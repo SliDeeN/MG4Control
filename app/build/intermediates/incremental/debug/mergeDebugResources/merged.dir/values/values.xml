@@ -632,23 +632,22 @@
     <color name="abc_search_url_text_pressed">@android:color/black</color>
     <color name="abc_search_url_text_selected">@android:color/black</color>
     <color name="accent_blue">#FF2A7FD4</color>
-    <color name="accent_cyan">#FF00BCD4</color>
     <color name="accent_green">#FF2ECC71</color>
     <color name="accent_material_dark">@color/material_deep_teal_200</color>
     <color name="accent_material_light">@color/material_deep_teal_500</color>
-    <color name="accent_orange">#FFFF6B35</color>
+    <color name="accent_orange">#FFFFC107</color>
+    <color name="accent_red">#FFE53935</color>
     <color name="androidx_core_ripple_material_light">#1f000000</color>
     <color name="androidx_core_secondary_text_default_material_light">#8a000000</color>
     <color name="background_floating_material_dark">@color/material_grey_800</color>
     <color name="background_floating_material_light">@android:color/white</color>
     <color name="background_material_dark">@color/material_grey_850</color>
     <color name="background_material_light">@color/material_grey_50</color>
-    <color name="bg_button">#FF252530</color>
-    <color name="bg_button_selected">#FF1E3A5F</color>
-    <color name="bg_card">#FF1A1A20</color>
-    <color name="bg_dark">#FF0E0E11</color>
-    <color name="border_default">#FF2A2A35</color>
-    <color name="border_selected">#FF2A7FD4</color>
+    <color name="bg_button">#FF1E1E28</color>
+    <color name="bg_card">#FF13131A</color>
+    <color name="bg_dark">#FF0A0A0E</color>
+    <color name="bg_section_header">#FF0F0F15</color>
+    <color name="border_default">#FF2A2A38</color>
     <color name="bright_foreground_disabled_material_dark">#80ffffff</color>
     <color name="bright_foreground_disabled_material_light">#80000000</color>
     <color name="bright_foreground_inverse_material_dark">@color/bright_foreground_material_light</color>
@@ -702,7 +701,7 @@
     <color name="dim_foreground_disabled_material_light">#80323232</color>
     <color name="dim_foreground_material_dark">#ffbebebe</color>
     <color name="dim_foreground_material_light">#ff323232</color>
-    <color name="divider">#FF1E1E28</color>
+    <color name="divider">#FF1A1A24</color>
     <color name="error_color_material_dark">#ff7043</color>
     <color name="error_color_material_light">#ff5722</color>
     <color name="foreground_material_dark">@android:color/white</color>
@@ -948,9 +947,6 @@
     <color name="mtrl_textinput_hovered_box_stroke_color">#DE000000</color>
     <color name="notification_action_color_filter">#ffffffff</color>
     <color name="notification_icon_bg_color">#ff9e9e9e</color>
-    <color name="one_pedal_border_on">#FF2ECC71</color>
-    <color name="one_pedal_off">#FF252530</color>
-    <color name="one_pedal_on">#FF1A3020</color>
     <color name="primary_dark_material_dark">@android:color/black</color>
     <color name="primary_dark_material_light">@color/material_grey_600</color>
     <color name="primary_material_dark">@color/material_grey_900</color>
@@ -973,8 +969,6 @@
     <color name="switch_thumb_disabled_material_light">#ffbdbdbd</color>
     <color name="switch_thumb_normal_material_dark">#ffbdbdbd</color>
     <color name="switch_thumb_normal_material_light">#fff1f1f1</color>
-    <color name="text_button">#FFCCD6E0</color>
-    <color name="text_button_selected">#FFFFFFFF</color>
     <color name="text_primary">#FFFFFFFF</color>
     <color name="text_secondary">#FF8890A0</color>
     <color name="tooltip_background_dark">#e6616161</color>
@@ -2006,33 +2000,38 @@
     <string description="A description of an action that a user of an accessibility service can perform to expand a bottomsheet halfway to its full height. [CHAR LIMIT=25]" name="bottomsheet_action_expand_halfway">Expand halfway</string>
     <string description="An accessibility feedback when the bottom sheet drag handle is clicked [CHAR LIMIT=NONE]" name="bottomsheet_drag_handle_clicked">Drag handle double-tapped</string>
     <string description="The content description of bottom sheet drag handles [CHAR LIMIT=NONE]" name="bottomsheet_drag_handle_content_description">Drag handle</string>
+    <string name="btn_adas_acc">ACC</string>
+    <string name="btn_adas_ica">ICA</string>
+    <string name="btn_adas_lim">LIMITATEUR</string>
+    <string name="btn_adas_off">OFF</string>
     <string name="btn_apply_profile">▶ Appliquer</string>
     <string name="btn_cancel">Annuler</string>
     <string name="btn_clear_logs">Effacer</string>
     <string name="btn_close">✕ Fermer</string>
     <string name="btn_connect">Connecter</string>
-    <string name="btn_eco">🍃  ECO</string>
+    <string name="btn_diag_adas">🔍 Lire IDs ADAS</string>
+    <string name="btn_eco">ECO</string>
     <string name="btn_logs">📋 Logs</string>
-    <string name="btn_normal">●  NORMAL</string>
+    <string name="btn_normal">NORMAL</string>
     <string name="btn_ok">OK</string>
-    <string name="btn_one_pedal_off">ONE PEDAL  OFF</string>
-    <string name="btn_one_pedal_on">ONE PEDAL  ON</string>
-    <string name="btn_overspeed_off">⚠ DÉPASSEMENT VITESSE  OFF</string>
-    <string name="btn_overspeed_on">⚠ DÉPASSEMENT VITESSE  ON</string>
+    <string name="btn_one_pedal_off">ONE PEDAL  ●  OFF</string>
+    <string name="btn_one_pedal_on">ONE PEDAL  ●  ON</string>
+    <string name="btn_overspeed_off">⚠  DÉPASSEMENT DE VITESSE  ●  OFF</string>
+    <string name="btn_overspeed_on">⚠  DÉPASSEMENT DE VITESSE  ●  ON</string>
     <string name="btn_profiles">👤 Profils</string>
-    <string name="btn_refresh">↻ État</string>
-    <string name="btn_regen_auto">A\nADAPT.</string>
-    <string name="btn_regen_high">3\nFORT</string>
-    <string name="btn_regen_low">1\nFAIBLE</string>
-    <string name="btn_regen_std">2\nSTD</string>
+    <string name="btn_refresh">Actualiser</string>
+    <string name="btn_regen_auto">ADAPTATIF</string>
+    <string name="btn_regen_high">FORT</string>
+    <string name="btn_regen_low">FAIBLE</string>
+    <string name="btn_regen_std">MOYEN</string>
     <string name="btn_save_current">💾 Sauvegarder état actuel</string>
     <string name="btn_set_favorite_off">☆ Favori</string>
     <string name="btn_set_favorite_on">⭐ Favori</string>
     <string name="btn_settings">⚙ Réglages</string>
-    <string name="btn_snow">❄  NEIGE</string>
-    <string name="btn_speed_tone_off">🔔 CHANGEMENT LIMITE  OFF</string>
-    <string name="btn_speed_tone_on">🔔 CHANGEMENT LIMITE  ON</string>
-    <string name="btn_sport">⚡  SPORT</string>
+    <string name="btn_snow">NEIGE</string>
+    <string name="btn_speed_tone_off">🔔  CHANGEMENT DE LIMITE  ●  OFF</string>
+    <string name="btn_speed_tone_on">🔔  CHANGEMENT DE LIMITE  ●  ON</string>
+    <string name="btn_sport">SPORT</string>
     <string name="call_notification_answer_action">Answer</string>
     <string name="call_notification_answer_video_action">Video</string>
     <string name="call_notification_decline_action">Decline</string>
@@ -2055,9 +2054,10 @@
     <string name="exposed_dropdown_menu_content_description">Show dropdown menu</string>
     <string name="fab_transformation_scrim_behavior" translatable="false">com.google.android.material.transformation.FabTransformationScrimBehavior</string>
     <string name="fab_transformation_sheet_behavior" translatable="false">com.google.android.material.transformation.FabTransformationSheetBehavior</string>
+    <string name="feedback_adas_applied">✓ Aide à la conduite : %1$s</string>
     <string name="feedback_drive_mode_applied">✓ Mode %1$s appliqué</string>
-    <string name="feedback_error_apply">✗ Erreur lors de l\'application du profil</string>
-    <string name="feedback_error_write">✗ Erreur écriture (voir logcat)</string>
+    <string name="feedback_error_apply">✗ Erreur application du profil</string>
+    <string name="feedback_error_write">✗ Erreur écriture</string>
     <string name="feedback_favorite_set">⭐ \'%1$s\' défini comme profil favori</string>
     <string name="feedback_one_pedal_off">✓ One Pedal désactivé</string>
     <string name="feedback_one_pedal_on">✓ One Pedal activé</string>
@@ -2068,7 +2068,6 @@
     <string name="feedback_regen_applied">✓ Régénération %1$s</string>
     <string name="feedback_speed_tone_off">✓ Son changement limite désactivé</string>
     <string name="feedback_speed_tone_on">✓ Son changement limite activé</string>
-    <string name="feedback_values_read">Valeurs lues — ouvre les logs</string>
     <string name="hide_bottom_view_on_scroll_behavior" translatable="false">com.google.android.material.behavior.HideBottomViewOnScrollBehavior</string>
     <string description="Content description for an icon that appears in the title area of a dialog" name="icon_content_description">Dialog Icon</string>
     <string name="item_view_role_description">Tab</string>
@@ -2192,7 +2191,6 @@
     <string name="path_password_eye_mask_visible" translatable="false">M2,4.27 L2,4.27 L4.54,1.73 L4.54,1.73 L4.54,1 L23,1 L23,23 L1,23 L1,4.27 Z</string>
     <string name="path_password_strike_through" translatable="false">M3.27,4.27 L19.74,20.74</string>
     <string name="profile_default_name">Profil %1$d</string>
-    <string name="profile_summary">%1$s • Régén %2$s</string>
     <string name="profiles_hint">Le profil ⭐ favori est appliqué automatiquement au démarrage de la voiture</string>
     <string name="search_menu_title">Search</string>
     <string name="searchbar_scrolling_view_behavior" translatable="false">
@@ -2200,11 +2198,16 @@
   </string>
     <string description="Content description for the X button to clear text [CHAR_LIMIT=NONE]" name="searchview_clear_text_content_description">Clear text</string>
     <string description="Content description for the navigation button to return to the previous screen [CHAR_LIMIT=NONE]" name="searchview_navigation_content_description">Back</string>
-    <string name="section_alerts">ALERTES VITESSE</string>
+    <string name="section_adas">AIDE À LA CONDUITE</string>
+    <string name="section_alerts_full">PARAMÈTRES D\'ALERTES</string>
     <string name="section_drive_mode">MODE DE CONDUITE</string>
+    <string name="section_drive_mode_full">PARAMÈTRES DE CONDUITE</string>
     <string name="section_regen">RÉGÉNÉRATION</string>
+    <string name="settings_diag">DIAGNOSTIC</string>
     <string name="settings_language">Langue de l\'application</string>
     <string name="settings_language_current">Langue : Français</string>
+    <string name="settings_logs">Logs</string>
+    <string name="settings_logs_sub">Diagnostic et débogage</string>
     <string name="settings_title">RÉGLAGES</string>
     <string description="Title of the side sheet&apos;s accessibility pane that is spoken by TalkBack when the side sheet appears on screen. [CHAR_LIMIT=NONE]" name="side_sheet_accessibility_pane_title">Side Sheet</string>
     <string name="side_sheet_behavior" translatable="false">com.google.android.material.sidesheet.SideSheetBehavior</string>
@@ -6486,7 +6489,6 @@
         <item name="android:windowBackground">@color/bg_dark</item>
         <item name="android:statusBarColor">@color/bg_dark</item>
         <item name="android:navigationBarColor">@color/bg_dark</item>
-        <item name="buttonStyle">@style/Widget.MG4Control.Button.DriveMode</item>
     </style>
     <style name="Theme.Material3.Dark" parent="Base.Theme.Material3.Dark"/>
     <style name="Theme.Material3.Dark.BottomSheetDialog" parent="Base.Theme.Material3.Dark.BottomSheetDialog"/>
@@ -7405,29 +7407,54 @@
     <item name="shapeAppearance">@null</item>
     <item name="shapeAppearanceOverlay">@null</item>
   </style>
-    <style name="Widget.MG4Control.Button.DriveMode" parent="Widget.MaterialComponents.Button.OutlinedButton">
-        <item name="android:textColor">@color/btn_text_selector</item>
-        <item name="android:background">@drawable/bg_button_drive</item>
+    <style name="Widget.MG4Control.Button.Alert" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/btn_alert_text</item>
+        <item name="android:background">@drawable/bg_button_alert_off</item>
         <item name="android:textSize">12sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:lineSpacingMultiplier">1.2</item>
+        <item name="android:letterSpacing">0.06</item>
         <item name="android:gravity">center</item>
         <item name="android:stateListAnimator">@null</item>
-        <item name="strokeColor">@color/transparent</item>
-        <item name="rippleColor">@color/accent_blue</item>
         <item name="android:paddingHorizontal">8dp</item>
-        <item name="android:letterSpacing">0.08</item>
     </style>
-    <style name="Widget.MG4Control.Button.OnePedal" parent="Widget.MG4Control.Button.DriveMode">
-        <item name="android:background">@drawable/bg_button_one_pedal</item>
-        <item name="android:textSize">14sp</item>
+    <style name="Widget.MG4Control.Button.DriveMode" parent="Widget.MG4Control.Button.ParamBlue"/>
+    <style name="Widget.MG4Control.Button.Param" parent="Widget.MG4Control.Button.ParamBlue"/>
+    <style name="Widget.MG4Control.Button.ParamAmber" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/btn_param_amber_text</item>
+        <item name="android:background">@drawable/bg_button_param_amber</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:gravity">center</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="rippleColor">@color/accent_orange</item>
+        <item name="android:paddingHorizontal">4dp</item>
     </style>
-    <style name="Widget.MG4Control.Button.Regen" parent="Widget.MG4Control.Button.DriveMode">
-        <item name="android:background">@drawable/bg_button_regen</item>
+    <style name="Widget.MG4Control.Button.ParamBlue" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/btn_param_blue_text</item>
+        <item name="android:background">@drawable/bg_button_param_blue</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:gravity">center</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="rippleColor">@color/accent_blue</item>
+        <item name="android:paddingHorizontal">4dp</item>
+    </style>
+    <style name="Widget.MG4Control.Button.ParamGreen" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/btn_param_green_text</item>
+        <item name="android:background">@drawable/bg_button_param_green</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:gravity">center</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="rippleColor">@color/accent_green</item>
+        <item name="android:paddingHorizontal">4dp</item>
     </style>
     <style name="Widget.MG4Control.Button.Secondary" parent="Widget.MaterialComponents.Button.TextButton">
         <item name="android:textColor">@color/text_secondary</item>
-        <item name="android:textSize">12sp</item>
+        <item name="android:textSize">11sp</item>
         <item name="android:background">@drawable/bg_button_secondary</item>
         <item name="android:stateListAnimator">@null</item>
         <item name="rippleColor">@color/accent_blue</item>

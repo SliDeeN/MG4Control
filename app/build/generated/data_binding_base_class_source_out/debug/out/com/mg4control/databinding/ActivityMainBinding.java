@@ -5,12 +5,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.constraintlayout.widget.Barrier;
-import androidx.constraintlayout.widget.ConstraintLayout;
-import androidx.constraintlayout.widget.Guideline;
 import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
 import com.mg4control.R;
@@ -20,19 +18,25 @@ import java.lang.String;
 
 public final class ActivityMainBinding implements ViewBinding {
   @NonNull
-  private final ConstraintLayout rootView;
+  private final LinearLayout rootView;
 
   @NonNull
-  public final Barrier barrierBottom;
+  public final Button btnAdasAcc;
+
+  @NonNull
+  public final Button btnAdasIca;
+
+  @NonNull
+  public final Button btnAdasLim;
+
+  @NonNull
+  public final Button btnAdasOff;
 
   @NonNull
   public final Button btnConnect;
 
   @NonNull
   public final Button btnEco;
-
-  @NonNull
-  public final Button btnLogs;
 
   @NonNull
   public final Button btnNormal;
@@ -42,9 +46,6 @@ public final class ActivityMainBinding implements ViewBinding {
 
   @NonNull
   public final Button btnProfiles;
-
-  @NonNull
-  public final Button btnRefresh;
 
   @NonNull
   public final Button btnRegenAuto;
@@ -74,51 +75,32 @@ public final class ActivityMainBinding implements ViewBinding {
   public final Button btnSport;
 
   @NonNull
-  public final View divider;
-
-  @NonNull
-  public final View divider2;
-
-  @NonNull
-  public final Guideline guidelineCenter;
-
-  @NonNull
-  public final TextView tvAlertsLabel;
-
-  @NonNull
   public final TextView tvAppTitle;
-
-  @NonNull
-  public final TextView tvDrivingLabel;
 
   @NonNull
   public final TextView tvLastAction;
 
   @NonNull
-  public final TextView tvRegenLabel;
-
-  @NonNull
   public final TextView tvStatus;
 
-  private ActivityMainBinding(@NonNull ConstraintLayout rootView, @NonNull Barrier barrierBottom,
-      @NonNull Button btnConnect, @NonNull Button btnEco, @NonNull Button btnLogs,
-      @NonNull Button btnNormal, @NonNull Button btnOnePedal, @NonNull Button btnProfiles,
-      @NonNull Button btnRefresh, @NonNull Button btnRegenAuto, @NonNull Button btnRegenHigh,
-      @NonNull Button btnRegenLow, @NonNull Button btnRegenStd, @NonNull Button btnSettings,
-      @NonNull Button btnSlifWarning, @NonNull Button btnSnow,
-      @NonNull Button btnSpeedLimitChangeTone, @NonNull Button btnSport, @NonNull View divider,
-      @NonNull View divider2, @NonNull Guideline guidelineCenter, @NonNull TextView tvAlertsLabel,
-      @NonNull TextView tvAppTitle, @NonNull TextView tvDrivingLabel,
-      @NonNull TextView tvLastAction, @NonNull TextView tvRegenLabel, @NonNull TextView tvStatus) {
+  private ActivityMainBinding(@NonNull LinearLayout rootView, @NonNull Button btnAdasAcc,
+      @NonNull Button btnAdasIca, @NonNull Button btnAdasLim, @NonNull Button btnAdasOff,
+      @NonNull Button btnConnect, @NonNull Button btnEco, @NonNull Button btnNormal,
+      @NonNull Button btnOnePedal, @NonNull Button btnProfiles, @NonNull Button btnRegenAuto,
+      @NonNull Button btnRegenHigh, @NonNull Button btnRegenLow, @NonNull Button btnRegenStd,
+      @NonNull Button btnSettings, @NonNull Button btnSlifWarning, @NonNull Button btnSnow,
+      @NonNull Button btnSpeedLimitChangeTone, @NonNull Button btnSport,
+      @NonNull TextView tvAppTitle, @NonNull TextView tvLastAction, @NonNull TextView tvStatus) {
     this.rootView = rootView;
-    this.barrierBottom = barrierBottom;
+    this.btnAdasAcc = btnAdasAcc;
+    this.btnAdasIca = btnAdasIca;
+    this.btnAdasLim = btnAdasLim;
+    this.btnAdasOff = btnAdasOff;
     this.btnConnect = btnConnect;
     this.btnEco = btnEco;
-    this.btnLogs = btnLogs;
     this.btnNormal = btnNormal;
     this.btnOnePedal = btnOnePedal;
     this.btnProfiles = btnProfiles;
-    this.btnRefresh = btnRefresh;
     this.btnRegenAuto = btnRegenAuto;
     this.btnRegenHigh = btnRegenHigh;
     this.btnRegenLow = btnRegenLow;
@@ -128,20 +110,14 @@ public final class ActivityMainBinding implements ViewBinding {
     this.btnSnow = btnSnow;
     this.btnSpeedLimitChangeTone = btnSpeedLimitChangeTone;
     this.btnSport = btnSport;
-    this.divider = divider;
-    this.divider2 = divider2;
-    this.guidelineCenter = guidelineCenter;
-    this.tvAlertsLabel = tvAlertsLabel;
     this.tvAppTitle = tvAppTitle;
-    this.tvDrivingLabel = tvDrivingLabel;
     this.tvLastAction = tvLastAction;
-    this.tvRegenLabel = tvRegenLabel;
     this.tvStatus = tvStatus;
   }
 
   @Override
   @NonNull
-  public ConstraintLayout getRoot() {
+  public LinearLayout getRoot() {
     return rootView;
   }
 
@@ -166,9 +142,27 @@ public final class ActivityMainBinding implements ViewBinding {
     // This is done to optimize the compiled bytecode for size and performance.
     int id;
     missingId: {
-      id = R.id.barrierBottom;
-      Barrier barrierBottom = ViewBindings.findChildViewById(rootView, id);
-      if (barrierBottom == null) {
+      id = R.id.btnAdasAcc;
+      Button btnAdasAcc = ViewBindings.findChildViewById(rootView, id);
+      if (btnAdasAcc == null) {
+        break missingId;
+      }
+
+      id = R.id.btnAdasIca;
+      Button btnAdasIca = ViewBindings.findChildViewById(rootView, id);
+      if (btnAdasIca == null) {
+        break missingId;
+      }
+
+      id = R.id.btnAdasLim;
+      Button btnAdasLim = ViewBindings.findChildViewById(rootView, id);
+      if (btnAdasLim == null) {
+        break missingId;
+      }
+
+      id = R.id.btnAdasOff;
+      Button btnAdasOff = ViewBindings.findChildViewById(rootView, id);
+      if (btnAdasOff == null) {
         break missingId;
       }
 
@@ -181,12 +175,6 @@ public final class ActivityMainBinding implements ViewBinding {
       id = R.id.btnEco;
       Button btnEco = ViewBindings.findChildViewById(rootView, id);
       if (btnEco == null) {
-        break missingId;
-      }
-
-      id = R.id.btnLogs;
-      Button btnLogs = ViewBindings.findChildViewById(rootView, id);
-      if (btnLogs == null) {
         break missingId;
       }
 
@@ -205,12 +193,6 @@ public final class ActivityMainBinding implements ViewBinding {
       id = R.id.btnProfiles;
       Button btnProfiles = ViewBindings.findChildViewById(rootView, id);
       if (btnProfiles == null) {
-        break missingId;
-      }
-
-      id = R.id.btnRefresh;
-      Button btnRefresh = ViewBindings.findChildViewById(rootView, id);
-      if (btnRefresh == null) {
         break missingId;
       }
 
@@ -268,39 +250,9 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.divider;
-      View divider = ViewBindings.findChildViewById(rootView, id);
-      if (divider == null) {
-        break missingId;
-      }
-
-      id = R.id.divider2;
-      View divider2 = ViewBindings.findChildViewById(rootView, id);
-      if (divider2 == null) {
-        break missingId;
-      }
-
-      id = R.id.guidelineCenter;
-      Guideline guidelineCenter = ViewBindings.findChildViewById(rootView, id);
-      if (guidelineCenter == null) {
-        break missingId;
-      }
-
-      id = R.id.tvAlertsLabel;
-      TextView tvAlertsLabel = ViewBindings.findChildViewById(rootView, id);
-      if (tvAlertsLabel == null) {
-        break missingId;
-      }
-
       id = R.id.tvAppTitle;
       TextView tvAppTitle = ViewBindings.findChildViewById(rootView, id);
       if (tvAppTitle == null) {
-        break missingId;
-      }
-
-      id = R.id.tvDrivingLabel;
-      TextView tvDrivingLabel = ViewBindings.findChildViewById(rootView, id);
-      if (tvDrivingLabel == null) {
         break missingId;
       }
 
@@ -310,23 +262,16 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.tvRegenLabel;
-      TextView tvRegenLabel = ViewBindings.findChildViewById(rootView, id);
-      if (tvRegenLabel == null) {
-        break missingId;
-      }
-
       id = R.id.tvStatus;
       TextView tvStatus = ViewBindings.findChildViewById(rootView, id);
       if (tvStatus == null) {
         break missingId;
       }
 
-      return new ActivityMainBinding((ConstraintLayout) rootView, barrierBottom, btnConnect, btnEco,
-          btnLogs, btnNormal, btnOnePedal, btnProfiles, btnRefresh, btnRegenAuto, btnRegenHigh,
-          btnRegenLow, btnRegenStd, btnSettings, btnSlifWarning, btnSnow, btnSpeedLimitChangeTone,
-          btnSport, divider, divider2, guidelineCenter, tvAlertsLabel, tvAppTitle, tvDrivingLabel,
-          tvLastAction, tvRegenLabel, tvStatus);
+      return new ActivityMainBinding((LinearLayout) rootView, btnAdasAcc, btnAdasIca, btnAdasLim,
+          btnAdasOff, btnConnect, btnEco, btnNormal, btnOnePedal, btnProfiles, btnRegenAuto,
+          btnRegenHigh, btnRegenLow, btnRegenStd, btnSettings, btnSlifWarning, btnSnow,
+          btnSpeedLimitChangeTone, btnSport, tvAppTitle, tvLastAction, tvStatus);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

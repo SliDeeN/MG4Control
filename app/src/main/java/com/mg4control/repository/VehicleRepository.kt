@@ -33,6 +33,8 @@ class VehicleRepository(private val appContext: Context) {
     private var managerInstance: Any?  = null
     private var methodSetInt: Method?  = null
     private var methodGetInt: Method?  = null
+    private var methodSetMix: Method?  = null
+    private var methodGetMix: Method?  = null
 
     fun connect() {
         if (_connectionState.value == ConnectionState.Connected ||
@@ -108,6 +110,8 @@ class VehicleRepository(private val appContext: Context) {
             // 6. Mettre en cache les méthodes
             methodGetInt = managerClass.getMethod("getIntProperty", Int::class.java)
             methodSetInt = managerClass.getMethod("setIntProperty", Int::class.java, Int::class.java)
+            methodGetMix = managerClass.getMethod("getMixProperty", Class::class.java, Int::class.java)
+            methodSetMix = managerClass.getMethod("setMixProperty", Class::class.java, Int::class.java, Any::class.java)
             AppLogger.i(TAG, "Méthodes get/set cachées OK")
 
             _connectionState.value = ConnectionState.Connected
@@ -176,5 +180,81 @@ class VehicleRepository(private val appContext: Context) {
         VehiclePropertyIds.SPEED_LIMIT_CHANGE_TONE,
         if (on) VehiclePropertyIds.AlertSwitch.ON else VehiclePropertyIds.AlertSwitch.OFF
     )
+
+    fun getMixInt(id: Int): Int {
+        return try {
+            // Stratégie 1 : appel direct à getMixIntProperty sur le service AIDL interne
+            val managerClass = managerInstance?.javaClass ?: return -1
+            val serviceField = managerClass.getDeclaredField("mIVehiclePropertyService")
+            serviceField.isAccessible = true
+            val service = serviceField.get(managerInstance)
+            if (service != null) {
+                val getMixIntMethod = service.javaClass.getMethod("getMixIntProperty", Int::class.java)
+                val result = getMixIntMethod.invoke(service, id) as? Int ?: -1
+                AppLogger.d(TAG, "getMixInt direct(0x${id.toString(16)}) = $result")
+                return result
+            }
+
+            // Stratégie 2 : via getMixProperty avec cast Number
+            val obj = methodGetMix?.invoke(managerInstance, Integer.TYPE, id)
+            val result = (obj as? Number)?.toInt() ?: -1
+            AppLogger.d(TAG, "getMixInt fallback(0x${id.toString(16)}) = $result")
+            result
+        } catch (e: Exception) {
+            val cause = if (e is java.lang.reflect.InvocationTargetException) e.cause else e
+            AppLogger.e(TAG, "getMixInt(0x${id.toString(16)}) : ${cause?.javaClass?.simpleName}: ${cause?.message}")
+            -1
+        }
+    }
+
+    fun setMixInt(id: Int, value: Int): Boolean {
+        return try {
+            // Stratégie 1 : appel direct à setMixIntProperty sur le service AIDL interne
+            val managerClass = managerInstance?.javaClass ?: return false
+            val serviceField = managerClass.getDeclaredField("mIVehiclePropertyService")
+            serviceField.isAccessible = true
+            val service = serviceField.get(managerInstance)
+            if (service != null) {
+                val setMixIntMethod = service.javaClass.getMethod("setMixIntProperty", Int::class.java, Int::class.java)
+                setMixIntMethod.invoke(service, id, value)
+                AppLogger.i(TAG, "setMixInt direct(0x${id.toString(16)}, $value) OK")
+                return true
+            }
+
+            // Stratégie 2 : via setMixProperty
+            val boxed = Integer.valueOf(value)
+            methodSetMix?.invoke(managerInstance, Integer.TYPE, id, boxed)
+            AppLogger.i(TAG, "setMixInt fallback(0x${id.toString(16)}, $value) OK")
+            true
+        } catch (e: Exception) {
+            val cause = if (e is java.lang.reflect.InvocationTargetException) e.cause else e
+            AppLogger.e(TAG, "setMixInt(0x${id.toString(16)}, $value) : ${cause?.javaClass?.simpleName}: ${cause?.message}")
+            false
+        }
+    }
+
+    fun getAdasMode()        = getMixInt(VehiclePropertyIds.MIXED_INTELLIGENT_DRIVE)
+    fun setAdasMode(v: Int)  = setMixInt(VehiclePropertyIds.MIXED_INTELLIGENT_DRIVE, v)
+
+    /** Loggue l'état interne du service pour diagnostic */
+    fun logMixServiceState() {
+        try {
+            val managerClass = managerInstance?.javaClass ?: run {
+                AppLogger.w(TAG, "managerInstance est null")
+                return
+            }
+            // Lire mIVehiclePropertyService via réflexion
+            val serviceField = managerClass.getDeclaredField("mIVehiclePropertyService")
+            serviceField.isAccessible = true
+            val service = serviceField.get(managerInstance)
+            AppLogger.i(TAG, "mIVehiclePropertyService = $service")
+
+            // Lister les méthodes getMixProperty disponibles
+            val mixMethods = managerClass.methods.filter { it.name.contains("Mix", ignoreCase = true) }
+            AppLogger.i(TAG, "Méthodes Mix disponibles : ${mixMethods.map { "${it.name}(${it.parameterTypes.map{it.simpleName}})" }}")
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "logMixServiceState erreur : ${e.message}", e)
+        }
+    }
 }
 

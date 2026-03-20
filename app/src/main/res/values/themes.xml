@@ -10,39 +10,69 @@
         <item name="android:windowBackground">@color/bg_dark</item>
         <item name="android:statusBarColor">@color/bg_dark</item>
         <item name="android:navigationBarColor">@color/bg_dark</item>
-        <item name="buttonStyle">@style/Widget.MG4Control.Button.DriveMode</item>
     </style>
 
-    <!-- Bouton mode de conduite -->
-    <style name="Widget.MG4Control.Button.DriveMode" parent="Widget.MaterialComponents.Button.OutlinedButton">
-        <item name="android:textColor">@color/btn_text_selector</item>
-        <item name="android:background">@drawable/bg_button_drive</item>
+    <!-- Alias générique utilisé dans les layouts — redirige vers ParamBlue par défaut -->
+    <style name="Widget.MG4Control.Button.Param" parent="Widget.MG4Control.Button.ParamBlue"/>
+
+    <!-- Alias DriveMode conservé pour item_profile.xml -->
+    <style name="Widget.MG4Control.Button.DriveMode" parent="Widget.MG4Control.Button.ParamBlue"/>
+
+    <!-- Bouton paramètre BLEU (mode conduite) -->
+    <style name="Widget.MG4Control.Button.ParamBlue" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/btn_param_blue_text</item>
+        <item name="android:background">@drawable/bg_button_param_blue</item>
         <item name="android:textSize">12sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:lineSpacingMultiplier">1.2</item>
+        <item name="android:letterSpacing">0.06</item>
         <item name="android:gravity">center</item>
         <item name="android:stateListAnimator">@null</item>
-        <item name="strokeColor">@color/transparent</item>
         <item name="rippleColor">@color/accent_blue</item>
+        <item name="android:paddingHorizontal">4dp</item>
+    </style>
+
+    <!-- Bouton paramètre VERT (régénération) -->
+    <style name="Widget.MG4Control.Button.ParamGreen" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/btn_param_green_text</item>
+        <item name="android:background">@drawable/bg_button_param_green</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:gravity">center</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="rippleColor">@color/accent_green</item>
+        <item name="android:paddingHorizontal">4dp</item>
+    </style>
+
+    <!-- Bouton paramètre AMBER (aide à la conduite) -->
+    <style name="Widget.MG4Control.Button.ParamAmber" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/btn_param_amber_text</item>
+        <item name="android:background">@drawable/bg_button_param_amber</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:gravity">center</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="rippleColor">@color/accent_orange</item>
+        <item name="android:paddingHorizontal">4dp</item>
+    </style>
+
+    <!-- Bouton alerte -->
+    <style name="Widget.MG4Control.Button.Alert" parent="Widget.MaterialComponents.Button.TextButton">
+        <item name="android:textColor">@color/btn_alert_text</item>
+        <item name="android:background">@drawable/bg_button_alert_off</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">0.06</item>
+        <item name="android:gravity">center</item>
+        <item name="android:stateListAnimator">@null</item>
         <item name="android:paddingHorizontal">8dp</item>
-        <item name="android:letterSpacing">0.08</item>
     </style>
 
-    <!-- Bouton régénération -->
-    <style name="Widget.MG4Control.Button.Regen" parent="Widget.MG4Control.Button.DriveMode">
-        <item name="android:background">@drawable/bg_button_regen</item>
-    </style>
-
-    <!-- Bouton One Pedal -->
-    <style name="Widget.MG4Control.Button.OnePedal" parent="Widget.MG4Control.Button.DriveMode">
-        <item name="android:background">@drawable/bg_button_one_pedal</item>
-        <item name="android:textSize">14sp</item>
-    </style>
-
-    <!-- Bouton secondaire (Connecter / Refresh) -->
+    <!-- Bouton secondaire (header) -->
     <style name="Widget.MG4Control.Button.Secondary" parent="Widget.MaterialComponents.Button.TextButton">
         <item name="android:textColor">@color/text_secondary</item>
-        <item name="android:textSize">12sp</item>
+        <item name="android:textSize">11sp</item>
         <item name="android:background">@drawable/bg_button_secondary</item>
         <item name="android:stateListAnimator">@null</item>
         <item name="rippleColor">@color/accent_blue</item>

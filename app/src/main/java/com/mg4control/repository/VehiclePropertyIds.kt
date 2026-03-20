@@ -56,5 +56,34 @@ object VehiclePropertyIds {
         const val OFF = 0
         const val ON  = 1
     }
+
+    // ─── Aide à la conduite (ADAS) ──────────────────────────────────────────
+    // Confirmé par analyse smali VehiclePropertyID.smali + r0/h.smali :
+    // ID_MIXED_INTELLIGENT_DRIVE = 0x32, lu/écrit via getMixProperty/setMixProperty
+    const val MIXED_INTELLIGENT_DRIVE = 0x32
+
+    object AdasMode {
+        const val OFF        = 0  // non documenté dans le smali — à confirmer
+        const val SPEED_LIMI = 1  // INTELLIGENT_DRIVE_MANUAL (limitateur vitesse)
+        const val AUTO       = 2  // INTELLIGENT_DRIVE_AUTO (reconnaissance panneaux)
+        const val ACC        = 3  // INTELLIGENT_DRIVE_ACC
+        const val ICA        = 4  // INTELLIGENT_DRIVE_ICA
+    }
+
+    // IDs suspects à scanner lors du diagnostic
+    val ADAS_DIAG_IDS = mapOf(
+        "MIXED_INTELLIGENT_DRIVE 0x2050001" to 0x2050001,
+        "MIXED_INTELLIGENT_DRIVE 0x2050002" to 0x2050002,
+        "INTELLIGENT_DRIVE       0x2040002" to 0x2040002,
+        "INTELLIGENT_DRIVE       0x2040003" to 0x2040003,
+        "SPEED_LIMIT_ASSIST      0x5040001" to 0x5040001,
+        "SPEED_LIMIT_ASSIST      0x5040002" to 0x5040002,
+        "ACC_MODE                0x5050001" to 0x5050001,
+        "ACC_MODE                0x5050002" to 0x5050002,
+        "ICA_MODE                0x5060001" to 0x5060001,
+        "DRIVE_ASSIST            0x32"      to 0x32,
+        "DRIVE_ASSIST            0x33"      to 0x33,
+        "DRIVE_ASSIST            0x34"      to 0x34
+    )
 }
 

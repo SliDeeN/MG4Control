@@ -6,7 +6,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.viewbinding.ViewBinding;
@@ -24,21 +23,26 @@ public final class DialogSettingsBinding implements ViewBinding {
   public final Button btnCloseSettings;
 
   @NonNull
+  public final Button btnDiagAdas;
+
+  @NonNull
   public final Button btnLangEn;
 
   @NonNull
   public final Button btnLangFr;
 
   @NonNull
-  public final TextView tvCurrentLang;
+  public final Button btnOpenLogs;
 
   private DialogSettingsBinding(@NonNull LinearLayout rootView, @NonNull Button btnCloseSettings,
-      @NonNull Button btnLangEn, @NonNull Button btnLangFr, @NonNull TextView tvCurrentLang) {
+      @NonNull Button btnDiagAdas, @NonNull Button btnLangEn, @NonNull Button btnLangFr,
+      @NonNull Button btnOpenLogs) {
     this.rootView = rootView;
     this.btnCloseSettings = btnCloseSettings;
+    this.btnDiagAdas = btnDiagAdas;
     this.btnLangEn = btnLangEn;
     this.btnLangFr = btnLangFr;
-    this.tvCurrentLang = tvCurrentLang;
+    this.btnOpenLogs = btnOpenLogs;
   }
 
   @Override
@@ -74,6 +78,12 @@ public final class DialogSettingsBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.btnDiagAdas;
+      Button btnDiagAdas = ViewBindings.findChildViewById(rootView, id);
+      if (btnDiagAdas == null) {
+        break missingId;
+      }
+
       id = R.id.btnLangEn;
       Button btnLangEn = ViewBindings.findChildViewById(rootView, id);
       if (btnLangEn == null) {
@@ -86,14 +96,14 @@ public final class DialogSettingsBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.tvCurrentLang;
-      TextView tvCurrentLang = ViewBindings.findChildViewById(rootView, id);
-      if (tvCurrentLang == null) {
+      id = R.id.btnOpenLogs;
+      Button btnOpenLogs = ViewBindings.findChildViewById(rootView, id);
+      if (btnOpenLogs == null) {
         break missingId;
       }
 
-      return new DialogSettingsBinding((LinearLayout) rootView, btnCloseSettings, btnLangEn,
-          btnLangFr, tvCurrentLang);
+      return new DialogSettingsBinding((LinearLayout) rootView, btnCloseSettings, btnDiagAdas,
+          btnLangEn, btnLangFr, btnOpenLogs);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

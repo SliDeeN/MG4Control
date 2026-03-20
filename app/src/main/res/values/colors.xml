@@ -1,36 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Fonds -->
-    <color name="bg_dark">#FF0E0E11</color>
-    <color name="bg_card">#FF1A1A20</color>
-    <color name="bg_button">#FF252530</color>
-    <color name="bg_button_selected">#FF1E3A5F</color>
+    <color name="bg_dark">#FF0A0A0E</color>
+    <color name="bg_card">#FF13131A</color>
+    <color name="bg_button">#FF1E1E28</color>
+    <color name="bg_section_header">#FF0F0F15</color>
 
-    <!-- Textes -->
     <color name="text_primary">#FFFFFFFF</color>
     <color name="text_secondary">#FF8890A0</color>
-    <color name="text_button">#FFCCD6E0</color>
-    <color name="text_button_selected">#FFFFFFFF</color>
 
-    <!-- Accents -->
     <color name="accent_blue">#FF2A7FD4</color>
     <color name="accent_green">#FF2ECC71</color>
-    <color name="accent_orange">#FFFF6B35</color>
-    <color name="accent_cyan">#FF00BCD4</color>
+    <color name="accent_orange">#FFFFC107</color>
+    <color name="accent_red">#FFE53935</color>
 
-    <!-- Status connexion -->
     <color name="status_connected">#FF2ECC71</color>
     <color name="status_connecting">#FFFFC107</color>
     <color name="status_disconnected">#FF8890A0</color>
     <color name="status_error">#FFE53935</color>
 
-    <!-- Bordures -->
-    <color name="border_default">#FF2A2A35</color>
-    <color name="border_selected">#FF2A7FD4</color>
-    <color name="divider">#FF1E1E28</color>
-
-    <!-- One Pedal -->
-    <color name="one_pedal_off">#FF252530</color>
-    <color name="one_pedal_on">#FF1A3020</color>
-    <color name="one_pedal_border_on">#FF2ECC71</color>
+    <color name="border_default">#FF2A2A38</color>
+    <color name="divider">#FF1A1A24</color>
 </resources>

@@ -33,6 +33,16 @@
             android:layout_marginEnd="8dp"/>
 
         <Button
+            android:id="@+id/btnScrollBottom"
+            style="@style/Widget.MG4Control.Button.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="⬇ Bas"
+            android:paddingHorizontal="12dp"
+            android:textSize="11sp"
+            android:layout_marginEnd="8dp"/>
+
+        <Button
             android:id="@+id/btnCloseLogs"
             style="@style/Widget.MG4Control.Button.Secondary"
             android:layout_width="wrap_content"

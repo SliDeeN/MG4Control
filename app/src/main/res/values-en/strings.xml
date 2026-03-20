@@ -2,42 +2,44 @@
 <resources>
     <string name="app_name">MG4 Control</string>
 
-    <!-- Header -->
     <string name="btn_connect">Connect</string>
-    <string name="btn_refresh">↻ Refresh</string>
+    <string name="btn_refresh">Refresh</string>
     <string name="btn_logs">📋 Logs</string>
     <string name="btn_profiles">👤 Profiles</string>
     <string name="btn_settings">⚙ Settings</string>
 
-    <!-- Connection status -->
     <string name="status_disconnected">⚫ Disconnected</string>
     <string name="status_connecting">🟡 Connecting…</string>
     <string name="status_connected">🟢 Connected</string>
 
-    <!-- Drive mode -->
+    <string name="section_drive_mode_full">DRIVE SETTINGS</string>
+    <string name="section_alerts_full">ALERT SETTINGS</string>
     <string name="section_drive_mode">DRIVE MODE</string>
-    <string name="btn_eco">🍃  ECO</string>
-    <string name="btn_normal">●  NORMAL</string>
-    <string name="btn_sport">⚡  SPORT</string>
-    <string name="btn_snow">❄  SNOW</string>
-
-    <!-- Regeneration -->
     <string name="section_regen">REGENERATION</string>
-    <string name="btn_regen_low">1\nLOW</string>
-    <string name="btn_regen_std">2\nSTD</string>
-    <string name="btn_regen_high">3\nHIGH</string>
-    <string name="btn_regen_auto">A\nAUTO</string>
-    <string name="btn_one_pedal_off">ONE PEDAL  OFF</string>
-    <string name="btn_one_pedal_on">ONE PEDAL  ON</string>
+    <string name="section_adas">DRIVING ASSIST</string>
 
-    <!-- Speed alerts -->
-    <string name="section_alerts">SPEED ALERTS</string>
-    <string name="btn_overspeed_off">⚠ OVERSPEED ALARM  OFF</string>
-    <string name="btn_overspeed_on">⚠ OVERSPEED ALARM  ON</string>
-    <string name="btn_speed_tone_off">🔔 SPEED LIMIT TONE  OFF</string>
-    <string name="btn_speed_tone_on">🔔 SPEED LIMIT TONE  ON</string>
+    <string name="btn_eco">ECO</string>
+    <string name="btn_normal">NORMAL</string>
+    <string name="btn_sport">SPORT</string>
+    <string name="btn_snow">SNOW</string>
 
-    <!-- Feedbacks -->
+    <string name="btn_regen_low">LOW</string>
+    <string name="btn_regen_std">MED</string>
+    <string name="btn_regen_high">HIGH</string>
+    <string name="btn_regen_auto">AUTO</string>
+    <string name="btn_one_pedal_off">ONE PEDAL  ●  OFF</string>
+    <string name="btn_one_pedal_on">ONE PEDAL  ●  ON</string>
+
+    <string name="btn_adas_off">OFF</string>
+    <string name="btn_adas_lim">SPEED LIMIT</string>
+    <string name="btn_adas_acc">ACC</string>
+    <string name="btn_adas_ica">ICA</string>
+
+    <string name="btn_overspeed_off">⚠  OVERSPEED ALARM  ●  OFF</string>
+    <string name="btn_overspeed_on">⚠  OVERSPEED ALARM  ●  ON</string>
+    <string name="btn_speed_tone_off">🔔  SPEED LIMIT TONE  ●  OFF</string>
+    <string name="btn_speed_tone_on">🔔  SPEED LIMIT TONE  ●  ON</string>
+
     <string name="feedback_drive_mode_applied">✓ Mode %1$s applied</string>
     <string name="feedback_regen_applied">✓ Regeneration %1$s</string>
     <string name="feedback_one_pedal_on">✓ One Pedal enabled</string>
@@ -46,11 +48,10 @@
     <string name="feedback_overspeed_off">✓ Overspeed alarm disabled</string>
     <string name="feedback_speed_tone_on">✓ Speed limit tone enabled</string>
     <string name="feedback_speed_tone_off">✓ Speed limit tone disabled</string>
-    <string name="feedback_error_write">✗ Write error (check logcat)</string>
+    <string name="feedback_error_write">✗ Write error</string>
     <string name="feedback_error_apply">✗ Error applying profile</string>
-    <string name="feedback_values_read">Values read — open logs</string>
+    <string name="feedback_adas_applied">✓ Driving assist: %1$s</string>
 
-    <!-- Profiles -->
     <string name="dialog_profiles_title">DRIVING PROFILES</string>
     <string name="btn_save_current">💾 Save current state</string>
     <string name="btn_close">✕ Close</string>
@@ -59,7 +60,6 @@
     <string name="btn_set_favorite_on">⭐ Favorite</string>
     <string name="btn_apply_profile">▶ Apply</string>
     <string name="profile_default_name">Profile %1$d</string>
-    <string name="profile_summary">%1$s • Regen %2$s</string>
     <string name="dialog_save_to">Save to…</string>
     <string name="dialog_rename_title">Rename profile</string>
     <string name="dialog_rename_hint">Profile name</string>
@@ -67,25 +67,25 @@
     <string name="btn_cancel">Cancel</string>
     <string name="feedback_profile_saved">✓ State saved in \'%1$s\'</string>
     <string name="feedback_profile_applied">✓ Profile \'%1$s\' applied</string>
-    <string name="feedback_favorite_set">⭐ \'%1$s\' set as favorite profile</string>
+    <string name="feedback_favorite_set">⭐ \'%1$s\' set as favorite</string>
 
-    <!-- Logs -->
     <string name="logs_title">Logs — MG4 Control</string>
     <string name="btn_clear_logs">Clear</string>
 
-    <!-- Boot service -->
     <string name="notif_channel_name">MG4 Control — Auto start</string>
     <string name="notif_channel_desc">Applying favorite profile at startup</string>
     <string name="notif_title">MG4 Control</string>
     <string name="notif_text">Applying favorite profile…</string>
 
-    <!-- Language picker -->
     <string name="lang_dialog_title">Choose language</string>
     <string name="lang_french">🇫🇷 Français</string>
     <string name="lang_english">🇬🇧 English</string>
 
-    <!-- Settings -->
     <string name="settings_title">SETTINGS</string>
     <string name="settings_language">App language</string>
     <string name="settings_language_current">Language: English</string>
+    <string name="settings_logs">Logs</string>
+    <string name="settings_logs_sub">Diagnostics and debugging</string>
+    <string name="settings_diag">DIAGNOSTICS</string>
+    <string name="btn_diag_adas">🔍 Lire IDs ADAS</string>
 </resources>

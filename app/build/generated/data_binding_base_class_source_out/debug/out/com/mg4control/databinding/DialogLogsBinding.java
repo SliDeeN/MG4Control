@@ -28,16 +28,21 @@ public final class DialogLogsBinding implements ViewBinding {
   public final Button btnCloseLogs;
 
   @NonNull
+  public final Button btnScrollBottom;
+
+  @NonNull
   public final ScrollView scrollLogs;
 
   @NonNull
   public final TextView tvLogs;
 
   private DialogLogsBinding(@NonNull LinearLayout rootView, @NonNull Button btnClearLogs,
-      @NonNull Button btnCloseLogs, @NonNull ScrollView scrollLogs, @NonNull TextView tvLogs) {
+      @NonNull Button btnCloseLogs, @NonNull Button btnScrollBottom, @NonNull ScrollView scrollLogs,
+      @NonNull TextView tvLogs) {
     this.rootView = rootView;
     this.btnClearLogs = btnClearLogs;
     this.btnCloseLogs = btnCloseLogs;
+    this.btnScrollBottom = btnScrollBottom;
     this.scrollLogs = scrollLogs;
     this.tvLogs = tvLogs;
   }
@@ -81,6 +86,12 @@ public final class DialogLogsBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.btnScrollBottom;
+      Button btnScrollBottom = ViewBindings.findChildViewById(rootView, id);
+      if (btnScrollBottom == null) {
+        break missingId;
+      }
+
       id = R.id.scrollLogs;
       ScrollView scrollLogs = ViewBindings.findChildViewById(rootView, id);
       if (scrollLogs == null) {
@@ -93,8 +104,8 @@ public final class DialogLogsBinding implements ViewBinding {
         break missingId;
       }
 
-      return new DialogLogsBinding((LinearLayout) rootView, btnClearLogs, btnCloseLogs, scrollLogs,
-          tvLogs);
+      return new DialogLogsBinding((LinearLayout) rootView, btnClearLogs, btnCloseLogs,
+          btnScrollBottom, scrollLogs, tvLogs);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

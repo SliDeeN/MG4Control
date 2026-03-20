@@ -32,22 +32,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val vm: MainViewModel by viewModels()
 
-    private val drivingButtons by lazy {
-        listOf(binding.btnEco, binding.btnNormal, binding.btnSport, binding.btnSnow)
-    }
-    private val regenButtons by lazy {
-        listOf(binding.btnRegenLow, binding.btnRegenStd, binding.btnRegenHigh, binding.btnRegenAuto)
-    }
+    private val drivingButtons   by lazy { listOf(binding.btnEco, binding.btnNormal, binding.btnSport, binding.btnSnow) }
+    private val regenButtons     by lazy { listOf(binding.btnRegenLow, binding.btnRegenStd, binding.btnRegenHigh, binding.btnRegenAuto) }
+    private val adasButtons      by lazy { listOf(binding.btnAdasOff, binding.btnAdasLim, binding.btnAdasAcc, binding.btnAdasIca) }
 
     private var logsDialog: Dialog? = null
     private var logsBinding: DialogLogsBinding? = null
     private val logsHandler = Handler(Looper.getMainLooper())
     private val logsRunnable = object : Runnable {
         override fun run() {
-            logsBinding?.let { lb ->
-                lb.tvLogs.text = AppLogger.getAll()
-                lb.scrollLogs.post { lb.scrollLogs.fullScroll(View.FOCUS_DOWN) }
-            }
+            logsBinding?.tvLogs?.text = AppLogger.getAll()
             logsHandler.postDelayed(this, 1000)
         }
     }
@@ -65,19 +59,17 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         AppLogger.init(applicationContext)
 
-        // Dialogue de choix de langue au premier lancement
         if (LanguageManager.isFirstLaunch(this)) {
             showFirstLaunchLanguagePicker()
             return
         }
-
         init()
     }
 
     private fun init() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        AppLogger.i("MainActivity", "onCreate — langue: ${LanguageManager.getSavedLanguage(this)}")
+        AppLogger.i("MainActivity", "onCreate — lang: ${LanguageManager.getSavedLanguage(this)}")
         setupClickListeners()
         observeViewModel()
     }
@@ -93,7 +85,7 @@ class MainActivity : AppCompatActivity() {
         logsDialog?.dismiss()
     }
 
-    // ── Choix langue premier lancement ────────────────────────────────────
+    // ── Premier lancement ─────────────────────────────────────────────────
 
     private fun showFirstLaunchLanguagePicker() {
         AlertDialog.Builder(this)
@@ -101,7 +93,7 @@ class MainActivity : AppCompatActivity() {
             .setItems(arrayOf("🇫🇷 Français", "🇬🇧 English")) { _, which ->
                 val lang = if (which == 0) LanguageManager.LANG_FR else LanguageManager.LANG_EN
                 LanguageManager.saveLanguage(this, lang)
-                recreate() // recrée l'activité avec la bonne langue
+                recreate()
             }
             .setCancelable(false)
             .show()
@@ -110,22 +102,29 @@ class MainActivity : AppCompatActivity() {
     // ── Listeners ─────────────────────────────────────────────────────────
 
     private fun setupClickListeners() {
+        // Mode de conduite
         binding.btnEco.setOnClickListener    { vm.setEco() }
         binding.btnNormal.setOnClickListener { vm.setNormal() }
         binding.btnSport.setOnClickListener  { vm.setSport() }
         binding.btnSnow.setOnClickListener   { vm.setSnow() }
+        // Régénération
         binding.btnRegenLow.setOnClickListener  { vm.setRegenLow() }
         binding.btnRegenStd.setOnClickListener  { vm.setRegenStandard() }
         binding.btnRegenHigh.setOnClickListener { vm.setRegenHigh() }
         binding.btnRegenAuto.setOnClickListener { vm.setRegenAuto() }
-        binding.btnOnePedal.setOnClickListener              { vm.toggleOnePedal() }
-        binding.btnRefresh.setOnClickListener               { vm.refreshAll() }
-        binding.btnConnect.setOnClickListener               { vm.connect() }
-        binding.btnLogs.setOnClickListener                  { showLogsDialog() }
-        binding.btnProfiles.setOnClickListener              { showProfilesDialog() }
-        binding.btnSettings.setOnClickListener              { showSettingsDialog() }
-        binding.btnSlifWarning.setOnClickListener           { vm.toggleOverspeedAlarm() }
-        binding.btnSpeedLimitChangeTone.setOnClickListener  { vm.toggleSpeedLimitChangeTone() }
+        binding.btnOnePedal.setOnClickListener  { vm.toggleOnePedal() }
+        // ADAS
+        binding.btnAdasOff.setOnClickListener { vm.setAdasOff() }
+        binding.btnAdasLim.setOnClickListener { vm.setAdasLimitateur() }
+        binding.btnAdasAcc.setOnClickListener { vm.setAdasAcc() }
+        binding.btnAdasIca.setOnClickListener { vm.setAdasIca() }
+        // Header
+        binding.btnConnect.setOnClickListener  { vm.connect() }
+        binding.btnProfiles.setOnClickListener { showProfilesDialog() }
+        binding.btnSettings.setOnClickListener { showSettingsDialog() }
+        // Alertes
+        binding.btnSlifWarning.setOnClickListener          { vm.toggleOverspeedAlarm() }
+        binding.btnSpeedLimitChangeTone.setOnClickListener { vm.toggleSpeedLimitChangeTone() }
     }
 
     // ── Observation ───────────────────────────────────────────────────────
@@ -134,19 +133,20 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { vm.connectionState.collect { updateConnectionUi(it) } }
-                launch { vm.drivingMode.collect     { highlightDrivingMode(it) } }
-                launch { vm.regenLevel.collect      { highlightRegenLevel(it) } }
-                launch { vm.onePedal.collect        { updateOnePedalButton(it) } }
-                launch { vm.overspeedAlarm.collect  { updateAlertButton(binding.btnSlifWarning, it,
+                launch { vm.drivingMode.collect      { highlightDrivingMode(it) } }
+                launch { vm.regenLevel.collect       { highlightRegenLevel(it) } }
+                launch { vm.onePedal.collect         { updateOnePedalButton(it) } }
+                launch { vm.adasMode.collect         { highlightAdas(it) } }
+                launch { vm.overspeedAlarm.collect   { updateAlertButton(
+                    binding.btnSlifWarning, it,
                     getString(if (it) R.string.btn_overspeed_on else R.string.btn_overspeed_off)) } }
-                launch { vm.speedLimitChangeTone.collect { updateAlertButton(binding.btnSpeedLimitChangeTone, it,
+                launch { vm.speedLimitChangeTone.collect { updateAlertButton(
+                    binding.btnSpeedLimitChangeTone, it,
                     getString(if (it) R.string.btn_speed_tone_on else R.string.btn_speed_tone_off)) } }
-                launch {
-                    vm.lastAction.collect { msg ->
-                        binding.tvLastAction.text = msg
-                        binding.tvLastAction.visibility = if (msg.isEmpty()) View.GONE else View.VISIBLE
-                    }
-                }
+                launch { vm.lastAction.collect { msg ->
+                    binding.tvLastAction.text = msg
+                    binding.tvLastAction.visibility = if (msg.isEmpty()) View.GONE else View.VISIBLE
+                }}
             }
         }
     }
@@ -157,29 +157,23 @@ class MainActivity : AppCompatActivity() {
         val dialog = Dialog(this)
         val sb = DialogSettingsBinding.inflate(layoutInflater)
         dialog.setContentView(sb.root)
-        dialog.window?.setLayout(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT
-        )
+        dialog.window?.setLayout(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT)
 
-        val currentLang = LanguageManager.getSavedLanguage(this)
-        sb.btnLangFr.isSelected = (currentLang == LanguageManager.LANG_FR)
-        sb.btnLangEn.isSelected = (currentLang == LanguageManager.LANG_EN)
-        sb.tvCurrentLang.text = if (currentLang == LanguageManager.LANG_FR)
-            getString(R.string.lang_french) else getString(R.string.lang_english)
+        val lang = LanguageManager.getSavedLanguage(this)
+        sb.btnLangFr.isSelected = (lang == LanguageManager.LANG_FR)
+        sb.btnLangEn.isSelected = (lang == LanguageManager.LANG_EN)
 
         sb.btnLangFr.setOnClickListener {
             LanguageManager.saveLanguage(this, LanguageManager.LANG_FR)
-            dialog.dismiss()
-            recreate()
+            dialog.dismiss(); recreate()
         }
         sb.btnLangEn.setOnClickListener {
             LanguageManager.saveLanguage(this, LanguageManager.LANG_EN)
-            dialog.dismiss()
-            recreate()
+            dialog.dismiss(); recreate()
         }
+        sb.btnOpenLogs.setOnClickListener { dialog.dismiss(); showLogsDialog() }
+        sb.btnDiagAdas.setOnClickListener { dialog.dismiss(); vm.diagAdas(); showLogsDialog() }
         sb.btnCloseSettings.setOnClickListener { dialog.dismiss() }
-
         dialog.show()
     }
 
@@ -189,33 +183,26 @@ class MainActivity : AppCompatActivity() {
         val dialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
         val pb = DialogProfilesBinding.inflate(layoutInflater)
         dialog.setContentView(pb.root)
-        dialog.window?.setLayout(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT
-        )
+        dialog.window?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
 
         pb.btnCloseProfiles.setOnClickListener { dialog.dismiss() }
         pb.btnSaveCurrentProfile.setOnClickListener {
             showSaveToProfilePicker { profileId ->
                 vm.saveCurrentToProfile(profileId)
-                dialog.dismiss()
-                showProfilesDialog()
+                dialog.dismiss(); showProfilesDialog()
             }
         }
 
-        val profiles = vm.profiles.value
-        bindProfileItem(pb.profile1, profiles.getOrNull(0) ?: VehicleProfile.empty(1), dialog)
-        bindProfileItem(pb.profile2, profiles.getOrNull(1) ?: VehicleProfile.empty(2), dialog)
-        bindProfileItem(pb.profile3, profiles.getOrNull(2) ?: VehicleProfile.empty(3), dialog)
+        fun refresh() {
+            val profiles = vm.profiles.value
+            bindProfileItem(pb.profile1, profiles.getOrNull(0) ?: VehicleProfile.empty(1), dialog)
+            bindProfileItem(pb.profile2, profiles.getOrNull(1) ?: VehicleProfile.empty(2), dialog)
+            bindProfileItem(pb.profile3, profiles.getOrNull(2) ?: VehicleProfile.empty(3), dialog)
+        }
+        refresh()
 
         lifecycleScope.launch {
-            vm.profiles.collect { updatedProfiles ->
-                if (dialog.isShowing) {
-                    bindProfileItem(pb.profile1, updatedProfiles.getOrNull(0) ?: VehicleProfile.empty(1), dialog)
-                    bindProfileItem(pb.profile2, updatedProfiles.getOrNull(1) ?: VehicleProfile.empty(2), dialog)
-                    bindProfileItem(pb.profile3, updatedProfiles.getOrNull(2) ?: VehicleProfile.empty(3), dialog)
-                }
-            }
+            vm.profiles.collect { if (dialog.isShowing) refresh() }
         }
         dialog.show()
     }
@@ -223,17 +210,13 @@ class MainActivity : AppCompatActivity() {
     private fun bindProfileItem(ib: ItemProfileBinding, profile: VehicleProfile, parentDialog: Dialog) {
         val starPrefix = if (profile.isFavorite) "⭐ " else ""
         ib.tvProfileName.text = "$starPrefix${profile.name}"
-        val onePedalStr = if (profile.onePedal) " • One Pedal ON" else ""
-        ib.tvProfileSummary.text = "${profile.driveModeLabel()} • ${getString(R.string.section_regen)} ${profile.regenLabel()}$onePedalStr"
+        ib.tvProfileSummary.text = "${profile.driveModeLabel()} • ${profile.regenLabel()}${if (profile.onePedal) " • One Pedal" else ""}"
         ib.btnSetFavorite.text = if (profile.isFavorite) getString(R.string.btn_set_favorite_on) else getString(R.string.btn_set_favorite_off)
         ib.btnSetFavorite.setOnClickListener {
             if (profile.isFavorite) vm.renameProfile(profile.id, profile.name)
             else vm.setFavorite(profile.id)
         }
-        ib.btnApplyProfile.setOnClickListener {
-            vm.applyProfile(profile.id)
-            parentDialog.dismiss()
-        }
+        ib.btnApplyProfile.setOnClickListener { vm.applyProfile(profile.id); parentDialog.dismiss() }
         ib.tvProfileName.setOnClickListener {
             showRenameDialog(profile) { newName -> vm.renameProfile(profile.id, newName) }
         }
@@ -251,8 +234,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showRenameDialog(profile: VehicleProfile, onConfirm: (String) -> Unit) {
         val input = EditText(this).apply {
-            setText(profile.name)
-            selectAll()
+            setText(profile.name); selectAll()
             hint = getString(R.string.dialog_rename_hint)
             setTextColor(ContextCompat.getColor(context, R.color.text_primary))
             setHintTextColor(ContextCompat.getColor(context, R.color.text_secondary))
@@ -262,8 +244,8 @@ class MainActivity : AppCompatActivity() {
             .setTitle(getString(R.string.dialog_rename_title))
             .setView(input)
             .setPositiveButton(getString(R.string.btn_ok)) { _, _ ->
-                val newName = input.text.toString().trim()
-                if (newName.isNotEmpty()) onConfirm(newName)
+                val n = input.text.toString().trim()
+                if (n.isNotEmpty()) onConfirm(n)
             }
             .setNegativeButton(getString(R.string.btn_cancel), null)
             .show()
@@ -275,17 +257,13 @@ class MainActivity : AppCompatActivity() {
         val dialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
         val lb = DialogLogsBinding.inflate(layoutInflater)
         dialog.setContentView(lb.root)
-        dialog.window?.setLayout(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT
-        )
-        logsDialog  = dialog
-        logsBinding = lb
+        dialog.window?.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT)
+        logsDialog = dialog; logsBinding = lb
         lb.btnClearLogs.setOnClickListener { AppLogger.clear(); lb.tvLogs.text = "" }
+        lb.btnScrollBottom.setOnClickListener { lb.scrollLogs.post { lb.scrollLogs.fullScroll(View.FOCUS_DOWN) } }
         lb.btnCloseLogs.setOnClickListener {
             logsHandler.removeCallbacks(logsRunnable)
-            dialog.dismiss()
-            logsDialog = null; logsBinding = null
+            dialog.dismiss(); logsDialog = null; logsBinding = null
         }
         lb.tvLogs.text = AppLogger.getAll()
         lb.scrollLogs.post { lb.scrollLogs.fullScroll(View.FOCUS_DOWN) }
@@ -300,35 +278,33 @@ class MainActivity : AppCompatActivity() {
             is VehicleRepository.ConnectionState.Disconnected -> {
                 binding.tvStatus.text = getString(R.string.status_disconnected)
                 binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_disconnected))
-                binding.btnConnect.visibility = View.VISIBLE
+                binding.btnConnect.text = getString(R.string.btn_connect)
                 setControlsEnabled(false)
             }
             is VehicleRepository.ConnectionState.Connecting -> {
                 binding.tvStatus.text = getString(R.string.status_connecting)
                 binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_connecting))
-                binding.btnConnect.visibility = View.GONE
+                binding.btnConnect.text = getString(R.string.btn_connect)
                 setControlsEnabled(false)
             }
             is VehicleRepository.ConnectionState.Connected -> {
                 binding.tvStatus.text = getString(R.string.status_connected)
                 binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_connected))
-                binding.btnConnect.visibility = View.GONE
+                binding.btnConnect.text = getString(R.string.btn_refresh)
                 setControlsEnabled(true)
             }
             is VehicleRepository.ConnectionState.Error -> {
-                val shortMsg = state.message.lines().first()
-                binding.tvStatus.text = "🔴 $shortMsg"
+                binding.tvStatus.text = "🔴 ${state.message.lines().first()}"
                 binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_error))
-                binding.btnConnect.visibility = View.VISIBLE
+                binding.btnConnect.text = getString(R.string.btn_connect)
                 setControlsEnabled(false)
             }
         }
     }
 
     private fun setControlsEnabled(enabled: Boolean) {
-        (drivingButtons + regenButtons + listOf(
-            binding.btnOnePedal, binding.btnRefresh,
-            binding.btnSlifWarning, binding.btnSpeedLimitChangeTone
+        (drivingButtons + regenButtons + adasButtons + listOf(
+            binding.btnOnePedal, binding.btnSlifWarning, binding.btnSpeedLimitChangeTone
         )).forEach { it.isEnabled = enabled }
     }
 
@@ -344,6 +320,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun highlightRegenLevel(level: Int) {
+        // Si One Pedal est ON, ne pas surligner les boutons régén
+        if (vm.onePedal.value) return
         val active = when (level) {
             VehiclePropertyIds.RegenLevel.LOW      -> binding.btnRegenLow
             VehiclePropertyIds.RegenLevel.STANDARD -> binding.btnRegenStd
@@ -359,10 +337,31 @@ class MainActivity : AppCompatActivity() {
         binding.btnOnePedal.text = getString(
             if (active) R.string.btn_one_pedal_on else R.string.btn_one_pedal_off
         )
+        // Estomper/restaurer les boutons régén
+        regenButtons.forEach { btn ->
+            btn.isEnabled = !active
+            btn.isSelected = if (active) false else btn.isSelected
+        }
+        if (!active) highlightRegenLevel(vm.regenLevel.value)
+    }
+
+    private fun highlightAdas(mode: Int) {
+        val active = when (mode) {
+            VehiclePropertyIds.AdasMode.OFF        -> binding.btnAdasOff
+            VehiclePropertyIds.AdasMode.SPEED_LIMI -> binding.btnAdasLim
+            VehiclePropertyIds.AdasMode.ACC        -> binding.btnAdasAcc
+            VehiclePropertyIds.AdasMode.ICA        -> binding.btnAdasIca
+            else -> null
+        }
+        adasButtons.forEach { it.isSelected = (it == active) }
     }
 
     private fun updateAlertButton(btn: android.widget.Button, active: Boolean, label: String) {
         btn.isSelected = active
         btn.text = label
+        btn.background = ContextCompat.getDrawable(
+            this,
+            if (active) R.drawable.bg_button_alert_on else R.drawable.bg_button_alert_off
+        )
     }
 }

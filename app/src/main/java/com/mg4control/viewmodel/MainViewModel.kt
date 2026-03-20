@@ -43,6 +43,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     private val _speedLimitChangeTone = MutableStateFlow(false)
     val speedLimitChangeTone: StateFlow<Boolean> = _speedLimitChangeTone.asStateFlow()
 
+    private val _adasMode = MutableStateFlow(0)
+    val adasMode: StateFlow<Int> = _adasMode.asStateFlow()
+
     private val _lastAction = MutableStateFlow("")
     val lastAction: StateFlow<String> = _lastAction.asStateFlow()
 
@@ -69,13 +72,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val pedal  = repository.getOnePedal()
             val slif   = repository.getOverspeedAlarm()
             val tone   = repository.getSpeedLimitChangeTone()
-            Log.d(TAG, "refreshAll → drive=$mode regen=$regen pedal=$pedal slif=$slif tone=$tone")
+            val adas   = repository.getAdasMode()  // getIntProperty(0x32)
+            Log.d(TAG, "refreshAll → drive=$mode regen=$regen pedal=$pedal slif=$slif tone=$tone adas=$adas")
             _drivingMode.value          = mode
             _regenLevel.value           = regen
             _onePedal.value             = (pedal == VehiclePropertyIds.SignalPedal.ON)
             _overspeedAlarm.value       = (slif == VehiclePropertyIds.AlertSwitch.ON)
             _speedLimitChangeTone.value = (tone == VehiclePropertyIds.AlertSwitch.ON)
-        }
+            _adasMode.value             = if (adas >= 0) adas else 0        }
     }
 
     // ── Mode de conduite ─────────────────────────────────────────────────
@@ -125,10 +129,42 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val ok = repository.setOnePedal(newState)
             if (ok) {
                 _onePedal.value = newState
-                feedback(if (newState) "✓ One Pedal activé" else "✓ One Pedal désactivé")
+                feedback(getApplication<android.app.Application>().getString(
+                    if (newState) R.string.feedback_one_pedal_on else R.string.feedback_one_pedal_off))
             } else {
                 feedback(getApplication<android.app.Application>().getString(R.string.feedback_error_write))
             }
+        }
+    }
+
+    // ── ADAS ─────────────────────────────────────────────────────────────
+    fun setAdasOff()        = applyAdas(VehiclePropertyIds.AdasMode.OFF,        "OFF")
+    fun setAdasLimitateur() = applyAdas(VehiclePropertyIds.AdasMode.SPEED_LIMI, "Limitateur")
+    fun setAdasAcc()        = applyAdas(VehiclePropertyIds.AdasMode.ACC,        "ACC")
+    fun setAdasIca()        = applyAdas(VehiclePropertyIds.AdasMode.ICA,        "ICA")
+    private fun applyAdas(mode: Int, label: String) {
+        viewModelScope.launch {
+            val ok = repository.setAdasMode(mode)
+            if (ok) {
+                _adasMode.value = mode
+                feedback(getApplication<android.app.Application>().getString(R.string.feedback_adas_applied, label))
+            } else {
+                feedback(getApplication<android.app.Application>().getString(R.string.feedback_error_write))
+            }
+        }
+    }
+
+    /** Diagnostic ADAS — lit le mode via getMixProperty (méthode correcte confirmée par smali) */
+    fun diagAdas() {
+        viewModelScope.launch {
+            AppLogger.i("DIAG_ADAS", "=== Diagnostic ADAS ===")
+            val vMix = repository.getMixInt(VehiclePropertyIds.MIXED_INTELLIGENT_DRIVE)
+            AppLogger.i("DIAG_ADAS", "getMixProperty(0x32) = $vMix")
+            val vInt = repository.getIntProperty(VehiclePropertyIds.MIXED_INTELLIGENT_DRIVE)
+            AppLogger.i("DIAG_ADAS", "getIntProperty(0x32) = $vInt")
+            AppLogger.i("DIAG_ADAS", "Valeurs attendues : 0=OFF 1=Limitateur 2=Auto 3=ACC 4=ICA")
+            AppLogger.i("DIAG_ADAS", "=== Fin ===")
+            feedback("ADAS : getMix=$vMix getInt=$vInt")
         }
     }
 
@@ -139,7 +175,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val ok = repository.setOverspeedAlarm(newState)
             if (ok) {
                 _overspeedAlarm.value = newState
-                feedback(if (newState) "✓ Alerte dépassement activée" else "✓ Alerte dépassement désactivée")
+                feedback(getApplication<android.app.Application>().getString(
+                    if (newState) R.string.feedback_overspeed_on else R.string.feedback_overspeed_off))
             } else {
                 feedback(getApplication<android.app.Application>().getString(R.string.feedback_error_write))
             }
@@ -176,7 +213,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val ok = repository.setSpeedLimitChangeTone(newState)
             if (ok) {
                 _speedLimitChangeTone.value = newState
-                feedback(if (newState) "✓ Son changement limite activé" else "✓ Son changement limite désactivé")
+                feedback(getApplication<android.app.Application>().getString(
+                    if (newState) R.string.feedback_speed_tone_on else R.string.feedback_speed_tone_off))
             } else {
                 feedback(getApplication<android.app.Application>().getString(R.string.feedback_error_write))
             }
