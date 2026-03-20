@@ -1,0 +1,54 @@
+[
+    {
+        "merged": "com.mg4control.app-debug-36:/drawable_bg_button_drive.xml.flat",
+        "source": "com.mg4control.app-main-38:/drawable/bg_button_drive.xml"
+    },
+    {
+        "merged": "com.mg4control.app-debug-36:/drawable_bg_button_regen.xml.flat",
+        "source": "com.mg4control.app-main-38:/drawable/bg_button_regen.xml"
+    },
+    {
+        "merged": "com.mg4control.app-debug-36:/mipmap-anydpi_ic_launcher_round.xml.flat",
+        "source": "com.mg4control.app-main-38:/mipmap-anydpi/ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.mg4control.app-debug-36:/drawable_bg_button_secondary.xml.flat",
+        "source": "com.mg4control.app-main-38:/drawable/bg_button_secondary.xml"
+    },
+    {
+        "merged": "com.mg4control.app-debug-36:/mipmap-anydpi_ic_launcher.xml.flat",
+        "source": "com.mg4control.app-main-38:/mipmap-anydpi/ic_launcher.xml"
+    },
+    {
+        "merged": "com.mg4control.app-debug-36:/layout_dialog_logs.xml.flat",
+        "source": "com.mg4control.app-main-38:/layout/dialog_logs.xml"
+    },
+    {
+        "merged": "com.mg4control.app-debug-36:/color_btn_text_selector.xml.flat",
+        "source": "com.mg4control.app-main-38:/color/btn_text_selector.xml"
+    },
+    {
+        "merged": "com.mg4control.app-debug-36:/layout_dialog_settings.xml.flat",
+        "source": "com.mg4control.app-main-38:/layout/dialog_settings.xml"
+    },
+    {
+        "merged": "com.mg4control.app-debug-36:/layout_item_profile.xml.flat",
+        "source": "com.mg4control.app-main-38:/layout/item_profile.xml"
+    },
+    {
+        "merged": "com.mg4control.app-debug-36:/drawable_bg_button_one_pedal.xml.flat",
+        "source": "com.mg4control.app-main-38:/drawable/bg_button_one_pedal.xml"
+    },
+    {
+        "merged": "com.mg4control.app-debug-36:/layout_dialog_profiles.xml.flat",
+        "source": "com.mg4control.app-main-38:/layout/dialog_profiles.xml"
+    },
+    {
+        "merged": "com.mg4control.app-debug-36:/layout_activity_main.xml.flat",
+        "source": "com.mg4control.app-main-38:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.mg4control.app-debug-36:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "com.mg4control.app-main-38:/drawable/ic_launcher_foreground.xml"
+    }
+]

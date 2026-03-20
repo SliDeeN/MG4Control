@@ -1,0 +1,22 @@
+[
+    {
+        "merged": "com.mg4control.app-mergeDebugResources-35:/layout/item_profile.xml",
+        "source": "com.mg4control.app-main-38:/layout/item_profile.xml"
+    },
+    {
+        "merged": "com.mg4control.app-mergeDebugResources-35:/layout/dialog_settings.xml",
+        "source": "com.mg4control.app-main-38:/layout/dialog_settings.xml"
+    },
+    {
+        "merged": "com.mg4control.app-mergeDebugResources-35:/layout/dialog_logs.xml",
+        "source": "com.mg4control.app-main-38:/layout/dialog_logs.xml"
+    },
+    {
+        "merged": "com.mg4control.app-mergeDebugResources-35:/layout/dialog_profiles.xml",
+        "source": "com.mg4control.app-main-38:/layout/dialog_profiles.xml"
+    },
+    {
+        "merged": "com.mg4control.app-mergeDebugResources-35:/layout/activity_main.xml",
+        "source": "com.mg4control.app-main-38:/layout/activity_main.xml"
+    }
+]
