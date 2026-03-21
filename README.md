@@ -1,6 +1,6 @@
 # MG4 Control
 
-Application Android pour piloter les réglages de conduite de la MG4 EV directement depuis l'écran de bord.
+Application Android pour sauvegarder les réglages de conduite de la MG4 EV et les appliquer directement au démarrage de la voiture.
 
 > **Langues / Languages** : Français 🇫🇷 | English 🇬🇧
 
@@ -65,13 +65,11 @@ val managerClass = launcherCtx.classLoader
 
 ## Installation sur la MG4
 
-1. Compiler l'APK dans Android Studio : **Build → Build APK**
-2. Copier `app-debug.apk` sur une clé USB **FAT32**
+1. Télécharger l'APK
+2. Copier l'APK sur une clé USB **FAT32**
 3. Brancher la clé sur la MG4
 4. Ouvrir le gestionnaire de fichiers → taper sur l'APK → **Installer**
 5. Autoriser les sources inconnues si demandé
-
-> **Note** : si une version précédente est installée, la désinstaller d'abord.
 
 ---
 
