@@ -20,10 +20,10 @@ public final class DialogSettingsBinding implements ViewBinding {
   private final LinearLayout rootView;
 
   @NonNull
-  public final Button btnCloseSettings;
+  public final Button btnAbout;
 
   @NonNull
-  public final Button btnDiagAdas;
+  public final Button btnCloseSettings;
 
   @NonNull
   public final Button btnLangEn;
@@ -34,12 +34,12 @@ public final class DialogSettingsBinding implements ViewBinding {
   @NonNull
   public final Button btnOpenLogs;
 
-  private DialogSettingsBinding(@NonNull LinearLayout rootView, @NonNull Button btnCloseSettings,
-      @NonNull Button btnDiagAdas, @NonNull Button btnLangEn, @NonNull Button btnLangFr,
+  private DialogSettingsBinding(@NonNull LinearLayout rootView, @NonNull Button btnAbout,
+      @NonNull Button btnCloseSettings, @NonNull Button btnLangEn, @NonNull Button btnLangFr,
       @NonNull Button btnOpenLogs) {
     this.rootView = rootView;
+    this.btnAbout = btnAbout;
     this.btnCloseSettings = btnCloseSettings;
-    this.btnDiagAdas = btnDiagAdas;
     this.btnLangEn = btnLangEn;
     this.btnLangFr = btnLangFr;
     this.btnOpenLogs = btnOpenLogs;
@@ -72,15 +72,15 @@ public final class DialogSettingsBinding implements ViewBinding {
     // This is done to optimize the compiled bytecode for size and performance.
     int id;
     missingId: {
-      id = R.id.btnCloseSettings;
-      Button btnCloseSettings = ViewBindings.findChildViewById(rootView, id);
-      if (btnCloseSettings == null) {
+      id = R.id.btnAbout;
+      Button btnAbout = ViewBindings.findChildViewById(rootView, id);
+      if (btnAbout == null) {
         break missingId;
       }
 
-      id = R.id.btnDiagAdas;
-      Button btnDiagAdas = ViewBindings.findChildViewById(rootView, id);
-      if (btnDiagAdas == null) {
+      id = R.id.btnCloseSettings;
+      Button btnCloseSettings = ViewBindings.findChildViewById(rootView, id);
+      if (btnCloseSettings == null) {
         break missingId;
       }
 
@@ -102,7 +102,7 @@ public final class DialogSettingsBinding implements ViewBinding {
         break missingId;
       }
 
-      return new DialogSettingsBinding((LinearLayout) rootView, btnCloseSettings, btnDiagAdas,
+      return new DialogSettingsBinding((LinearLayout) rootView, btnAbout, btnCloseSettings,
           btnLangEn, btnLangFr, btnOpenLogs);
     }
     String missingId = rootView.getResources().getResourceName(id);

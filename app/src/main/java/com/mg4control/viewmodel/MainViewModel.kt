@@ -55,11 +55,22 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     // ── Init ──────────────────────────────────────────────────────────────
     init {
         _profiles.value = profileRepository.getAll()
+
+        // Premier refresh quand Connected est émis
         connectionState.onEach { state ->
             if (state == VehicleRepository.ConnectionState.Connected) {
                 refreshAll()
             }
         }.launchIn(viewModelScope)
+
+        // Second refresh quand onServiceConnected est vraiment reçu (SDK prêt)
+        // Résout le bug de boutons grisés au démarrage
+        repository.onServiceConnectedCallback = {
+            viewModelScope.launch {
+                AppLogger.i("MainViewModel", "onServiceConnected — refreshAll tardif")
+                refreshAll()
+            }
+        }
     }
 
     // ── Actions ───────────────────────────────────────────────────────────

@@ -78,9 +78,6 @@ public final class ActivityMainBinding implements ViewBinding {
   public final TextView tvAppTitle;
 
   @NonNull
-  public final TextView tvLastAction;
-
-  @NonNull
   public final TextView tvStatus;
 
   private ActivityMainBinding(@NonNull LinearLayout rootView, @NonNull Button btnAdasAcc,
@@ -90,7 +87,7 @@ public final class ActivityMainBinding implements ViewBinding {
       @NonNull Button btnRegenHigh, @NonNull Button btnRegenLow, @NonNull Button btnRegenStd,
       @NonNull Button btnSettings, @NonNull Button btnSlifWarning, @NonNull Button btnSnow,
       @NonNull Button btnSpeedLimitChangeTone, @NonNull Button btnSport,
-      @NonNull TextView tvAppTitle, @NonNull TextView tvLastAction, @NonNull TextView tvStatus) {
+      @NonNull TextView tvAppTitle, @NonNull TextView tvStatus) {
     this.rootView = rootView;
     this.btnAdasAcc = btnAdasAcc;
     this.btnAdasIca = btnAdasIca;
@@ -111,7 +108,6 @@ public final class ActivityMainBinding implements ViewBinding {
     this.btnSpeedLimitChangeTone = btnSpeedLimitChangeTone;
     this.btnSport = btnSport;
     this.tvAppTitle = tvAppTitle;
-    this.tvLastAction = tvLastAction;
     this.tvStatus = tvStatus;
   }
 
@@ -256,12 +252,6 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.tvLastAction;
-      TextView tvLastAction = ViewBindings.findChildViewById(rootView, id);
-      if (tvLastAction == null) {
-        break missingId;
-      }
-
       id = R.id.tvStatus;
       TextView tvStatus = ViewBindings.findChildViewById(rootView, id);
       if (tvStatus == null) {
@@ -271,7 +261,7 @@ public final class ActivityMainBinding implements ViewBinding {
       return new ActivityMainBinding((LinearLayout) rootView, btnAdasAcc, btnAdasIca, btnAdasLim,
           btnAdasOff, btnConnect, btnEco, btnNormal, btnOnePedal, btnProfiles, btnRegenAuto,
           btnRegenHigh, btnRegenLow, btnRegenStd, btnSettings, btnSlifWarning, btnSnow,
-          btnSpeedLimitChangeTone, btnSport, tvAppTitle, tvLastAction, tvStatus);
+          btnSpeedLimitChangeTone, btnSport, tvAppTitle, tvStatus);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:background="@color/bg_dark"
     android:orientation="vertical"
-    android:padding="12dp">
+    android:padding="8dp">
 
     <!-- ── HEADER ── -->
     <LinearLayout
@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:layout_marginBottom="10dp">
+        android:layout_marginBottom="6dp">
 
         <TextView
             android:id="@+id/tvAppTitle"
@@ -21,9 +21,9 @@
             android:layout_height="wrap_content"
             android:text="@string/app_name"
             android:textColor="@color/text_primary"
-            android:textSize="18sp"
+            android:textSize="16sp"
             android:textStyle="bold"
-            android:layout_marginEnd="12dp"/>
+            android:layout_marginEnd="10dp"/>
 
         <TextView
             android:id="@+id/tvStatus"
@@ -31,54 +31,54 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/status_disconnected"
-            android:textSize="12sp"
+            android:textSize="11sp"
             android:textColor="@color/status_disconnected"
             android:background="@drawable/bg_status"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="6dp"
+            android:paddingHorizontal="10dp"
+            android:paddingVertical="5dp"
             android:ellipsize="end"
             android:maxLines="1"
-            android:layout_marginEnd="8dp"/>
+            android:layout_marginEnd="6dp"/>
 
         <Button
             android:id="@+id/btnConnect"
             style="@style/Widget.MG4Control.Button.Secondary"
             android:layout_width="wrap_content"
-            android:layout_height="34dp"
+            android:layout_height="30dp"
             android:text="@string/btn_connect"
-            android:paddingHorizontal="12dp"
-            android:textSize="11sp"
-            android:layout_marginEnd="6dp"/>
+            android:paddingHorizontal="10dp"
+            android:textSize="10sp"
+            android:layout_marginEnd="4dp"/>
 
         <Button
             android:id="@+id/btnProfiles"
             style="@style/Widget.MG4Control.Button.Secondary"
             android:layout_width="wrap_content"
-            android:layout_height="34dp"
+            android:layout_height="30dp"
             android:text="@string/btn_profiles"
-            android:paddingHorizontal="12dp"
-            android:textSize="11sp"
-            android:layout_marginEnd="6dp"/>
+            android:paddingHorizontal="10dp"
+            android:textSize="10sp"
+            android:layout_marginEnd="4dp"/>
 
         <Button
             android:id="@+id/btnSettings"
             style="@style/Widget.MG4Control.Button.Secondary"
             android:layout_width="wrap_content"
-            android:layout_height="34dp"
+            android:layout_height="30dp"
             android:text="@string/btn_settings"
-            android:paddingHorizontal="12dp"
-            android:textSize="11sp"/>
+            android:paddingHorizontal="10dp"
+            android:textSize="10sp"/>
     </LinearLayout>
 
-    <!-- ── PARAMÈTRES DE CONDUITE (pleine largeur) ── -->
+    <!-- ── PARAMÈTRES DE CONDUITE ── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="3"
         android:orientation="vertical"
         android:background="@drawable/bg_card_rounded"
-        android:layout_marginBottom="8dp"
-        android:padding="10dp">
+        android:layout_marginBottom="6dp"
+        android:padding="8dp">
 
         <TextView
             android:layout_width="match_parent"
@@ -88,9 +88,8 @@
             android:textSize="9sp"
             android:letterSpacing="0.12"
             android:gravity="center"
-            android:layout_marginBottom="8dp"/>
+            android:layout_marginBottom="6dp"/>
 
-        <!-- 3 blocs côte à côte -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
@@ -104,64 +103,45 @@
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:background="@drawable/bg_block"
-                android:layout_marginEnd="6dp"
-                android:padding="8dp">
+                android:layout_marginEnd="4dp"
+                android:padding="6dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/section_drive_mode"
                     android:textColor="@color/text_secondary"
-                    android:textSize="9sp"
+                    android:textSize="8sp"
                     android:letterSpacing="0.1"
                     android:gravity="center"
-                    android:layout_marginBottom="6dp"/>
+                    android:layout_marginBottom="4dp"/>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="4dp">
-                    <Button
-                        android:id="@+id/btnEco"
+                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+                    android:layout_weight="1" android:orientation="horizontal" android:layout_marginBottom="3dp">
+                    <Button android:id="@+id/btnEco"
                         style="@style/Widget.MG4Control.Button.ParamBlue"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:text="@string/btn_eco"
-                        android:layout_marginEnd="3dp"/>
-                    <Button
-                        android:id="@+id/btnNormal"
+                        android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="@string/btn_eco"
+                        android:layout_marginEnd="2dp"/>
+                    <Button android:id="@+id/btnNormal"
                         style="@style/Widget.MG4Control.Button.ParamBlue"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:text="@string/btn_normal"
-                        android:layout_marginStart="3dp"/>
+                        android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="@string/btn_normal"
+                        android:layout_marginStart="2dp"/>
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:orientation="horizontal">
-                    <Button
-                        android:id="@+id/btnSport"
+                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+                    android:layout_weight="1" android:orientation="horizontal">
+                    <Button android:id="@+id/btnSport"
                         style="@style/Widget.MG4Control.Button.ParamBlue"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:text="@string/btn_sport"
-                        android:layout_marginEnd="3dp"/>
-                    <Button
-                        android:id="@+id/btnSnow"
+                        android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="@string/btn_sport"
+                        android:layout_marginEnd="2dp"/>
+                    <Button android:id="@+id/btnSnow"
                         style="@style/Widget.MG4Control.Button.ParamBlue"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:text="@string/btn_snow"
-                        android:layout_marginStart="3dp"/>
+                        android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="@string/btn_snow"
+                        android:layout_marginStart="2dp"/>
                 </LinearLayout>
             </LinearLayout>
 
@@ -172,69 +152,48 @@
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:background="@drawable/bg_block"
-                android:layout_marginEnd="6dp"
-                android:padding="8dp">
+                android:layout_marginEnd="4dp"
+                android:padding="6dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/section_regen"
                     android:textColor="@color/text_secondary"
-                    android:textSize="9sp"
+                    android:textSize="8sp"
                     android:letterSpacing="0.1"
                     android:gravity="center"
-                    android:layout_marginBottom="6dp"/>
+                    android:layout_marginBottom="4dp"/>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="4dp">
-                    <Button
-                        android:id="@+id/btnRegenLow"
+                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+                    android:layout_weight="1" android:orientation="horizontal" android:layout_marginBottom="3dp">
+                    <Button android:id="@+id/btnRegenLow"
                         style="@style/Widget.MG4Control.Button.ParamGreen"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:text="@string/btn_regen_low"
-                        android:layout_marginEnd="3dp"/>
-                    <Button
-                        android:id="@+id/btnRegenStd"
+                        android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="@string/btn_regen_low"
+                        android:layout_marginEnd="2dp"/>
+                    <Button android:id="@+id/btnRegenStd"
                         style="@style/Widget.MG4Control.Button.ParamGreen"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:text="@string/btn_regen_std"
-                        android:layout_marginStart="3dp"/>
+                        android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="@string/btn_regen_std"
+                        android:layout_marginStart="2dp"/>
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="4dp">
-                    <Button
-                        android:id="@+id/btnRegenHigh"
+                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+                    android:layout_weight="1" android:orientation="horizontal" android:layout_marginBottom="3dp">
+                    <Button android:id="@+id/btnRegenHigh"
                         style="@style/Widget.MG4Control.Button.ParamGreen"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:text="@string/btn_regen_high"
-                        android:layout_marginEnd="3dp"/>
-                    <Button
-                        android:id="@+id/btnRegenAuto"
+                        android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="@string/btn_regen_high"
+                        android:layout_marginEnd="2dp"/>
+                    <Button android:id="@+id/btnRegenAuto"
                         style="@style/Widget.MG4Control.Button.ParamGreen"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:text="@string/btn_regen_auto"
-                        android:layout_marginStart="3dp"/>
+                        android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="@string/btn_regen_auto"
+                        android:layout_marginStart="2dp"/>
                 </LinearLayout>
 
-                <Button
-                    android:id="@+id/btnOnePedal"
+                <Button android:id="@+id/btnOnePedal"
                     style="@style/Widget.MG4Control.Button.ParamGreen"
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
@@ -249,77 +208,58 @@
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:background="@drawable/bg_block"
-                android:padding="8dp">
+                android:padding="6dp">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/section_adas"
                     android:textColor="@color/text_secondary"
-                    android:textSize="9sp"
+                    android:textSize="8sp"
                     android:letterSpacing="0.1"
                     android:gravity="center"
-                    android:layout_marginBottom="6dp"/>
+                    android:layout_marginBottom="4dp"/>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:orientation="horizontal"
-                    android:layout_marginBottom="4dp">
-                    <Button
-                        android:id="@+id/btnAdasOff"
+                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+                    android:layout_weight="1" android:orientation="horizontal" android:layout_marginBottom="3dp">
+                    <Button android:id="@+id/btnAdasOff"
                         style="@style/Widget.MG4Control.Button.ParamAmber"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:text="@string/btn_adas_off"
-                        android:layout_marginEnd="3dp"/>
-                    <Button
-                        android:id="@+id/btnAdasLim"
+                        android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="@string/btn_adas_off"
+                        android:layout_marginEnd="2dp"/>
+                    <Button android:id="@+id/btnAdasLim"
                         style="@style/Widget.MG4Control.Button.ParamAmber"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:text="@string/btn_adas_lim"
-                        android:layout_marginStart="3dp"/>
+                        android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="@string/btn_adas_lim"
+                        android:layout_marginStart="2dp"/>
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:orientation="horizontal">
-                    <Button
-                        android:id="@+id/btnAdasAcc"
+                <LinearLayout android:layout_width="match_parent" android:layout_height="0dp"
+                    android:layout_weight="1" android:orientation="horizontal">
+                    <Button android:id="@+id/btnAdasAcc"
                         style="@style/Widget.MG4Control.Button.ParamAmber"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:text="@string/btn_adas_acc"
-                        android:layout_marginEnd="3dp"/>
-                    <Button
-                        android:id="@+id/btnAdasIca"
+                        android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="@string/btn_adas_acc"
+                        android:layout_marginEnd="2dp"/>
+                    <Button android:id="@+id/btnAdasIca"
                         style="@style/Widget.MG4Control.Button.ParamAmber"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
-                        android:text="@string/btn_adas_ica"
-                        android:layout_marginStart="3dp"/>
+                        android:layout_width="0dp" android:layout_height="match_parent"
+                        android:layout_weight="1" android:text="@string/btn_adas_ica"
+                        android:layout_marginStart="2dp"/>
                 </LinearLayout>
             </LinearLayout>
 
         </LinearLayout>
     </LinearLayout>
 
-    <!-- ── PARAMÈTRES D'ALERTES (pleine largeur, en dessous) ── -->
+    <!-- ── PARAMÈTRES D'ALERTES ── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:orientation="vertical"
         android:background="@drawable/bg_card_rounded"
-        android:padding="10dp">
+        android:padding="8dp">
 
         <TextView
             android:layout_width="match_parent"
@@ -329,7 +269,7 @@
             android:textSize="9sp"
             android:letterSpacing="0.12"
             android:gravity="center"
-            android:layout_marginBottom="8dp"/>
+            android:layout_marginBottom="6dp"/>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -344,7 +284,7 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:text="@string/btn_overspeed_off"
-                android:layout_marginEnd="8dp"/>
+                android:layout_marginEnd="4dp"/>
 
             <Button
                 android:id="@+id/btnSpeedLimitChangeTone"
@@ -352,21 +292,9 @@
                 android:layout_width="0dp"
                 android:layout_height="match_parent"
                 android:layout_weight="1"
-                android:text="@string/btn_speed_tone_off"/>
-
+                android:text="@string/btn_speed_tone_off"
+                android:layout_marginStart="4dp"/>
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/tvLastAction"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text=""
-            android:textColor="@color/accent_green"
-            android:textSize="11sp"
-            android:gravity="center"
-            android:visibility="gone"
-            android:layout_marginTop="6dp"/>
-
     </LinearLayout>
 
 </LinearLayout>

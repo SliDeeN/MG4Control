@@ -36,6 +36,9 @@ class VehicleRepository(private val appContext: Context) {
     private var methodSetMix: Method?  = null
     private var methodGetMix: Method?  = null
 
+    // Callback déclenché quand le service SAIC est vraiment prêt
+    var onServiceConnectedCallback: (() -> Unit)? = null
+
     fun connect() {
         if (_connectionState.value == ConnectionState.Connected ||
             _connectionState.value == ConnectionState.Connecting) return
@@ -58,11 +61,16 @@ class VehicleRepository(private val appContext: Context) {
             val managerClass = cl.loadClass(CLASS_PROPERTY_MANAGER)
             AppLogger.i(TAG, "Classe chargée OK")
 
-            // 3. Proxy no-op pour IVehicleServiceListener
+            // 3. Proxy pour IVehicleServiceListener — intercepte onServiceConnected
             AppLogger.i(TAG, "Création proxy IVehicleServiceListener...")
             val listenerIface = cl.loadClass(IFACE_SERVICE_LISTENER)
             val proxy = Proxy.newProxyInstance(cl, arrayOf(listenerIface)) { _, method, args ->
                 AppLogger.d(TAG, "Listener.${method.name}(${args?.joinToString() ?: ""})")
+                // Quand le service SAIC est vraiment prêt, on relance un refresh
+                if (method.name == "onServiceConnected") {
+                    AppLogger.i(TAG, "onServiceConnected reçu — refresh des paramètres...")
+                    onServiceConnectedCallback?.invoke()
+                }
                 null
             }
             AppLogger.i(TAG, "Proxy créé OK")

@@ -17,7 +17,20 @@
     <color name="text_primary">#FFFFFFFF</color>
     <color name="text_secondary">#FF8890A0</color>
     <color name="transparent">#00000000</color>
+    <string name="about_credit">Made with ♥ by\nSliDeeN &amp; Claude AI\nAnthropic · 2026</string>
+    <string name="about_firmware_badge">SWI133 · Trophy EU MY24</string>
+    <string name="about_firmware_label">Firmware testé</string>
+    <string name="about_firmware_value">SWI133-29176-1300R30</string>
+    <string name="about_github_label">GitHub</string>
+    <string name="about_github_value">github.com/SliDeeN/MG4Control</string>
+    <string name="about_license_label">Licence</string>
+    <string name="about_license_value">MIT · Open Source</string>
+    <string name="about_tech_label">Technique</string>
+    <string name="about_tech_value">SAIC SDK · Réflexion Java · AIDL</string>
+    <string name="about_title">À PROPOS</string>
+    <string name="about_version">Version 1.2 · Android Automotive</string>
     <string name="app_name">MG4 Control</string>
+    <string name="btn_about">ℹ Infos</string>
     <string name="btn_adas_acc">ACC</string>
     <string name="btn_adas_ica">ICA</string>
     <string name="btn_adas_lim">LIMITATEUR</string>
@@ -83,6 +96,7 @@
     <string name="section_drive_mode">MODE DE CONDUITE</string>
     <string name="section_drive_mode_full">PARAMÈTRES DE CONDUITE</string>
     <string name="section_regen">RÉGÉNÉRATION</string>
+    <string name="settings_about_section">À PROPOS</string>
     <string name="settings_diag">DIAGNOSTIC</string>
     <string name="settings_language">Langue de l\'application</string>
     <string name="settings_language_current">Langue : Français</string>
@@ -102,56 +116,71 @@
         <item name="android:statusBarColor">@color/bg_dark</item>
         <item name="android:navigationBarColor">@color/bg_dark</item>
     </style>
-    <style name="Widget.MG4Control.Button.Alert" parent="Widget.MaterialComponents.Button.TextButton">
+    <style name="Widget.MG4Control.Button.Alert" parent="Widget.MaterialComponents.Button">
         <item name="android:textColor">@color/btn_alert_text</item>
         <item name="android:background">@drawable/bg_button_alert_off</item>
-        <item name="android:textSize">12sp</item>
+        <item name="android:textSize">11sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:letterSpacing">0.06</item>
         <item name="android:gravity">center</item>
         <item name="android:stateListAnimator">@null</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="backgroundTint">@null</item>
         <item name="android:paddingHorizontal">8dp</item>
     </style>
     <style name="Widget.MG4Control.Button.DriveMode" parent="Widget.MG4Control.Button.ParamBlue"/>
     <style name="Widget.MG4Control.Button.Param" parent="Widget.MG4Control.Button.ParamBlue"/>
-    <style name="Widget.MG4Control.Button.ParamAmber" parent="Widget.MaterialComponents.Button.TextButton">
+    <style name="Widget.MG4Control.Button.ParamAmber" parent="Widget.MaterialComponents.Button">
         <item name="android:textColor">@color/btn_param_amber_text</item>
         <item name="android:background">@drawable/bg_button_param_amber</item>
-        <item name="android:textSize">12sp</item>
+        <item name="android:textSize">11sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:letterSpacing">0.06</item>
         <item name="android:gravity">center</item>
         <item name="android:stateListAnimator">@null</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="backgroundTint">@null</item>
         <item name="rippleColor">@color/accent_orange</item>
         <item name="android:paddingHorizontal">4dp</item>
     </style>
-    <style name="Widget.MG4Control.Button.ParamBlue" parent="Widget.MaterialComponents.Button.TextButton">
+    <style name="Widget.MG4Control.Button.ParamBlue" parent="Widget.MaterialComponents.Button">
         <item name="android:textColor">@color/btn_param_blue_text</item>
         <item name="android:background">@drawable/bg_button_param_blue</item>
-        <item name="android:textSize">12sp</item>
+        <item name="android:textSize">11sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:letterSpacing">0.06</item>
         <item name="android:gravity">center</item>
         <item name="android:stateListAnimator">@null</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="backgroundTint">@null</item>
         <item name="rippleColor">@color/accent_blue</item>
         <item name="android:paddingHorizontal">4dp</item>
     </style>
-    <style name="Widget.MG4Control.Button.ParamGreen" parent="Widget.MaterialComponents.Button.TextButton">
+    <style name="Widget.MG4Control.Button.ParamGreen" parent="Widget.MaterialComponents.Button">
         <item name="android:textColor">@color/btn_param_green_text</item>
         <item name="android:background">@drawable/bg_button_param_green</item>
-        <item name="android:textSize">12sp</item>
+        <item name="android:textSize">11sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:letterSpacing">0.06</item>
         <item name="android:gravity">center</item>
         <item name="android:stateListAnimator">@null</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="backgroundTint">@null</item>
         <item name="rippleColor">@color/accent_green</item>
         <item name="android:paddingHorizontal">4dp</item>
     </style>
-    <style name="Widget.MG4Control.Button.Secondary" parent="Widget.MaterialComponents.Button.TextButton">
+    <style name="Widget.MG4Control.Button.Secondary" parent="Widget.MaterialComponents.Button">
         <item name="android:textColor">@color/text_secondary</item>
-        <item name="android:textSize">11sp</item>
+        <item name="android:textSize">10sp</item>
         <item name="android:background">@drawable/bg_button_secondary</item>
         <item name="android:stateListAnimator">@null</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="backgroundTint">@null</item>
         <item name="rippleColor">@color/accent_blue</item>
     </style>
 </resources>

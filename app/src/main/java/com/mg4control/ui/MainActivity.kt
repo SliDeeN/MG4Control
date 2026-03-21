@@ -20,6 +20,7 @@ import com.mg4control.databinding.ActivityMainBinding
 import com.mg4control.databinding.DialogLogsBinding
 import com.mg4control.databinding.DialogProfilesBinding
 import com.mg4control.databinding.DialogSettingsBinding
+import com.mg4control.databinding.DialogAboutBinding
 import com.mg4control.databinding.ItemProfileBinding
 import com.mg4control.model.VehicleProfile
 import com.mg4control.repository.VehiclePropertyIds
@@ -32,9 +33,18 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private val vm: MainViewModel by viewModels()
 
-    private val drivingButtons   by lazy { listOf(binding.btnEco, binding.btnNormal, binding.btnSport, binding.btnSnow) }
-    private val regenButtons     by lazy { listOf(binding.btnRegenLow, binding.btnRegenStd, binding.btnRegenHigh, binding.btnRegenAuto) }
-    private val adasButtons      by lazy { listOf(binding.btnAdasOff, binding.btnAdasLim, binding.btnAdasAcc, binding.btnAdasIca) }
+    private val drivingButtons by lazy { listOf(binding.btnEco, binding.btnNormal, binding.btnSport, binding.btnSnow) }
+    private val regenButtons   by lazy { listOf(binding.btnRegenLow, binding.btnRegenStd, binding.btnRegenHigh, binding.btnRegenAuto) }
+    private val adasButtons    by lazy { listOf(binding.btnAdasOff, binding.btnAdasLim, binding.btnAdasAcc, binding.btnAdasIca) }
+
+    // Texte de statut de base (sans feedback)
+    private var baseStatusText = ""
+    private var baseStatusColor = 0
+    private val statusHandler = Handler(Looper.getMainLooper())
+    private val restoreStatusRunnable = Runnable {
+        binding.tvStatus.text = baseStatusText
+        binding.tvStatus.setTextColor(baseStatusColor)
+    }
 
     private var logsDialog: Dialog? = null
     private var logsBinding: DialogLogsBinding? = null
@@ -82,6 +92,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         logsHandler.removeCallbacks(logsRunnable)
+        statusHandler.removeCallbacks(restoreStatusRunnable)
         logsDialog?.dismiss()
     }
 
@@ -102,27 +113,22 @@ class MainActivity : AppCompatActivity() {
     // ── Listeners ─────────────────────────────────────────────────────────
 
     private fun setupClickListeners() {
-        // Mode de conduite
         binding.btnEco.setOnClickListener    { vm.setEco() }
         binding.btnNormal.setOnClickListener { vm.setNormal() }
         binding.btnSport.setOnClickListener  { vm.setSport() }
         binding.btnSnow.setOnClickListener   { vm.setSnow() }
-        // Régénération
         binding.btnRegenLow.setOnClickListener  { vm.setRegenLow() }
         binding.btnRegenStd.setOnClickListener  { vm.setRegenStandard() }
         binding.btnRegenHigh.setOnClickListener { vm.setRegenHigh() }
         binding.btnRegenAuto.setOnClickListener { vm.setRegenAuto() }
         binding.btnOnePedal.setOnClickListener  { vm.toggleOnePedal() }
-        // ADAS
         binding.btnAdasOff.setOnClickListener { vm.setAdasOff() }
         binding.btnAdasLim.setOnClickListener { vm.setAdasLimitateur() }
         binding.btnAdasAcc.setOnClickListener { vm.setAdasAcc() }
         binding.btnAdasIca.setOnClickListener { vm.setAdasIca() }
-        // Header
         binding.btnConnect.setOnClickListener  { vm.connect() }
         binding.btnProfiles.setOnClickListener { showProfilesDialog() }
         binding.btnSettings.setOnClickListener { showSettingsDialog() }
-        // Alertes
         binding.btnSlifWarning.setOnClickListener          { vm.toggleOverspeedAlarm() }
         binding.btnSpeedLimitChangeTone.setOnClickListener { vm.toggleSpeedLimitChangeTone() }
     }
@@ -143,12 +149,60 @@ class MainActivity : AppCompatActivity() {
                 launch { vm.speedLimitChangeTone.collect { updateAlertButton(
                     binding.btnSpeedLimitChangeTone, it,
                     getString(if (it) R.string.btn_speed_tone_on else R.string.btn_speed_tone_off)) } }
-                launch { vm.lastAction.collect { msg ->
-                    binding.tvLastAction.text = msg
-                    binding.tvLastAction.visibility = if (msg.isEmpty()) View.GONE else View.VISIBLE
-                }}
+                // Feedback dans la zone de statut au lieu du bas de l'écran
+                launch { vm.lastAction.collect { msg -> showFeedbackInStatus(msg) } }
             }
         }
+    }
+
+    // ── Feedback dans la zone de statut ───────────────────────────────────
+
+    private fun showFeedbackInStatus(msg: String) {
+        if (msg.isEmpty()) return
+        // Afficher le feedback dans tvStatus pendant 3s puis restaurer
+        statusHandler.removeCallbacks(restoreStatusRunnable)
+        binding.tvStatus.text = "$baseStatusText — $msg"
+        binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.accent_green))
+        statusHandler.postDelayed(restoreStatusRunnable, 3000)
+    }
+
+    // ── Dialog About ──────────────────────────────────────────────────────
+
+    private fun showAboutDialog() {
+        val dialog = Dialog(this)
+        val ab = DialogAboutBinding.inflate(layoutInflater)
+        dialog.setContentView(ab.root)
+        dialog.window?.setLayout(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT)
+
+        val githubUrl = "https://github.com/SliDeeN/MG4Control"
+
+        // QR code GitHub
+        try {
+            val qrBitmap = QrCodeGenerator.generate(githubUrl, 300)
+            ab.imgQrCode.setImageBitmap(qrBitmap)
+        } catch (e: Exception) {
+            AppLogger.e("About", "QR code erreur : ${e.message}", e)
+        }
+
+        // Lien + QR cliquables → ouvre le navigateur
+        val openGithub: () -> Unit = {
+            try {
+                startActivity(android.content.Intent(
+                    android.content.Intent.ACTION_VIEW,
+                    android.net.Uri.parse(githubUrl)
+                ))
+            } catch (e: Exception) {
+                AppLogger.e("About", "Impossible d'ouvrir le navigateur", e)
+            }
+        }
+        ab.imgQrCode.setOnClickListener { openGithub() }
+        ab.tvGithubLink.setOnClickListener { openGithub() }
+
+        // Crédit avec vrais sauts de ligne
+        ab.tvCredit.text = "Made with ♥ by\nSliDeeN & Claude AI\nAnthropic · 2026"
+
+        ab.btnCloseAbout.setOnClickListener { dialog.dismiss() }
+        dialog.show()
     }
 
     // ── Dialog Réglages ───────────────────────────────────────────────────
@@ -163,16 +217,10 @@ class MainActivity : AppCompatActivity() {
         sb.btnLangFr.isSelected = (lang == LanguageManager.LANG_FR)
         sb.btnLangEn.isSelected = (lang == LanguageManager.LANG_EN)
 
-        sb.btnLangFr.setOnClickListener {
-            LanguageManager.saveLanguage(this, LanguageManager.LANG_FR)
-            dialog.dismiss(); recreate()
-        }
-        sb.btnLangEn.setOnClickListener {
-            LanguageManager.saveLanguage(this, LanguageManager.LANG_EN)
-            dialog.dismiss(); recreate()
-        }
+        sb.btnLangFr.setOnClickListener { LanguageManager.saveLanguage(this, LanguageManager.LANG_FR); dialog.dismiss(); recreate() }
+        sb.btnLangEn.setOnClickListener { LanguageManager.saveLanguage(this, LanguageManager.LANG_EN); dialog.dismiss(); recreate() }
         sb.btnOpenLogs.setOnClickListener { dialog.dismiss(); showLogsDialog() }
-        sb.btnDiagAdas.setOnClickListener { dialog.dismiss(); vm.diagAdas(); showLogsDialog() }
+        sb.btnAbout.setOnClickListener { dialog.dismiss(); showAboutDialog() }
         sb.btnCloseSettings.setOnClickListener { dialog.dismiss() }
         dialog.show()
     }
@@ -200,10 +248,7 @@ class MainActivity : AppCompatActivity() {
             bindProfileItem(pb.profile3, profiles.getOrNull(2) ?: VehicleProfile.empty(3), dialog)
         }
         refresh()
-
-        lifecycleScope.launch {
-            vm.profiles.collect { if (dialog.isShowing) refresh() }
-        }
+        lifecycleScope.launch { vm.profiles.collect { if (dialog.isShowing) refresh() } }
         dialog.show()
     }
 
@@ -217,9 +262,7 @@ class MainActivity : AppCompatActivity() {
             else vm.setFavorite(profile.id)
         }
         ib.btnApplyProfile.setOnClickListener { vm.applyProfile(profile.id); parentDialog.dismiss() }
-        ib.tvProfileName.setOnClickListener {
-            showRenameDialog(profile) { newName -> vm.renameProfile(profile.id, newName) }
-        }
+        ib.tvProfileName.setOnClickListener { showRenameDialog(profile) { newName -> vm.renameProfile(profile.id, newName) } }
     }
 
     private fun showSaveToProfilePicker(onSelected: (Int) -> Unit) {
@@ -276,26 +319,34 @@ class MainActivity : AppCompatActivity() {
     private fun updateConnectionUi(state: VehicleRepository.ConnectionState) {
         when (state) {
             is VehicleRepository.ConnectionState.Disconnected -> {
-                binding.tvStatus.text = getString(R.string.status_disconnected)
-                binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_disconnected))
+                baseStatusText = getString(R.string.status_disconnected)
+                baseStatusColor = ContextCompat.getColor(this, R.color.status_disconnected)
+                binding.tvStatus.text = baseStatusText
+                binding.tvStatus.setTextColor(baseStatusColor)
                 binding.btnConnect.text = getString(R.string.btn_connect)
                 setControlsEnabled(false)
             }
             is VehicleRepository.ConnectionState.Connecting -> {
-                binding.tvStatus.text = getString(R.string.status_connecting)
-                binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_connecting))
+                baseStatusText = getString(R.string.status_connecting)
+                baseStatusColor = ContextCompat.getColor(this, R.color.status_connecting)
+                binding.tvStatus.text = baseStatusText
+                binding.tvStatus.setTextColor(baseStatusColor)
                 binding.btnConnect.text = getString(R.string.btn_connect)
                 setControlsEnabled(false)
             }
             is VehicleRepository.ConnectionState.Connected -> {
-                binding.tvStatus.text = getString(R.string.status_connected)
-                binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_connected))
+                baseStatusText = getString(R.string.status_connected)
+                baseStatusColor = ContextCompat.getColor(this, R.color.status_connected)
+                binding.tvStatus.text = baseStatusText
+                binding.tvStatus.setTextColor(baseStatusColor)
                 binding.btnConnect.text = getString(R.string.btn_refresh)
                 setControlsEnabled(true)
             }
             is VehicleRepository.ConnectionState.Error -> {
-                binding.tvStatus.text = "🔴 ${state.message.lines().first()}"
-                binding.tvStatus.setTextColor(ContextCompat.getColor(this, R.color.status_error))
+                baseStatusText = "🔴 ${state.message.lines().first()}"
+                baseStatusColor = ContextCompat.getColor(this, R.color.status_error)
+                binding.tvStatus.text = baseStatusText
+                binding.tvStatus.setTextColor(baseStatusColor)
                 binding.btnConnect.text = getString(R.string.btn_connect)
                 setControlsEnabled(false)
             }
@@ -320,7 +371,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun highlightRegenLevel(level: Int) {
-        // Si One Pedal est ON, ne pas surligner les boutons régén
         if (vm.onePedal.value) return
         val active = when (level) {
             VehiclePropertyIds.RegenLevel.LOW      -> binding.btnRegenLow
@@ -334,10 +384,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateOnePedalButton(active: Boolean) {
         binding.btnOnePedal.isSelected = active
-        binding.btnOnePedal.text = getString(
-            if (active) R.string.btn_one_pedal_on else R.string.btn_one_pedal_off
-        )
-        // Estomper/restaurer les boutons régén
+        binding.btnOnePedal.text = getString(if (active) R.string.btn_one_pedal_on else R.string.btn_one_pedal_off)
         regenButtons.forEach { btn ->
             btn.isEnabled = !active
             btn.isSelected = if (active) false else btn.isSelected

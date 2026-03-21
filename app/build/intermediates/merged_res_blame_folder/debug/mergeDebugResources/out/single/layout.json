@@ -4,6 +4,10 @@
         "source": "com.mg4control.app-main-38:/layout/item_profile.xml"
     },
     {
+        "merged": "com.mg4control.app-mergeDebugResources-35:/layout/dialog_about.xml",
+        "source": "com.mg4control.app-main-38:/layout/dialog_about.xml"
+    },
+    {
         "merged": "com.mg4control.app-mergeDebugResources-35:/layout/dialog_settings.xml",
         "source": "com.mg4control.app-main-38:/layout/dialog_settings.xml"
     },

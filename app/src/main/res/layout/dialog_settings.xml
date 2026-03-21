@@ -65,7 +65,6 @@
             android:layout_marginStart="6dp"/>
     </LinearLayout>
 
-    <!-- Séparateur -->
     <View android:layout_width="match_parent" android:layout_height="1dp"
         android:background="@color/divider" android:layout_marginBottom="12dp"/>
 
@@ -87,26 +86,25 @@
         android:text="@string/btn_logs"
         android:textSize="12sp"/>
 
-    <!-- Séparateur -->
     <View android:layout_width="match_parent" android:layout_height="1dp"
         android:background="@color/divider" android:layout_marginTop="12dp" android:layout_marginBottom="12dp"/>
 
-    <!-- Diagnostic ADAS -->
+    <!-- À propos -->
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/settings_diag"
+        android:text="@string/settings_about_section"
         android:textColor="@color/text_secondary"
         android:textSize="10sp"
         android:letterSpacing="0.1"
         android:layout_marginBottom="8dp"/>
 
     <Button
-        android:id="@+id/btnDiagAdas"
+        android:id="@+id/btnAbout"
         style="@style/Widget.MG4Control.Button.Secondary"
         android:layout_width="match_parent"
         android:layout_height="46dp"
-        android:text="@string/btn_diag_adas"
+        android:text="@string/btn_about"
         android:textSize="12sp"/>
 
 </LinearLayout>
