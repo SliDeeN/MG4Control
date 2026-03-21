@@ -92,7 +92,7 @@
     <string name="settings_about_section">À PROPOS</string>
     <string name="btn_about">ℹ Infos</string>
     <string name="about_title">À PROPOS</string>
-    <string name="about_version">Version 1.2 · Android Automotive</string>
+    <string name="about_version">Version 1.21 · Android Automotive</string>
     <string name="about_firmware_badge">SWI133 · Trophy EU MY24</string>
     <string name="about_firmware_label">Firmware testé</string>
     <string name="about_firmware_value">SWI133-29176-1300R30</string>

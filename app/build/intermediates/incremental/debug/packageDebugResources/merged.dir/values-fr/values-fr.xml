@@ -11,7 +11,7 @@
     <string name="about_tech_label">Technique</string>
     <string name="about_tech_value">SAIC SDK · Réflexion Java · AIDL</string>
     <string name="about_title">À PROPOS</string>
-    <string name="about_version">Version 1.2 · Android Automotive</string>
+    <string name="about_version">Version 1.21 · Android Automotive</string>
     <string name="app_name">MG4 Control</string>
     <string name="btn_about">ℹ Infos</string>
     <string name="btn_adas_acc">ACC</string>
