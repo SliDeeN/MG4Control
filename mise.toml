@@ -31,6 +31,32 @@ BUILD_TOOLS = "34.0.0"
 # Gradle doit tourner sur le JDK de mise. Sans -Dorg.gradle.java.home, Gradle réutilise
 # un daemon déjà lancé par l'extension Java de VS Code, qui embarque un JRE 21 sans
 # jlink : le build échoue alors sur JdkImageTransform, sans rapport avec le code.
+# ── Émulateur ────────────────────────────────────────────────────────────────────
+#
+# ATTENTION sur la fidélité : le véhicule tourne en AAOS 9 (API 28). Google ne publie
+# AUCUNE image système Automotive en dessous d'API 33 — vérifié avec sdkmanager --list.
+# Il n'existe donc pas d'émulateur qui reproduise à la fois l'OS et l'API voiture du MG4.
+# D'où deux profils, chacun fidèle sur un axe :
+#
+#   emulator-car     API 33 Automotive — a bien un CarPropertyManager, mauvaise version
+#                    d'OS. Pour tester le cycle de vie du service et le chemin voiture.
+#                    Les propriétés VENDEUR SAIC (0x216xxxxx : SOC, autonomie) n'existent
+#                    pas dans l'émulateur : ces lectures échoueront, c'est normal.
+#   emulator-screen  API 28 tablette — bonne version d'OS et bon écran (1920x1080 @ 160dpi,
+#                    12,8" HD comme le MG4), mais AUCUN service voiture.
+#                    Pour l'UI, les layouts et la densité.
+#
+# Rien de tout cela ne remplace un essai sur le véhicule.
+# 12,8" HD : 1920x1080 ≈ 172 dpi réels, arrondi au bucket 160 (mdpi).
+
+EMU_CAR_AVD = "mg4control-car"
+EMU_CAR_IMAGE = "system-images;android-33;android-automotive;x86_64"
+EMU_SCREEN_AVD = "mg4control-screen"
+EMU_SCREEN_IMAGE = "system-images;android-28;google_apis;x86_64"
+EMU_WIDTH = "1920"
+EMU_HEIGHT = "1080"
+EMU_DENSITY = "160"
+
 [tasks.bootstrap]
 description = "Installe le SDK Android (platform + build-tools) s'il manque"
 run = """
@@ -83,3 +109,90 @@ run = './gradlew -Dorg.gradle.java.home=$JAVA_HOME assembleOnlineRelease assembl
 
 [tasks.clean]
 run = './gradlew -Dorg.gradle.java.home=$JAVA_HOME clean'
+
+[tasks.emulator-setup]
+description = "Installe l'émulateur + les images système et crée les deux AVD"
+run = '''
+set -e
+SDK="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+AVDM="$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager"
+
+if [ ! -e /dev/kvm ]; then
+  echo "ERREUR : /dev/kvm absent — pas d'accélération matérielle, l'émulateur sera inutilisable." >&2
+  echo "Sous WSL2 : activer la virtualisation imbriquée côté Windows." >&2
+  exit 1
+fi
+if ! id -nG | tr ' ' '\n' | grep -qx kvm; then
+  echo "ATTENTION : utilisateur absent du groupe kvm. Corriger avec :" >&2
+  echo "  sudo usermod -aG kvm $USER   # puis se reconnecter" >&2
+fi
+
+yes | "$SDK" --sdk_root="$ANDROID_HOME" --licenses > /dev/null
+"$SDK" --sdk_root="$ANDROID_HOME" "emulator" "platform-tools" "$EMU_CAR_IMAGE" "$EMU_SCREEN_IMAGE"
+
+create_avd() {
+  name="$1"; image="$2"; device="$3"
+  if "$AVDM" list avd 2>/dev/null | grep -q "Name: $name"; then
+    echo "AVD $name déjà présent"
+  else
+    echo no | "$AVDM" create avd -n "$name" -k "$image" -d "$device" --force
+  fi
+  cfg="$HOME/.android/avd/$name.avd/config.ini"
+  # Écran du MG4. Sans ça l'AVD garde la densité du profil générique et les layouts
+  # ne ressemblent pas à ce que voit le conducteur.
+  sed -i '/^hw.lcd/d;/^disk.dataPartition.size/d' "$cfg"
+  {
+    echo "hw.lcd.width=$EMU_WIDTH"
+    echo "hw.lcd.height=$EMU_HEIGHT"
+    echo "hw.lcd.density=$EMU_DENSITY"
+    echo "disk.dataPartition.size=4G"
+  } >> "$cfg"
+  echo "AVD $name configuré en ${EMU_WIDTH}x${EMU_HEIGHT} @ ${EMU_DENSITY}dpi"
+}
+
+create_avd "$EMU_CAR_AVD" "$EMU_CAR_IMAGE" "automotive_1024p_landscape"
+create_avd "$EMU_SCREEN_AVD" "$EMU_SCREEN_IMAGE" "pixel_c"
+'''
+
+[tasks.emulator-car]
+description = "Lance l'émulateur Automotive (API 33 — a un CarPropertyManager)"
+run = '''
+set -e
+# swiftshader_indirect : le GPU hôte n'est pas exposé de façon fiable sous WSL2.
+"$ANDROID_HOME/emulator/emulator" -avd "$EMU_CAR_AVD" \
+  -gpu swiftshader_indirect -no-snapshot-save -no-boot-anim &
+"$ANDROID_HOME/platform-tools/adb" wait-for-device
+echo "Émulateur voiture prêt."
+'''
+
+[tasks.emulator-screen]
+description = "Lance l'émulateur écran MG4 (API 28, 1920x1080 @ 160dpi — pas de service voiture)"
+run = '''
+set -e
+"$ANDROID_HOME/emulator/emulator" -avd "$EMU_SCREEN_AVD" \
+  -gpu swiftshader_indirect -no-snapshot-save -no-boot-anim &
+"$ANDROID_HOME/platform-tools/adb" wait-for-device
+echo "Émulateur écran prêt."
+'''
+
+[tasks.emulator-stop]
+description = "Arrête l'émulateur en cours"
+run = '"$ANDROID_HOME/platform-tools/adb" emu kill || true'
+
+[tasks.run]
+description = "Compile, installe et lance l'APK sur l'émulateur ou le véhicule connecté"
+depends = ["build"]
+run = '''
+set -e
+ADB="$ANDROID_HOME/platform-tools/adb"
+if [ -z "$($ADB devices | sed '1d' | grep -w device || true)" ]; then
+  echo "Aucun appareil connecté. Lancer d'abord 'mise run emulator-car' ou 'mise run emulator-screen'," >&2
+  echo "ou brancher le véhicule en ADB." >&2
+  exit 1
+fi
+APK=$(ls -t app/build/outputs/apk/online/debug/*.apk | head -1)
+echo "Installation de $APK"
+$ADB install -r -g "$APK"
+$ADB shell am start -n "com.mg4.control/com.mg4.control.MainActivity"
+echo "Lancé. Logs : mise run logs"
+'''
