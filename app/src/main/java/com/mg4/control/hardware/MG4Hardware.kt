@@ -155,6 +155,11 @@ object MG4Hardware {
     // d'écriture à 0 km/h (voir VehicleWriteGate).
     private const val PROP_VEHICLE_SPEED = 0x11600207
 
+    // Standard AAOS — VehicleProperty.ENV_OUTSIDE_TEMPERATURE (float, °C).
+    // NON VÉRIFIÉE sur véhicule : tous les firmwares MG4 n'exposent pas cette propriété.
+    // Les appelants doivent traiter null comme « donnée indisponible », pas comme 0 °C.
+    private const val PROP_OUTSIDE_TEMP = 0x11600703
+
     /** Valeurs de IGNITION_STATE (VehicleIgnitionState) — propriété AAOS standard. */
     object IgnitionState {
         const val UNDEFINED = 0
@@ -332,6 +337,85 @@ object MG4Hardware {
         // absolue qui compte pour savoir si le véhicule bouge.
         return kotlin.math.abs(mps) * 3.6f
     }
+
+    /**
+     * Température extérieure en °C, ou null si illisible (CPM non prêt, propriété non
+     * supportée par le firmware, exception).
+     *
+     * Le null est significatif : il veut dire « on ne sait pas », pas « il fait 0 °C ».
+     * Une règle météo qui reçoit null ne doit PAS se déclencher.
+     */
+    fun getOutsideTempCelsius(): Float? =
+        getFloatPropertyCPM(PROP_OUTSIDE_TEMP, AREA_GLOBAL)
+            ?: getFloatPropertyCPM(PROP_OUTSIDE_TEMP, 0)
+
+    // -------------------------------------------------------------------------
+    // Climate + windows — READ ONLY, UNVERIFIED on MG4 firmware.
+    //
+    // Standard AOSP VehicleProperty IDs. The R69 OEM sources expose these names, but the
+    // numeric ids and area ids are not confirmed against any MG4 generation. These reads
+    // exist so the MG4Tasker diagnostic screen can show whether a signal is actually
+    // readable BEFORE any write path is added. Every method returns null when unreadable —
+    // callers must treat null as "unknown", never as a value. No write counterpart exists
+    // on purpose: writing a wrong id to the vehicle is exactly the risk being deferred.
+    // -------------------------------------------------------------------------
+
+    private const val PROP_HVAC_AC_ON          = 0x15200505  // HVAC_AC_ON (bool)
+    private const val PROP_HVAC_AUTO_ON        = 0x1520050A  // HVAC_AUTO_ON (bool)
+    private const val PROP_HVAC_RECIRC_ON      = 0x15200508  // HVAC_RECIRC_ON (bool)
+    private const val PROP_HVAC_FAN_SPEED      = 0x15400500  // HVAC_FAN_SPEED (int)
+    private const val PROP_HVAC_TEMPERATURE_SET = 0x15600503 // HVAC_TEMPERATURE_SET (float °C)
+    private const val PROP_WINDOW_POS          = 0x13340BC0  // WINDOW_POS (int, per window area)
+
+    // Candidate HVAC area ids: the seat-heat area used elsewhere, plus GLOBAL and 0.
+    private val HVAC_AREA_CANDIDATES = intArrayOf(AREA_HVAC, AREA_GLOBAL, 0)
+    // VehicleAreaWindow bits: front windshield + the four door windows.
+    private val WINDOW_AREA_CANDIDATES = intArrayOf(0x0001, 0x0010, 0x0040, 0x0100, 0x0400)
+
+    fun getAcOn(): Boolean?          = readHvacBool(PROP_HVAC_AC_ON)
+    fun getHvacAutoOn(): Boolean?    = readHvacBool(PROP_HVAC_AUTO_ON)
+    fun getRecircOn(): Boolean?      = readHvacBool(PROP_HVAC_RECIRC_ON)
+    fun getFanSpeed(): Int?          = readHvacInt(PROP_HVAC_FAN_SPEED)
+    fun getTemperatureSetCelsius(): Float? = readHvacFloat(PROP_HVAC_TEMPERATURE_SET)
+
+    /** True if any door/windshield window reads as not fully closed; null if none readable. */
+    fun isAnyWindowOpen(): Boolean? {
+        var readAny = false
+        for (area in WINDOW_AREA_CANDIDATES) {
+            val pos = readWindowArea(area) ?: continue
+            readAny = true
+            if (pos > 0) return true
+        }
+        return if (readAny) false else null
+    }
+
+    private fun readHvacBool(propId: Int): Boolean? = readHvacInt(propId)?.let { it != 0 }
+
+    /** Sweeps HVAC-manager then CPM across the candidate areas; null when nothing answers. */
+    private fun readHvacInt(propId: Int): Int? {
+        for (area in HVAC_AREA_CANDIDATES) {
+            getIntPropertyHvac(propId, area).takeIf { it >= 0 }?.let { return it }
+            getIntPropertyCPM(propId, area).takeIf { it >= 0 }?.let { return it }
+        }
+        return null
+    }
+
+    private fun readHvacFloat(propId: Int): Float? {
+        val hvac = sCarHvacManager
+        for (area in HVAC_AREA_CANDIDATES) {
+            if (hvac != null) {
+                runCatching {
+                    hvac.javaClass.getMethod("getFloatProperty", Int::class.java, Int::class.java)
+                        .invoke(hvac, propId, area) as? Float
+                }.getOrNull()?.let { return it }
+            }
+            getFloatPropertyCPM(propId, area)?.let { return it }
+        }
+        return null
+    }
+
+    private fun readWindowArea(area: Int): Int? =
+        getIntPropertyCPM(PROP_WINDOW_POS, area).takeIf { it >= 0 }
 
     /** Contexte applicatif, pour les messages utilisateur du verrou d'écriture. */
     internal fun appContext(): Context? = sAppContext

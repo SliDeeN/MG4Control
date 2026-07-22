@@ -29,6 +29,15 @@
         android:name="com.mg4.control.permission.RECEIVE_HARDKEY"
         android:protectionLevel="signature" />
 
+    <!-- Pont MG4Tasker. En protectionLevel="signature", seule une app signée avec la même
+         clé plateforme peut se lier au service ou recevoir la notification d'allumage.
+         MG4Control la déclare ET la demande : il l'exige des clients du service, et il en a
+         besoin lui-même pour émettre le broadcast vers MG4Tasker. -->
+    <permission
+        android:name="com.mg4.control.permission.TASKER_BRIDGE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.mg4.control.permission.TASKER_BRIDGE" />
+
     <!-- Réseau / auto-update : déclarés UNIQUEMENT dans le flavor online
          (src/online/AndroidManifest.xml). Le flavor offline n'en a aucun, par construction. -->
 
@@ -64,6 +73,15 @@
             android:exported="false"
             android:directBootAware="true"
             android:foregroundServiceType="connectedDevice" />
+
+        <!-- Pont IPC MG4Tasker. exported=true car le client est une autre app, mais l'accès
+             est fermé par la permission signature : seule une app signée avec la clé
+             plateforme de la ROM peut se lier. Le service n'expose aucune écriture de
+             propriété brute — uniquement le catalogue d'actions de TaskerBridgeService. -->
+        <service
+            android:name=".tasker.TaskerBridgeService"
+            android:exported="true"
+            android:permission="com.mg4.control.permission.TASKER_BRIDGE" />
 
         <!-- FileProvider + InstallReceiver (auto-update) : déclarés UNIQUEMENT dans
              le flavor online (src/online/AndroidManifest.xml). Déplacer le FileProvider

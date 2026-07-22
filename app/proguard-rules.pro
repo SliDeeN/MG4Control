@@ -9,6 +9,11 @@
 # ServiceManager, which was already listed.
 -keep class android.os.SystemProperties { *; }
 
+# Contrat IPC avec MG4Tasker. Le Stub/Proxy AIDL est résolu par nom côté client :
+# renommer ces classes casserait le bind au lieu d'échouer à la compilation.
+-keep interface com.mg4.control.tasker.ITaskerBridge { *; }
+-keep class com.mg4.control.tasker.ITaskerBridge$* { *; }
+
 # Gson (profils + sauvegarde). Sans Signature, le type générique de
 # TypeToken<List<DrivingProfile>> est effacé et la désérialisation rend une liste de
 # LinkedTreeMap : les profils disparaîtraient silencieusement au premier lancement d'une

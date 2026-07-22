@@ -23,6 +23,10 @@ android.car.permission.CONTROL_CAR_CLIMATE
 # seule une app signée avec la clé plateforme peut l'obtenir. Elle restreint un accès,
 # elle n'en accorde pas.
 com.mg4.control.permission.RECEIVE_HARDKEY
+# Pont MG4Tasker : ferme l'accès au TaskerBridgeService et au broadcast d'allumage.
+# protectionLevel="signature" → réservée aux apps signées avec la clé plateforme.
+# Déclarée ET demandée par MG4Control : demandée pour pouvoir émettre le broadcast.
+com.mg4.control.permission.TASKER_BRIDGE
 # --- network / auto-update (online variant only) ---
 android.permission.INTERNET
 android.permission.ACCESS_NETWORK_STATE

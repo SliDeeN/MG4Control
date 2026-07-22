@@ -70,6 +70,8 @@ android {
     buildFeatures {
         viewBinding = true
         buildConfig = true
+        // ITaskerBridge : contrat IPC partagé avec MG4Tasker (même package AIDL des deux côtés).
+        aidl = true
     }
 
     // Tests unitaires JVM (pas de véhicule, pas d'émulateur) : Robolectric a besoin des
