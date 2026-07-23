@@ -37,8 +37,6 @@ class TaskerBridgeService : Service() {
     companion object {
         private const val TAG = "MG4_TASKER_BRIDGE"
 
-        /** Broadcast émis vers MG4Tasker quand l'allumage passe à ON. */
-        const val ACTION_IGNITION_ON = "com.mg4.control.tasker.IGNITION_ON"
 
         /** Permission signature exigée du récepteur du broadcast ci-dessus. */
         const val PERMISSION_BRIDGE = "com.mg4.control.permission.TASKER_BRIDGE"

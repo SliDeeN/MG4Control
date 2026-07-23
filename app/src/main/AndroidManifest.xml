@@ -30,13 +30,12 @@
         android:protectionLevel="signature" />
 
     <!-- Pont MG4Tasker. En protectionLevel="signature", seule une app signée avec la même
-         clé plateforme peut se lier au service ou recevoir la notification d'allumage.
-         MG4Control la déclare ET la demande : il l'exige des clients du service, et il en a
-         besoin lui-même pour émettre le broadcast vers MG4Tasker. -->
+         clé plateforme peut se lier au TaskerBridgeService. MG4Control la déclare pour
+         protéger ce service ; MG4Tasker (signé avec la même clé) l'obtient et l'utilise
+         uniquement pour l'action « appliquer un profil ». -->
     <permission
         android:name="com.mg4.control.permission.TASKER_BRIDGE"
         android:protectionLevel="signature" />
-    <uses-permission android:name="com.mg4.control.permission.TASKER_BRIDGE" />
 
     <!-- Réseau / auto-update : déclarés UNIQUEMENT dans le flavor online
          (src/online/AndroidManifest.xml). Le flavor offline n'en a aucun, par construction. -->

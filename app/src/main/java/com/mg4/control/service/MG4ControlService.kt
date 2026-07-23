@@ -29,7 +29,6 @@ import com.mg4.hardware.model.RegenLevel
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.shortcut.ShortcutAction
-import com.mg4.control.tasker.TaskerBridgeService
 import com.mg4.hardware.FirmwareInfo
 import com.mg4.hardware.VehicleWriteGate
 import com.mg4.control.util.ThemeHelper
@@ -45,11 +44,7 @@ class MG4ControlService : Service() {
         private const val NOTIF_ID     = 1
         private const val PREFS_SHORTCUTS = "mg4_shortcuts"
 
-        /** Destinataire du broadcast d'allumage. Absent = broadcast sans effet, pas d'erreur. */
-        private const val TASKER_PACKAGE = "com.mg4.tasker"
 
-        /** Marge laissée à l'application du profil par défaut (HVAC scrute jusqu'à ~7 s). */
-        private const val TASKER_NOTIFY_DELAY_MS = 8_000L
 
         // Intent action broadcast par le système SAIC pour les touches physiques
         private const val HARDKEY_ACTION   = "com.saic.keyevent.hardkey.report"
@@ -464,7 +459,6 @@ class MG4ControlService : Service() {
                     Handler(Looper.getMainLooper()).postDelayed({
                         applyDefaultProfileOnIgnition()
                     }, 500L)
-                    notifyTaskerOnIgnition()
                 }
                 MG4Hardware.CarIgnitionItem.OFF -> {
                     // Extinction → on oublie le choix manuel : le prochain cycle repart sur le défaut/BT
@@ -478,32 +472,6 @@ class MG4ControlService : Service() {
         vehicleConditionListener = vcListener
         MG4Hardware.registerVehicleConditionListener(vcListener)
         AppLogger.i(TAG, "Listener Katman5 enregistré")
-    }
-
-    /**
-     * Prévient MG4Tasker qu'un cycle d'allumage vient de commencer.
-     *
-     * Le délai n'est pas cosmétique : [applyDefaultProfileOnIgnition] démarre à +500 ms et
-     * ses écritures HVAC scrutent l'état jusqu'à ~7 s. Réveiller le tasker plus tôt le
-     * ferait écrire pendant qu'un profil est en cours d'application — ces écritures
-     * unitaires ne passent pas par le mutex de ProfileApplier et s'entrelaceraient avec
-     * les séquences ADAS multi-étapes. On laisse donc le profil se poser d'abord.
-     *
-     * Broadcast explicite (package ciblé) + permission signature : aucune app tierce ne
-     * peut ni le recevoir ni s'y substituer.
-     */
-    private fun notifyTaskerOnIgnition() {
-        Handler(Looper.getMainLooper()).postDelayed({
-            val intent = Intent(TaskerBridgeService.ACTION_IGNITION_ON).apply {
-                setPackage(TASKER_PACKAGE)
-            }
-            try {
-                sendBroadcast(intent, TaskerBridgeService.PERMISSION_BRIDGE)
-                AppLogger.i(TAG, "IGNITION → notification MG4Tasker envoyée")
-            } catch (e: Exception) {
-                AppLogger.w(TAG, "IGNITION → notification MG4Tasker échouée : ${e.message}")
-            }
-        }, TASKER_NOTIFY_DELAY_MS)
     }
 
     /**
