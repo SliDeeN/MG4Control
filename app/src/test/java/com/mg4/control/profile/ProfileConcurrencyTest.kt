@@ -1,9 +1,9 @@
 package com.mg4.control.profile
 
 import androidx.test.core.app.ApplicationProvider
-import com.mg4.control.model.DriveMode
-import com.mg4.control.model.DrivingProfile
-import com.mg4.control.model.RegenLevel
+import com.mg4.hardware.model.DriveMode
+import com.mg4.hardware.model.DrivingProfile
+import com.mg4.hardware.model.RegenLevel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue

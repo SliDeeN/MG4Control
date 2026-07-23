@@ -8,9 +8,9 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.mg4.control.R
-import com.mg4.control.hardware.MG4Hardware
-import com.mg4.control.model.DriveMode
-import com.mg4.control.model.RegenLevel
+import com.mg4.hardware.MG4Hardware
+import com.mg4.hardware.model.DriveMode
+import com.mg4.hardware.model.RegenLevel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

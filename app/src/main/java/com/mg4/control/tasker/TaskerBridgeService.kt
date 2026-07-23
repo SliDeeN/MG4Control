@@ -4,14 +4,14 @@ import android.app.Service
 import android.content.Intent
 import android.os.Bundle
 import android.os.IBinder
-import com.mg4.control.debug.AppLogger
-import com.mg4.control.hardware.MG4Hardware
-import com.mg4.control.hardware.VehicleWriteGate
-import com.mg4.control.model.DriveMode
-import com.mg4.control.model.RegenLevel
+import com.mg4.hardware.AppLogger
+import com.mg4.hardware.MG4Hardware
+import com.mg4.hardware.VehicleWriteGate
+import com.mg4.hardware.model.DriveMode
+import com.mg4.hardware.model.RegenLevel
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
-import com.mg4.control.util.FirmwareInfo
+import com.mg4.hardware.FirmwareInfo
 import com.mg4.control.bluetooth.BluetoothProfileManager
 
 /**

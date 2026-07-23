@@ -3,7 +3,7 @@ package com.mg4.control.update
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
-import com.mg4.control.debug.AppLogger
+import com.mg4.hardware.AppLogger
 import java.io.File
 import java.net.URI
 import java.security.MessageDigest

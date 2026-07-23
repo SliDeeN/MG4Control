@@ -32,9 +32,9 @@ import com.google.android.material.button.MaterialButton
 import com.mg4.control.BuildConfig
 import com.mg4.control.R
 import com.mg4.control.util.QrCode
-import com.mg4.control.debug.AppLogger
+import com.mg4.hardware.AppLogger
 import com.mg4.control.debug.CrashLogger
-import com.mg4.control.hardware.MG4Hardware
+import com.mg4.hardware.MG4Hardware
 import com.mg4.control.update.ApkCleanup
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateDialogManager

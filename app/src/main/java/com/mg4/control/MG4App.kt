@@ -3,7 +3,7 @@ package com.mg4.control
 import android.app.Application
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
-import com.mg4.control.debug.AppLogger
+import com.mg4.hardware.AppLogger
 import com.mg4.control.debug.CrashLogger
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.ThemeHelper

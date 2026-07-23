@@ -11,7 +11,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.slider.Slider
 import com.mg4.control.R
-import com.mg4.control.hardware.MG4Hardware
+import com.mg4.hardware.MG4Hardware
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

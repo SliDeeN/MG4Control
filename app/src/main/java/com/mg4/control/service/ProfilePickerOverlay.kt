@@ -13,15 +13,15 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
-import com.mg4.control.hardware.VehicleWriteGate
+import com.mg4.hardware.VehicleWriteGate
 import android.widget.LinearLayout
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.R
-import com.mg4.control.debug.AppLogger
-import com.mg4.control.hardware.MG4Hardware
-import com.mg4.control.model.DrivingProfile
+import com.mg4.hardware.AppLogger
+import com.mg4.hardware.MG4Hardware
+import com.mg4.hardware.model.DrivingProfile
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.util.LocaleHelper
@@ -127,7 +127,7 @@ object ProfilePickerOverlay {
 
         fun dp(value: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, dm).toInt()
 
-        fun makeProfileButton(profile: com.mg4.control.model.DrivingProfile) =
+        fun makeProfileButton(profile: com.mg4.hardware.model.DrivingProfile) =
             MaterialButton(themedContext).apply {
                 text      = profile.name
                 textSize  = 19f

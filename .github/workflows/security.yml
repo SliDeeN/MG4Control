@@ -18,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - name: Check manifest permissions
         run: bash .github/security/check-permissions.sh
 
@@ -36,6 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: actions/setup-python@v5
         with: { python-version: "3.12" }
 
@@ -94,6 +98,8 @@ jobs:
       NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       # Runs only when an NVD API key is configured — otherwise the NVD API is too
       # rate-limited to be useful, and an empty --nvdApiKey breaks the tool.
       - name: OWASP Dependency-Check

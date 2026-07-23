@@ -2,6 +2,7 @@ package com.mg4.control.debug
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
+import com.mg4.hardware.AppLogger
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date

@@ -21,16 +21,17 @@ import android.widget.Toast
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.R
 import com.mg4.control.bluetooth.BluetoothProfileManager
-import com.mg4.control.debug.AppLogger
-import com.mg4.control.hardware.MG4Hardware
-import com.mg4.control.hardware.MG4Hardware.AebMode
-import com.mg4.control.hardware.MG4Hardware.Swi68Mode
-import com.mg4.control.model.RegenLevel
+import com.mg4.hardware.AppLogger
+import com.mg4.hardware.MG4Hardware
+import com.mg4.hardware.MG4Hardware.AebMode
+import com.mg4.hardware.MG4Hardware.Swi68Mode
+import com.mg4.hardware.model.RegenLevel
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.tasker.TaskerBridgeService
-import com.mg4.control.util.FirmwareInfo
+import com.mg4.hardware.FirmwareInfo
+import com.mg4.hardware.VehicleWriteGate
 import com.mg4.control.util.ThemeHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -99,6 +100,15 @@ class MG4ControlService : Service() {
         super.onCreate()
         AppLogger.i(TAG, "onCreate")
         startForeground(NOTIF_ID, buildNotification())
+        // Feed the shared gate MG4Control's localized refusal strings (mg4-hardware itself
+        // has no app resources; the module falls back to English when no provider is set).
+        VehicleWriteGate.messageProvider = { decision ->
+            when (decision) {
+                VehicleWriteGate.Decision.REFUSED_MOVING        -> getString(R.string.write_refused_moving)
+                VehicleWriteGate.Decision.REFUSED_UNKNOWN_SPEED -> getString(R.string.write_refused_unknown_speed)
+                VehicleWriteGate.Decision.ALLOWED               -> null
+            }
+        }
         MG4Hardware.init(applicationContext)
         registerHardkeyReceiver()
         registerBtAclReceiver()        // [BT-PROFILES]

@@ -2,9 +2,9 @@ package com.mg4.control.profile
 
 import android.os.Environment
 import com.google.gson.Gson
-import com.mg4.control.debug.AppLogger
-import com.mg4.control.model.DrivingProfile
-import com.mg4.control.model.ProfileBackup
+import com.mg4.hardware.AppLogger
+import com.mg4.hardware.model.DrivingProfile
+import com.mg4.hardware.model.ProfileBackup
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption

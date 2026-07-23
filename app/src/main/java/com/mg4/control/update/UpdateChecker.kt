@@ -2,7 +2,7 @@ package com.mg4.control.update
 
 import android.content.Context
 import androidx.annotation.VisibleForTesting
-import com.mg4.control.debug.AppLogger
+import com.mg4.hardware.AppLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

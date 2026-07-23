@@ -9,10 +9,10 @@ import android.widget.Button
 import android.widget.Switch
 import androidx.fragment.app.Fragment
 import com.mg4.control.R
-import com.mg4.control.hardware.MG4Hardware
-import com.mg4.control.hardware.MG4Hardware.AebMode
-import com.mg4.control.hardware.MG4Hardware.Swi68Mode
-import com.mg4.control.util.FirmwareInfo
+import com.mg4.hardware.MG4Hardware
+import com.mg4.hardware.MG4Hardware.AebMode
+import com.mg4.hardware.MG4Hardware.Swi68Mode
+import com.mg4.hardware.FirmwareInfo
 import kotlinx.coroutines.*
 
 class AdasFragment : Fragment() {

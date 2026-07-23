@@ -1,7 +1,7 @@
 package com.mg4.control.util
 
 import android.content.Context
-import com.mg4.control.debug.AppLogger
+import com.mg4.hardware.AppLogger
 
 /**
  * Lit la version firmware du système d'infodivertissement.

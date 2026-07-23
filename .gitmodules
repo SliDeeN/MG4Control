@@ -1,0 +1,3 @@
+[submodule "MG4Hardware"]
+	path = MG4Hardware
+	url = https://github.com/malys/MG4Hardware

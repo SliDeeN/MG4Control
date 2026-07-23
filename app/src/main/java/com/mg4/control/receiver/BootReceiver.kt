@@ -3,7 +3,7 @@ package com.mg4.control.receiver
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import com.mg4.control.debug.AppLogger
+import com.mg4.hardware.AppLogger
 import com.mg4.control.service.MG4ControlService
 
 class BootReceiver : BroadcastReceiver() {

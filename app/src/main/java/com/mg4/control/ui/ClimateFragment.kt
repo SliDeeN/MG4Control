@@ -9,7 +9,7 @@ import android.widget.Button
 import android.widget.Switch
 import androidx.fragment.app.Fragment
 import com.mg4.control.R
-import com.mg4.control.hardware.MG4Hardware
+import com.mg4.hardware.MG4Hardware
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

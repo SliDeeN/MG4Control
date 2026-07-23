@@ -74,6 +74,7 @@ android {
         aidl = true
     }
 
+
     // Tests unitaires JVM (pas de véhicule, pas d'émulateur) : Robolectric a besoin des
     // ressources Android pour instancier un Context.
     testOptions {
@@ -95,6 +96,9 @@ android {
 }
 
 dependencies {
+    // Shared vehicle layer (git submodule ./MG4Hardware, subproject :mg4hardware).
+    implementation(project(":mg4hardware"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.constraintlayout)

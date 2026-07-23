@@ -34,8 +34,8 @@ class ProguardRulesTest {
             "android.os.ServiceManager",
             "android.os.SystemProperties",
             "com.saicmotor.**",
-            "com.mg4.control.model.**",
-            "com.mg4.control.hardware.MG4Hardware"
+            "com.mg4.hardware.model.**",
+            "com.mg4.hardware.MG4Hardware"
         ).forEach { target ->
             assertTrue("règle -keep manquante pour $target",
                 rules.contains("-keep class $target"))

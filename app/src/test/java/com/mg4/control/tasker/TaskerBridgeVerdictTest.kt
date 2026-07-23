@@ -1,6 +1,6 @@
 package com.mg4.control.tasker
 
-import com.mg4.control.hardware.VehicleWriteGate
+import com.mg4.hardware.VehicleWriteGate
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

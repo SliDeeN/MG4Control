@@ -1,6 +1,7 @@
 package com.mg4.control.hardware
 
-import com.mg4.control.hardware.VehicleWriteGate.Decision
+import com.mg4.hardware.VehicleWriteGate
+import com.mg4.hardware.VehicleWriteGate.Decision
 import org.junit.Assert.assertEquals
 import org.junit.Test
 

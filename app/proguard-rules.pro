@@ -2,8 +2,8 @@
 -keep class android.car.** { *; }
 -keep class android.os.ServiceManager { *; }
 -keep class com.saicmotor.** { *; }
--keep class com.mg4.control.model.** { *; }
--keep class com.mg4.control.hardware.MG4Hardware { *; }
+-keep class com.mg4.hardware.model.** { *; }
+-keep class com.mg4.hardware.MG4Hardware { *; }
 
 # Reflected by Class.forName in MG4Hardware/FirmwareInfo — same treatment as
 # ServiceManager, which was already listed.
@@ -24,7 +24,7 @@
 -keep class * extends com.google.gson.reflect.TypeToken
 
 # Les champs des classes sérialisées sont lus par réflexion : ne pas les renommer.
--keepclassmembers class com.mg4.control.model.** {
+-keepclassmembers class com.mg4.hardware.model.** {
     <fields>;
     <init>(...);
 }

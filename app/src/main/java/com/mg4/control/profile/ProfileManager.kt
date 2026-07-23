@@ -3,7 +3,7 @@ package com.mg4.control.profile
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.mg4.control.model.DrivingProfile
+import com.mg4.hardware.model.DrivingProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -116,7 +116,7 @@ class ProfileManager(private val context: Context) {
      * de la sauvegarde (plafonné à [MAX_PROFILES]) et applique le profil par défaut.
      * Retourne le nombre de profils restaurés.
      */
-    fun restoreFrom(backup: com.mg4.control.model.ProfileBackup): Int {
+    fun restoreFrom(backup: com.mg4.hardware.model.ProfileBackup): Int {
         val restored = backup.profiles.take(MAX_PROFILES)
         synchronized(MUTATION_LOCK) {
             persist(restored)

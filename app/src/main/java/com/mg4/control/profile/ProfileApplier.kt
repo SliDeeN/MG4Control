@@ -1,10 +1,10 @@
 package com.mg4.control.profile
 
-import com.mg4.control.debug.AppLogger
-import com.mg4.control.hardware.MG4Hardware
-import com.mg4.control.hardware.MG4Hardware.Swi68Mode
-import com.mg4.control.model.DrivingProfile
-import com.mg4.control.util.FirmwareInfo
+import com.mg4.hardware.AppLogger
+import com.mg4.hardware.MG4Hardware
+import com.mg4.hardware.MG4Hardware.Swi68Mode
+import com.mg4.hardware.model.DrivingProfile
+import com.mg4.hardware.FirmwareInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

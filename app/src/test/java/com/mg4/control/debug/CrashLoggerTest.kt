@@ -1,5 +1,6 @@
 package com.mg4.control.debug
 
+import com.mg4.hardware.AppLogger
 import androidx.test.core.app.ApplicationProvider
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

@@ -1,5 +1,6 @@
 package com.mg4.control.update
 
+import com.mg4.hardware.AppLogger
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test

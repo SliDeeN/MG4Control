@@ -7,9 +7,9 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 import com.mg4.control.R
-import com.mg4.control.hardware.MG4Hardware.Swi68Mode
-import com.mg4.control.model.DrivingProfile
-import com.mg4.control.util.FirmwareInfo
+import com.mg4.hardware.MG4Hardware.Swi68Mode
+import com.mg4.hardware.model.DrivingProfile
+import com.mg4.hardware.FirmwareInfo
 
 class ProfileAdapter(
     private var profiles: MutableList<DrivingProfile>,

@@ -18,11 +18,11 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
-import com.mg4.control.model.RegenLevel
+import com.mg4.hardware.model.RegenLevel
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.shortcut.ShortcutAction
-import com.mg4.control.hardware.MG4Hardware
-import com.mg4.control.util.FirmwareInfo
+import com.mg4.hardware.MG4Hardware
+import com.mg4.hardware.FirmwareInfo
 
 class ShortcutsFragment : Fragment() {
 

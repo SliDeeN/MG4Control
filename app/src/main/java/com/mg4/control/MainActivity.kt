@@ -15,7 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import com.google.android.material.button.MaterialButton
-import com.mg4.control.hardware.MG4Hardware
+import com.mg4.hardware.MG4Hardware
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.service.MG4ControlService
 import kotlinx.coroutines.CoroutineScope
@@ -24,7 +24,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateDialogManager
-import com.mg4.control.util.FirmwareInfo
+import com.mg4.hardware.FirmwareInfo
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.ThemeHelper
 

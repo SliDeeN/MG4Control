@@ -14,8 +14,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.mg4.control.R
-import com.mg4.control.debug.AppLogger
-import com.mg4.control.hardware.MG4Hardware
+import com.mg4.hardware.AppLogger
+import com.mg4.hardware.MG4Hardware
 
 class ConsoleFragment : Fragment() {
 
