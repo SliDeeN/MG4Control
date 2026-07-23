@@ -1,4 +1,4 @@
-package com.mg4.control.tasker
+package com.mg4.control.api
 
 import android.app.Service
 import android.content.Intent
@@ -11,25 +11,24 @@ import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
 
 /**
- * Profile bridge for MG4Tasker (see [ITaskerBridge]).
+ * MG4Control's external control API — driving profiles (see [IProfileControl]).
  *
- * MG4Tasker is an independent system app: it reads and writes the vehicle itself through
- * the shared MG4Hardware layer. The one thing it cannot do alone is apply an MG4Control
- * *profile* — those live in MG4Control — so this service exposes exactly that: list the
- * profiles and apply one. There is no vehicle read and no raw property write here.
+ * Lets any app signed with the same platform key list and apply MG4Control's driving
+ * profiles over IPC. Deliberately narrow: profiles only, no vehicle read and no raw
+ * property write. It is not tied to any particular caller.
  *
- * Guarded by the signature permission com.mg4.control.permission.TASKER_BRIDGE: only an app
- * signed with the same platform key can bind.
+ * Guarded by the signature permission com.mg4.control.permission.CONTROL_PROFILES: only an
+ * app signed with the same platform key can bind.
  */
-class TaskerBridgeService : Service() {
+class ProfileControlService : Service() {
 
     companion object {
-        private const val TAG = "MG4_TASKER_BRIDGE"
+        private const val TAG = "MG4_PROFILE_API"
 
         /** Signature permission required to bind this service. */
-        const val PERMISSION_BRIDGE = "com.mg4.control.permission.TASKER_BRIDGE"
+        const val PERMISSION = "com.mg4.control.permission.CONTROL_PROFILES"
 
-        // Result keys (shared with MG4Tasker's BridgeContract).
+        // Result keys (shared with callers).
         const val KEY_OK      = "ok"
         const val KEY_VERDICT = "verdict"
         const val KEY_DETAIL  = "detail"
@@ -56,7 +55,7 @@ class TaskerBridgeService : Service() {
 
     override fun onBind(intent: Intent?): IBinder = binder
 
-    private val binder = object : ITaskerBridge.Stub() {
+    private val binder = object : IProfileControl.Stub() {
 
         override fun listProfiles(): Bundle {
             val profiles = profileManager.getAll()

@@ -29,12 +29,11 @@
         android:name="com.mg4.control.permission.RECEIVE_HARDKEY"
         android:protectionLevel="signature" />
 
-    <!-- Pont MG4Tasker. En protectionLevel="signature", seule une app signée avec la même
-         clé plateforme peut se lier au TaskerBridgeService. MG4Control la déclare pour
-         protéger ce service ; MG4Tasker (signé avec la même clé) l'obtient et l'utilise
-         uniquement pour l'action « appliquer un profil ». -->
+    <!-- External control API. In protectionLevel="signature", only an app signed with the
+         same platform key can bind ProfileControlService. MG4Control declares the permission
+         to protect that service; any such app may list and apply MG4Control profiles. -->
     <permission
-        android:name="com.mg4.control.permission.TASKER_BRIDGE"
+        android:name="com.mg4.control.permission.CONTROL_PROFILES"
         android:protectionLevel="signature" />
 
     <!-- Réseau / auto-update : déclarés UNIQUEMENT dans le flavor online
@@ -76,14 +75,14 @@
             android:directBootAware="true"
             android:foregroundServiceType="connectedDevice" />
 
-        <!-- Pont IPC MG4Tasker. exported=true car le client est une autre app, mais l'accès
-             est fermé par la permission signature : seule une app signée avec la clé
-             plateforme de la ROM peut se lier. Le service n'expose aucune écriture de
-             propriété brute — uniquement le catalogue d'actions de TaskerBridgeService. -->
+        <!-- External control API (profiles). exported=true because the caller is another
+             app, but access is closed by the signature permission: only an app signed with
+             the ROM platform key can bind. The service exposes no raw property write —
+             only listing and applying MG4Control profiles. -->
         <service
-            android:name=".tasker.TaskerBridgeService"
+            android:name=".api.ProfileControlService"
             android:exported="true"
-            android:permission="com.mg4.control.permission.TASKER_BRIDGE" />
+            android:permission="com.mg4.control.permission.CONTROL_PROFILES" />
 
         <!-- FileProvider + InstallReceiver (auto-update) : déclarés UNIQUEMENT dans
              le flavor online (src/online/AndroidManifest.xml). Déplacer le FileProvider
