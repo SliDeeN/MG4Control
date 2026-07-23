@@ -47,6 +47,8 @@
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/Theme.MG4Control"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
         android:supportsRtl="true">
 
         <!-- API Car AOSP (CarDoorLockManager pour la détection d'ouverture de porte) -->
@@ -55,6 +57,7 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:taskAffinity=""
             android:screenOrientation="landscape"
             android:windowSoftInputMode="adjustPan">
             <intent-filter>
