@@ -47,7 +47,8 @@ BUILD_TOOLS = "34.0.0"
 #                    Pour l'UI, les layouts et la densité.
 #
 # Rien de tout cela ne remplace un essai sur le véhicule.
-# 12,8" HD : 1920x1080 ≈ 172 dpi réels, arrondi au bucket 160 (mdpi).
+# Densité CONFIRMÉE depuis la ROM (vendor/build.prop : ro.sf.lcd_density=160).
+# Écran 12,8" 1920x1080. Firmware de référence : SWI68-29958-1300R69.
 
 EMU_CAR_AVD = "mg4control-car"
 EMU_CAR_IMAGE = "system-images;android-33;android-automotive;x86_64"

@@ -1,0 +1,4318 @@
+===== app/src/main/java/com/mg4/control/MG4App.kt (+1/-7) =====
+20,23d19
+<         // ── Crash handler global ──────────────────────────────────────────────
+<         // Intercepte toute exception non gérée, écrit la stack trace + les logs
+<         // AppLogger dans filesDir/crash_log.txt, puis laisse le handler par défaut
+<         // terminer le processus normalement (Android affiche son propre écran de crash).
+33d28
+<         // ── Migration + initialisation du thème ───────────────────────────────
+37,38c32
+<             // Migration depuis l'ancien booléen "dark_theme" (version < 2.x)
+<             // Sur nouvelle installation : "auto" (tous les firmwares le supportent)
+---
+> 
+
+===== app/src/main/java/com/mg4/control/MainActivity.kt (+19/-68) =====
+11d10
+< import android.view.View
+13d11
+< import android.widget.Toast
+19,20d16
+< import com.mg4.control.update.UpdateChecker
+< import com.mg4.control.update.UpdateDialogManager
+36,37d31
+<         // Init firmware EN PREMIER — avant toute inflation de fragment
+<         // Charge le mode forcé éventuel depuis les prefs
+40d33
+<         // [THEME-AUTO] Recrée l'activité quand le launcher MG change de thème en mode "auto"
+43d35
+<         // Premier lancement : choix de la langue avant tout
+59,60c51
+<         setupDiagnosticUnlock()
+<         checkUnknownFirmware()  // après setupFirmwareChips pour que les chips soient prêtes
+---
+>         checkUnknownFirmware()
+65,84d55
+<     // ── Déblocage du bouton Diagnostic (5 clics sur le logo) ────────────────
+< 
+<     private var logoClickCount = 0
+< 
+<     private fun setupDiagnosticUnlock() {
+<         findViewById<View>(R.id.topbar_logo)?.setOnClickListener {
+<             if (diagnosticUnlocked) return@setOnClickListener
+<             logoClickCount++
+<             if (logoClickCount >= 5) {
+<                 logoClickCount = 0
+<                 diagnosticUnlocked = true
+<                 // Révèle immédiatement le bouton si l'onglet Réglages est déjà affiché
+<                 findViewById<View>(R.id.btn_diagnostic)?.visibility = View.VISIBLE
+<                 Toast.makeText(this, getString(R.string.diagnostic_unlocked), Toast.LENGTH_SHORT).show()
+<             }
+<         }
+<     }
+< 
+<     // ── Navigation vers l'écran par défaut au démarrage ─────────────────────
+< 
+86c57
+<         // Ne naviguer que si c'est un vrai démarrage (pas une rotation / recreate)
+---
+> 
+92c63
+<             // "dashboard" → rien à faire, c'est déjà le startDestination
+---
+> 
+96,97d66
+<     // ── Vérification de mise à jour au démarrage ──────────────────────────────
+< 
+99,100d67
+<         val prefs = getSharedPreferences("mg4_settings", android.content.Context.MODE_PRIVATE)
+<         if (!prefs.getBoolean("auto_check_update", true)) return
+102,110d68
+<         UpdateChecker.check(
+<             context = this,
+<             onUpdateAvailable = { updateInfo ->
+<                 if (!isFinishing && !isDestroyed) {
+<                     UpdateDialogManager.show(this, updateInfo)
+<                 }
+<             }
+<             // onNoUpdate et onError ignorés au démarrage — silencieux si tout va bien
+<         )
+113,114d70
+<     // ── Indicateur firmware (chips SWI133 / SWI68 / SWI69 / SWI131 / SWI165) ──
+< 
+140c96
+<             // Firmware inconnu sans choix forcé : chip cliquable, surlignée en rouge
+---
+> 
+152c108
+<                 // Les six chips en mode "à choisir" (rouge dim, aucune barrée)
+---
+> 
+175c131
+<             else -> { // SWI133 ou forcé SWI133
+---
+>             else -> {
+181d136
+<         // Chips cliquables si firmware inconnu (naturel ou forcé) pour changer de mode
+210,211d164
+<     // ── Dialog firmware non reconnu ───────────────────────────────────────────
+< 
+213c166
+<         // Ne montre le dialog que si le firmware est inconnu ET pas encore de choix forcé
+---
+> 
+220d172
+<         // Affiche la chaîne firmware brute dans le badge (ex: "SWI69-12345")
+236c188
+<             // L'utilisateur peut maintenant taper sur les chips SWI133/SWI68
+---
+> 
+242,243d193
+<     // ── Boutons de navigation dans la top-bar ─────────────────────────────────
+< 
+244a195
+>         val btnAudio     = findViewById<MaterialButton>(R.id.btn_nav_audio)
+248a200,206
+>         btnAudio.setOnClickListener {
+>             when (navController.currentDestination?.id) {
+>                 R.id.audioFragment -> navController.popBackStack(R.id.dashboardFragment, false)
+>                 else               -> navController.navigate(R.id.audioFragment)
+>             }
+>         }
+> 
+272a231,233
+>             btnAudio.backgroundTintList = android.content.res.ColorStateList.valueOf(
+>                 if (destination.id == R.id.audioFragment) accent else inactive
+>             )
+285,286d245
+<     // ── Dialogue de choix de langue au premier lancement ─────────────────────
+< 
+314,321d272
+<     }
+< 
+<     companion object {
+<         /**
+<          * Débloqué via 5 clics sur le logo en haut à gauche. En mémoire uniquement :
+<          * réinitialisé au redémarrage du process (le bouton Diagnostic reste masqué par défaut).
+<          */
+<         @Volatile var diagnosticUnlocked = false
+
+===== app/src/main/java/com/mg4/control/bluetooth/BluetoothProfileManager.kt (+1/-29) =====
+8,19d7
+< /**
+<  * [BT-PROFILES] Utilitaires Bluetooth pour la fonctionnalité de profils automatiques.
+<  *
+<  * Les associations Bluetooth ↔ Profil sont désormais stockées directement dans
+<  * [DrivingProfile.btDeviceMac] — ce fichier ne gère que :
+<  *   • le suivi en mémoire des appareils ACL connectés
+<  *   • la liste des appareils appairés (pour l'UI de l'éditeur de profil)
+<  *   • la requête HFP async (fix "première configuration")
+<  *
+<  * Pour supprimer la fonctionnalité : supprimer ce fichier + tous les blocs
+<  * marqués // [BT-PROFILES] dans les autres fichiers modifiés.
+<  */
+22,25d9
+<     // ── Appareils actuellement connectés (en mémoire) ─────────────────────────
+<     // Mis à jour depuis MG4ControlService via ACTION_ACL_CONNECTED/DISCONNECTED.
+<     // Remis à zéro si le service redémarre — le chemin HFP async compense ce cas.
+< 
+32,33d15
+<     // ── Appareils appairés ────────────────────────────────────────────────────
+< 
+36c18
+<     /** Retourne la liste des appareils Bluetooth appairés, triée par nom. */
+---
+>     
+48,57d29
+< 
+<     // ── Appareils HFP actuellement connectés (requête async) ─────────────────
+<     //
+<     // Utilisé dans applyProfileOnIgnition() quand connectedMacs est vide,
+<     // ce qui se produit si le téléphone était déjà connecté avant le démarrage
+<     // du service (première configuration, redémarrage du service AAOS).
+<     //
+<     // On utilise BluetoothProfile.HEADSET (profil HFP AG, rôle voiture) :
+<     // sur AAOS la voiture est l'Audio Gateway, les téléphones connectés sont
+<     // donc accessibles via ce profil. HEADSET_CLIENT n'est pas exposé sur AAOS.
+
+===== app/src/main/java/com/mg4/control/debug/AppLogger.kt (+0/-10) =====
+9,12d8
+< /**
+<  * In-app log buffer — mirrors every Log.* call to an in-memory ring buffer
+<  * so the ConsoleFragment can display them without ADB.
+<  */
+31,32d26
+<     // ---- Public log methods (mirror android.util.Log) ----
+< 
+43,44d36
+<     // ---- Listener for live UI updates ----
+< 
+47,48d38
+< 
+<     // ---- Internal ----
+
+===== app/src/main/java/com/mg4/control/debug/CrashLogger.kt (+5/-22) =====
+9,15d8
+< /**
+<  * Écrit la stack trace d'un crash non-géré dans un fichier sur le stockage interne,
+<  * accompagnée des 60 dernières lignes du buffer AppLogger pour contexte.
+<  *
+<  * Le fichier est lu par SettingsFragment → showDiagnosticDialog().
+<  * Utilisation : installer dans MG4App.onCreate() via Thread.setDefaultUncaughtExceptionHandler.
+<  */
+19,21c12
+<     private const val MAX_FILE_BYTES = 48_000   // ~48 Ko max pour éviter de saturer filesDir
+< 
+<     // ── Écriture (appelé depuis le UncaughtExceptionHandler) ─────────────────
+---
+>     private const val MAX_FILE_BYTES = 48_000
+35d25
+<         // ── Exception principale ──────────────────────────────────────────
+40d29
+<         // ── Causes (chaîne de causes) ─────────────────────────────────────
+52d40
+<         // ── Dernières entrées AppLogger ───────────────────────────────────
+64d51
+<         // ── Écriture sur disque ───────────────────────────────────────────
+67c54
+<             // Tronque à MAX_FILE_BYTES pour ne pas saturer le stockage
+---
+> 
+74c61
+<             // Dernier recours — on ne peut rien faire de plus ici
+---
+> 
+78,80c65
+<     // ── Lecture (appelé depuis SettingsFragment) ──────────────────────────────
+< 
+<     /** Retourne le contenu du crash log ou null si aucun crash n'a été enregistré. */
+---
+>     
+86c71
+<     /** Supprime le fichier de crash log. */
+---
+>     
+90,91d74
+< 
+<     // ── Utilitaires ───────────────────────────────────────────────────────────
+
+===== app/src/main/java/com/mg4/control/hardware/MG4Hardware.kt (+292/-698) =====
+1c1
+< package com.mg4.control.hardware
+---
+> ﻿package com.mg4.control.hardware
+14a15,18
+> import java.util.concurrent.atomic.AtomicInteger
+> import kotlinx.coroutines.CoroutineScope
+> import kotlinx.coroutines.Dispatchers
+> import kotlinx.coroutines.launch
+16,24d19
+< /**
+<  * Hardware abstraction layer for MG4 vehicle control.
+<  * Reconstructed from DriveHub Dort 0.9 smali.
+<  *
+<  * Three communication layers (mirrors original exactly):
+<  *  Katman1 — android.car.Car → CarPropertyManager / CarHvacManager (async ServiceConnection)
+<  *  Katman2 — ServiceManager.getService("vehiclesetting") → raw IBinder (often SELinux-blocked)
+<  *  Katman3 — bindService(VehicleService) → IHubService → sub-services (not needed for our use case)
+<  */
+29d23
+<     // Area IDs
+33d26
+<     // Vehicle property IDs
+41d33
+<     // SAIC binder transaction codes
+51d42
+<     // ADAS property IDs — SWI133 (getMixProperty / getIntProperty)
+56,63d46
+<     // ELK — Assistant de sortie de voie (SWI133)
+<     // Accès via IVehicleSettingService binder (sVehicleBinder) — smali IVehicleSettingService$Stub$Proxy
+<     // getLaneKeepingAsstMode()   → TX 0x53 (synchrone, reply: readException + readInt)
+<     // setLaneKeepingAsstMode(I)  → TX 0x54 (ONEWAY, data: writeInt(value))
+<     // getLaneKeepingAsstSen()    → TX 0x55 (synchrone)
+<     // setLaneKeepingAsstSen(I)   → TX 0x56 (ONEWAY)
+<     // Mode  : 1=OFF, 2=Alerte(LDW), 3=Aider(LDP), 5=Maintien d'urgence(ELK)
+<     // Sen   : 1=Faible, 2=Standard, 3=Élevé
+69,71d51
+<     // SWI132 binder TX codes (IVehicleSettingService — DESCRIPTOR_VSM132, two-way flag=0x0)
+<     // Setters : 0x057=setSLIFWarningState, 0x128=setOverSpeedSoundMode, 0x12a=setSpeedLimitSoundMode
+<     // Getters : 0x058=getSLIFWarningState, 0x129=getOverSpeedSoundMode, 0x12b=getSpeedLimitSoundMode
+79c59
+<     /** Valeurs du mode ELK (LaneKeepingAsstMode). */
+---
+>     
+81,84c61,64
+<         const val OFF       = 1   // Désactivé
+<         const val ALERT     = 2   // Alerte (LDW)
+<         const val ASSIST    = 3   // Aider (LDP)
+<         const val EMERGENCY = 5   // Maintien d'urgence (ELK)
+---
+>         const val OFF       = 1
+>         const val ALERT     = 2
+>         const val ASSIST    = 3
+>         const val EMERGENCY = 5
+87c67
+<     /** Valeurs de sensibilité ELK. */
+---
+>     
+89,111c69,83
+<         const val LOW      = 1   // Faible
+<         const val STANDARD = 2   // Standard
+<         const val HIGH     = 3   // Élevé
+<     }
+< 
+<     // AEB — Système anti-collision avant (SWI133)
+<     // PROP_AEB_SWITCH    : CarPropertyManager, AREA_GLOBAL, 1=OFF / 2=ON
+<     private const val PROP_AEB_SWITCH    = 0x2140a108  // AAD_FRONT_COLLISION_ASST_SYS (CPM)
+<     // PROP_AEB_SYS_MODE  : VPM, ID_AAD_FRONT_COLLISION_ASST_SYS, 1=Alerte / 2=Alerte+Freinage
+<     // PROP_AEB_MODE      : VPM, ID_AAD_AUTO_EME_BREAK,            1=Alerte / 2=Alerte+Freinage
+<     // Le smali vehiclesettings écrit toujours les deux simultanément via setIntPropertyRecovery
+<     private const val PROP_AEB_SYS_MODE    = 0x302000a  // ID_AAD_FRONT_COLLISION_ASST_SYS (VPM)
+<     private const val PROP_AEB_MODE        = 0x302000b  // ID_AAD_AUTO_EME_BREAK (VPM)
+<     // PROP_AEB_SENSITIVITY : VPM, ForwardCollisionAsstSentItem, 1=Faible / 2=Standard / 3=Élevé
+<     private const val PROP_AEB_SENSITIVITY = 0x302000e  // ID_AAD_FRONT_COLLISION_ASST_SEN (VPM)
+< 
+<     // TSR — Reconnaissance des panneaux de vitesse (SLIF Warning)
+<     // SWI133 : VPM toggle 0/1 ; SWI68/SWI165 : VSM setSpeedAsstSlifWarning ; SWI69/SWI131 : VSM setSLIFWarningState (inversé)
+<     private const val PROP_TSR_MODE = 0x5030049  // ID_AAD_SLIF_WARNING
+< 
+<     // Économie d'énergie (Endurance Mode / Longer Endurance)
+<     // SWI133 : VPM PROP_ENERGY_SAVING ; SWI69/SWI131 : VSM setEnduranceMode ; SWI68/SWI165 : VSM setLongerEndurance
+<     private const val PROP_ENERGY_SAVING = 0x5030007  // ID_LONGER_ENDURANCE_MODE
+---
+>         const val LOW      = 1
+>         const val STANDARD = 2
+>         const val HIGH     = 3
+>     }
+> 
+>     private const val PROP_AEB_SWITCH    = 0x2140a108
+> 
+>     private const val PROP_AEB_SYS_MODE    = 0x302000a
+>     private const val PROP_AEB_MODE        = 0x302000b
+> 
+>     private const val PROP_AEB_SENSITIVITY = 0x302000e
+> 
+>     private const val PROP_TSR_MODE = 0x5030049
+> 
+>     private const val PROP_ENERGY_SAVING = 0x5030007
+113d84
+<     // SWI68 : VehicleSettingManager class name (loaded via launcher context)
+117,127d87
+<     // Luminosité écran — ancien SDK (SWI133/68/165) : GeneralManager.setBrightness(Int)/getBrightness().
+<     // Plage native 0..255 (constantes DARKEST_VALUE=0x0 / BRIGHTEST_VALUE=0xff confirmées dans le smali).
+<     // A9 (SWI132/131/69) = phase 2 (setScreenBrightness(III), params non décodables sans SystemUI).
+<     private const val GENERAL_MANAGER_CLASS = "com.saicmotor.sdk.systemsettings.GeneralManager"
+<     private const val BRIGHTNESS_NATIVE_MAX = 255
+<     private const val BRIGHTNESS_MIN_PERCENT = 5   // plancher de sécurité : ne jamais éteindre l'écran
+< 
+<     // SWI69/SWI131 : accès via CarAdapterClient → queryClient(0x8) → CarVehicleSettingClient
+<     // Architecture réelle : CarAdapterClient se connecte à com.saicmotor.caradapter.CarAdapterService,
+<     // puis queryClient(code) retourne l'IBinder pour chaque service.
+<     // Code 0x8 = CarVehicleSettingClient (vérifié dans VehicleSettingService.onResult() smali)
+131,132c91,92
+<     private const val VSM_SERVICE_CODE    = 0x8   // queryClient(0x8) → ICarVehicleSettingService
+<     private const val VEHICLE_SETTING_PKG = "com.saicmotor.vehiclesetting"  // SWI131 : carapi dans VS
+---
+>     private const val VSM_SERVICE_CODE    = 0x8
+>     private const val VEHICLE_SETTING_PKG = "com.saicmotor.vehiclesetting"
+134d93
+<     // Katman5 — VehicleConditionManager (IVehicleConditionService via IHubService "vehiclecondition")
+138d96
+<     // Katman5 SWI69/SWI131 — ICarGeneralService via CarAdapterClient (queryClient(0x1))
+140c98
+<     private const val BIND_CODE_CAR_GENERAL    = 0x1   // ICarAdapterService.queryClient(0x1)
+---
+>     private const val BIND_CODE_CAR_GENERAL    = 0x1
+142d99
+<     // Standard AAOS — VehicleProperty.IGNITION_STATE (compatible tous firmwares via CarPropertyManager)
+145c102
+<     /** Valeurs de IGNITION_STATE (VehicleIgnitionState) — propriété AAOS standard. */
+---
+>     
+151c108
+<         const val ON        = 4   // Clé détectée + frein appuyé = état READY
+---
+>         const val ON        = 4
+155,158c112
+<     /**
+<      * Valeurs retournées par IVehicleConditionService.getVehicleIgnition() (Katman5).
+<      * Source : VehicleConditionConst.smali + CarIgnitionItem.smali (SWI133 launcher).
+<      */
+---
+>     
+160,175c114,117
+<         const val OFF       = 0x0   // Voiture éteinte
+<         const val ACCESSORY = 0x1   // Accessoires uniquement
+<         const val RUN       = 0x2   // Clé ON / état READY
+<         const val CRANK     = 0x3   // Démarrage
+<     }
+< 
+<     /**
+<      * Limiteur de vitesse (Speed Assist System / SAS) — réglage INDÉPENDANT du mode ACC/TJA.
+<      * Sur SWI132 il est piloté par setSasMode (et NON par setAccTjaState/SHWA, qui ne l'active pas).
+<      * Valeurs confirmées dans le smali SWI132 (SasModel / sas_modes) :
+<      *   0 = Désactivé, 2 = Manuel, 3 = Intelligent  (1 = avert. vitesse, modèles TW uniquement)
+<      */
+<     object SasMode {
+<         const val OFF         = 0
+<         const val MANUEL      = 2
+<         const val INTELLIGENT = 3
+---
+>         const val OFF       = 0x0
+>         const val ACCESSORY = 0x1
+>         const val RUN       = 0x2
+>         const val CRANK     = 0x3
+178c120
+<     /** Valeurs de mode ADAS pour firmware SWI68/SWI132 (CarAccTja constants). */
+---
+>     
+180,183c122,125
+<         const val OFF  = 0x4   // Désactiver
+<         const val SHWA = 0x3   // Speed Limit Mode (Limiteur) — SWI132 uniquement
+<         const val ACC  = 0x1   // ACC
+<         const val TJA  = 0x2   // TJA (Traffic Jam Assist) = ICA dans l'UI SWI132
+---
+>         const val OFF  = 0x4
+>         const val SHWA = 0x3
+>         const val ACC  = 0x1
+>         const val TJA  = 0x2
+186c128
+<     /** Valeurs du mode AEB (communes SWI133 + SWI68). */
+---
+>     
+188,189c130,131
+<         const val ALARM       = 1   // Alerte seule (FCW)
+<         const val ALARM_BRAKE = 2   // Alerte + Freinage automatique d'urgence
+---
+>         const val ALARM       = 1
+>         const val ALARM_BRAKE = 2
+192c134
+<     /** Valeurs de sensibilité AEB — SWI133 uniquement (PROP_AEB_SENSITIVITY = 0x302000e). */
+---
+>     
+194,196c136,138
+<         const val LOW      = 1   // Faible
+<         const val STANDARD = 2   // Standard
+<         const val HIGH     = 3   // Élevé
+---
+>         const val LOW      = 1
+>         const val STANDARD = 2
+>         const val HIGH     = 3
+204,210c146,150
+<     @Volatile private var sVpm: Any? = null          // VehiclePropertyManager instance (SWI133, Katman4)
+<     @Volatile private var sVpmService: Any? = null   // mIVehiclePropertyService field value (SWI133)
+<     @Volatile private var sVsm: Any? = null          // VehicleSettingManager instance (SWI68, Katman4)
+<     @Volatile private var sVsmService: Any? = null   // mVehicleSettingService field value (SWI68)
+<     @Volatile private var sVsm133: Any? = null       // VehicleSettingManager instance (SWI133, pour ELK)
+<     @Volatile private var sGeneral: Any? = null      // GeneralManager instance (SWI133/68/165, luminosité)
+<     @Volatile private var sCarGeneral: Any? = null   // CarGeneralClient instance (A9 SWI132/131/69, luminosité)
+---
+>     @Volatile private var sVpm: Any? = null
+>     @Volatile private var sVpmService: Any? = null
+>     @Volatile private var sVsm: Any? = null
+>     @Volatile private var sVsmService: Any? = null
+>     @Volatile private var sVsm133: Any? = null
+218d157
+<     // ── Katman5 — IGNITION_STATE via CarPropertyManager (standard AAOS) ──────
+223d161
+<     // ── Katman5 — VehicleConditionManager / ICarGeneralService ───────────────
+227c165,166
+<     @Volatile private var sLastVcmIgnitionState = -1   // filtre les faux RUN répétés
+---
+> 
+>     private val sLastVcmIgnitionState = AtomicInteger(-1)
+231c170
+<     /** Listeners notifiés dès que Katman1 (CPM + HVAC) est opérationnel. */
+---
+>     
+234c173
+<     /** Listeners notifiés dès que Katman4 (mIVehiclePropertyService) est opérationnel. */
+---
+>     
+237,240c176
+<     /**
+<      * Exécute [action] dès que CarPropertyManager et CarHvacManager sont disponibles.
+<      * Si déjà prêt, exécution immédiate. Sinon, mis en file et déclenché à la connexion.
+<      */
+---
+>     
+249,252c185
+<     /**
+<      * Exécute [action] dès que le service ADAS (Katman4) est disponible.
+<      * SWI133 → mIVehiclePropertyService ; SWI68/SWI69/SWI131 → mVehicleSettingService
+<      */
+---
+>     
+258c191
+<     /** Exécute [action] dès que Katman5 (IVehicleConditionService) est opérationnel. */
+---
+>     
+263c196,203
+<     /** Enregistre un callback invoqué à chaque changement d'état d'allumage (CarIgnitionItem). */
+---
+>     
+>     fun clearPendingReadyListeners() {
+>         katman1ReadyListeners.clear()
+>         katman4ReadyListeners.clear()
+>         katman5ReadyListeners.clear()
+>     }
+> 
+>     
+272c212
+<     /** Enregistre un callback sur IGNITION_STATE via CarPropertyManager (standard AAOS). */
+---
+>     
+282c222
+<     /** Désenregistre le proxy CarPropertyManager (appeler depuis Service.onDestroy). */
+---
+>     
+299,302c239
+<     /**
+<      * Lit l'état d'allumage courant via CarPropertyManager.
+<      * Retourne -1 si CPM non prêt, 0 si propriété non supportée.
+<      */
+---
+>     
+315,318d251
+<     // -------------------------------------------------------------------------
+<     // Init
+<     // -------------------------------------------------------------------------
+< 
+328,330c261,263
+<             FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI165 -> initKatman4Swi68(context)  // même SDK que SWI68
+<             FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 -> initKatman4Swi69(context)  // CarVehicleSettingClient, même path que SWI69
+<             FirmwareInfo.isNewGenVsm()                              -> initKatman4Swi69(context)   // SWI69 + SWI131
+---
+>             FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI165 -> initKatman4Swi68(context)
+>             FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 -> initKatman4Swi69(context)
+>             FirmwareInfo.isNewGenVsm()                              -> initKatman4Swi69(context)
+333,334c266
+<         // Katman5 — détection IGNITION_STATE push (VehicleConditionManager ou ICarGeneralService)
+<         // SWI132 utilise ICarGeneralService (même path que SWI69/SWI131) — VehicleConditionManager absent de son smali
+---
+> 
+342a275
+>         initAudio(context)
+346,349d278
+<     // -------------------------------------------------------------------------
+<     // Katman1 — android.car.Car (async, mirrors original bindCarService exactly)
+<     // -------------------------------------------------------------------------
+< 
+367d295
+<         // Attempt 1: createCar(Context)
+373d300
+<         // Attempt 2: createCar(Context, Handler)
+382d308
+<         // Attempt 3: createCar(Context, ServiceConnection) — async, callback fires when connected
+416d341
+<         // Call car.connect() if available (required on older builds)
+421c346
+<             // connect() not present on all builds, ignore
+---
+> 
+426d350
+<         // Try sync managers immediately
+429d352
+<         // Schedule retries — délais étendus pour couvrir le boot lent du Car service SAIC
+441c364
+<         if (sCarPropertyManager != null && sCarHvacManager != null) return // already done
+---
+>         if (sCarPropertyManager != null && sCarHvacManager != null) return
+475d397
+<             // Notifier les abonnés whenKatman1Ready dès que les deux managers sont prêts
+482d403
+<             // Tentative d'enregistrement du callback IGNITION_STATE (best-effort)
+489,492d409
+<     // -------------------------------------------------------------------------
+<     // Katman2 — ServiceManager raw binder
+<     // -------------------------------------------------------------------------
+< 
+506,509d422
+<     // -------------------------------------------------------------------------
+<     // Katman4 — VehiclePropertyManager via saicmotor.hmi.launcher context
+<     // -------------------------------------------------------------------------
+< 
+529,530d441
+<         // ---- Constructeurs (priorité) ----
+<         // 1) ctor(launcherCtx) — most likely for a class bundled in the launcher APK
+534c445
+<         // 2) ctor(appCtx)
+---
+> 
+538c449
+<         // 3) ctor() no-arg
+---
+> 
+543d453
+<         // ---- Méthodes statiques de factory ----
+562d471
+<         // 1) bindService() — connecte au service véhicule (async)
+565d473
+<         // 2) init(Context, IVehicleServiceListener) via dynamic proxy — reçoit onServiceConnected
+568d475
+<         // 3) VehicleSettingManager pour SWI133 (ELK) — même singleton que SWI68
+571,574d477
+<         // 3b) GeneralManager pour SWI133 (luminosité écran)
+<         tryInitGeneralManager(launcherCtx, context)
+< 
+<         // 4) Retries pour récupérer mIVehiclePropertyService et VSM133 une fois le service connecté
+580d482
+<                 if (sGeneral == null) tryInitGeneralManager(launcherCtx, context)
+591d492
+<         // Log all methods for diagnostics
+597d497
+<         // Strategy 1: Inspect the actual init() signature to get the real listener type
+607d506
+<             // Try dynamic proxy with the actual listener interface type
+634d532
+<             // Fallback: try init(Context, null) — works if listener is nullable
+644d541
+<         // Strategy 2: init(Context) single-param
+654d550
+<         // Strategy 3: init() no-arg
+667c563
+<     /** Exécute [block], retourne le résultat ou null, log le résultat/erreur. */
+---
+>     
+687c583
+<                     // Notify any pending Katman4 listeners
+---
+> 
+697,702d592
+<     // -------------------------------------------------------------------------
+<     // -------------------------------------------------------------------------
+<     // SWI133 — VehicleSettingManager (ELK : getLaneKeepingAsstMode / setLaneKeepingAsstMode)
+<     // Même singleton que SWI68 mais initialisé dans le chemin SWI133.
+<     // -------------------------------------------------------------------------
+< 
+708d597
+<             // Tentative 1 : lire le singleton déjà initialisé par le launcher
+718d606
+<             // Tentative 2 : appeler init() nous-mêmes (comme SWI68)
+748,886c636
+<     // -------------------------------------------------------------------------
+<     // Luminosité écran — GeneralManager (ancien SDK SWI133/68/165)
+<     // GeneralManager.init(Context, ISettingsServiceListener) — singleton sInstance.
+<     // Même pattern que tryInitVsm133 ; chargé depuis le launcher com.saicmotor.hmi.launcher.
+<     // -------------------------------------------------------------------------
+< 
+<     private fun tryInitGeneralManager(launcherCtx: Context, appCtx: Context) {
+<         if (sGeneral != null) return
+<         try {
+<             val cls = launcherCtx.classLoader.loadClass(GENERAL_MANAGER_CLASS)
+< 
+<             // Tentative 1 : singleton déjà initialisé
+<             val f = cls.getDeclaredField("sInstance")
+<             f.isAccessible = true
+<             f.get(null)?.let {
+<                 sGeneral = it
+<                 AppLogger.i(TAG, "  GeneralManager singleton ✓")
+<                 return
+<             }
+< 
+<             // Tentative 2 : init(Context, ISettingsServiceListener) — proxy dynamique
+<             val initMethod = cls.methods.firstOrNull { m ->
+<                 m.name == "init" && m.parameterCount == 2 &&
+<                 Context::class.java.isAssignableFrom(m.parameterTypes[0])
+<             } ?: run {
+<                 AppLogger.w(TAG, "  GeneralManager init() non trouvé")
+<                 return
+<             }
+<             val listenerType = initMethod.parameterTypes[1]
+<             val listener = if (listenerType.isInterface) {
+<                 java.lang.reflect.Proxy.newProxyInstance(listenerType.classLoader, arrayOf(listenerType)) { _, method, _ ->
+<                     if (method.name == "onServiceConnected") {
+<                         try {
+<                             f.get(null)?.let { sGeneral = it }
+<                             AppLogger.i(TAG, "  GeneralManager onServiceConnected — sGeneral=${if (sGeneral != null) "OK ✓" else "null"}")
+<                         } catch (_: Exception) {}
+<                     }
+<                     null
+<                 }
+<             } else null
+<             initMethod.invoke(null, appCtx, listener)
+<             // init() crée sInstance immédiatement (service connecté de façon asynchrone ensuite)
+<             f.get(null)?.let { sGeneral = it }
+<             AppLogger.i(TAG, "  GeneralManager.init() called — sGeneral=${if (sGeneral != null) "OK ✓" else "null"}")
+<         } catch (e: Exception) {
+<             AppLogger.d(TAG, "  tryInitGeneralManager exc: ${e.message}")
+<         }
+<     }
+< 
+<     /** A9 (SWI132/131/69) : luminosité via CarGeneralClient.setScreenBrightness(mode,day,night). */
+<     private fun isA9Brightness(): Boolean =
+<         FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132
+< 
+<     /** Luminosité écran disponible : ancien SDK (133/68/165) ou A9 (132/131/69). */
+<     fun hasBrightnessControl(): Boolean = FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
+< 
+<     /** Lit la luminosité écran en % (0–100), ou -1 si indisponible. */
+<     fun getScreenBrightnessPercent(): Int =
+<         if (isA9Brightness()) getBrightnessA9() else getBrightnessOldSdk()
+< 
+<     /**
+<      * Règle la luminosité écran en % (0–100). Plancher de sécurité à BRIGHTNESS_MIN_PERCENT
+<      * pour ne jamais éteindre l'écran.
+<      */
+<     fun setScreenBrightnessPercent(pct: Int): Boolean {
+<         val clamped = pct.coerceIn(BRIGHTNESS_MIN_PERCENT, 100)
+<         return if (isA9Brightness()) setBrightnessA9(clamped) else setBrightnessOldSdk(clamped)
+<     }
+< 
+<     // ── Ancien SDK (SWI133/68/165) — GeneralManager.setBrightness(Int), plage native 0..255 ──
+< 
+<     private fun getBrightnessOldSdk(): Int {
+<         val g = sGeneral ?: return -1
+<         return try {
+<             val native = (g.javaClass.getMethod("getBrightness").invoke(g) as? Int) ?: return -1
+<             if (native < 0) return -1
+<             val pct = (native * 100 / BRIGHTNESS_NATIVE_MAX).coerceIn(0, 100)
+<             AppLogger.d(TAG, "  getBrightness native=$native → $pct%")
+<             pct
+<         } catch (e: Exception) {
+<             AppLogger.w(TAG, "  getBrightness exc: ${e.message}")
+<             -1
+<         }
+<     }
+< 
+<     private fun setBrightnessOldSdk(clampedPct: Int): Boolean {
+<         val g = sGeneral ?: return false
+<         val native = (clampedPct * BRIGHTNESS_NATIVE_MAX / 100).coerceIn(0, BRIGHTNESS_NATIVE_MAX)
+<         if (logEnabled) AppLogger.i(TAG, "setBrightness → $clampedPct% (native=$native/255)")
+<         return try {
+<             g.javaClass.getMethod("setBrightness", Int::class.javaPrimitiveType).invoke(g, native)
+<             true
+<         } catch (e: Exception) {
+<             AppLogger.w(TAG, "  setBrightness exc: ${e.message}")
+<             false
+<         }
+<     }
+< 
+<     // ── A9 (SWI132/131/69) — luminosité via Settings.System.SCREEN_BRIGHTNESS ──
+<     // L'app Settings A9 (GeneralModel.setBrightness) pilote réellement la dalle par
+<     // Settings.System.putInt("screen_brightness", 0..255) + passage en mode manuel.
+<     // CarGeneralClient.setScreenBrightness(mode,day,night) ne stocke que le jour/nuit
+<     // et n'a AUCUN effet sur la dalle (confirmé par les logs SWI132 : valeur lue=0,
+<     // aucun changement visuel). L'app étant uid.system, elle peut écrire Settings.System.
+<     private const val A9_BRIGHTNESS_NATIVE_MAX = 255
+< 
+<     private fun getBrightnessA9(): Int {
+<         val resolver = sAppContext?.contentResolver ?: return -1
+<         val native = try {
+<             android.provider.Settings.System.getInt(resolver, android.provider.Settings.System.SCREEN_BRIGHTNESS)
+<         } catch (e: Exception) {
+<             AppLogger.w(TAG, "  A9 getBrightness Settings.System exc: ${e.message}"); return -1
+<         }
+<         if (native < 0) return -1
+<         return (native * 100 / A9_BRIGHTNESS_NATIVE_MAX).coerceIn(0, 100)
+<     }
+< 
+<     private fun setBrightnessA9(clampedPct: Int): Boolean {
+<         val resolver = sAppContext?.contentResolver ?: return false
+<         val native = (clampedPct.coerceIn(0, 100) * A9_BRIGHTNESS_NATIVE_MAX / 100).coerceIn(1, A9_BRIGHTNESS_NATIVE_MAX)
+<         return try {
+<             // Mode manuel, sinon l'auto-luminosité écrase aussitôt la valeur
+<             android.provider.Settings.System.putInt(resolver,
+<                 android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE,
+<                 android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
+<             android.provider.Settings.System.putInt(resolver,
+<                 android.provider.Settings.System.SCREEN_BRIGHTNESS, native)
+<             if (logEnabled) AppLogger.i(TAG, "A9 brightness → Settings.System.SCREEN_BRIGHTNESS=$native ($clampedPct%)")
+<             true
+<         } catch (e: Exception) {
+<             AppLogger.w(TAG, "  A9 setBrightness Settings.System exc: ${e.message}")
+<             false
+<         }
+<     }
+< 
+<     /**
+<      * Appelle une méthode sur sVsm133 par réflexion.
+<      * Retourne la valeur (Int pour getters, null pour setters void) ou null si erreur.
+<      */
+---
+>     
+898,900d647
+<     // Katman4 SWI68 — VehicleSettingManager via saicmotor.hmi.launcher context
+<     // -------------------------------------------------------------------------
+< 
+918d664
+<         // Appel static : VehicleSettingManager.init(Context, IVehicleServiceListener)
+950d695
+<         // Récupère le singleton depuis le champ statique sVehicleSettingManager
+962,965d706
+<         // GeneralManager pour SWI68/SWI165 (luminosité écran) — même launcher context
+<         tryInitGeneralManager(launcherCtx, context)
+< 
+<         // Retries pour récupérer mVehicleSettingService et le singleton si pas encore prêt
+978d718
+<                 if (sGeneral == null) tryInitGeneralManager(launcherCtx, context)
+1003,1015d742
+<     // -------------------------------------------------------------------------
+<     // Katman4 SWI69/SWI131 — CarVehicleSettingClient via CarAdapterClient
+<     //
+<     // Architecture réelle (vérifiée dans smali) :
+<     //   CarAdapterClient.getInstance(ctx).start()
+<     //   → bindService(com.saicmotor.caradapter / CarAdapterService)
+<     //   → onResult(0=OK) : queryClient(0x8) → IBinder (ICarVehicleSettingService)
+<     //   → new CarVehicleSettingClient(ibinder)
+<     //
+<     // CarVehicleSettingClient expose exactement les mêmes méthodes que VehicleSettingManager
+<     // (getAccTjaState, setAccTjaState, getLasWarningSound, getFcwState, etc.)
+<     // -------------------------------------------------------------------------
+< 
+1036d762
+<         // Obtenir le singleton CarAdapterClient
+1049d774
+<         // Enregistrer le ServiceConnListener (onResult(0) = connecté)
+1071d795
+<         // Démarrer la connexion à CarAdapterService
+1076d799
+<         // Tentative immédiate si CarAdapterService était déjà connecté
+1079d801
+<         // Retries échelonnés
+1088,1091c810
+<     /**
+<      * Tente d'obtenir un CarVehicleSettingClient via queryClient(0x8).
+<      * Appelée à la connexion (onResult=0) et lors des retries.
+<      */
+---
+>     
+1131,1136c850
+<     /**
+<      * Appelle une méthode void sur sVsm par réflexion.
+<      * Contrairement à callVsm(), retourne true si la méthode existe et s'exécute sans exception,
+<      * même si invoke() retourne null (comportement normal pour les méthodes void).
+<      * Retourne false si sVsm est null ou si une exception est levée (méthode introuvable, etc.).
+<      */
+---
+>     
+1142c856
+<             true   // méthode trouvée et appelée sans exception → succès
+---
+>             true
+1166c880
+<     /** Variante avec recovery — utilisée par vehiclesettings pour les propriétés FCW/AEB. */
+---
+>     
+1175c889
+<             // Fallback sur setIntProperty si setIntPropertyRecovery absent
+---
+> 
+1181,1235d894
+<     // ── Alimentation véhicule (mise hors tension, infodivertissement maintenu) ─
+<     // Reproduit le bouton "Vehicle Power → Off" du launcher MG (onglet Safety).
+<     // Valeur 2 sur les 6 firmwares ; seul le chemin d'accès diffère :
+<     //   • SWI133        : VehiclePropertyManager.setIntPropertyRecovery(0x6030021, 2)
+<     //   • SWI68/SWI165  : VehicleSettingManager.setPowerModeSwitch(2)
+<     //   • A9 (132/131/69): CarAdapterClient.queryClient(0xf) → CarComfortabletClient.setPowerModeSwitch(2)
+<     // Le véhicule n'exécute la coupure qu'à l'arrêt en position P (garde côté firmware).
+<     private const val PROP_POWER_MODE_SWITCH    = 0x6030021   // ID_POWER_MODE_SWITCH (SWI133)
+<     private const val POWER_MODE_OFF            = 2
+<     private const val COMFORTABLET_CLIENT_CLASS = "com.saicmotor.carapi.client.CarComfortabletClient"
+<     private const val CAR_ADAPTER_CLIENT_CLASS  = "com.saicmotor.carapi.CarAdapterClient"
+<     private const val COMFORTABLET_SERVICE_CODE = 0xf
+< 
+<     /** Disponible sur tous les firmwares connus. */
+<     fun hasVehiclePowerOff(): Boolean =
+<         FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
+< 
+<     /** Coupe l'alimentation du véhicule tout en gardant l'écran/infodivertissement actif. */
+<     fun vehiclePowerOff(): Boolean {
+<         val gen = FirmwareInfo.getGeneration()
+<         AppLogger.i(TAG, "vehiclePowerOff (gen=$gen)")
+<         return when {
+<             gen == FirmwareInfo.Gen.SWI133 ->
+<                 setIntPropertyVpmRecovery(PROP_POWER_MODE_SWITCH, POWER_MODE_OFF)
+<             gen == FirmwareInfo.Gen.SWI68 || gen == FirmwareInfo.Gen.SWI165 ->
+<                 // sVsm = VehicleSettingManager (vieux SDK)
+<                 callVsmVoid("setPowerModeSwitch", POWER_MODE_OFF)
+<             FirmwareInfo.isNewGenVsm() || gen == FirmwareInfo.Gen.SWI132 ->
+<                 vehiclePowerOffA9()
+<             else -> false
+<         }
+<     }
+< 
+<     /** A9 (SWI132/131/69) : obtient CarComfortabletClient via l'adaptateur carapi et coupe l'alim. */
+<     private fun vehiclePowerOffA9(): Boolean {
+<         val cl = sVsm?.javaClass?.classLoader ?: run {
+<             AppLogger.w(TAG, "  A9 power-off: sVsm/classloader null"); return false
+<         }
+<         return try {
+<             val adapterClass = cl.loadClass(CAR_ADAPTER_CLIENT_CLASS)
+<             val adapter = adapterClass.getMethod("getInstance", Context::class.java).invoke(null, sAppContext)
+<             val binder = adapterClass.getMethod("queryClient", Int::class.javaPrimitiveType)
+<                 .invoke(adapter, COMFORTABLET_SERVICE_CODE) as? android.os.IBinder
+<                 ?: run { AppLogger.w(TAG, "  A9 power-off: queryClient(0xf) null"); return false }
+<             val comfortClass = cl.loadClass(COMFORTABLET_CLIENT_CLASS)
+<             val comfort = comfortClass.getConstructor(android.os.IBinder::class.java).newInstance(binder)
+<             comfortClass.getMethod("setPowerModeSwitch", Int::class.javaPrimitiveType).invoke(comfort, POWER_MODE_OFF)
+<             AppLogger.i(TAG, "  A9 power-off: CarComfortabletClient.setPowerModeSwitch($POWER_MODE_OFF) ✓")
+<             true
+<         } catch (e: Exception) {
+<             AppLogger.w(TAG, "  A9 power-off error: ${e.javaClass.simpleName}: ${e.message}")
+<             false
+<         }
+<     }
+< 
+1239c898
+<             // Méthode réelle sur VPM : getMixProperty(Class, int)
+---
+> 
+1258c917
+<             // Méthode réelle sur VPM : setMixProperty(Class, int, Object)
+---
+> 
+1270,1273d928
+<     // -------------------------------------------------------------------------
+<     // Low-level property accessors
+<     // -------------------------------------------------------------------------
+< 
+1321,1324c976
+<     /**
+<      * SAIC proprietary binder transact (Katman2 fallback).
+<      * Parcel layout from smali: [interfaceToken, AREA_GLOBAL, 1, value, float[], byte[]]
+<      */
+---
+>     
+1352,1355c1004
+<     /**
+<      * HVAC toggle — cycles the property by sending value=1 until target is reached.
+<      * Timeout: 7 seconds (from original smali: 0x1b58 ms = 7000 ms).
+<      */
+---
+>     
+1379,1382d1027
+<     // -------------------------------------------------------------------------
+<     // Public vehicle control API
+<     // -------------------------------------------------------------------------
+< 
+1455c1100
+<         // Send a single click and wait for state confirmation (avoids on/off oscillation)
+---
+> 
+1465,1468d1109
+<     // -------------------------------------------------------------------------
+<     // ADAS API (Katman4)
+<     // -------------------------------------------------------------------------
+< 
+1471,1472c1112
+<             // Priorité VSM (CarVehicleSettingClient) — confirmé dans smali SWI132
+<             // getOverSpeedSoundMode() : 0=OFF, 1/2/3=ON
+---
+> 
+1486,1487c1126
+<             // Essai 1 : CarVehicleSettingClient — setOverSpeedSoundMode(I)V est une méthode void ;
+<             // callVsmVoid() détecte le succès même quand invoke() retourne null (comportement normal).
+---
+> 
+1493c1132
+<             // Essai 2 : binder direct (TX 0x128, bloqué SELinux sur certains builds)
+---
+> 
+1503c1142
+<             // getSpeedLimitSoundMode() : 0=OFF, valeur positive=ON
+---
+> 
+1517c1156
+<             // Essai 1 : CarVehicleSettingClient — setSpeedLimitSoundMode(I)V (méthode void)
+---
+> 
+1523c1162
+<             // Essai 2 : binder direct (TX 0x12a)
+---
+> 
+1531c1170
+<     /** Returns 0–4 (Off/Limiteur/Auto/ACC/ICA), or -1 if Katman4 not ready. */
+---
+>     
+1535c1174
+<         // Primary: setMixProperty (smali-accurate). Fallback: setIntProperty if method missing.
+---
+> 
+1540,1545c1179
+<     // ── SWI68 / SWI69 ADAS API — VehicleSettingManager (noms de méthodes différents) ──
+< 
+<     /**
+<      * Retourne le mode ACC/TJA actuel (0x4=Off, 0x1=ACC, 0x2=TJA), ou -1 si pas prêt.
+<      * SWI68/SWI165 : getAccTjaMode()   SWI69/SWI131/SWI132 : getAccTjaState()
+<      */
+---
+>     
+1553c1187
+<     /** SWI68/SWI165 : setAccTjaMode(I)V   SWI69/SWI131/SWI132 : setAccTjaState(I)V — void */
+---
+>     
+1558c1192,1199
+<         return callVsmVoid(method, mode)   // void method — callVsmVoid évite le faux-négatif
+---
+>         return callVsmVoid(method, mode)
+>     }
+> 
+>     
+>     object SasMode {
+>         const val OFF         = 0
+>         const val MANUEL      = 2
+>         const val INTELLIGENT = 3
+1561,1568d1201
+<     /**
+<      * Limiteur de vitesse — API unifiée pour tous les firmwares VSM.
+<      * Le limiteur est un réglage INDÉPENDANT du mode ACC/TJA, avec les mêmes valeurs partout
+<      * (0=Désactivé, 2=Manuel, 3=Intelligent — vérifié dans le smali de chaque firmware),
+<      * seul le nom de méthode binder diffère :
+<      *   SWI132/SWI131/SWI69 : getSasMode/setSasMode        (CarVehicleSettingClient)
+<      *   SWI68/SWI165        : getSpeedAsstMode/setSpeedAsstMode (VehicleSettingManager)
+<      */
+1572d1204
+<     /** Lit le mode du limiteur de vitesse. Retourne 0/2/3, ou -1 si indisponible. */
+1579d1210
+<     /** Configure le mode du limiteur de vitesse. 0=Désactivé, 2=Manuel, 3=Intelligent. */
+1586,1590c1217
+<     /**
+<      * SWI68/SWI165 : getLaneKeepingWarningSound()
+<      * SWI69/SWI131/SWI132 : getLasWarningSound()   (confirmé dans smali SWI132)
+<      * Valeurs : 2=ON / 1=OFF
+<      */
+---
+>     
+1597c1224
+<     /** SWI68 : setLaneKeepingWarningSound(I)   SWI69/SWI131/SWI132 : setLasWarningSound(I) — void */
+---
+>     
+1605,1613c1232
+<     // ── AEB — Système anti-collision avant ──────────────────────────────────
+< 
+<     /**
+<      * Retourne true si le système anti-collision avant est activé.
+<      * SWI133          : lit PROP_AEB_SWITCH (2=ON, 1=OFF) via CarPropertyManager.
+<      * SWI68 / SWI165  : getFcwAlarmMode() == 2  (FCW_ALARM_ON=2, FCW_ALARM_OFF=1)
+<      *                   Vérifié dans SafeSettingsRepository SWI165 — même API que SWI68.
+<      * SWI69 / SWI131  : getFcwState() — 1=DÉSACTIVÉ, 2=ACTIVÉ
+<      */
+---
+>     
+1616c1235
+<             // SWI69 / SWI131 / SWI132 — CarVehicleSettingClient : getFcwState() (1=OFF, 2=ON)
+---
+> 
+1619,1620c1238,1239
+<             FirmwareInfo.isVsmBased()  -> (callVsm("getFcwAlarmMode") as? Int) == 2  // SWI68 / SWI165
+<             else                       -> getIntPropertyCPM(PROP_AEB_SWITCH, AREA_GLOBAL) == 0x2  // SWI133
+---
+>             FirmwareInfo.isVsmBased()  -> (callVsm("getFcwAlarmMode") as? Int) == 2
+>             else                       -> getIntPropertyCPM(PROP_AEB_SWITCH, AREA_GLOBAL) == 0x2
+1627,1629c1246
+<             // SWI69 / SWI131 / SWI132 — CarVehicleSettingClient (même API)
+<             // setFcwState(I)V et setFcwAutoBrakeMode(I)V sont des méthodes VOID →
+<             // callVsmVoid() est utilisé pour éviter le faux-négatif de callVsm() != null.
+---
+> 
+1631,1634c1248
+<                 // OFF : setFcwState(1) + setFcwAutoBrakeMode(1) + setFcwSensitivity(0)
+<                 // ON  : setFcwState(2) + setFcwAutoBrakeMode(curMode)
+<                 // Le launcher conditionne son affichage à fcwState==1 AND autoBreakState==1
+<                 // → sans setFcwAutoBrakeMode, son switch reste ON même quand l'AEB est désactivé
+---
+> 
+1648,1651c1262
+<                 // SWI68 / SWI165 : setFcwAlarmMode(2=ON / 1=OFF) + setFcwAutoBrakeMode(1) si OFF
+<                 // Vérifié dans SafeSettingsRepository SWI165 — même API que SWI68,
+<                 // setAutoEmergencyBraking() n'est jamais utilisé par l'app officielle.
+<                 // setFcwAlarmMode(I)V et setFcwAutoBrakeMode(I)V sont void → callVsmVoid()
+---
+> 
+1659,1663c1270
+<     /**
+<      * Retourne le mode AEB courant (1=Alerte, 2=Alerte+Freinage), ou -1 si pas prêt.
+<      * SWI133          : PROP_AEB_MODE (0x302000b) via VehiclePropertyManager.
+<      * SWI68/SWI69/SWI131 : getFcwAutoBrakeMode() (1=Alerte, 2=Alerte+Freinage).
+<      */
+---
+>     
+1676,1677c1283
+<             // SWI69 / SWI131 / SWI132 — CarVehicleSettingClient : fixer mode puis activer
+<             // setFcwAutoBrakeMode(I)V et setFcwState(I)V sont void → callVsmVoid()
+---
+> 
+1679c1285
+<                 // L'ordre : 1) fixer le mode, 2) activer (commit le mode).
+---
+> 
+1687c1293
+<                 // SWI68 / SWI165 : setFcwAutoBrakeMode uniquement (1=Alerte, 2=Alerte+Freinage)
+---
+> 
+1691c1297
+<                 // SWI133 smali exact
+---
+> 
+1703,1708c1309
+<     /**
+<      * Retourne la sensibilité AEB courante (1=Faible, 2=Standard, 3=Élevé), ou -1 si pas prêt.
+<      * SWI133         : PROP_AEB_SENSITIVITY (0x302000e, VPM)
+<      * SWI68/SWI165   : VehicleSettingManager.getFcwSensitivity()
+<      * SWI69/SWI131   : CarVehicleSettingClient.getFcwSensitivity()
+<      */
+---
+>     
+1720,1725c1321
+<     /**
+<      * Définit la sensibilité AEB (1=Faible, 2=Standard, 3=Élevé).
+<      * SWI133         : PROP_AEB_SENSITIVITY (0x302000e, VPM)
+<      * SWI68/SWI165   : VehicleSettingManager.setFcwSensitivity(I)
+<      * SWI69/SWI131   : CarVehicleSettingClient.setFcwSensitivity(I)
+<      */
+---
+>     
+1727c1323
+<         // setFcwSensitivity(I)V est void → callVsmVoid() pour éviter le faux-négatif
+---
+> 
+1737,1748c1333
+<     // -------------------------------------------------------------------------
+<     // ELK — Assistant de sortie de voie (SWI133 uniquement pour l'instant)
+<     // Utilise IVehicleSettingService via sVehicleBinder (TX 0x53–0x56)
+<     // -------------------------------------------------------------------------
+< 
+<     /**
+<      * Retourne le mode ELK courant (1=OFF, 2=Alerte, 3=Aider, 5=Maintien d'urgence).
+<      * Routage par firmware :
+<      *   SWI133         → VSM133 (getLaneKeepingAsstMode) → binder TX 0x53
+<      *   SWI68/SWI165   → VSM    (getLaneKeepingAsstMode)
+<      *   SWI69/SWI131   → VSM    (getLasMode)
+<      */
+---
+>     
+1758c1343
+<             // SWI69/SWI131/SWI132 — CarVehicleSettingClient
+---
+> 
+1764c1349
+<             // SWI68/SWI165 — VehicleSettingManager
+---
+> 
+1771,1774c1356
+<     /**
+<      * Définit le mode ELK.
+<      * Routage identique à getElkMode().
+<      */
+---
+>     
+1784c1366
+<             // SWI69/SWI131/SWI132 — CarVehicleSettingClient
+---
+> 
+1790c1372
+<             // SWI68/SWI165 — VehicleSettingManager
+---
+> 
+1797,1800c1379
+<     /**
+<      * Retourne la sensibilité ELK courante (1=Faible, 2=Standard, 3=Élevé).
+<      * Routage par firmware — identique à getElkMode().
+<      */
+---
+>     
+1810c1389
+<             // SWI69/SWI131/SWI132 — CarVehicleSettingClient
+---
+> 
+1816c1395
+<             // SWI68/SWI165 — VehicleSettingManager
+---
+> 
+1823,1826c1402
+<     /**
+<      * Définit la sensibilité ELK.
+<      * Routage identique à getElkMode().
+<      */
+---
+>     
+1836c1412
+<             // SWI69/SWI131/SWI132 — CarVehicleSettingClient
+---
+> 
+1842c1418
+<             // SWI68/SWI165 — VehicleSettingManager
+---
+> 
+1849c1425
+<     /** Retourne true si l'ELK est activé (mode ≠ OFF). */
+---
+>     
+1855,1858c1431
+<     /**
+<      * SWI132 — Alerte sonore (LAS Warning Sound) : 0=OFF, 1=ON.
+<      * Retourne -1 si erreur ou firmware non SWI132.
+<      */
+---
+>     
+1873,1876c1446
+<     /**
+<      * SWI132 — Rappel par vibration (LAS Warning Vibration) : 0=OFF, 1=ON.
+<      * Retourne -1 si erreur ou firmware non SWI132.
+<      */
+---
+>     
+1891,1896c1461
+<     /**
+<      * GET via IVehicleSettingService binder — layout smali :
+<      *   data : [writeInterfaceToken]
+<      *   transact(code, data, reply, 0)
+<      *   reply: readException() + readInt()
+<      */
+---
+>     
+1924,1928c1489
+<     /**
+<      * SET via IVehicleSettingService binder — layout smali :
+<      *   data : [writeInterfaceToken, writeInt(value)]
+<      *   transact(code, data, null, FLAG_ONEWAY=1)
+<      */
+---
+>     
+1949,1952c1510
+<     /**
+<      * GET via IVehicleSettingService SWI132 (DESCRIPTOR_VSM132, two-way flag=0x0).
+<      * Retourne la valeur entière lue, ou -1 en cas d'erreur.
+<      */
+---
+>     
+1980,1983c1538
+<     /**
+<      * SET via IVehicleSettingService SWI132 (DESCRIPTOR_VSM132, two-way flag=0x0).
+<      * Différent de elkBinderSet : utilise le bon DESCRIPTOR et flag two-way.
+<      */
+---
+>     
+2007,2010d1561
+<     // -------------------------------------------------------------------------
+<     // TSR — Reconnaissance des panneaux de vitesse
+<     // -------------------------------------------------------------------------
+< 
+2013,2014c1564
+<             // Priorité CarVehicleSettingClient (binder vehiclesetting bloqué SELinux)
+<             // Convention identique SWI69/SWI131 : 0=ON, 1=OFF
+---
+> 
+2018c1568
+<             } ?: (swi132BinderGet(VSM132_TX_GET_SLIF) == 1)  // fallback binder (rarement accessible)
+---
+>             } ?: (swi132BinderGet(VSM132_TX_GET_SLIF) == 1)
+2021c1571
+<         FirmwareInfo.isNewGenVsm() ->   // SWI69 + SWI131 — convention inversée : 0=ON, 1=OFF
+---
+>         FirmwareInfo.isNewGenVsm() ->
+2023c1573
+<         FirmwareInfo.isVsmBased() ->    // SWI68 + SWI165
+---
+>         FirmwareInfo.isVsmBased() ->
+2032,2033c1582
+<                 // Priorité CarVehicleSettingClient — setSLIFWarningState(I)V confirmé dans smali SWI132
+<                 // Convention identique SWI69/SWI131 : 0=activer, 1=désactiver
+---
+> 
+2038c1587
+<                     // Fallback binder direct (bloqué SELinux sur la plupart des builds SWI132)
+---
+> 
+2044,2045c1593
+<                 // SWI133 : le firmware remet OVERSPEED et SPEED_TONE à ON quand le SLIF est réactivé
+<                 // → on sauvegarde avant et on restaure après.
+---
+> 
+2067,2068c1615,1616
+<             FirmwareInfo.isNewGenVsm() -> {   // SWI69 + SWI131 — convention inversée : 0=activer, 1=désactiver
+<                 // setSLIFWarningState(I)V est void → callVsmVoid()
+---
+>             FirmwareInfo.isNewGenVsm() -> {
+> 
+2071,2073c1619,1620
+<             FirmwareInfo.isVsmBased() -> {    // SWI68 + SWI165
+<                 // L'avertissement sonore pourrait être remis à ON lors de la réactivation du TSR
+<                 // → on sauvegarde avant et on restaure après.
+---
+>             FirmwareInfo.isVsmBased() -> {
+> 
+2080c1627
+<                 // setSpeedAsstSlifWarning(I)V est void → callVsmVoid()
+---
+> 
+2094,2099c1641
+<     /**
+<      * SWI133 : retourne (overspeed, speedTone) tels que sauvegardés lors du dernier TSR OFF.
+<      * Utilisé par l'UI pour mettre à jour les switches après la réactivation du TSR, sans
+<      * relire le hardware (le VPM a une latence de propagation qui renverrait encore ON
+<      * pendant ~500–1000ms après les écritures internes de setTsrMode).
+<      */
+---
+>     
+2108,2111d1649
+<     // -------------------------------------------------------------------------
+<     // Économie d'énergie (Endurance Mode)
+<     // -------------------------------------------------------------------------
+< 
+2115c1653
+<         FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 ->  // SWI69 + SWI131 + SWI132
+---
+>         FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 ->
+2117c1655
+<         FirmwareInfo.isVsmBased() ->        // SWI68 + SWI165
+---
+>         FirmwareInfo.isVsmBased() ->
+2127,2128c1665,1666
+<             FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 -> {  // SWI69 + SWI131 + SWI132
+<                 // setEnduranceMode(I)V est void → callVsmVoid()
+---
+>             FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 -> {
+> 
+2131,2132c1669,1670
+<             FirmwareInfo.isVsmBased() -> {   // SWI68 + SWI165
+<                 // setLongerEndurance(I)V est void → callVsmVoid()
+---
+>             FirmwareInfo.isVsmBased() -> {
+> 
+2146,2155c1684
+<     // -------------------------------------------------------------------------
+<     // IGNITION_STATE — CarPropertyManager callback (standard AAOS, tous firmwares)
+<     // -------------------------------------------------------------------------
+< 
+<     /**
+<      * Enregistre un CarPropertyEventCallback sur PROP_IGNITION_STATE via réflexion.
+<      * Protégé par [sIgnitionCallbackRegistered] — ne s'exécute qu'une seule fois.
+<      * Lit l'état courant immédiatement après l'enregistrement : CPM ne notifie que sur changement,
+<      * donc si la voiture est déjà READY au moment du bind, aucun event ne serait reçu sans cette lecture.
+<      */
+---
+>     
+2204c1733
+<             sIgnitionCallbackProxy = proxy   // référence forte pour éviter le GC
+---
+>             sIgnitionCallbackProxy = proxy
+2209d1737
+<             // Lecture immédiate de l'état courant
+2239,2242d1766
+<     // -------------------------------------------------------------------------
+<     // Katman5 SWI69/SWI131 — ICarGeneralService via CarAdapterClient (queryClient(0x1))
+<     // -------------------------------------------------------------------------
+< 
+2299d1822
+<             sCarGeneral = client   // conservé pour la luminosité écran A9 (setScreenBrightness)
+2314,2319d1836
+<             // Binder réel nécessaire pour l'enregistrement cross-process via AIDL.
+<             // ICarGeneralService est dans un processus distant (com.saicmotor.caradapter) :
+<             // registListener() appelle writeStrongBinder(callback.asBinder()) — un proxy qui
+<             // retourne null pour asBinder() transmettrait un binder null au service, qui ne
+<             // pourrait jamais rappeler. On crée donc un Binder concret qui implémente onTransact
+<             // pour le code 0x7 (TRANSACTION_onIgnitionStateChange, identique sur SWI69 et SWI131).
+2326c1843
+<                         0x7 -> { // TRANSACTION_onIgnitionStateChange
+---
+>                         0x7 -> {
+2345c1862
+<                             // Chemin in-process (rare) — le service appelle directement l'interface
+---
+> 
+2363c1880
+<                 sVcmListener = callbackBinder  // référence forte sur le Binder pour éviter le GC
+---
+>                 sVcmListener = callbackBinder
+2398,2402d1914
+<     // -------------------------------------------------------------------------
+<     // Katman5 — VehicleConditionManager (IVehicleConditionService via IHubService)
+<     // SWI133 / SWI68 / SWI165
+<     // -------------------------------------------------------------------------
+< 
+2426d1937
+<         // Tentative 1 : singleton déjà initialisé par le launcher
+2440d1950
+<         // Tentative 2 : appeler init(Context, IVehicleServiceListener)
+2492d2001
+<         // Retries — singleton disponible après connexion asynchrone
+2566d2074
+<             // Lecture immédiate (le callback ne se déclenche que sur CHANGEMENT)
+2583,2587c2091,2092
+<         // Ne dispatcher que si l'état change réellement — évite les faux RUN répétés
+<         // que VehicleConditionManager envoie à chaque changement de condition véhicule
+<         // (changement de rapport D/N/R, etc.) alors que la voiture est déjà en RUN.
+<         if (state == sLastVcmIgnitionState) return
+<         sLastVcmIgnitionState = state
+---
+> 
+>         if (sLastVcmIgnitionState.getAndSet(state) == state) return
+2601,2604d2105
+<     // -------------------------------------------------------------------------
+<     // Listener management
+<     // -------------------------------------------------------------------------
+< 
+2608,2612c2109
+<     // -------------------------------------------------------------------------
+<     // Diagnostic
+<     // -------------------------------------------------------------------------
+< 
+<     /** Retourne true si le binder IVehicleSettingService est disponible. */
+---
+>     
+2615,2619c2112
+<     /**
+<      * Génère un rapport de diagnostic complet :
+<      * état des services, tests binder SWI132 en temps réel, dump AppLogger.
+<      * À appeler sur Dispatchers.IO (les TX binder sont bloquants).
+<      */
+---
+>     
+2641c2134
+<         sb.appendLine("Katman5 ign  : ${carIgnitionName(sLastVcmIgnitionState)} ($sLastVcmIgnitionState)")
+---
+>         sb.appendLine("Katman5 ign  : ${carIgnitionName(sLastVcmIgnitionState.get())} (${sLastVcmIgnitionState.get()})")
+2646d2138
+<             // ── Binder IVehicleSettingService ─────────────────────────────
+2661d2152
+<             // ── Alertes — lecture brute + interprétation ──────────────────
+2678,2680d2168
+<             // ── Alertes — test SET aller-retour (écrit la valeur courante) ─
+<             // Si la valeur brute est lisible (≥ 0), on réécrit la même valeur pour tester
+<             // que le SET passe (sans modifier l'état réel de la voiture).
+2708d2195
+<             // ── CarVehicleSettingClient (Katman4) ─────────────────────────
+2715d2201
+<             // ACC/TJA
+2725d2210
+<             // AEB
+2739d2223
+<             // ELK
+2746d2229
+<             // ── ALERTES via VSM (nouveau path — confirmé dans smali SWI132) ─
+2762d2244
+<             // TSR / SLIF
+2771d2252
+<             // Son d'alerte de voie (LAS)
+2780d2260
+<             // Test SET round-trip via VSM (sans modifier l'état réel : on réécrit la valeur courante)
+2808d2287
+<             // Éco
+2824c2303,2418
+< }
+---
+> 
+>     private const val DESCRIPTOR_CARADAPTER = "com.saicmotor.carapi.ICarAdapterService"
+>     private const val TX_QUERY_AUDIO_CLIENT = 1
+>     private const val HELPER_AUDIO_CODE     = 10
+> 
+>     private const val AUDIO_SET_FADER_FRONT   = 12
+>     private const val AUDIO_SET_BALANCE_RIGHT = 13
+>     private const val AUDIO_SET_LOUDNESS      = 15
+>     private const val AUDIO_GET_LOUDNESS      = 16
+>     private const val AUDIO_SET_SPEED_VOL     = 17
+>     private const val AUDIO_GET_SPEED_VOL     = 18
+>     private const val AUDIO_SET_3D_EFFECT     = 26
+>     private const val AUDIO_GET_3D_EFFECT     = 27
+>     private const val AUDIO_SET_SOUND_FIELD   = 30
+>     private const val AUDIO_GET_BALANCE       = 31
+>     private const val AUDIO_GET_FADER         = 32
+>     private const val AUDIO_SET_BOSE_SOUND    = 36
+>     private const val AUDIO_GET_BOSE_SOUND    = 37
+>     private const val AUDIO_SET_TONE          = 40
+>     private const val AUDIO_GET_TONE          = 41
+> 
+>     @Volatile private var sCarAdapterBinder: IBinder? = null
+>     @Volatile private var sAudioHelper: IBinder? = null
+>     @Volatile private var sAudioDescriptor: String = ""
+>     @Volatile private var sAudioServiceConn: android.content.ServiceConnection? = null
+> 
+>     val isAudioAvailable: Boolean get() = sAudioHelper?.isBinderAlive == true
+> 
+>     private fun initAudio(context: Context) {
+>         if (sAudioHelper?.isBinderAlive == true) return
+>         if (sAudioServiceConn != null) return
+>         val intent = android.content.Intent().apply {
+>             setClassName("com.saicmotor.caradapter", "com.saicmotor.caradapter.service.CarAdapterService")
+>         }
+>         val conn = object : android.content.ServiceConnection {
+>             override fun onServiceConnected(name: android.content.ComponentName?, binder: IBinder?) {
+>                 sCarAdapterBinder = binder
+>                 AppLogger.i(TAG, "  Audio: CarAdapterService connecté ✓")
+>                 CoroutineScope(Dispatchers.IO).launch { tryGetAudioHelper() }
+>             }
+>             override fun onServiceDisconnected(name: android.content.ComponentName?) {
+>                 sCarAdapterBinder = null; sAudioHelper = null
+>             }
+>         }
+>         sAudioServiceConn = conn
+>         try {
+>             val bound = context.applicationContext.bindService(intent, conn, android.content.Context.BIND_AUTO_CREATE)
+>             if (!bound) {
+>                 sAudioServiceConn = null
+>                 Handler(Looper.getMainLooper()).postDelayed({ if (sAudioHelper == null) initAudio(context.applicationContext) }, 10_000L)
+>             }
+>         } catch (e: Exception) { sAudioServiceConn = null; AppLogger.w(TAG, "  Audio: bindService error: ${e.message}") }
+>     }
+> 
+>     private fun tryGetAudioHelper() {
+>         val svc = sCarAdapterBinder ?: return
+>         val data = Parcel.obtain(); val reply = Parcel.obtain()
+>         try {
+>             data.writeInterfaceToken(DESCRIPTOR_CARADAPTER)
+>             data.writeInt(HELPER_AUDIO_CODE)
+>             if (svc.transact(TX_QUERY_AUDIO_CLIENT, data, reply, 0)) {
+>                 reply.readException()
+>                 val helper = reply.readStrongBinder()
+>                 if (helper != null && helper.isBinderAlive) {
+>                     sAudioHelper = helper; sAudioDescriptor = helper.interfaceDescriptor ?: ""
+>                     AppLogger.i(TAG, "  Audio: helper OK descriptor='$sAudioDescriptor'")
+>                 } else {
+>                     Handler(Looper.getMainLooper()).postDelayed({ CoroutineScope(Dispatchers.IO).launch { tryGetAudioHelper() } }, 5_000)
+>                 }
+>             }
+>         } finally { data.recycle(); reply.recycle() }
+>     }
+> 
+>     private fun audioGet(txCode: Int): Int {
+>         val h = sAudioHelper ?: return -1
+>         if (!h.isBinderAlive) { sAudioHelper = null; return -1 }
+>         val data = Parcel.obtain(); val reply = Parcel.obtain()
+>         return try {
+>             data.writeInterfaceToken(sAudioDescriptor)
+>             if (h.transact(txCode, data, reply, 0)) { reply.readException(); reply.readInt() } else -1
+>         } catch (_: Exception) { -1 } finally { data.recycle(); reply.recycle() }
+>     }
+> 
+>     private fun audioSet(txCode: Int, value: Int): Boolean {
+>         val h = sAudioHelper ?: return false
+>         if (!h.isBinderAlive) { sAudioHelper = null; return false }
+>         val data = Parcel.obtain(); val reply = Parcel.obtain()
+>         return try {
+>             data.writeInterfaceToken(sAudioDescriptor)
+>             data.writeInt(value)
+>             h.transact(txCode, data, reply, 0).also { if (it) reply.readException() }
+>         } catch (_: Exception) { false } finally { data.recycle(); reply.recycle() }
+>     }
+> 
+>     private const val AUDIO_TYPE_MIN  = 0
+>     private const val AUDIO_TYPE_MAX  = 3
+>     private const val AUDIO_LEVEL_MIN = -9
+>     private const val AUDIO_LEVEL_MAX =  9
+> 
+>     fun getBoseSoundType(): Int              = audioGet(AUDIO_GET_BOSE_SOUND)
+>     fun setBoseSoundType(t: Int): Boolean    = audioSet(AUDIO_SET_BOSE_SOUND, t.coerceIn(AUDIO_TYPE_MIN, AUDIO_TYPE_MAX))
+>     fun getAudioBalance(): Int               = audioGet(AUDIO_GET_BALANCE)
+>     fun setAudioBalance(v: Int): Boolean     = audioSet(AUDIO_SET_BALANCE_RIGHT, v.coerceIn(AUDIO_LEVEL_MIN, AUDIO_LEVEL_MAX))
+>     fun getAudioFader(): Int                 = audioGet(AUDIO_GET_FADER)
+>     fun setAudioFader(v: Int): Boolean       = audioSet(AUDIO_SET_FADER_FRONT, v.coerceIn(AUDIO_LEVEL_MIN, AUDIO_LEVEL_MAX))
+>     fun getLoudnessState(): Int              = audioGet(AUDIO_GET_LOUDNESS)
+>     fun setLoudnessState(s: Int): Boolean    = audioSet(AUDIO_SET_LOUDNESS, s)
+>     fun getSpeedVolumeLevel(): Int           = audioGet(AUDIO_GET_SPEED_VOL)
+>     fun setSpeedVolumeLevel(l: Int): Boolean = audioSet(AUDIO_SET_SPEED_VOL, l.coerceIn(AUDIO_TYPE_MIN, AUDIO_TYPE_MAX))
+>     fun getSoundFieldType(): Int             = -1
+>     fun setSoundFieldType(t: Int): Boolean   = audioSet(AUDIO_SET_SOUND_FIELD, t)
+>     fun get3dEffectType(): Int               = audioGet(AUDIO_GET_3D_EFFECT)
+>     fun set3dEffectType(t: Int): Boolean     = audioSet(AUDIO_SET_3D_EFFECT, t.coerceIn(AUDIO_TYPE_MIN, AUDIO_TYPE_MAX))
+>     fun getToneControl(): Int                = audioGet(AUDIO_GET_TONE)
+>     fun setToneControl(v: Int): Boolean      = audioSet(AUDIO_SET_TONE, v.coerceIn(AUDIO_LEVEL_MIN, AUDIO_LEVEL_MAX))
+> }
+\ No newline at end of file
+
+===== app/src/main/java/com/mg4/control/model/DrivingProfile.kt (+19/-21) =====
+11c11
+<     val seatHeatLeft: Int = 0,        // 0=off, 1, 2, 3
+---
+>     val seatHeatLeft: Int = 0,
+13c13
+<     // ADAS SWI133 (Katman4) — valeurs par défaut OFF pour compatibilité profils existants
+---
+> 
+16,17c16,17
+<     val adasMode: Int = 0,            // 0=Off, 1=Limiteur, 2=Auto, 3=ACC, 4=ICA
+<     // ADAS SWI68 — champs distincts pour isoler les configurations par firmware
+---
+>     val adasMode: Int = 0,
+> 
+19,22c19,20
+<     val swi68AdasMode: Int = 0x4,     // Mode ACC/TJA (CarAccTja) : 0x4=Off, 0x1=ACC, 0x2=TJA/ICA
+<     // Limiteur de vitesse (SAS) — réglage INDÉPENDANT du mode ACC/TJA (SWI132).
+<     // swi132LimiterConfigured=false (défaut + profils créés avant cette fonction) → le limiteur
+<     // n'est PAS touché lors de l'application du profil (aucune régression sur l'état voiture).
+---
+>     val swi68AdasMode: Int = 0x4,
+> 
+24,35c22,33
+<     val swi132SasMode: Int = 0,       // SAS : 0=Désactivé, 2=Manuel, 3=Intelligent
+<     // AEB — Système anti-collision avant (commun SWI133 + SWI68)
+<     val aebEnabled: Boolean = false,   // false=OFF, true=ON
+<     val aebMode: Int = 1,              // 1=Alerte seule, 2=Alerte+Freinage auto
+<     val aebSensitivity: Int = 0,       // 0=non configuré, 1=Faible, 2=Standard, 3=Élevé (SWI133)
+<     // ELK — Assistant de sortie de voie
+<     val elkMode: Int = 0,              // 0=non configuré, 1=OFF, 2=Alerte(LDW), 3=Aider(LDP), 5=ELK
+<     val elkSensitivity: Int = 0,       // 0=non configuré, 1=Faible, 2=Standard, 3=Élevé
+<     // ELK SWI132 — Alerte sonore + Vibration (spécifique SWI132)
+<     val lasAudibleWarning: Boolean = true,    // true=ON (défaut ON dans la voiture)
+<     val lasVibrationReminder: Boolean = true, // true=ON (défaut ON dans la voiture)
+<     // Économie d'énergie + TSR
+---
+>     val swi132SasMode: Int = 0,
+> 
+>     val aebEnabled: Boolean = false,
+>     val aebMode: Int = 1,
+>     val aebSensitivity: Int = 0,
+> 
+>     val elkMode: Int = 0,
+>     val elkSensitivity: Int = 0,
+> 
+>     val lasAudibleWarning: Boolean = true,
+>     val lasVibrationReminder: Boolean = true,
+> 
+39c37
+<     // [BT-PROFILES] MAC de l'appareil Bluetooth associé à ce profil (null = aucun)
+---
+> 
+
+===== app/src/main/java/com/mg4/control/profile/ProfileApplier.kt (+19/-180) =====
+5d4
+< import com.mg4.control.hardware.MG4Hardware.Swi68Mode
+7a7
+> import kotlinx.coroutines.CoroutineScope
+9c9
+< import kotlinx.coroutines.GlobalScope
+---
+> import kotlinx.coroutines.SupervisorJob
+16,43c16,20
+<     /**
+<      * Id du dernier profil appliqué MANUELLEMENT (popup volant, bouton dans l'app, raccourci
+<      * APPLY_PROFILE) — c.-à-d. avec autoStart=false. Permet au passage en READY de respecter le
+<      * choix explicite de l'utilisateur au lieu de ré-appliquer le profil par défaut.
+<      * En mémoire : réinitialisé à l'extinction de la voiture (IGNITION_OFF) ou au redémarrage du process.
+<      */
+<     @Volatile
+<     var lastManualProfileId: String? = null
+< 
+<     /**
+<      * Applique tous les paramètres de [profile] au véhicule de façon asynchrone.
+<      * Les opérations HVAC (siège/volant) sont bloquantes (polling jusqu'à 7s),
+<      * exécutées sur le dispatcher IO.
+<      *
+<      * @param autoStart true si l'application est déclenchée automatiquement au démarrage
+<      *   (IGNITION/boot). Active la passe de vérification des alertes sonores (SWI132/SWI133) :
+<      *   au démarrage à froid, le firmware peut ré-asserter OVERSPEED/SPEED_TONE après nos
+<      *   écritures — on relit et on réécrit en cas d'écart. Inutile en application manuelle.
+<      */
+<     fun apply(profile: DrivingProfile, autoStart: Boolean = false, onComplete: ((Boolean) -> Unit)? = null) {
+<         AppLogger.i(TAG, "Application du profil : ${profile.name} (autoStart=$autoStart)")
+< 
+<         // Application manuelle (popup volant / app / raccourci) → on mémorise le choix de l'utilisateur
+<         // pour que le passage en READY le respecte au lieu de ré-appliquer le profil par défaut.
+<         if (!autoStart) {
+<             lastManualProfileId = profile.id
+<             AppLogger.i(TAG, "  Choix manuel mémorisé : ${profile.name} (id=${profile.id})")
+<         }
+---
+>     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+> 
+>     
+>     fun apply(profile: DrivingProfile, onComplete: ((Boolean) -> Unit)? = null) {
+>         AppLogger.i(TAG, "Application du profil : ${profile.name}")
+45,46c22
+<         @Suppress("OPT_IN_USAGE")
+<         GlobalScope.launch(Dispatchers.IO) {
+---
+>         scope.launch {
+49d24
+<             // Mode de conduite (rapide — binder call)
+54d28
+<             // Niveau de régénération (rapide — binder call)
+59d32
+<             // Volant + Sièges chauffants — uniquement SWI133 et SWI68 (SWI69/SWI131 n'ont pas ces équipements)
+72d44
+<             // ADAS (Katman4) — appliqué dès que le service est prêt
+76,81d47
+<                     // ── SWI132 ──────────────────────────────────────────────────────────
+<                     //
+<                     // SWI132 utilise CarVehicleSettingClient pour l'ADAS (ACC/TJA)
+<                     // mais le binder direct IVehicleSettingService pour les alertes sonores.
+<                     // → setOverspeedAlarm() et setSpeedLimitTone() envoient les TX binder corrects
+<                     //   (0x128 et 0x12a) sans passer par VehicleSettingManager.
+83d48
+<                     // TSR (SLIF) via VSM — appliqué en premier comme SWI133
+87,92d51
+<                     // Alertes sonores via VSM
+<                     // Le firmware SWI132 remet overspeed et speedTone à ON ~400ms après l'activation
+<                     // du TSR (même comportement que SWI133). setTsrMode() retourne immédiatement sans
+<                     // attendre cette réinitialisation. Si on écrit les alertes trop tôt, le firmware
+<                     // les écrase ensuite. On attend 450ms pour laisser le firmware terminer sa
+<                     // réinitialisation avant d'appliquer les valeurs du profil.
+96,98c55
+<                     // Délai de 150ms entre les deux écritures : le middleware traite les propriétés
+<                     // dans une file avec debounce — deux écritures trop rapides font que seule la
+<                     // dernière est validée. 150ms garantit que la première est traitée.
+---
+> 
+105,116c62,63
+<                     // Mode ACC/TJA via CarVehicleSettingClient (setAccTjaState).
+<                     // SHWA (ancien codage limiteur) n'est plus un mode ACC/TJA → ramené à Off ;
+<                     // le limiteur est géré séparément via setSasMode ci-dessous.
+<                     val cruiseMode = if (profile.swi68AdasMode == Swi68Mode.SHWA) Swi68Mode.OFF else profile.swi68AdasMode
+<                     val adOk = MG4Hardware.setAccTjaMode(cruiseMode)
+<                     AppLogger.i(TAG, "  AdasMode=0x${cruiseMode.toString(16)} → $adOk")
+<                     // Limiteur de vitesse (SAS) — appliqué uniquement si le profil l'a configuré.
+<                     // Profils créés avant cette fonction (swi132LimiterConfigured=false) → non touché.
+<                     if (profile.swi132LimiterConfigured) {
+<                         MG4Hardware.setSpeedLimiterMode(profile.swi132SasMode)
+<                         AppLogger.i(TAG, "  SasMode=${profile.swi132SasMode} (0=Off 2=Manuel 3=Intelligent)")
+<                     }
+---
+>                     val adOk = MG4Hardware.setAccTjaMode(profile.swi68AdasMode)
+>                     AppLogger.i(TAG, "  AdasMode=0x${profile.swi68AdasMode.toString(16)} → $adOk")
+119d65
+<                     // Économie d'énergie — via CarVehicleSettingClient (setEnduranceMode), même path que SWI69
+124,128c70
+<                     // ── SWI68/SWI69/SWI131/SWI165 ──────────────────────────────────────
+<                     //
+<                     // Le TSR est appliqué EN PREMIER : setTsrMode() bloque 400 ms en interne
+<                     // et restaure soundWarning depuis les préférences. On l'appelle en premier
+<                     // pour pouvoir ensuite écraser l'alerte sonore avec la valeur du profil.
+---
+> 
+132d73
+<                     // Alerte sonore — appliquée APRÈS le TSR pour écraser sa restauration interne
+136,145c77,78
+<                     // Mode ACC/TJA — SHWA (ancien codage limiteur) ramené à Off (limiteur géré à part)
+<                     val cruiseMode = if (profile.swi68AdasMode == Swi68Mode.SHWA) Swi68Mode.OFF else profile.swi68AdasMode
+<                     val adOk = MG4Hardware.setAccTjaMode(cruiseMode)
+<                     AppLogger.i(TAG, "  AdasMode=0x${cruiseMode.toString(16)} → $adOk")
+<                     // Limiteur de vitesse — appliqué uniquement si le profil l'a configuré.
+<                     // (SWI69/SWI131 → setSasMode ; SWI68/SWI165 → setSpeedAsstMode, dispatch interne)
+<                     if (profile.swi132LimiterConfigured) {
+<                         MG4Hardware.setSpeedLimiterMode(profile.swi132SasMode)
+<                         AppLogger.i(TAG, "  LimiterMode=${profile.swi132SasMode} (0=Off 2=Manuel 3=Intelligent)")
+<                     }
+---
+>                     val adOk = MG4Hardware.setAccTjaMode(profile.swi68AdasMode)
+>                     AppLogger.i(TAG, "  AdasMode=0x${profile.swi68AdasMode.toString(16)} → $adOk")
+148d80
+<                     // Économie d'énergie — firmwares VSM hors SWI132 (SWI68/SWI69/SWI131/SWI165)
+152,156c84
+<                     // ── SWI133/UNKNOWN ──────────────────────────────────────────────────
+<                     //
+<                     // Même logique : activer le TSR ré-active OVERSPEED_ALARM et SPEED_LIMIT_TONE.
+<                     // setTsrMode() restaure depuis les préférences — on l'appelle en premier
+<                     // puis on écrase avec les valeurs du profil.
+---
+> 
+162,165d89
+<                     // Alertes vitesse — appliquées APRÈS le TSR
+<                     // Délai de 150ms entre les deux écritures : le middleware véhicule (VPM) traite
+<                     // les propriétés dans une file avec debounce — deux écritures trop rapides font
+<                     // que seule la dernière est validée. 150ms garantit que la première est traitée.
+176d99
+<                     // Économie d'énergie — SWI133 via VPM
+182,183d104
+<                 // ELK — commun à tous les firmwares connus
+<                 applyElk(profile.elkMode, profile.elkSensitivity, profile.lasAudibleWarning, profile.lasVibrationReminder)
+185,249c106
+<                 // ── Passe de vérification ADAS (auto-démarrage uniquement) ────────────
+<                 // Au démarrage à froid, le firmware peut ré-asserter certains réglages APRÈS
+<                 // notre écriture (alertes survitesse/ton ~400ms après le SLIF/TSR ; ELK remis à
+<                 // sa valeur par défaut). On relit après stabilisation et on réécrit en cas d'écart.
+<                 // Concerne SWI132/SWI133 (2 alertes distinctes + ELK).
+<                 val gen = FirmwareInfo.getGeneration()
+<                 if (autoStart && (gen == FirmwareInfo.Gen.SWI133 || gen == FirmwareInfo.Gen.SWI132)) {
+<                     verifyAdasWithRetry(profile)
+<                 }
+<             }
+<         }
+<     }
+< 
+<     /**
+<      * Passe de vérification post-application (auto-démarrage, SWI132/SWI133). Attend la fin de
+<      * la fenêtre de ré-assertion firmware puis relit/réécrit en cas d'écart :
+<      *   - alertes sonores survitesse + ton
+<      *   - ELK (assistant de sortie de voie) — le firmware le remet à sa valeur par défaut au boot
+<      */
+<     private fun verifyAdasWithRetry(profile: DrivingProfile) {
+<         AppLogger.i(TAG, "  [VERIFY] Vérification ADAS (auto-démarrage) — stabilisation 500ms")
+<         try { Thread.sleep(500) } catch (_: InterruptedException) {}
+<         verifyOneAlert("OverspeedAlarm", profile.overspeedAlarm,
+<             { MG4Hardware.isOverspeedAlarmOn() }, { MG4Hardware.setOverspeedAlarm(it) })
+<         verifyOneAlert("SpeedLimitTone", profile.speedLimitTone,
+<             { MG4Hardware.isSpeedLimitToneOn() }, { MG4Hardware.setSpeedLimitTone(it) })
+<         verifyElk(profile)
+<     }
+< 
+<     /**
+<      * Vérifie le mode ELK (assistant de sortie de voie) après stabilisation et le réécrit s'il a
+<      * dérivé (réactivation auto par le firmware). Ne fait rien si le profil ne configure pas l'ELK
+<      * (elkMode=0). Réapplique la config ELK complète (mode + sensibilité + sonore/vibration SWI132).
+<      */
+<     private fun verifyElk(profile: DrivingProfile) {
+<         if (profile.elkMode == 0) return   // ELK non configuré dans ce profil → ne pas toucher
+<         repeat(3) { i ->
+<             val actual = MG4Hardware.getElkMode()
+<             if (actual == profile.elkMode) {
+<                 AppLogger.i(TAG, "  [VERIFY] ElkMode conforme (lu=$actual" +
+<                     if (i > 0) ", après $i correction(s))" else ")")
+<                 return
+<             }
+<             AppLogger.w(TAG, "  [VERIFY] ElkMode ÉCART (lu=$actual, attendu=${profile.elkMode}) → réécriture (tentative ${i + 1}/3)")
+<             applyElk(profile.elkMode, profile.elkSensitivity, profile.lasAudibleWarning, profile.lasVibrationReminder)
+<             try { Thread.sleep(300) } catch (_: InterruptedException) {}
+<         }
+<         val finalVal = MG4Hardware.getElkMode()
+<         if (finalVal == profile.elkMode)
+<             AppLogger.i(TAG, "  [VERIFY] ElkMode finalement conforme (lu=$finalVal)")
+<         else
+<             AppLogger.w(TAG, "  [VERIFY] ElkMode ÉCHEC après 3 tentatives (lu=$finalVal, attendu=${profile.elkMode})")
+<     }
+< 
+<     /**
+<      * Relit une alerte ; si elle diffère de la valeur voulue, la réécrit et réessaie.
+<      * Jusqu'à 3 tentatives espacées de 300ms pour couvrir un écrasement firmware tardif.
+<      */
+<     private fun verifyOneAlert(name: String, desired: Boolean, read: () -> Boolean, write: (Boolean) -> Boolean) {
+<         repeat(3) { i ->
+<             val actual = read()
+<             if (actual == desired) {
+<                 AppLogger.i(TAG, "  [VERIFY] $name conforme (lu=$actual" +
+<                     if (i > 0) ", après $i correction(s))" else ")")
+<                 return
+---
+>                 applyElk(profile.elkMode, profile.elkSensitivity, profile.lasAudibleWarning, profile.lasVibrationReminder)
+251,253d107
+<             AppLogger.w(TAG, "  [VERIFY] $name ÉCART (lu=$actual, attendu=$desired) → réécriture (tentative ${i + 1}/3)")
+<             write(desired)
+<             try { Thread.sleep(300) } catch (_: InterruptedException) {}
+255,259d108
+<         val finalVal = read()
+<         if (finalVal == desired)
+<             AppLogger.i(TAG, "  [VERIFY] $name finalement conforme (lu=$finalVal)")
+<         else
+<             AppLogger.w(TAG, "  [VERIFY] $name ÉCHEC après 3 tentatives (lu=$finalVal, attendu=$desired)")
+262,266c111
+<     /**
+<      * Applique les réglages ELK (assistant de sortie de voie) du profil — tous firmwares.
+<      * Si elkMode=0 (valeur par défaut — profil créé avant l'ajout de l'ELK),
+<      * on ne touche pas aux réglages ELK pour éviter une modification involontaire.
+<      */
+---
+>     
+278,280c123
+<         // SWI132 : Alerte sonore + Vibration appliquées après délai
+<         // Le firmware peut réinitialiser ces valeurs lors du changement de mode ELK.
+<         // 300ms garantit que le firmware a terminé sa réinitialisation interne.
+---
+> 
+290,294c133
+<     /**
+<      * Applique les réglages AEB du profil.
+<      * Si aebEnabled=false ET aebMode=1 ET aebSensitivity=0 (valeurs par défaut),
+<      * on ne touche pas à l'état AEB de la voiture pour éviter une désactivation involontaire.
+<      */
+---
+>     
+
+===== app/src/main/java/com/mg4/control/profile/ProfileManager.kt (+2/-12) =====
+20,23d19
+<     // -------------------------------------------------------------------------
+<     // CRUD
+<     // -------------------------------------------------------------------------
+< 
+29,30c25
+<             // Migration : profils créés avant l'ajout AEB ont aebMode=0 (valeur JVM par défaut).
+<             // On les initialise à AEB activé + mode Alerte+Freinage par défaut.
+---
+> 
+54c49
+<         // Clear default if it was this profile
+---
+> 
+77d71
+<     // [BT-PROFILES] Retourne le premier profil dont le btDeviceMac correspond au MAC donné.
+80,83d73
+< 
+<     // -------------------------------------------------------------------------
+<     // Persistence
+<     // -------------------------------------------------------------------------
+
+===== app/src/main/java/com/mg4/control/receiver/BootReceiver.kt (+0/-2) =====
+31d30
+<         // Essai immédiat
+35d33
+<         // Retry à 3s et 8s au cas où le système n'est pas encore prêt
+
+===== app/src/main/java/com/mg4/control/service/MG4ControlService.kt (+69/-127) =====
+29a30,31
+> import kotlinx.coroutines.SupervisorJob
+> import kotlinx.coroutines.cancel
+33a36,37
+>     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+> 
+40d43
+<         // Intent action broadcast par le système SAIC pour les touches physiques
+43,51c46,50
+<         // Keycodes des boutons ★ du volant
+<         private const val KEYCODE_BTN1     = 17    // STAR_LEFT
+<         private const val KEYCODE_BTN2     = 286   // STAR_RIGHT
+<         private const val KEYCODE_BTN2_ALT = 18    // alias STAR_RIGHT (certains firmwares)
+< 
+<         /**
+<          * Flag one-shot : le profil n'est appliqué qu'une seule fois par session de processus.
+<          * Évite le double-apply quand MainActivity et BootReceiver démarrent le service.
+<          */
+---
+>         private const val KEYCODE_BTN1     = 17
+>         private const val KEYCODE_BTN2     = 286
+>         private const val KEYCODE_BTN2_ALT = 18
+> 
+>         
+56,57d54
+<     // ── Hardkey receiver ─────────────────────────────────────────────────────
+< 
+60d56
+<     // ── [BT-PROFILES] Receiver ACL Bluetooth ─────────────────────────────────
+63d58
+<     // ── Receiver sync thème launcher ─────────────────────────────────────────
+66d60
+<     // ── Listener de cycle d'allumage (Katman5) ──────────────────────────────
+69d62
+<     // État par slot pour la détection d'appui long
+72,74d64
+<     // États des toggles en mémoire — réinitialisés à chaque démarrage du service (= redémarrage voiture)
+<     // Évite le bug du 1er appui : si on utilise SharedPrefs, l'état persisté peut ne pas correspondre
+<     // à l'état réel de la voiture après un redémarrage, causant un toggle dans le mauvais sens.
+83,84c73,74
+<         registerBtAclReceiver()        // [BT-PROFILES]
+<         registerSkinChangeReceiver()   // [THEME-AUTO]
+---
+>         registerBtAclReceiver()
+>         registerSkinChangeReceiver()
+94c84
+<         btAclReceiver?.let { unregisterReceiver(it) }     // [BT-PROFILES]
+---
+>         btAclReceiver?.let { unregisterReceiver(it) }
+96c86
+<         skinChangeReceiver?.let { unregisterReceiver(it) } // [THEME-AUTO]
+---
+>         skinChangeReceiver?.let { unregisterReceiver(it) }
+97a88,89
+>         MG4Hardware.clearPendingReadyListeners()
+>         serviceScope.cancel()
+108,109d99
+<     // ── Enregistrement dynamique du receiver ─────────────────────────────────
+< 
+120,121d109
+<     // ── Traitement d'un event hardkey ────────────────────────────────────────
+< 
+125d112
+<         // Raccourcis désactivés globalement → on laisse le launcher gérer
+128d114
+<         // Lecture du keycode (plusieurs noms d'extra selon le firmware)
+170,171d155
+<     // ── Exécution du toggle ──────────────────────────────────────────────────
+< 
+175d158
+<         // PROFILE_PICKER : overlay flottant au-dessus du launcher — aucun toggle d'état
+183d165
+<         // APPLY_PROFILE : action directe — pas de toggle d'état, chaque pression applique le profil
+186c168
+<             CoroutineScope(Dispatchers.IO).launch {
+---
+>             serviceScope.launch {
+199,200d180
+<         // Pour tous les autres toggles : état en mémoire (réinitialisé au démarrage du service)
+<         // Évite le bug du 1er appui causé par un état SharedPrefs désynchronisé après redémarrage.
+206c186
+<         CoroutineScope(Dispatchers.IO).launch {
+---
+>         serviceScope.launch {
+229d208
+<                     // Tous les firmwares connus stockent des indices 0-4 (Off/Lim.Manuel/Lim.Auto/ACC/ICA|TJA)
+234,235d212
+<                         // VSM (SWI68/69/131/132/165) : index → mode ACC/TJA (setAccTjaMode)
+<                         // + limiteur de vitesse (setSpeedLimiterMode), réglages exclusifs.
+237,241c214,218
+<                             1 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.MANUEL);      MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
+<                             2 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.INTELLIGENT); MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
+<                             3 -> { MG4Hardware.setAccTjaMode(Swi68Mode.ACC); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+<                             4 -> { MG4Hardware.setAccTjaMode(Swi68Mode.TJA); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+<                             else -> { MG4Hardware.setAccTjaMode(Swi68Mode.OFF); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+---
+>                             1 -> { MG4Hardware.setAccTjaMode(Swi68Mode.OFF); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.MANUEL) }
+>                             2 -> { MG4Hardware.setAccTjaMode(Swi68Mode.OFF); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.INTELLIGENT) }
+>                             3 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF); MG4Hardware.setAccTjaMode(Swi68Mode.ACC) }
+>                             4 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF); MG4Hardware.setAccTjaMode(Swi68Mode.TJA) }
+>                             else -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF); MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
+244d220
+<                         // SWI133 : VPM direct (l'index est aussi la valeur mixedIntelligentDrive)
+271,276c247
+<     /**
+<      * Planifie l'application du profil au démarrage du processus (one-shot).
+<      * Priorité : profil BT associé → profil par défaut.
+<      * Si connectedMacs est vide (téléphone connecté avant démarrage du service),
+<      * une requête HFP async est effectuée en fallback.
+<      */
+---
+>     
+292d262
+<         // [BT-PROFILES] Cherche tous les profils BT parmi les appareils déjà connus en mémoire
+299c269
+<                 // Conflit BT : plusieurs appareils ont un profil associé → popup de sélection
+---
+> 
+306,307c276,277
+<                             // Timeout sans sélection → applique le 1er profil (comportement historique)
+<                             CoroutineScope(Dispatchers.IO).launch {
+---
+> 
+>                             serviceScope.launch {
+309c279
+<                                 ProfileApplier.apply(btProfiles[0], autoStart = true) { ok ->
+---
+>                                 ProfileApplier.apply(btProfiles[0]) { ok ->
+321c291
+<                     ProfileApplier.apply(btProfiles[0], autoStart = true) { ok ->
+---
+>                     ProfileApplier.apply(btProfiles[0]) { ok ->
+329d298
+<         // [BT-PROFILES] Fallback : requête HFP async (cas téléphone connecté avant démarrage service)
+342c311
+<                                 CoroutineScope(Dispatchers.IO).launch {
+---
+>                                 serviceScope.launch {
+344c313
+<                                     ProfileApplier.apply(hfpProfiles[0], autoStart = true) { ok ->
+---
+>                                     ProfileApplier.apply(hfpProfiles[0]) { ok ->
+355c324
+<                         ProfileApplier.apply(hfpProfiles[0], autoStart = true) { ok ->
+---
+>                         ProfileApplier.apply(hfpProfiles[0]) { ok ->
+361c330
+<                     // Aucun match BT → profil par défaut
+---
+> 
+370c339
+<                         ProfileApplier.apply(defaultProfile, autoStart = true) { ok ->
+---
+>                         ProfileApplier.apply(defaultProfile) { ok ->
+379,384c348
+<     // ── Listener IGNITION_STATE (Katman5) ────────────────────────────────────
+< 
+<     /**
+<      * Enregistre le listener Katman5 sur les changements d'état d'allumage.
+<      * À chaque RUN (0x2), applique le profil par défaut.
+<      */
+---
+>     
+387,400c351,355
+<             when (state) {
+<                 MG4Hardware.CarIgnitionItem.RUN -> {
+<                     AppLogger.i(TAG, "Katman5 IGNITION_RUN → application du profil")
+<                     Handler(Looper.getMainLooper()).postDelayed({
+<                         applyDefaultProfileOnIgnition()
+<                     }, 500L)
+<                 }
+<                 MG4Hardware.CarIgnitionItem.OFF -> {
+<                     // Extinction → on oublie le choix manuel : le prochain cycle repart sur le défaut/BT
+<                     if (ProfileApplier.lastManualProfileId != null) {
+<                         AppLogger.i(TAG, "Katman5 IGNITION_OFF → reset du choix manuel")
+<                         ProfileApplier.lastManualProfileId = null
+<                     }
+<                 }
+---
+>             if (state == MG4Hardware.CarIgnitionItem.RUN) {
+>                 AppLogger.i(TAG, "Katman5 IGNITION_RUN → application du profil par défaut")
+>                 Handler(Looper.getMainLooper()).postDelayed({
+>                     applyDefaultProfileOnIgnition()
+>                 }, 500L)
+408,411c363
+<     /**
+<      * [BT-PROFILES] Enregistre les receivers ACL Bluetooth pour maintenir
+<      * la liste des appareils connectés dans BluetoothProfileManager.
+<      */
+---
+>     
+421a374,375
+> 
+>                         applyBtProfileForMac(mac)
+438,441c392
+<     /**
+<      * Applique le profil approprié suite à un événement IGNITION_STATE=RUN.
+<      * Priorité : choix manuel récent (popup/app) → profil BT associé → profil par défaut.
+<      */
+---
+>     
+451,471d401
+<         // Choix manuel récent (popup volant / app) → prioritaire sur BT et défaut.
+<         // L'utilisateur a explicitement sélectionné un profil depuis le démarrage : on le respecte.
+<         val manualId = ProfileApplier.lastManualProfileId
+<         if (manualId != null) {
+<             val manualProfile = pm.getById(manualId)
+<             if (manualProfile != null) {
+<                 AppLogger.i(TAG, "IGNITION → choix manuel respecté : '${manualProfile.name}'")
+<                 MG4Hardware.whenKatman1Ready {
+<                     ProfileApplier.apply(manualProfile, autoStart = true) { ok ->
+<                         AppLogger.i(TAG, "IGNITION → profil manuel '${manualProfile.name}' ré-appliqué — ok=$ok")
+<                     }
+<                 }
+<                 return
+<             } else {
+<                 // Profil supprimé entre-temps → on oublie le choix et on retombe sur le défaut/BT
+<                 AppLogger.i(TAG, "IGNITION → choix manuel introuvable (id=$manualId), fallback défaut/BT")
+<                 ProfileApplier.lastManualProfileId = null
+<             }
+<         }
+< 
+<         // [BT-PROFILES] Cherche tous les profils BT parmi les appareils connectés
+484c414
+<                             CoroutineScope(Dispatchers.IO).launch {
+---
+>                             serviceScope.launch {
+486c416
+<                                 ProfileApplier.apply(btProfiles[0], autoStart = true) { ok ->
+---
+>                                 ProfileApplier.apply(btProfiles[0]) { ok ->
+497c427
+<                     ProfileApplier.apply(btProfiles[0], autoStart = true) { ok ->
+---
+>                     ProfileApplier.apply(btProfiles[0]) { ok ->
+503c433
+<                 // Aucun match BT → profil par défaut
+---
+> 
+510c440
+<                     ProfileApplier.apply(defaultProfile, autoStart = true) { ok ->
+---
+>                     ProfileApplier.apply(defaultProfile) { ok ->
+518,525c448
+<     // ── Receiver sync thème launcher (SWI69 / SWI131 / SWI132) ─────────────
+< 
+<     /**
+<      * Écoute le broadcast "com.saicmotor.changeSkin" émis par le launcher MG
+<      * lorsque l'utilisateur change de thème (sombre ↔ clair).
+<      * Ne fait rien si le firmware n'expose pas SKIN_THEME_CONFIG ou si
+<      * l'utilisateur a choisi un thème manuel (mode ≠ "auto").
+<      */
+---
+>     
+528c451
+<             // SWI133/68 : MODE_NIGHT_FOLLOW_SYSTEM gère la sync automatiquement
+---
+> 
+546a470,488
+>     }
+> 
+>     
+>     private fun applyBtProfileForMac(mac: String) {
+>         val prefs = getSharedPreferences("mg4_settings", MODE_PRIVATE)
+>         if (!prefs.getBoolean("auto_apply_profile", true)) {
+>             AppLogger.i(TAG, "[BT] auto_apply_profile désactivé — skip pour $mac")
+>             return
+>         }
+>         val profile = ProfileManager(applicationContext).getProfileForBtDevice(mac) ?: run {
+>             AppLogger.i(TAG, "[BT] Connexion $mac sans profil associé — profil actif conservé")
+>             return
+>         }
+>         AppLogger.i(TAG, "[BT] Connexion $mac → profil '${profile.name}' prioritaire sur le défaut")
+>         MG4Hardware.whenKatman1Ready {
+>             ProfileApplier.apply(profile) { ok ->
+>                 AppLogger.i(TAG, "[BT] Profil '${profile.name}' appliqué — ok=$ok")
+>             }
+>         }
+
+===== app/src/main/java/com/mg4/control/service/ProfilePickerOverlay.kt (+8/-119) =====
+17d16
+< import com.google.android.material.slider.Slider
+20d18
+< import com.mg4.control.hardware.MG4Hardware
+24d21
+< import com.mg4.control.util.LocaleHelper
+29,39d25
+< /**
+<  * Overlay flottant affichant la liste des profils de conduite.
+<  *
+<  * Deux modes d'utilisation :
+<  *  - Raccourci volant → show(ctx) : affiche tous les profils
+<  *  - Conflit BT       → show(ctx, profiles, onAutoDismiss) : affiche uniquement
+<  *    les profils associés aux appareils connectés ; si l'utilisateur ne choisit
+<  *    pas avant le timeout, [onAutoDismiss] est appelé (ex. applique le 1er profil).
+<  *
+<  * Toutes les opérations WindowManager se font sur le thread principal.
+<  */
+51,56c37
+<     // ── API publique ─────────────────────────────────────────────────────────
+< 
+<     /**
+<      * Affiche l'overlay avec tous les profils (raccourci volant).
+<      * Peut être appelé depuis n'importe quel thread.
+<      */
+---
+>     
+61,65c42
+<     /**
+<      * Affiche l'overlay avec une liste restreinte de profils (conflit BT).
+<      * [onAutoDismiss] est appelé si le timeout s'écoule sans sélection.
+<      * Peut être appelé depuis n'importe quel thread.
+<      */
+---
+>     
+70,73c47
+<     /**
+<      * Ferme l'overlay immédiatement (sans déclencher onAutoDismiss).
+<      * Peut être appelé depuis n'importe quel thread.
+<      */
+---
+>     
+78,79d51
+<     // ── Implémentation (main thread) ─────────────────────────────────────────
+< 
+85c57
+<         // Si déjà affiché → on remplace (sans déclencher l'ancien onAutoDismiss)
+---
+> 
+96,104c68
+<         // Le contexte du Service n'applique pas la langue choisie dans l'app
+<         // (LocaleHelper n'est posé que sur MainActivity/MG4App). Sans ça, le popup
+<         // tombe sur la langue système. On enveloppe avec la locale courante (lecture
+<         // fraîche → reflète un changement de langue en cours de session).
+<         val localizedContext = LocaleHelper.applyLocale(context)
+< 
+<         // Le contexte du Service n'a pas de thème Material → on l'enveloppe
+<         // avec le thème de l'app pour que MaterialButton puisse s'instancier.
+<         val themedContext = ContextThemeWrapper(localizedContext, R.style.Theme_MG4Control)
+---
+>         val themedContext = ContextThemeWrapper(context, R.style.Theme_MG4Control)
+106d69
+<         // Inflate la vue depuis le layout XML (utilise le contexte thémé)
+109d71
+<         // ── Grille 2 colonnes de profils ─────────────────────────────────
+136d97
+<         // Découpe en lignes de 2, chaque ligne = LinearLayout horizontal
+155d115
+<             // Nombre impair → placeholder invisible pour garder la symétrie
+166d125
+<         // ── Fermeture manuelle ────────────────────────────────────────────
+171d129
+<         // ── Tap sur le fond → fermeture ───────────────────────────────────
+175,176d132
+<         // La carte intérieure intercepte les appuis sans propager au fond
+<         view.findViewById<View>(R.id.overlay_card)?.setOnClickListener { /* consommer */ }
+178c134,135
+<         // ── Paramètres WindowManager ──────────────────────────────────────
+---
+>         view.findViewById<View>(R.id.overlay_card)?.setOnClickListener {  }
+> 
+193d149
+<         // ── Compte à rebours ──────────────────────────────────────────────
+200c156
+<                 tvCountdown?.text = localizedContext.getString(R.string.overlay_countdown, remaining)
+---
+>                 tvCountdown?.text = context.getString(R.string.overlay_countdown, remaining)
+210,213d165
+<         // ── Fermeture automatique ─────────────────────────────────────────
+<         // onAutoDismiss est appelé UNIQUEMENT ici (timeout sans sélection).
+<         // Si l'utilisateur choisit un profil ou appuie sur Fermer,
+<         // dismissOnMainThread(fireAutoDismiss=false) annule ce runnable.
+221,283d172
+< 
+<         // Ré-arme les deux timers (appelé à chaque interaction luminosité pour
+<         // ne pas fermer le popup pendant le réglage).
+<         fun resetTimers() {
+<             handler.removeCallbacks(dr)
+<             handler.postDelayed(dr, AUTO_DISMISS_MS)
+<             countdownRunnable?.let { handler.removeCallbacks(it) }
+<             remaining = (AUTO_DISMISS_MS / 1_000L).toInt()
+<             handler.post(tick)
+<         }
+< 
+<         // ── Bloc luminosité (ancien SDK SWI133/68/165 ; A9 = phase 2) ─────
+<         val briSection = view.findViewById<View>(R.id.overlay_brightness_section)
+<         if (!MG4Hardware.hasBrightnessControl()) {
+<             briSection?.visibility = View.GONE
+<         } else {
+<             val slider   = view.findViewById<Slider>(R.id.overlay_bri_slider)
+<             val briValue = view.findViewById<TextView>(R.id.overlay_bri_value)
+< 
+<             fun applyBrightnessAsync(pct: Int) {
+<                 CoroutineScope(Dispatchers.IO).launch { MG4Hardware.setScreenBrightnessPercent(pct) }
+<             }
+<             // Debounce des écritures pendant le glissement (évite de spammer le binder)
+<             val pendingApply = Runnable { slider?.let { applyBrightnessAsync(it.value.toInt()) } }
+< 
+<             slider?.addOnChangeListener { _, value, fromUser ->
+<                 briValue?.text = "${value.toInt()}%"
+<                 if (fromUser) {
+<                     resetTimers()
+<                     handler.removeCallbacks(pendingApply)
+<                     handler.postDelayed(pendingApply, 60L)
+<                 }
+<             }
+<             slider?.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+<                 override fun onStartTrackingTouch(s: Slider) { resetTimers() }
+<                 override fun onStopTrackingTouch(s: Slider) {
+<                     handler.removeCallbacks(pendingApply)
+<                     applyBrightnessAsync(s.value.toInt())   // application finale
+<                     resetTimers()
+<                 }
+<             })
+< 
+<             // Presets — déplacent le curseur (met à jour le label via le listener) puis appliquent
+<             fun preset(pct: Int) {
+<                 slider?.value = pct.toFloat()
+<                 applyBrightnessAsync(pct)
+<                 resetTimers()
+<             }
+<             view.findViewById<View>(R.id.overlay_bri_night)?.setOnClickListener { preset(15) }
+<             view.findViewById<View>(R.id.overlay_bri_mid)?.setOnClickListener   { preset(50) }
+<             view.findViewById<View>(R.id.overlay_bri_day)?.setOnClickListener   { preset(100) }
+< 
+<             // Initialisation depuis la valeur courante (lecture binder en arrière-plan)
+<             briValue?.text = "…"
+<             CoroutineScope(Dispatchers.IO).launch {
+<                 val cur = MG4Hardware.getScreenBrightnessPercent()
+<                 handler.post {
+<                     if (overlayView == null) return@post
+<                     if (cur >= 0) slider?.value = cur.coerceIn(5, 100).toFloat()  // label via le listener
+<                     else briValue?.text = "--%"
+<                 }
+<             }
+<         }
+
+===== app/src/main/java/com/mg4/control/ui/AdasFragment.kt (+11/-41) =====
+20d19
+<     // SWI133 views
+29d27
+<     // SWI68/69/131/165 views — 5 boutons (index 0-4) : Off / Lim.Manuel / Lim.Auto / ACC / TJA
+37d34
+<     // AEB views (communes SWI133 + SWI68)
+46d42
+<     // index 0-4 → button (Off / Lim.Manuel / Lim.Auto / ACC / TJA)
+59c55
+<         // ── Références views ────────────────────────────────────────────────
+---
+> 
+77d72
+<         // ── Afficher la bonne section selon le firmware ──────────────────────
+82,84d76
+<         // SWI133 : 5 boutons ADAS (Off/Limiteur/Auto/ACC/ICA)
+<         // SWI132 : 4 boutons ADAS (Off/Lim/ACC/ICA) — même section que SWI133, bouton Auto masqué
+<         // SWI68/SWI69/SWI131/SWI165 : 3 boutons ADAS (Off/ACC/TJA)
+89d80
+<         // Ligne du bas (AEB + alertes) — disponible si firmware connu
+92,93d82
+<         // Alertes : colonne droite — SWI133 et SWI132 ont 2 alertes séparées (survitesse + ton)
+<         //                          — SWI68/SWI69/SWI131/SWI165 ont une seule alerte sonore VSM
+99d87
+<         // ── Listeners SWI133 ─────────────────────────────────────────────────
+119,122d106
+<         // ── Listeners SWI132 — alertes + ADAS 5 modes ─────────────────────────
+<         // Off / Lim.Manuel / Lim.Auto(Intelligent) / ACC / ICA.
+<         // Le mode ACC/TJA (setAccTjaMode) et le limiteur de vitesse (setSasMode) sont deux
+<         // réglages indépendants : le sélecteur unique impose l'exclusivité.
+132d115
+<             // Le bouton Auto est disponible sur SWI132 : il sélectionne le limiteur Intelligent.
+144d126
+<         // ── Listeners AEB (communs SWI133 + SWI68) ──────────────────────────
+168,170d149
+<         // ── Listeners SWI68 / SWI69 / SWI131 / SWI165 — sélecteur 5 modes (index 0-4) ─
+<         // Off / Lim.Manuel / Lim.Auto / ACC / TJA. Mode ACC/TJA + limiteur indépendants,
+<         // exclusivité via le sélecteur unique (même logique que SWI132).
+194,199c173
+<     /**
+<      * SWI132 : applique l'index du sélecteur ADAS (0-4) en distinguant le mode ACC/TJA
+<      * (setAccTjaMode) du limiteur de vitesse (setSasMode). Le sélecteur unique impose
+<      * l'exclusivité : choisir un mode désactive l'autre sous-système.
+<      *   0=Off, 1=Lim.Manuel(SAS 2), 2=Lim.Auto/Intelligent(SAS 3), 3=ACC, 4=ICA
+<      */
+---
+>     
+202,206c176,182
+<             1 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.MANUEL);      MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
+<             2 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.INTELLIGENT); MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
+<             3 -> { MG4Hardware.setAccTjaMode(Swi68Mode.ACC); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+<             4 -> { MG4Hardware.setAccTjaMode(Swi68Mode.TJA); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+<             else -> { MG4Hardware.setAccTjaMode(Swi68Mode.OFF); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+---
+> 
+>             1 -> { MG4Hardware.setAccTjaMode(Swi68Mode.OFF); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.MANUEL) }
+>             2 -> { MG4Hardware.setAccTjaMode(Swi68Mode.OFF); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.INTELLIGENT) }
+> 
+>             3 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF); MG4Hardware.setAccTjaMode(Swi68Mode.ACC) }
+>             4 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF); MG4Hardware.setAccTjaMode(Swi68Mode.TJA) }
+>             else -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF); MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
+210d185
+<     /** SWI132 : état lu (mode ACC/TJA + limiteur SAS) → index de bouton (0-4). */
+229,232d203
+<     /**
+<      * SWI132 : rafraîchit l'état ADAS (mode Off/Lim/ACC/ICA via CarVehicleSettingClient),
+<      * les alertes sonores (via binder getter TX 0x129/0x12b) et l'AEB.
+<      */
+235c206
+<         val sas       = MG4Hardware.getSpeedLimiterMode()   // limiteur : 0=Off, 2=Manuel, 3=Intelligent
+---
+>         val sas       = MG4Hardware.getSpeedLimiterMode()
+246d216
+<             // SWI132 : mode ACC/TJA + limiteur SAS → index bouton (0-4)
+279c249
+<         val sas     = MG4Hardware.getSpeedLimiterMode()   // limiteur : 0=Off, 2=Manuel, 3=Intelligent
+---
+>         val sas     = MG4Hardware.getSpeedLimiterMode()
+
+===== app/src/main/java/com/mg4/control/ui/ClimateFragment.kt (+1/-3) =====
+34d33
+<         // isPressed guard prevents the listener firing on programmatic setChecked()
+55,56c54
+<             // getSeatHeatLeft returns -1 (coerced to 0) when HVAC not ready;
+<             // use -1 raw to detect not-ready state
+---
+> 
+
+===== app/src/main/java/com/mg4/control/ui/ConsoleFragment.kt (+0/-4) =====
+57,58d56
+<     // ---- Status banner ----
+< 
+77,78d74
+< 
+<     // ---- Log list ----
+
+===== app/src/main/java/com/mg4/control/ui/DashboardFragment.kt (+63/-176) =====
+29,33d28
+< /**
+<  * Fragment principal du dashboard — ViewPager2 horizontal.
+<  *   Page 0 : paramètres de conduite, climat, alertes, AEB
+<  *   Page 1 : Assistant de sortie de voie (ELK)
+<  */
+36d30
+<     // ── ViewPager ────────────────────────────────────────────────────────────
+40d33
+<     // ── Page 0 — Drive mode ─────────────────────────────────────────────────
+43d35
+<     // ── Page 0 — Régénération ───────────────────────────────────────────────
+46d37
+<     // ── Page 0 — ADAS SWI133 ────────────────────────────────────────────────
+49d39
+<     private var btnAdasAuto: Button?    = null
+53c43
+<         get() = mapOf(0 to btnAdasOff, 1 to btnAdasLimiteur, 2 to btnAdasAuto, 3 to btnAdasAcc, 4 to btnAdasIca)
+---
+>         get() = mapOf(0 to btnAdasOff, 1 to btnAdasLimiteur, 3 to btnAdasAcc, 4 to btnAdasIca)
+55,56d44
+<     // ── Page 0 — ADAS SWI68/69/131/165 (5 boutons index 0-4) ────────────────
+<     // Off / Lim.Manuel / Lim.Auto / ACC / TJA
+58,59d45
+<     private var btnSwi68Lim: Button? = null
+<     private var btnSwi68Auto: Button? = null
+63c49
+<         get() = mapOf(0 to btnSwi68Off, 1 to btnSwi68Lim, 2 to btnSwi68Auto, 3 to btnSwi68Acc, 4 to btnSwi68Tja)
+---
+>         get() = mapOf(Swi68Mode.OFF to btnSwi68Off, Swi68Mode.ACC to btnSwi68Acc, Swi68Mode.TJA to btnSwi68Tja)
+65d50
+<     // ── Page 0 — Climat ─────────────────────────────────────────────────────
+70d54
+<     // ── Page 0 — Alertes ────────────────────────────────────────────────────
+76d59
+<     // ── Page 0 — TSR + Économie d'énergie ───────────────────────────────────
+80c63
+<     /** Dernier mode de conduite connu — nécessaire pour arbitrer les exclusions SNOW / Éco énergie. */
+---
+>     
+83d65
+<     // ── AEB : page 0 pour VSM-based, page 1 (SWI133) pour les autres ───────────
+93d74
+<     // ── Page 1 — ELK ────────────────────────────────────────────────────────
+101c82
+<     // SWI132 ELK extra
+---
+> 
+109c90
+<     /** True pendant les mises à jour programmatiques des Switch — bloque les listeners. */
+---
+>     
+111c92
+<     /** Dernier mode ELK actif connu (pour restaurer le mode lors du toggle ON). */
+---
+>     
+114d94
+<     // ── Couleurs (lazy pour contexte disponible) ─────────────────────────────
+124,127d103
+<     // ═════════════════════════════════════════════════════════════════════════
+<     //  Lifecycle
+<     // ═════════════════════════════════════════════════════════════════════════
+< 
+144c120
+<                 if (FirmwareInfo.isVsmBased()) refreshElk()  // ELK utilise sVsm sur ces firmwares
+---
+>                 if (FirmwareInfo.isVsmBased()) refreshElk()
+147c123
+<         refreshElk()  // SWI133 — sVsm133 indépendant de Katman4
+---
+>         refreshElk()
+150,153d125
+<     // ═════════════════════════════════════════════════════════════════════════
+<     //  ViewPager2 — Adapter + Dots
+<     // ═════════════════════════════════════════════════════════════════════════
+< 
+159c131
+<         pager?.offscreenPageLimit = 1  // garde les 2 pages en mémoire
+---
+>         pager?.offscreenPageLimit = 1
+161d132
+<         // Dots
+179c150
+<                 // Refresh ELK quand on arrive sur la page 1
+---
+> 
+208,211d178
+<     // ═════════════════════════════════════════════════════════════════════════
+<     //  Page 0 — Binding, visibility, listeners  (code existant)
+<     // ═════════════════════════════════════════════════════════════════════════
+< 
+216c183
+<         // Refresh immédiat (la page vient d'être créée)
+---
+> 
+228c195
+<         // Drive
+---
+> 
+235d201
+<         // Regen
+243d208
+<         // ADAS SWI133
+246d210
+<         btnAdasAuto     = view.findViewById(R.id.btn_adas_auto)
+250,255c214,216
+<         // ADAS SWI68
+<         btnSwi68Off  = view.findViewById(R.id.btn_swi68_off)
+<         btnSwi68Lim  = view.findViewById(R.id.btn_swi68_lim)
+<         btnSwi68Auto = view.findViewById(R.id.btn_swi68_auto)
+<         btnSwi68Acc  = view.findViewById(R.id.btn_swi68_acc)
+<         btnSwi68Tja  = view.findViewById(R.id.btn_swi68_tja)
+---
+>         btnSwi68Off = view.findViewById(R.id.btn_swi68_off)
+>         btnSwi68Acc = view.findViewById(R.id.btn_swi68_acc)
+>         btnSwi68Tja = view.findViewById(R.id.btn_swi68_tja)
+257d217
+<         // Climat
+268d227
+<         // Alertes
+274d232
+<         // TSR + Économie d'énergie
+278d235
+<         // AEB déplacé sur page 1 pour tous les firmwares — pas de binding ici
+288d244
+<         // SWI132 utilise les 4 boutons Off/Lim/ACC/ICA (même groupe que SWI133), pas Off/ACC/TJA
+291c247
+<         // SWI132 utilise deux alertes séparées (survitesse + ton) comme SWI133, pas soundWarning
+---
+> 
+294c250
+<         // AEB déplacé sur page 1 pour tous les firmwares
+---
+> 
+297c253
+<         // TSR + Économie d'énergie — tous firmwares connus
+---
+> 
+309d264
+<         // Drive mode
+317d271
+<         // Regen
+325,328d278
+<         // ADAS
+<         // SWI133/UNKNOWN : setMixedIntelligentDrive (VPM) — indices 0/1/3/4 → Off/Lim/ACC/ICA
+<         // SWI132          : setAccTjaMode (VSM) — valeurs 0x4/0x3/0x1/0x2 → Off/Lim/ACC/ICA
+<         // SWI68/SWI69/SWI131/SWI165 : setAccTjaMode (VSM) — valeurs 0x4/0x1/0x2 → Off/ACC/TJA
+334,336c284
+<                             // SWI132 : mode ACC/TJA (setAccTjaMode) et limiteur de vitesse (setSasMode)
+<                             // sont deux réglages indépendants ; le sélecteur unique impose l'exclusivité.
+<                             applyVsmAdasMode(modeIndex)
+---
+>                             MG4Hardware.setAccTjaMode(swi133IndexToSwi132Value(modeIndex))
+345,347c293
+<             // SWI68/SWI69/SWI131/SWI165 : sélecteur 5 modes (index 0-4), même logique que SWI132
+<             // (mode ACC/TJA + limiteur de vitesse indépendants, exclusivité via le sélecteur unique).
+<             swi68AdasMap.forEach { (modeIndex, btn) ->
+---
+>             swi68AdasMap.forEach { (modeValue, btn) ->
+350,351c296,297
+<                         applyVsmAdasMode(modeIndex)
+<                         withContext(Dispatchers.Main) { if (isAdded) applySwi68AdasUI(modeIndex) }
+---
+>                         MG4Hardware.setAccTjaMode(modeValue)
+>                         withContext(Dispatchers.Main) { if (isAdded) applySwi68AdasUI(modeValue) }
+357d302
+<         // Climat
+371d315
+<         // Alertes SWI133 + SWI132 (deux toggles indépendants : survitesse + ton limite)
+383d326
+<         // Alerte sonore SWI68/SWI69/SWI131/SWI165 (un seul toggle)
+391d333
+<         // TSR — tous firmwares connus
+397,399c339
+<                     // Mise à jour UI immédiate — pas besoin d'attendre le hardware :
+<                     // TSR OFF → alertes forcées à OFF et section grisée (non modifiable)
+<                     // TSR ON  → section ré-activée ; les valeurs réelles sont lues après le SET
+---
+> 
+415,420c355
+<                                         // Le firmware SWI133 remet overspeed/speedTone à ON dès que
+<                                         // le TSR est activé. setTsrMode() les restaure ensuite via VPM,
+<                                         // mais les écritures VPM ont une latence de propagation pouvant
+<                                         // dépasser 500ms : lire le hardware ici renverrait encore ON.
+<                                         // → On utilise directement les valeurs sauvegardées en prefs,
+<                                         //   qui sont exactement ce que setTsrMode() vient de restaurer.
+---
+> 
+431,432c366
+<                                         // SWI132 : activer le TSR réinitialise overspeed/speedTone à ON
+<                                         // dans la voiture. Forcer les toggles à ON dans l'UI directement.
+---
+> 
+450d383
+<         // Économie d'énergie — tous firmwares connus
+461d393
+<         // AEB : listeners sur page 1 via setupAebPage2Listeners() — rien ici
+464,467d395
+<     // ═════════════════════════════════════════════════════════════════════════
+<     //  Page 1 — ELK : Binding + Listeners
+<     // ═════════════════════════════════════════════════════════════════════════
+< 
+470c398
+<         // ELK — switch principal : IDs différents selon le firmware
+---
+> 
+472c400
+<             // SWI132 : layout multi-lignes dans elk_activation_swi132
+---
+> 
+478c406
+<             // SWI132 : pas de mode Emergency — masqué
+---
+> 
+481c409
+<             // Défaut SWI132 : Alerte (mode 2), pas Emergency
+---
+> 
+493d420
+<         // AEB — page 1 pour tous les firmwares connus
+513c440
+<         // Toggle ON/OFF
+---
+> 
+517c444
+<                 // SWI132 : grise les 2 switches supplémentaires si désactivé
+---
+> 
+531d457
+<         // SWI132 — Alerte sonore
+543d468
+<         // Mode buttons
+554d478
+<         // Sensitivity buttons
+566c490
+<         // Toggle ON/OFF
+---
+> 
+575c499
+<         // Mode
+---
+> 
+588c512
+<         // Sensibilité
+---
+> 
+617,634c541,556
+<     // ═════════════════════════════════════════════════════════════════════════
+<     //  Helpers UI
+<     // ═════════════════════════════════════════════════════════════════════════
+< 
+<     /**
+<      * SWI132 : applique l'index du sélecteur ADAS en distinguant le mode ACC/TJA (setAccTjaMode)
+<      * du limiteur de vitesse (setSasMode), deux réglages indépendants sur la voiture. Le sélecteur
+<      * unique impose l'exclusivité : choisir un mode désactive l'autre sous-système.
+<      *   0=Off, 1=Lim.Manuel(SAS 2), 2=Lim.Auto/Intelligent(SAS 3), 3=ACC, 4=ICA
+<      */
+<     private fun applyVsmAdasMode(index: Int) {
+<         when (index) {
+<             1 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.MANUEL);      MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
+<             2 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.INTELLIGENT); MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
+<             3 -> { MG4Hardware.setAccTjaMode(Swi68Mode.ACC); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+<             4 -> { MG4Hardware.setAccTjaMode(Swi68Mode.TJA); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+<             else -> { MG4Hardware.setAccTjaMode(Swi68Mode.OFF); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+<         }
+---
+>     
+>     private fun swi132ValueToSwi133Index(value: Int): Int = when (value) {
+>         Swi68Mode.OFF  -> 0
+>         Swi68Mode.SHWA -> 1
+>         Swi68Mode.ACC  -> 3
+>         Swi68Mode.TJA  -> 4
+>         else           -> 0
+>     }
+> 
+>     
+>     private fun swi133IndexToSwi132Value(index: Int): Int = when (index) {
+>         0 -> Swi68Mode.OFF
+>         1 -> Swi68Mode.SHWA
+>         3 -> Swi68Mode.ACC
+>         4 -> Swi68Mode.TJA
+>         else -> Swi68Mode.OFF
+637,653c559
+<     /**
+<      * SWI132 : convertit l'état lu (mode ACC/TJA + limiteur SAS) en index de bouton (0-4).
+<      * Manuel→1 (Lim.Manuel), Intelligent→2 (Lim.Auto), ACC→3, TJA→4, sinon Off→0.
+<      */
+<     private fun vsmStateToIndex(accTja: Int, sas: Int): Int = when {
+<         sas == MG4Hardware.SasMode.MANUEL      -> 1
+<         sas == MG4Hardware.SasMode.INTELLIGENT -> 2
+<         accTja == Swi68Mode.ACC                -> 3
+<         accTja == Swi68Mode.TJA                -> 4
+<         else                                   -> 0
+<     }
+< 
+<     /**
+<      * SWI133 / SWI132 : active ou grise la section des 2 alertes sonores.
+<      * Quand le TSR (RECO. PANNEAUX) est OFF, les alertes sont désactivées et non modifiables.
+<      * L'alpha est appliqué sur le conteneur entier (labels + switches) pour un rendu cohérent.
+<      */
+---
+>     
+660,663d565
+<     // ═════════════════════════════════════════════════════════════════════════
+<     //  Refresh depuis le hardware
+<     // ═════════════════════════════════════════════════════════════════════════
+< 
+665c567
+<         if (driveModeButtons.isEmpty()) return  // page pas encore créée
+---
+>         if (driveModeButtons.isEmpty()) return
+702,703c604
+<         // Vérifie que les boutons ADAS de page 0 sont créés (AEB est sur page 1)
+<         // SWI132 utilise les boutons swi133 (Off/Lim/ACC/ICA), pas les boutons swi68
+---
+> 
+737c638
+<             setAlertsSwi133Enabled(tsrOn)   // grise les alertes si TSR est OFF
+---
+>             setAlertsSwi133Enabled(tsrOn)
+744,747c645
+<     /**
+<      * SWI132 : mode ACC/TJA (CarVehicleSettingClient) + alertes binder direct
+<      * (overspeed TX 0x129, speedTone TX 0x12b) + TSR binder direct + AEB + économie.
+<      */
+---
+>     
+750d647
+<         val sas          = MG4Hardware.getSpeedLimiterMode()   // limiteur : 0=Off, 2=Manuel, 3=Intelligent
+770,771c667,668
+<             setAlertsSwi133Enabled(tsrOn)   // grise les alertes si TSR est OFF
+<             applySwi133AdasUI(vsmStateToIndex(mode, sas))  // SWI132 : Off/Limiteur/ACC/ICA
+---
+>             setAlertsSwi133Enabled(tsrOn)
+>             applySwi133AdasUI(swi132ValueToSwi133Index(mode))
+779d675
+<         val sas          = MG4Hardware.getSpeedLimiterMode()   // limiteur : 0=Off, 2=Manuel, 3=Intelligent
+797c693
+<             applySwi68AdasUI(vsmStateToIndex(mode, sas))
+---
+>             applySwi68AdasUI(mode)
+804c700
+<         if (switchElk == null) return  // page pas encore créée
+---
+>         if (switchElk == null) return
+830,833d725
+<     // ═════════════════════════════════════════════════════════════════════════
+<     //  Helpers UI — Page 0
+<     // ═════════════════════════════════════════════════════════════════════════
+< 
+838c730
+<         // Regen : indisponible si Éco actif OU si SNOW sélectionné
+---
+> 
+854c746
+<         // Regen : indisponible si SNOW OU si Éco énergie actif
+---
+> 
+856c748
+<         // Bouton Éco énergie : indisponible en mode SNOW (modes exclusifs)
+---
+> 
+873,874c765
+<             // ONE_PEDAL reste accessible même quand Éco énergie est actif,
+<             // sauf en mode SNOW où tous les niveaux de regen sont indisponibles.
+---
+> 
+927,930d817
+< 
+<     // ═════════════════════════════════════════════════════════════════════════
+<     //  Helpers UI — Page 1 (ELK)
+<     // ═════════════════════════════════════════════════════════════════════════
+
+===== app/src/main/java/com/mg4/control/ui/DriveRegenFragment.kt (+2/-2) =====
+97c97
+<         // SNOW : regen forcée faible par le véhicule → griser les boutons regen
+---
+> 
+111c111
+<     /** Active ou grise les boutons de régénération. */
+---
+>     
+
+===== app/src/main/java/com/mg4/control/ui/ProfileAdapter.kt (+1/-1) =====
+50c50
+<             // SWI68/SWI69/SWI131 : mêmes modes ADAS (ACC / TJA / Off)
+---
+> 
+
+===== app/src/main/java/com/mg4/control/ui/ProfileFragment.kt (+16/-63) =====
+86d85
+<         // ── Bouton Fermer ─────────────────────────────────────────────────────
+111,114d109
+<     // -------------------------------------------------------------------------
+<     // Nouveau profil : lit l'état hardware courant puis ouvre le dialog pré-rempli
+<     // -------------------------------------------------------------------------
+< 
+120c115
+<                 // SWI68/SWI69/SWI131/SWI132/SWI165 : ADAS ACC/TJA — sièges/volant uniquement sur SWI68/SWI165
+---
+> 
+132c127
+<                     // SWI132 : deux alertes indépendantes comme SWI133 (pas de soundWarning VSM)
+---
+> 
+136d130
+<                     // Mode ACC/TJA — SHWA (ancien codage limiteur) ramené à Off (limiteur géré à part)
+140d133
+<                     // Limiteur de vitesse — capturé pour tous les firmwares VSM (SWI68/69/131/132/165)
+154c147
+<                 // SWI133/UNKNOWN : ADAS mixte, sièges et volant chauffants
+---
+> 
+183,186d175
+<     // -------------------------------------------------------------------------
+<     // Dialog d'édition / création — style dark MaterialButton
+<     // -------------------------------------------------------------------------
+< 
+192d180
+<         // ── Couleurs ─────────────────────────────────────────────────────────
+202c190
+<         /** Lie un groupe de boutons : un seul actif à la fois. Retourne une lambda pour lire la valeur courante. */
+---
+>         
+213,214c201
+<         // ── Variables de sélection ───────────────────────────────────────────
+<         var selectedBtMac: String? = data.btDeviceMac   // [BT-PROFILES]
+---
+>         var selectedBtMac: String? = data.btDeviceMac
+222c209
+<         var swi132SasMode   = data.swi132SasMode                       // 0=Off, 2=Manuel, 3=Intelligent
+---
+>         var swi132SasMode   = data.swi132SasMode
+230c217
+<         /** Dernier mode ELK actif pour restauration après toggle ON */
+---
+>         
+237d223
+<         // ── Bouton Éco énergie — déclaré tôt pour être accessible dans le binding drive mode ─
+240d225
+<         // ── Mode de conduite ─────────────────────────────────────────────────
+263,264c248
+<                 // ONE_PEDAL reste accessible même quand Éco énergie est actif,
+<                 // sauf en mode SNOW où tous les niveaux de regen sont indisponibles.
+---
+> 
+274c258
+<             // Regen : indisponible si SNOW ou Éco énergie actif (ONE_PEDAL exempt de l'Éco)
+---
+> 
+276c260
+<             // Bouton Éco énergie : indisponible en mode SNOW (modes exclusifs)
+---
+> 
+282c266
+<         // État initial : regen indisponible si SNOW ou Éco énergie déjà actif
+---
+> 
+285d268
+<         // ── Régénération ─────────────────────────────────────────────────────
+296d278
+<         // ── Volant chauffant ─────────────────────────────────────────────────
+303d284
+<         // ── Siège gauche ─────────────────────────────────────────────────────
+312d292
+<         // ── Siège droit ──────────────────────────────────────────────────────
+321d300
+<         // ── Sections Climat (Volant + Sièges) — masquées si pas de chauffage (SWI69/SWI131) ─
+328d306
+<         // ── Section AEB (commune SWI133 + SWI68 + SWI69) ────────────────────
+336d313
+<             // Sensibilité AEB — SWI133 uniquement
+378d354
+<         // ── Section ELK (tous firmwares connus) ─────────────────────────────
+392d367
+<             // SWI132 : pas de mode Emergency + 2 switches supplémentaires
+461d435
+<         // ── Sections ADAS ────────────────────────────────────────────────────
+468,470d441
+<                 // SWI132 : 5 boutons ADAS Off/Lim.Manuel/Lim.Auto/ACC/ICA + alertes séparées.
+<                 // Le mode ACC/TJA (swi68Mode) et le limiteur de vitesse (swi132SasMode) sont
+<                 // deux réglages indépendants ; le sélecteur unique impose l'exclusivité.
+502,503d472
+<                 // SWI68/SWI69/SWI131/SWI165 : section SWI68 (5 boutons + alerte sonore).
+<                 // Off / Lim.Manuel / Lim.Auto / ACC / TJA — mode ACC/TJA + limiteur indépendants.
+533c502
+<                 // SWI133/UNKNOWN : section SWI133 (overspeed + speedTone + 5 boutons ADAS)
+---
+> 
+551,552d519
+<         // ── Économie d'énergie + TSR (tous firmwares connus) ───────────────
+<         // btn_energy_saving_d est en Col 1 (drive section), section_tsr_dialog en Col 2
+556c523
+<             // Grisé si SNOW est déjà sélectionné à l'ouverture du dialog
+---
+> 
+564c531
+<                 // Regen : indisponible si Éco actif ou si SNOW sélectionné
+---
+> 
+567d533
+<             // Note : l'état initial de la regen est déjà géré après le bindGroup des modes
+575d540
+<         // ── [BT-PROFILES] Spinner appareil Bluetooth ────────────────────────
+578d542
+<         // "Aucun" en première entrée, suivi des appareils appairés
+582d545
+<         // Chargement async des appareils appairés, puis population du Spinner
+595d557
+<                 // Pré-sélectionner l'appareil déjà associé au profil
+601d562
+<                 // Callback de sélection — stocké dans une var accessible lors du Save
+608c569
+<                 // Initialise selectedBtMac avec la valeur pré-sélectionnée
+---
+> 
+613d573
+<         // ── Profil par défaut ────────────────────────────────────────────────
+617d576
+<         // ── Nom ──────────────────────────────────────────────────────────────
+621d579
+<         // ── Création du dialog sans chrome Android ───────────────────────────
+628d585
+<         // Titre dynamique intégré dans le layout
+632d588
+<         // ── Bouton Annuler ───────────────────────────────────────────────────
+637d592
+<         // ── Bouton Enregistrer : ne ferme PAS si le nom est vide ────────────
+646d600
+<             // SWI132 utilise désormais sectionSwi133 (mêmes IDs que SWI133 — sans suffixe _d)
+675c629
+<                 btDeviceMac    = selectedBtMac   // [BT-PROFILES]
+---
+>                 btDeviceMac    = selectedBtMac
+685d638
+<         // Borner la taille du dialog : footer toujours visible + largeur adaptée à 3 colonnes
+
+===== app/src/main/java/com/mg4/control/ui/SettingsFragment.kt (+11/-178) =====
+7d6
+< import android.content.Intent
+10d8
+< import com.mg4.control.MainActivity
+12d9
+< import android.graphics.Bitmap
+16d12
+< import android.net.Uri
+22d17
+< import android.widget.ImageView
+30,32d24
+< import com.google.zxing.BarcodeFormat
+< import com.google.zxing.EncodeHintType
+< import com.google.zxing.MultiFormatWriter
+37,38d28
+< import com.mg4.control.update.UpdateChecker
+< import com.mg4.control.update.UpdateDialogManager
+48,49c38
+<     private val githubUrl = "https://github.com/SliDeeN/MG4Control"
+<     private val gitlabUrl = "https://gitlab.com/SliDeeN/mg4control"
+---
+>     private var updateClickCount = 0
+65d53
+<         // ── Langue ───────────────────────────────────────────────────────────
+94d81
+<         // ── Écran par défaut ─────────────────────────────────────────────────
+122d108
+<         // ── Thème : Auto / Sombre / Clair ───────────────────────────────────
+155d140
+<         // ── Auto-apply ───────────────────────────────────────────────────────
+162d146
+<         // ── Vérification auto des mises à jour ───────────────────────────────
+169,192d152
+<         // ── Alimentation véhicule (SWI133) — éteint la voiture, garde l'écran ──
+<         val rowVehiclePower = view.findViewById<View>(R.id.row_vehicle_power)
+<         val dividerVehiclePower = view.findViewById<View>(R.id.row_vehicle_power_divider)
+<         val btnVehiclePower = view.findViewById<MaterialButton>(R.id.btn_vehicle_power_off)
+<         if (!MG4Hardware.hasVehiclePowerOff()) {
+<             rowVehiclePower.visibility = View.GONE
+<             dividerVehiclePower.visibility = View.GONE
+<         } else {
+<             btnVehiclePower.setOnClickListener {
+<                 AlertDialog.Builder(requireContext())
+<                     .setTitle(R.string.vehicle_power_dialog_title)
+<                     .setMessage(R.string.vehicle_power_dialog_msg)
+<                     .setNegativeButton(R.string.vehicle_power_dialog_cancel, null)
+<                     .setPositiveButton(R.string.vehicle_power_dialog_confirm) { _, _ ->
+<                         CoroutineScope(Dispatchers.IO).launch {
+<                             val ok = MG4Hardware.vehiclePowerOff()
+<                             AppLogger.i("MG4_SETTINGS", "Vehicle power off → $ok")
+<                         }
+<                     }
+<                     .show()
+<             }
+<         }
+< 
+<         // ── Bouton Vérifier mise à jour ──────────────────────────────────────
+195,198d154
+<         val originalUpdateText = getString(R.string.btn_check_update)
+< 
+<         // Bouton Diagnostic débloqué via 5 clics sur le logo (cf. MainActivity)
+<         btnDiagnostic.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
+201d156
+<             btnUpdate.isEnabled = false
+203,220c158,165
+<             UpdateChecker.check(
+<                 context = requireContext(),
+<                 onUpdateAvailable = { updateInfo ->
+<                     if (isAdded) {
+<                         btnUpdate.isEnabled = true
+<                         UpdateDialogManager.show(
+<                             requireActivity() as androidx.appcompat.app.AppCompatActivity,
+<                             updateInfo
+<                         )
+<                     }
+<                 },
+<                 onNoUpdate = {
+<                     if (isAdded) showUpToDate(btnUpdate, originalUpdateText)
+<                 },
+<                 onError = {
+<                     if (isAdded) showUpdateError(btnUpdate, originalUpdateText)
+<                 }
+<             )
+---
+>             updateClickCount++
+>             if (updateClickCount >= 5) {
+>                 updateClickCount = 0
+>                 btnDiagnostic.visibility = View.VISIBLE
+>             }
+> 
+>             btnUpdate.text = getString(R.string.btn_update_disabled)
+>             btnUpdate.postDelayed({ if (isAdded) btnUpdate.text = getString(R.string.btn_check_update) }, 2_000)
+223d167
+<         // ── Bouton Nettoyer APK ──────────────────────────────────────────────
+262d205
+<         // ── Bouton Diagnostic (caché par défaut — débloqué par 5 clics sur MAJ) ──
+267d209
+<         // ── Bouton Infos ─────────────────────────────────────────────────────
+272d213
+<         // ── Bouton Fermer ─────────────────────────────────────────────────────
+278,333d218
+<     // ── Feedback "application à jour" sur le bouton ──────────────────────────
+< 
+<     private fun showUpToDate(btn: MaterialButton, originalText: String) {
+<         val ctx = requireContext()
+<         val ecoDim    = ctx.getColor(R.color.dash_eco_dim)
+<         val eco       = ctx.getColor(R.color.dash_eco)
+<         val accentDim = ctx.getColor(R.color.dash_accent_dim)
+<         val accent    = ctx.getColor(R.color.dash_accent)
+< 
+<         // Passe le bouton en vert "à jour"
+<         btn.text = getString(R.string.update_up_to_date)
+<         btn.backgroundTintList = android.content.res.ColorStateList.valueOf(ecoDim)
+<         btn.strokeColor        = android.content.res.ColorStateList.valueOf(eco)
+<         btn.setTextColor(eco)
+<         btn.isEnabled = false
+< 
+<         // Revient à l'état normal après 3 secondes
+<         btn.postDelayed({
+<             if (isAdded) {
+<                 btn.text = originalText
+<                 btn.backgroundTintList = android.content.res.ColorStateList.valueOf(accentDim)
+<                 btn.strokeColor        = android.content.res.ColorStateList.valueOf(accent)
+<                 btn.setTextColor(accent)
+<                 btn.isEnabled = true
+<             }
+<         }, 3_000)
+<     }
+< 
+<     // ── Feedback "erreur réseau" sur le bouton ────────────────────────────────
+< 
+<     private fun showUpdateError(btn: MaterialButton, originalText: String) {
+<         val ctx = requireContext()
+<         val dangerDim = ctx.getColor(R.color.dash_danger_dim)
+<         val danger    = ctx.getColor(R.color.dash_danger)
+<         val accentDim = ctx.getColor(R.color.dash_accent_dim)
+<         val accent    = ctx.getColor(R.color.dash_accent)
+< 
+<         btn.text = getString(R.string.update_network_error)
+<         btn.backgroundTintList = android.content.res.ColorStateList.valueOf(dangerDim)
+<         btn.strokeColor        = android.content.res.ColorStateList.valueOf(danger)
+<         btn.setTextColor(danger)
+<         btn.isEnabled = false
+< 
+<         btn.postDelayed({
+<             if (isAdded) {
+<                 btn.text = originalText
+<                 btn.backgroundTintList = android.content.res.ColorStateList.valueOf(accentDim)
+<                 btn.strokeColor        = android.content.res.ColorStateList.valueOf(accent)
+<                 btn.setTextColor(accent)
+<                 btn.isEnabled = true
+<             }
+<         }, 3_000)
+<     }
+< 
+<     // ── Dialog Diagnostic ────────────────────────────────────────────────────
+< 
+341d225
+<         // ── Layout : crash banner (optionnel) + rapport matériel ──────────────
+350d233
+<         // Section crash log (si un crash a été enregistré)
+364d246
+<             // Séparateur
+375d256
+<         // Section rapport matériel
+386d266
+<         // Section AppLogger en temps réel (30 dernières lignes)
+421c301
+<             // "Copier" — copie tout sans fermer le dialog
+---
+> 
+433c313
+<             // "Effacer crash" — supprime le fichier et ferme le dialog
+---
+> 
+442d321
+<         // Génération du rapport matériel sur le thread IO
+451,452d329
+<     // ── Dialog À propos ──────────────────────────────────────────────────────
+< 
+457d333
+<         // Version de l'app
+464d339
+<         // Version firmware (lecture asynchrone)
+472,490d346
+<         // QR Code GitHub
+<         val ivQrGithub = dialogView.findViewById<ImageView>(R.id.iv_qr_code_github)
+<         generateQrBitmap(githubUrl, 400)?.let { ivQrGithub.setImageBitmap(it) }
+< 
+<         // QR Code GitLab
+<         val ivQrGitlab = dialogView.findViewById<ImageView>(R.id.iv_qr_code_gitlab)
+<         generateQrBitmap(gitlabUrl, 400)?.let { ivQrGitlab.setImageBitmap(it) }
+< 
+<         // Lien GitHub cliquable
+<         dialogView.findViewById<TextView>(R.id.tv_github_link).setOnClickListener {
+<             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl)))
+<         }
+< 
+<         // Lien GitLab cliquable
+<         dialogView.findViewById<TextView>(R.id.tv_gitlab_link).setOnClickListener {
+<             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(gitlabUrl)))
+<         }
+< 
+<         // Création du dialog sans chrome Android (fond transparent = layout seul visible)
+497d352
+<         // Bouton Fermer intégré dans le layout
+505,526d359
+<     // ── Génération QR code (ZXing core) ──────────────────────────────────────
+< 
+<     private fun generateQrBitmap(content: String, sizePx: Int = 400): Bitmap? {
+<         return try {
+<             val hints = mapOf(
+<                 EncodeHintType.MARGIN to 1,
+<                 EncodeHintType.CHARACTER_SET to "UTF-8"
+<             )
+<             val matrix = MultiFormatWriter().encode(
+<                 content, BarcodeFormat.QR_CODE, sizePx, sizePx, hints
+<             )
+<             val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.RGB_565)
+<             for (x in 0 until sizePx) {
+<                 for (y in 0 until sizePx) {
+<                     bmp.setPixel(x, y, if (matrix[x, y]) Color.BLACK else Color.WHITE)
+<                 }
+<             }
+<             bmp
+<         } catch (e: Exception) {
+<             null
+<         }
+<     }
+
+===== app/src/main/java/com/mg4/control/ui/ShortcutsFragment.kt (+43/-62) =====
+20a21
+> import com.mg4.control.hardware.MG4Hardware.Swi68Mode
+37c38
+<     /** Éléments disponibles dans les Spinners — calculés une fois selon le firmware. */
+---
+>     
+40c41
+<     /** Liste de base (sans label custom) — partagée pour tous les spinners. */
+---
+>     
+43c44
+<     /** Clés identifiant chaque ligne slot × type de pression. */
+---
+>     
+49d49
+<     // ── Par-spinner : label list mutable + adapter + vue ─────────────────
+71d70
+<         // ── Construction des items de base selon firmware ─────────────────
+78c77
+<             // SWI68/69/131/165 : une seule alerte sonore VSM
+---
+> 
+82c81
+<             // SWI133 + SWI132 : deux alertes indépendantes (survitesse + ton limite)
+---
+> 
+102,106c101,103
+<         // ── Affichage des sections de config selon firmware ───────────────
+<         // Tous les firmwares connus utilisent la config 5 modes (Off/Lim.Manuel/Lim.Auto/ACC/ICA|TJA).
+<         view.findViewById<View>(R.id.config_adas_section)?.visibility = if (isKnown) View.VISIBLE else View.GONE
+<         view.findViewById<View>(R.id.config_adas_swi133)?.visibility  = if (isKnown) View.VISIBLE else View.GONE
+<         view.findViewById<View>(R.id.config_adas_swi68)?.visibility   = View.GONE
+---
+>         view.findViewById<View>(R.id.config_adas_section)?.visibility = if (isKnown)    View.VISIBLE else View.GONE
+>         view.findViewById<View>(R.id.config_adas_swi133)?.visibility  = if (!isVsmBased && isKnown) View.VISIBLE else View.GONE
+>         view.findViewById<View>(R.id.config_adas_swi68)?.visibility   = if (isVsmBased) View.VISIBLE else View.GONE
+108d104
+<         // ── Bouton Fermer ─────────────────────────────────────────────
+114c110
+<         setupConfigListeners(view)
+---
+>         setupConfigListeners(view, isVsmBased)
+118,119d113
+<     // ── Spinners (un adapter par spinner) ────────────────────────────────
+< 
+125d118
+<             // Construire la liste de labels pour ce slot (OPEN_CUSTOM_APP peut avoir un label custom)
+135d127
+<             // Sélection initiale
+140,141d131
+<             // Listener positionné APRÈS pour ignorer le callback auto de setSelection.
+<             // Le flag `initialized` absorbe le premier onItemSelected automatique (sélection initiale).
+163,167c153
+<     /**
+<      * Construit la liste de labels pour un slot.
+<      * - OPEN_CUSTOM_APP : affiche "Ouvrir [AppName]" si une app est sauvegardée.
+<      * - APPLY_PROFILE   : affiche "▶ [NomProfil]" si un profil est sauvegardé.
+<      */
+---
+>     
+194c180
+<     /** Retourne le label de l'application (packageName) ou null si introuvable. */
+---
+>     
+204,205d189
+<     // ── Dialog de sélection d'application ────────────────────────────────
+< 
+209d192
+<         // Récupérer toutes les apps launchables, triées par label
+228c211
+<                 // Si aucune app n'était sauvegardée → revenir à NONE
+---
+> 
+238,239d220
+<     // ── Dialog de sélection de profil ────────────────────────────────────────
+< 
+244c225
+<             // Aucun profil créé → revenir à NONE
+---
+> 
+266c247
+<                 // Annulation sans profil préalablement sauvegardé → revenir à NONE
+---
+> 
+276c257
+<     /** Met à jour le label APPLY_PROFILE dans l'adapter du spinner concerné. */
+---
+>     
+290c271
+<     /** Met à jour le label OPEN_CUSTOM_APP dans l'adapter du spinner concerné. */
+---
+>     
+301c282
+<         // S'assurer que le spinner affiche le bon item sélectionné
+---
+> 
+305,307c286
+<     // ── Config buttons (1 Pédale / AEB / ADAS) ───────────────────────────
+< 
+<     private fun setupConfigListeners(view: View) {
+---
+>     private fun setupConfigListeners(view: View, isVsmBased: Boolean) {
+316d294
+<         // One Pedal — regen de retour
+325,334c303,323
+<         // ADAS — modes A et B : tous les firmwares connus utilisent les indices 0-4
+<         // (Off/Lim.Manuel/Lim.Auto/ACC/ICA|TJA). La conversion index→hardware est faite dans le service.
+<         setupConfigRow("shortcut_adas_mode_a", 0, view,
+<             R.id.sc_adas_a_0 to 0, R.id.sc_adas_a_1 to 1, R.id.sc_adas_a_2 to 2,
+<             R.id.sc_adas_a_3 to 3, R.id.sc_adas_a_4 to 4
+<         )
+<         setupConfigRow("shortcut_adas_mode_b", 3, view,
+<             R.id.sc_adas_b_0 to 0, R.id.sc_adas_b_1 to 1, R.id.sc_adas_b_2 to 2,
+<             R.id.sc_adas_b_3 to 3, R.id.sc_adas_b_4 to 4
+<         )
+---
+>         if (!isVsmBased) {
+>             setupConfigRow("shortcut_adas_mode_a", 0, view,
+>                 R.id.sc_adas_a_0 to 0, R.id.sc_adas_a_1 to 1,
+>                 R.id.sc_adas_a_3 to 3, R.id.sc_adas_a_4 to 4
+>             )
+>             setupConfigRow("shortcut_adas_mode_b", 3, view,
+>                 R.id.sc_adas_b_0 to 0, R.id.sc_adas_b_1 to 1,
+>                 R.id.sc_adas_b_3 to 3, R.id.sc_adas_b_4 to 4
+>             )
+>         } else {
+>             setupConfigRow("shortcut_adas_mode_a", Swi68Mode.ACC, view,
+>                 R.id.sc_adas_a_s68_off to Swi68Mode.OFF,
+>                 R.id.sc_adas_a_s68_acc to Swi68Mode.ACC,
+>                 R.id.sc_adas_a_s68_tja to Swi68Mode.TJA
+>             )
+>             setupConfigRow("shortcut_adas_mode_b", Swi68Mode.OFF, view,
+>                 R.id.sc_adas_b_s68_off to Swi68Mode.OFF,
+>                 R.id.sc_adas_b_s68_acc to Swi68Mode.ACC,
+>                 R.id.sc_adas_b_s68_tja to Swi68Mode.TJA
+>             )
+>         }
+355,356d343
+<     // ── Restauration de l'état ────────────────────────────────────────────
+< 
+363,364d349
+<     // ── Helpers UI ───────────────────────────────────────────────────────
+< 
+379,380d363
+<         val activeTextColor   = requireContext().getColor(R.color.text_active)
+<         val inactiveTextColor = requireContext().getColor(R.color.text_secondary)
+382,384c365,367
+<             val isActive = value == active
+<             btn?.backgroundTintList = ColorStateList.valueOf(if (isActive) accentColor else defColor)
+<             btn?.setTextColor(if (isActive) activeTextColor else inactiveTextColor)
+---
+>             btn?.backgroundTintList = ColorStateList.valueOf(
+>                 if (value == active) accentColor else defColor
+>             )
+395,396d377
+< 
+<     // ── Prefs helpers ────────────────────────────────────────────────────
+
+===== app/src/main/java/com/mg4/control/update/ApkCleanup.kt (+1/-25) =====
+3,9d2
+< import android.os.Environment
+< import android.util.Log
+< 
+< /**
+<  * Nettoie automatiquement les anciens fichiers MGControl*.apk dans le dossier Téléchargements.
+<  * Ne conserve que les [MAX_APK] plus récents.
+<  */
+12,14c5
+<     private const val TAG     = "ApkCleanup"
+<     private const val MAX_APK = 5
+< 
+---
+>     
+16,21d6
+<         val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+<         val apkFiles = downloadsDir.listFiles { f ->
+<             f.isFile && f.name.startsWith("MGControl") && f.name.endsWith(".apk")
+<         } ?: return
+< 
+<         if (apkFiles.size <= MAX_APK) return
+23,31d7
+<         val toDelete = apkFiles.sortedBy { it.lastModified() }.take(apkFiles.size - MAX_APK)
+<         toDelete.forEach { file ->
+<             if (file.delete()) {
+<                 Log.i(TAG, "Supprimé : ${file.name}")
+<             } else {
+<                 Log.w(TAG, "Échec suppression : ${file.name}")
+<             }
+<         }
+<         Log.i(TAG, "${toDelete.size} APK(s) supprimé(s) — ${MAX_APK} conservé(s)")
+
+===== app/src/main/java/com/mg4/control/update/ApkDownloader.kt (+4/-63) =====
+3,4d2
+< import kotlinx.coroutines.Dispatchers
+< import kotlinx.coroutines.withContext
+6,7d3
+< import java.net.HttpURLConnection
+< import java.net.URL
+9,13d4
+< /**
+<  * Télécharge un fichier APK depuis une URL vers un fichier local.
+<  * Gère les redirections HTTP/HTTPS (GitHub CDN).
+<  * La progression (0–100) est remontée via [onProgress] sur le thread appelant.
+<  */
+15a7,8
+>     
+>     @Suppress("UNUSED_PARAMETER")
+20,23c13
+<     ): Boolean = withContext(Dispatchers.IO) {
+<         try {
+<             // Supprimer un éventuel fichier précédent
+<             if (destFile.exists()) destFile.delete()
+---
+>     ): Boolean {
+25,74c15
+<             val conn = openConnection(url)
+<             if (conn.responseCode != 200) {
+<                 conn.disconnect()
+<                 return@withContext false
+<             }
+< 
+<             val totalBytes = conn.contentLengthLong
+<             var downloaded = 0L
+< 
+<             conn.inputStream.use { input ->
+<                 destFile.outputStream().use { output ->
+<                     val buffer = ByteArray(8_192)
+<                     var read: Int
+<                     while (input.read(buffer).also { read = it } != -1) {
+<                         output.write(buffer, 0, read)
+<                         downloaded += read
+<                         if (totalBytes > 0) {
+<                             val pct = (downloaded * 100L / totalBytes).toInt()
+<                             withContext(Dispatchers.Main) { onProgress(pct) }
+<                         }
+<                     }
+<                 }
+<             }
+< 
+<             conn.disconnect()
+<             destFile.exists() && destFile.length() > 0
+< 
+<         } catch (_: Exception) {
+<             destFile.delete()
+<             false
+<         }
+<     }
+< 
+<     /** Ouvre une connexion en suivant manuellement les redirections (GitHub → CDN). */
+<     private fun openConnection(urlStr: String, depth: Int = 0): HttpURLConnection {
+<         val conn = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+<             instanceFollowRedirects = true
+<             setRequestProperty("User-Agent", "MG4Control-Android")
+<             connectTimeout = 15_000
+<             readTimeout    = 120_000
+<             connect()
+<         }
+<         // Fallback de suivi de redirect manuel (au cas où instanceFollowRedirects est ignoré)
+<         val code = conn.responseCode
+<         if ((code == 301 || code == 302 || code == 303) && depth < 5) {
+<             val location = conn.getHeaderField("Location") ?: return conn
+<             conn.disconnect()
+<             return openConnection(location, depth + 1)
+<         }
+<         return conn
+---
+>         return false
+
+===== app/src/main/java/com/mg4/control/update/ApkInstaller.kt (+3/-77) =====
+4,6d3
+< import android.content.Intent
+< import android.util.Log
+< import androidx.core.content.FileProvider
+9,22d5
+< /**
+<  * Installe un APK via deux méthodes en cascade, adaptées aux contraintes AAOS :
+<  *
+<  *   1. pm install depuis le stockage externe  (getExternalFilesDir — accessible par pm)
+<  *   2. pm install depuis le stockage interne  (cacheDir — fallback si pas de stockage externe)
+<  *
+<  * Note :
+<  *   - PackageInstaller (API silencieuse) : bloqué par AAOS ("non-system apps on internal storage")
+<  *   - ACTION_INSTALL_PACKAGE : bloqué par le sharedUserId="android.uid.system" de l'app
+<  *     (le système refuse de mettre à jour une app système via l'installeur standard)
+<  *   - Seul pm install depuis un chemin lisible par le processus pm peut fonctionner
+<  *
+<  * Retourne null si une méthode a pu être lancée, message d'erreur sinon.
+<  */
+25,28c8,9
+<     private const val TAG = "ApkInstaller"
+<     // Nom différent du fichier téléchargé pour éviter toute collision source/dest
+<     private const val PM_TMP_NAME = "mg4control_pm_tmp.apk"
+< 
+---
+>     
+>     @Suppress("UNUSED_PARAMETER")
+30,76d10
+<         if (!apkFile.exists() || apkFile.length() == 0L) {
+<             return "APK manquant ou vide : ${apkFile.absolutePath}"
+<         }
+< 
+<         // ── Stratégie 1 : pm install depuis le stockage externe ───────────────
+<         val extDir = context.getExternalFilesDir(null)
+<         if (extDir != null) {
+<             val extApk = File(extDir, PM_TMP_NAME)
+<             val error = tryPmInstall(apkFile, extApk)
+<             if (error == null) {
+<                 Log.i(TAG, "pm install (externe) : succès")
+<                 return null
+<             }
+<             Log.w(TAG, "pm install (externe) échoué : $error")
+<         }
+< 
+<         // ── Stratégie 2 : pm install depuis le stockage interne (cache) ───────
+<         val intApk = File(context.cacheDir, PM_TMP_NAME)
+<         val error = tryPmInstall(apkFile, intApk)
+<         if (error == null) {
+<             Log.i(TAG, "pm install (interne) : succès")
+<             return null
+<         }
+<         Log.w(TAG, "pm install (interne) échoué : $error")
+< 
+<         val extMsg = if (extDir != null) "ext: échec" else "ext: absent"
+<         return "$extMsg | int: $error"
+<     }
+< 
+<     // ── pm install -r ─────────────────────────────────────────────────────────
+< 
+<     private fun tryPmInstall(source: File, dest: File): String? {
+<         return try {
+<             // Copie vers la destination (nom différent → jamais la même que source)
+<             source.copyTo(dest, overwrite = true)
+< 
+<             val process = ProcessBuilder(
+<                 "/system/bin/pm", "install", "-r", "--user", "0", dest.absolutePath
+<             )
+<                 .redirectErrorStream(true)
+<                 .start()
+< 
+<             val output = process.inputStream.bufferedReader().readText().trim()
+<             val exitCode = process.waitFor()
+< 
+<             dest.runCatching { delete() }
+<             Log.d(TAG, "pm install [${dest.parent}] exitCode=$exitCode output=$output")
+78,86c12
+<             if (output.contains("Success", ignoreCase = true) || exitCode == 0) {
+<                 null
+<             } else {
+<                 "exitCode=$exitCode | $output"
+<             }
+<         } catch (e: Exception) {
+<             dest.runCatching { delete() }
+<             "${e.javaClass.simpleName}: ${e.message}"
+<         }
+---
+>         return "Mise à jour automatique désactivée (gestion locale)"
+
+===== app/src/main/java/com/mg4/control/update/InstallReceiver.kt (+0/-48) =====
+6,9d5
+< import android.content.pm.PackageInstaller
+< import android.util.Log
+< import android.widget.Toast
+< import com.mg4.control.R
+11,14d6
+< /**
+<  * Reçoit le résultat de l'installation silencieuse depuis [ApkInstaller].
+<  * Enregistré dans le Manifest ; appelé par PackageInstaller après commit().
+<  */
+19d10
+<         private const val TAG = "InstallReceiver"
+23d13
+<         if (intent.action != ACTION_INSTALL_STATUS) return
+25,62d14
+<         val status  = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
+<         val message = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: ""
+< 
+<         Log.d(TAG, "Install status=$status message=$message")
+< 
+<         when (status) {
+<             PackageInstaller.STATUS_SUCCESS -> {
+<                 Log.i(TAG, "Installation réussie !")
+<                 Toast.makeText(
+<                     context,
+<                     context.getString(R.string.update_installed),
+<                     Toast.LENGTH_LONG
+<                 ).show()
+<             }
+< 
+<             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
+<                 // Ne devrait pas arriver avec INSTALL_PACKAGES système,
+<                 // mais on ouvre quand même la confirmation si nécessaire.
+<                 @Suppress("DEPRECATION")
+<                 val confirmIntent = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU)
+<                     intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+<                 else
+<                     intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
+<                 confirmIntent?.let {
+<                     it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+<                     context.startActivity(it)
+<                 }
+<             }
+< 
+<             else -> {
+<                 Log.e(TAG, "Installation échouée — status=$status : $message")
+<                 Toast.makeText(
+<                     context,
+<                     context.getString(R.string.update_install_error, message),
+<                     Toast.LENGTH_LONG
+<                 ).show()
+<             }
+<         }
+
+===== app/src/main/java/com/mg4/control/update/UpdateChecker.kt (+3/-219) =====
+4,11d3
+< import com.mg4.control.debug.AppLogger
+< import kotlinx.coroutines.CoroutineScope
+< import kotlinx.coroutines.Dispatchers
+< import kotlinx.coroutines.launch
+< import kotlinx.coroutines.withContext
+< import org.json.JSONObject
+< import java.net.HttpURLConnection
+< import java.net.URL
+13,17d4
+< /**
+<  * Vérifie si une version plus récente est disponible.
+<  * Stratégie : GitHub en priorité, GitLab en fallback si GitHub est inaccessible
+<  * (timeout, erreur réseau, rate-limit, repo privé, etc.).
+<  */
+20,45c7
+<     private const val TAG = "MG4_UPDATE"
+< 
+<     private const val GITHUB_API_URL =
+<         "https://api.github.com/repos/SliDeeN/MG4Control/releases/latest"
+< 
+<     private const val GITLAB_API_URL =
+<         "https://gitlab.com/api/v4/projects/SliDeeN%2Fmg4control/releases/permalink/latest"
+< 
+<     private const val PREFS_SKIP       = "mg4_update_skip"
+<     private const val KEY_SKIP_VERSION = "skip_version"
+< 
+<     // -------------------------------------------------------------------------
+<     // Données brutes extraites depuis GitHub ou GitLab
+<     // -------------------------------------------------------------------------
+< 
+<     private data class RawRelease(
+<         val tagName: String,
+<         val apkUrl: String,
+<         val releaseNotes: String,
+<         val source: String          // "GitHub" ou "GitLab" — pour les logs
+<     )
+< 
+<     // -------------------------------------------------------------------------
+<     // Point d'entrée public
+<     // -------------------------------------------------------------------------
+< 
+---
+>     
+52,60d13
+<         CoroutineScope(Dispatchers.IO).launch {
+<             try {
+<                 val currentVersion = context.packageManager
+<                     .getPackageInfo(context.packageName, 0).versionName
+<                     ?: return@launch
+< 
+<                 val skippedVersion = context
+<                     .getSharedPreferences(PREFS_SKIP, Context.MODE_PRIVATE)
+<                     .getString(KEY_SKIP_VERSION, null)
+62,95c15
+<                 // Essai GitHub → fallback GitLab
+<                 val release = fetchFromGitHub()
+<                     ?: fetchFromGitLab()
+<                     ?: run {
+<                         AppLogger.w(TAG, "GitHub et GitLab inaccessibles")
+<                         withContext(Dispatchers.Main) { onError?.invoke() }
+<                         return@launch
+<                     }
+< 
+<                 AppLogger.i(TAG, "Release récupérée depuis ${release.source} : ${release.tagName}")
+< 
+<                 val versionName = release.tagName.trimStart('v')
+< 
+<                 if (isNewer(versionName, currentVersion)) {
+<                     if (versionName == skippedVersion) {
+<                         AppLogger.i(TAG, "Mise à jour $versionName ignorée (utilisateur)")
+<                         withContext(Dispatchers.Main) { onNoUpdate?.invoke() }
+<                         return@launch
+<                     }
+<                     val skippedCount = versionHops(currentVersion, versionName)
+<                     val info = UpdateInfo(
+<                         versionName, release.tagName, release.apkUrl,
+<                         release.releaseNotes, skippedCount
+<                     )
+<                     withContext(Dispatchers.Main) { onUpdateAvailable(info) }
+<                 } else {
+<                     AppLogger.i(TAG, "Version actuelle ($currentVersion) à jour — pas de mise à jour")
+<                     withContext(Dispatchers.Main) { onNoUpdate?.invoke() }
+<                 }
+< 
+<             } catch (_: Exception) {
+<                 withContext(Dispatchers.Main) { onError?.invoke() }
+<             }
+<         }
+---
+>         onNoUpdate?.invoke()
+98,198c18
+<     // -------------------------------------------------------------------------
+<     // Requête GitHub
+<     // -------------------------------------------------------------------------
+< 
+<     private fun fetchFromGitHub(): RawRelease? {
+<         return try {
+<             val conn = (URL(GITHUB_API_URL).openConnection() as HttpURLConnection).apply {
+<                 setRequestProperty("Accept", "application/vnd.github.v3+json")
+<                 setRequestProperty("User-Agent", "MG4Control-Android")
+<                 connectTimeout = 10_000
+<                 readTimeout    = 10_000
+<             }
+<             if (conn.responseCode != 200) {
+<                 AppLogger.w(TAG, "GitHub réponse ${conn.responseCode} → fallback GitLab")
+<                 conn.disconnect()
+<                 return null
+<             }
+<             val json = JSONObject(conn.inputStream.bufferedReader().readText())
+<             conn.disconnect()
+< 
+<             val tagName = json.getString("tag_name")
+<             val notes   = json.optString("body", "").take(400)
+<             val assets  = json.optJSONArray("assets") ?: return null
+<             var apkUrl  = ""
+<             for (i in 0 until assets.length()) {
+<                 val asset = assets.getJSONObject(i)
+<                 if (asset.getString("name").endsWith(".apk")) {
+<                     apkUrl = asset.getString("browser_download_url")
+<                     break
+<                 }
+<             }
+<             if (apkUrl.isEmpty()) {
+<                 AppLogger.w(TAG, "GitHub : aucun asset .apk trouvé → fallback GitLab")
+<                 return null
+<             }
+<             RawRelease(tagName, apkUrl, notes, "GitHub")
+< 
+<         } catch (e: Exception) {
+<             AppLogger.w(TAG, "GitHub inaccessible : ${e.message} → fallback GitLab")
+<             null
+<         }
+<     }
+< 
+<     // -------------------------------------------------------------------------
+<     // Requête GitLab (fallback)
+<     // -------------------------------------------------------------------------
+< 
+<     private fun fetchFromGitLab(): RawRelease? {
+<         return try {
+<             val conn = (URL(GITLAB_API_URL).openConnection() as HttpURLConnection).apply {
+<                 setRequestProperty("User-Agent", "MG4Control-Android")
+<                 connectTimeout = 10_000
+<                 readTimeout    = 10_000
+<             }
+<             if (conn.responseCode != 200) {
+<                 AppLogger.w(TAG, "GitLab réponse ${conn.responseCode}")
+<                 conn.disconnect()
+<                 return null
+<             }
+<             val json = JSONObject(conn.inputStream.bufferedReader().readText())
+<             conn.disconnect()
+< 
+<             val tagName = json.getString("tag_name")
+<             val notes   = json.optString("description", "").take(400)
+< 
+<             // Structure GitLab : assets.links[] (contrairement à assets[] sur GitHub)
+<             // Le champ "name" est un libellé libre (ex: "MG4Control v1.2.0") — pas forcément
+<             // le nom de fichier. On vérifie donc aussi l'URL elle-même en fallback.
+<             val links  = json.optJSONObject("assets")?.optJSONArray("links") ?: return null
+<             var apkUrl = ""
+<             for (i in 0 until links.length()) {
+<                 val link      = links.getJSONObject(i)
+<                 val linkName  = link.optString("name")
+<                 val linkUrl   = link.optString("direct_asset_url").ifEmpty {
+<                     link.optString("url")
+<                 }
+<                 if (linkName.endsWith(".apk", ignoreCase = true)
+<                     || linkUrl.contains(".apk", ignoreCase = true)) {
+<                     apkUrl = linkUrl
+<                     break
+<                 }
+<             }
+<             if (apkUrl.isEmpty()) {
+<                 AppLogger.w(TAG, "GitLab : aucun asset .apk trouvé dans les links")
+<                 return null
+<             }
+<             RawRelease(tagName, apkUrl, notes, "GitLab")
+< 
+<         } catch (e: Exception) {
+<             AppLogger.w(TAG, "GitLab inaccessible : ${e.message}")
+<             null
+<         }
+<     }
+< 
+<     // -------------------------------------------------------------------------
+<     // Helpers
+<     // -------------------------------------------------------------------------
+< 
+<     /**
+<      * Sauvegarde la version [version] comme "à ne plus rappeler".
+<      */
+---
+>     
+200,230d19
+<         context.getSharedPreferences(PREFS_SKIP, Context.MODE_PRIVATE)
+<             .edit()
+<             .putString(KEY_SKIP_VERSION, version)
+<             .apply()
+<     }
+< 
+<     /**
+<      * Retourne true si [remote] est une version supérieure à [current].
+<      * Comparaison sémantique segment par segment (ex: "2.1.3" > "2.1.2").
+<      */
+<     private fun isNewer(remote: String, current: String): Boolean {
+<         fun segments(v: String) =
+<             v.trimStart('v').split(".").mapNotNull { it.toIntOrNull() }
+< 
+<         val r = segments(remote)
+<         val c = segments(current)
+<         for (i in 0 until maxOf(r.size, c.size)) {
+<             val rv = r.getOrElse(i) { 0 }
+<             val cv = c.getOrElse(i) { 0 }
+<             if (rv > cv) return true
+<             if (rv < cv) return false
+<         }
+<         return false
+<     }
+< 
+<     /**
+<      * Estime le nombre de versions intermédiaires entre [from] et [to].
+<      */
+<     private fun versionHops(from: String, to: String): Int {
+<         fun segments(v: String) =
+<             v.trimStart('v').split(".").mapNotNull { it.toIntOrNull() }
+232,236d20
+<         val f = segments(from)
+<         val t = segments(to)
+<         return (0 until maxOf(f.size, t.size)).sumOf { i ->
+<             maxOf(0, t.getOrElse(i) { 0 } - f.getOrElse(i) { 0 })
+<         }
+
+===== app/src/main/java/com/mg4/control/update/UpdateDialogManager.kt (+2/-263) =====
+3,19d2
+< import android.app.AlertDialog
+< import android.app.DownloadManager
+< import android.content.Context
+< import android.content.Intent
+< import android.graphics.Bitmap
+< import android.graphics.Color
+< import android.graphics.Paint
+< import android.net.ConnectivityManager
+< import android.net.NetworkCapabilities
+< import android.net.Uri
+< import android.os.Environment
+< import android.util.Log
+< import android.view.LayoutInflater
+< import android.view.View
+< import android.widget.ImageView
+< import android.widget.ProgressBar
+< import android.widget.TextView
+21,27d3
+< import androidx.lifecycle.lifecycleScope
+< import com.google.android.material.button.MaterialButton
+< import com.google.zxing.BarcodeFormat
+< import com.google.zxing.MultiFormatWriter
+< import com.mg4.control.R
+< import kotlinx.coroutines.delay
+< import kotlinx.coroutines.launch
+29,35d4
+< /**
+<  * Gère l'affichage du dialog de mise à jour.
+<  * 3 phases distinctes :
+<  *   1. Info      : versions + boutons Télécharger / Manuel / Plus tard
+<  *   2. Progress  : téléchargement via DownloadManager (dossier Téléchargements public)
+<  *   3. Manuel    : instructions GitHub/QR code
+<  */
+38,41c7,8
+<     private const val TAG = "UpdateDialogManager"
+<     private const val GITHUB_RELEASES_URL =
+<         "https://github.com/SliDeeN/MG4Control/releases/latest"
+< 
+---
+>     
+>     @Suppress("UNUSED_PARAMETER")
+43,207d9
+<         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_update, null)
+< 
+<         val dialog = AlertDialog.Builder(activity)
+<             .setView(view)
+<             .setCancelable(false)
+<             .create()
+< 
+<         // ── Références vues ──────────────────────────────────────────────────
+<         val groupInfo     = view.findViewById<View>(R.id.group_info)
+<         val groupProgress = view.findViewById<View>(R.id.group_progress)
+<         val groupManual   = view.findViewById<View>(R.id.group_manual)
+< 
+<         // Phase 1 — Info
+<         val tvFrom       = view.findViewById<TextView>(R.id.tv_version_from)
+<         val tvTo         = view.findViewById<TextView>(R.id.tv_version_to)
+<         val tvNotes      = view.findViewById<TextView>(R.id.tv_release_notes)
+<         val tvSkipHint   = view.findViewById<TextView>(R.id.tv_skip_hint)
+<         val rowDataWarn  = view.findViewById<View>(R.id.row_data_warning)
+<         val btnAuto      = view.findViewById<MaterialButton>(R.id.btn_update_auto)
+<         val btnManual    = view.findViewById<MaterialButton>(R.id.btn_update_manual)
+<         val btnLater     = view.findViewById<MaterialButton>(R.id.btn_update_later)
+<         val btnSkip      = view.findViewById<MaterialButton>(R.id.btn_update_skip)
+< 
+<         // Phase 2 — Progress
+<         val tvStatus     = view.findViewById<TextView>(R.id.tv_progress_status)
+<         val progressBar  = view.findViewById<ProgressBar>(R.id.progress_bar)
+<         val btnCancel    = view.findViewById<MaterialButton>(R.id.btn_cancel_download)
+< 
+<         // Phase 3 — Manuel
+<         val ivQr         = view.findViewById<ImageView>(R.id.iv_update_qr)
+<         val tvGhLink     = view.findViewById<TextView>(R.id.tv_update_gh_link)
+<         val tvApkPath    = view.findViewById<TextView>(R.id.tv_apk_path)
+<         val tvManualInst = view.findViewById<TextView>(R.id.tv_manual_instructions)
+<         val btnClose     = view.findViewById<MaterialButton>(R.id.btn_close_manual)
+< 
+<         // ── Remplissage initial ──────────────────────────────────────────────
+<         val currentVersion = try {
+<             activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: "?"
+<         } catch (_: Exception) { "?" }
+< 
+<         tvFrom.text  = "v$currentVersion"
+<         tvTo.text    = "v${info.versionName}"
+<         tvNotes.text = info.releaseNotes.ifBlank { "—" }
+< 
+<         val onWifi = isOnWifi(activity)
+<         rowDataWarn.visibility = if (onWifi) View.GONE else View.VISIBLE
+< 
+<         // ── Hint : N mises à jour non installées ─────────────────────────────
+<         if (info.skippedCount > 0) {
+<             tvSkipHint.text = activity.resources.getQuantityString(
+<                 R.plurals.update_skipped_hint, info.skippedCount, info.skippedCount)
+<             tvSkipHint.visibility = View.VISIBLE
+<         }
+< 
+<         // ── Bouton NE PLUS ME RAPPELER ───────────────────────────────────────
+<         btnSkip.setOnClickListener {
+<             UpdateChecker.skipVersion(activity, info.versionName)
+<             dialog.dismiss()
+<         }
+< 
+<         // ── Bouton PLUS TARD ─────────────────────────────────────────────────
+<         btnLater.setOnClickListener { dialog.dismiss() }
+< 
+<         // ── Panneau Manuel ───────────────────────────────────────────────────
+<         tvGhLink.setOnClickListener {
+<             runCatching {
+<                 activity.startActivity(
+<                     Intent(Intent.ACTION_VIEW, Uri.parse(GITHUB_RELEASES_URL))
+<                 )
+<             }
+<         }
+<         btnClose.setOnClickListener { dialog.dismiss() }
+< 
+<         generateQrBitmap(GITHUB_RELEASES_URL, 152)?.let { ivQr.setImageBitmap(it) }
+<         tvGhLink.text = GITHUB_RELEASES_URL
+<         tvGhLink.paintFlags = tvGhLink.paintFlags or Paint.UNDERLINE_TEXT_FLAG
+< 
+<         fun showManualPanel(inDownloads: Boolean = false) {
+<             if (inDownloads) {
+<                 tvManualInst.text = activity.getString(R.string.update_downloaded_instructions)
+<                 tvApkPath.visibility = View.GONE
+<             }
+<             switchTo(groupInfo, groupProgress, groupManual, showGroup = groupManual)
+<         }
+< 
+<         // ── Bouton INSTALLATION MANUELLE ─────────────────────────────────────
+<         btnManual.setOnClickListener { showManualPanel() }
+< 
+<         // ── Bouton TÉLÉCHARGER L'APK ──────────────────────────────────────────
+<         btnAuto.setOnClickListener {
+<             if (!onWifi) {
+<                 AlertDialog.Builder(activity)
+<                     .setTitle(R.string.update_data_warn_title)
+<                     .setMessage(R.string.update_data_warn_message)
+<                     .setPositiveButton(R.string.update_continue) { _, _ ->
+<                         switchTo(groupInfo, groupProgress, groupManual, showGroup = groupProgress)
+<                         launchDownload(activity, info, dialog, tvStatus, progressBar, btnCancel) {
+<                             showManualPanel(inDownloads = true)
+<                         }
+<                     }
+<                     .setNegativeButton(R.string.update_cancel, null)
+<                     .show()
+<             } else {
+<                 switchTo(groupInfo, groupProgress, groupManual, showGroup = groupProgress)
+<                 launchDownload(activity, info, dialog, tvStatus, progressBar, btnCancel) {
+<                     showManualPanel(inDownloads = true)
+<                 }
+<             }
+<         }
+< 
+<         dialog.show()
+<     }
+< 
+<     // ── Téléchargement via DownloadManager → dossier Téléchargements public ───
+< 
+<     private fun launchDownload(
+<         activity: AppCompatActivity,
+<         info: UpdateInfo,
+<         dialog: AlertDialog,
+<         tvStatus: TextView,
+<         progressBar: ProgressBar,
+<         btnCancel: MaterialButton,
+<         onDownloaded: () -> Unit
+<     ) {
+<         val dm = activity.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+<         // On conserve le nom d'origine du fichier tel qu'il est sur GitHub
+<         val fileName = info.apkUrl
+<             .substringAfterLast('/')
+<             .substringBefore('?')
+<             .ifBlank { "MGControl${info.versionName}.apk" }
+< 
+<         val request = DownloadManager.Request(Uri.parse(info.apkUrl)).apply {
+<             setTitle("MG4Control ${info.versionName}")
+<             setDescription(activity.getString(R.string.update_downloading))
+<             setNotificationVisibility(
+<                 DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED
+<             )
+<             setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+<             setMimeType("application/vnd.android.package-archive")
+<         }
+< 
+<         val downloadId = dm.enqueue(request)
+<         Log.i(TAG, "DownloadManager enqueued id=$downloadId → $fileName")
+< 
+<         btnCancel.setOnClickListener {
+<             dm.remove(downloadId)
+<             dialog.dismiss()
+<         }
+< 
+<         tvStatus.setText(R.string.update_downloading)
+<         progressBar.isIndeterminate = false
+<         progressBar.progress = 0
+< 
+<         activity.lifecycleScope.launch {
+<             while (true) {
+<                 val cursor = dm.query(DownloadManager.Query().setFilterById(downloadId))
+<                 if (!cursor.moveToFirst()) { cursor.close(); break }
+< 
+<                 val status = cursor.getInt(
+<                     cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+<                 val downloaded = cursor.getLong(
+<                     cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+<                 val total = cursor.getLong(
+<                     cursor.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+<                 cursor.close()
+209,235d10
+<                 when (status) {
+<                     DownloadManager.STATUS_SUCCESSFUL -> {
+<                         progressBar.progress = 100
+<                         // Nettoie les anciens APK dans Téléchargements (garde les 5 plus récents)
+<                         ApkCleanup.cleanIfNeeded()
+<                         // Ouvre le dossier Téléchargements dans le gestionnaire AAOS
+<                         openDownloadsFolder(activity)
+<                         onDownloaded()
+<                         break
+<                     }
+<                     DownloadManager.STATUS_FAILED -> {
+<                         tvStatus.setText(R.string.update_error_download)
+<                         btnCancel.setText(R.string.update_close)
+<                         break
+<                     }
+<                     else -> {
+<                         if (total > 0) {
+<                             val pct = (downloaded * 100 / total).toInt()
+<                             progressBar.progress = pct
+<                             tvStatus.text = activity.getString(
+<                                 R.string.update_downloading_pct, pct)
+<                         }
+<                     }
+<                 }
+<                 delay(500)
+<             }
+<         }
+237,272d11
+< 
+<     // ── Ouvre le dossier Téléchargements dans le gestionnaire AAOS ───────────
+< 
+<     private fun openDownloadsFolder(context: Context) {
+<         try {
+<             val intent = Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).apply {
+<                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+<             }
+<             context.startActivity(intent)
+<             Log.i(TAG, "Dossier Téléchargements ouvert")
+<         } catch (e: Exception) {
+<             Log.w(TAG, "Impossible d'ouvrir Téléchargements : ${e.message}")
+<         }
+<     }
+< 
+<     // ── Utilitaires ──────────────────────────────────────────────────────────
+< 
+<     private fun switchTo(vararg allGroups: View, showGroup: View) {
+<         allGroups.forEach { it.visibility = View.GONE }
+<         showGroup.visibility = View.VISIBLE
+<     }
+< 
+<     private fun isOnWifi(context: Context): Boolean {
+<         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+<         val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
+<         return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+<     }
+< 
+<     private fun generateQrBitmap(url: String, sizePx: Int): Bitmap? = runCatching {
+<         val bitMatrix = MultiFormatWriter().encode(url, BarcodeFormat.QR_CODE, sizePx, sizePx)
+<         val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.RGB_565)
+<         for (x in 0 until sizePx) for (y in 0 until sizePx) {
+<             bmp.setPixel(x, y, if (bitMatrix[x, y]) Color.BLACK else Color.WHITE)
+<         }
+<         bmp
+<     }.getOrNull()
+
+===== app/src/main/java/com/mg4/control/update/UpdateInfo.kt (+5/-8) =====
+3,5d2
+< /**
+<  * Informations sur une release GitHub disponible.
+<  */
+7c4
+<     /** "2.1"   — version parsée depuis le tag GitHub */
+---
+>     
+9c6
+<     /** "v2.1"  — tag brut de la release */
+---
+>     
+11c8
+<     /** URL de téléchargement directe du fichier .apk */
+---
+>     
+13c10
+<     /** Corps de la release note (tronqué à 400 caractères) */
+---
+>     
+15c12
+<     /** Nombre de versions ignorées depuis la version actuellement installée */
+---
+>     
+
+===== app/src/main/java/com/mg4/control/util/FirmwareHelper.kt (+0/-4) =====
+6,9d5
+< /**
+<  * Lit la version firmware du système d'infodivertissement.
+<  * Propriété système : ro.build.mt2712.version → "SWI133-29176-1300R32"
+<  */
+
+===== app/src/main/java/com/mg4/control/util/FirmwareInfo.kt (+11/-54) =====
+5,17d4
+< /**
+<  * Détecte la génération de firmware à partir de ro.build.mt2712.version.
+<  *
+<  * SWI133 : "SWI133-xxxxx" — ADAS via getMixProperty(0x32), 5 modes, 2 alertes, sièges+volant chauffants
+<  * SWI132 : "SWI132-xxxxx" — ADAS via CarVehicleSettingClient (acc/tja getAccTjaState), alertes via binder
+<  *                            direct IVehicleSettingService (TX 0x128/0x12a), même section UI que SWI68
+<  * SWI68  : "SWI68-xxxxx"  — ADAS via VehicleSettingManager (acc/tja), sièges+volant chauffants
+<  * SWI69  : "SWI69-xxxxx"  — ADAS via VehicleSettingManager "nouvelle gen", sans sièges/volant chauffants
+<  * SWI131 : "SWI131-xxxxx" — Identique SWI69 (même package, même API), sans sièges/volant chauffants
+<  * SWI165 : "SWI165-xxxxx" — ADAS via VehicleSettingManager (même SDK que SWI68), AEB via setFcwAlarmMode
+<  *                            sièges+volant chauffants disponibles
+<  * UNKNOWN : firmware non reconnu — l'utilisateur peut forcer un mode de compatibilité
+<  */
+28,31c15
+<     /**
+<      * À appeler en premier dans MainActivity.onCreate(), avant toute inflation de fragment.
+<      * Lit le choix forcé éventuel depuis les SharedPreferences et l'applique au cache.
+<      */
+---
+>     
+38c22
+<     /** Retourne la génération active (forcée ou détectée automatiquement). */
+---
+>     
+48c32
+<             version.startsWith("SWI132")  -> Gen.SWI132   // avant SWI131 — startsWith("SWI13") serait ambigu
+---
+>             version.startsWith("SWI132")  -> Gen.SWI132
+58,61c42
+<     /**
+<      * Chaîne brute lue depuis les propriétés système (ex: "SWI131-12345-xxx").
+<      * Utile pour afficher la version exacte à l'utilisateur dans le dialog de warning.
+<      */
+---
+>     
+67,70c48
+<     /**
+<      * Force le mode de compatibilité manuellement.
+<      * Le choix est persisté dans les SharedPreferences et survit aux redémarrages.
+<      */
+---
+>     
+77,80c55
+<     /**
+<      * Retourne true si le mode de compatibilité a été forcé manuellement
+<      * (par opposition à une détection automatique réussie).
+<      */
+---
+>     
+85,92c60
+<     // ── Helpers de capacités ─────────────────────────────────────────────────
+< 
+<     /**
+<      * SWI69 et SWI131 utilisent la même API "nouvelle génération" VSM :
+<      *   package com.saicmotor.vehiclesetting.service
+<      *   constructeur IBinder-direct
+<      *   méthodes : setAccTjaState, setFcwState, setLasWarningSound…
+<      */
+---
+>     
+98,102c66
+<     /**
+<      * SWI68, SWI69, SWI131 et SWI165 utilisent tous le VehicleSettingManager SAIC
+<      * pour l'ADAS (ACC/TJA) et les alertes sonores.
+<      * SWI133 utilise VehiclePropertyManager (getMixProperty).
+<      */
+---
+>     
+108,111c72
+<     /**
+<      * SWI133, SWI68 et SWI165 ont les sièges chauffants et le volant chauffant.
+<      * SWI69 et SWI131 sont des finitions Standard/SE sans ces équipements.
+<      */
+---
+>     
+114c75
+<         return gen == Gen.SWI133 || gen == Gen.SWI68 || gen == Gen.SWI165
+---
+>         return gen == Gen.SWI133 || gen == Gen.SWI68 || gen == Gen.SWI165 || gen == Gen.SWI69
+117,121c78
+<     /**
+<      * SWI165 utilise le même SDK VehicleSettingManager que SWI68.
+<      * L'AEB est contrôlé par setFcwAlarmMode() (même API que SWI68).
+<      * setAutoEmergencyBraking() existe dans le SDK mais n'est pas utilisé par l'app officielle.
+<      */
+---
+>     
+
+===== app/src/main/java/com/mg4/control/util/LocaleHelper.kt (+4/-4) =====
+13c13
+<     /** Retourne "fr" ou "en" (défaut : "fr"). */
+---
+>     
+18c18
+<     /** Sauvegarde le choix et marque le premier lancement comme fait. */
+---
+>     
+26c26
+<     /** True si l'utilisateur n'a pas encore choisi de langue. */
+---
+>     
+31c31
+<     /** Applique la locale sauvegardée au contexte fourni et retourne le contexte modifié. */
+---
+>     
+
+===== app/src/main/java/com/mg4/control/util/ThemeHelper.kt (+6/-51) =====
+7,28d6
+< /**
+<  * Gestion du thème de l'application (sombre / clair / auto-sync launcher).
+<  *
+<  * Le mode "auto" est disponible sur TOUS les firmwares, mais fonctionne différemment :
+<  *
+<  * ─ SWI69 / SWI131 / SWI132 ──────────────────────────────────────────────────────
+<  *   Clé Settings.System : "SKIN_THEME_CONFIG"  (0 = sombre, 1 = clair)
+<  *   Broadcast launcher  : "com.saicmotor.changeSkin" (sans extra → relire Settings.System)
+<  *   → On lit la valeur explicitement et on passe MODE_NIGHT_YES/NO + recreate().
+<  *
+<  * ─ SWI133 / SWI68 ───────────────────────────────────────────────────────────────
+<  *   Le launcher appelle UiModeManager.setNightMode() qui change le uiMode Android
+<  *   global (0x13 = clair, 0x23 = sombre). Le SkinManager SWI133 lit isNightMode()
+<  *   depuis Configuration.uiMode.
+<  *   → On utilise MODE_NIGHT_FOLLOW_SYSTEM : AppCompat suit automatiquement le
+<  *     uiMode système et recrée l'activité lorsqu'il change.
+<  *
+<  * Préférence stockée : "theme_mode" dans "mg4_settings"
+<  *   "auto"  → sync avec le launcher MG (mécanisme adapté au firmware)
+<  *   "dark"  → toujours sombre
+<  *   "light" → toujours clair
+<  */
+36,40c14
+<     /**
+<      * Callback invoqué (sur le thread principal) lorsque le launcher change de thème
+<      * sur SWI69/131/132. MainActivity l'utilise pour déclencher recreate().
+<      * Sur SWI133/68, AppCompat appelle recreate() automatiquement via FOLLOW_SYSTEM.
+<      */
+---
+>     
+43,48c17
+<     // ── Détection du mécanisme ───────────────────────────────────────────────
+< 
+<     /**
+<      * Retourne true si ce firmware expose SKIN_THEME_CONFIG dans Settings.System
+<      * (SWI69 / SWI131 / SWI132). Sur SWI68/133, utilise FOLLOW_SYSTEM à la place.
+<      */
+---
+>     
+57,62c26
+<     // ── Lecture du thème launcher (SWI69/131/132 uniquement) ─────────────────
+< 
+<     /**
+<      * Lit SKIN_THEME_CONFIG et retourne MODE_NIGHT_YES ou MODE_NIGHT_NO.
+<      * À n'appeler que si hasSkinThemeConfig() == true.
+<      */
+---
+>     
+72,79c36
+<     // ── Résolution du mode à appliquer ───────────────────────────────────────
+< 
+<     /**
+<      * Retourne le night mode AppCompat à appliquer selon la préférence "theme_mode".
+<      *
+<      * "auto" sur SWI69/131/132 → YES ou NO selon SKIN_THEME_CONFIG
+<      * "auto" sur SWI133/68    → MODE_NIGHT_FOLLOW_SYSTEM (suit le uiMode Android)
+<      */
+---
+>     
+86c43
+<             else    -> AppCompatDelegate.MODE_NIGHT_YES   // "dark" + fallback
+---
+>             else    -> AppCompatDelegate.MODE_NIGHT_YES
+90,92c47
+<     // ── Notification de changement (SWI69/131/132) ───────────────────────────
+< 
+<     /** Appelé depuis le service (déjà sur le main thread) pour déclencher recreate(). */
+---
+>     
+

@@ -53,7 +53,12 @@ jobs:
       - name: Collect APKs
         run: |
           mkdir -p dist
-          find app/build/outputs/apk -name "MG4Control-*-*.apk" -exec cp {} dist/ \;
+          # AGP 9 emits app-<flavor>-release.apk; rename to the published convention.
+          for f in $(find app/build/outputs/apk -name "app-*-release.apk"); do
+            flavor=$(basename "$f" | sed -E 's/app-(.*)-release.apk/\1/')
+            ver=$(grep -oE 'versionName = "[^"]+"' app/build.gradle.kts | head -1 | sed -E 's/.*"([^"]+)"/\1/')
+            cp "$f" "dist/MG4Control-${flavor}-${ver}.apk"
+          done
           ls -la dist/
 
       - name: Upload APKs as workflow artifacts
