@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only overlay: remove sharedUserId so the debug APK installs on a stock
+  emulator with the ordinary debug key.
+
+  The app declares sharedUserId="android.uid.system" for vehicle access on the car,
+  which needs the platform signature. Emulators are signed with Google's own
+  (non-public) platform key, so neither a platform-signed nor a debug-key APK with
+  sharedUserId can install (INSTALL_FAILED_SHARED_USER_INCOMPATIBLE).
+
+  Stripping it here (debug only) costs nothing on the emulator: the SAIC vehicle
+  services are absent there, so vehicle calls fail regardless — UI, layouts and
+  navigation still render. Release builds keep sharedUserId untouched.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:remove="android:sharedUserId" />

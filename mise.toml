@@ -58,6 +58,7 @@ EMU_WIDTH = "1920"
 EMU_HEIGHT = "1080"
 EMU_DENSITY = "160"
 
+
 [tasks.bootstrap]
 description = "Installe le SDK Android (platform + build-tools) s'il manque"
 run = """
@@ -187,10 +188,12 @@ run = '''
 set -e
 ADB="$ANDROID_HOME/platform-tools/adb"
 if [ -z "$($ADB devices | sed '1d' | grep -w device || true)" ]; then
-  echo "Aucun appareil connecté. Lancer d'abord 'mise run emulator-car' ou 'mise run emulator-screen'," >&2
-  echo "ou brancher le véhicule en ADB." >&2
+  echo "Aucun appareil. Lancer 'mise run emulator-car'/'emulator-screen' ou brancher le véhicule." >&2
   exit 1
 fi
+# Les builds debug retirent sharedUserId (overlay src/debug/AndroidManifest.xml), donc la
+# clé debug suffit pour installer sur un émulateur. La release garde sharedUserId + signature
+# plateforme pour le véhicule.
 APK=$(ls -t app/build/outputs/apk/online/debug/*.apk | head -1)
 echo "Installation de $APK"
 $ADB install -r -g "$APK"
