@@ -662,6 +662,24 @@
                             android:layout_marginTop="8dp"
                             android:background="@drawable/bg_section_rounded" />
 
+                        <!-- Quatrieme etape, valeur par defaut inoffensive : « Tous les
+                             profils » reproduit exactement le comportement d'avant. Qui ne
+                             s'en sert pas ne la voit pas travailler. -->
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:text="@string/adv_sc_step_profile"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <Spinner
+                            android:id="@+id/spinner_adv_profile"
+                            android:layout_width="match_parent"
+                            android:layout_height="64dp"
+                            android:layout_marginTop="8dp"
+                            android:background="@drawable/bg_section_rounded" />
+
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_adv_create"
                             android:layout_width="match_parent"

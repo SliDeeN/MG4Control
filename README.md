@@ -121,6 +121,33 @@ La liste des raccourcis avancés affiche pour chaque ligne le **bouton** (nom et
 d'appui**, la **fonction**, puis *Modifier* et *Supprimer*. Réattribuer un bouton déjà utilisé sur
 le même type d'appui demande confirmation et nomme la fonction qui va être remplacée.
 
+#### Raccourcis associés à un profil
+Un raccourci avancé porte une touche, un type d'appui, une fonction — et un **profil**, « Tous les
+profils » par défaut. La même touche et le même appui peuvent donc porter plusieurs raccourcis, un
+par profil : sous *Sport* le bouton fait une chose, sous *Hiver* une autre.
+
+La résolution à l'appui se fait en deux crans, dans cet ordre :
+1. un raccourci réservé au **profil actif** ;
+2. sinon celui marqué **Tous les profils** ;
+3. sinon rien.
+
+Le cas 3 mérite d'être connu : la touche reste **consommée**, comme n'importe quel type d'appui
+laissé libre sur une touche réclamée — elle ne retombe pas sur le launcher. La liste le signale
+sur les groupes qui n'ont aucune ligne « Tous les profils ».
+
+Le **profil actif** est le dernier appliqué, quelle qu'en soit la source : démarrage, contact,
+Bluetooth, automatisation température ou choix manuel. Il est enregistré, donc il survit à un
+redémarrage du service.
+
+> [!NOTE]
+> C'est le dernier profil **appliqué**, pas l'état réel du véhicule : un réglage changé à la main
+> depuis le Dashboard ne l'invalide pas. L'alternative — comparer l'état du véhicule à chaque
+> profil — coûterait une dizaine de lectures véhicule à chaque appui, pour un résultat ambigu dès
+> que deux profils se ressemblent.
+
+La liste des raccourcis est **groupée par touche + type d'appui**, « Tous les profils » en tête de
+chaque groupe : l'ordre d'affichage est celui de la résolution.
+
 Les trois réglages d'action — **repli du mode 1 Pédale**, **crans du cycle ADAS** et **cycle de
 régénération** — ont chacun leur page, révélée dans le rail de gauche dès que la fonction est
 attribuée à un bouton. Peu importe par quelle voie : emplacement classique, raccourci avancé, ou
@@ -326,6 +353,7 @@ MG4Control/
 │   │   │   └── ProfileBackup.kt       # Format de la sauvegarde véhicule
 │   │   │
 │   │   ├── profile/
+│   │   │   ├── ActiveProfile.kt       # Dernier profil appliqué (raccourcis par profil)
 │   │   │   ├── ProfileManager.kt      # CRUD profils (SharedPreferences + Gson)
 │   │   │   ├── ProfileApplier.kt      # Application des réglages au véhicule (async)
 │   │   │   └── ProfileBackupManager.kt# Sauvegarde / restauration en mémoire véhicule
@@ -914,6 +942,32 @@ Each row of the advanced list shows the **button** (name and code), the **press 
 **action**, then *Edit* and *Delete*. Reassigning a button already used with the same press type
 asks for confirmation and names the action about to be replaced.
 
+#### Profile-scoped shortcuts
+An advanced shortcut carries a key, a press type, an action — and a **profile**, "All profiles" by
+default. The same key and press type can therefore carry several shortcuts, one per profile: under
+*Sport* the button does one thing, under *Winter* another.
+
+Resolution on press happens in two steps, in this order:
+1. a shortcut reserved for the **active profile**;
+2. otherwise the one marked **All profiles**;
+3. otherwise nothing.
+
+Case 3 is worth knowing: the key is still **consumed**, like any press type left unassigned on a
+claimed key — it does not fall back to the launcher. The list flags this on groups that have no
+"All profiles" row.
+
+The **active profile** is the last one applied, whatever the source: startup, ignition, Bluetooth,
+temperature automation or a manual choice. It is stored, so it survives a service restart.
+
+> [!NOTE]
+> It is the last profile **applied**, not the actual state of the vehicle: a setting changed by
+> hand from the Dashboard does not invalidate it. The alternative — comparing the vehicle state
+> against every profile — would cost a dozen vehicle reads on every key press, for an ambiguous
+> result as soon as two profiles look alike.
+
+The shortcut list is **grouped by key + press type**, "All profiles" first in each group: the
+display order is the resolution order.
+
 The three action settings — **One Pedal fallback**, **ADAS cycle notches** and the **regeneration
 cycle** — each get their own page, revealed in the left rail as soon as the action is assigned to a
 button. However it was assigned: a classic slot, an advanced shortcut, or an action merely selected
@@ -1112,6 +1166,7 @@ MG4Control/
 │   │   │   └── ProfileBackup.kt       # Vehicle backup format
 │   │   │
 │   │   ├── profile/
+│   │   │   ├── ActiveProfile.kt       # Last applied profile (profile-scoped shortcuts)
 │   │   │   ├── ProfileManager.kt      # Profile CRUD (SharedPreferences + Gson)
 │   │   │   ├── ProfileApplier.kt      # Applies settings to the vehicle (async)
 │   │   │   └── ProfileBackupManager.kt# Backup / restore in vehicle storage

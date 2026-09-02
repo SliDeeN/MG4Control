@@ -443,6 +443,12 @@
     <string name="adv_sc_step_key">1 · Touche</string>
     <string name="adv_sc_step_press">2 · Type d\'appui</string>
     <string name="adv_sc_step_action">3 · Fonction</string>
+    <string name="adv_sc_step_profile">4 · Profil</string>
+    <string name="adv_sc_all_profiles">Tous les profils</string>
+    <string name="adv_sc_profile_missing">Profil supprimé</string>
+    <string name="adv_sc_group_title">%1$s · %2$s</string>
+    <string name="adv_sc_no_fallback">Aucun raccourci pour les autres profils : la touche y est réclamée mais ne fait rien.</string>
+    <string name="adv_sc_edit_conflict">Ce profil a déjà un raccourci sur cette touche et ce type d\'appui.</string>
     <string name="adv_sc_empty">Aucun raccourci avancé enregistré.</string>
     <string name="adv_sc_claimed_warning">La touche attribuée ne pourra plus être utilisée pour autre chose que MG4Control, jusqu\'à la suppression du raccourci dans « LISTE DES RACCOURCIS ».</string>
     <string name="adv_sc_delete">Suppr.</string>
@@ -476,7 +482,7 @@
 
     <!-- Liste des raccourcis avances : modification et remplacement -->
     <string name="adv_sc_edit">Modif.</string>
-    <string name="adv_sc_edit_title">Modifier la fonction</string>
+    <string name="adv_sc_edit_title">Modifier le raccourci</string>
     <string name="adv_sc_updated">Raccourci modifié</string>
     <string name="adv_sc_press_short">Appui court</string>
     <string name="adv_sc_press_long_lbl">Appui long</string>

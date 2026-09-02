@@ -59,6 +59,11 @@ object ProfileApplier {
     fun apply(profile: DrivingProfile, autoStart: Boolean = false, onComplete: ((Boolean) -> Unit)? = null) {
         AppLogger.i(TAG, "Application du profil : ${profile.name} (autoStart=$autoStart)")
 
+        // Profil ACTIF : toutes sources confondues, celle-ci comprise. C'est ce que lisent les
+        // raccourcis associés à un profil — voir [ActiveProfile], et surtout la distinction avec
+        // [lastManualProfileId] juste en dessous, qui répond à une question différente.
+        ActiveProfile.set(MG4Hardware.appContext(), profile.id)
+
         // Application manuelle (popup volant / app / raccourci) → on mémorise le choix de l'utilisateur
         // pour que le passage en READY le respecte au lieu de ré-appliquer le profil par défaut.
         if (!autoStart) {

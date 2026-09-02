@@ -441,6 +441,12 @@
     <string name="adv_sc_step_key">1 · Key</string>
     <string name="adv_sc_step_press">2 · Press type</string>
     <string name="adv_sc_step_action">3 · Function</string>
+    <string name="adv_sc_step_profile">4 · Profile</string>
+    <string name="adv_sc_all_profiles">All profiles</string>
+    <string name="adv_sc_profile_missing">Deleted profile</string>
+    <string name="adv_sc_group_title">%1$s · %2$s</string>
+    <string name="adv_sc_no_fallback">No shortcut for the other profiles: the key is claimed there but does nothing.</string>
+    <string name="adv_sc_edit_conflict">That profile already has a shortcut on this key and press type.</string>
     <string name="adv_sc_empty">No advanced shortcut recorded.</string>
     <string name="adv_sc_claimed_warning">The assigned key can no longer be used for anything other than MG4Control, until the shortcut is deleted from « SHORTCUT LIST ».</string>
     <string name="adv_sc_delete">Delete</string>
@@ -474,7 +480,7 @@
 
     <!-- Liste des raccourcis avances : modification et remplacement -->
     <string name="adv_sc_edit">Edit</string>
-    <string name="adv_sc_edit_title">Change action</string>
+    <string name="adv_sc_edit_title">Edit shortcut</string>
     <string name="adv_sc_updated">Shortcut updated</string>
     <string name="adv_sc_press_short">Short press</string>
     <string name="adv_sc_press_long_lbl">Long press</string>

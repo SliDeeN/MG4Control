@@ -441,6 +441,12 @@
     <string name="adv_sc_step_key">1 · Tecla</string>
     <string name="adv_sc_step_press">2 · Tipo de pressão</string>
     <string name="adv_sc_step_action">3 · Função</string>
+    <string name="adv_sc_step_profile">4 · Perfil</string>
+    <string name="adv_sc_all_profiles">Todos os perfis</string>
+    <string name="adv_sc_profile_missing">Perfil eliminado</string>
+    <string name="adv_sc_group_title">%1$s · %2$s</string>
+    <string name="adv_sc_no_fallback">Nenhum atalho para os outros perfis: a tecla está reservada mas não faz nada.</string>
+    <string name="adv_sc_edit_conflict">Esse perfil já tem um atalho nesta tecla e tipo de pressão.</string>
     <string name="adv_sc_empty">Nenhum atalho avançado registado.</string>
     <string name="adv_sc_claimed_warning">A tecla atribuída deixa de poder ser usada para outra coisa além do MG4Control, até apagar o atalho em « LISTA DE ATALHOS ».</string>
     <string name="adv_sc_delete">Apagar</string>
@@ -474,7 +480,7 @@
 
     <!-- Liste des raccourcis avances : modification et remplacement -->
     <string name="adv_sc_edit">Editar</string>
-    <string name="adv_sc_edit_title">Alterar a função</string>
+    <string name="adv_sc_edit_title">Editar o atalho</string>
     <string name="adv_sc_updated">Atalho alterado</string>
     <string name="adv_sc_press_short">Pressão curta</string>
     <string name="adv_sc_press_long_lbl">Pressão longa</string>

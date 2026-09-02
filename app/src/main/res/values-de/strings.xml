@@ -441,6 +441,12 @@
     <string name="adv_sc_step_key">1 · Taste</string>
     <string name="adv_sc_step_press">2 · Druckart</string>
     <string name="adv_sc_step_action">3 · Funktion</string>
+    <string name="adv_sc_step_profile">4 · Profil</string>
+    <string name="adv_sc_all_profiles">Alle Profile</string>
+    <string name="adv_sc_profile_missing">Gelöschtes Profil</string>
+    <string name="adv_sc_group_title">%1$s · %2$s</string>
+    <string name="adv_sc_no_fallback">Kein Kürzel für die anderen Profile: die Taste ist dort belegt, tut aber nichts.</string>
+    <string name="adv_sc_edit_conflict">Dieses Profil hat bereits ein Kürzel auf dieser Taste und Druckart.</string>
     <string name="adv_sc_empty">Kein erweitertes Kürzel gespeichert.</string>
     <string name="adv_sc_claimed_warning">Die zugewiesene Taste kann nur noch für MG4Control verwendet werden, bis das Kürzel unter « KÜRZELLISTE » gelöscht wird.</string>
     <string name="adv_sc_delete">Löschen</string>
@@ -474,7 +480,7 @@
 
     <!-- Liste des raccourcis avances : modification et remplacement -->
     <string name="adv_sc_edit">Ändern</string>
-    <string name="adv_sc_edit_title">Funktion ändern</string>
+    <string name="adv_sc_edit_title">Kürzel bearbeiten</string>
     <string name="adv_sc_updated">Verknüpfung geändert</string>
     <string name="adv_sc_press_short">Kurzer Druck</string>
     <string name="adv_sc_press_long_lbl">Langer Druck</string>

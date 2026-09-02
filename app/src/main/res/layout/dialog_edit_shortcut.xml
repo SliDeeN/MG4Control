@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Modification d'un raccourci avancé : sa fonction et son profil, dans une seule boîte.
+
+     Deux dialogues enchaînés auraient été plus simples à écrire, mais on ne peut alors plus
+     revenir sur le premier choix après avoir vu le second, et annuler à mi-chemin laisse un
+     raccourci à moitié modifié. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
+    android:paddingTop="18dp"
+    android:paddingBottom="6dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/adv_sc_step_action"
+        android:textColor="@color/text_secondary"
+        android:textSize="16sp" />
+
+    <Spinner
+        android:id="@+id/spinner_edit_action"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:text="@string/adv_sc_step_profile"
+        android:textColor="@color/text_secondary"
+        android:textSize="16sp" />
+
+    <Spinner
+        android:id="@+id/spinner_edit_profile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp" />
+
+</LinearLayout>

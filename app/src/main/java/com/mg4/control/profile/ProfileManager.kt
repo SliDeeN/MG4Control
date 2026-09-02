@@ -75,6 +75,10 @@ class ProfileManager(private val context: Context) {
             if (prefs.getString(KEY_DEFAULT_ID, null) == profileId) {
                 prefs.edit().remove(KEY_DEFAULT_ID).apply()
             }
+            // Idem pour le profil ACTIF : le laisser pointer sur un profil disparu ferait
+            // résoudre les raccourcis qui lui sont associés sur un identifiant fantôme — ils
+            // ne se déclencheraient jamais, sans que rien ne l'explique.
+            ActiveProfile.forgetIfMissing(context, list.map { it.id })
         }
         triggerBackup()
     }

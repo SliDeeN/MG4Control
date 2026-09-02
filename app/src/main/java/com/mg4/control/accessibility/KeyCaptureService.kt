@@ -132,10 +132,11 @@ class KeyCaptureService : AccessibilityService() {
         if (fenetre != null) {
             handler.removeCallbacks(fenetre)
             annulerLong(code)   // un second appui n'ouvre pas d'appui long
-            val action = AdvancedShortcuts.actionFor(this, code, PressType.DOUBLE)
-            AppLogger.i(TAG, "touche $code — DOUBLE appui → ${action?.name ?: "aucune"}")
+            val m = AdvancedShortcuts.resolve(this, code, PressType.DOUBLE)
+            AppLogger.i(TAG, "touche $code — DOUBLE appui → ${m?.action?.name ?: "aucune"}" +
+                (m?.profileId?.let { " (profil $it)" } ?: ""))
             doubleDeclenche.add(code)
-            if (action != null) declencher(action, code, PressType.DOUBLE)
+            if (m != null) declencher(m)
             return
         }
 
@@ -145,14 +146,17 @@ class KeyCaptureService : AccessibilityService() {
         // le bouton — donc jamais deux fois pareil, et toujours en retard sur la sensation
         // d'avoir « appuyé longtemps ». La minuterie donne un repère fixe : l'action part à
         // 500 ms précises, la touche est encore enfoncée, et le relâchement ne fait plus rien.
-        val action = AdvancedShortcuts.actionFor(this, code, PressType.LONG) ?: return
+        // Résolue MAINTENANT et non à l'échéance : le profil peut changer pendant les 500 ms
+        // (une connexion Bluetooth, par exemple), et l'action doit être celle qui correspondait
+        // au moment où l'utilisateur a appuyé.
+        val m = AdvancedShortcuts.resolve(this, code, PressType.LONG) ?: return
         val minuterie = Runnable {
             minuterieLongue.remove(code)
             longDeclenche.add(code)
             AppLogger.i(TAG, "touche $code — appui LONG au seuil " +
                 "(${AdvancedShortcuts.LONG_PRESS_MS} ms, sans attendre le relâchement) " +
-                "→ ${action.name}")
-            declencher(action, code, PressType.LONG)
+                "→ ${m.action.name}" + (m.profileId?.let { " (profil $it)" } ?: ""))
+            declencher(m)
         }
         minuterieLongue[code] = minuterie
         handler.postDelayed(minuterie, AdvancedShortcuts.LONG_PRESS_MS)
@@ -171,13 +175,18 @@ class KeyCaptureService : AccessibilityService() {
         if (doubleDeclenche.remove(code)) return
         if (longDeclenche.remove(code)) return
 
-        val simple = AdvancedShortcuts.actionFor(this, code, PressType.SINGLE)
-        val aDouble = AdvancedShortcuts.actionFor(this, code, PressType.DOUBLE) != null
+        val simple = AdvancedShortcuts.resolve(this, code, PressType.SINGLE)
+        // La fenêtre d'attente dépend de l'EXISTENCE d'un double appui sur la touche, pas de sa
+        // résolution : une variante réservée à un autre profil doit quand même faire attendre,
+        // sinon un double appui sous ce profil déclencherait d'abord le simple.
+        val aDouble = PressType.DOUBLE.let { d ->
+            AdvancedShortcuts.all(this).any { it.keyCode == code && it.press == d }
+        }
 
         // Sans double appui sur cette touche, rien à attendre : l'action part immédiatement.
         if (!aDouble) {
-            AppLogger.i(TAG, "touche $code — appui court → ${simple?.name ?: "aucune"}")
-            if (simple != null) declencher(simple, code, PressType.SINGLE)
+            AppLogger.i(TAG, "touche $code — appui court → ${simple?.action?.name ?: "aucune"}")
+            if (simple != null) declencher(simple)
             return
         }
 
@@ -188,8 +197,8 @@ class KeyCaptureService : AccessibilityService() {
             fenetreDouble.remove(code)
             AppLogger.i(TAG, "touche $code — appui court confirmé " +
                 "(aucun second appui en ${AdvancedShortcuts.DOUBLE_TAP_MS} ms) " +
-                "→ ${simple?.name ?: "aucune"}")
-            if (simple != null) declencher(simple, code, PressType.SINGLE)
+                "→ ${simple?.action?.name ?: "aucune"}")
+            if (simple != null) declencher(simple)
         }
         fenetreDouble[code] = fenetre
         handler.postDelayed(fenetre, AdvancedShortcuts.DOUBLE_TAP_MS)
@@ -203,13 +212,15 @@ class KeyCaptureService : AccessibilityService() {
      * Relaie l'action au service principal, qui détient déjà tout le répartiteur et l'état des
      * bascules. On ne réimplémente rien ici — un second chemin d'exécution finirait par diverger.
      */
-    private fun declencher(action: ShortcutAction, code: Int, press: PressType) {
+    private fun declencher(m: AdvancedShortcuts.Mapping) {
         val i = android.content.Intent(this, MG4ControlService::class.java).apply {
             setAction(MG4ControlService.ACTION_ADV_SHORTCUT)
-            putExtra(MG4ControlService.EXTRA_ADV_ACTION, action.name)
+            putExtra(MG4ControlService.EXTRA_ADV_ACTION, m.action.name)
             // Clé de bascule propre aux raccourcis avancés : sans elle, une action à deux états
-            // partagerait son état avec le bouton classique du même nom.
-            putExtra(MG4ControlService.EXTRA_ADV_SLOT, AdvancedShortcuts.slotKey(code, press))
+            // partagerait son état avec le bouton classique du même nom. Le profil en fait
+            // partie, sinon deux variantes de la même touche partageraient leur cible.
+            putExtra(MG4ControlService.EXTRA_ADV_SLOT,
+                AdvancedShortcuts.slotKey(m.keyCode, m.press, m.profileId))
         }
         runCatching { startForegroundService(i) }
             .onFailure { AppLogger.w(TAG, "relais impossible : ${it.message}") }

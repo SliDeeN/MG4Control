@@ -252,6 +252,7 @@ class ShortcutsFragment : Fragment() {
         val btnLong   = view.findViewById<MaterialButton>(R.id.btn_adv_press_long)
         val btnDouble = view.findViewById<MaterialButton>(R.id.btn_adv_press_double)
         val spinner = view.findViewById<Spinner>(R.id.spinner_adv_action)
+        val spinnerProfil = view.findViewById<Spinner>(R.id.spinner_adv_profile)
 
         // Toutes les actions sont proposées. « Ouvrir une app » et « Appliquer un profil »
         // réclament un choix supplémentaire : il est demandé juste après, et le raccourci n'est
@@ -262,8 +263,19 @@ class ShortcutsFragment : Fragment() {
             actionsAvancees.map { it.label }
         )
 
+        // La liste est construite UNE FOIS : créer un profil oblige à quitter cet écran, dont
+        // la vue est alors détruite puis reconstruite — le spinner repart donc à jour.
+        val itemsProfils = itemsProfils()
+        spinnerProfil.adapter = ArrayAdapter(
+            requireContext(), android.R.layout.simple_spinner_dropdown_item,
+            itemsProfils.map { it.first }
+        )
+
         var toucheChoisie: Int? = null
         var typeAppui = PressType.SINGLE
+        // `null` = tous les profils, première entrée du spinner et valeur par défaut : sans
+        // toucher à cette étape, on retrouve exactement le comportement d'avant.
+        var profilChoisi: String? = null
 
         val actif   = requireContext().getColor(R.color.dash_accent_dim)
         val inactif = requireContext().getColor(R.color.dash_btn)
@@ -290,7 +302,7 @@ class ShortcutsFragment : Fragment() {
             // et l'utilisateur croirait que sa touche n'est pas reconnue.
             val utilisable = serviceOn && sw.isChecked
             cardRec.alpha = if (utilisable) 1f else 0.35f
-            listOf<View>(btnRec, btnSimple, btnLong, btnDouble, spinner,
+            listOf<View>(btnRec, btnSimple, btnLong, btnDouble, spinner, spinnerProfil,
                 view.findViewById(R.id.btn_adv_create)).forEach { it.isEnabled = utilisable }
             refreshAdvancedList(view)
         }
@@ -401,6 +413,13 @@ class ShortcutsFragment : Fragment() {
             }
         }
 
+        spinnerProfil.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(p: AdapterView<*>?, v: View?, pos: Int, id: Long) {
+                profilChoisi = itemsProfils.getOrNull(pos)?.second
+            }
+            override fun onNothingSelected(p: AdapterView<*>?) { profilChoisi = null }
+        }
+
         view.findViewById<MaterialButton>(R.id.btn_adv_create).setOnClickListener {
             val touche = toucheChoisie
             val action = actionChoisie
@@ -415,26 +434,27 @@ class ShortcutsFragment : Fragment() {
                 return@setOnClickListener
             }
 
+            val profil = profilChoisi
             val enregistrer = {
-                AdvancedShortcuts.set(requireContext(), touche, typeAppui, action)
+                AdvancedShortcuts.set(requireContext(), touche, typeAppui, action, profil)
                 AppLogger.i("MG4_KEYCAP", "raccourci avancé enregistré : touche=$touche " +
-                    "${typeAppui.key} → ${action.name}")
+                    "${typeAppui.key} → ${action.name} (profil ${profil ?: "tous"})")
                 Toast.makeText(requireContext(), R.string.adv_sc_saved, Toast.LENGTH_SHORT).show()
                 toucheChoisie = null
                 actionChoisie = null
                 tvKey.setText(R.string.adv_sc_none)
                 spinner.setSelection(0, false)
+                spinnerProfil.setSelection(0, false)
                 refreshAdvancedList(view)
             }
 
             // Les deux actions à cible réclament un choix supplémentaire ; annuler laisse le
             // formulaire en l'état plutôt que de créer un raccourci sans destination.
             val poursuivre = {
+                val slot = AdvancedShortcuts.slotKey(touche, typeAppui, profil)
                 when (action) {
-                    ShortcutAction.OPEN_CUSTOM_APP ->
-                        choisirAppAvancee(AdvancedShortcuts.slotKey(touche, typeAppui), enregistrer)
-                    ShortcutAction.APPLY_PROFILE ->
-                        choisirProfilAvance(AdvancedShortcuts.slotKey(touche, typeAppui), enregistrer)
+                    ShortcutAction.OPEN_CUSTOM_APP -> choisirAppAvancee(slot, enregistrer)
+                    ShortcutAction.APPLY_PROFILE   -> choisirProfilAvance(slot, enregistrer)
                     else -> enregistrer()
                 }
             }
@@ -443,7 +463,10 @@ class ShortcutsFragment : Fragment() {
             // stockage elle-même. La deuxième attribution écrasait donc la première EN SILENCE
             // — l'utilisateur croyait ajouter un raccourci, il en remplaçait un. On le dit, et
             // on nomme la fonction perdue : sans elle, impossible de décider en connaissance.
-            val existante = AdvancedShortcuts.actionFor(requireContext(), touche, typeAppui)
+            // Le couple qui doit rester unique est désormais un TRIPLET : la même touche et le
+            // même appui peuvent porter plusieurs raccourcis, un par profil. C'est tout l'objet
+            // de la fonctionnalité — le garde-fou descend simplement d'un cran.
+            val existante = AdvancedShortcuts.actionFor(requireContext(), touche, typeAppui, profil)
             if (existante == null) {
                 poursuivre()
                 return@setOnClickListener
@@ -452,8 +475,10 @@ class ShortcutsFragment : Fragment() {
                 .setTitle(R.string.adv_sc_replace_title)
                 .setMessage(getString(R.string.adv_sc_replace_msg,
                     libelleTouche(touche),
-                    getString(libellePress(typeAppui)),
-                    libelleAction(AdvancedShortcuts.Mapping(touche, typeAppui, existante))))
+                    // Le profil est accolé au type d'appui plutôt que de multiplier les
+                    // variantes de message : « Appui court · Sport » se lit sans explication.
+                    getString(libellePress(typeAppui)) + " · " + libelleProfil(profil),
+                    libelleAction(AdvancedShortcuts.Mapping(touche, typeAppui, existante, profil))))
                 .setPositiveButton(R.string.adv_sc_replace_ok) { _, _ -> poursuivre() }
                 .setNegativeButton(android.R.string.cancel, null)
                 .show()
@@ -512,7 +537,7 @@ class ShortcutsFragment : Fragment() {
      * différents seraient indiscernables.
      */
     private fun libelleAction(m: AdvancedShortcuts.Mapping): String {
-        val slot = AdvancedShortcuts.slotKey(m.keyCode, m.press)
+        val slot = AdvancedShortcuts.slotKey(m.keyCode, m.press, m.profileId)
         val generique = baseActionItems.firstOrNull { it.action == m.action }?.label ?: m.action.name
         return when (m.action) {
             ShortcutAction.OPEN_CUSTOM_APP ->
@@ -523,6 +548,27 @@ class ShortcutsFragment : Fragment() {
                     ?.let { id -> ProfileManager(requireContext()).getById(id)?.name } ?: generique
             else -> generique
         }
+    }
+
+    /**
+     * Les entrées du spinner de profil : « Tous les profils » d'abord, puis les profils
+     * existants. La valeur portée est l'identifiant, `null` pour la première.
+     */
+    private fun itemsProfils(): List<Pair<String, String?>> =
+        listOf(getString(R.string.adv_sc_all_profiles) to null) +
+        ProfileManager(requireContext()).getAll().map { it.name to it.id }
+
+    /**
+     * Nom du profil d'un raccourci.
+     *
+     * Un identifiant qui ne correspond plus à rien est DIT, pas masqué : c'est ce qui arrive
+     * quand on supprime un profil, et le raccourci resté derrière ne se déclenchera jamais.
+     * Mieux vaut le voir dans la liste et pouvoir l'effacer.
+     */
+    private fun libelleProfil(id: String?): String {
+        if (id == null) return getString(R.string.adv_sc_all_profiles)
+        return ProfileManager(requireContext()).getById(id)?.name
+            ?: getString(R.string.adv_sc_profile_missing)
     }
 
     /**
@@ -547,37 +593,68 @@ class ShortcutsFragment : Fragment() {
     }
 
     /**
-     * Change la FONCTION d'un raccourci existant, sans retoucher ni la touche ni le type
-     * d'appui — refaire les trois étapes pour corriger la seule fonction n'avait pas de raison
-     * d'être, et obligeait à réappuyer sur un bouton que le service consomme.
+     * Change la FONCTION et le PROFIL d'un raccourci existant, sans retoucher ni la touche ni le
+     * type d'appui — refaire les étapes pour corriger l'un des deux n'avait pas de raison d'être,
+     * et obligeait à réappuyer sur un bouton que le service consomme.
+     *
+     * Les deux réglages sont dans la MÊME boîte. Deux dialogues enchaînés auraient été plus
+     * simples, mais on ne peut alors plus revenir sur le premier choix après avoir vu le second,
+     * et annuler à mi-chemin laisse un raccourci à moitié modifié.
      */
     private fun modifierRaccourci(m: AdvancedShortcuts.Mapping, vue: View) {
         // Même liste que le formulaire, filtres firmware compris : proposer ici une fonction
         // absente du firmware fabriquerait un raccourci sans effet.
-        val choix = baseActionItems.filter { it.action != ShortcutAction.NONE }
-        val courant = choix.indexOfFirst { it.action == m.action }
-        var selection = courant
+        val choixActions = baseActionItems.filter { it.action != ShortcutAction.NONE }
+        val choixProfils = itemsProfils()
+
+        val contenu = layoutInflater.inflate(R.layout.dialog_edit_shortcut, null)
+        val spAction = contenu.findViewById<Spinner>(R.id.spinner_edit_action)
+        val spProfil = contenu.findViewById<Spinner>(R.id.spinner_edit_profile)
+        spAction.adapter = ArrayAdapter(requireContext(),
+            android.R.layout.simple_spinner_dropdown_item, choixActions.map { it.label })
+        spProfil.adapter = ArrayAdapter(requireContext(),
+            android.R.layout.simple_spinner_dropdown_item, choixProfils.map { it.first })
+        choixActions.indexOfFirst { it.action == m.action }
+            .takeIf { it >= 0 }?.let { spAction.setSelection(it) }
+        choixProfils.indexOfFirst { it.second == m.profileId }
+            .takeIf { it >= 0 }?.let { spProfil.setSelection(it) }
+
         AlertDialog.Builder(requireContext())
             .setTitle(R.string.adv_sc_edit_title)
-            .setSingleChoiceItems(choix.map { it.label }.toTypedArray(), courant) { _, i ->
-                selection = i
-            }
+            .setView(contenu)
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val action = choix.getOrNull(selection)?.action ?: return@setPositiveButton
+                val action = choixActions.getOrNull(spAction.selectedItemPosition)?.action
+                    ?: return@setPositiveButton
+                val profil = choixProfils.getOrNull(spProfil.selectedItemPosition)?.second
+
+                // Changer de profil DÉPLACE le raccourci, sa clé de stockage en dépendant. Si la
+                // destination est déjà occupée on refuse : écraser en silence ferait disparaître
+                // un raccourci que l'utilisateur ne regardait même pas.
+                if (profil != m.profileId &&
+                    AdvancedShortcuts.actionFor(requireContext(), m.keyCode, m.press, profil) != null) {
+                    Toast.makeText(requireContext(), R.string.adv_sc_edit_conflict,
+                        Toast.LENGTH_LONG).show()
+                    return@setPositiveButton
+                }
+
                 val enregistrer = {
-                    AdvancedShortcuts.set(requireContext(), m.keyCode, m.press, action)
+                    // L'ancienne entrée d'abord : sans ça un changement de profil laisserait
+                    // deux raccourcis là où l'utilisateur croit n'en avoir déplacé qu'un.
+                    if (profil != m.profileId) {
+                        AdvancedShortcuts.remove(requireContext(), m.keyCode, m.press, m.profileId)
+                    }
+                    AdvancedShortcuts.set(requireContext(), m.keyCode, m.press, action, profil)
                     AppLogger.i("MG4_KEYCAP", "raccourci avancé modifié : touche=${m.keyCode} " +
-                        "${m.press.key} → ${action.name}")
+                        "${m.press.key} → ${action.name} (profil ${profil ?: "tous"})")
                     Toast.makeText(requireContext(), R.string.adv_sc_updated, Toast.LENGTH_SHORT).show()
                     refreshAdvancedList(vue)
                 }
                 // Mêmes cibles à choisir que dans le formulaire : basculer sur « ouvrir une
                 // app » sans désigner laquelle donnerait un raccourci qui n'ouvre rien.
+                val slot = AdvancedShortcuts.slotKey(m.keyCode, m.press, profil)
                 when (action) {
-                    ShortcutAction.OPEN_CUSTOM_APP ->
-                        choisirAppAvancee(AdvancedShortcuts.slotKey(m.keyCode, m.press), enregistrer)
-                    ShortcutAction.APPLY_PROFILE ->
-                        choisirProfilAvance(AdvancedShortcuts.slotKey(m.keyCode, m.press), enregistrer)
+                    ShortcutAction.OPEN_CUSTOM_APP -> choisirAppAvancee(slot, enregistrer)
+                    ShortcutAction.APPLY_PROFILE   -> choisirProfilAvance(slot, enregistrer)
                     else -> enregistrer()
                 }
             }
@@ -585,7 +662,13 @@ class ShortcutsFragment : Fragment() {
             .show()
     }
 
-    /** Reconstruit la liste des raccourcis avancés. Une ligne par couple touche + type d'appui. */
+    /**
+     * Reconstruit la liste des raccourcis avancés, GROUPÉE par touche + type d'appui.
+     *
+     * Le regroupement porte l'information : à l'intérieur d'un groupe, les lignes sont dans
+     * l'ordre où elles sont résolues à l'appui — « tous les profils » en tête, variantes en
+     * dessous. Une liste plate laisserait deviner laquelle l'emporte.
+     */
     private fun refreshAdvancedList(view: View) {
         val conteneur = view.findViewById<ViewGroup>(R.id.container_adv_list) ?: return
         val vide      = view.findViewById<View>(R.id.tv_adv_empty)
@@ -593,21 +676,34 @@ class ShortcutsFragment : Fragment() {
         val items = AdvancedShortcuts.all(requireContext())
         vide?.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
 
-        items.forEach { m ->
-            val ligne = layoutInflater.inflate(R.layout.item_advanced_shortcut, conteneur, false)
-            // « 1 · Touche 42 » : l'ancien libellé réutilisait le titre de l'étape 1 du
-            // formulaire, numéro compris. Le nom du bouton a désormais sa propre chaîne.
-            ligne.findViewById<TextView>(R.id.adv_item_key).text = libelleTouche(m.keyCode)
-            ligne.findViewById<TextView>(R.id.adv_item_press).setText(libellePress(m.press))
-            ligne.findViewById<TextView>(R.id.adv_item_action).text = libelleAction(m)
-            ligne.findViewById<View>(R.id.adv_item_edit).setOnClickListener {
-                modifierRaccourci(m, view)
+        // `all` rend déjà la liste triée, et groupBy conserve l'ordre de rencontre : les groupes
+        // comme leurs lignes sortent donc dans le bon ordre sans second tri.
+        items.groupBy { it.keyCode to it.press }.forEach { (cle, lignes) ->
+            val (code, press) = cle
+            val entete = layoutInflater.inflate(R.layout.item_advanced_group, conteneur, false)
+            entete.findViewById<TextView>(R.id.adv_group_title).text = getString(
+                R.string.adv_sc_group_title, libelleTouche(code), getString(libellePress(press)))
+            // Sans ligne « tous les profils », la touche reste réclamée sous les autres profils
+            // mais n'y fait rien — conséquence directe du fait qu'une touche se réclame en bloc.
+            entete.findViewById<View>(R.id.adv_group_warning).visibility =
+                if (lignes.any { it.profileId == null }) View.GONE else View.VISIBLE
+            conteneur.addView(entete)
+
+            lignes.forEach { m ->
+                val ligne = layoutInflater.inflate(R.layout.item_advanced_shortcut, conteneur, false)
+                ligne.findViewById<TextView>(R.id.adv_item_profile).text =
+                    if (m.profileId == null) getString(R.string.adv_sc_all_profiles)
+                    else "\u2514 " + libelleProfil(m.profileId)
+                ligne.findViewById<TextView>(R.id.adv_item_action).text = libelleAction(m)
+                ligne.findViewById<View>(R.id.adv_item_edit).setOnClickListener {
+                    modifierRaccourci(m, view)
+                }
+                ligne.findViewById<View>(R.id.adv_item_delete).setOnClickListener {
+                    AdvancedShortcuts.remove(requireContext(), m.keyCode, m.press, m.profileId)
+                    refreshAdvancedList(view)
+                }
+                conteneur.addView(ligne)
             }
-            ligne.findViewById<View>(R.id.adv_item_delete).setOnClickListener {
-                AdvancedShortcuts.remove(requireContext(), m.keyCode, m.press)
-                refreshAdvancedList(view)
-            }
-            conteneur.addView(ligne)
         }
 
         // Créer, modifier ou supprimer un raccourci peut faire apparaître ou disparaître le

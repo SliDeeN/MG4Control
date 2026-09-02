@@ -441,6 +441,12 @@
     <string name="adv_sc_step_key">1 · Tecla</string>
     <string name="adv_sc_step_press">2 · Tipo de pulsación</string>
     <string name="adv_sc_step_action">3 · Función</string>
+    <string name="adv_sc_step_profile">4 · Perfil</string>
+    <string name="adv_sc_all_profiles">Todos los perfiles</string>
+    <string name="adv_sc_profile_missing">Perfil eliminado</string>
+    <string name="adv_sc_group_title">%1$s · %2$s</string>
+    <string name="adv_sc_no_fallback">Ningún atajo para los demás perfiles: la tecla está reservada pero no hace nada.</string>
+    <string name="adv_sc_edit_conflict">Ese perfil ya tiene un atajo en esta tecla y tipo de pulsación.</string>
     <string name="adv_sc_empty">Ningún atajo avanzado registrado.</string>
     <string name="adv_sc_claimed_warning">La tecla asignada ya no podrá usarse para nada más que MG4Control, hasta que se borre el atajo en « LISTA DE ATAJOS ».</string>
     <string name="adv_sc_delete">Borrar</string>
@@ -474,7 +480,7 @@
 
     <!-- Liste des raccourcis avances : modification et remplacement -->
     <string name="adv_sc_edit">Editar</string>
-    <string name="adv_sc_edit_title">Cambiar la función</string>
+    <string name="adv_sc_edit_title">Modificar el atajo</string>
     <string name="adv_sc_updated">Atajo modificado</string>
     <string name="adv_sc_press_short">Pulsación corta</string>
     <string name="adv_sc_press_long_lbl">Pulsación larga</string>

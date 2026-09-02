@@ -441,6 +441,12 @@
     <string name="adv_sc_step_key">1 · Tasto</string>
     <string name="adv_sc_step_press">2 · Tipo di pressione</string>
     <string name="adv_sc_step_action">3 · Funzione</string>
+    <string name="adv_sc_step_profile">4 · Profilo</string>
+    <string name="adv_sc_all_profiles">Tutti i profili</string>
+    <string name="adv_sc_profile_missing">Profilo eliminato</string>
+    <string name="adv_sc_group_title">%1$s · %2$s</string>
+    <string name="adv_sc_no_fallback">Nessuna scorciatoia per gli altri profili: il tasto è riservato ma non fa nulla.</string>
+    <string name="adv_sc_edit_conflict">Quel profilo ha già una scorciatoia su questo tasto e tipo di pressione.</string>
     <string name="adv_sc_empty">Nessuna scorciatoia avanzata registrata.</string>
     <string name="adv_sc_claimed_warning">Il tasto assegnato non potrà più essere usato per altro che MG4Control, fino all\'eliminazione della scorciatoia in « ELENCO SCORCIATOIE ».</string>
     <string name="adv_sc_delete">Elimina</string>
@@ -474,7 +480,7 @@
 
     <!-- Liste des raccourcis avances : modification et remplacement -->
     <string name="adv_sc_edit">Modifica</string>
-    <string name="adv_sc_edit_title">Cambia funzione</string>
+    <string name="adv_sc_edit_title">Modifica la scorciatoia</string>
     <string name="adv_sc_updated">Scorciatoia modificata</string>
     <string name="adv_sc_press_short">Pressione breve</string>
     <string name="adv_sc_press_long_lbl">Pressione lunga</string>
