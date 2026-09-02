@@ -245,8 +245,21 @@
     <string name="settings_default_screen">Écran par défaut</string>
     <string name="settings_default_screen_dashboard">Tableau de bord</string>
     <string name="settings_auto_apply">Réglages supplémentaires</string>
-    <string name="settings_auto_apply_desc">Le profil par défaut s\'applique automatiquement au lancement</string>
+    <string name="settings_garage_mode">Mode Garage</string>
+    <string name="settings_garage_mode_desc">Met MG4Control en veille complète : plus de raccourcis (les boutons retrouvent leur fonction d\'origine), plus de profil appliqué au démarrage, plus d\'automatisation. Utile pour laisser le véhicule à l\'atelier sans désinstaller l\'application. Vos réglages sont conservés et reviennent dès que le mode est désactivé.</string>
+    <string name="notif_service_active">Service actif</string>
+    <string name="notif_garage_mode">Mode Garage — en veille</string>
     <string name="settings_auto_update_desc">Vérifier les mises à jour automatiquement au lancement</string>
+
+    <!-- Popup « mise à jour disponible » par-dessus l'infodivertissement -->
+    <string name="update_overlay_title">Une mise à jour de MG4Control est disponible</string>
+    <string name="update_overlay_versions">%1$s  \u2192  %2$s</string>
+    <string name="update_overlay_install">Installer la MAJ</string>
+    <string name="update_overlay_skip">Ignorer cette version</string>
+    <string name="update_overlay_disable">Ne plus me prévenir des mises à jour</string>
+    <string name="update_overlay_disabled_toast">Alertes désactivées. Réactivables dans Réglages > Mises à jour.</string>
+    <string name="settings_update_overlay">Prévenir sur l\'écran du véhicule</string>
+    <string name="settings_update_overlay_desc">Affiche un message par-dessus l\'infodivertissement quand une mise à jour est disponible, à l\'arrêt uniquement</string>
     <string name="settings_vehicle_power_desc">Éteindre le véhicule en gardant l\'écran allumé</string>
     <string name="settings_vehicle_power_btn">Éteindre</string>
     <string name="vehicle_power_dialog_title">Éteindre le véhicule</string>

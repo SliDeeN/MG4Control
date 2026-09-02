@@ -243,8 +243,21 @@
     <string name="settings_default_screen">Default screen</string>
     <string name="settings_default_screen_dashboard">Dashboard</string>
     <string name="settings_auto_apply">Additional settings</string>
-    <string name="settings_auto_apply_desc">The default profile is applied automatically at launch</string>
+    <string name="settings_garage_mode">Garage mode</string>
+    <string name="settings_garage_mode_desc">Puts MG4Control fully to sleep: no shortcuts (buttons regain their original function), no profile applied at startup, no automation. Useful when leaving the car at a workshop without uninstalling the app. Your settings are kept and come back as soon as the mode is turned off.</string>
+    <string name="notif_service_active">Service running</string>
+    <string name="notif_garage_mode">Garage mode — asleep</string>
     <string name="settings_auto_update_desc">Automatically check for updates at launch</string>
+
+    <!-- Popup « mise à jour disponible » par-dessus l'infodivertissement -->
+    <string name="update_overlay_title">A MG4Control update is available</string>
+    <string name="update_overlay_versions">%1$s  \u2192  %2$s</string>
+    <string name="update_overlay_install">Install update</string>
+    <string name="update_overlay_skip">Skip this version</string>
+    <string name="update_overlay_disable">Stop telling me about updates</string>
+    <string name="update_overlay_disabled_toast">Alerts turned off. You can turn them back on in Settings > Updates.</string>
+    <string name="settings_update_overlay">Notify on the vehicle screen</string>
+    <string name="settings_update_overlay_desc">Shows a message over the infotainment when an update is available, when stopped only</string>
     <string name="settings_vehicle_power_desc">Power off the vehicle while keeping the screen on</string>
     <string name="settings_vehicle_power_btn">Power off</string>
     <string name="vehicle_power_dialog_title">Power off vehicle</string>

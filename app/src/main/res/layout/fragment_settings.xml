@@ -467,29 +467,48 @@
                     android:layout_height="1dp"
                     android:background="@color/dash_border" />
 
+                <!-- Mode Garage : remplace l'ancien « application automatique du profil »,
+                     dont il est la version complete. La description est indispensable — un
+                     interrupteur qui eteint TOUT ne se devine pas depuis son seul titre. -->
                 <LinearLayout
+                    android:id="@+id/row_garage_mode"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
+                    android:orientation="vertical"
                     android:padding="12dp">
 
-                    <TextView
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/settings_auto_apply_desc"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="16sp" />
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
 
-                    <Switch
-                        android:scaleX="1.3"
-                        android:scaleY="1.3"
-                        android:layout_marginHorizontal="8dp"
-                            android:id="@+id/switch_auto_apply"
-                        android:layout_width="wrap_content"
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/settings_garage_mode"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <Switch
+                            android:scaleX="1.3"
+                            android:scaleY="1.3"
+                            android:layout_marginHorizontal="8dp"
+                            android:id="@+id/switch_garage_mode"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="false" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:checked="true" />
+                        android:layout_marginTop="6dp"
+                        android:text="@string/settings_garage_mode_desc"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="13sp" />
 
                 </LinearLayout>
 
@@ -570,6 +589,55 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:checked="true" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
+                <!-- Popup de mise a jour par-dessus l'infodivertissement. Masque en offline
+                     comme les deux voisins. -->
+                <LinearLayout
+                    android:id="@+id/row_update_overlay"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/settings_update_overlay"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <Switch
+                            android:scaleX="1.3"
+                            android:scaleY="1.3"
+                            android:layout_marginHorizontal="8dp"
+                            android:id="@+id/switch_update_overlay"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/settings_update_overlay_desc"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="13sp" />
 
                 </LinearLayout>
 

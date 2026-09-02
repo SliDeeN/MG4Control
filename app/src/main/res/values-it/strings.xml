@@ -243,8 +243,21 @@
     <string name="settings_default_screen">Schermata predefinita</string>
     <string name="settings_default_screen_dashboard">Dashboard</string>
     <string name="settings_auto_apply">Impostazioni aggiuntive</string>
-    <string name="settings_auto_apply_desc">Il profilo predefinito viene applicato automaticamente all\'avvio</string>
+    <string name="settings_garage_mode">Modalità officina</string>
+    <string name="settings_garage_mode_desc">Mette MG4Control completamente in pausa: niente scorciatoie (i pulsanti tornano alla loro funzione originale), nessun profilo all\'avvio, nessuna automazione. Utile per lasciare l\'auto in officina senza disinstallare l\'app. Le impostazioni restano e tornano appena la modalità viene disattivata.</string>
+    <string name="notif_service_active">Servizio attivo</string>
+    <string name="notif_garage_mode">Modalità officina — in pausa</string>
     <string name="settings_auto_update_desc">Controlla aggiornamenti automaticamente all\'avvio</string>
+
+    <!-- Popup « mise à jour disponible » par-dessus l'infodivertissement -->
+    <string name="update_overlay_title">È disponibile un aggiornamento di MG4Control</string>
+    <string name="update_overlay_versions">%1$s  \u2192  %2$s</string>
+    <string name="update_overlay_install">Installa l\'aggiornamento</string>
+    <string name="update_overlay_skip">Ignora questa versione</string>
+    <string name="update_overlay_disable">Non avvisarmi più degli aggiornamenti</string>
+    <string name="update_overlay_disabled_toast">Avvisi disattivati. Riattivabili in Impostazioni > Aggiornamenti.</string>
+    <string name="settings_update_overlay">Avvisa sullo schermo del veicolo</string>
+    <string name="settings_update_overlay_desc">Mostra un messaggio sopra l\'infotainment quando c\'è un aggiornamento, solo da fermi</string>
     <string name="settings_vehicle_power_desc">Spegnere il veicolo mantenendo lo schermo acceso</string>
     <string name="settings_vehicle_power_btn">Spegni</string>
     <string name="vehicle_power_dialog_title">Spegnere il veicolo</string>

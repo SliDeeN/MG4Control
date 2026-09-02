@@ -44,10 +44,13 @@ import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.VehicleWriteGate
 import com.mg4.control.update.ApkCleanup
 import com.mg4.control.update.UpdateChecker
+import com.mg4.control.update.UpdateNotifier
 import com.mg4.control.update.UpdateDialogManager
 import java.io.File
 import com.mg4.control.util.FirmwareHelper
 import com.mg4.control.util.FirmwareInfo
+import com.mg4.control.service.MG4ControlService
+import com.mg4.control.util.GarageMode
 import com.mg4.control.util.LocaleHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -207,11 +210,19 @@ class SettingsFragment : Fragment() {
             }
         }
 
-        // ── Auto-apply ───────────────────────────────────────────────────────
-        val switchAutoApply = view.findViewById<Switch>(R.id.switch_auto_apply)
-        switchAutoApply.isChecked = prefs.getBoolean("auto_apply_profile", true)
-        switchAutoApply.setOnCheckedChangeListener { _, checked ->
-            prefs.edit().putBoolean("auto_apply_profile", checked).apply()
+        // ── Mode Garage — MG4Control en veille complète ──────────────────────
+        val switchGarage = view.findViewById<Switch>(R.id.switch_garage_mode)
+        switchGarage.isChecked = GarageMode.isOn(requireContext())
+        switchGarage.setOnCheckedChangeListener { _, checked ->
+            GarageMode.setOn(requireContext(), checked)
+            // La notification persistante est le seul repere permanent : elle doit basculer
+            // tout de suite, sans attendre un redemarrage du service.
+            runCatching {
+                requireContext().startForegroundService(
+                    Intent(requireContext(), MG4ControlService::class.java)
+                        .setAction(MG4ControlService.ACTION_GARAGE_CHANGED)
+                )
+            }
         }
 
         // ── Sécurité conduite (verrou d'écriture par vitesse) ────────────────
@@ -248,6 +259,7 @@ class SettingsFragment : Fragment() {
         // Build offline : pas de réseau → on masque toute l'UI de mise à jour.
         if (BuildConfig.OFFLINE) {
             view.findViewById<View>(R.id.row_auto_update).visibility = View.GONE
+            view.findViewById<View>(R.id.row_update_overlay).visibility = View.GONE
             view.findViewById<View>(R.id.row_beta_channel).visibility = View.GONE
             view.findViewById<View>(R.id.row_update_buttons).visibility = View.GONE
         } else {
@@ -255,6 +267,14 @@ class SettingsFragment : Fragment() {
             switchAutoUpdate.isChecked = prefs.getBoolean("auto_check_update", true)
             switchAutoUpdate.setOnCheckedChangeListener { _, checked ->
                 prefs.edit().putBoolean("auto_check_update", checked).apply()
+            }
+
+            // Seul chemin de retour après « Ne plus me prévenir » sur le popup véhicule :
+            // c'est aussi pour ça que le popup dit où le retrouver.
+            val switchOverlay = view.findViewById<Switch>(R.id.switch_update_overlay)
+            switchOverlay.isChecked = UpdateNotifier.isEnabled(requireContext())
+            switchOverlay.setOnCheckedChangeListener { _, checked ->
+                UpdateNotifier.setEnabled(requireContext(), checked)
             }
         }
 

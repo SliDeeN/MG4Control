@@ -243,8 +243,21 @@
     <string name="settings_default_screen">Pantalla predeterminada</string>
     <string name="settings_default_screen_dashboard">Panel de control</string>
     <string name="settings_auto_apply">Ajustes adicionales</string>
-    <string name="settings_auto_apply_desc">El perfil predeterminado se aplica automáticamente al iniciar</string>
+    <string name="settings_garage_mode">Modo taller</string>
+    <string name="settings_garage_mode_desc">Pone MG4Control en reposo total: sin atajos (los botones recuperan su función original), sin perfil al arrancar, sin automatizaciones. Útil para dejar el vehículo en el taller sin desinstalar la aplicación. Sus ajustes se conservan y vuelven en cuanto se desactiva el modo.</string>
+    <string name="notif_service_active">Servicio activo</string>
+    <string name="notif_garage_mode">Modo taller — en reposo</string>
     <string name="settings_auto_update_desc">Buscar actualizaciones automáticamente al iniciar</string>
+
+    <!-- Popup « mise à jour disponible » par-dessus l'infodivertissement -->
+    <string name="update_overlay_title">Hay una actualización de MG4Control disponible</string>
+    <string name="update_overlay_versions">%1$s  \u2192  %2$s</string>
+    <string name="update_overlay_install">Instalar la actualización</string>
+    <string name="update_overlay_skip">Omitir esta versión</string>
+    <string name="update_overlay_disable">No avisarme más de las actualizaciones</string>
+    <string name="update_overlay_disabled_toast">Avisos desactivados. Puede reactivarlos en Ajustes > Actualizaciones.</string>
+    <string name="settings_update_overlay">Avisar en la pantalla del vehículo</string>
+    <string name="settings_update_overlay_desc">Muestra un mensaje sobre el infoentretenimiento cuando hay una actualización, solo detenido</string>
     <string name="settings_vehicle_power_desc">Apagar el vehículo manteniendo la pantalla encendida</string>
     <string name="settings_vehicle_power_btn">Apagar</string>
     <string name="vehicle_power_dialog_title">Apagar el vehículo</string>

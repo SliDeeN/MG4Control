@@ -12,6 +12,7 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.service.MG4ControlService
 import com.mg4.control.shortcut.PressType
 import com.mg4.control.shortcut.ShortcutAction
+import com.mg4.control.util.GarageMode
 
 /**
  * Interception des touches volant, AVANT le launcher.
@@ -98,7 +99,11 @@ class KeyCaptureService : AccessibilityService() {
 
             // Seules les touches explicitement enregistrées sont interceptées. Tout le reste
             // traverse : c'est ce qui garantit qu'un bug ici ne peut pas paralyser le volant.
-            if (!AdvancedShortcuts.isEnabled(this) || !AdvancedShortcuts.isClaimed(this, code)) {
+            // Mode Garage : ne RIEN consommer. C'est ici que se joue le retour des touches au
+            // launcher d'origine — un raccourci avancé réclame sa touche en bloc, et seul un
+            // `false` rendu ici la laisse repartir vers l'application au premier plan.
+            if (GarageMode.isOn(this) ||
+                !AdvancedShortcuts.isEnabled(this) || !AdvancedShortcuts.isClaimed(this, code)) {
                 return false
             }
 

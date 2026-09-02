@@ -243,8 +243,21 @@
     <string name="settings_default_screen">Standardbildschirm</string>
     <string name="settings_default_screen_dashboard">Dashboard</string>
     <string name="settings_auto_apply">Weitere Einstellungen</string>
-    <string name="settings_auto_apply_desc">Das Standardprofil wird beim Start automatisch angewendet</string>
+    <string name="settings_garage_mode">Werkstattmodus</string>
+    <string name="settings_garage_mode_desc">Versetzt MG4Control vollständig in den Ruhezustand: keine Tastenkürzel (die Tasten haben wieder ihre ursprüngliche Funktion), kein Profil beim Start, keine Automatisierung. Praktisch, wenn das Fahrzeug in die Werkstatt kommt, ohne die App zu deinstallieren. Ihre Einstellungen bleiben erhalten und kehren zurück, sobald der Modus ausgeschaltet wird.</string>
+    <string name="notif_service_active">Dienst aktiv</string>
+    <string name="notif_garage_mode">Werkstattmodus — im Ruhezustand</string>
     <string name="settings_auto_update_desc">Beim Start automatisch nach Updates suchen</string>
+
+    <!-- Popup « mise à jour disponible » par-dessus l'infodivertissement -->
+    <string name="update_overlay_title">Ein MG4Control-Update ist verfügbar</string>
+    <string name="update_overlay_versions">%1$s  \u2192  %2$s</string>
+    <string name="update_overlay_install">Update installieren</string>
+    <string name="update_overlay_skip">Version überspringen</string>
+    <string name="update_overlay_disable">Nicht mehr über Updates informieren</string>
+    <string name="update_overlay_disabled_toast">Hinweise deaktiviert. Wieder aktivierbar unter Einstellungen > Updates.</string>
+    <string name="settings_update_overlay">Auf dem Fahrzeugbildschirm hinweisen</string>
+    <string name="settings_update_overlay_desc">Zeigt bei verfügbarem Update eine Meldung über dem Infotainment an, nur im Stand</string>
     <string name="settings_vehicle_power_desc">Fahrzeug ausschalten und Bildschirm anlassen</string>
     <string name="settings_vehicle_power_btn">Ausschalten</string>
     <string name="vehicle_power_dialog_title">Fahrzeug ausschalten</string>

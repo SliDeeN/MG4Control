@@ -243,8 +243,21 @@
     <string name="settings_default_screen">Ecrã predefinido</string>
     <string name="settings_default_screen_dashboard">Painel</string>
     <string name="settings_auto_apply">Definições adicionais</string>
-    <string name="settings_auto_apply_desc">O perfil padrão é aplicado automaticamente no arranque</string>
+    <string name="settings_garage_mode">Modo oficina</string>
+    <string name="settings_garage_mode_desc">Coloca o MG4Control totalmente em pausa: sem atalhos (os botões recuperam a função original), sem perfil ao arrancar, sem automações. Útil para deixar o veículo na oficina sem desinstalar a aplicação. As suas definições são mantidas e voltam assim que o modo for desativado.</string>
+    <string name="notif_service_active">Serviço ativo</string>
+    <string name="notif_garage_mode">Modo oficina — em pausa</string>
     <string name="settings_auto_update_desc">Verificar atualizações automaticamente no arranque</string>
+
+    <!-- Popup « mise à jour disponible » par-dessus l'infodivertissement -->
+    <string name="update_overlay_title">Está disponível uma atualização do MG4Control</string>
+    <string name="update_overlay_versions">%1$s  \u2192  %2$s</string>
+    <string name="update_overlay_install">Instalar a atualização</string>
+    <string name="update_overlay_skip">Ignorar esta versão</string>
+    <string name="update_overlay_disable">Deixar de me avisar das atualizações</string>
+    <string name="update_overlay_disabled_toast">Avisos desativados. Pode reativá-los em Definições > Atualizações.</string>
+    <string name="settings_update_overlay">Avisar no ecrã do veículo</string>
+    <string name="settings_update_overlay_desc">Mostra uma mensagem sobre o infoentretenimento quando há uma atualização, apenas parado</string>
     <string name="settings_vehicle_power_desc">Desligar o veículo mantendo o ecrã ligado</string>
     <string name="settings_vehicle_power_btn">Desligar</string>
     <string name="vehicle_power_dialog_title">Desligar o veículo</string>

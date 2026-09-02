@@ -21,6 +21,7 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.util.FirmwareInfo
+import com.mg4.control.util.GarageMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -4721,8 +4722,13 @@ object MG4Hardware {
         return gen == FirmwareInfo.Gen.SWI132 || gen == FirmwareInfo.Gen.SWI133
     }
 
-    private fun doorVolumeEnabled(): Boolean =
-        sAppContext?.getSharedPreferences("mg4_settings", 0)?.getBoolean("door_volume_enabled", false) ?: false
+    private fun doorVolumeEnabled(): Boolean {
+        // Mode Garage : une portière qui fait chuter le volume est exactement le genre de
+        // comportement inexpliqué qu'on ne veut pas laisser observer.
+        if (GarageMode.isOn(sAppContext)) return false
+        return sAppContext?.getSharedPreferences("mg4_settings", 0)
+            ?.getBoolean("door_volume_enabled", false) ?: false
+    }
 
     private fun doorVolumeLevel(): Int =
         sAppContext?.getSharedPreferences("mg4_settings", 0)?.getInt("door_volume_level", 0) ?: 0

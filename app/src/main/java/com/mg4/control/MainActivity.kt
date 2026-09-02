@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateDialogManager
+import com.mg4.control.update.UpdateNotifier
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.ThemeHelper
@@ -86,8 +87,26 @@ class MainActivity : AppCompatActivity() {
         setupDiagnosticUnlock()
         checkUnknownFirmware()
         navigateToDefaultScreen(savedInstanceState)
-        checkForUpdates()
+        // Ouverture venue du popup véhicule : la release est déjà connue, on affiche le
+        // dialogue tout de suite plutôt que de refaire l'aller-retour réseau.
+        val depuisPopup = UpdateNotifier.readFrom(intent)
+        if (depuisPopup != null) UpdateDialogManager.show(this, depuisPopup)
+        else checkForUpdates()
         checkProfileRestore()
+    }
+
+    /**
+     * L'application était déjà au premier plan quand le popup véhicule a été touché.
+     *
+     * L'intent est lancé en FLAG_ACTIVITY_SINGLE_TOP : dans ce cas Android ne recrée pas
+     * l'activité et [onCreate] n'est jamais rappelé — sans cette surcharge, « Installer la MAJ »
+     * ramènerait l'application au premier plan sans rien ouvrir du tout.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val info = UpdateNotifier.readFrom(intent) ?: return
+        if (!isFinishing && !isDestroyed) UpdateDialogManager.show(this, info)
     }
 
     // ── Restauration des profils depuis la sauvegarde (après réinstallation) ──────

@@ -155,13 +155,71 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
 Écran organisé en **quatre onglets** :
 - **Langues** : français, anglais, allemand, espagnol, italien, portugais
 - **Interface** : écran affiché au démarrage, apparence (auto / sombre / clair)
-- **Réglages avancés** : application automatique du profil, vérification des mises à jour au
-  lancement, **canal bêta**, extinction du véhicule écran allumé, blocage des réglages de conduite
-  au-delà d'une vitesse donnée, **API externe** (cf. section dédiée)
+- **Réglages avancés** : **Mode Garage** (cf. ci-dessous), vérification des mises à jour au
+  lancement, **alerte de mise à jour sur l'écran du véhicule**, **canal bêta**, extinction du
+  véhicule écran allumé, blocage des réglages de conduite au-delà d'une vitesse donnée,
+  **API externe** (cf. section dédiée)
 - **Infos** : vérification des mises à jour, nettoyage des APK, **consommation de données**
   (aujourd'hui, semaine en cours, mois courant, 30 derniers jours), dialog « À propos » (version de
   l'app, firmware, QR codes), indicateur de firmware, et bouton Diagnostic révélé par 5 clics sur
   le logo
+
+### Mode Garage
+Un seul interrupteur met MG4Control **en veille complète**, sans rien désinstaller ni
+reconfigurer. Il répond à un cas concret : laisser la voiture à l'atelier sans qu'un technicien
+voie des réglages changer seuls au contact, ni un bouton du volant faire autre chose que prévu.
+
+Ce que le mode suspend, ce sont les comportements **autonomes** — ceux que personne n'a demandés
+sur le moment :
+
+| Suspendu | Détail |
+|---|---|
+| Raccourcis classiques | La touche repart au launcher |
+| Raccourcis avancés | Les touches réclamées sont **rendues** : le service d'accessibilité ne consomme plus rien |
+| Profil au démarrage et au contact | Y compris la résolution Bluetooth |
+| Automatisations par température | Profil comme climatisation |
+| Baisse de volume à l'ouverture de porte | |
+| API externe | Les commandes tierces sont refusées |
+| Alerte de mise à jour sur l'écran du véhicule | |
+
+Ce qu'il ne touche pas : l'application elle-même. Ouvrir MG4Control et appliquer un profil à la
+main reste possible — c'est une action de l'utilisateur, pas un comportement observable par
+quelqu'un qui ne fait que rouler.
+
+**Rien n'est effacé.** Repasser l'interrupteur sur OFF rend l'ensemble à l'identique, profils,
+raccourcis et automatisations compris.
+
+La notification persistante affiche « Mode Garage — en veille » tant qu'il est actif : sans ce
+repère, un mode oublié se manifesterait par « plus rien ne marche » sans la moindre explication.
+
+> [!NOTE]
+> Le Mode Garage **remplace** l'ancien interrupteur « le profil par défaut s'applique
+> automatiquement au lancement », dont il est la version complète. Qui l'avait décoché est repris
+> en Mode Garage activé à la première ouverture : couper l'application était bien l'intention.
+
+### Alerte de mise à jour sur l'écran du véhicule
+Une mise à jour ne se découvre plus seulement en ouvrant MG4Control : un message apparaît
+**par-dessus l'infodivertissement**, comme le popup de confirmation de profil, et annonce la
+version installée face à la nouvelle. Trois choix :
+
+| Bouton | Effet |
+|---|---|
+| **Installer la MAJ** | Ouvre MG4Control sur le dialogue de mise à jour habituel, sans refaire la requête réseau |
+| **Ignorer cette version** | Cette version n'est plus proposée, ni ici ni au lancement de l'application |
+| **Ne plus me prévenir** | Coupe ce popup. Le dialogue au lancement de MG4Control, lui, reste |
+
+Toucher le fond assombri vaut « plus tard » : rien n'est retenu, l'annonce reviendra.
+
+Quatre garde-fous, parce que ce chemin n'est déclenché par personne :
+- la vérification a lieu **20 s après le coup de contact** — au moment même, la liaison données de
+  la voiture n'est pas encore montée ;
+- **six heures minimum** entre deux interrogations réseau, la voiture étant sur un forfait données ;
+- **rien ne s'affiche en roulant** (même verrou que le popup multiprofils) ;
+- une version déjà proposée ne l'est plus dans la même session — et le marquage n'a lieu que si le
+  popup est **réellement apparu**.
+
+L'interrupteur historique « vérifier les mises à jour au lancement » coupe aussi ce popup : c'est
+un réglage que l'utilisateur croit global, et il l'est.
 
 ### Profils
 - Liste des profils avec application, définition par défaut, modification, suppression
@@ -315,13 +373,15 @@ MG4Control/
 │   │   ├── service/
 │   │   │   ├── MG4ControlService.kt   # Service de premier plan (boot, raccourcis, API externe)
 │   │   │   ├── ProfilePickerOverlay.kt# Sélecteur de profil en fenêtre flottante
-│   │   │   └── ProfileConfirmOverlay.kt # Confirmation OUI/NON des automatisations
+│   │   │   ├── ProfileConfirmOverlay.kt # Confirmation OUI/NON des automatisations
+│   │   │   └── UpdateOverlay.kt      # Popup « MAJ disponible » sur l'écran du véhicule
 │   │   │
 │   │   ├── receiver/
 │   │   │   └── BootReceiver.kt        # Récepteur de démarrage système
 │   │   │
 │   │   ├── util/
 │   │   │   ├── FirmwareInfo.kt        # Détection firmware + mode forcé
+│   │   │   ├── GarageMode.kt          # Mode Garage — met tous les automatismes en veille
 │   │   │   ├── FirmwareHelper.kt      # Lecture version firmware complète (async)
 │   │   │   ├── LocaleHelper.kt        # Gestion de la langue (6 langues)
 │   │   │   ├── ThemeHelper.kt         # Thème auto / sombre / clair
@@ -330,6 +390,7 @@ MG4Control/
 │   │   ├── update/
 │   │   │   ├── UpdateChecker.kt       # Vérification des releases GitHub (stable et bêta)
 │   │   │   ├── UpdateDialogManager.kt # Dialog MAJ + DownloadManager
+│   │   │   ├── UpdateNotifier.kt     # Quand signaler une MAJ sur l'écran du véhicule
 │   │   │   ├── UpdateInfo.kt          # Description d'une version disponible
 │   │   │   ├── ApkSecurity.kt         # Contrôle de signature de l'APK téléchargé
 │   │   │   ├── ApkInstaller.kt        # Installation
@@ -886,12 +947,67 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
 Screen organised into **four tabs**:
 - **Languages**: French, English, German, Spanish, Italian, Portuguese
 - **Interface**: screen shown at startup, appearance (auto / dark / light)
-- **Advanced**: automatic profile application, update check at launch, **beta channel**, power the
-  car off while keeping the screen on, block driving settings above a given speed, **external API**
-  (see the dedicated section)
+- **Advanced**: **Garage mode** (see below), update check at launch, **update alert on the
+  vehicle screen**, **beta channel**, power the car off while keeping the screen on, block driving
+  settings above a given speed, **external API** (see the dedicated section)
 - **Info**: update check, APK cleanup, **data usage** (today, current week, current month, last 30
   days), "About" dialog (app version, firmware, QR codes), firmware indicator, and a Diagnostic
   button revealed by 5 taps on the logo
+
+### Garage mode
+A single switch puts MG4Control **fully to sleep**, without uninstalling or reconfiguring
+anything. It answers a concrete case: leaving the car at a workshop without a technician seeing
+settings change on their own at ignition, or a steering-wheel button doing something unexpected.
+
+What the mode suspends are the **autonomous** behaviours — the ones nobody asked for at that
+moment:
+
+| Suspended | Detail |
+|---|---|
+| Classic shortcuts | The key goes back to the launcher |
+| Advanced shortcuts | Claimed keys are **released**: the accessibility service consumes nothing |
+| Profile at startup and at ignition | Bluetooth resolution included |
+| Temperature automations | Profile and climate alike |
+| Volume drop when a door opens | |
+| External API | Third-party commands are refused |
+| Update alert on the vehicle screen | |
+
+What it does not touch: the app itself. Opening MG4Control and applying a profile by hand still
+works — that is a user action, not a behaviour observable by someone who is only driving.
+
+**Nothing is erased.** Switching it back off restores everything as it was: profiles, shortcuts
+and automations.
+
+The persistent notification reads "Garage mode — asleep" while it is on: without that marker, a
+forgotten mode would show up as "nothing works any more" with no explanation whatsoever.
+
+> [!NOTE]
+> Garage mode **replaces** the old "the default profile is applied automatically at launch"
+> switch, of which it is the complete version. Anyone who had unchecked it is carried over into
+> Garage mode on first launch: stopping the app from acting was the intent.
+
+### Update alert on the vehicle screen
+An update is no longer found only by opening MG4Control: a message appears **over the
+infotainment**, like the profile confirmation popup, showing the installed version against the new
+one. Three choices:
+
+| Button | Effect |
+|---|---|
+| **Install update** | Opens MG4Control on the usual update dialog, without repeating the network request |
+| **Skip this version** | That version is no longer offered, here or at app launch |
+| **Stop telling me** | Turns this popup off. The dialog at MG4Control launch stays |
+
+Tapping the dimmed background means "later": nothing is remembered, the alert will come back.
+
+Four safeguards, because nobody triggers this path:
+- the check runs **20 s after ignition** — at the moment itself the car's data link is not up yet;
+- **six hours minimum** between network requests, the car being on a data plan;
+- **nothing shows while driving** (same lock as the multi-profile popup);
+- a version already offered is not offered again in the same session — and it is only marked as
+  offered if the popup **actually appeared**.
+
+The long-standing "check for updates at launch" switch also turns this popup off: it is a setting
+users read as global, and it is.
 
 ### Profiles
 - Profile list with apply, set as default, edit and delete
@@ -1043,13 +1159,15 @@ MG4Control/
 │   │   ├── service/
 │   │   │   ├── MG4ControlService.kt   # Foreground service (boot, shortcuts, external API)
 │   │   │   ├── ProfilePickerOverlay.kt# Floating profile picker
-│   │   │   └── ProfileConfirmOverlay.kt # YES/NO confirmation for automations
+│   │   │   ├── ProfileConfirmOverlay.kt # YES/NO confirmation for automations
+│   │   │   └── UpdateOverlay.kt      # "Update available" popup on the vehicle screen
 │   │   │
 │   │   ├── receiver/
 │   │   │   └── BootReceiver.kt        # System boot receiver
 │   │   │
 │   │   ├── util/
 │   │   │   ├── FirmwareInfo.kt        # Firmware detection + forced mode
+│   │   │   ├── GarageMode.kt          # Garage mode — puts every automatism to sleep
 │   │   │   ├── FirmwareHelper.kt      # Full firmware version string reader (async)
 │   │   │   ├── LocaleHelper.kt        # Language management (6 languages)
 │   │   │   ├── ThemeHelper.kt         # Auto / dark / light theme
@@ -1058,6 +1176,7 @@ MG4Control/
 │   │   ├── update/
 │   │   │   ├── UpdateChecker.kt       # GitHub release check (stable and beta)
 │   │   │   ├── UpdateDialogManager.kt # Update dialog + DownloadManager
+│   │   │   ├── UpdateNotifier.kt     # When to announce an update on the vehicle screen
 │   │   │   ├── UpdateInfo.kt          # Description of an available version
 │   │   │   ├── ApkSecurity.kt         # Signature check of the downloaded APK
 │   │   │   ├── ApkInstaller.kt        # Installation
