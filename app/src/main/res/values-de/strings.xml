@@ -412,6 +412,14 @@
     <string name="adv_sc_none">keine</string>
     <string name="shortcuts_cat_classic">Tastenkürzel</string>
     <string name="adv_sc_list_title">Kürzelliste</string>
+
+    <!-- Cycle de régénération personnalisable -->
+    <string name="shortcuts_cat_regen_cycle">Regen-Zyklus</string>
+    <string name="shortcuts_cfg_regen_cycle">Rekuperationszyklus</string>
+    <string name="shortcuts_cfg_regen_hint">Tippen Sie die Stufen in der gewünschten Reihenfolge an.</string>
+    <string name="shortcuts_cfg_regen_summary">Zyklus: %1$s</string>
+    <string name="shortcuts_cfg_regen_reset">Zurücksetzen</string>
+    <string name="shortcuts_cfg_regen_min">Ein Zyklus braucht mindestens zwei Stufen.</string>
     <string name="adv_sc_new">Neues Kürzel</string>
     <string name="adv_sc_step_key">1 · Taste</string>
     <string name="adv_sc_step_press">2 · Druckart</string>

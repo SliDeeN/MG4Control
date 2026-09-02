@@ -2,6 +2,7 @@ package com.mg4.control.model
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -46,5 +47,47 @@ class RegenCycleTest {
     fun `1 Pedale reste hors du cycle`() {
         assertFalse(RegenLevel.ONE_PEDAL in RegenLevel.CYCLE_ORDER)
         assertFalse(RegenLevel.OFF in RegenLevel.CYCLE_ORDER)
+    }
+
+    // ── Cycle composé par l'utilisateur ────────────────────────────────────
+
+    @Test
+    fun `une sequence choisie est parcourue dans son ordre`() {
+        // L'ordre du cycle est celui des appuis de l'utilisateur, PAS celui de l'enum : c'est
+        // exactement ce qu'un parcours arithmétique sur les valeurs ferait échouer.
+        val ordre = listOf(RegenLevel.HIGH, RegenLevel.LOW, RegenLevel.ADAPTIVE)
+        assertEquals(RegenLevel.LOW,      RegenLevel.nextInCycle(RegenLevel.HIGH, ordre))
+        assertEquals(RegenLevel.ADAPTIVE, RegenLevel.nextInCycle(RegenLevel.LOW, ordre))
+        assertEquals(RegenLevel.HIGH,     RegenLevel.nextInCycle(RegenLevel.ADAPTIVE, ordre))
+    }
+
+    @Test
+    fun `1 Pedale peut figurer dans une sequence choisie`() {
+        // Hors du cycle PAR DÉFAUT, mais rien n'interdit de le vouloir dans le sien.
+        val ordre = listOf(RegenLevel.LOW, RegenLevel.ONE_PEDAL)
+        assertEquals(RegenLevel.ONE_PEDAL, RegenLevel.nextInCycle(RegenLevel.LOW, ordre))
+        assertEquals(RegenLevel.LOW,       RegenLevel.nextInCycle(RegenLevel.ONE_PEDAL, ordre))
+    }
+
+    @Test
+    fun `un niveau absent de la sequence entre par le premier cran`() {
+        // Cas réel : la voiture est sur un mode que l'utilisateur a retiré de son cycle. Ne
+        // rien faire passerait pour une panne du raccourci.
+        val ordre = listOf(RegenLevel.HIGH, RegenLevel.ADAPTIVE)
+        assertEquals(RegenLevel.HIGH, RegenLevel.nextInCycle(RegenLevel.MEDIUM, ordre))
+    }
+
+    @Test
+    fun `une sequence vide retombe sur l ordre d origine`() {
+        // Aucun mode à écrire : mieux vaut le cycle d'origine qu'une touche sans effet.
+        assertEquals(RegenLevel.MEDIUM, RegenLevel.nextInCycle(RegenLevel.LOW, emptyList()))
+    }
+
+    @Test
+    fun `les modes proposables excluent Off et contiennent 1 Pedale`() {
+        assertFalse("Off n'est pas un cran de dosage",
+            RegenLevel.OFF in RegenLevel.CYCLE_SELECTABLE)
+        assertTrue("1 Pédale doit pouvoir être choisi",
+            RegenLevel.ONE_PEDAL in RegenLevel.CYCLE_SELECTABLE)
     }
 }

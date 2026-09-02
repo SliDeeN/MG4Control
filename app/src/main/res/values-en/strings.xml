@@ -412,6 +412,14 @@
     <string name="adv_sc_none">none</string>
     <string name="shortcuts_cat_classic">Shortcuts</string>
     <string name="adv_sc_list_title">Shortcut list</string>
+
+    <!-- Cycle de régénération personnalisable -->
+    <string name="shortcuts_cat_regen_cycle">Regen cycle</string>
+    <string name="shortcuts_cfg_regen_cycle">Regeneration cycle</string>
+    <string name="shortcuts_cfg_regen_hint">Tap the modes in the order you want to cycle through them.</string>
+    <string name="shortcuts_cfg_regen_summary">Cycle: %1$s</string>
+    <string name="shortcuts_cfg_regen_reset">Reset</string>
+    <string name="shortcuts_cfg_regen_min">A cycle needs at least two modes.</string>
     <string name="adv_sc_new">New shortcut</string>
     <string name="adv_sc_step_key">1 · Key</string>
     <string name="adv_sc_step_press">2 · Press type</string>

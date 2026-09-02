@@ -23,15 +23,34 @@ enum class RegenLevel(val value: Int, val label: String) {
         val CYCLE_ORDER = listOf(LOW, MEDIUM, HIGH, ADAPTIVE)
 
         /**
-         * Niveau suivant dans [CYCLE_ORDER], en rebouclant à la fin.
+         * Modes qu'on accepte de voir figurer dans un cycle composé par l'utilisateur.
          *
-         * Un niveau hors cycle ([OFF] ou [ONE_PEDAL]) fait entrer par le premier cran : sur une
-         * touche de volant, ne rien faire passerait pour une panne.
+         * [ONE_PEDAL] en fait partie : il reste hors du cycle PAR DÉFAUT ci-dessus, mais rien
+         * n'interdit à quelqu'un de le vouloir dans sa séquence — c'est un mode de conduite qui
+         * s'écrit exactement comme les autres.
+         *
+         * [OFF] non : couper la régénération n'est pas un cran de dosage, le launcher d'origine
+         * ne le propose pas davantage, et le traverser à chaque tour serait subi plus que choisi.
          */
-        fun nextInCycle(current: RegenLevel): RegenLevel {
-            val idx = CYCLE_ORDER.indexOf(current)
-            return if (idx < 0) CYCLE_ORDER.first()
-                   else CYCLE_ORDER[(idx + 1) % CYCLE_ORDER.size]
+        val CYCLE_SELECTABLE = listOf(LOW, MEDIUM, HIGH, ADAPTIVE, ONE_PEDAL)
+
+        /**
+         * Niveau suivant dans le cycle, en rebouclant à la fin.
+         *
+         * [order] est la séquence à parcourir — [CYCLE_ORDER] par défaut, ou celle que
+         * l'utilisateur a composée (voir `RegenCycle`). Une séquence vide retombe sur l'ordre
+         * d'origine : un cycle sans mode ne pourrait produire aucun niveau à écrire.
+         *
+         * Un niveau absent du cycle (parce qu'il n'y figure pas, ou plus) fait entrer par le
+         * premier cran : sur une touche de volant, ne rien faire passerait pour une panne.
+         */
+        fun nextInCycle(
+            current: RegenLevel,
+            order: List<RegenLevel> = CYCLE_ORDER
+        ): RegenLevel {
+            val cycle = if (order.isEmpty()) CYCLE_ORDER else order
+            val idx = cycle.indexOf(current)
+            return if (idx < 0) cycle.first() else cycle[(idx + 1) % cycle.size]
         }
     }
 }

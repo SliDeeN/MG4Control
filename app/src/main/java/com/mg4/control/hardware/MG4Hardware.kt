@@ -4226,6 +4226,47 @@ object MG4Hardware {
      * 4. **La touche média Android**, dernier recours : c'est la seule voie sur les firmwares A9,
      *    où ce service SAIC n'existe pas, et la seule qui atteigne une session Bluetooth.
      */
+    /** `getCurrentAudioType` de `ICarAudioService` (A9). */
+    private const val AUDIO_GET_CURRENT_TYPE = 0x2c
+
+    /**
+     * SONDE — source audio déclarée par le véhicule sur A9, ou `null` si indisponible.
+     *
+     * Elle ne sert encore À RIEN dans les décisions : elle est là pour être relevée dans les
+     * rapports, parce qu'il nous manque une information et une seule.
+     *
+     * Le problème mesuré sur SWI132 : quand un téléphone est connecté, la session Bluetooth et
+     * celle de la radio se déclarent **toutes deux en lecture**. Relevé sur un essai radio :
+     * 18 fois la radio retenue, 16 fois le Bluetooth — un tirage au sort. Départager par
+     * l'ordre de la liste ne peut pas marcher.
+     *
+     * `getCurrentAudioType` est la seule source qui sache dire quelle source est réellement
+     * audible. Il reste à apprendre son espace de valeurs : d'où cette lecture, journalisée
+     * dans les cas ambigus et dans le rapport de diagnostic. Deux rapports — un sur radio, un
+     * sur Bluetooth — suffiront à établir la table, et l'aiguillage deviendra déterministe.
+     *
+     * ⚠️ Absent du launcher SWI131 (interface plus ancienne, 0x2c hors plage) : la transaction
+     * y est rejetée sans effet de bord. Vérifié dans le smali avant d'oser l'appel.
+     */
+    private fun typeAudioCourant(): Int? {
+        if (!isA9Sound()) return null
+        val h = sAudioHelper ?: return null
+        if (!h.isBinderAlive) return null
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        return try {
+            data.writeInterfaceToken(sAudioDescriptor)
+            if (!h.transact(AUDIO_GET_CURRENT_TYPE, data, reply, 0)) return null
+            reply.readException()
+            reply.readInt()
+        } catch (e: Exception) {
+            null
+        } finally {
+            data.recycle()
+            reply.recycle()
+        }
+    }
+
     /**
      * Une session est-elle en lecture ? `null` si on ne peut pas les consulter.
      *
@@ -4275,7 +4316,16 @@ object MG4Hardware {
             return false
         }
 
-        val joue = sessions.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+        // SONDE : plusieurs sessions qui se déclarent en lecture EN MÊME TEMPS, c'est le cas
+        // qu'on ne sait pas trancher. On le journalise avec le type audio du véhicule — le
+        // choix ci-dessous, lui, est inchangé.
+        val enLecture = sessions.filter { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+        if (enLecture.size > 1) {
+            AppLogger.w(MEDIA_TAG, "AMBIGU : ${enLecture.size} sessions se déclarent en lecture " +
+                "(${enLecture.joinToString { it.packageName ?: "?" }}) — type audio véhicule = " +
+                "${typeAudioCourant() ?: "non exposé"} — retenue : ${enLecture[0].packageName}")
+        }
+        val joue = enLecture.firstOrNull()
         val cible = joue
             ?: if (cmd == CmdMedia.LECTURE_PAUSE)
                    // ⚠️ Pour REPRENDRE, on ne demande pas un état précis mais une CAPACITÉ.
@@ -4587,6 +4637,9 @@ object MG4Hardware {
         val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         AppLogger.i(MEDIA_TAG, "── DIAG média ────────────────────────────────")
         AppLogger.i(MEDIA_TAG, "lecture en cours (isMusicActive) = ${am?.isMusicActive}")
+        // Type audio déclaré par le véhicule (A9). À relever une fois par source pour établir
+        // la table — voir [typeAudioCourant].
+        AppLogger.i(MEDIA_TAG, "type audio véhicule (A9) = ${typeAudioCourant() ?: "non exposé"}")
 
         // Sessions média : c'est ce qui a montré que les touches média ne pouvaient pas aboutir.
         try {

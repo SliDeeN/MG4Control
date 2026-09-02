@@ -35,6 +35,7 @@ import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.ThemeHelper
@@ -575,10 +576,16 @@ class MG4ControlService : Service() {
                         "imposé par le véhicule")
                     return
                 }
-                // L'ordre du cycle vit à côté de l'enum, où se trouve le piège : l'ordre de
+                // La séquence est celle que l'utilisateur a composée, et à défaut l'ordre
+                // d'origine. Elle est relue À CHAQUE APPUI : le réglage vit dans un autre écran,
+                // et le service n'est pas redémarré quand on le modifie.
+                //
+                // L'ordre par défaut vit à côté de l'enum, où se trouve le piège : l'ordre de
                 // déclaration n'est pas l'ordre d'usage. Il y est couvert par des tests.
-                val suivant = RegenLevel.nextInCycle(actuel)
-                AppLogger.i(TAG, "SHORTCUT régénération : ${actuel.label} → ${suivant.label}")
+                val ordre   = RegenCycle.order(this)
+                val suivant = RegenLevel.nextInCycle(actuel, ordre)
+                AppLogger.i(TAG, "SHORTCUT régénération : ${actuel.label} → ${suivant.label} " +
+                    "(cycle ${ordre.joinToString("/") { it.label }})")
                 MG4Hardware.setRegenLevel(suivant)
             }
 

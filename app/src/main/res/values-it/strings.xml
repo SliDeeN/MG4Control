@@ -412,6 +412,14 @@
     <string name="adv_sc_none">nessuno</string>
     <string name="shortcuts_cat_classic">Scorciatoie</string>
     <string name="adv_sc_list_title">Elenco scorciatoie</string>
+
+    <!-- Cycle de régénération personnalisable -->
+    <string name="shortcuts_cat_regen_cycle">Ciclo regen</string>
+    <string name="shortcuts_cfg_regen_cycle">Ciclo di rigenerazione</string>
+    <string name="shortcuts_cfg_regen_hint">Tocca le modalità nell\'ordine in cui vuoi scorrerle.</string>
+    <string name="shortcuts_cfg_regen_summary">Ciclo: %1$s</string>
+    <string name="shortcuts_cfg_regen_reset">Ripristina</string>
+    <string name="shortcuts_cfg_regen_min">Un ciclo richiede almeno due modalità.</string>
     <string name="adv_sc_new">Nuova scorciatoia</string>
     <string name="adv_sc_step_key">1 · Tasto</string>
     <string name="adv_sc_step_press">2 · Tipo di pressione</string>

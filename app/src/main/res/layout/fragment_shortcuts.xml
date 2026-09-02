@@ -87,6 +87,25 @@
                 app:strokeColor="@color/dash_border"
                 app:cornerRadius="8dp" />
 
+            <!-- Sous-entrée conditionnelle : n'apparaît que si la fonction « cycle de
+                 régénération » est attribuée à un bouton, ou en cours de sélection dans le
+                 formulaire. Même retrait que la liste, dont elle partage la place. -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_sc_sub_regen"
+                android:layout_marginStart="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/shortcuts_cat_regen_cycle"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                android:textAllCaps="true"
+                android:visibility="gone"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_sc_sub_list"
                 android:layout_marginStart="16dp"
@@ -643,6 +662,95 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:orientation="vertical" />
+
+                </LinearLayout>
+
+                <!-- ═══ Cycle de régénération — séquence composée par l'utilisateur ═══ -->
+                <!-- Page du sous-onglet : le rail la révèle quand la fonction est attribuée,
+                     et la retire dès qu'elle ne l'est plus (voir bindCategoryRail). -->
+                <LinearLayout
+                    android:id="@+id/page_sc_regen"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_card_rounded"
+                        android:layout_marginEnd="5dp"
+                        android:paddingBottom="12dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/shortcuts_cfg_regen_cycle"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.10"
+                            android:textAllCaps="true"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="8dp" />
+
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/dash_border" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/shortcuts_cfg_regen_hint"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp">
+
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_regen_cycle_low" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:text="@string/regen_low" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_regen_cycle_medium" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:text="@string/regen_medium" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_regen_cycle_high" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:text="@string/regen_high" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_regen_cycle_adaptive" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:text="@string/regen_adaptive_short" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_regen_cycle_one_pedal" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:text="@string/regen_one_pedal_short" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_regen_cycle_summary"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="16sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_regen_cycle_reset"
+                            android:layout_width="wrap_content"
+                            android:layout_height="52dp"
+                            android:layout_gravity="end"
+                            android:layout_marginTop="10dp"
+                            android:layout_marginEnd="14dp"
+                            android:text="@string/shortcuts_cfg_regen_reset"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp"
+                            app:backgroundTint="@color/bg_button"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="8dp" />
+
+                    </LinearLayout>
 
                 </LinearLayout>
 

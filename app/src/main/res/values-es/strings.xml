@@ -412,6 +412,14 @@
     <string name="adv_sc_none">ninguna</string>
     <string name="shortcuts_cat_classic">Atajos</string>
     <string name="adv_sc_list_title">Lista de atajos</string>
+
+    <!-- Cycle de régénération personnalisable -->
+    <string name="shortcuts_cat_regen_cycle">Ciclo regen</string>
+    <string name="shortcuts_cfg_regen_cycle">Ciclo de regeneración</string>
+    <string name="shortcuts_cfg_regen_hint">Toque los modos en el orden en que desea recorrerlos.</string>
+    <string name="shortcuts_cfg_regen_summary">Ciclo: %1$s</string>
+    <string name="shortcuts_cfg_regen_reset">Restablecer</string>
+    <string name="shortcuts_cfg_regen_min">Un ciclo necesita al menos dos modos.</string>
     <string name="adv_sc_new">Nuevo atajo</string>
     <string name="adv_sc_step_key">1 · Tecla</string>
     <string name="adv_sc_step_press">2 · Tipo de pulsación</string>

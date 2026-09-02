@@ -122,7 +122,16 @@ d'appui**, la **fonction**, puis *Modifier* et *Supprimer*. Réattribuer un bout
 le même type d'appui demande confirmation et nomme la fonction qui va être remplacée.
 
 Les réglages associés à une action ne s'affichent que si cette action est réellement attribuée
-(niveau de repli du mode 1 Pédale, crans du cycle ADAS).
+(niveau de repli du mode 1 Pédale, crans du cycle ADAS). Le **cycle de régénération** va plus loin :
+dès que la fonction est attribuée — ou même simplement choisie dans le formulaire avancé — une
+sous-entrée apparaît dans le rail de gauche et ouvre sa propre page.
+
+On y compose la séquence parcourue par la touche : toucher un mode l'ajoute **en fin de cycle**,
+le toucher à nouveau le retire, et l'ordre des appuis est celui du cycle. Les cinq modes proposés
+sont Faible, Moyen, Fort, Adaptatif et 1 Pédale ; deux au minimum, faute de quoi le raccourci
+n'aurait plus rien à parcourir après le premier appui. Le réglage est **global** — la même
+séquence pour tous les boutons qui déclenchent la fonction — et sans réglage, le comportement
+d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
 
 ### Automatisation
 - **Application d'un profil selon la température extérieure** : seuil, sens
@@ -254,7 +263,7 @@ MG4Control/
 │   │   ├── model/
 │   │   │   ├── DrivingProfile.kt      # Modèle de données d'un profil
 │   │   │   ├── DriveMode.kt           # Enum modes de conduite (ECO/NORMAL/SPORT/SNOW/CUSTOM)
-│   │   │   ├── RegenLevel.kt          # Enum niveaux de régénération + ordre d'usage du cycle
+│   │   │   ├── RegenLevel.kt          # Enum niveaux de régénération + ordre du cycle par défaut
 │   │   │   └── ProfileBackup.kt       # Format de la sauvegarde véhicule
 │   │   │
 │   │   ├── profile/
@@ -271,6 +280,7 @@ MG4Control/
 │   │   │   └── AdvancedShortcuts.kt   # Stockage (touche, type d'appui) → action
 │   │   │
 │   │   ├── shortcut/
+│   │   │   ├── RegenCycle.kt          # Séquence du cycle de régénération choisie par l'utilisateur
 │   │   │   └── ShortcutAction.kt      # Catalogue des actions, partagé par les deux systèmes
 │   │   │
 │   │   ├── bluetooth/
@@ -843,7 +853,16 @@ Each row of the advanced list shows the **button** (name and code), the **press 
 asks for confirmation and names the action about to be replaced.
 
 Settings attached to an action appear only when that action is actually assigned (One Pedal
-fallback level, ADAS cycle notches).
+fallback level, ADAS cycle notches). The **regeneration cycle** goes further: as soon as the action
+is assigned — or merely picked in the advanced form — a sub-entry appears in the left rail and
+opens a page of its own.
+
+There you compose the sequence the key walks through: tapping a mode appends it **at the end of the
+cycle**, tapping it again removes it, and the order of your taps is the order of the cycle. The five
+modes on offer are Low, Medium, High, Adaptive and One Pedal; two at the very least, otherwise the
+shortcut would have nothing left to walk through after the first press. The setting is **global** —
+the same sequence for every button triggering the action — and with no setting at all, the original
+behaviour stands unchanged (Low → Medium → High → Adaptive).
 
 ### Automation
 - **Apply a profile from the outside temperature**: threshold, direction (below/above), profile to
@@ -971,7 +990,7 @@ MG4Control/
 │   │   ├── model/
 │   │   │   ├── DrivingProfile.kt      # Profile data model
 │   │   │   ├── DriveMode.kt           # Drive mode enum (ECO/NORMAL/SPORT/SNOW/CUSTOM)
-│   │   │   ├── RegenLevel.kt          # Regen level enum + shortcut cycle order
+│   │   │   ├── RegenLevel.kt          # Regen level enum + default shortcut cycle order
 │   │   │   └── ProfileBackup.kt       # Vehicle backup format
 │   │   │
 │   │   ├── profile/
@@ -988,6 +1007,7 @@ MG4Control/
 │   │   │   └── AdvancedShortcuts.kt   # Storage for (key, press type) → action
 │   │   │
 │   │   ├── shortcut/
+│   │   │   ├── RegenCycle.kt          # User-composed regeneration cycle sequence
 │   │   │   └── ShortcutAction.kt      # Action catalogue, shared by both systems
 │   │   │
 │   │   ├── bluetooth/
