@@ -107,7 +107,7 @@ Actions disponibles — celles qui dépendent du firmware n'apparaissent pas sur
 
 | Catégorie | Actions |
 |---|---|
-| Conduite | 1 Pédale · Régénération : niveau suivant · Éco. énergie |
+| Conduite | 1 Pédale · Cycle Régénération Personnalisé · Éco. énergie |
 | Sécurité | ESC · Somnolence · Somnolence : sensibilité · Système Anticollision · ADAS · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son |
 | Confort | Siège chauffant gauche · Siège chauffant droit · Volant chauffant · Clim ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant · Dégivrage arrière · Recirculation · Luminosité ± |
 | Média | Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume - |
@@ -121,16 +121,17 @@ La liste des raccourcis avancés affiche pour chaque ligne le **bouton** (nom et
 d'appui**, la **fonction**, puis *Modifier* et *Supprimer*. Réattribuer un bouton déjà utilisé sur
 le même type d'appui demande confirmation et nomme la fonction qui va être remplacée.
 
-Les réglages associés à une action ne s'affichent que si cette action est réellement attribuée
-(niveau de repli du mode 1 Pédale, crans du cycle ADAS). Le **cycle de régénération** va plus loin :
-dès que la fonction est attribuée — ou même simplement choisie dans le formulaire avancé — une
-sous-entrée apparaît dans le rail de gauche et ouvre sa propre page.
+Les trois réglages d'action — **repli du mode 1 Pédale**, **crans du cycle ADAS** et **cycle de
+régénération** — ont chacun leur page, révélée dans le rail de gauche dès que la fonction est
+attribuée à un bouton. Peu importe par quelle voie : emplacement classique, raccourci avancé, ou
+fonction simplement sélectionnée dans le formulaire avancé, avant même la création du raccourci.
 
-On y compose la séquence parcourue par la touche : toucher un mode l'ajoute **en fin de cycle**,
+Le cycle de régénération se compose sur sa page : toucher un mode l'ajoute **en fin de cycle**,
 le toucher à nouveau le retire, et l'ordre des appuis est celui du cycle. Les cinq modes proposés
-sont Faible, Moyen, Fort, Adaptatif et 1 Pédale ; deux au minimum, faute de quoi le raccourci
-n'aurait plus rien à parcourir après le premier appui. Le réglage est **global** — la même
-séquence pour tous les boutons qui déclenchent la fonction — et sans réglage, le comportement
+sont Faible, Moyen, Fort, Adaptatif et 1 Pédale. On peut tout effacer pour recomposer de zéro ;
+rien n'est enregistré avant *Sauvegarder*, qui reste grisé sous deux modes — en dessous, le
+raccourci n'aurait plus rien à parcourir après le premier appui. Le réglage est **global** — la
+même séquence pour tous les boutons qui déclenchent la fonction — et sans réglage, le comportement
 d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
 
 ### Automatisation
@@ -838,7 +839,7 @@ Available actions — those depending on the firmware do not show up on the othe
 
 | Category | Actions |
 |---|---|
-| Driving | One Pedal · Regeneration: next level · Energy saving |
+| Driving | One Pedal · Custom Regeneration Cycle · Energy saving |
 | Safety | ESC · Drowsiness · Drowsiness: sensitivity · Forward collision · ADAS · Traffic signs (TSR) · Overspeed alert · Speed limit change alert · Sound |
 | Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Brightness ± |
 | Media | Play / Pause · Next track · Previous track · Volume + · Volume - |
@@ -852,14 +853,15 @@ Each row of the advanced list shows the **button** (name and code), the **press 
 **action**, then *Edit* and *Delete*. Reassigning a button already used with the same press type
 asks for confirmation and names the action about to be replaced.
 
-Settings attached to an action appear only when that action is actually assigned (One Pedal
-fallback level, ADAS cycle notches). The **regeneration cycle** goes further: as soon as the action
-is assigned — or merely picked in the advanced form — a sub-entry appears in the left rail and
-opens a page of its own.
+The three action settings — **One Pedal fallback**, **ADAS cycle notches** and the **regeneration
+cycle** — each get their own page, revealed in the left rail as soon as the action is assigned to a
+button. However it was assigned: a classic slot, an advanced shortcut, or an action merely selected
+in the advanced form, before the shortcut even exists.
 
-There you compose the sequence the key walks through: tapping a mode appends it **at the end of the
+The regeneration cycle is composed on its page: tapping a mode appends it **at the end of the
 cycle**, tapping it again removes it, and the order of your taps is the order of the cycle. The five
-modes on offer are Low, Medium, High, Adaptive and One Pedal; two at the very least, otherwise the
+modes on offer are Low, Medium, High, Adaptive and One Pedal. You can clear everything and start
+over; nothing is stored until *Save*, which stays greyed out below two modes — under that, the
 shortcut would have nothing left to walk through after the first press. The setting is **global** —
 the same sequence for every button triggering the action — and with no setting at all, the original
 behaviour stands unchanged (Low → Medium → High → Adaptive).

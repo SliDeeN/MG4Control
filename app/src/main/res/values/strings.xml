@@ -416,11 +416,15 @@
     <string name="adv_sc_list_title">Liste des raccourcis</string>
 
     <!-- Cycle de régénération personnalisable -->
+    <string name="shortcuts_cat_onepedal">1 Pédale</string>
+    <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Cycle regen</string>
     <string name="shortcuts_cfg_regen_cycle">Cycle de régénération</string>
-    <string name="shortcuts_cfg_regen_hint">Touchez les modes dans l\'ordre où vous voulez les parcourir.</string>
+    <string name="shortcuts_cfg_regen_hint">Touchez les modes dans l\'ordre où vous voulez les parcourir, puis enregistrez.</string>
     <string name="shortcuts_cfg_regen_summary">Cycle : %1$s</string>
-    <string name="shortcuts_cfg_regen_reset">Réinitialiser</string>
+    <string name="shortcuts_cfg_regen_clear">Tout effacer</string>
+    <string name="shortcuts_cfg_regen_save">Sauvegarder</string>
+    <string name="shortcuts_cfg_regen_saved">Cycle enregistré</string>
     <string name="shortcuts_cfg_regen_min">Un cycle demande au moins deux modes.</string>
     <string name="adv_sc_new">Nouveau raccourci</string>
     <string name="adv_sc_step_key">1 · Touche</string>
@@ -447,7 +451,7 @@
     <string name="shortcuts_action_hvac_fan_down">Clim : ventilation -</string>
 
     <!-- Raccourcis : confort et affichage -->
-    <string name="shortcuts_action_regen_cycle">Régénération : niveau suivant</string>
+    <string name="shortcuts_action_regen_cycle">Cycle Régénération Personnalisé</string>
     <string name="shortcuts_action_seat_heat_left">Siège chauffant gauche : cycle</string>
     <string name="shortcuts_action_seat_heat_right">Siège chauffant droit : cycle</string>
     <string name="shortcuts_action_steering_heat">Volant chauffant (ON/OFF)</string>

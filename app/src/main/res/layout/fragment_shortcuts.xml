@@ -87,6 +87,42 @@
                 app:strokeColor="@color/dash_border"
                 app:cornerRadius="8dp" />
 
+            <!-- Les trois sous-entrées de réglage suivent toutes la même règle : elles
+                 n'existent que si leur fonction est attribuée à un bouton, d'où qu'elle le
+                 soit — emplacement classique, raccourci avancé, ou simple sélection en cours
+                 dans le formulaire. Voir actionEnJeu(). -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_sc_sub_onepedal"
+                android:layout_marginStart="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/shortcuts_cat_onepedal"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                android:textAllCaps="true"
+                android:visibility="gone"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_sc_sub_adas"
+                android:layout_marginStart="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/shortcuts_cat_adas"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                android:textAllCaps="true"
+                android:visibility="gone"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
             <!-- Sous-entrée conditionnelle : n'apparaît que si la fonction « cycle de
                  régénération » est attribuée à un bouton, ou en cours de sélection dans le
                  formulaire. Même retrait que la liste, dont elle partage la place. -->
@@ -143,9 +179,9 @@
                 android:paddingTop="14dp">
 
                 <!-- ═══════════ BOUTONS ═══════════ -->
-                <!-- Onglet « Raccourcis » : les deux sections historiques (boutons + réglages des
-                     actions) réunies en une page qui défile. Leurs conteneurs sont CONSERVÉS tels quels
-                     pour ne casser aucun identifiant ni aucun câblage existant. -->
+                <!-- Onglet « Raccourcis » : les emplacements, et eux seuls. Les réglages des
+                     actions ont quitté cette page pour la leur — voir plus bas — parce qu'ici ils
+                     n'apparaissaient que pour les emplacements classiques. -->
                 <LinearLayout
                     android:id="@+id/page_sc_classic"
                     android:layout_width="match_parent"
@@ -254,16 +290,16 @@
                 </LinearLayout>
             </LinearLayout>
                 </LinearLayout>
+                </LinearLayout>
 
-                <!-- ═══════════ ACTIONS ═══════════ -->
-                <!-- Chaque bloc n'apparait que si l'action correspondante est attribuee a un
-                     bouton : sinon ce sont des reglages sans effet. Si aucune ne l'est,
-                     l'onglet entier disparait (garde de page vide du rail). -->
+                <!-- ═══ Config : 1 Pédale — page de sous-onglet ═══ -->
+                <!-- Ces réglages vivaient dans la page « Raccourcis », révélés par une fonction
+                     qui ne consultait QUE les quatre emplacements classiques : les attribuer
+                     depuis l'onglet avancé n'affichait donc jamais leur réglage. Chacun a
+                     désormais sa page, révélée par le rail selon la même règle que le cycle. -->
                 <LinearLayout
-                    android:id="@+id/page_sc_actions"
-                    android:divider="@drawable/spacer_v12"
-                    android:showDividers="middle"
-                                        android:layout_width="match_parent"
+                    android:id="@+id/page_sc_onepedal"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:visibility="gone">
@@ -312,15 +348,26 @@
                 </LinearLayout>
             </LinearLayout>
 
+                </LinearLayout>
+
+                <!-- ═══ Config : ADAS — page de sous-onglet ═══ -->
+                <LinearLayout
+                    android:id="@+id/page_sc_adas"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
             <!-- ── Config : ADAS ─────────────────────────────────────── -->
+            <!-- Plus de visibilité propre : c'est la page qui décide, et le firmware qui n'a
+                 pas l'ADAS n'ouvre simplement jamais cette page (voir adasSupported). -->
             <LinearLayout
                 android:id="@+id/config_adas_section"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/bg_card_rounded"
-                android:layout_marginStart="5dp"
-                android:visibility="gone">
+                android:layout_marginEnd="5dp">
 
                 <TextView
                     android:layout_width="match_parent"
@@ -385,7 +432,6 @@
                 </LinearLayout>
 
             </LinearLayout>
-                </LinearLayout>
                 </LinearLayout>
 
 
@@ -735,20 +781,44 @@
                             android:paddingEnd="14dp"
                             android:paddingTop="12dp" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_regen_cycle_reset"
-                            android:layout_width="wrap_content"
-                            android:layout_height="52dp"
-                            android:layout_gravity="end"
+                        <!-- Rien n'est enregistré tant que « Sauvegarder » n'a pas été touché :
+                             on peut donc tout défaire et recomposer librement, y compris passer
+                             par une sélection vide. Le bouton reste grisé sous deux modes. -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="end"
                             android:layout_marginTop="10dp"
-                            android:layout_marginEnd="14dp"
-                            android:text="@string/shortcuts_cfg_regen_reset"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="16sp"
-                            app:backgroundTint="@color/bg_button"
-                            app:strokeWidth="1dp"
-                            app:strokeColor="@color/dash_border"
-                            app:cornerRadius="8dp" />
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_regen_cycle_clear"
+                                android:layout_width="wrap_content"
+                                android:layout_height="52dp"
+                                android:text="@string/shortcuts_cfg_regen_clear"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_regen_cycle_save"
+                                android:layout_width="wrap_content"
+                                android:layout_height="52dp"
+                                android:layout_marginStart="8dp"
+                                android:text="@string/shortcuts_cfg_regen_save"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                        </LinearLayout>
 
                     </LinearLayout>
 

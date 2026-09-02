@@ -72,9 +72,15 @@ class ShortcutsFragment : Fragment() {
      * Fonction sélectionnée dans le formulaire des raccourcis avancés, avant création.
      *
      * Champ et non variable locale : le rail doit pouvoir la consulter pour révéler le réglage
-     * d'une fonction PENDANT qu'on compose le raccourci — voir [regenCycleAttribue].
+     * d'une fonction PENDANT qu'on compose le raccourci — voir [actionEnJeu].
      */
     private var actionChoisie: ShortcutAction? = null
+
+    /** Rejoue l'affichage de la page du cycle (état des modes, du résumé et du bouton). */
+    private var majCycleRegen: (() -> Unit)? = null
+
+    /** Repart de la séquence ENREGISTRÉE, en jetant une composition non sauvegardée. */
+    private var rechargerCycleRegen: (() -> Unit)? = null
 
     // ── Par-spinner : label list mutable + adapter + vue ─────────────────
     private val spinnerLabelLists = mutableMapOf<String, MutableList<String>>()
@@ -186,9 +192,8 @@ class ShortcutsFragment : Fragment() {
         setupRegenCycle(view)
         restoreState()
 
-        // En dernier : le rail compte les sections visibles, il doit donc voir l'état final.
+        // En dernier : le rail décide quelles pages existent, il lui faut l'état final.
         rootView = view
-        refreshActionConfigVisibility()
         bindCategoryRail(view)
     }
 
@@ -230,6 +235,8 @@ class ShortcutsFragment : Fragment() {
         // appelants (spinner avancé, création, suppression), donc plusieurs occasions d'être
         // invoquée après la destruction de la vue si on la laissait en place.
         reselectTabs = null
+        majCycleRegen = null
+        rechargerCycleRegen = null
         rootView = null
         super.onDestroyView()
     }
@@ -610,58 +617,36 @@ class ShortcutsFragment : Fragment() {
     }
 
     /**
-     * N'affiche un réglage d'action que si l'action est réellement attribuée à un bouton :
-     * régler le niveau de retour du mode 1 pédale n'a aucun sens si aucun bouton ne le déclenche.
+     * Une fonction est-elle attribuée à un bouton, et donc son réglage utile ?
      *
-     * Appelée au démarrage ET à chaque changement de sélection dans un spinner — sinon le réglage
-     * n'apparaîtrait qu'au prochain passage sur l'écran.
-     */
-    private fun refreshActionConfigVisibility() {
-        val view = rootView ?: return
-        val assigned = slotPressList.map { ShortcutAction.fromId(prefs.getInt("shortcut_$it", 0)) }
-
-        val showOnePedal = assigned.any { it == ShortcutAction.ONE_PEDAL }
-        val showAdas     = adasSupported && assigned.any { it == ShortcutAction.ADAS_CYCLE }
-
-        view.findViewById<View>(R.id.config_onepedal_section)?.visibility =
-            if (showOnePedal) View.VISIBLE else View.GONE
-        view.findViewById<View>(R.id.config_adas_section)?.visibility =
-            if (showAdas) View.VISIBLE else View.GONE
-
-        // Avant, l'onglet « Actions » disparaissait quand il n'avait plus rien à montrer.
-        // Devenue une SECTION de la page Raccourcis, elle doit se masquer elle-même — sinon
-        // on afficherait un titre suivi de rien.
-        view.findViewById<View>(R.id.page_sc_actions)?.visibility =
-            if (showOnePedal || showAdas) View.VISIBLE else View.GONE
-
-        reselectTabs?.invoke()
-    }
-
-    /**
-     * La fonction « cycle de régénération » est-elle en jeu ?
+     * Trois sources, et il en faut trois :
+     *  • les emplacements classiques,
+     *  • les raccourcis avancés déjà créés — c'est celle qui manquait, et sans elle un réglage
+     *    attribué depuis l'onglet avancé n'apparaissait JAMAIS,
+     *  • la fonction en cours de sélection dans le formulaire avancé, parce que c'est LÀ que
+     *    l'utilisateur veut la régler : c'est le moment où il y pense.
      *
-     * Trois sources, et il en faut trois. Les emplacements classiques et les raccourcis avancés
-     * déjà créés, parce que le réglage doit rester atteignable une fois le raccourci posé. Et la
-     * fonction en cours de sélection dans le formulaire avancé, parce que c'est LÀ que
-     * l'utilisateur veut la régler — c'est le moment où il y pense.
-     *
-     * Le réglage est global : peu importe laquelle des trois répond, la séquence est la même
+     * Ces réglages sont globaux : peu importe laquelle des trois sources répond, le réglage vaut
      * pour tous les boutons qui déclenchent la fonction.
      */
-    private fun regenCycleAttribue(): Boolean {
-        if (actionChoisie == ShortcutAction.REGEN_CYCLE) return true
+    private fun actionEnJeu(action: ShortcutAction): Boolean {
+        if (actionChoisie == action) return true
         if (slotPressList.any {
-                ShortcutAction.fromId(prefs.getInt("shortcut_$it", 0)) == ShortcutAction.REGEN_CYCLE
+                ShortcutAction.fromId(prefs.getInt("shortcut_$it", 0)) == action
             }) return true
-        return AdvancedShortcuts.all(requireContext()).any { it.action == ShortcutAction.REGEN_CYCLE }
+        return AdvancedShortcuts.all(requireContext()).any { it.action == action }
     }
 
     /**
-     * Composition de la séquence parcourue par le raccourci « Régénération : niveau suivant ».
+     * Composition de la séquence parcourue par le raccourci « Cycle Régénération Personnalisé ».
      *
      * Le geste tient en un principe : l'ordre des appuis EST l'ordre du cycle. Toucher un mode
      * éteint l'ajoute en fin de séquence, toucher un mode allumé le retire. Pas de flèches, pas
      * de glisser-déposer — ni l'un ni l'autre ne se manient au volant.
+     *
+     * La composition est LIBRE, y compris vide, et rien n'est enregistré avant « Sauvegarder ».
+     * Le minimum de deux modes s'imposait auparavant à chaque geste : il fallait défaire pour
+     * refaire, ce qui rendait le choix des deux PREMIERS modes du cycle presque impraticable.
      */
     private fun setupRegenCycle(view: View) {
         val boutons = listOf(
@@ -674,9 +659,7 @@ class ShortcutsFragment : Fragment() {
             view.findViewById<MaterialButton>(id)?.let { it to niveau }
         }
         val resume = view.findViewById<TextView>(R.id.tv_regen_cycle_summary)
-
-        regenCycleSel.clear()
-        regenCycleSel.addAll(RegenCycle.order(requireContext()))
+        val save   = view.findViewById<MaterialButton>(R.id.btn_regen_cycle_save)
 
         val texteActif   = requireContext().getColor(R.color.text_active)
         val texteInactif = requireContext().getColor(R.color.text_secondary)
@@ -692,42 +675,46 @@ class ShortcutsFragment : Fragment() {
                 btn.backgroundTintList = ColorStateList.valueOf(if (on) accentColor else defColor)
                 btn.setTextColor(if (on) texteActif else texteInactif)
             }
-            resume?.text = getString(
+            val assez = regenCycleSel.size >= RegenCycle.MIN_MODES
+            // À la place du résumé, la RAISON du refus : un bouton grisé sans explication se lit
+            // comme une panne de l'écran.
+            resume?.text = if (assez) getString(
                 R.string.shortcuts_cfg_regen_summary,
                 regenCycleSel.joinToString(" → ") { libelleRegen(it) }
-            )
+            ) else getString(R.string.shortcuts_cfg_regen_min)
+            save?.isEnabled = assez
+            save?.alpha     = if (assez) 1f else 0.4f
         }
 
         boutons.forEach { (btn, niveau) ->
             btn.setOnClickListener {
-                if (regenCycleSel.contains(niveau)) {
-                    // Descendre sous deux modes laisserait une consigne fixe déguisée en cycle :
-                    // le premier appui agirait, tous les suivants seraient sans effet, et le
-                    // raccourci passerait pour cassé.
-                    if (regenCycleSel.size <= RegenCycle.MIN_MODES) {
-                        Toast.makeText(requireContext(), R.string.shortcuts_cfg_regen_min,
-                            Toast.LENGTH_SHORT).show()
-                        return@setOnClickListener
-                    }
-                    regenCycleSel.remove(niveau)
-                } else {
-                    regenCycleSel.add(niveau)
-                }
-                // Enregistré à chaque geste : il n'y a pas de bouton « valider » sur cet écran,
-                // et l'utilisateur peut en sortir par le rail à tout moment.
-                RegenCycle.save(requireContext(), regenCycleSel)
+                // Aucun minimum PENDANT la composition : le verrou ne s'applique qu'à
+                // l'enregistrement. `remove` rend faux quand l'élément n'y était pas, ce qui
+                // donne la bascule ajouter/retirer en une ligne.
+                if (!regenCycleSel.remove(niveau)) regenCycleSel.add(niveau)
                 maj()
             }
         }
 
-        view.findViewById<MaterialButton>(R.id.btn_regen_cycle_reset)?.setOnClickListener {
-            RegenCycle.reset(requireContext())
+        view.findViewById<MaterialButton>(R.id.btn_regen_cycle_clear)?.setOnClickListener {
+            regenCycleSel.clear()
+            maj()
+        }
+
+        save?.setOnClickListener {
+            if (regenCycleSel.size < RegenCycle.MIN_MODES) return@setOnClickListener
+            RegenCycle.save(requireContext(), regenCycleSel)
+            Toast.makeText(requireContext(), R.string.shortcuts_cfg_regen_saved,
+                Toast.LENGTH_SHORT).show()
+        }
+
+        majCycleRegen = { maj() }
+        rechargerCycleRegen = {
             regenCycleSel.clear()
             regenCycleSel.addAll(RegenCycle.order(requireContext()))
             maj()
         }
-
-        maj()
+        rechargerCycleRegen?.invoke()
     }
 
     /** Libellés courts des niveaux — les mêmes que la rangée « Regen retour », pour que le même
@@ -742,24 +729,39 @@ class ShortcutsFragment : Fragment() {
     })
 
     /**
-     * Rail de gauche — même motif que l'éditeur de profil et les Réglages, à ceci près que le
-     * contenu de l'onglet Actions dépend des choix de l'utilisateur : si plus rien n'y est
-     * visible, l'onglet disparaît et l'écran redevient une page unique.
+     * Rail de gauche — même motif que l'éditeur de profil et les Réglages, à ceci près que
+     * plusieurs entrées vont et viennent selon ce que l'utilisateur a attribué.
+     *
+     * Deux familles d'entrées, deux règles :
+     *  • les onglets « Raccourcis » et « Avancés » existent tant que leur page a du contenu ;
+     *  • les trois pages de RÉGLAGE (1 Pédale, ADAS, cycle de régénération) existent quand leur
+     *    fonction est attribuée à un bouton, quelle que soit la voie — c'est [actionEnJeu] qui
+     *    tranche, et rien d'autre.
      */
     private fun bindCategoryRail(view: View) {
-        // « Boutons » et « Actions » ne sont plus deux onglets mais deux sections d'une même
-        // page : leurs conteneurs existent toujours, on les réunit sous page_sc_classic. Rien
-        // de leur câblage n'a bougé.
+        // La page « Raccourcis » ne contient plus que les emplacements : les réglages d'action
+        // y étaient des sections, ce qui les rendait dépendants d'un onglet où l'utilisateur ne
+        // passe pas forcément. Chacun a désormais sa page.
         val tabs = listOf(
             view.findViewById<MaterialButton>(R.id.btn_sc_cat_classic)  to view.findViewById<ViewGroup>(R.id.page_sc_classic),
             view.findViewById<MaterialButton>(R.id.btn_sc_cat_advanced) to view.findViewById<ViewGroup>(R.id.page_sc_advanced),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_onepedal) to view.findViewById<ViewGroup>(R.id.page_sc_onepedal),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_adas)     to view.findViewById<ViewGroup>(R.id.page_sc_adas),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_regen)    to view.findViewById<ViewGroup>(R.id.page_sc_regen),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_list)     to view.findViewById<ViewGroup>(R.id.page_sc_list)
         )
-        val pageAvance = tabs[1].second
-        val pageRegen  = tabs[2].second
-        val btnSubList = tabs[3].first
-        val pageListe  = tabs[3].second
+        val pageClassique = tabs[0].second
+        val pageCycle     = tabs[4].second
+        val btnSubList    = tabs[5].first
+
+        // Chaque page de réglage est adossée à une fonction : elle n'existe que si un bouton la
+        // déclenche. C'est la règle qui manquait aux deux premières, dont les réglages ne
+        // regardaient que les emplacements classiques.
+        val pagesReglage = mapOf(
+            tabs[2].second to ShortcutAction.ONE_PEDAL,
+            tabs[3].second to ShortcutAction.ADAS_CYCLE,
+            tabs[4].second to ShortcutAction.REGEN_CYCLE
+        )
         setupAdvancedShortcuts(view)
         val scroll = view.findViewById<ScrollView>(R.id.scroll_shortcuts)
         // Le rail reprend l'accent des deux autres écrans refondus (dash_accent), pas l'accent vert
@@ -773,10 +775,15 @@ class ShortcutsFragment : Fragment() {
         fun hasVisibleContent(page: ViewGroup): Boolean =
             (0 until page.childCount).any { page.getChildAt(it).visibility == View.VISIBLE }
 
-        // La page du cycle de régénération a TOUJOURS du contenu : ce n'est pas lui qui décide
-        // de son existence, mais le fait que la fonction soit en jeu ou non.
-        fun utilisable(page: ViewGroup): Boolean =
-            if (page === pageRegen) regenCycleAttribue() else hasVisibleContent(page)
+        // Les pages de réglage ont TOUJOURS du contenu : ce n'est pas lui qui décide de leur
+        // existence, mais le fait que leur fonction soit en jeu.
+        fun utilisable(page: ViewGroup): Boolean {
+            val action = pagesReglage[page] ?: return hasVisibleContent(page)
+            // L'ADAS ne se règle pas là où le firmware ne l'expose pas : la page offrirait des
+            // crans dont aucun ne serait écrit.
+            if (action == ShortcutAction.ADAS_CYCLE && !adasSupported) return false
+            return actionEnJeu(action)
+        }
 
         fun apply() {
             val usable = tabs.filter { (_, page) -> utilisable(page) }
@@ -798,22 +805,21 @@ class ShortcutsFragment : Fragment() {
                 btn.setTextColor(if (on) railOn else textOff)
                 btn.strokeColor = ColorStateList.valueOf(if (on) railOn else border)
             }
-            // La liste n'apparaît que dans son contexte : sur l'onglet avancé ou sur l'une de
-            // ses sous-entrées. Ailleurs elle encombrerait le rail sans rien vouloir dire.
-            //
-            // Le cycle de régénération, lui, n'est PAS soumis à cette règle : il se règle aussi
-            // depuis un emplacement classique, et le masquer hors de l'onglet avancé rendrait le
-            // réglage introuvable pour qui n'y met jamais les pieds. Sa seule condition reste
-            // que la fonction soit en jeu, déjà tranchée plus haut.
-            val dansAvance = pageAvance.visibility == View.VISIBLE ||
-                             pageListe.visibility == View.VISIBLE ||
-                             pageRegen.visibility == View.VISIBLE
-            if (!dansAvance) btnSubList.visibility = View.GONE
+            // La liste appartient au contexte avancé : sur la page des emplacements
+            // classiques elle encombrerait le rail sans rien vouloir dire. Les pages de réglage,
+            // elles, ne sont soumises à aucun contexte — on y arrive depuis l'un ou l'autre
+            // onglet, et les masquer rendrait le réglage introuvable pour qui ne va jamais dans
+            // l'avancé.
+            if (pageClassique.visibility == View.VISIBLE) btnSubList.visibility = View.GONE
         }
 
         tabs.forEach { (btn, page) ->
             btn.setOnClickListener {
                 tabs.forEach { (_, p) -> p.visibility = if (p === page) View.VISIBLE else View.GONE }
+                // Revenir sur la page du cycle repart de ce qui est ENREGISTRÉ : une composition
+                // abandonnée sans « Sauvegarder » ne doit pas se faire passer pour le réglage
+                // en vigueur.
+                if (page === pageCycle) rechargerCycleRegen?.invoke()
                 scroll?.scrollTo(0, 0)
                 apply()
             }
@@ -855,7 +861,7 @@ class ShortcutsFragment : Fragment() {
                         val action = baseActionItems[pos].action
                         saveInt("shortcut_$slotKey", action.id)
                         // Le réglage lié à l'action doit apparaître (ou disparaître) tout de suite.
-                        refreshActionConfigVisibility()
+                        reselectTabs?.invoke()
                         if (initialized) {
                             when (action) {
                                 ShortcutAction.OPEN_CUSTOM_APP -> showAppPickerDialog(slotKey)
@@ -1076,6 +1082,9 @@ class ShortcutsFragment : Fragment() {
     private fun applyEnabledUI(enabled: Boolean) {
         shortcutsContent?.alpha = if (enabled) 1f else 0.35f
         setChildrenEnabled(shortcutsContent, enabled)
+        // setChildrenEnabled réactive TOUT, « Sauvegarder » compris. Or son état ne dépend pas
+        // de l'interrupteur global mais du nombre de modes choisis : il faut le lui rendre.
+        if (enabled) majCycleRegen?.invoke()
     }
 
     private fun setChildrenEnabled(v: View?, enabled: Boolean) {

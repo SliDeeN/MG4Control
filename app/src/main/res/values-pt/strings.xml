@@ -414,11 +414,15 @@
     <string name="adv_sc_list_title">Lista de atalhos</string>
 
     <!-- Cycle de régénération personnalisable -->
+    <string name="shortcuts_cat_onepedal">1 Pedal</string>
+    <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Ciclo regen</string>
     <string name="shortcuts_cfg_regen_cycle">Ciclo de regeneração</string>
-    <string name="shortcuts_cfg_regen_hint">Toque nos modos pela ordem por que os quer percorrer.</string>
+    <string name="shortcuts_cfg_regen_hint">Toque nos modos pela ordem por que os quer percorrer e depois guarde.</string>
     <string name="shortcuts_cfg_regen_summary">Ciclo: %1$s</string>
-    <string name="shortcuts_cfg_regen_reset">Repor</string>
+    <string name="shortcuts_cfg_regen_clear">Limpar tudo</string>
+    <string name="shortcuts_cfg_regen_save">Guardar</string>
+    <string name="shortcuts_cfg_regen_saved">Ciclo guardado</string>
     <string name="shortcuts_cfg_regen_min">Um ciclo precisa de pelo menos dois modos.</string>
     <string name="adv_sc_new">Novo atalho</string>
     <string name="adv_sc_step_key">1 · Tecla</string>
@@ -445,7 +449,7 @@
     <string name="shortcuts_action_hvac_fan_down">Clima: ventilação -</string>
 
     <!-- Raccourcis : confort et affichage -->
-    <string name="shortcuts_action_regen_cycle">Regeneração: nível seguinte</string>
+    <string name="shortcuts_action_regen_cycle">Ciclo de regeneração personalizado</string>
     <string name="shortcuts_action_seat_heat_left">Banco esquerdo aquecido: ciclo</string>
     <string name="shortcuts_action_seat_heat_right">Banco direito aquecido: ciclo</string>
     <string name="shortcuts_action_steering_heat">Volante aquecido (ON/OFF)</string>
