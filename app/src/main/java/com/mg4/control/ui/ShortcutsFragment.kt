@@ -750,9 +750,7 @@ class ShortcutsFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_regen)    to view.findViewById<ViewGroup>(R.id.page_sc_regen),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_list)     to view.findViewById<ViewGroup>(R.id.page_sc_list)
         )
-        val pageClassique = tabs[0].second
-        val pageCycle     = tabs[4].second
-        val btnSubList    = tabs[5].first
+        val pageCycle = tabs[4].second
 
         // Chaque page de réglage est adossée à une fonction : elle n'existe que si un bouton la
         // déclenche. C'est la règle qui manquait aux deux premières, dont les réglages ne
@@ -805,12 +803,10 @@ class ShortcutsFragment : Fragment() {
                 btn.setTextColor(if (on) railOn else textOff)
                 btn.strokeColor = ColorStateList.valueOf(if (on) railOn else border)
             }
-            // La liste appartient au contexte avancé : sur la page des emplacements
-            // classiques elle encombrerait le rail sans rien vouloir dire. Les pages de réglage,
-            // elles, ne sont soumises à aucun contexte — on y arrive depuis l'un ou l'autre
-            // onglet, et les masquer rendrait le réglage introuvable pour qui ne va jamais dans
-            // l'avancé.
-            if (pageClassique.visibility == View.VISIBLE) btnSubList.visibility = View.GONE
+            // Aucune entrée n'est masquée par le CONTEXTE : la liste reste atteignable depuis
+            // n'importe quel onglet, et les pages de réglage ne dépendent que de l'attribution
+            // de leur fonction. La règle de contexte qui cachait la liste hors de l'onglet
+            // avancé obligeait à un détour pour la consulter.
         }
 
         tabs.forEach { (btn, page) ->

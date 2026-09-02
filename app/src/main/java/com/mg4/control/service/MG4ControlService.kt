@@ -60,6 +60,7 @@ class MG4ControlService : Service() {
             ShortcutAction.DROWSINESS_SEN_CYCLE, ShortcutAction.HVAC_TOGGLE,
             ShortcutAction.HVAC_TEMP_UP, ShortcutAction.HVAC_TEMP_DOWN,
             ShortcutAction.HVAC_FAN_UP, ShortcutAction.HVAC_FAN_DOWN,
+            ShortcutAction.ADAS_CYCLE,
             ShortcutAction.REGEN_CYCLE, ShortcutAction.SEAT_HEAT_LEFT_CYCLE,
             ShortcutAction.SEAT_HEAT_RIGHT_CYCLE, ShortcutAction.STEERING_HEAT_TOGGLE,
             ShortcutAction.DEFROST_FRONT_TOGGLE, ShortcutAction.DEFROST_REAR_TOGGLE,
@@ -506,6 +507,48 @@ class MG4ControlService : Service() {
      * ⚠️ Bloquant (lectures binder, et ~1 s pour l'ESC qui confirme son état avant d'agir) :
      * à n'appeler que depuis un contexte IO.
      */
+    /**
+     * Index ADAS courant — 0=Off, 1=Lim. manuel, 2=Lim. auto, 3=ACC, 4=ICA/TJA — ou `null` si le
+     * véhicule ne répond pas. Mêmes indices et même conversion que l'écran ADAS, sans quoi le
+     * raccourci et l'écran ne parleraient pas de la même chose.
+     */
+    private fun adasIndexCourant(): Int? {
+        if (!FirmwareInfo.isVsmBased()) {
+            // SWI133 : l'index EST la valeur de la propriété VPM.
+            val v = MG4Hardware.getMixedIntelligentDrive()
+            return if (v < 0) null else v
+        }
+        val accTja = MG4Hardware.getAccTjaMode()
+        if (accTja < 0) return null
+        // Le limiteur prime dans l'affichage : il est exclusif du mode ACC/TJA côté véhicule.
+        val sas = MG4Hardware.getSpeedLimiterMode()
+        return when {
+            sas == MG4Hardware.SasMode.MANUEL      -> 1
+            sas == MG4Hardware.SasMode.INTELLIGENT -> 2
+            accTja == Swi68Mode.ACC                -> 3
+            accTja == Swi68Mode.TJA                -> 4
+            else                                   -> 0
+        }
+    }
+
+    /**
+     * Écrit un index ADAS. Sur VSM, mode ACC/TJA et limiteur sont deux réglages EXCLUSIFS : il
+     * faut poser les deux à chaque fois, sinon l'ancien resterait actif à côté du nouveau.
+     */
+    private fun ecrireModeAdas(index: Int) {
+        if (!FirmwareInfo.isVsmBased()) {
+            MG4Hardware.setMixedIntelligentDrive(index)
+            return
+        }
+        when (index) {
+            1 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.MANUEL);      MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
+            2 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.INTELLIGENT); MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
+            3 -> { MG4Hardware.setAccTjaMode(Swi68Mode.ACC); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+            4 -> { MG4Hardware.setAccTjaMode(Swi68Mode.TJA); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+            else -> { MG4Hardware.setAccTjaMode(Swi68Mode.OFF); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+        }
+    }
+
     private fun executeVehicleAction(action: ShortcutAction) {
         when (action) {
             ShortcutAction.ESC_TOGGLE -> {
@@ -587,6 +630,34 @@ class MG4ControlService : Service() {
                 AppLogger.i(TAG, "SHORTCUT régénération : ${actuel.label} → ${suivant.label} " +
                     "(cycle ${ordre.joinToString("/") { it.label }})")
                 MG4Hardware.setRegenLevel(suivant)
+            }
+
+            ShortcutAction.ADAS_CYCLE -> {
+                val prefs = getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
+                // Mêmes valeurs par défaut que l'écran de configuration (Off / ACC). Elles y
+                // étaient inversées : l'écran montrait A=Off et B=ACC, le service faisait
+                // l'inverse tant que l'utilisateur n'avait touché aucun bouton.
+                val modeA = prefs.getInt("shortcut_adas_mode_a", 0)
+                val modeB = prefs.getInt("shortcut_adas_mode_b", 3)
+                if (modeA == modeB) {
+                    AppLogger.w(TAG, "SHORTCUT ADAS — les deux modes sont identiques ($modeA), " +
+                        "rien à alterner")
+                    return
+                }
+                // Lecture RÉELLE du mode courant, comme pour la clim ou les sièges chauffants.
+                // L'état mémorisé qui servait jusqu'ici repartait de zéro à chaque démarrage du
+                // service et ignorait l'écran d'origine : deux appuis de suite pouvaient
+                // réécrire le même mode, ce qui se voit comme un raccourci sans effet.
+                val actuel = adasIndexCourant()
+                if (actuel == null) {
+                    AppLogger.w(TAG, "SHORTCUT ADAS — mode illisible, aucune action")
+                    return
+                }
+                // Sur n'importe quel mode qui n'est ni A ni B (l'utilisateur est passé par
+                // l'écran d'origine), on entre par A plutôt que de ne rien faire.
+                val cible = if (actuel == modeA) modeB else modeA
+                AppLogger.i(TAG, "SHORTCUT ADAS : index $actuel → $cible (A=$modeA, B=$modeB)")
+                ecrireModeAdas(cible)
             }
 
             ShortcutAction.SEAT_HEAT_LEFT_CYCLE, ShortcutAction.SEAT_HEAT_RIGHT_CYCLE -> {
@@ -789,26 +860,6 @@ class MG4ControlService : Service() {
                 ShortcutAction.SOUND_WARNING    -> MG4Hardware.setSoundWarning(newState)
                 ShortcutAction.OVERSPEED_ALARM  -> MG4Hardware.setOverspeedAlarm(newState)
                 ShortcutAction.SPEED_LIMIT_TONE -> MG4Hardware.setSpeedLimitTone(newState)
-                ShortcutAction.ADAS_CYCLE -> {
-                    // Tous les firmwares connus stockent des indices 0-4 (Off/Lim.Manuel/Lim.Auto/ACC/ICA|TJA)
-                    val modeA = prefs.getInt("shortcut_adas_mode_a", 3)
-                    val modeB = prefs.getInt("shortcut_adas_mode_b", 0)
-                    val mode  = if (newState) modeA else modeB
-                    if (FirmwareInfo.isVsmBased()) {
-                        // VSM (SWI68/69/131/132/165) : index → mode ACC/TJA (setAccTjaMode)
-                        // + limiteur de vitesse (setSpeedLimiterMode), réglages exclusifs.
-                        when (mode) {
-                            1 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.MANUEL);      MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
-                            2 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.INTELLIGENT); MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
-                            3 -> { MG4Hardware.setAccTjaMode(Swi68Mode.ACC); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
-                            4 -> { MG4Hardware.setAccTjaMode(Swi68Mode.TJA); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
-                            else -> { MG4Hardware.setAccTjaMode(Swi68Mode.OFF); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
-                        }
-                    } else {
-                        // SWI133 : VPM direct (l'index est aussi la valeur mixedIntelligentDrive)
-                        MG4Hardware.setMixedIntelligentDrive(mode)
-                    }
-                }
                 ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.setEnergySavingMode(newState)
                 ShortcutAction.TSR_TOGGLE           -> MG4Hardware.setTsrMode(newState)
                 ShortcutAction.OPEN_APP -> {

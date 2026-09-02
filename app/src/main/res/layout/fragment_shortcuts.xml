@@ -142,9 +142,11 @@
                 app:strokeColor="@color/dash_border"
                 app:cornerRadius="8dp" />
 
+            <!-- Pas de retrait, contrairement aux trois réglages : la liste n'est pas
+                 conditionnelle, c'est une destination permanente au même rang que les deux
+                 premiers onglets. -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_sc_sub_list"
-                android:layout_marginStart="16dp"
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
                 android:layout_marginBottom="8dp"
