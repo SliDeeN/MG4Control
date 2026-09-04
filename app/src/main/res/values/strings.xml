@@ -118,6 +118,16 @@
     <string name="profile_auto_applied">Profil par défaut appliqué au démarrage</string>
     <!-- [BT-PROFILES] -->
     <string name="profile_bt_device_label">Appareil Bluetooth</string>
+
+    <!-- Bloc climatisation du profil (onglet Confort) -->
+    <string name="profile_hvac_title">Climatisation</string>
+    <string name="profile_hvac_row_clim">Clim</string>
+    <string name="profile_hvac_row_loop">Recycl.</string>
+    <string name="profile_hvac_row_def_front">Dég. AV</string>
+    <string name="profile_hvac_row_def_rear">Dég. AR</string>
+    <string name="profile_hvac_on">Marche</string>
+    <string name="profile_hvac_unchanged">Inchangé</string>
+    <string name="profile_hvac_temp_value">%1$d °C</string>
     <string name="profile_bt_none">Aucun</string>
     <string name="profile_bt_applied">Profil BT appliqué : %s</string>
 

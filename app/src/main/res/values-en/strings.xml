@@ -116,6 +116,16 @@
     <string name="profile_max_reached">Maximum %d profiles reached</string>
     <string name="profile_auto_applied">Default profile applied at startup</string>
     <string name="profile_bt_device_label">Bluetooth device</string>
+
+    <!-- Bloc climatisation du profil (onglet Confort) -->
+    <string name="profile_hvac_title">Air conditioning</string>
+    <string name="profile_hvac_row_clim">A/C</string>
+    <string name="profile_hvac_row_loop">Recirc.</string>
+    <string name="profile_hvac_row_def_front">Defr. front</string>
+    <string name="profile_hvac_row_def_rear">Defr. rear</string>
+    <string name="profile_hvac_on">On</string>
+    <string name="profile_hvac_unchanged">Unchanged</string>
+    <string name="profile_hvac_temp_value">%1$d °C</string>
     <string name="profile_bt_none">None</string>
     <string name="profile_bt_applied">BT profile applied: %s</string>
 

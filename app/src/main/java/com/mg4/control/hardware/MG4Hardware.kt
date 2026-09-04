@@ -5495,6 +5495,74 @@ object MG4Hardware {
      *
      * ⚠️ Bloquant (plusieurs secondes avec les bascules) → appeler depuis un thread IO.
      */
+    /**
+     * Applique le bloc clim d'un profil — exactement ce qu'il porte, et rien d'autre.
+     *
+     * Distinct d'[applyClimatePreset], qui force marche et A/C à ON : un préréglage
+     * d'automatisation sert toujours à FAIRE fonctionner la clim, alors qu'un profil doit aussi
+     * pouvoir l'éteindre. D'où deux entrées plutôt qu'un paramètre de plus, les deux appelants
+     * n'ayant pas la même intention.
+     *
+     * Les `null` valent « ne pas y toucher », comme dans l'automatisation : un profil qui ne se
+     * prononce pas sur le dégivrage ne doit pas l'éteindre au passage.
+     */
+    fun applyProfileClimate(
+        power: Boolean,
+        ac: Boolean,
+        autoMode: Boolean,
+        targetTemp: Int,
+        fanLevel: Int,
+        defrostFront: Boolean?,
+        defrostRear: Boolean?,
+        loopMode: Int?
+    ): Boolean {
+        val state = getClimateState() ?: run {
+            AppLogger.w(CLIM_TAG, "Profil : état clim illisible → abandon")
+            return false
+        }
+        // Clim éteinte : tout le reste n'aurait aucun sens, et écrire une consigne sur une clim
+        // à l'arrêt la rallume sur certains firmwares.
+        if (!power) {
+            val ok = setClimatePower(false)
+            AppLogger.i(CLIM_TAG, "Profil : climatisation ÉTEINTE → ok=$ok")
+            return ok
+        }
+        var ok = setClimatePower(true)
+        ok = setClimateAc(ac) && ok
+        ok = setClimateTemp(targetTemp.coerceIn(state.tempMin, state.tempMax)) && ok
+
+        // ⚠️ Mode auto et ventilation manuelle s'excluent : régler une vitesse fait sortir du
+        // mode auto, et activer le mode auto reprend la main sur la vitesse. Appliquer les deux
+        // donnerait un état final décidé par le seul ordre des appels, pas par l'utilisateur.
+        if (autoMode) {
+            ok = setClimateAuto(true) && ok
+        } else {
+            ok = setClimateFan(fanLevel.coerceIn(state.fanMin, state.fanMax)) && ok
+        }
+
+        // Deux conditions : que le profil se prononce, ET que le véhicule expose le réglage.
+        if (defrostFront != null && state.defrostFront != null) {
+            ok = setClimateDefrostFront(defrostFront) && ok
+        }
+        if (defrostRear != null && state.defrostRear != null) {
+            ok = setClimateDefrostRear(defrostRear) && ok
+        }
+        if (loopMode != null) {
+            val mode = when (loopMode) {
+                0    -> LoopMode.INNER
+                1    -> LoopMode.OUTSIDE
+                else -> LoopMode.AUTO
+            }
+            ok = setClimateLoopMode(mode) && ok
+        }
+
+        AppLogger.i(CLIM_TAG, "Profil : clim=ON A/C=$ac consigne=$targetTemp " +
+            (if (autoMode) "ventilation=AUTO" else "vent=$fanLevel") +
+            " dégAV=${defrostFront ?: "inchangé"} dégAR=${defrostRear ?: "inchangé"} " +
+            "recyclage=${loopMode ?: "inchangé"} → ok=$ok")
+        return ok
+    }
+
     fun applyClimatePreset(
         targetTemp: Int,
         fanLevel: Int,

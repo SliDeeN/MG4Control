@@ -1619,6 +1619,231 @@
                 </LinearLayout>
 
 
+                <!-- ── Climatisation — facultative, décochée par défaut ──────────────
+                     Reprend les commandes de l'onglet Confort du Dashboard. Masquée quand le
+                     firmware n'expose pas la clim.
+
+                     « Inchangé » sur le recyclage et les dégivrages veut dire « ne pas y
+                     toucher » : sans lui, un profil qui ne se prononce pas les ÉTEINDRAIT. -->
+                <LinearLayout
+                    android:id="@+id/section_hvac"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_section_rounded"
+                    android:padding="14dp"
+                    android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingBottom="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/profile_hvac_title"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.12"
+                            android:textAllCaps="true" />
+
+                        <Switch
+                            android:scaleX="1.3"
+                            android:scaleY="1.3"
+                            android:layout_marginHorizontal="8dp"
+                            android:id="@+id/sw_hvac_enabled"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/dash_border"
+                        android:layout_marginBottom="5dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="72dp"
+                            android:text="@string/profile_hvac_row_clim"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp"
+                            android:letterSpacing="0.06"
+                            android:textAllCaps="true" />
+
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_power" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="6dp" android:text="@string/profile_hvac_on" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_ac" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/clim_ac" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_auto" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/clim_auto" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="72dp"
+                            android:text="@string/clim_temperature"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp"
+                            android:letterSpacing="0.06"
+                            android:textAllCaps="true" />
+
+                        <com.google.android.material.slider.Slider
+                            android:id="@+id/sld_hvac_temp"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:valueFrom="15"
+                            android:valueTo="33"
+                            android:value="21"
+                            android:stepSize="1"
+                            app:labelBehavior="gone"
+                            app:thumbRadius="12dp"
+                            app:trackHeight="8dp"
+                            app:thumbColor="@color/accent_eco"
+                            app:trackColorActive="@color/accent_eco"
+                            app:trackColorInactive="@color/dash_border" />
+
+                        <TextView
+                            android:id="@+id/tv_hvac_temp"
+                            android:layout_width="56dp"
+                            android:layout_height="wrap_content"
+                            android:gravity="end"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp" />
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="10dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="72dp"
+                            android:text="@string/clim_fan"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp"
+                            android:letterSpacing="0.06"
+                            android:textAllCaps="true" />
+
+                        <com.google.android.material.slider.Slider
+                            android:id="@+id/sld_hvac_fan"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:valueFrom="1"
+                            android:valueTo="11"
+                            android:value="4"
+                            android:stepSize="1"
+                            app:labelBehavior="gone"
+                            app:thumbRadius="12dp"
+                            app:trackHeight="8dp"
+                            app:thumbColor="@color/accent_eco"
+                            app:trackColorActive="@color/accent_eco"
+                            app:trackColorInactive="@color/dash_border" />
+
+                        <TextView
+                            android:id="@+id/tv_hvac_fan"
+                            android:layout_width="56dp"
+                            android:layout_height="wrap_content"
+                            android:gravity="end"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp" />
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="72dp"
+                            android:text="@string/profile_hvac_row_loop"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp"
+                            android:letterSpacing="0.06"
+                            android:textAllCaps="true" />
+
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_loop_in" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="6dp" android:text="@string/clim_loop_inner" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_loop_out" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/clim_loop_outside" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_loop_auto" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/clim_loop_auto" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_loop_none" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/profile_hvac_unchanged" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="72dp"
+                            android:text="@string/profile_hvac_row_def_front"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp"
+                            android:letterSpacing="0.06"
+                            android:textAllCaps="true" />
+
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_df_off" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="6dp" android:text="@string/climate_off" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_df_on" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/profile_hvac_on" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_df_none" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/profile_hvac_unchanged" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="72dp"
+                            android:text="@string/profile_hvac_row_def_rear"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp"
+                            android:letterSpacing="0.06"
+                            android:textAllCaps="true" />
+
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_dr_off" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="6dp" android:text="@string/climate_off" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_dr_on" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/profile_hvac_on" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_dr_none" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/profile_hvac_unchanged" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
                 <!-- ── [BT-PROFILES] Section Bluetooth ───────────────── -->
                 <LinearLayout
                     android:id="@+id/section_bt_profile"

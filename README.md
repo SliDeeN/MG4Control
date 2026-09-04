@@ -254,6 +254,31 @@ un réglage que l'utilisateur croit global, et il l'est.
 - Le nom du profil et le réglage « profil par défaut » restent visibles sur les trois onglets
 - Volant et sièges chauffants disposent d'un interrupteur de **prise en compte** : décoché, le
   profil ne touche pas au réglage au lieu de l'éteindre
+- **Climatisation** : bloc facultatif de l'onglet Confort, décoché par défaut, reprenant les
+  commandes du Dashboard — marche/arrêt, A/C, ventilation automatique, consigne, vitesse,
+  recyclage et dégivrages
+
+#### Bloc climatisation du profil
+Décoché, le profil ne touche pas à la climatisation : c'est le comportement de toujours, et celui
+de tous les profils déjà enregistrés. Coché, il applique ce qu'il porte au démarrage, au contact
+et à chaque application manuelle.
+
+Trois règles s'y appliquent, qui viennent du véhicule et non de l'interface :
+
+| Règle | Conséquence |
+|---|---|
+| Clim éteinte | Rien d'autre n'est écrit — une consigne posée sur une clim à l'arrêt la rallume sur certains firmwares |
+| Mode AUTO | La vitesse de ventilation n'est pas appliquée : la régler ferait sortir du mode auto |
+| « Inchangé » | Recyclage et dégivrages ne sont pas touchés — sans cette valeur, un profil qui ne s'en préoccupe pas les éteindrait |
+
+Les curseurs sont bornés à la saisie (15–33 °C, 1–11), mais les **vraies** limites sont lues sur le
+véhicule au moment d'appliquer et la consigne y est clampée : elles diffèrent entre A9 et les
+autres firmwares.
+
+> [!NOTE]
+> **Le profil est prioritaire sur l'automatisation A/C.** Si le profil actif porte un bloc
+> climatisation, l'automatisation par température ne fait rien et le journalise. Sans cette règle
+> les deux s'écriraient dessus au contact, dans un ordre que rien ne garantit.
 
 ### Compatibilité firmware inconnue (UNKNOWN)
 - Dialog d'avertissement au démarrage si le firmware n'est pas reconnu
@@ -1069,6 +1094,30 @@ users read as global, and it is.
 - The profile name and the "default profile" setting stay visible across the three tabs
 - Heated steering wheel and seats have an **apply** switch: unchecked, the profile leaves the
   setting alone instead of turning it off
+- **Air conditioning**: an optional block in the Comfort tab, unchecked by default, carrying the
+  Dashboard's own controls — on/off, A/C, auto fan, setpoint, fan speed, recirculation, defrosters
+
+#### The profile's climate block
+Unchecked, the profile does not touch the climate: that is the long-standing behaviour, and the
+one every stored profile keeps. Checked, it applies what it carries at startup, at ignition, and
+on every manual application.
+
+Three rules apply, and they come from the vehicle rather than the interface:
+
+| Rule | Consequence |
+|---|---|
+| Climate off | Nothing else is written — a setpoint sent to a stopped climate turns it back on with some firmwares |
+| AUTO mode | The fan speed is not applied: setting it would leave auto mode |
+| "Unchanged" | Recirculation and defrosters are left alone — without that value, a profile that says nothing about them would turn them off |
+
+The sliders are bounded for input (15–33 °C, 1–11), but the **real** limits are read from the
+vehicle when applying and the setpoint is clamped to them: they differ between A9 and the other
+firmwares.
+
+> [!NOTE]
+> **The profile wins over the A/C automation.** If the active profile carries a climate block, the
+> temperature automation does nothing and logs it. Without that rule the two would write over each
+> other at ignition, in an order nothing guarantees.
 
 ### Unknown firmware (UNKNOWN)
 - Warning dialog at startup when the firmware is not recognised

@@ -117,6 +117,23 @@ object ProfileApplier {
                 }
             }
 
+            // Climatisation — facultative, décochée par défaut. Enchaîne des bascules qui
+            // prennent plusieurs secondes, mais on est déjà sur le dispatcher IO sous verrou :
+            // rien d'autre n'écrit sur le véhicule pendant ce temps.
+            if (profile.hvacEnabled && MG4Hardware.hasClimateControl()) {
+                val climOk = MG4Hardware.applyProfileClimate(
+                    power        = profile.hvacPower,
+                    ac           = profile.hvacAc,
+                    autoMode     = profile.hvacAuto,
+                    targetTemp   = profile.hvacTemp,
+                    fanLevel     = profile.hvacFan,
+                    defrostFront = profile.hvacDefrostFront,
+                    defrostRear  = profile.hvacDefrostRear,
+                    loopMode     = profile.hvacLoopMode
+                )
+                AppLogger.i(TAG, "  Climatisation du profil appliquée → $climOk")
+            }
+
             AppLogger.i(TAG, "Profil '${profile.name}' Katman1 terminé — ok=$ok")
             onComplete?.invoke(ok)
 

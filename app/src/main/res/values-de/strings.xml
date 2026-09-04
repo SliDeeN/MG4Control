@@ -116,6 +116,16 @@
     <string name="profile_max_reached">Maximum %d Profile erreicht</string>
     <string name="profile_auto_applied">Standardprofil beim Start angewendet</string>
     <string name="profile_bt_device_label">Bluetooth-Gerät</string>
+
+    <!-- Bloc climatisation du profil (onglet Confort) -->
+    <string name="profile_hvac_title">Klimaanlage</string>
+    <string name="profile_hvac_row_clim">Klima</string>
+    <string name="profile_hvac_row_loop">Umluft</string>
+    <string name="profile_hvac_row_def_front">Entf. vorn</string>
+    <string name="profile_hvac_row_def_rear">Entf. hinten</string>
+    <string name="profile_hvac_on">Ein</string>
+    <string name="profile_hvac_unchanged">Unverändert</string>
+    <string name="profile_hvac_temp_value">%1$d °C</string>
     <string name="profile_bt_none">Keines</string>
     <string name="profile_bt_applied">BT-Profil angewendet: %s</string>
 

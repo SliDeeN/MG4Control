@@ -33,6 +33,7 @@ import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.MG4Hardware.AebMode
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.RegenLevel
+import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.shortcut.RegenCycle
@@ -1263,6 +1264,19 @@ class MG4ControlService : Service() {
         }
         if (!MG4Hardware.hasClimateControl()) {
             AppLogger.i(TAG, "Auto A/C ($origin) : clim non pilotable sur ce firmware")
+            return
+        }
+        // LE PROFIL EST PRIORITAIRE. S'il porte son propre bloc clim, l'automatisation n'a rien
+        // à dire : sans cette règle les deux s'écriraient dessus au contact, dans un ordre que
+        // rien ne garantit, et le résultat dépendrait de qui finit en dernier.
+        //
+        // Le profil actif est renseigné DÈS L'ENTRÉE de ProfileApplier.apply(), avant même les
+        // écritures véhicule : quand cette vérification a lieu, il désigne bien le profil du
+        // cycle en cours.
+        val profilActif = ActiveProfile.id(ctx)?.let { ProfileManager(ctx).getById(it) }
+        if (profilActif?.hvacEnabled == true) {
+            AppLogger.i(TAG, "Auto A/C ($origin) : le profil actif '${profilActif.name}' porte " +
+                "sa propre climatisation — priorité au profil")
             return
         }
         val since = System.currentTimeMillis() - climateAutoLastRunMs

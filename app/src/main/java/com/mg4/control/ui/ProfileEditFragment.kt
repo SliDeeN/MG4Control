@@ -9,6 +9,7 @@ import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.slider.Slider
 import com.mg4.control.R
 import com.mg4.control.bluetooth.BluetoothProfileManager
 import com.mg4.control.hardware.MG4Hardware
@@ -37,6 +38,14 @@ import kotlinx.coroutines.withContext
 class ProfileEditFragment : Fragment() {
 
     companion object {
+        /** Bornes des curseurs de climatisation — les VRAIES limites sont lues sur le véhicule
+         *  au moment d'appliquer, et la consigne y est clampée. Celles-ci ne servent qu'à la
+         *  saisie, et doivent couvrir tous les firmwares (A9 accepte 17–33 °C et 1–11). */
+        const val HVAC_TEMP_MIN = 15
+        const val HVAC_TEMP_MAX = 33
+        const val HVAC_FAN_MIN  = 1
+        const val HVAC_FAN_MAX  = 11
+
         /**
          * Passage de données depuis [ProfileFragment]. Un profil complet ne tient pas
          * confortablement dans un Bundle (enums + une vingtaine de champs) et l'écran n'est ouvert
@@ -105,6 +114,19 @@ class ProfileEditFragment : Fragment() {
         var seatHeatEnabled = data.appliesSeatHeat
         var seatLeft        = data.seatHeatLeft
         var seatRight       = data.seatHeatRight
+        var hvacEnabledSel  = data.hvacEnabled
+        var hvacPowerSel    = data.hvacPower
+        var hvacAcSel       = data.hvacAc
+        var hvacAutoSel     = data.hvacAuto
+        // ⚠️ CLAMPÉS À LA LECTURE, et ce n'est pas de la prudence gratuite : Gson n'appelle pas
+        // le constructeur Kotlin, donc un profil enregistré avant cette fonctionnalité rend 0
+        // pour ces deux champs. Le curseur Material LÈVE une exception si on lui pose une valeur
+        // hors de [valueFrom, valueTo] — l'éditeur planterait à l'ouverture d'un ancien profil.
+        var hvacTempSel     = data.hvacTemp.coerceIn(HVAC_TEMP_MIN, HVAC_TEMP_MAX)
+        var hvacFanSel      = data.hvacFan.coerceIn(HVAC_FAN_MIN, HVAC_FAN_MAX)
+        var hvacDfSel       = data.hvacDefrostFront
+        var hvacDrSel       = data.hvacDefrostRear
+        var hvacLoopSel     = data.hvacLoopMode
         var adasMode        = data.adasMode
         var swi68Mode       = data.swi68AdasMode
         var swi132SasMode   = data.swi132SasMode                       // 0=Off, 2=Manuel, 3=Intelligent
@@ -219,6 +241,97 @@ class ProfileEditFragment : Fragment() {
             seatHeatEnabled = checked
             setBtnsEnabled(seatLeftBtns + seatRightBtns, checked)
         }
+
+        // ── Climatisation — bloc facultatif du profil ────────────────────────
+        val swHvac    = view.findViewById<Switch>(R.id.sw_hvac_enabled)
+        val btnPower  = view.findViewById<MaterialButton>(R.id.btn_hvac_power)
+        val btnAc     = view.findViewById<MaterialButton>(R.id.btn_hvac_ac)
+        val btnAuto   = view.findViewById<MaterialButton>(R.id.btn_hvac_auto)
+        val sldTemp   = view.findViewById<Slider>(R.id.sld_hvac_temp)
+        val tvTemp    = view.findViewById<TextView>(R.id.tv_hvac_temp)
+        val sldFan    = view.findViewById<Slider>(R.id.sld_hvac_fan)
+        val tvFan     = view.findViewById<TextView>(R.id.tv_hvac_fan)
+        val loopBtns  = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_hvac_loop_in),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_loop_out),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_loop_auto),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_loop_none)
+        )
+        val dfBtns = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_hvac_df_off),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_df_on),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_df_none)
+        )
+        val drBtns = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_hvac_dr_off),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_dr_on),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_dr_none)
+        )
+
+        /**
+         * Trois grisages en cascade, qui reproduisent des règles du véhicule et non des choix
+         * d'interface :
+         *  • interrupteur sur OFF → le profil ne touche pas à la clim, rien n'est modifiable ;
+         *  • clim éteinte → consigne, ventilation et le reste n'ont plus de sens ;
+         *  • mode AUTO → la ventilation manuelle est exclue, régler une vitesse ferait sortir
+         *    du mode auto (voir MG4Hardware.applyProfileClimate).
+         */
+        fun majHvac() {
+            val actif  = hvacEnabledSel
+            val allume = actif && hvacPowerSel
+            setBtnsEnabled(listOf(btnPower), actif)
+            setBtnsEnabled(listOf(btnAc, btnAuto) + loopBtns + dfBtns + drBtns, allume)
+            listOf(sldTemp, sldFan).forEach { it.isEnabled = allume }
+            sldFan.isEnabled = allume && !hvacAutoSel
+            sldTemp.alpha = if (allume) 1f else 0.35f
+            sldFan.alpha  = if (allume && !hvacAutoSel) 1f else 0.35f
+            tvTemp.alpha  = sldTemp.alpha
+            tvFan.alpha   = sldFan.alpha
+            activateBtn(btnPower, hvacPowerSel)
+            activateBtn(btnAc,    hvacAcSel)
+            activateBtn(btnAuto,  hvacAutoSel)
+        }
+
+        bindGroup(listOf(
+            loopBtns[0] to 0, loopBtns[1] to 1, loopBtns[2] to 2, loopBtns[3] to null
+        ), hvacLoopSel) { hvacLoopSel = it }
+        bindGroup(listOf(
+            dfBtns[0] to false, dfBtns[1] to true, dfBtns[2] to null
+        ), hvacDfSel) { hvacDfSel = it }
+        bindGroup(listOf(
+            drBtns[0] to false, drBtns[1] to true, drBtns[2] to null
+        ), hvacDrSel) { hvacDrSel = it }
+
+        // Bascules et non groupes : ce sont les mêmes commandes que sur le Dashboard, où un
+        // bouton unique s'allume quand le réglage est actif.
+        btnPower.setOnClickListener { hvacPowerSel = !hvacPowerSel; majHvac() }
+        btnAc.setOnClickListener    { hvacAcSel    = !hvacAcSel;    majHvac() }
+        btnAuto.setOnClickListener  { hvacAutoSel  = !hvacAutoSel;  majHvac() }
+
+        sldTemp.value = hvacTempSel.toFloat()
+        tvTemp.text = getString(R.string.profile_hvac_temp_value, hvacTempSel)
+        sldTemp.addOnChangeListener { _, v, _ ->
+            hvacTempSel = v.toInt()
+            tvTemp.text = getString(R.string.profile_hvac_temp_value, hvacTempSel)
+        }
+        sldFan.value = hvacFanSel.toFloat()
+        tvFan.text = hvacFanSel.toString()
+        sldFan.addOnChangeListener { _, v, _ ->
+            hvacFanSel = v.toInt()
+            tvFan.text = hvacFanSel.toString()
+        }
+
+        swHvac.isChecked = hvacEnabledSel
+        swHvac.setOnCheckedChangeListener { _, checked ->
+            hvacEnabledSel = checked
+            majHvac()
+        }
+        majHvac()
+
+        // Firmware sans clim pilotable : la section entière disparaît, comme la page Clim du
+        // Dashboard. Proposer des réglages qui n'écriraient rien serait pire que rien.
+        view.findViewById<View>(R.id.section_hvac)?.visibility =
+            if (MG4Hardware.hasClimateControl()) View.VISIBLE else View.GONE
 
         // ── Sections Climat — masquées si pas de chauffage (SWI69/SWI131) ────
         val hasHeat = FirmwareInfo.hasHeatFeatures()
@@ -537,6 +650,15 @@ class ProfileEditFragment : Fragment() {
                 lasVibrationReminder = lasVibrationReminderSel,
                 energySaving   = energySavingSel,
                 tsrEnabled     = tsrEnabledSel,
+                hvacEnabled      = hvacEnabledSel,
+                hvacPower        = hvacPowerSel,
+                hvacAc           = hvacAcSel,
+                hvacAuto         = hvacAutoSel,
+                hvacTemp         = hvacTempSel,
+                hvacFan          = hvacFanSel,
+                hvacDefrostFront = hvacDfSel,
+                hvacDefrostRear  = hvacDrSel,
+                hvacLoopMode     = hvacLoopSel,
                 btDeviceMac    = selectedBtMac   // [BT-PROFILES]
             )
             manager.save(profile)

@@ -54,6 +54,28 @@ data class DrivingProfile(
     val escEnabled: Boolean? = null,
     val drowsinessEnabled: Boolean? = null,
     val drowsinessSensitivity: Int? = null,   // 1=Faible, 2=Standard, 3=Élevé
+    // ── Climatisation ────────────────────────────────────────────────────────────
+    /**
+     * Interrupteur du bloc clim. FAUX par défaut, et c'est ce que Gson donne aux profils
+     * enregistrés avant la fonctionnalité (champ absent → défaut de la JVM) : aucun d'eux ne se
+     * met donc à piloter la climatisation.
+     *
+     * ⚠️ C'est aussi ce qui rend les défauts ci-dessous sans conséquence. Un profil ancien les
+     * lit à 0/false, ce qui n'aurait aucun sens appliqué tel quel — mais ils ne sont JAMAIS lus
+     * tant que celui-ci est faux.
+     */
+    val hvacEnabled: Boolean = false,
+    val hvacPower: Boolean = true,
+    val hvacAc: Boolean = true,
+    /** Ventilation automatique. Exclusive de [hvacFan] : voir MG4Hardware.applyProfileClimate. */
+    val hvacAuto: Boolean = false,
+    val hvacTemp: Int = 21,
+    val hvacFan: Int = 4,
+    /** `null` = ne pas y toucher. Même convention que l'automatisation A/C. */
+    val hvacDefrostFront: Boolean? = null,
+    val hvacDefrostRear: Boolean? = null,
+    /** `null` = inchangé, sinon 0=Intérieur, 1=Extérieur, 2=Auto. */
+    val hvacLoopMode: Int? = null,
     // [BT-PROFILES] MAC de l'appareil Bluetooth associé à ce profil (null = aucun)
     val btDeviceMac: String? = null
 ) {
