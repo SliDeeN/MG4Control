@@ -78,6 +78,13 @@
     <string name="drive_section_mode">Modalità di guida</string>
     <string name="drive_section_regen">Rigenerazione</string>
 
+    <!-- Mode de conduite Personnalisé -->
+    <string name="drive_section_custom">Modalità personalizzata</string>
+    <string name="drive_custom_power">Potenza</string>
+    <string name="drive_custom_steering">Sterzo</string>
+    <string name="drive_custom_pedal">Pedale</string>
+    <string name="drive_custom_comfort">Comfort</string>
+
     <!-- Livelli di rigenerazione -->
     <string name="regen_off">Off</string>
     <string name="regen_low">Bassa</string>

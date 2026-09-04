@@ -51,6 +51,31 @@ L'application communique avec le véhicule via le SDK propriétaire SAIC, en acc
 - **Mode de conduite** : ECO / NORMAL / SPORT / SNOW / CUSTOM
 - **Régénération** : Off / Faible / Moyen / Fort / Adaptatif / 1 Pédale
 
+#### Mode de conduite Personnalisé
+Trois réglages que le véhicule n'expose que dans ce mode : **puissance** (Éco / Normal / Sport),
+**direction** et **force sur la pédale** (Confort / Normal / Sport). Disponibles sur les six
+firmwares, par deux voies distinctes — signaux `VehiclePropertyManager` en SWI133/68/165,
+méthodes `CarVehicleSettingClient` sur A9.
+
+Présents à deux endroits, avec une règle d'apparition différente :
+
+| Écran | La carte apparaît quand |
+|---|---|
+| Dashboard, onglet Conduite | la **voiture** est en mode Personnalisé, y compris si le mode a été mis depuis l'écran d'origine |
+| Éditeur de profil, onglet Conduite | le **profil** en cours d'édition a Personnalisé pour mode |
+
+Sur le Dashboard, une ligne dont le véhicule ne rend pas l'état disparaît : la commande existe sur
+tous les firmwares, mais rien ne garantit que la finition porte l'équipement.
+
+> [!WARNING]
+> Les trois réglages n'ont pas la même échelle côté véhicule, et la pédale est un piège :
+> **Normal y vaut 0**, pas la valeur du milieu. La puissance vaut 1/2/3 en SWI133/68/165 mais
+> 2/3/4 sur A9, où la voiture réutilise l'échelle des modes de conduite. L'application ne
+> manipule donc jamais ces nombres — elle passe un index 0/1/2 et la conversion vit dans
+> `MG4Hardware`.
+
+Dans un profil, ils ne sont écrits que si son mode de conduite est Personnalisé, et un profil
+enregistré avant cette fonctionnalité n'écrit rien tant qu'il n'a pas été rouvert et sauvegardé.
 ### Sécurité
 - **ESC** : ON / OFF
 - **Avertissement de somnolence** : ON / OFF, avec sensibilité Faible / Standard / Élevé
@@ -899,6 +924,30 @@ The app communicates with the vehicle through the proprietary SAIC SDK, accessin
 - **Drive mode**: ECO / NORMAL / SPORT / SNOW / CUSTOM
 - **Regenerative braking**: Off / Low / Medium / High / Adaptive / One Pedal
 
+#### Custom drive mode
+Three settings the vehicle only exposes in that mode: **power** (Eco / Normal / Sport),
+**steering** and **pedal force** (Comfort / Normal / Sport). Available on all six firmwares
+through two distinct routes — `VehiclePropertyManager` signals on SWI133/68/165, and
+`CarVehicleSettingClient` methods on A9.
+
+Present in two places, with a different reveal rule:
+
+| Screen | The card appears when |
+|---|---|
+| Dashboard, Driving tab | the **car** is in Custom mode, including when it was set from the stock screen |
+| Profile editor, Driving tab | the **profile** being edited has Custom as its mode |
+
+On the Dashboard, a row whose state the vehicle does not report disappears: the command exists on
+every firmware, but nothing guarantees the trim carries the hardware.
+
+> [!WARNING]
+> The three settings do not share one scale, and the pedal is a trap: **Normal is 0 there**, not
+> the middle value. Power is 1/2/3 on SWI133/68/165 but 2/3/4 on A9, where the car reuses the
+> drive-mode scale. The app therefore never handles those numbers — it passes a 0/1/2 index and
+> the conversion lives in `MG4Hardware`.
+
+In a profile they are only written when its drive mode is Custom, and a profile saved before this
+feature writes nothing until it has been reopened and saved.
 ### Safety
 - **ESC**: ON / OFF
 - **Drowsiness warning**: ON / OFF, with Low / Standard / High sensitivity

@@ -3,6 +3,7 @@ package com.mg4.control.profile
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
+import com.mg4.control.model.DriveMode
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.util.FirmwareInfo
 import kotlinx.coroutines.CoroutineScope
@@ -114,6 +115,20 @@ object ProfileApplier {
                     AppLogger.i(TAG, "  SeatHeatRight=${profile.seatHeatRight} → $srOk")
                 } else {
                     AppLogger.i(TAG, "  SeatHeat non pris en compte par ce profil — inchangé")
+                }
+            }
+
+            // Mode Personnalisé — les trois réglages n'ont d'effet que dans ce mode, les
+            // écrire ailleurs serait au mieux sans effet, au pire refusé par le véhicule.
+            if (profile.driveMode == DriveMode.CUSTOM) {
+                profile.customPower?.let {
+                    AppLogger.i(TAG, "  Puissance personnalisée=$it → ${MG4Hardware.setCustomPower(it)}")
+                }
+                profile.customSteering?.let {
+                    AppLogger.i(TAG, "  Direction personnalisée=$it → ${MG4Hardware.setCustomSteering(it)}")
+                }
+                profile.customPedal?.let {
+                    AppLogger.i(TAG, "  Pédale personnalisée=$it → ${MG4Hardware.setCustomPedal(it)}")
                 }
             }
 

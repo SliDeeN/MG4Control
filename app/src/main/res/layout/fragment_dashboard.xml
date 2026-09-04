@@ -216,6 +216,203 @@
 
             </LinearLayout>
 
+            <!-- ── Mode Personnalisé : puissance, direction, pédale ──────────────
+                 Ces trois réglages n'existent QUE dans le mode Personnalisé du véhicule :
+                 la carte n'apparaît donc que lorsqu'il est actif, et une ligne dont le
+                 véhicule ne rend pas l'état est masquée (finition sans l'équipement). -->
+            <LinearLayout
+                android:id="@+id/section_custom_drive"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_section_rounded"
+                android:padding="9dp"
+                android:layout_marginStart="5dp"
+                android:layout_marginEnd="5dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/drive_section_custom"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    android:textAllCaps="true"
+                    android:paddingBottom="5dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border"
+                    android:layout_marginBottom="5dp" />
+
+                <LinearLayout
+                    android:id="@+id/row_cd_power"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="4dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="86dp"
+                        android:text="@string/drive_custom_power"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="13sp"
+                        android:letterSpacing="0.06"
+                        android:textAllCaps="true" />
+
+                    <Button
+                        android:id="@+id/btn_cd_power_eco"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="5dp"
+                        android:text="@string/drive_eco"
+                        android:textColor="@color/text_secondary"
+                        android:backgroundTint="@color/dash_btn"
+                        android:textSize="16sp"
+                        android:textAllCaps="true" />
+
+                    <Button
+                        android:id="@+id/btn_cd_power_normal"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="5dp"
+                        android:text="@string/drive_normal"
+                        android:textColor="@color/text_secondary"
+                        android:backgroundTint="@color/dash_btn"
+                        android:textSize="16sp"
+                        android:textAllCaps="true" />
+
+                    <Button
+                        android:id="@+id/btn_cd_power_sport"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:text="@string/drive_sport"
+                        android:textColor="@color/text_secondary"
+                        android:backgroundTint="@color/dash_btn"
+                        android:textSize="16sp"
+                        android:textAllCaps="true" />
+
+                </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/row_cd_steer"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="4dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="86dp"
+                        android:text="@string/drive_custom_steering"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="13sp"
+                        android:letterSpacing="0.06"
+                        android:textAllCaps="true" />
+
+                    <Button
+                        android:id="@+id/btn_cd_steer_comfort"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="5dp"
+                        android:text="@string/drive_custom_comfort"
+                        android:textColor="@color/text_secondary"
+                        android:backgroundTint="@color/dash_btn"
+                        android:textSize="16sp"
+                        android:textAllCaps="true" />
+
+                    <Button
+                        android:id="@+id/btn_cd_steer_normal"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="5dp"
+                        android:text="@string/drive_normal"
+                        android:textColor="@color/text_secondary"
+                        android:backgroundTint="@color/dash_btn"
+                        android:textSize="16sp"
+                        android:textAllCaps="true" />
+
+                    <Button
+                        android:id="@+id/btn_cd_steer_sport"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:text="@string/drive_sport"
+                        android:textColor="@color/text_secondary"
+                        android:backgroundTint="@color/dash_btn"
+                        android:textSize="16sp"
+                        android:textAllCaps="true" />
+
+                </LinearLayout>
+                <LinearLayout
+                    android:id="@+id/row_cd_pedal"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginTop="4dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minWidth="86dp"
+                        android:text="@string/drive_custom_pedal"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="13sp"
+                        android:letterSpacing="0.06"
+                        android:textAllCaps="true" />
+
+                    <Button
+                        android:id="@+id/btn_cd_pedal_comfort"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="5dp"
+                        android:text="@string/drive_custom_comfort"
+                        android:textColor="@color/text_secondary"
+                        android:backgroundTint="@color/dash_btn"
+                        android:textSize="16sp"
+                        android:textAllCaps="true" />
+
+                    <Button
+                        android:id="@+id/btn_cd_pedal_normal"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="5dp"
+                        android:text="@string/drive_normal"
+                        android:textColor="@color/text_secondary"
+                        android:backgroundTint="@color/dash_btn"
+                        android:textSize="16sp"
+                        android:textAllCaps="true" />
+
+                    <Button
+                        android:id="@+id/btn_cd_pedal_sport"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:text="@string/drive_sport"
+                        android:textColor="@color/text_secondary"
+                        android:backgroundTint="@color/dash_btn"
+                        android:textSize="16sp"
+                        android:textAllCaps="true" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
             <!-- ── Section Régénération ────────────────────────────────── -->
             <LinearLayout
                 android:id="@+id/section_regen"

@@ -1686,6 +1686,115 @@ object MG4Hardware {
         return ok
     }
 
+    // ── Mode de conduite Personnalisé : puissance, direction, pédale ─────────
+    //
+    // Ces trois réglages n'existent que dans le mode Personnalisé du véhicule. Ils sont présents
+    // sur les six firmwares, mais par deux voies différentes.
+
+    /**
+     * Signaux du SDK vehiclesettings (SWI133/68/165).
+     *
+     * ⚠️ Ce ne sont PAS des identifiants de propriété VHAL : l'app d'origine passe par
+     * `VehiclePropertyManager` avec sa propre numérotation. Les équivalents VHAL existent
+     * (0x2140a18c / 0x2140a18d / 0x2140a18e) si cette voie devenait un jour nécessaire.
+     */
+    private const val SIG_CUSTOM_POWER    = 0x2040002
+    private const val SIG_CUSTOM_STEERING = 0x2040004
+    private const val SIG_CUSTOM_PEDAL    = 0x2040005
+
+    /** Index manipulés par l'application — jamais les valeurs véhicule, voir [valeurPuissance]. */
+    object CustomDrive {
+        const val ECO_COMFORT = 0
+        const val NORMAL      = 1
+        const val SPORT       = 2
+    }
+
+    /**
+     * A9 : SWI69, SWI131, SWI132. Même ensemble que la clim, mais fonction distincte à dessein —
+     * changer la règle d'un domaine ne doit pas déplacer l'autre en silence.
+     */
+    private fun isDriveCustomA9(): Boolean {
+        val gen = FirmwareInfo.getGeneration()
+        return gen == FirmwareInfo.Gen.SWI69 || gen == FirmwareInfo.Gen.SWI131 ||
+               gen == FirmwareInfo.Gen.SWI132
+    }
+
+    // ⚠️ TROIS ÉCHELLES DIFFÉRENTES, relevées dans le code d'origine des deux familles :
+    //  • direction : 1/2/3 partout ;
+    //  • pédale : 1/0/2 partout — Normal vaut ZÉRO, et non la valeur du milieu. Le smali SWI133
+    //    réassigne le registre entre deux branches, ce qui se lit 1/2/3 si on va trop vite ;
+    //    le dispatch A9 sur les libellés comfort/normal/sport donne le même résultat ;
+    //  • puissance : 1/2/3 en old-SDK mais 2/3/4 sur A9, où la voiture réutilise l'échelle des
+    //    modes de conduite (ÉCO=2, NORMAL=3, SPORT=4).
+    //
+    // D'où l'index 0/1/2 exposé au reste de l'application : personne d'autre ne manipule ces
+    // nombres, et une échelle qui changerait ne se corrige qu'ici.
+    private fun valeurPuissance(index: Int): Int = index + (if (isDriveCustomA9()) 2 else 1)
+    private fun valeurDirection(index: Int): Int = index + 1
+    private fun valeurPedale(index: Int): Int = when (index) {
+        CustomDrive.ECO_COMFORT -> 1
+        CustomDrive.SPORT       -> 2
+        else                    -> 0
+    }
+
+    private fun indexPuissance(v: Int): Int? =
+        (v - (if (isDriveCustomA9()) 2 else 1)).takeIf { it in 0..2 }
+    private fun indexDirection(v: Int): Int? = (v - 1).takeIf { it in 0..2 }
+    private fun indexPedale(v: Int): Int? = when (v) {
+        1    -> CustomDrive.ECO_COMFORT
+        0    -> CustomDrive.NORMAL
+        2    -> CustomDrive.SPORT
+        else -> null
+    }
+
+    /** Puissance en chevaux du mode Personnalisé. [index] : 0=Éco, 1=Normal, 2=Sport. */
+    fun setCustomPower(index: Int): Boolean {
+        if (index !in 0..2) return false
+        val v = valeurPuissance(index)
+        if (logEnabled) AppLogger.i(TAG, "setCustomPower → index=$index valeur=$v")
+        return if (isDriveCustomA9()) callVsmVoid("setDrivingPowerTrainMode", v)
+               else setIntPropertyVpmRecovery(SIG_CUSTOM_POWER, v)
+    }
+
+    /** Direction du mode Personnalisé. [index] : 0=Confort, 1=Normal, 2=Sport. */
+    fun setCustomSteering(index: Int): Boolean {
+        if (index !in 0..2) return false
+        val v = valeurDirection(index)
+        if (logEnabled) AppLogger.i(TAG, "setCustomSteering → index=$index valeur=$v")
+        // A9 : setSteeringMode, et NON setDrivingEpsMode — les deux existent, seule la première
+        // est appelée par l'app d'origine. Vérifié en traçant fragment → presenter → model.
+        return if (isDriveCustomA9()) callVsmVoid("setSteeringMode", v)
+               else setIntPropertyVpmRecovery(SIG_CUSTOM_STEERING, v)
+    }
+
+    /** Force exercée sur la pédale. [index] : 0=Confort, 1=Normal, 2=Sport. */
+    fun setCustomPedal(index: Int): Boolean {
+        if (index !in 0..2) return false
+        val v = valeurPedale(index)
+        if (logEnabled) AppLogger.i(TAG, "setCustomPedal → index=$index valeur=$v")
+        return if (isDriveCustomA9()) callVsmVoid("setBrakePedalMode", v)
+               else setIntPropertyVpmRecovery(SIG_CUSTOM_PEDAL, v)
+    }
+
+    /**
+     * Lectures — `null` si le véhicule ne répond pas OU rend une valeur hors échelle.
+     *
+     * C'est le seul garde-fou honnête pour savoir si la voiture porte réellement ces réglages :
+     * ils existent sur les six firmwares, mais rien ne dit qu'ils sont montés sur toutes les
+     * finitions. Un `null` fait masquer la ligne plutôt que d'offrir un bouton sans effet.
+     */
+    fun getCustomPower(): Int? = indexPuissance(
+        if (isDriveCustomA9()) (callVsm("getDrivingPowerTrainMode") as? Int) ?: -1
+        else getIntPropertyVpm(SIG_CUSTOM_POWER))
+
+    fun getCustomSteering(): Int? = indexDirection(
+        if (isDriveCustomA9()) (callVsm("getSteeringMode") as? Int) ?: -1
+        else getIntPropertyVpm(SIG_CUSTOM_STEERING))
+
+    fun getCustomPedal(): Int? = indexPedale(
+        if (isDriveCustomA9()) (callVsm("getBrakePedalMode") as? Int) ?: -1
+        else getIntPropertyVpm(SIG_CUSTOM_PEDAL))
+
     fun setRegenLevel(level: RegenLevel): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setRegenLevel → ${level.label} (${level.value})")
         return if (level == RegenLevel.ONE_PEDAL) {

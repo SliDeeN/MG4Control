@@ -78,6 +78,13 @@
     <string name="drive_section_mode">Mode de conduite</string>
     <string name="drive_section_regen">Régénération</string>
 
+    <!-- Mode de conduite Personnalisé -->
+    <string name="drive_section_custom">Mode personnalisé</string>
+    <string name="drive_custom_power">Puissance</string>
+    <string name="drive_custom_steering">Direction</string>
+    <string name="drive_custom_pedal">Pédale</string>
+    <string name="drive_custom_comfort">Confort</string>
+
     <!-- Regen levels -->
     <string name="regen_off">Off</string>
     <string name="regen_low">Faible</string>

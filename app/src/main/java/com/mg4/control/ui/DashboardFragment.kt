@@ -17,6 +17,7 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.R
+import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.MG4Hardware.AebMode
 import com.mg4.control.hardware.MG4Hardware.AebSensitivity
@@ -85,6 +86,12 @@ class DashboardFragment : Fragment() {
     private var energySavingOn = false
     /** Dernier mode de conduite connu — nécessaire pour arbitrer les exclusions SNOW / Éco énergie. */
     private var currentDriveMode: DriveMode? = null
+
+    // ── Mode Personnalisé — puissance / direction / pédale ───────────────────
+    // Une entrée par ligne : le bouton, et l'index qu'il représente (0/1/2).
+    private val customPowerButtons  = mutableMapOf<Int, Button>()
+    private val customSteerButtons  = mutableMapOf<Int, Button>()
+    private val customPedalButtons  = mutableMapOf<Int, Button>()
 
     // ── AEB : page 0 pour VSM-based, page 1 (SWI133) pour les autres ───────────
     private var switchAeb: Switch? = null
@@ -320,6 +327,17 @@ class DashboardFragment : Fragment() {
         switchSoundWarning = view.findViewById(R.id.switch_sound_warning)
         alertsGroupSwi133  = view.findViewById(R.id.alerts_group_swi133)
 
+        // Mode Personnalisé — trois lignes de trois boutons
+        customPowerButtons[0] = view.findViewById(R.id.btn_cd_power_eco)
+        customPowerButtons[1] = view.findViewById(R.id.btn_cd_power_normal)
+        customPowerButtons[2] = view.findViewById(R.id.btn_cd_power_sport)
+        customSteerButtons[0] = view.findViewById(R.id.btn_cd_steer_comfort)
+        customSteerButtons[1] = view.findViewById(R.id.btn_cd_steer_normal)
+        customSteerButtons[2] = view.findViewById(R.id.btn_cd_steer_sport)
+        customPedalButtons[0] = view.findViewById(R.id.btn_cd_pedal_comfort)
+        customPedalButtons[1] = view.findViewById(R.id.btn_cd_pedal_normal)
+        customPedalButtons[2] = view.findViewById(R.id.btn_cd_pedal_sport)
+
         // TSR + Économie d'énergie
         switchTsr       = view.findViewById(R.id.switch_tsr)
         btnEnergySaving = view.findViewById(R.id.btn_energy_saving)
@@ -360,6 +378,22 @@ class DashboardFragment : Fragment() {
             btn.setOnClickListener {
                 applyDriveModeUI(mode)
                 CoroutineScope(Dispatchers.IO).launch { MG4Hardware.setDriveMode(mode) }
+            }
+        }
+
+        // Mode Personnalisé — chaque ligne écrit son réglage et rien d'autre.
+        listOf(
+            Triple(customPowerButtons, MG4Hardware::setCustomPower,    "puissance"),
+            Triple(customSteerButtons, MG4Hardware::setCustomSteering, "direction"),
+            Triple(customPedalButtons, MG4Hardware::setCustomPedal,    "pédale")
+        ).forEach { (boutons, ecrire, nom) ->
+            boutons.forEach { (index, btn) ->
+                btn.setOnClickListener {
+                    highlightCustomRow(boutons, index)
+                    CoroutineScope(Dispatchers.IO).launch {
+                        AppLogger.i("MG4_DASH", "mode personnalisé — $nom = $index → ${ecrire(index)}")
+                    }
+                }
             }
         }
 
@@ -906,8 +940,68 @@ class DashboardFragment : Fragment() {
         setRegenEnabled(!active && currentDriveMode != DriveMode.SNOW)
     }
 
+    /** Surligne l'option retenue d'une ligne du mode Personnalisé. */
+    private fun highlightCustomRow(boutons: Map<Int, Button>, actif: Int?) {
+        boutons.forEach { (index, btn) ->
+            val on = index == actif
+            btn.backgroundTintList = ColorStateList.valueOf(if (on) colorActive else colorInactive)
+            btn.setTextColor(if (on) colorTextActive else colorTextInactive)
+        }
+    }
+
+    /**
+     * Révèle la carte du mode Personnalisé et y reporte l'état du véhicule.
+     *
+     * Deux niveaux de masquage, et ils ne disent pas la même chose :
+     *  • la CARTE n'apparaît que si la voiture est réellement en mode Personnalisé — ces trois
+     *    réglages n'ont aucun effet ailleurs ;
+     *  • une LIGNE disparaît si le véhicule ne rend pas son état. Les six firmwares exposent la
+     *    commande, mais rien ne garantit que la finition porte l'équipement — une direction à
+     *    assistance variable, par exemple. Un bouton qui n'écrirait nulle part vaut moins que
+     *    pas de bouton du tout.
+     */
+    private fun refreshCustomDrive(mode: DriveMode?) {
+        val vue = view ?: return
+        val carte = vue.findViewById<View>(R.id.section_custom_drive) ?: return
+        if (mode != DriveMode.CUSTOM) {
+            carte.visibility = View.GONE
+            return
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            val puissance = MG4Hardware.getCustomPower()
+            val direction = MG4Hardware.getCustomSteering()
+            val pedale    = MG4Hardware.getCustomPedal()
+            withContext(Dispatchers.Main) {
+                if (!isAdded) return@withContext
+                // L'état a pu changer pendant la lecture (l'utilisateur quitte le mode) : on
+                // revérifie avant d'afficher, sinon la carte réapparaîtrait toute seule.
+                if (currentDriveMode != DriveMode.CUSTOM) { carte.visibility = View.GONE; return@withContext }
+                val lignes = listOf(
+                    Triple(customPowerButtons, puissance, R.id.row_cd_power),
+                    Triple(customSteerButtons, direction, R.id.row_cd_steer),
+                    Triple(customPedalButtons, pedale,    R.id.row_cd_pedal)
+                )
+                lignes.forEach { (boutons, valeur, rowId) ->
+                    vue.findViewById<View>(rowId)?.visibility =
+                        if (valeur == null) View.GONE else View.VISIBLE
+                    highlightCustomRow(boutons, valeur)
+                }
+                // Aucune ligne lisible : la carte n'aurait qu'un titre à montrer.
+                val lisible = lignes.any { it.second != null }
+                carte.visibility = if (lisible) View.VISIBLE else View.GONE
+                // Trois lectures nulles d'un coup, c'est plus vraisemblablement une couche
+                // véhicule pas encore prête qu'une voiture dépourvue des trois équipements.
+                // Même repli que refreshDriveRegen, qui réessaie pour la même raison.
+                if (!lisible) view?.postDelayed({
+                    if (isAdded && currentDriveMode == DriveMode.CUSTOM) refreshCustomDrive(currentDriveMode)
+                }, 3_000)
+            }
+        }
+    }
+
     private fun applyDriveModeUI(mode: DriveMode) {
         currentDriveMode = mode
+        refreshCustomDrive(mode)
         driveModeButtons.forEach { (m, btn) ->
             val (bg, text) = when {
                 m != mode            -> colorInactive to colorTextInactive

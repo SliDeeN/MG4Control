@@ -54,6 +54,20 @@ data class DrivingProfile(
     val escEnabled: Boolean? = null,
     val drowsinessEnabled: Boolean? = null,
     val drowsinessSensitivity: Int? = null,   // 1=Faible, 2=Standard, 3=Élevé
+    // ── Mode de conduite Personnalisé ────────────────────────────────────────
+    //
+    // Index 0/1/2 (Éco ou Confort, Normal, Sport) — jamais les valeurs véhicule, dont l'échelle
+    // varie d'un firmware à l'autre. La conversion vit dans MG4Hardware.
+    //
+    // ⚠️ NULLABLES À DESSEIN, comme les chauffages : Gson n'appelle pas le constructeur Kotlin,
+    // donc un profil enregistré avant cette fonctionnalité rend `null` et n'écrit RIEN. Un
+    // `Int = 1` aurait rendu 0 (défaut de la JVM) et se serait appliqué comme « Éco/Confort »
+    // sur tous les profils Personnalisé existants.
+    //
+    // Ils ne sont appliqués que si [driveMode] vaut CUSTOM : le véhicule les ignore ailleurs.
+    val customPower: Int? = null,
+    val customSteering: Int? = null,
+    val customPedal: Int? = null,
     // ── Climatisation ────────────────────────────────────────────────────────────
     /**
      * Interrupteur du bloc clim. FAUX par défaut, et c'est ce que Gson donne aux profils

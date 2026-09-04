@@ -127,6 +127,13 @@ class ProfileEditFragment : Fragment() {
         var hvacDfSel       = data.hvacDefrostFront
         var hvacDrSel       = data.hvacDefrostRear
         var hvacLoopSel     = data.hvacLoopMode
+        // Index 0/1/2, ou null quand le profil ne s'est jamais prononcé (créé avant la
+        // fonctionnalité). L'éditeur propose alors Normal, mais rien n'est enregistré tant que
+        // l'utilisateur n'a pas sauvegardé — un ancien profil Personnalisé ne se met donc pas à
+        // écrire ces réglages du seul fait qu'on l'a ouvert.
+        var customPowerSel  = data.customPower
+        var customSteerSel  = data.customSteering
+        var customPedalSel  = data.customPedal
         var adasMode        = data.adasMode
         var swi68Mode       = data.swi68AdasMode
         var swi132SasMode   = data.swi132SasMode                       // 0=Off, 2=Manuel, 3=Intelligent
@@ -181,6 +188,15 @@ class ProfileEditFragment : Fragment() {
             }
         }
 
+        /**
+         * La carte suit le mode CHOISI dans le formulaire, pas l'état du véhicule : c'est un
+         * profil qu'on édite, il peut très bien être composé voiture éteinte.
+         */
+        fun majCustomDrive() {
+            view.findViewById<View>(R.id.section_custom_drive_d)?.visibility =
+                if (selectedDrive == DriveMode.CUSTOM) View.VISIBLE else View.GONE
+        }
+
         bindGroup(drivePairs, selectedDrive) { mode ->
             selectedDrive = mode
             val isSnow = mode == DriveMode.SNOW
@@ -189,8 +205,10 @@ class ProfileEditFragment : Fragment() {
                 btnEnergy.isEnabled = !isSnow
                 btnEnergy.alpha = if (isSnow) 0.35f else 1f
             }
+            majCustomDrive()
         }
         setRegenEnabled(data.driveMode != DriveMode.SNOW && !energySavingSel)
+        majCustomDrive()
 
         // ── Régénération ─────────────────────────────────────────────────────
         val regenPairs = listOf(
@@ -202,6 +220,28 @@ class ProfileEditFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_regen_one_pedal_d) to RegenLevel.ONE_PEDAL
         )
         bindGroup(regenPairs, selectedRegen) { selectedRegen = it }
+
+        // ── Mode Personnalisé : puissance, direction, pédale ─────────────────
+        val cdPower = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_cd_power_eco_d)    to 0,
+            view.findViewById<MaterialButton>(R.id.btn_cd_power_normal_d) to 1,
+            view.findViewById<MaterialButton>(R.id.btn_cd_power_sport_d)  to 2
+        )
+        val cdSteer = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_cd_steer_comfort_d) to 0,
+            view.findViewById<MaterialButton>(R.id.btn_cd_steer_normal_d)  to 1,
+            view.findViewById<MaterialButton>(R.id.btn_cd_steer_sport_d)   to 2
+        )
+        val cdPedal = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_cd_pedal_comfort_d) to 0,
+            view.findViewById<MaterialButton>(R.id.btn_cd_pedal_normal_d)  to 1,
+            view.findViewById<MaterialButton>(R.id.btn_cd_pedal_sport_d)   to 2
+        )
+        // Normal proposé par défaut : la carte n'apparaît que sur Personnalisé, il faut donc
+        // qu'elle montre ce qui sera appliqué plutôt qu'une rangée vide.
+        bindGroup(cdPower, customPowerSel ?: 1) { customPowerSel = it }
+        bindGroup(cdSteer, customSteerSel ?: 1) { customSteerSel = it }
+        bindGroup(cdPedal, customPedalSel ?: 1) { customPedalSel = it }
 
         // ── Volant chauffant + prise en compte ───────────────────────────────
         val steerBtns = listOf(
@@ -650,6 +690,9 @@ class ProfileEditFragment : Fragment() {
                 lasVibrationReminder = lasVibrationReminderSel,
                 energySaving   = energySavingSel,
                 tsrEnabled     = tsrEnabledSel,
+                customPower      = if (selectedDrive == DriveMode.CUSTOM) (customPowerSel ?: 1) else customPowerSel,
+                customSteering   = if (selectedDrive == DriveMode.CUSTOM) (customSteerSel ?: 1) else customSteerSel,
+                customPedal      = if (selectedDrive == DriveMode.CUSTOM) (customPedalSel ?: 1) else customPedalSel,
                 hvacEnabled      = hvacEnabledSel,
                 hvacPower        = hvacPowerSel,
                 hvacAc           = hvacAcSel,

@@ -78,6 +78,13 @@
     <string name="drive_section_mode">Fahrmodus</string>
     <string name="drive_section_regen">Rekuperation</string>
 
+    <!-- Mode de conduite Personnalisé -->
+    <string name="drive_section_custom">Eigener Modus</string>
+    <string name="drive_custom_power">Leistung</string>
+    <string name="drive_custom_steering">Lenkung</string>
+    <string name="drive_custom_pedal">Pedal</string>
+    <string name="drive_custom_comfort">Komfort</string>
+
     <!-- Rekuperationsstufen -->
     <string name="regen_off">Aus</string>
     <string name="regen_low">Schwach</string>
