@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.annotation.VisibleForTesting
 import com.mg4.control.debug.AppLogger
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,6 +45,16 @@ object UpdateChecker {
 
     private const val GITLAB_API_URL =
         "https://gitlab.com/api/v4/projects/SliDeeN%2Fmg4control/releases/permalink/latest"
+
+    /**
+     * Interrogations de GitHub avant de se rabattre sur GitLab, et délai entre elles.
+     *
+     * Ce n'est pas de la paranoïa : l'API GitHub renvoie régulièrement une erreur passagère, et
+     * jusqu'ici un seul échec suffisait à conclure. Le popup véhicule en souffrait bien plus que
+     * le dialogue de l'application, qui lui retente à chaque ouverture.
+     */
+    private const val GITHUB_ESSAIS    = 3
+    private const val GITHUB_RETRY_MS  = 10_000L
 
     private const val PREFS_SKIP       = "mg4_update_skip"
     private const val KEY_SKIP_VERSION = "skip_version"
@@ -87,17 +98,34 @@ object UpdateChecker {
                 // de « aucune beta publiee », et il faut relire le code pour trancher.
                 AppLogger.i(TAG, "Canal ${if (beta) "BETA (pre-releases incluses)" else "STABLE"}" +
                     " — version installee $currentVersion")
-                val release = fetchFromGitHub(beta)
+                // GitHub répond mal assez souvent pour qu'un seul essai raté ne doive pas
+                // conclure à « pas de mise à jour ». Trois tentatives espacées, PUIS le repli
+                // GitLab — qui reste le dernier recours et non un substitut au premier échec,
+                // les pré-releases n'y étant pas publiées.
+                var release: RawRelease? = null
+                for (essai in 1..GITHUB_ESSAIS) {
+                    release = fetchFromGitHub(beta)
+                    if (release != null) {
+                        if (essai > 1) AppLogger.i(TAG, "GitHub a répondu au ${essai}e essai")
+                        break
+                    }
+                    if (essai < GITHUB_ESSAIS) {
+                        AppLogger.w(TAG, "GitHub muet (essai $essai/$GITHUB_ESSAIS) — " +
+                            "nouvel essai dans ${GITHUB_RETRY_MS / 1000} s")
+                        delay(GITHUB_RETRY_MS)
+                    }
+                }
+                val rel = release
                     ?: fetchFromGitLab()
                     ?: run {
-                        AppLogger.w(TAG, "GitHub et GitLab inaccessibles")
+                        AppLogger.w(TAG, "GitHub ($GITHUB_ESSAIS essais) et GitLab inaccessibles")
                         withContext(Dispatchers.Main) { onError?.invoke() }
                         return@launch
                     }
 
-                AppLogger.i(TAG, "Release récupérée depuis ${release.source} : ${release.tagName}")
+                AppLogger.i(TAG, "Release récupérée depuis ${rel.source} : ${rel.tagName}")
 
-                val versionName = release.tagName.trimStart('v')
+                val versionName = rel.tagName.trimStart('v')
 
                 if (isNewer(versionName, currentVersion)) {
                     if (versionName == skippedVersion) {
@@ -106,8 +134,8 @@ object UpdateChecker {
                         return@launch
                     }
                     val info = UpdateInfo(
-                        versionName, release.tagName, release.apkUrl,
-                        release.releaseNotes
+                        versionName, rel.tagName, rel.apkUrl,
+                        rel.releaseNotes
                     )
                     withContext(Dispatchers.Main) { onUpdateAvailable(info) }
                 } else {

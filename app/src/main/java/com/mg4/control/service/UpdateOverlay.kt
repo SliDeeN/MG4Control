@@ -40,11 +40,12 @@ object UpdateOverlay {
         onInstaller: () -> Unit,
         onIgnorer: () -> Unit,
         onDesactiver: () -> Unit,
-        onAffiche: () -> Unit = {}
+        onAffiche: () -> Unit = {},
+        onReporte: () -> Unit = {}
     ) {
         handler.post {
             showOnMain(context, info, versionActuelle, onInstaller, onIgnorer, onDesactiver,
-                onAffiche)
+                onAffiche, onReporte)
         }
     }
 
@@ -55,12 +56,14 @@ object UpdateOverlay {
         onInstaller: () -> Unit,
         onIgnorer: () -> Unit,
         onDesactiver: () -> Unit,
-        onAffiche: () -> Unit
+        onAffiche: () -> Unit,
+        onReporte: () -> Unit
     ) {
         // Même règle que le popup de confirmation de profil : rien ne recouvre l'écran en
-        // roulant. La vérification reviendra au prochain contact, la mise à jour attendra.
+        // roulant. La vérification reviendra plus tard, la mise à jour attendra.
         if (!VehicleWriteGate.isAllowedNow()) {
             AppLogger.w(TAG, "MAJ ${info.versionName} non signalée : véhicule en mouvement")
+            onReporte()
             return
         }
         dismiss(context)
@@ -111,6 +114,7 @@ object UpdateOverlay {
         } catch (e: Exception) {
             // Permission d'affichage par-dessus les autres applications retirée, par exemple.
             AppLogger.w(TAG, "MAJ non signalée — overlay refusé : ${e.message}")
+            onReporte()
             return
         }
         overlayView = view

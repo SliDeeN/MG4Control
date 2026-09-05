@@ -26,6 +26,9 @@ object UpdateNotifier {
 
     private const val KEY_LAST_CHECK = "update_overlay_last_check"
 
+    /** La dernière vérification a-t-elle abouti ? Décide de la longueur du créneau ci-dessous. */
+    private const val KEY_LAST_OK = "update_overlay_last_ok"
+
     /**
      * Six heures entre deux interrogations réseau.
      *
@@ -34,6 +37,20 @@ object UpdateNotifier {
      * chaque coup de contact d'une journée de trajets courts.
      */
     private const val MIN_INTERVAL_MS = 6L * 60L * 60L * 1_000L
+
+    /**
+     * Créneau bien plus court après un échec.
+     *
+     * ⚠️ C'est la correction d'un vrai défaut : l'horodatage était posé AVANT l'appel réseau, si
+     * bien qu'une erreur GitHub passagère condamnait le popup au silence pour six heures. Le
+     * dialogue de l'application, lui, n'a aucun créneau et retente à chaque ouverture — d'où le
+     * symptôme « le popup dans l'app apparaît, celui du véhicule presque jamais ».
+     *
+     * L'horodatage reste écrit avant l'appel : il sert aussi à empêcher deux vérifications
+     * simultanées (démarrage du service et coup de contact se suivent de près). Seul son SENS
+     * change, selon que la tentative a abouti ou non.
+     */
+    private const val RETRY_INTERVAL_MS = 15L * 60L * 1_000L
 
     /**
      * Version déjà proposée depuis le démarrage du service.
@@ -50,6 +67,23 @@ object UpdateNotifier {
     /** À appeler quand le popup est réellement apparu à l'écran. */
     fun marquerProposee(version: String) {
         dejaProposee = version
+    }
+
+    private fun marquerAbouti(ctx: Context, ok: Boolean) {
+        prefs(ctx).edit().putBoolean(KEY_LAST_OK, ok).apply()
+    }
+
+    /**
+     * Le dépôt a répondu, mais le popup n'a pas pu s'afficher — véhicule en mouvement, ou
+     * permission d'overlay retirée.
+     *
+     * Sans ça, la vérification aurait « abouti » et l'annonce attendrait six heures alors que
+     * personne ne l'a vue. On repasse donc sur le créneau court.
+     */
+    fun marquerReporte(ctx: Context) {
+        AppLogger.i(TAG, "popup non affiché — nouvel essai possible dans " +
+            "${RETRY_INTERVAL_MS / 60_000} min")
+        marquerAbouti(ctx, false)
     }
 
     fun isEnabled(ctx: Context): Boolean =
@@ -76,24 +110,35 @@ object UpdateNotifier {
 
         val maintenant = System.currentTimeMillis()
         val dernier = prefs(ctx).getLong(KEY_LAST_CHECK, 0L)
+        val abouti  = prefs(ctx).getBoolean(KEY_LAST_OK, true)
+        val creneau = if (abouti) MIN_INTERVAL_MS else RETRY_INTERVAL_MS
         // Une horloge véhicule qui recule (mise à l'heure GPS) rendrait l'écart négatif et
-        // bloquerait la vérification pour six heures : on repart de zéro dans ce cas.
+        // bloquerait la vérification : on repart de zéro dans ce cas.
         val ecart = maintenant - dernier
-        if (dernier != 0L && ecart in 0 until MIN_INTERVAL_MS) return
+        if (dernier != 0L && ecart in 0 until creneau) return
 
-        prefs(ctx).edit().putLong(KEY_LAST_CHECK, maintenant).apply()
+        // Posé avant l'appel pour empêcher deux vérifications simultanées, mais marqué NON
+        // abouti : seule une réponse du dépôt le fera passer à vrai, et donc ouvrir le créneau
+        // de six heures.
+        prefs(ctx).edit().putLong(KEY_LAST_CHECK, maintenant).putBoolean(KEY_LAST_OK, false).apply()
         AppLogger.i(TAG, "vérification de mise à jour ($raison)")
 
         UpdateChecker.check(
             context = ctx,
             onUpdateAvailable = { info ->
+                marquerAbouti(ctx, true)
                 if (info.versionName == dejaProposee) {
                     AppLogger.i(TAG, "${info.versionName} déjà proposée dans cette session")
                     return@check
                 }
                 onDisponible(info)
+            },
+            onNoUpdate = { marquerAbouti(ctx, true) },
+            // Réseau muet : on laisse le créneau court, la prochaine occasion retentera.
+            onError = {
+                AppLogger.w(TAG, "dépôts injoignables — nouvel essai possible dans " +
+                    "${RETRY_INTERVAL_MS / 60_000} min")
             }
-            // Silencieux quand tout va bien ou quand le réseau manque : personne n'a rien demandé.
         )
     }
 

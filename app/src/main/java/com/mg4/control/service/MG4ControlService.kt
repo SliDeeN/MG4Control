@@ -161,10 +161,15 @@ class MG4ControlService : Service() {
         registerSkinChangeReceiver()   // [THEME-AUTO]
         registerExternalApiReceiver()  // issue #79
         registerIgnitionListener()
-        // Le contact est peut-être déjà mis : le service redémarre aussi après une mise à jour
-        // de l'application ou un arrêt système, sans qu'aucun IGNITION_RUN ne suive.
+        // Vérification de mise à jour, cinq secondes après le démarrage automatique.
+        //
+        // Pourquoi attendre du tout : à t=0 la liaison données de la voiture n'est pas encore
+        // montée et la requête échouerait à coup sûr, gâchant le premier des trois essais.
+        // Pourquoi si peu : ce sont les DEUX NOUVELLES TENTATIVES d'UpdateChecker, à 10 s
+        // d'intervalle, qui absorbent un réseau lent — pas cette attente. Elle n'a qu'à éviter
+        // l'instant où l'on est certain d'échouer.
         Handler(Looper.getMainLooper()).postDelayed(
-            { tryUpdateNotice("démarrage service") }, 60_000L)
+            { tryUpdateNotice("démarrage service") }, 5_000L)
     }
 
     // ── Mise à jour disponible — popup par-dessus l'infodivertissement ───────
@@ -217,7 +222,8 @@ class MG4ControlService : Service() {
                     Toast.makeText(ctx, R.string.update_overlay_disabled_toast,
                         Toast.LENGTH_LONG).show()
                 },
-                onAffiche = { UpdateNotifier.marquerProposee(info.versionName) }
+                onAffiche = { UpdateNotifier.marquerProposee(info.versionName) },
+                onReporte = { UpdateNotifier.marquerReporte(ctx) }
             )
         }
     }
@@ -1134,11 +1140,6 @@ class MG4ControlService : Service() {
                         applyDefaultProfileOnIgnition()
                         tryClimateAutomation("IGNITION_RUN")
                     }, 500L)
-                    // Bien plus tard que le reste : au coup de contact, la liaison données de
-                    // la voiture n'est pas encore montée, et une requête lancée trop tôt
-                    // échouerait en consommant le créneau des six heures.
-                    Handler(Looper.getMainLooper()).postDelayed(
-                        { tryUpdateNotice("IGNITION_RUN") }, 20_000L)
                 }
                 MG4Hardware.CarIgnitionItem.OFF -> {
                     // Extinction → on oublie le choix manuel : le prochain cycle repart sur le défaut/BT
