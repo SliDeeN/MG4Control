@@ -157,7 +157,7 @@ jobs:
             | Variant | File | Network | Auto-update |
             |---|---|---|---|
             | **Online** | `MG4Control-online-*.apk` | yes | yes |
-            | **Offline** | `MG4Control-offline-*.apk` | none | no |
+            | **Offline** | `MG4Control-secure-*-offline.apk` | none | no |
 
       # Purge des anciennes betas. Trois garde-fous, dans cet ordre :
       #   1. on ne touche QU'AUX prereleases (select .prerelease==true) — une erreur de filtre
