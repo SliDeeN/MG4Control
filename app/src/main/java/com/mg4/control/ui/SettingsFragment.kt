@@ -37,7 +37,6 @@ import com.mg4.control.api.ExternalApi
 import com.mg4.control.R
 import com.mg4.control.util.QrCode
 import com.mg4.control.debug.AppLogger
-import com.mg4.control.debug.DataUsageProbe
 import com.mg4.control.util.DataUsage
 import com.mg4.control.debug.CrashLogger
 import com.mg4.control.hardware.MG4Hardware
@@ -387,19 +386,6 @@ class SettingsFragment : Fragment() {
             showDiagnosticDialog()
         }
 
-        // [TEST TEMPORAIRE] Appui LONG sur Diagnostic → test d'écriture climatisation.
-        // Délibérément pas sur le clic simple : le Diagnostic s'ouvre souvent et ce test
-        // modifie brièvement la clim de la voiture (puis restaure l'état d'origine).
-        btnDiagnostic.setOnLongClickListener {
-            Toast.makeText(
-                requireContext(),
-                "Test écriture climatisation lancé — voir les logs MG4_CLIM (~4 s)",
-                Toast.LENGTH_LONG
-            ).show()
-            CoroutineScope(Dispatchers.IO).launch { MG4Hardware.runClimateWriteTest() }
-            true
-        }
-
         // ── Bouton Infos ─────────────────────────────────────────────────────
         view.findViewById<MaterialButton>(R.id.btn_infos).setOnClickListener {
             showInfosDialog()
@@ -522,25 +508,12 @@ class SettingsFragment : Fragment() {
         // Sonde diagnostic : logge volume + état des portes AVANT de rendre les logs,
         // pour que le rapport les contienne (indépendant du toggle / de l'onglet Audio).
         MG4Hardware.runDoorVolumeDiag()
-        // Sonde température : tente de lire temp extérieure + habitacle et logge le brut.
-        MG4Hardware.runTemperatureDiag()
-        // Sonde vitesse : logge la vitesse brute (validation de l'unité par firmware).
-        MG4Hardware.runSpeedDiag()
-        // Sonde climatisation : lecture seule, repère ce qui répond avant tout pilotage.
-        MG4Hardware.runClimateDiag()
         // Sonde média : qui joue, et surtout quelles sessions média existent — c'est ce qui
         // décide si une touche « piste suivante » peut aboutir quelque part.
         MG4Hardware.runMediaDiag()
-        // Sonde consommation de données : lecture seule, aucune API véhicule impliquée.
-        DataUsageProbe.run(ctx)
         // Sonde somnolence / sensibilité / ESC : lecture seule (elle ne bascule RIEN — un
         // rapport de diagnostic ne doit pas toucher à un organe de sécurité active).
         MG4Hardware.runSafetyDiag()
-        // Chasse à la consigne de température (candidats × zones + voie OEM).
-        MG4Hardware.runClimateSetpointHunt()
-        // Sonde thème : quelle source de day/night répond sur ce firmware. Contexte d'ACTIVITÉ —
-        // c'est sa configuration qui décide des ressources affichées.
-        ThemeHelper.runDiagnostic(ctx)
 
         val appVersion = try {
             ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"

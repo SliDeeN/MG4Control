@@ -3711,7 +3711,6 @@ object MG4Hardware {
             else            -> -1
         }
         AppLogger.i(VOL_TAG, "getMediaVolumeMax = $v  [oldSdk=${isOldSdkSound()} a9=${isA9Sound()} smartSound=${sSmartSound != null} audioHelper=${sAudioHelper != null}]")
-        logMediaVolumeDiag()   // A9 : compare type-0 vs group-id (no-op ailleurs)
         return v
     }
 
@@ -3775,15 +3774,6 @@ object MG4Hardware {
     // "group id" (AAOS) ? On logge les deux pour comparer au max réel de la voiture.
     private const val AUDIO_GET_GROUP_FOR_USAGE = 0xe   // getVolumeGroupIdForUsage(usage)
     private const val USAGE_MEDIA_AAOS = 1              // AudioAttributes.USAGE_MEDIA
-    fun logMediaVolumeDiag() {
-        if (!isA9Sound()) return
-        val maxT = audioGetArg(AUDIO_GET_MAX_VOL, VOL_TYPE_MEDIA)
-        val volT = audioGetArg(AUDIO_GET_VOLUME,  VOL_TYPE_MEDIA)
-        val grp  = audioGetArg(AUDIO_GET_GROUP_FOR_USAGE, USAGE_MEDIA_AAOS)
-        val maxG = if (grp in 0..64) audioGetArg(AUDIO_GET_MAX_VOL, grp) else -1
-        val volG = if (grp in 0..64) audioGetArg(AUDIO_GET_VOLUME,  grp) else -1
-        AppLogger.i(VOL_TAG, "A9 diag: parType0[max=$maxT vol=$volT]  groupForUsage(MEDIA)=$grp  parGroup[max=$maxG vol=$volG]")
-    }
 
     // ── Baisse du volume à l'ouverture d'une porte avant (v1 : SWI133) ──────────
     // Détection via l'API Car AOSP **CarPropertyManager** (service "property") + permission
@@ -4908,12 +4898,6 @@ object MG4Hardware {
     private const val PROP_HVAC_TEMP_CURRENT = 0x15600502  // HVAC_TEMPERATURE_CURRENT (SAIC — inversé vs AAOS)
     private val TEMP_HVAC_AREAS = intArrayOf(0x1, 0x2, 0x4, AREA_HVAC, AREA_GLOBAL, 0)
 
-    private fun fmtTemp(v: Float?): String = when {
-        v == null || v.isNaN() -> "illisible"
-        v <= -1000f            -> "n/c(${"%.0f".format(v)})"   // sentinelle SAIC -10000 = service non connecté
-        else                   -> "%.1f".format(v)
-    }
-
     /** Lit un getter float sans argument sur le manager clim SAIC (réflexion). */
     private fun acFloat(name: String): Float? {
         val ac = sAirCondition ?: return null
@@ -4978,34 +4962,6 @@ object MG4Hardware {
     }
 
     /**
-     * Sonde du bouton Diagnostic (lecture seule). Voie principale = service clim SAIC
-     * (`getOutCarTemp`, ce que fait l'OEM). Voie CPM = secondaire, teste les IDs vendor.
-     */
-    fun runTemperatureDiag() {
-        AppLogger.i(TEMP_TAG, "── DIAG température ──")
-        sAppContext?.let { initAirCondition(it) }   // au cas où l'init au démarrage n'a pas abouti
-
-        // Voie OEM (la bonne).
-        if (sAirCondition == null) {
-            AppLogger.i(TEMP_TAG, "AirConditionManager indisponible (SDK non chargé) — voir voie CPM")
-        } else {
-            AppLogger.i(TEMP_TAG, "OEM getOutCarTemp=${fmtTemp(acFloat("getOutCarTemp"))} " +
-                "drvSet=${acInt("getDrvTemp") ?: "?"} psgSet=${acInt("getPsgTemp") ?: "?"}")
-        }
-
-        // Voie CPM secondaire : IDs vendor SAIC (au cas où certains soient lisibles en direct).
-        AppLogger.i(TEMP_TAG, "CPM EXTstd(0x11600703)=${fmtTemp(getFloatPropertyCPM(PROP_ENV_OUTSIDE_TEMP, AREA_GLOBAL))} " +
-            "OUTCAR(0x15602511)=${fmtTemp(getFloatPropertyCPM(PROP_HVAC_TEMP_OUTCAR, AREA_GLOBAL))} " +
-            "AMBIENT(0x1560252a)=${fmtTemp(getFloatPropertyCPM(PROP_HVAC_AMBIENT_TEMP, AREA_GLOBAL))}")
-        for (area in TEMP_HVAC_AREAS) {
-            val a = "0x${Integer.toHexString(area)}"
-            AppLogger.i(TEMP_TAG, "CPM area=$a OUTCAR=${fmtTemp(getFloatPropertyCPM(PROP_HVAC_TEMP_OUTCAR, area))} " +
-                "AMBIENT=${fmtTemp(getFloatPropertyCPM(PROP_HVAC_AMBIENT_TEMP, area))} " +
-                "CURRENT=${fmtTemp(getFloatPropertyCPM(PROP_HVAC_TEMP_CURRENT, area))}")
-        }
-    }
-
-    /**
      * Température extérieure en °C, ou null si illisible. Voie OEM (`getOutCarTemp`) puis
      * repli CPM (`HVAC_TEMPERATURE_OUTCAR` @ zone 0x75, validé sur SWI133). Sentinelle SAIC
      * (-10000) et NaN => null. Lecture seule.
@@ -5018,34 +4974,6 @@ object MG4Hardware {
 
     // ── Sonde vitesse (bouton Diagnostic) ─────────────────────────────────────
     private const val SPEED_TAG = "MG4_SPEED"
-
-    private fun fmtSpeed(v: Float?): String =
-        if (v == null || v.isNaN()) "illisible" else "%.1f".format(v)
-
-    /** Lit un getter float sans argument sur VehicleConditionManager (Katman5, old-SDK). */
-    private fun vcmFloat(name: String): Float? {
-        val vcm = sVcm ?: return null
-        return try { vcm.javaClass.getMethod(name).invoke(vcm) as? Float } catch (_: Exception) { null }
-    }
-
-    /**
-     * Sonde du bouton Diagnostic : logge la vitesse BRUTE telle que rendue par le véhicule,
-     * pour valider l'unité firmware par firmware. Lecture seule.
-     *
-     * Mode d'emploi : rouler à une vitesse connue (ex. 50 au compteur) et cliquer Diagnostic.
-     *  - valeur brute ≈ compteur  → km/h (ce que l'app suppose désormais) ✓
-     *  - valeur brute ≈ compteur/3,6 → m/s (il faudrait reconvertir sur ce firmware)
-     */
-    fun runSpeedDiag() {
-        AppLogger.i(SPEED_TAG, "── DIAG vitesse ──")
-        val rawGlobal = getFloatPropertyCPM(PROP_VEHICLE_SPEED, AREA_GLOBAL)
-        val rawZero   = getFloatPropertyCPM(PROP_VEHICLE_SPEED, 0)
-        val oem       = vcmFloat("getCarSpeed")   // sentinelle OEM -1.0f = indisponible
-        AppLogger.i(SPEED_TAG, "CPM brut(0x11600207) area=GLOBAL: ${fmtSpeed(rawGlobal)} | area=0: ${fmtSpeed(rawZero)}")
-        AppLogger.i(SPEED_TAG, "OEM getCarSpeed (VCM): ${fmtSpeed(oem)} (-1,0 = service indispo)")
-        AppLogger.i(SPEED_TAG, "→ vitesse retenue par l'app: ${fmtSpeed(getVehicleSpeedKmh())} km/h")
-        AppLogger.i(SPEED_TAG, "Comparer au compteur : identique = km/h OK ; ~3,6x plus petit = m/s")
-    }
 
     // ── Sonde climatisation (bouton Diagnostic) ───────────────────────────────
     private const val CLIM_TAG = "MG4_CLIM"
@@ -5078,69 +5006,6 @@ object MG4Hardware {
         "ANION_STATUS"    to 0x15402510
     )
 
-    /** Lecture typée via CarHvacManager. Renvoie la valeur ou la raison de l'échec. LECTURE SEULE. */
-    private fun climRead(propId: Int, area: Int): String {
-        val hvac = sCarHvacManager ?: return "HVAC absent"
-        return try {
-            val getter = when (propId and 0x00FF0000) {
-                0x00600000 -> "getFloatProperty"
-                0x00200000 -> "getBooleanProperty"
-                else       -> "getIntProperty"
-            }
-            val v = hvac.javaClass.getMethod(getter, Int::class.java, Int::class.java)
-                .invoke(hvac, propId, area)
-            v?.toString() ?: "null"
-        } catch (e: Exception) {
-            "illisible(${(e.cause ?: e).javaClass.simpleName})"
-        }
-    }
-
-    /**
-     * Sonde du bouton Diagnostic : tente de LIRE les propriétés de climatisation à la zone
-     * HVAC (0x75). **Aucune écriture** — on ne fait que constater ce qui répond, firmware par
-     * firmware, avant d'envisager un pilotage.
-     *
-     * Les deux dernières lignes sont des TÉMOINS : des propriétés déjà connues pour marcher
-     * (siège chauffant, temp extérieure). Si elles répondent et que les autres non, l'écart
-     * est significatif ; si elles échouent aussi, c'est le manager qui n'est pas prêt.
-     */
-    fun runClimateDiag() {
-        AppLogger.i(CLIM_TAG, "── DIAG climatisation (lecture seule) ──")
-        AppLogger.i(CLIM_TAG, "HVAC manager=${sCarHvacManager != null} zone=0x${Integer.toHexString(AREA_HVAC)}")
-        for ((label, propId) in CLIMATE_PROPS) {
-            AppLogger.i(CLIM_TAG, "  ${label.padEnd(16)} 0x${Integer.toHexString(propId)} = ${climRead(propId, AREA_HVAC)}")
-        }
-        AppLogger.i(CLIM_TAG, "TÉMOIN siègeChauffG(0x15402513) = ${climRead(PROP_SEAT_HEAT_L, AREA_HVAC)}")
-        AppLogger.i(CLIM_TAG, "TÉMOIN tempExt(0x15602511)      = ${climRead(PROP_HVAC_TEMP_OUTCAR, AREA_HVAC)}")
-
-        // Voie OEM en parallèle des propriétés : le dégivrage arrière est piloté par un bouton
-        // PHYSIQUE sur le véhicule — on veut savoir si le service en reflète l'état malgré tout.
-        // (une propriété à 0 ne prouve rien ; si l'OEM renvoie autre chose, l'état est lisible)
-        if (sAirCondition != null) {
-            AppLogger.i(CLIM_TAG, "OEM dégivrage AV=${acInt("getFrontWindowDefroster") ?: "n/a"} " +
-                "AR=${acInt("getBackWindowDefroster") ?: "n/a"}  (−1 = non exposé)")
-            AppLogger.i(CLIM_TAG, "OEM power=${acInt("getHvacPowerStatus") ?: "n/a"} ac=${acInt("getAcSwitch") ?: "n/a"} " +
-                "auto=${acInt("getAutoStatus") ?: "n/a"} loop=${acInt("getLoopMode") ?: "n/a"}")
-        }
-
-        // Voie A9 : lit le CarHvacClient (queryClient 0x7). Sert à mesurer les deux inconnues —
-        // l'encodage de la recirculation et les bornes réelles température/ventilation.
-        if (isClimateA9()) {
-            if (hvacA9() == null) {
-                AppLogger.w(CLIM_TAG, "A9: CarHvacClient indisponible (queryClient(0x7) muet)")
-            } else {
-                AppLogger.i(CLIM_TAG, "A9 power=${a9Get("getHvacPowerStatus")} ac=${a9Get("getACStatus")} " +
-                    "auto=${a9Get("getAutoStatus")}")
-                AppLogger.i(CLIM_TAG, "A9 drvTemp=${a9Get("getDriverTemperature")} psgTemp=${a9Get("getPassengerTemperature")} " +
-                    "fan=${a9Get("getFanSpeed")} fanDir=${a9Get("getFanDirection")}")
-                AppLogger.i(CLIM_TAG, "A9 recirc=${a9Get("getAirCirculationStatus")} " +
-                    "(à comparer au mode affiché : 0/1/2 = intérieur/extérieur/auto ?)")
-                AppLogger.i(CLIM_TAG, "A9 dégivrageAV=${a9Get("getFrontDefrostStatus")} " +
-                    "dégivrageAR=${a9Get("getRearDefrostStatus")} tempExt=${a9Get("getOutSideTemperature")}")
-            }
-        }
-    }
-
     /**
      * Candidats pour la CONSIGNE de température. Les variantes FLOAT (…SET) ont échoué à la
      * zone 0x75 ; la table SAIC propose aussi des variantes ENTIÈRES suffixées "SWA", et la
@@ -5158,34 +5023,6 @@ object MG4Hardware {
     )
 
     private val TEMP_SETPOINT_AREAS = intArrayOf(AREA_HVAC, 0x1, 0x2, 0x4, AREA_GLOBAL, 0)
-
-    /**
-     * Chasse à la consigne de température : balaye candidats × zones et ne journalise que les
-     * lectures QUI RÉUSSISSENT (sinon le log serait noyé). Lecture seule.
-     *
-     * Mode d'emploi : noter la consigne réelle affichée par la voiture, puis chercher cette
-     * valeur dans les résultats (attention à un éventuel encodage ×10 : 25 °C → 250).
-     */
-    fun runClimateSetpointHunt() {
-        AppLogger.i(CLIM_TAG, "── CHASSE consigne température (lecture seule) ──")
-        var hits = 0
-        var fails = 0
-        for ((label, propId) in TEMP_SETPOINT_CANDIDATES) {
-            for (area in TEMP_SETPOINT_AREAS) {
-                val r = climRead(propId, area)
-                if (r.startsWith("illisible") || r == "null" || r == "HVAC absent") { fails++; continue }
-                hits++
-                AppLogger.i(CLIM_TAG, "  ✔ ${label.padEnd(20)} 0x${Integer.toHexString(propId)} " +
-                    "@0x${Integer.toHexString(area)} = $r")
-            }
-        }
-        AppLogger.i(CLIM_TAG, "  → $hits lecture(s) réussie(s), $fails échec(s)")
-        // Voie OEM (AirConditionManager) — déjà bindée par la feature température, old-SDK.
-        AppLogger.i(CLIM_TAG, "OEM drvTemp=${acInt("getDrvTemp") ?: "n/a"} psgTemp=${acInt("getPsgTemp") ?: "n/a"} " +
-            "min=${acInt("getMinTemp") ?: "n/a"} max=${acInt("getMaxTemp") ?: "n/a"} " +
-            "airVol=${acInt("getAirVolumeLevel") ?: "n/a"} acSwitch=${acInt("getAcSwitch") ?: "n/a"}")
-        AppLogger.i(CLIM_TAG, "→ repérer la consigne affichée par la voiture (ex. 25, ou 250 si ×10)")
-    }
 
     // ── Voie A9 (SWI69/131/132) : carapi CarHvacClient via queryClient(0x7) ──────
     // Le SDK vehiclesettings est ABSENT sur A9 ; la clim passe par l'adaptateur carapi,
@@ -5269,62 +5106,6 @@ object MG4Hardware {
             AppLogger.w(CLIM_TAG, "  $name($value) échec : ${(e.cause ?: e).message}")
             false
         }
-    }
-
-    /**
-     * Un cycle de test sur une grandeur : lit, écrit une valeur voisine, relit pour vérifier,
-     * puis RESTAURE la valeur d'origine et revérifie. Bloquant (attentes) → appeler hors du
-     * thread principal.
-     */
-    private fun climWriteProbe(label: String, getter: String, setter: String, minGetter: String, maxGetter: String) {
-        val before = acInt(getter)
-        if (before == null || before < 0) {
-            AppLogger.w(CLIM_TAG, "$label : lecture initiale impossible ($getter=${before ?: "null"}) → test ignoré")
-            return
-        }
-        val lo = acInt(minGetter)?.takeIf { it >= 0 } ?: 0
-        val hi = acInt(maxGetter)?.takeIf { it > lo } ?: (before + 1)
-        // Valeur voisine, en restant dans la plage : un écart de 1 suffit à prouver l'écriture.
-        val target = if (before < hi) before + 1 else before - 1
-        if (target < lo || target > hi) {
-            AppLogger.w(CLIM_TAG, "$label : pas de valeur voisine dans la plage $lo..$hi → test ignoré")
-            return
-        }
-
-        AppLogger.i(CLIM_TAG, "$label : actuel=$before plage=$lo..$hi → tentative $target")
-        val written = acSet(setter, target)
-        Thread.sleep(800)
-        val after = acInt(getter)
-        AppLogger.i(CLIM_TAG, "  écriture=$written relecture=$after " +
-            if (after == target) "✅ PRISE EN COMPTE" else "❌ non prise")
-
-        // Restauration systématique, même si l'écriture a échoué.
-        val restoredOk = acSet(setter, before)
-        Thread.sleep(800)
-        val restored = acInt(getter)
-        AppLogger.i(CLIM_TAG, "  restauration=$restoredOk → $restored " +
-            if (restored == before) "✅ état d'origine rétabli" else "⚠️ VÉRIFIER MANUELLEMENT (attendu $before)")
-    }
-
-    /**
-     * Test d'ÉCRITURE de la climatisation — **réversible**. Modifie brièvement la consigne de
-     * température puis la ventilation, vérifie que la voiture prend la valeur, et remet
-     * systématiquement l'état d'origine.
-     *
-     * Confort uniquement : ne touche à aucun réglage de conduite, donc hors périmètre du
-     * verrou de vitesse (VehicleWriteGate), conformément à la politique T-904.
-     *
-     * ⚠️ Bloquant (~3,5 s) → appeler depuis un thread IO, jamais depuis le thread principal.
-     */
-    fun runClimateWriteTest() {
-        AppLogger.i(CLIM_TAG, "── TEST ÉCRITURE climatisation (réversible) ──")
-        if (sAirCondition == null) {
-            AppLogger.w(CLIM_TAG, "AirConditionManager indisponible → test impossible sur ce firmware")
-            return
-        }
-        climWriteProbe("Consigne conducteur", "getDrvTemp", "setDrvTemp", "getMinTemp", "getMaxTemp")
-        climWriteProbe("Ventilation", "getAirVolumeLevel", "setAirVolumeLevel", "getMinAirVolume", "getMaxAirVolume")
-        AppLogger.i(CLIM_TAG, "── fin du test — l'état d'origine doit être rétabli ──")
     }
 
     // ═════════════════════════════════════════════════════════════════════════
