@@ -10,6 +10,7 @@ import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.service.MG4ControlService
+import com.mg4.control.service.ProfilePickerOverlay
 import com.mg4.control.shortcut.PressType
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.GarageMode
@@ -24,10 +25,12 @@ import com.mg4.control.util.GarageMode
  * d'accessibilité portant [AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS] voit la touche
  * AVANT l'application au premier plan, et peut la consommer en renvoyant `true` depuis [onKeyEvent].
  *
- * ⚠️ PÉRIMÈTRE DE LA CONSOMMATION, à ne pas élargir à la légère. Deux cas seulement :
+ * ⚠️ PÉRIMÈTRE DE LA CONSOMMATION, à ne pas élargir à la légère. Trois cas seulement :
  *  • les touches EXPLICITEMENT enregistrées dans [AdvancedShortcuts], et uniquement si
  *    l'interrupteur des raccourcis avancés est actif ;
- *  • la touche pressée PENDANT un enregistrement, le temps d'un seul appui.
+ *  • la touche pressée PENDANT un enregistrement, le temps d'un seul appui ;
+ *  • le joystick droit (297-301) PENDANT que le popup de profils est affiché — il y sert à
+ *    naviguer, et l'avaler est ce qui empêche le volume et la piste de changer en même temps.
  * Tout le reste traverse. Avaler une
  * touche par erreur sur une voiture est autrement plus grave que le désagrément qu'on corrige,
  * d'où ce double verrou et le try/catch qui renvoie false en cas d'imprévu.
@@ -63,6 +66,9 @@ class KeyCaptureService : AccessibilityService() {
     /** Touche en cours d'apprentissage : sert à avaler aussi la fin de son appui. */
     private var codeEnregistre: Int? = null
 
+    /** Touches du joystick dont l'appui a servi à naviguer : leur fin d'appui est avalée aussi. */
+    private val navigationEnCours = mutableSetOf<Int>()
+
     override fun onKeyEvent(event: KeyEvent?): Boolean {
         // Tout est encapsulé : une exception qui remonterait d'ici déciderait à notre place du
         // sort de la touche. On ne laisse jamais une erreur avaler une commande du volant.
@@ -97,13 +103,38 @@ class KeyCaptureService : AccessibilityService() {
                 return true
             }
 
-            // Seules les touches explicitement enregistrées sont interceptées. Tout le reste
-            // traverse : c'est ce qui garantit qu'un bug ici ne peut pas paralyser le volant.
+            // Fin d'un appui qui a navigué dans le popup. Testé AVANT tout le reste : le popup a
+            // pu se fermer entre-temps (le clic central choisit un profil et le ferme), et ce UP
+            // ne doit partir ni au système ni vers un raccourci avancé de la même touche.
+            if (code in navigationEnCours) {
+                if (event.action == KeyEvent.ACTION_UP) navigationEnCours.remove(code)
+                return true
+            }
+
             // Mode Garage : ne RIEN consommer. C'est ici que se joue le retour des touches au
             // launcher d'origine — un raccourci avancé réclame sa touche en bloc, et seul un
             // `false` rendu ici la laisse repartir vers l'application au premier plan.
-            if (GarageMode.isOn(this) ||
-                !AdvancedShortcuts.isEnabled(this) || !AdvancedShortcuts.isClaimed(this, code)) {
+            if (GarageMode.isOn(this)) return false
+
+            // ── Popup de profils ouvert : le joystick droit y navigue ──
+            //
+            // Prioritaire sur les raccourcis avancés, qui ne doivent pas se déclencher pendant
+            // qu'on choisit un profil, et indépendant de leur interrupteur. Seul un PREMIER down
+            // ouvre la navigation : une répétition sans premier down signale un appui commencé
+            // avant l'ouverture (un appui long qui vient d'ouvrir le popup, typiquement), et son
+            // relâchement appartient au raccourci qui l'a pris en charge.
+            val commande = JoystickFocus.commande(code)
+            if (commande != null && event.action == KeyEvent.ACTION_DOWN &&
+                event.repeatCount == 0 && ProfilePickerOverlay.isShowing()) {
+                navigationEnCours.add(code)
+                AppLogger.i(TAG, "touche $code — navigation popup profils → ${commande.name}")
+                ProfilePickerOverlay.naviguer(commande)
+                return true
+            }
+
+            // Seules les touches explicitement enregistrées sont interceptées. Tout le reste
+            // traverse : c'est ce qui garantit qu'un bug ici ne peut pas paralyser le volant.
+            if (!AdvancedShortcuts.isEnabled(this) || !AdvancedShortcuts.isClaimed(this, code)) {
                 return false
             }
 
@@ -238,6 +269,7 @@ class KeyCaptureService : AccessibilityService() {
         fenetreDouble.clear()
         longDeclenche.clear()
         doubleDeclenche.clear()
+        navigationEnCours.clear()
         AppLogger.i(TAG, "service déconnecté")
         super.onDestroy()
     }

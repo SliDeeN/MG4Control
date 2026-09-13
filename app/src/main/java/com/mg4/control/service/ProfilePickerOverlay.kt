@@ -4,7 +4,11 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.Rect
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
@@ -15,11 +19,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.MainActivity
 import com.mg4.control.R
+import com.mg4.control.accessibility.JoystickFocus
+import com.mg4.control.accessibility.KeyCaptureService
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.model.DrivingProfile
@@ -39,6 +46,9 @@ import kotlinx.coroutines.launch
  *    les profils associés aux appareils connectés ; si l'utilisateur ne choisit
  *    pas avant le timeout, [onAutoDismiss] est appelé (ex. applique le 1er profil).
  *
+ * Dans les deux modes, le joystick droit du volant navigue dans le popup (voir [naviguer]) si le
+ * service d'accessibilité est actif ; sinon le popup reste purement tactile.
+ *
  * Toutes les opérations WindowManager se font sur le thread principal.
  */
 object ProfilePickerOverlay {
@@ -48,11 +58,31 @@ object ProfilePickerOverlay {
 
     private val handler = Handler(Looper.getMainLooper())
 
+    /** Cran du curseur de luminosité au joystick, en points de pourcentage. */
+    private const val PAS_LUMINOSITE = 5
+
     @Volatile private var overlayView: View? = null
     private var dismissRunnable: Runnable? = null
     private var countdownRunnable: Runnable? = null
 
+    /** Focus au joystick du popup affiché ; vit et meurt avec la vue. Thread principal seulement. */
+    private var navigation: Navigation? = null
+
     // ── API publique ─────────────────────────────────────────────────────────
+
+    /**
+     * Vrai si le popup est à l'écran. Lu depuis [com.mg4.control.accessibility.KeyCaptureService]
+     * pour décider, AU MOMENT de l'appui, si le joystick doit être avalé.
+     */
+    fun isShowing(): Boolean = overlayView != null
+
+    /**
+     * Commande du joystick droit reçue pendant que le popup est ouvert.
+     * Peut être appelé depuis n'importe quel thread ; sans effet si le popup s'est fermé entre-temps.
+     */
+    fun naviguer(commande: JoystickFocus.Commande) {
+        handler.post { navigation?.recevoir(commande) }
+    }
 
     /**
      * Affiche l'overlay avec tous les profils (raccourci volant).
@@ -124,6 +154,9 @@ object ProfilePickerOverlay {
 
         fun dp(value: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, dm).toInt()
 
+        /** Boutons de profil par ligne de la grille, pour la navigation au joystick. */
+        val lignesProfils = mutableListOf<List<View>>()
+
         fun makeProfileButton(profile: com.mg4.control.model.DrivingProfile) =
             MaterialButton(themedContext).apply {
                 text      = profile.name
@@ -153,14 +186,15 @@ object ProfilePickerOverlay {
                 ).also { it.bottomMargin = dp(10f) }
             }
 
-            row.forEachIndexed { index, profile ->
-                val btn = makeProfileButton(profile).apply {
+            val boutons = row.mapIndexed { index, profile ->
+                makeProfileButton(profile).apply {
                     layoutParams = LinearLayout.LayoutParams(0, dp(90f), 1f).also {
                         if (index == 0 && row.size == 2) it.marginEnd = dp(10f)
                     }
                 }
-                rowLayout.addView(btn)
             }
+            boutons.forEach(rowLayout::addView)
+            lignesProfils += boutons
 
             // Nombre impair → placeholder invisible pour garder la symétrie
             if (row.size == 1) {
@@ -263,6 +297,8 @@ object ProfilePickerOverlay {
         }
 
         // ── Bloc luminosité (ancien SDK SWI133/68/165 ; A9 = phase 2) ─────
+        // Posé par le bloc luminosité s'il est affiché : le joystick règle le curseur par crans.
+        var reglerLuminosite: ((Int) -> Unit)? = null
         val briSection = view.findViewById<View>(R.id.overlay_brightness_section)
         if (!MG4Hardware.hasBrightnessControl()) {
             briSection?.visibility = View.GONE
@@ -303,6 +339,17 @@ object ProfilePickerOverlay {
             view.findViewById<View>(R.id.overlay_bri_mid)?.setOnClickListener   { preset(50) }
             view.findViewById<View>(R.id.overlay_bri_day)?.setOnClickListener   { preset(100) }
 
+            // Joystick : même chemin que le glissement (écriture différée), sans quoi une rafale
+            // de crans enverrait une écriture binder par appui.
+            reglerLuminosite = { delta ->
+                slider?.let {
+                    it.value = (it.value + delta).coerceIn(it.valueFrom, it.valueTo)  // label via le listener
+                    handler.removeCallbacks(pendingApply)
+                    handler.postDelayed(pendingApply, 60L)
+                    resetTimers()
+                }
+            }
+
             // Initialisation depuis la valeur courante (lecture binder en arrière-plan)
             briValue?.text = "…"
             CoroutineScope(Dispatchers.IO).launch {
@@ -313,6 +360,137 @@ object ProfilePickerOverlay {
                     else briValue?.text = "--%"
                 }
             }
+        }
+
+        // ── Navigation au joystick droit du volant ───────────────────────
+        // Grille de haut en bas : préréglages, curseur, lignes de profils, barre du bas. Seules
+        // les cellules visibles y figurent : un bouton masqué ne doit pas pouvoir prendre le focus.
+        fun visibles(vararg vues: View?) = vues.filterNotNull().filter { it.visibility == View.VISIBLE }
+        val briVisible   = briSection?.visibility == View.VISIBLE
+        val ligneCurseur = if (briVisible) view.findViewById<View>(R.id.overlay_bri_slider)?.parent as? View else null
+        val lignes = buildList {
+            if (briVisible) {
+                add(visibles(view.findViewById<View>(R.id.overlay_bri_night),
+                             view.findViewById<View>(R.id.overlay_bri_mid),
+                             view.findViewById<View>(R.id.overlay_bri_day)))
+                add(listOfNotNull(ligneCurseur))
+            }
+            addAll(lignesProfils)
+            add(visibles(view.findViewById<View>(R.id.overlay_btn_close), btnPowerOff,
+                         view.findViewById<View>(R.id.overlay_btn_open_app)))
+        }
+        val grille = lignes.filter { it.isNotEmpty() }
+        // Focus de départ sur le premier profil : c'est ce qu'on vient chercher dans ce popup, et
+        // c'est aussi celui qu'applique le délai d'un conflit Bluetooth.
+        val premierProfil = grille.indexOfFirst { it.firstOrNull() === lignesProfils.firstOrNull()?.firstOrNull() }
+        navigation = Navigation(
+            grille           = grille,
+            ligneCurseur     = ligneCurseur,
+            defilement       = container.parent as? ScrollView,
+            reglerLuminosite = reglerLuminosite,
+            surDeplacement   = { resetTimers() },
+            couleur          = accentColor,
+            epaisseur        = dp(4f),
+            arrondi          = dp(12f).toFloat(),
+            depart           = JoystickFocus.Position(premierProfil.coerceAtLeast(0), 0),
+        ).also {
+            // Surligner sans service d'accessibilité promettrait une navigation qui ne viendra pas.
+            if (KeyCaptureService.isEnabled(context)) it.afficher()
+        }
+    }
+
+    /**
+     * Focus au joystick sur les cellules d'un popup affiché.
+     *
+     * Le choix de la cible est délégué à [JoystickFocus] (testé) ; cette classe ne fait que lire
+     * les positions à l'écran, dessiner l'anneau et agir. Les positions sont relues à CHAQUE appui :
+     * au premier, la mise en page vient à peine d'avoir lieu.
+     */
+    private class Navigation(
+        private val grille: List<List<View>>,
+        private val ligneCurseur: View?,
+        private val defilement: ScrollView?,
+        private val reglerLuminosite: ((Int) -> Unit)?,
+        private val surDeplacement: () -> Unit,
+        private val couleur: Int,
+        private val epaisseur: Int,
+        private val arrondi: Float,
+        depart: JoystickFocus.Position,
+    ) {
+        private var position = depart
+        private var surlignee: View? = null
+
+        fun afficher() = surligner(cellule())
+
+        fun recevoir(commande: JoystickFocus.Commande) {
+            val cellule = cellule()
+            val lateral = commande == JoystickFocus.Commande.GAUCHE || commande == JoystickFocus.Commande.DROITE
+            when {
+                // Clic réel : même chemin que le doigt, donc mêmes garde-fous (verrou de conduite,
+                // confirmation d'extinction…). Le curseur n'a rien à valider.
+                commande == JoystickFocus.Commande.VALIDER -> {
+                    AppLogger.i(TAG, "Joystick — validation de la cellule ${position.ligne}/${position.colonne}")
+                    if (cellule !== ligneCurseur) cellule.performClick()
+                }
+                // Sur le curseur, gauche/droite règlent la luminosité au lieu de déplacer le focus
+                // (la ligne n'a de toute façon qu'une cellule).
+                cellule === ligneCurseur && lateral -> reglerLuminosite?.invoke(
+                    if (commande == JoystickFocus.Commande.GAUCHE) -PAS_LUMINOSITE else PAS_LUMINOSITE
+                )
+                else -> {
+                    position = JoystickFocus.deplacer(centres(), position, commande)
+                    surligner(cellule())
+                    surDeplacement()
+                }
+            }
+        }
+
+        private fun cellule(): View {
+            val ligne = grille[position.ligne.coerceIn(0, grille.lastIndex)]
+            return ligne[position.colonne.coerceIn(0, ligne.lastIndex)]
+        }
+
+        private fun centres(): List<List<Int>> {
+            val xy = IntArray(2)
+            return grille.map { ligne ->
+                ligne.map { v -> v.getLocationOnScreen(xy); xy[0] + v.width / 2 }
+            }
+        }
+
+        private fun surligner(v: View) {
+            surlignee?.foreground = null
+            // Les MaterialButton dessinent leur fond en retrait vertical : sans le même retrait,
+            // l'anneau flotterait au-dessus et au-dessous du bouton.
+            val (haut, bas) = if (v is MaterialButton) v.insetTop to v.insetBottom else 0 to 0
+            v.foreground = InsetDrawable(GradientDrawable().apply {
+                cornerRadius = arrondi
+                setColor(Color.TRANSPARENT)
+                setStroke(epaisseur, couleur)
+            }, 0, haut, 0, bas)
+            surlignee = v
+            amenerDansLaVue(v)
+        }
+
+        /** Fait défiler la liste de profils si la cellule surlignée en dépasse. */
+        private fun amenerDansLaVue(v: View) {
+            val sv = defilement ?: return
+            if (sv.height == 0 || !estDans(v, sv)) return
+            val r = Rect()
+            v.getDrawingRect(r)
+            sv.offsetDescendantRectToMyCoords(v, r)
+            when {
+                r.top < sv.scrollY                -> sv.smoothScrollTo(0, r.top)
+                r.bottom > sv.scrollY + sv.height -> sv.smoothScrollTo(0, r.bottom - sv.height)
+            }
+        }
+
+        private fun estDans(v: View, parent: View): Boolean {
+            var p = v.parent
+            while (p != null) {
+                if (p === parent) return true
+                p = p.parent
+            }
+            return false
         }
     }
 
@@ -352,6 +530,7 @@ object ProfilePickerOverlay {
         countdownRunnable?.let { handler.removeCallbacks(it) }
         dismissRunnable   = null
         countdownRunnable = null
+        navigation        = null
 
         val v = overlayView ?: return
         overlayView = null
