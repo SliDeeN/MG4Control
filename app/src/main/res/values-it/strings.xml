@@ -287,6 +287,10 @@
     <string name="settings_theme_dark">Modalità scura</string>
     <string name="settings_theme_light">Modalità chiara</string>
     <string name="settings_theme_desc">Passa dal tema scuro al tema chiaro</string>
+    <string name="settings_text_size">Dimensione del testo</string>
+    <string name="settings_text_size_standard">Standard</string>
+    <string name="settings_text_size_large">Grande</string>
+    <string name="settings_text_size_xlarge">Molto grande</string>
     <string name="settings_language">Lingua</string>
     <string name="settings_language_fr">Français</string>
     <string name="settings_language_en">English</string>

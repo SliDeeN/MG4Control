@@ -51,6 +51,7 @@ import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.service.MG4ControlService
 import com.mg4.control.util.GarageMode
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.TextSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -60,6 +61,13 @@ class SettingsFragment : Fragment() {
 
     private val githubUrl = "https://github.com/SliDeeN/MG4Control"
     private val gitlabUrl = "https://gitlab.com/SliDeeN/mg4control"
+
+    /** Index, dans le rail, de l'onglet ouvert — sauvegardé pour survivre à un recreate(). */
+    private var selectedCategory = 0
+
+    private companion object {
+        const val STATE_CATEGORY = "settings_category"
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -164,6 +172,31 @@ class SettingsFragment : Fragment() {
         btnThemeAuto.setOnClickListener  { applyThemeMode("auto")  }
         btnThemeDark.setOnClickListener  { applyThemeMode("dark")  }
         btnThemeLight.setOnClickListener { applyThemeMode("light") }
+
+        // ── Taille du texte : Standard / Grand / Très grand ─────────────────
+        // Appliquée par LocaleHelper au contexte de l'activité : il faut la recréer pour que les
+        // écrans se regonflent à la nouvelle échelle. Le sous-onglet ouvert est conservé (voir
+        // bindCategoryRail), sinon chaque essai renverrait sur « Langues ».
+        val textSizeBtns = listOf(
+            TextSize.STANDARD to view.findViewById<MaterialButton>(R.id.btn_text_size_standard),
+            TextSize.LARGE    to view.findViewById(R.id.btn_text_size_large),
+            TextSize.XLARGE   to view.findViewById(R.id.btn_text_size_xlarge)
+        )
+        val currentTextSize = TextSize.get(requireContext())
+        textSizeBtns.forEach { (size, btn) ->
+            val active = size == currentTextSize
+            btn.backgroundTintList = ColorStateList.valueOf(if (active) accentDim else inactiveColor)
+            btn.setTextColor(if (active) textActive else textInactive)
+            btn.strokeColor = ColorStateList.valueOf(
+                if (active) accentColor else requireContext().getColor(R.color.dash_border)
+            )
+            btn.setOnClickListener {
+                if (size == TextSize.get(requireContext())) return@setOnClickListener
+                TextSize.set(requireContext(), size)
+                AppLogger.i("MG4_SETTINGS", "Taille du texte → ${size.key} (×${size.scale})")
+                requireActivity().recreate()
+            }
+        }
 
         // ── Canal de mise a jour beta ────────────────────────────────────────
         // Aucun avertissement bloquant : une beta ne donne pas le controle du vehicule a un
@@ -401,7 +434,12 @@ class SettingsFragment : Fragment() {
         // firmware sans extinction véhicule…), sinon le décompte serait faux.
         setupFirmwareChips(view)
         setupDataUsage(view)
-        bindCategoryRail(view, accentDim, inactiveColor, accentColor, textActive, textInactive)
+        bindCategoryRail(view, savedInstanceState, accentDim, inactiveColor, accentColor, textActive, textInactive)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_CATEGORY, selectedCategory)
     }
 
     /**
@@ -409,9 +447,13 @@ class SettingsFragment : Fragment() {
      *
      * Le bouton Diagnostic reste dans l'arbre même sur une page masquée : [MainActivity] peut donc
      * continuer à le révéler en direct après les 5 clics sur le logo, quel que soit l'onglet ouvert.
+     *
+     * L'onglet ouvert survit à un `recreate()` : langue, thème et taille du texte recréent
+     * l'activité, et retomber à chaque fois sur le premier onglet obligeait à y retourner.
      */
     private fun bindCategoryRail(
-        view: View, accentDim: Int, inactive: Int, accent: Int, textOn: Int, textOff: Int
+        view: View, savedInstanceState: Bundle?,
+        accentDim: Int, inactive: Int, accent: Int, textOn: Int, textOff: Int
     ) {
         val tabs = listOf(
             view.findViewById<MaterialButton>(R.id.btn_set_cat_lang)     to view.findViewById<ViewGroup>(R.id.page_set_lang),
@@ -431,6 +473,7 @@ class SettingsFragment : Fragment() {
         if (usable.isEmpty()) return
 
         fun select(target: ViewGroup) {
+            selectedCategory = tabs.indexOfFirst { it.second === target }
             tabs.forEach { (btn, page) ->
                 val on = page === target
                 page.visibility = if (on) View.VISIBLE else View.GONE
@@ -442,7 +485,9 @@ class SettingsFragment : Fragment() {
             scroll?.scrollTo(0, 0)   // changer d'onglet en gardant le scroll précédent désoriente
         }
         usable.forEach { (btn, page) -> btn.setOnClickListener { select(page) } }
-        select(usable.first().second)
+        // Un onglet mémorisé peut ne plus être disponible (page vidée entre-temps) : repli sur le premier.
+        val restored = savedInstanceState?.getInt(STATE_CATEGORY, -1)?.let { tabs.getOrNull(it) }
+        select((restored?.takeIf { it in usable } ?: usable.first()).second)
     }
 
 

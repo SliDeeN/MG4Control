@@ -2,6 +2,7 @@ package com.mg4.control.util
 
 import android.content.Context
 import android.content.res.Configuration
+import android.content.res.Resources
 import java.util.Locale
 
 object LocaleHelper {
@@ -28,13 +29,22 @@ object LocaleHelper {
         !context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getBoolean(KEY_LANG_SET, false)
 
-    /** Applique la locale sauvegardée au contexte fourni et retourne le contexte modifié. */
+    /**
+     * Applique la locale ET la taille du texte sauvegardées au contexte fourni, et retourne le
+     * contexte modifié.
+     *
+     * La taille du texte est posée ici parce que tous les contextes de l'app y passent déjà :
+     * activité, application, et popups du service (dont le contexte ne reçoit rien d'autre).
+     */
     fun applyLocale(context: Context): Context {
         val lang   = getLanguage(context)
         val locale = Locale(lang)
         Locale.setDefault(locale)
         val config = Configuration(context.resources.configuration)
         config.setLocale(locale)
+        // Calculée depuis l'échelle SYSTÈME, pas depuis celle du contexte reçu : un contexte déjà
+        // enveloppé l'aurait sinon appliquée deux fois (×1,25 × 1,25).
+        config.fontScale = Resources.getSystem().configuration.fontScale * TextSize.get(context).scale
         return context.createConfigurationContext(config)
     }
 }

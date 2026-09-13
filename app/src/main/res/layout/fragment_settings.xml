@@ -430,6 +430,91 @@
                 </LinearLayout>
 
             </LinearLayout>
+
+            <!-- ── Section TAILLE DU TEXTE ──────────────────────────────────── -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card_rounded"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_text_size"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    android:textAllCaps="true"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="7dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:padding="12dp">
+
+                    <!-- Hauteur minimale plutôt que fixe : ces boutons portent justement le texte
+                         agrandi, ils ne doivent pas être les premiers à le couper. -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_text_size_standard"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:minHeight="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/settings_text_size_standard"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="16sp"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="8dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_text_size_large"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:minHeight="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:text="@string/settings_text_size_large"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="16sp"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="8dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_text_size_xlarge"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:minHeight="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/settings_text_size_xlarge"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="16sp"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="8dp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
                 </LinearLayout>
 
                 <!-- ═══════════ REGLAGES AVANCES ═══════════ -->

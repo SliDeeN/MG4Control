@@ -287,6 +287,10 @@
     <string name="settings_theme_dark">Modo escuro</string>
     <string name="settings_theme_light">Modo claro</string>
     <string name="settings_theme_desc">Alternar entre tema escuro e claro</string>
+    <string name="settings_text_size">Tamanho do texto</string>
+    <string name="settings_text_size_standard">Padrão</string>
+    <string name="settings_text_size_large">Grande</string>
+    <string name="settings_text_size_xlarge">Muito grande</string>
     <string name="settings_language">Idioma</string>
     <string name="settings_language_fr">Français</string>
     <string name="settings_language_en">English</string>
