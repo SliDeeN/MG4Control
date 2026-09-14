@@ -466,10 +466,10 @@
     <string name="adv_sc_all_profiles">Todos os perfis</string>
     <string name="adv_sc_profile_missing">Perfil eliminado</string>
     <string name="adv_sc_group_title">%1$s · %2$s</string>
-    <string name="adv_sc_no_fallback">Nenhum atalho para os outros perfis: a tecla está reservada mas não faz nada.</string>
+    <string name="adv_sc_no_fallback">Nenhum atalho para os outros perfis: a tecla mantém aí a sua função original.</string>
     <string name="adv_sc_edit_conflict">Esse perfil já tem um atalho nesta tecla e tipo de pressão.</string>
     <string name="adv_sc_empty">Nenhum atalho avançado registado.</string>
-    <string name="adv_sc_claimed_warning">A tecla atribuída deixa de poder ser usada para outra coisa além do MG4Control, até apagar o atalho em « LISTA DE ATALHOS ».</string>
+    <string name="adv_sc_claimed_warning">As pressões sem atalho mantêm a função original da tecla. Numa tecla com pressão dupla, a pressão simples original chega com um ligeiro atraso (0,3 s).</string>
     <string name="adv_sc_delete">Apagar</string>
     <string name="adv_sc_status_label">Estado do serviço</string>
     <string name="adv_sc_saved">Atalho guardado</string>
@@ -513,7 +513,7 @@
 
     <!-- Avertissement a l'activation des raccourcis avances -->
     <string name="adv_sc_enable_warn_title">O botão atribuído muda de função</string>
-    <string name="adv_sc_enable_warn_msg">Um botão atribuído a um atalho avançado perde a sua função original: o MG4Control intercepta a tecla antes do launcher, que deixa de a receber.\n\nExemplo: se atribuir o botão Início, deixará de voltar ao launcher MG. Para o recuperar, atribua-lhe a ação « Iniciar um app » e escolha o launcher.\n\nA tecla é reservada por completo: atribuir apenas a pressão longa anula também a curta e a dupla.\n\nTudo volta ao normal ao eliminar o atalho em « Lista de atalhos ».</string>
+    <string name="adv_sc_enable_warn_msg">O MG4Control interceta os botões atribuídos antes do launcher.\n\nUma pressão com atalho substitui a função original do botão. As outras mantêm-na: se atribuir a pressão dupla do botão Início, a pressão simples continua a voltar ao launcher MG.\n\nÚnica contrapartida: num botão com pressão dupla, a pressão simples chega com um ligeiro atraso (0,3 s), o tempo de confirmar que não se segue uma segunda pressão.\n\nTudo volta ao normal ao eliminar o atalho em « Lista de atalhos ».</string>
     <string name="adv_sc_enable_warn_ok">Ativar</string>
 
     <!-- Raccourcis : pistes audio -->

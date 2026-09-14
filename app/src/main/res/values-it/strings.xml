@@ -466,10 +466,10 @@
     <string name="adv_sc_all_profiles">Tutti i profili</string>
     <string name="adv_sc_profile_missing">Profilo eliminato</string>
     <string name="adv_sc_group_title">%1$s · %2$s</string>
-    <string name="adv_sc_no_fallback">Nessuna scorciatoia per gli altri profili: il tasto è riservato ma non fa nulla.</string>
+    <string name="adv_sc_no_fallback">Nessuna scorciatoia per gli altri profili: il tasto vi mantiene la sua funzione originale.</string>
     <string name="adv_sc_edit_conflict">Quel profilo ha già una scorciatoia su questo tasto e tipo di pressione.</string>
     <string name="adv_sc_empty">Nessuna scorciatoia avanzata registrata.</string>
-    <string name="adv_sc_claimed_warning">Il tasto assegnato non potrà più essere usato per altro che MG4Control, fino all\'eliminazione della scorciatoia in « ELENCO SCORCIATOIE ».</string>
+    <string name="adv_sc_claimed_warning">Le pressioni senza scorciatoia mantengono la funzione originale del tasto. Su un tasto con doppia pressione, la pressione singola originale arriva con un leggero ritardo (0,3 s).</string>
     <string name="adv_sc_delete">Elimina</string>
     <string name="adv_sc_status_label">Stato del servizio</string>
     <string name="adv_sc_saved">Scorciatoia salvata</string>
@@ -513,7 +513,7 @@
 
     <!-- Avertissement a l'activation des raccourcis avances -->
     <string name="adv_sc_enable_warn_title">Il pulsante assegnato cambia ruolo</string>
-    <string name="adv_sc_enable_warn_msg">Un pulsante assegnato a una scorciatoia avanzata perde la sua funzione originale: MG4Control intercetta il tasto prima del launcher, che non lo riceve più.\n\nEsempio: se assegni il pulsante Home, non riporterà più al launcher MG. Per recuperarlo, assegnagli l\'azione « Avvia un\'app » e scegli il launcher.\n\nIl tasto è riservato per intero: assegnare solo la pressione lunga annulla anche quella breve e quella doppia.\n\nTutto torna normale eliminando la scorciatoia in « Elenco scorciatoie ».</string>
+    <string name="adv_sc_enable_warn_msg">MG4Control intercetta i pulsanti assegnati prima del launcher.\n\nUna pressione con scorciatoia sostituisce la funzione originale del pulsante. Le altre la mantengono: se assegni la doppia pressione del pulsante Home, la pressione singola riporta sempre al launcher MG.\n\nUnico compromesso: su un pulsante con doppia pressione, la pressione singola arriva con un leggero ritardo (0,3 s), il tempo di verificare che non segua una seconda pressione.\n\nTutto torna normale eliminando la scorciatoia in « Elenco scorciatoie ».</string>
     <string name="adv_sc_enable_warn_ok">Attiva</string>
 
     <!-- Raccourcis : pistes audio -->

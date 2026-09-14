@@ -110,14 +110,27 @@ class AdvancedShortcutProfileTest {
     }
 
     @Test
-    fun `la touche reste reclamee meme si aucune variante ne s applique`() {
-        // Conséquence assumée : une touche se réclame en bloc. Elle ne retombe pas sur le
-        // launcher parce que le profil courant n'a rien à y faire.
+    fun `une touche reservee a un autre profil est laissee au systeme`() {
+        // Remontée utilisateur : la touche configurée ne doit pas perdre sa fonction d'origine
+        // sous un profil qui n'a rien à y faire. Elle reste configurée, mais n'est plus interceptée.
         AdvancedShortcuts.set(ctx, 286, PressType.SINGLE, ShortcutAction.REGEN_CYCLE, SPORT)
         ActiveProfile.set(ctx, HIVER)
 
         assertTrue(AdvancedShortcuts.isClaimed(ctx, 286))
+        assertFalse(AdvancedShortcuts.isClaimedNow(ctx, 286))
         assertFalse("une autre touche n'est pas concernée", AdvancedShortcuts.isClaimed(ctx, 17))
+    }
+
+    @Test
+    fun `n importe quel type d appui suffit a intercepter la touche`() {
+        // Un double appui seul intercepte la touche ENTIÈRE : c'est l'appui simple qui sera
+        // renvoyé au système, pas la touche qui traverse.
+        AdvancedShortcuts.set(ctx, 3, PressType.DOUBLE, ShortcutAction.MEDIA_NEXT)
+        assertTrue(AdvancedShortcuts.isClaimedNow(ctx, 3))
+
+        ActiveProfile.set(ctx, SPORT)
+        AdvancedShortcuts.set(ctx, 17, PressType.LONG, ShortcutAction.REGEN_CYCLE, SPORT)
+        assertTrue("variante du profil actif", AdvancedShortcuts.isClaimedNow(ctx, 17))
     }
 
     @Test

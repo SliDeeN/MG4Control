@@ -2,9 +2,11 @@ package com.mg4.control.accessibility
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.Instrumentation
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
@@ -14,6 +16,8 @@ import com.mg4.control.service.ProfilePickerOverlay
 import com.mg4.control.shortcut.PressType
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.GarageMode
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 
 /**
  * Interception des touches volant, AVANT le launcher.
@@ -26,8 +30,9 @@ import com.mg4.control.util.GarageMode
  * AVANT l'application au premier plan, et peut la consommer en renvoyant `true` depuis [onKeyEvent].
  *
  * ⚠️ PÉRIMÈTRE DE LA CONSOMMATION, à ne pas élargir à la légère. Trois cas seulement :
- *  • les touches EXPLICITEMENT enregistrées dans [AdvancedShortcuts], et uniquement si
- *    l'interrupteur des raccourcis avancés est actif ;
+ *  • les touches qui portent une action dans [AdvancedShortcuts] POUR LE PROFIL ACTIF, et
+ *    uniquement si l'interrupteur des raccourcis avancés est actif — un appui qui s'avère sans
+ *    action y est renvoyé au système (voir [rejouer]) ;
  *  • la touche pressée PENDANT un enregistrement, le temps d'un seul appui ;
  *  • le joystick droit (297-301) PENDANT que le popup de profils est affiché — il y sert à
  *    naviguer, et l'avaler est ce qui empêche le volume et la piste de changer en même temps.
@@ -69,12 +74,39 @@ class KeyCaptureService : AccessibilityService() {
     /** Touches du joystick dont l'appui a servi à naviguer : leur fin d'appui est avalée aussi. */
     private val navigationEnCours = mutableSetOf<Int>()
 
+    /**
+     * Touches interceptées pour un raccourci avancé, entre leur DOWN et leur UP.
+     *
+     * La décision est prise UNE fois, au DOWN, puis tenue jusqu'au UP : elle dépend du profil actif,
+     * qui peut changer pendant l'appui (connexion Bluetooth), et un UP dont le DOWN n'a pas été
+     * vu par le système — ou l'inverse — laisserait une touche à moitié enfoncée.
+     */
+    private val touchesPrises = mutableSetOf<Int>()
+
+    /** Dernier DOWN intercepté par touche : modèle de l'événement renvoyé au système. */
+    private val modeles = mutableMapOf<Int, KeyEvent>()
+
+    /**
+     * Appuis renvoyés au système, repérés par leur `downTime` → code de touche.
+     *
+     * Un événement injecté ne repasse normalement pas par le filtre d'accessibilité. Mais si ce
+     * firmware le faisait, on le réintercepterait et le renverrait sans fin — le volant serait
+     * paralysé. Le coût de la précaution est nul.
+     */
+    private val rejeux = ConcurrentHashMap<Long, Int>()
+
+    /** `Instrumentation.sendKeySync` refuse le thread principal : les renvois ont leur propre fil. */
+    private val injecteur = Executors.newSingleThreadExecutor()
+
     override fun onKeyEvent(event: KeyEvent?): Boolean {
         // Tout est encapsulé : une exception qui remonterait d'ici déciderait à notre place du
         // sort de la touche. On ne laisse jamais une erreur avaler une commande du volant.
         try {
             event ?: return false
             val code = event.keyCode
+
+            // Notre propre renvoi : il appartient au système, on n'y touche pas.
+            if (rejeux[event.downTime] == code) return false
 
             if (event.action == KeyEvent.ACTION_DOWN) {
                 AppLogger.i(TAG, "TOUCHE keycode=$code (${KeyEvent.keyCodeToString(code)}) " +
@@ -111,6 +143,17 @@ class KeyCaptureService : AccessibilityService() {
                 return true
             }
 
+            // Suite d'un appui intercepté au DOWN : répétitions avalées, UP traité. Testé avant le
+            // Mode Garage et l'interrupteur, pour la même raison : un appui commencé se termine
+            // chez celui qui l'a commencé.
+            if (code in touchesPrises && !(event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0)) {
+                if (event.action == KeyEvent.ACTION_UP) {
+                    touchesPrises.remove(code)
+                    surRelachement(code)
+                }
+                return true
+            }
+
             // Mode Garage : ne RIEN consommer. C'est ici que se joue le retour des touches au
             // launcher d'origine — un raccourci avancé réclame sa touche en bloc, et seul un
             // `false` rendu ici la laisse repartir vers l'application au premier plan.
@@ -132,18 +175,25 @@ class KeyCaptureService : AccessibilityService() {
                 return true
             }
 
-            // Seules les touches explicitement enregistrées sont interceptées. Tout le reste
-            // traverse : c'est ce qui garantit qu'un bug ici ne peut pas paralyser le volant.
-            if (!AdvancedShortcuts.isEnabled(this) || !AdvancedShortcuts.isClaimed(this, code)) {
+            // Tout ce qui n'est pas le PREMIER down d'un appui traverse : répétitions et UP d'un
+            // appui que le système a vu commencer lui reviennent.
+            if (event.action != KeyEvent.ACTION_DOWN || event.repeatCount != 0) return false
+            if (!AdvancedShortcuts.isEnabled(this)) return false
+
+            // Seules les touches qui portent une action pour le profil ACTIF sont interceptées.
+            // Tout le reste traverse : c'est ce qui garantit qu'un bug ici ne peut pas paralyser
+            // le volant. Exception : le second appui d'un double appui en attente, attendu quoi
+            // qu'il arrive au profil entre-temps.
+            if (code !in fenetreDouble && !AdvancedShortcuts.isClaimedNow(this, code)) {
+                if (AdvancedShortcuts.isClaimed(this, code)) {
+                    AppLogger.i(TAG, "touche $code — raccourcis réservés à d'autres profils → laissée au système")
+                }
                 return false
             }
 
-            when (event.action) {
-                // Ne traiter que le PREMIER down : la répétition automatique en envoie d'autres
-                // tant que la touche est tenue, et relancerait la mécanique à chaque fois.
-                KeyEvent.ACTION_DOWN -> if (event.repeatCount == 0) surAppui(code)
-                KeyEvent.ACTION_UP   -> surRelachement(code)
-            }
+            touchesPrises.add(code)
+            modeles[code] = KeyEvent(event)   // copie : l'événement reçu peut être recyclé
+            surAppui(code)
             return true   // touche réclamée : le launcher ne la verra pas
         } catch (e: Exception) {
             AppLogger.w(TAG, "onKeyEvent exception : ${e.message}")
@@ -162,13 +212,18 @@ class KeyCaptureService : AccessibilityService() {
         val fenetre = fenetreDouble.remove(code)
         if (fenetre != null) {
             handler.removeCallbacks(fenetre)
-            annulerLong(code)   // un second appui n'ouvre pas d'appui long
             val m = AdvancedShortcuts.resolve(this, code, PressType.DOUBLE)
-            AppLogger.i(TAG, "touche $code — DOUBLE appui → ${m?.action?.name ?: "aucune"}" +
-                (m?.profileId?.let { " (profil $it)" } ?: ""))
-            doubleDeclenche.add(code)
-            if (m != null) declencher(m)
-            return
+            if (m != null) {
+                annulerLong(code)   // un second appui n'ouvre pas d'appui long
+                AppLogger.i(TAG, "touche $code — DOUBLE appui → ${m.action.name}" +
+                    (m.profileId?.let { " (profil $it)" } ?: ""))
+                doubleDeclenche.add(code)
+                declencher(m)
+                return
+            }
+            // Le double appui a disparu pendant la fenêtre (changement de profil) : le premier
+            // appui se conclut comme un simple, et celui-ci suit son cours normal.
+            fenetre.run()
         }
 
         // ── Appui long : déclenché au SEUIL, pas au relâchement ──
@@ -197,7 +252,8 @@ class KeyCaptureService : AccessibilityService() {
      * Fin d'un appui.
      *
      * Le relâchement ne déclenche plus que l'appui court — et encore, à retardement si la touche
-     * porte aussi un double appui.
+     * porte aussi un double appui. Un appui maintenu sans appui long configuré arrive ici aussi :
+     * la voiture ne connaissant que l'appui simple, c'est ainsi qu'elle l'aurait traité.
      */
     private fun surRelachement(code: Int) {
         annulerLong(code)   // relâchée avant le seuil : l'appui long n'aura pas lieu
@@ -207,17 +263,13 @@ class KeyCaptureService : AccessibilityService() {
         if (longDeclenche.remove(code)) return
 
         val simple = AdvancedShortcuts.resolve(this, code, PressType.SINGLE)
-        // La fenêtre d'attente dépend de l'EXISTENCE d'un double appui sur la touche, pas de sa
-        // résolution : une variante réservée à un autre profil doit quand même faire attendre,
-        // sinon un double appui sous ce profil déclencherait d'abord le simple.
-        val aDouble = PressType.DOUBLE.let { d ->
-            AdvancedShortcuts.all(this).any { it.keyCode == code && it.press == d }
-        }
+        // Résolu pour le profil ACTIF : un double appui réservé à un autre profil ne se
+        // déclencherait pas ici, l'attendre ne ferait que retarder l'appui simple.
+        val aDouble = AdvancedShortcuts.resolve(this, code, PressType.DOUBLE) != null
 
         // Sans double appui sur cette touche, rien à attendre : l'action part immédiatement.
         if (!aDouble) {
-            AppLogger.i(TAG, "touche $code — appui court → ${simple?.action?.name ?: "aucune"}")
-            if (simple != null) declencher(simple)
+            conclureAppuiCourt(code, simple, "appui court")
             return
         }
 
@@ -226,13 +278,50 @@ class KeyCaptureService : AccessibilityService() {
         // ouverte même sans action d'appui court, car c'est elle qui détecte le second appui.
         val fenetre = Runnable {
             fenetreDouble.remove(code)
-            AppLogger.i(TAG, "touche $code — appui court confirmé " +
-                "(aucun second appui en ${AdvancedShortcuts.DOUBLE_TAP_MS} ms) " +
-                "→ ${simple?.action?.name ?: "aucune"}")
-            if (simple != null) declencher(simple)
+            conclureAppuiCourt(code, simple,
+                "appui court confirmé (aucun second appui en ${AdvancedShortcuts.DOUBLE_TAP_MS} ms)")
         }
         fenetreDouble[code] = fenetre
         handler.postDelayed(fenetre, AdvancedShortcuts.DOUBLE_TAP_MS)
+    }
+
+    /** Appui simple établi : son action s'il en a une, sinon la fonction d'origine de la touche. */
+    private fun conclureAppuiCourt(code: Int, simple: AdvancedShortcuts.Mapping?, quoi: String) {
+        if (simple != null) {
+            AppLogger.i(TAG, "touche $code — $quoi → ${simple.action.name}")
+            declencher(simple)
+        } else {
+            AppLogger.i(TAG, "touche $code — $quoi sans action MG4Control → rendu au système")
+            rejouer(code)
+        }
+    }
+
+    /**
+     * Renvoie au système un appui simple sur [code], comme si la touche venait d'être pressée.
+     *
+     * C'est la seule façon de rendre sa fonction d'origine à une touche déjà interceptée : un
+     * DOWN consommé ne peut pas être « relâché » vers le launcher. On injecte donc un appui neuf,
+     * copié du DOWN d'origine (périphérique, scan code, source) pour que le système le traite
+     * exactement comme la vraie touche. Possible parce que l'app tourne en `android.uid.system`,
+     * qui détient l'injection d'événements — c'est aussi ce que fait KeyMapper.
+     */
+    private fun rejouer(code: Int) {
+        val modele = modeles[code] ?: return
+        val t = SystemClock.uptimeMillis()
+        rejeux[t] = code
+        handler.postDelayed({ rejeux.remove(t) }, 2_000L)
+
+        fun evenement(action: Int) = KeyEvent(
+            t, SystemClock.uptimeMillis(), action, code, 0,
+            modele.metaState, modele.deviceId, modele.scanCode, modele.flags, modele.source
+        )
+        injecteur.execute {
+            runCatching {
+                val instrumentation = Instrumentation()
+                instrumentation.sendKeySync(evenement(KeyEvent.ACTION_DOWN))
+                instrumentation.sendKeySync(evenement(KeyEvent.ACTION_UP))
+            }.onFailure { AppLogger.w(TAG, "touche $code — renvoi au système impossible : ${it.message}") }
+        }
     }
 
     private fun annulerLong(code: Int) {
@@ -270,6 +359,10 @@ class KeyCaptureService : AccessibilityService() {
         longDeclenche.clear()
         doubleDeclenche.clear()
         navigationEnCours.clear()
+        touchesPrises.clear()
+        modeles.clear()
+        rejeux.clear()
+        injecteur.shutdownNow()
         AppLogger.i(TAG, "service déconnecté")
         super.onDestroy()
     }

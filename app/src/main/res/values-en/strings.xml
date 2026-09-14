@@ -466,10 +466,10 @@
     <string name="adv_sc_all_profiles">All profiles</string>
     <string name="adv_sc_profile_missing">Deleted profile</string>
     <string name="adv_sc_group_title">%1$s · %2$s</string>
-    <string name="adv_sc_no_fallback">No shortcut for the other profiles: the key is claimed there but does nothing.</string>
+    <string name="adv_sc_no_fallback">No shortcut for the other profiles: the key keeps its original function there.</string>
     <string name="adv_sc_edit_conflict">That profile already has a shortcut on this key and press type.</string>
     <string name="adv_sc_empty">No advanced shortcut recorded.</string>
-    <string name="adv_sc_claimed_warning">The assigned key can no longer be used for anything other than MG4Control, until the shortcut is deleted from « SHORTCUT LIST ».</string>
+    <string name="adv_sc_claimed_warning">Presses without a shortcut keep the key\'s original function. On a key with a double press, the original single press comes with a slight delay (0.3 s).</string>
     <string name="adv_sc_delete">Delete</string>
     <string name="adv_sc_status_label">Service status</string>
     <string name="adv_sc_saved">Shortcut saved</string>
@@ -513,7 +513,7 @@
 
     <!-- Avertissement a l'activation des raccourcis avances -->
     <string name="adv_sc_enable_warn_title">Assigned buttons change role</string>
-    <string name="adv_sc_enable_warn_msg">A button assigned to an advanced shortcut loses its original function: MG4Control intercepts the key before the launcher, which no longer sees it at all.\n\nExample: assign the Home button and it no longer returns to the MG launcher. To get that back, give it the Launch an app action and pick the launcher.\n\nThe key is claimed as a whole: assigning only the long press also neutralises the short press and the double press.\n\nEverything returns to normal once the shortcut is deleted from Shortcut list.</string>
+    <string name="adv_sc_enable_warn_msg">MG4Control intercepts assigned buttons before the launcher.\n\nA press that carries a shortcut replaces the button\'s original function. The others keep it: assign a double press to the Home button and a single press still returns to the MG launcher.\n\nThe only trade-off: on a button with a double press, the single press comes with a slight delay (0.3 s), the time needed to make sure no second press follows.\n\nEverything returns to normal once the shortcut is deleted from Shortcut list.</string>
     <string name="adv_sc_enable_warn_ok">Enable</string>
 
     <!-- Raccourcis : pistes audio -->

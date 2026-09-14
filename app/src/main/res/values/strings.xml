@@ -468,10 +468,10 @@
     <string name="adv_sc_all_profiles">Tous les profils</string>
     <string name="adv_sc_profile_missing">Profil supprimé</string>
     <string name="adv_sc_group_title">%1$s · %2$s</string>
-    <string name="adv_sc_no_fallback">Aucun raccourci pour les autres profils : la touche y est réclamée mais ne fait rien.</string>
+    <string name="adv_sc_no_fallback">Aucun raccourci pour les autres profils : la touche y garde sa fonction d\'origine.</string>
     <string name="adv_sc_edit_conflict">Ce profil a déjà un raccourci sur cette touche et ce type d\'appui.</string>
     <string name="adv_sc_empty">Aucun raccourci avancé enregistré.</string>
-    <string name="adv_sc_claimed_warning">La touche attribuée ne pourra plus être utilisée pour autre chose que MG4Control, jusqu\'à la suppression du raccourci dans « LISTE DES RACCOURCIS ».</string>
+    <string name="adv_sc_claimed_warning">Les appuis sans raccourci gardent la fonction d\'origine de la touche. Sur une touche qui porte un double appui, l\'appui simple d\'origine part avec un léger délai (0,3 s).</string>
     <string name="adv_sc_delete">Suppr.</string>
     <string name="adv_sc_status_label">Statut du service</string>
     <string name="adv_sc_saved">Raccourci enregistré</string>
@@ -515,7 +515,7 @@
 
     <!-- Avertissement a l'activation des raccourcis avances -->
     <string name="adv_sc_enable_warn_title">Le bouton attribué change de rôle</string>
-    <string name="adv_sc_enable_warn_msg">Un bouton attribué à un raccourci avancé perd sa fonction d\'origine : MG4Control intercepte la touche avant le launcher, qui ne la voit plus du tout.\n\nExemple : si vous attribuez le bouton Accueil, il ne ramènera plus au launcher MG. Pour retrouver ce comportement, donnez-lui l\'action « Lancer une application » et choisissez le launcher.\n\nLa touche est réclamée en entier : n\'attribuer que l\'appui long neutralise aussi l\'appui court et le double appui.\n\nTout redevient normal en supprimant le raccourci dans « Liste des raccourcis ».</string>
+    <string name="adv_sc_enable_warn_msg">MG4Control intercepte les boutons attribués avant le launcher.\n\nUn appui qui porte un raccourci remplace la fonction d\'origine du bouton. Les autres la gardent : si vous attribuez le double appui du bouton Accueil, l\'appui simple ramène toujours au launcher MG.\n\nSeule contrepartie : sur un bouton qui porte un double appui, l\'appui simple part avec un léger délai (0,3 s), le temps de vérifier qu\'aucun second appui n\'arrive.\n\nTout redevient normal en supprimant le raccourci dans « Liste des raccourcis ».</string>
     <string name="adv_sc_enable_warn_ok">Activer</string>
 
     <!-- Raccourcis : pistes audio -->

@@ -12,11 +12,15 @@ import com.mg4.control.shortcut.ShortcutAction
  * véhicule. Ceux-ci passent par [KeyCaptureService], qui voit la touche AVANT le launcher et
  * peut la consommer.
  *
- * ⚠️ CONSÉQUENCE À CONNAÎTRE : une touche enregistrée ici est réclamée **en bloc**. Pour
- * intercepter un appui long il faut consommer le DOWN, or à cet instant on ne sait pas encore
- * si l'appui sera court, long ou double — et on ne peut pas « dé-consommer » après coup. Les
- * types d'appui non attribués ne retombent donc PAS sur le launcher : ils ne font rien.
- * C'est ce que [isClaimed] exprime, et c'est pour ça qu'elle ignore le type d'appui.
+ * ⚠️ CONSÉQUENCE À CONNAÎTRE : une touche qui porte une action pour le profil actif est
+ * interceptée **en bloc** ([isClaimedNow]). Pour intercepter un appui long il faut consommer le
+ * DOWN, or à cet instant on ne sait pas encore si l'appui sera court, long ou double — et on ne
+ * peut pas « dé-consommer » après coup.
+ *
+ * Les appuis qui ne portent aucune action ne sont pas perdus pour autant : la voiture ne connaît
+ * d'origine que l'appui simple, donc tout appui sans action se comporte comme un appui simple, et
+ * un appui simple sans action est RENVOYÉ au système une fois l'appui terminé (voir
+ * [KeyCaptureService]). Seul coût : 300 ms de retard sur une touche qui porte un double appui.
  */
 object AdvancedShortcuts {
 
@@ -199,9 +203,18 @@ object AdvancedShortcuts {
     }
 
     /**
-     * Vrai si CETTE TOUCHE est réclamée — quel que soit le type d'appui ET quel que soit le
-     * profil. Voir l'avertissement en tête de fichier : c'est cette méthode qui décide de la
-     * consommation, et une touche se réclame en bloc.
+     * Vrai si CETTE TOUCHE porte au moins une action qui s'appliquerait MAINTENANT, sous le profil
+     * actif — quel que soit le type d'appui. C'est ce qui décide de l'interception : une touche
+     * dont les raccourcis sont tous réservés à d'autres profils garde sa fonction d'origine, sans
+     * même le délai d'un renvoi.
+     */
+    fun isClaimedNow(context: Context, keyCode: Int): Boolean =
+        PressType.values().any { resolve(context, keyCode, it) != null }
+
+    /**
+     * Vrai si CETTE TOUCHE porte au moins un raccourci — quel que soit le type d'appui ET quel que
+     * soit le profil. Ne décide plus de l'interception (voir [isClaimedNow]) ; sert à expliquer
+     * dans le journal pourquoi une touche configurée est laissée au système.
      *
      * Balayage par préfixe plutôt que par énumération : les profils possibles ne sont pas
      * connus d'ici, et les tester un par un obligerait à charger la liste des profils à chaque

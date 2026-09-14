@@ -466,10 +466,10 @@
     <string name="adv_sc_all_profiles">Alle Profile</string>
     <string name="adv_sc_profile_missing">Gelöschtes Profil</string>
     <string name="adv_sc_group_title">%1$s · %2$s</string>
-    <string name="adv_sc_no_fallback">Kein Kürzel für die anderen Profile: die Taste ist dort belegt, tut aber nichts.</string>
+    <string name="adv_sc_no_fallback">Kein Kürzel für die anderen Profile: die Taste behält dort ihre ursprüngliche Funktion.</string>
     <string name="adv_sc_edit_conflict">Dieses Profil hat bereits ein Kürzel auf dieser Taste und Druckart.</string>
     <string name="adv_sc_empty">Kein erweitertes Kürzel gespeichert.</string>
-    <string name="adv_sc_claimed_warning">Die zugewiesene Taste kann nur noch für MG4Control verwendet werden, bis das Kürzel unter « KÜRZELLISTE » gelöscht wird.</string>
+    <string name="adv_sc_claimed_warning">Drücke ohne Kürzel behalten die ursprüngliche Funktion der Taste. Bei einer Taste mit Doppeldruck erfolgt der ursprüngliche einfache Druck mit leichter Verzögerung (0,3 s).</string>
     <string name="adv_sc_delete">Löschen</string>
     <string name="adv_sc_status_label">Dienststatus</string>
     <string name="adv_sc_saved">Kürzel gespeichert</string>
@@ -513,7 +513,7 @@
 
     <!-- Avertissement a l'activation des raccourcis avances -->
     <string name="adv_sc_enable_warn_title">Belegte Taste ändert ihre Rolle</string>
-    <string name="adv_sc_enable_warn_msg">Eine belegte Taste verliert ihre ursprüngliche Funktion: MG4Control fängt die Taste vor dem Launcher ab, der sie gar nicht mehr sieht.\n\nBeispiel: Wird die Home-Taste belegt, führt sie nicht mehr zum MG-Launcher zurück. Um das wiederherzustellen, weisen Sie ihr die Aktion App starten zu und wählen Sie den Launcher.\n\nDie Taste wird komplett beansprucht: Wird nur der lange Druck belegt, sind auch kurzer und doppelter Druck wirkungslos.\n\nAlles wird wieder normal, sobald die Verknüpfung in der Kürzelliste gelöscht wird.</string>
+    <string name="adv_sc_enable_warn_msg">MG4Control fängt belegte Tasten vor dem Launcher ab.\n\nEin Druck mit Kürzel ersetzt die ursprüngliche Funktion der Taste. Die anderen behalten sie: Wird der Doppeldruck der Home-Taste belegt, führt der einfache Druck weiterhin zum MG-Launcher zurück.\n\nEinziger Nachteil: Bei einer Taste mit Doppeldruck erfolgt der einfache Druck mit leichter Verzögerung (0,3 s), um sicherzugehen, dass kein zweiter Druck folgt.\n\nAlles wird wieder normal, sobald die Verknüpfung in der Kürzelliste gelöscht wird.</string>
     <string name="adv_sc_enable_warn_ok">Aktivieren</string>
 
     <!-- Raccourcis : pistes audio -->

@@ -466,10 +466,10 @@
     <string name="adv_sc_all_profiles">Todos los perfiles</string>
     <string name="adv_sc_profile_missing">Perfil eliminado</string>
     <string name="adv_sc_group_title">%1$s · %2$s</string>
-    <string name="adv_sc_no_fallback">Ningún atajo para los demás perfiles: la tecla está reservada pero no hace nada.</string>
+    <string name="adv_sc_no_fallback">Ningún atajo para los demás perfiles: la tecla conserva allí su función original.</string>
     <string name="adv_sc_edit_conflict">Ese perfil ya tiene un atajo en esta tecla y tipo de pulsación.</string>
     <string name="adv_sc_empty">Ningún atajo avanzado registrado.</string>
-    <string name="adv_sc_claimed_warning">La tecla asignada ya no podrá usarse para nada más que MG4Control, hasta que se borre el atajo en « LISTA DE ATAJOS ».</string>
+    <string name="adv_sc_claimed_warning">Las pulsaciones sin atajo conservan la función original de la tecla. En una tecla con doble pulsación, la pulsación simple original llega con un ligero retraso (0,3 s).</string>
     <string name="adv_sc_delete">Borrar</string>
     <string name="adv_sc_status_label">Estado del servicio</string>
     <string name="adv_sc_saved">Atajo guardado</string>
@@ -513,7 +513,7 @@
 
     <!-- Avertissement a l'activation des raccourcis avances -->
     <string name="adv_sc_enable_warn_title">El botón asignado cambia de función</string>
-    <string name="adv_sc_enable_warn_msg">Un botón asignado a un atajo avanzado pierde su función original: MG4Control intercepta la tecla antes que el launcher, que ya no la recibe.\n\nEjemplo: si asigna el botón Inicio, dejará de volver al launcher de MG. Para recuperarlo, asígnele la acción « Iniciar una app » y elija el launcher.\n\nLa tecla se reserva por completo: asignar solo la pulsación larga anula también la corta y la doble.\n\nTodo vuelve a la normalidad al eliminar el atajo en « Lista de atajos ».</string>
+    <string name="adv_sc_enable_warn_msg">MG4Control intercepta los botones asignados antes que el launcher.\n\nUna pulsación con atajo sustituye la función original del botón. Las demás la conservan: si asigna la doble pulsación del botón Inicio, la pulsación simple sigue volviendo al launcher de MG.\n\nÚnica contrapartida: en un botón con doble pulsación, la pulsación simple llega con un ligero retraso (0,3 s), el tiempo de comprobar que no sigue una segunda pulsación.\n\nTodo vuelve a la normalidad al eliminar el atajo en « Lista de atajos ».</string>
     <string name="adv_sc_enable_warn_ok">Activar</string>
 
     <!-- Raccourcis : pistes audio -->
