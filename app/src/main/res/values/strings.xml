@@ -132,6 +132,7 @@
     <string name="profile_hvac_row_loop">Recycl.</string>
     <string name="profile_hvac_row_def_front">Dég. AV</string>
     <string name="profile_hvac_row_def_rear">Dég. AR</string>
+    <string name="profile_hvac_row_air">Air</string>
     <string name="profile_hvac_on">Marche</string>
     <string name="profile_hvac_unchanged">Inchangé</string>
     <string name="profile_hvac_temp_value">%1$d °C</string>
@@ -373,6 +374,11 @@
     <string name="clim_section_defrost">Dégivrage</string>
     <string name="clim_defrost_front">Avant</string>
     <string name="clim_defrost_rear">Arrière</string>
+    <string name="clim_section_airflow">Sens de l\'air</string>
+    <string name="clim_air_face">Visage</string>
+    <string name="clim_air_feet">Pieds</string>
+    <string name="clim_air_windshield_front">Pare-brise AV</string>
+    <string name="clim_air_windshield_rear">Pare-brise AR</string>
     <string name="clim_write_failed">Réglage climatisation refusé par le véhicule</string>
 
     <!-- Editeur de profil : categories -->

@@ -90,6 +90,12 @@ data class DrivingProfile(
     val hvacDefrostRear: Boolean? = null,
     /** `null` = inchangé, sinon 0=Intérieur, 1=Extérieur, 2=Auto. */
     val hvacLoopMode: Int? = null,
+    /**
+     * Ligne « Air » : boutons cochés, en bits [AirFlow.FACE] / [AirFlow.FEET] /
+     * [AirFlow.WINDSHIELD] / [AirFlow.REAR_DEFROST]. `null` = inchangé — c'est aussi ce que Gson
+     * rend pour un profil enregistré avant l'ajout du champ.
+     */
+    val hvacAirFlow: Int? = null,
     // [BT-PROFILES] MAC de l'appareil Bluetooth associé à ce profil (null = aucun)
     val btDeviceMac: String? = null
 ) {

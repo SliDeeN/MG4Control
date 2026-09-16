@@ -2394,6 +2394,142 @@
 
     </LinearLayout>
 
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!--  CARTE : Sens de l'air — boutons CUMULABLES (voir model.AirFlow)   -->
+    <!--  Les dégivrages de la carte Modes restent, le temps de valider sur -->
+    <!--  véhicule que « Pare-brise AV » et le dégivrage avant se recouvrent. -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <LinearLayout
+        android:id="@+id/clim_airflow_card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card_rounded">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/clim_section_airflow"
+            android:textColor="@color/dash_text_lo"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.12"
+            android:textAllCaps="true"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="7dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/dash_border" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="10dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/clim_btn_air_face"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="84dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="@string/clim_air_face"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:textAllCaps="true"
+                app:icon="@drawable/ic_air_face"
+                app:iconGravity="top"
+                app:iconSize="32dp"
+                app:iconPadding="4dp"
+                app:iconTint="@color/text_secondary"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/clim_btn_air_feet"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="84dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="@string/clim_air_feet"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:textAllCaps="true"
+                app:icon="@drawable/ic_air_feet"
+                app:iconGravity="top"
+                app:iconSize="32dp"
+                app:iconPadding="4dp"
+                app:iconTint="@color/text_secondary"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/clim_btn_air_windshield_front"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="84dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="@string/clim_air_windshield_front"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:textAllCaps="true"
+                app:icon="@drawable/ic_air_windshield_front"
+                app:iconGravity="top"
+                app:iconSize="32dp"
+                app:iconPadding="4dp"
+                app:iconTint="@color/text_secondary"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/clim_btn_air_windshield_rear"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="84dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="@string/clim_air_windshield_rear"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:textAllCaps="true"
+                app:icon="@drawable/ic_air_windshield_rear"
+                app:iconGravity="top"
+                app:iconSize="32dp"
+                app:iconPadding="4dp"
+                app:iconTint="@color/text_secondary"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
 
                 </LinearLayout>
             </LinearLayout>

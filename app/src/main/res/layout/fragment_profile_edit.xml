@@ -2029,6 +2029,33 @@
                         <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_loop_none" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/profile_hvac_unchanged" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
 
                     </LinearLayout>
+                    <!-- Ligne « Air » : boutons CUMULABLES (model.AirFlow) + « Inchangé ».
+                         Coexiste avec Dég. AV / Dég. AR le temps de la validation véhicule. -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="76dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="72dp"
+                            android:text="@string/profile_hvac_row_air"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp"
+                            android:letterSpacing="0.06"
+                            android:textAllCaps="true" />
+
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_air_face" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="wrap_content" android:minHeight="76dp" android:layout_weight="1" android:layout_marginStart="6dp" android:text="@string/clim_air_face" android:textSize="12sp" android:insetTop="0dp" android:insetBottom="0dp" android:paddingStart="2dp" android:paddingEnd="2dp" app:icon="@drawable/ic_air_face" app:iconGravity="top" app:iconSize="28dp" app:iconPadding="2dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_air_feet" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="wrap_content" android:minHeight="76dp" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/clim_air_feet" android:textSize="12sp" android:insetTop="0dp" android:insetBottom="0dp" android:paddingStart="2dp" android:paddingEnd="2dp" app:icon="@drawable/ic_air_feet" app:iconGravity="top" app:iconSize="28dp" app:iconPadding="2dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_air_windshield_front" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="wrap_content" android:minHeight="76dp" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/clim_air_windshield_front" android:textSize="12sp" android:insetTop="0dp" android:insetBottom="0dp" android:paddingStart="2dp" android:paddingEnd="2dp" app:icon="@drawable/ic_air_windshield_front" app:iconGravity="top" app:iconSize="28dp" app:iconPadding="2dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_air_windshield_rear" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="wrap_content" android:minHeight="76dp" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/clim_air_windshield_rear" android:textSize="12sp" android:insetTop="0dp" android:insetBottom="0dp" android:paddingStart="2dp" android:paddingEnd="2dp" app:icon="@drawable/ic_air_windshield_rear" app:iconGravity="top" app:iconSize="28dp" app:iconPadding="2dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_air_none" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="wrap_content" android:minHeight="76dp" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/profile_hvac_unchanged" android:textSize="12sp" android:insetTop="0dp" android:insetBottom="0dp" android:paddingStart="2dp" android:paddingEnd="2dp" />
+
+                    </LinearLayout>
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="52dp"

@@ -130,6 +130,7 @@
     <string name="profile_hvac_row_loop">Recirc.</string>
     <string name="profile_hvac_row_def_front">Defr. front</string>
     <string name="profile_hvac_row_def_rear">Defr. rear</string>
+    <string name="profile_hvac_row_air">Air</string>
     <string name="profile_hvac_on">On</string>
     <string name="profile_hvac_unchanged">Unchanged</string>
     <string name="profile_hvac_temp_value">%1$d °C</string>
@@ -371,6 +372,11 @@
     <string name="clim_section_defrost">Defrost</string>
     <string name="clim_defrost_front">Front</string>
     <string name="clim_defrost_rear">Rear</string>
+    <string name="clim_section_airflow">Air direction</string>
+    <string name="clim_air_face">Face</string>
+    <string name="clim_air_feet">Feet</string>
+    <string name="clim_air_windshield_front">Windscreen</string>
+    <string name="clim_air_windshield_rear">Rear screen</string>
     <string name="clim_write_failed">Climate setting refused by the vehicle</string>
 
     <!-- Editeur de profil : categories -->

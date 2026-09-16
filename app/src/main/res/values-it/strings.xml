@@ -130,6 +130,7 @@
     <string name="profile_hvac_row_loop">Ricircolo</string>
     <string name="profile_hvac_row_def_front">Sbrin. ant.</string>
     <string name="profile_hvac_row_def_rear">Sbrin. post.</string>
+    <string name="profile_hvac_row_air">Aria</string>
     <string name="profile_hvac_on">Acceso</string>
     <string name="profile_hvac_unchanged">Invariato</string>
     <string name="profile_hvac_temp_value">%1$d °C</string>
@@ -371,6 +372,11 @@
     <string name="clim_section_defrost">Sbrinamento</string>
     <string name="clim_defrost_front">Anteriore</string>
     <string name="clim_defrost_rear">Posteriore</string>
+    <string name="clim_section_airflow">Direzione dell\'aria</string>
+    <string name="clim_air_face">Viso</string>
+    <string name="clim_air_feet">Piedi</string>
+    <string name="clim_air_windshield_front">Parabrezza</string>
+    <string name="clim_air_windshield_rear">Lunotto</string>
     <string name="clim_write_failed">Impostazione clima rifiutata dal veicolo</string>
 
     <!-- Editeur de profil : categories -->

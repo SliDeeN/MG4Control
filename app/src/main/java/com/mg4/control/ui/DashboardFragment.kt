@@ -24,6 +24,7 @@ import com.mg4.control.hardware.MG4Hardware.AebSensitivity
 import com.mg4.control.hardware.MG4Hardware.ElkMode
 import com.mg4.control.hardware.MG4Hardware.ElkSensitivity
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
+import com.mg4.control.model.AirFlow
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.util.FirmwareInfo
@@ -186,6 +187,8 @@ class DashboardFragment : Fragment() {
         const val TAB_DRIVE = 0
         const val TAB_SAFETY = 1
         const val TAB_COMFORT = 2
+        /** Tag des appuis « Sens de l'air » : le même que le filtre de la sonde MG4_AIR. */
+        const val CLIM_UI_TAG = "MG4_AIR"
     }
 
     /**
@@ -1235,6 +1238,10 @@ class DashboardFragment : Fragment() {
     private var climBtnDefFront: MaterialButton? = null
     private var climBtnDefRear: MaterialButton? = null
     private var climLoopButtons: Map<Int, MaterialButton?> = emptyMap()
+    private var climBtnAirFace: MaterialButton? = null
+    private var climBtnAirFeet: MaterialButton? = null
+    private var climBtnAirWindshield: MaterialButton? = null
+    private var climBtnAirRear: MaterialButton? = null
     /** Dernier état connu — sert à savoir vers quoi basculer au clic d'un bouton. */
     private var climLastState: MG4Hardware.ClimateState? = null
 
@@ -1276,6 +1283,10 @@ class DashboardFragment : Fragment() {
             MG4Hardware.LoopMode.OUTSIDE to view.findViewById<MaterialButton>(R.id.clim_btn_loop_outside),
             MG4Hardware.LoopMode.AUTO    to view.findViewById<MaterialButton>(R.id.clim_btn_loop_auto)
         )
+        climBtnAirFace       = view.findViewById(R.id.clim_btn_air_face)
+        climBtnAirFeet       = view.findViewById(R.id.clim_btn_air_feet)
+        climBtnAirWindshield = view.findViewById(R.id.clim_btn_air_windshield_front)
+        climBtnAirRear       = view.findViewById(R.id.clim_btn_air_windshield_rear)
         setupClimateListeners()
         refreshClimatePage()
     }
@@ -1350,6 +1361,33 @@ class DashboardFragment : Fragment() {
         climLoopButtons.forEach { (mode, btn) ->
             btn?.setOnClickListener { climateWrite { MG4Hardware.setClimateLoopMode(mode) } }
         }
+
+        // ── Sens de l'air : boutons CUMULABLES ──
+        // Chaque appui recompose la combinaison à partir du dernier état LU sur la voiture, pas
+        // d'un état gardé à l'écran : l'écran d'origine peut l'avoir changé entre-temps.
+        fun basculerAir(face: Boolean = false, feet: Boolean = false, windshield: Boolean = false) {
+            val lu = climLastState?.airFlow ?: return
+            val actuel = AirFlow.partsOf(lu) ?: AirFlow.Parts(face = false, feet = false, windshield = false)
+            val cible = AirFlow.directionFor(
+                face       = actuel.face xor face,
+                feet       = actuel.feet xor feet,
+                windshield = actuel.windshield xor windshield
+            )
+            // L'air doit bien sortir quelque part : le dernier bouton allumé ne s'éteint pas.
+            if (cible == null) {
+                AppLogger.i(CLIM_UI_TAG, "Sens de l'air : dernier bouton actif, appui ignoré (valeur lue=$lu)")
+                return
+            }
+            AppLogger.i(CLIM_UI_TAG, "Sens de l'air : appui → $lu ⇒ $cible")
+            climateWrite { MG4Hardware.setClimateAirFlow(cible) }
+        }
+        climBtnAirFace?.setOnClickListener       { basculerAir(face = true) }
+        climBtnAirFeet?.setOnClickListener       { basculerAir(feet = true) }
+        climBtnAirWindshield?.setOnClickListener { basculerAir(windshield = true) }
+        // Lunette arrière : hors de l'échelle du sens de l'air, c'est le dégivrage arrière.
+        climBtnAirRear?.setOnClickListener {
+            climLastState?.defrostRear?.let { cur -> climateWrite { MG4Hardware.setClimateDefrostRear(!cur) } }
+        }
     }
 
     /**
@@ -1390,6 +1428,14 @@ class DashboardFragment : Fragment() {
                 bindClimToggle(climBtnDefFront, s.defrostFront)
                 bindClimToggle(climBtnDefRear, s.defrostRear)
 
+                // Valeur illisible → boutons grisés. Valeur lue mais hors échelle (7 « aucun »)
+                // → boutons actifs, aucun allumé : l'utilisateur peut choisir un sens.
+                val air = s.airFlow?.let { AirFlow.partsOf(it) }
+                bindClimToggle(climBtnAirFace,       s.airFlow?.let { air?.face == true })
+                bindClimToggle(climBtnAirFeet,       s.airFlow?.let { air?.feet == true })
+                bindClimToggle(climBtnAirWindshield, s.airFlow?.let { air?.windshield == true })
+                bindClimToggle(climBtnAirRear,       s.defrostRear)
+
                 climLoopButtons.forEach { (mode, btn) ->
                     val active = s.loopMode == mode
                     btn?.backgroundTintList = ColorStateList.valueOf(if (active) colorActive else colorInactive)
@@ -1409,6 +1455,8 @@ class DashboardFragment : Fragment() {
         val active = state == true
         btn?.backgroundTintList = ColorStateList.valueOf(if (active) colorActive else colorInactive)
         btn?.setTextColor(if (active) colorTextActive else colorTextInactive)
+        // Sans effet sur un bouton sans icône ; les boutons « Sens de l'air » en portent une.
+        btn?.iconTint = ColorStateList.valueOf(if (active) colorTextActive else colorTextInactive)
         btn?.isEnabled = state != null
         btn?.alpha = if (state != null) 1f else 0.35f
     }

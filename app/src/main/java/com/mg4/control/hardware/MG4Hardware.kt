@@ -18,6 +18,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.AirFlow
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.util.FirmwareInfo
@@ -5128,6 +5129,13 @@ object MG4Hardware {
 
     /** Mode de recirculation — seule source fiable (l'OEM getLoopMode n'est pas vérifié). */
     private const val PROP_HVAC_LOOP_MODE = 0x15402507
+    /**
+     * Sens de l'air — `HVAC_BLOWER_DIRECTION`, échelle 0–7 décodée des firmwares (voir [AirFlow]).
+     * Les deux familles écrivent ICI, valeur brute : ce n'est pas une bascule.
+     */
+    private const val PROP_HVAC_BLOWER_DIRECTION = 0x1540250e
+    /** Propriété AOSP homonyme (masque de bits, autre échelle) — lue par la sonde seulement. */
+    private const val PROP_AOSP_FAN_DIRECTION = 0x15400501
     /** État A/C — encodage mesuré sur véhicule : 1 = allumé, 0 = éteint. */
     private const val PROP_HVAC_AC_ON = 0x15402500
 
@@ -5179,7 +5187,9 @@ object MG4Hardware {
         val autoOn: Boolean?,
         val loopMode: Int?,
         val defrostFront: Boolean?,
-        val defrostRear: Boolean?
+        val defrostRear: Boolean?,
+        /** Sens de l'air, valeur brute 0–7 ([AirFlow]) ; null si illisible. */
+        val airFlow: Int?
     )
 
     /**
@@ -5208,8 +5218,11 @@ object MG4Hardware {
      * n'aboutir qu'après la création de la page (bind asynchrone), auquel cas le prochain
      * rafraîchissement périodique remplit l'écran tout seul.
      */
-    fun getClimateState(): ClimateState? {
-        if (isClimateA9()) return getClimateStateA9()
+    fun getClimateState(): ClimateState? =
+        (if (isClimateA9()) getClimateStateA9() else getClimateStateOldSdk())
+            ?.also { traceAirFlowChange(it) }
+
+    private fun getClimateStateOldSdk(): ClimateState? {
         if (sAirCondition == null) sAppContext?.let { initAirCondition(it) }
         if (sAirCondition == null) return null
         // Bornes lues sur la voiture (jamais codées en dur) ; repli sur des valeurs sûres.
@@ -5230,7 +5243,11 @@ object MG4Hardware {
             // Lu via la PROPRIÉTÉ (0/1/2 mesurés sur véhicule), pas via l'OEM getLoopMode.
             loopMode     = getIntPropertyHvac(PROP_HVAC_LOOP_MODE, AREA_HVAC).takeIf { it >= 0 },
             defrostFront = acInt("getFrontWindowDefroster")?.takeIf { it >= 0 }?.let { it == 1 },
-            defrostRear  = acInt("getBackWindowDefroster")?.takeIf { it >= 0 }?.let { it == 1 }
+            defrostRear  = acInt("getBackWindowDefroster")?.takeIf { it >= 0 }?.let { it == 1 },
+            // Propriété d'abord (même voie que le recyclage) ; le getter OEM lit la même chose,
+            // en repli si le CarHvacManager n'est pas encore lié.
+            airFlow      = getIntPropertyHvac(PROP_HVAC_BLOWER_DIRECTION, AREA_HVAC).takeIf { it in 0..7 }
+                ?: acInt("getBlowerDirectionMode")?.takeIf { it in 0..7 }
         )
     }
 
@@ -5273,7 +5290,8 @@ object MG4Hardware {
             autoOn       = a9Get("getAutoStatus") as? Boolean,
             loopMode     = (a9Get("getAirCirculationStatus") as? Int)?.takeIf { it >= 0 },
             defrostFront = a9Get("getFrontDefrostStatus") as? Boolean,
-            defrostRear  = a9Get("getRearDefrostStatus") as? Boolean
+            defrostRear  = a9Get("getRearDefrostStatus") as? Boolean,
+            airFlow      = (a9Get("getFanDirection") as? Int)?.takeIf { it in 0..7 }
         )
     }
 
@@ -5359,18 +5377,97 @@ object MG4Hardware {
     }
 
     fun setClimateDefrostFront(on: Boolean): Boolean =
-        if (isClimateA9())
+        (if (isClimateA9())
             a9CycleTo("defrostFront", "getFrontDefrostStatus", if (on) 1 else 0, 2, "switchFrontDefrostStatus")
         else
             acCall(if (on) "openFrontWindowDefroster" else "closeFrontWindowDefroster")
-                .also { climLog("defrostFront=$on", it) }
+                .also { climLog("defrostFront=$on", it) })
+            .also { scheduleAirFlowProbe("après dégivrage AV=$on") }
 
     fun setClimateDefrostRear(on: Boolean): Boolean =
-        if (isClimateA9())
+        (if (isClimateA9())
             a9CycleTo("defrostRear", "getRearDefrostStatus", if (on) 1 else 0, 2, "switchRearDefrostStatus")
         else
             acCall(if (on) "openBackWindowDefroster" else "closeBackWindowDefroster")
-                .also { climLog("defrostRear=$on", it) }
+                .also { climLog("defrostRear=$on", it) })
+            .also { scheduleAirFlowProbe("après dégivrage AR=$on") }
+
+    /**
+     * Sens de l'air — écriture DIRECTE de la valeur (0–6, voir [AirFlow]), pas une bascule.
+     *
+     * Vérifié dans le code des services d'origine : l'ancien SDK (`setBlowerDirectionMode`) et A9
+     * (`setFanDirection`) écrivent tous deux la valeur brute dans `HVAC_BLOWER_DIRECTION`. Le
+     * service ancien SDK refuse hors de 0–7 ; celui d'A9 ignore une 2e écriture dans les 300 ms
+     * (anti-rebond du `HvacDataStore`) — sans conséquence pour des appuis au doigt.
+     *
+     * ⚠️ Pas encore validé sur véhicule : ce que 3, 5 et 6 font du dégivrage avant, et si 5/6
+     * sont appliqués. Les sondes MG4_AIR encadrent chaque écriture pour le mesurer.
+     */
+    fun setClimateAirFlow(direction: Int): Boolean {
+        if (direction !in 0..6) return false
+        probeAirFlow("avant écriture $direction")
+        val ok = if (isClimateA9())
+            a9Set("setFanDirection", direction).also { climLog("A9 airFlow=$direction", it) }
+        else
+            acSet("setBlowerDirectionMode", direction).also { climLog("airFlow=$direction", it) }
+        scheduleAirFlowProbe("après écriture $direction")
+        return ok
+    }
+
+    // ── SONDE TEMPORAIRE sens de l'air ────────────────────────────────────────
+    // À retirer une fois validés sur véhicule : le lien dégivrage AV ⇔ valeur 4, l'effet de
+    // 3/5/6 sur le dégivrage, et l'application réelle de 5 et 6. Tag dédié pour filtrer.
+    private const val AIR_TAG = "MG4_AIR"
+
+    /** Dernier instantané tracé : on ne journalise qu'un CHANGEMENT, pas chaque rafraîchissement. */
+    @Volatile private var sLastAirTrace: String? = null
+
+    /**
+     * Relevé complet des sources liées au sens de l'air. Lit les DEUX voies (propriété et getter
+     * du SDK) et la propriété AOSP homonyme : c'est leur comparaison qui dira laquelle est fiable.
+     */
+    fun probeAirFlow(origin: String) {
+        try {
+            val prop = getIntPropertyHvac(PROP_HVAC_BLOWER_DIRECTION, AREA_HVAC)
+            val aosp = getIntPropertyHvac(PROP_AOSP_FAN_DIRECTION, AREA_HVAC)
+            val msg = if (isClimateA9()) {
+                "A9 getFanDirection=${a9Get("getFanDirection")} prop0x1540250e=$prop aosp0x15400501=$aosp " +
+                    "dégAV=${a9Get("getFrontDefrostStatus")} dégAR=${a9Get("getRearDefrostStatus")} " +
+                    "clim=${a9Get("getHvacPowerStatus")} ventil=${a9Get("getFanSpeed")}"
+            } else {
+                "prop0x1540250e=$prop getBlowerDirectionMode=${acInt("getBlowerDirectionMode")} aosp0x15400501=$aosp " +
+                    "dégAV=${acInt("getFrontWindowDefroster")} dégAR=${acInt("getBackWindowDefroster")} " +
+                    "clim=${acInt("getHvacPowerStatus")} ventil=${acInt("getAirVolumeLevel")} A/C=${acInt("getAcSwitch")}"
+            }
+            AppLogger.i(AIR_TAG, "SONDE [$origin] $msg")
+        } catch (e: Exception) {
+            AppLogger.w(AIR_TAG, "SONDE [$origin] échec : ${e.message}")
+        }
+    }
+
+    /** Deux relevés différés : le véhicule met un instant à propager, et le dégivrage peut suivre. */
+    private fun scheduleAirFlowProbe(origin: String) {
+        kotlin.concurrent.thread(name = "mg4-air-probe", isDaemon = true) {
+            try {
+                Thread.sleep(1_500)
+                probeAirFlow("$origin +1,5 s")
+                Thread.sleep(3_000)
+                probeAirFlow("$origin +4,5 s")
+            } catch (_: InterruptedException) {}
+        }
+    }
+
+    /**
+     * Trace tout changement du sens de l'air ou des dégivrages vu par les rafraîchissements du
+     * Dashboard — y compris ceux faits depuis l'écran d'ORIGINE, qui ne passent pas par nous.
+     */
+    private fun traceAirFlowChange(s: ClimateState) {
+        val snap = "air=${s.airFlow} dégAV=${s.defrostFront} dégAR=${s.defrostRear} clim=${s.powerOn}"
+        if (snap == sLastAirTrace) return
+        val avant = sLastAirTrace
+        sLastAirTrace = snap
+        AppLogger.i(AIR_TAG, "changement : ${avant ?: "(premier relevé)"} → $snap")
+    }
 
     /**
      * Applique un préréglage complet de climatisation (automatisation température).
@@ -5404,7 +5501,8 @@ object MG4Hardware {
         fanLevel: Int,
         defrostFront: Boolean?,
         defrostRear: Boolean?,
-        loopMode: Int?
+        loopMode: Int?,
+        airFlow: Int? = null
     ): Boolean {
         val state = getClimateState() ?: run {
             AppLogger.w(CLIM_TAG, "Profil : état clim illisible → abandon")
@@ -5446,10 +5544,22 @@ object MG4Hardware {
             ok = setClimateLoopMode(mode) && ok
         }
 
+        // Ligne « Air » (boutons cumulables), APRÈS les anciennes lignes de dégivrage, qui
+        // coexistent le temps de valider le lien dégivrage ⇔ pare-brise : si les deux portent
+        // sur la lunette arrière, c'est la ligne Air qui l'emporte. Hors « Inchangé », le profil
+        // applique ce qui est affiché : lunette arrière non cochée = dégivrage arrière ÉTEINT.
+        if (airFlow != null) {
+            AirFlow.directionForMask(airFlow)?.let { ok = setClimateAirFlow(it) && ok }
+            if (state.defrostRear != null) {
+                ok = setClimateDefrostRear(airFlow and AirFlow.REAR_DEFROST != 0) && ok
+            }
+        }
+
         AppLogger.i(CLIM_TAG, "Profil : clim=ON A/C=$ac consigne=$targetTemp " +
             (if (autoMode) "ventilation=AUTO" else "vent=$fanLevel") +
             " dégAV=${defrostFront ?: "inchangé"} dégAR=${defrostRear ?: "inchangé"} " +
-            "recyclage=${loopMode ?: "inchangé"} → ok=$ok")
+            "recyclage=${loopMode ?: "inchangé"} " +
+            "air=${airFlow?.let { "boutons=$it valeur=${AirFlow.directionForMask(it)}" } ?: "inchangé"} → ok=$ok")
         return ok
     }
 

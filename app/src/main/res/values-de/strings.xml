@@ -130,6 +130,7 @@
     <string name="profile_hvac_row_loop">Umluft</string>
     <string name="profile_hvac_row_def_front">Entf. vorn</string>
     <string name="profile_hvac_row_def_rear">Entf. hinten</string>
+    <string name="profile_hvac_row_air">Luft</string>
     <string name="profile_hvac_on">Ein</string>
     <string name="profile_hvac_unchanged">Unverändert</string>
     <string name="profile_hvac_temp_value">%1$d °C</string>
@@ -371,6 +372,11 @@
     <string name="clim_section_defrost">Entfrosten</string>
     <string name="clim_defrost_front">Vorne</string>
     <string name="clim_defrost_rear">Hinten</string>
+    <string name="clim_section_airflow">Luftverteilung</string>
+    <string name="clim_air_face">Gesicht</string>
+    <string name="clim_air_feet">Füße</string>
+    <string name="clim_air_windshield_front">Frontscheibe</string>
+    <string name="clim_air_windshield_rear">Heckscheibe</string>
     <string name="clim_write_failed">Klimaeinstellung vom Fahrzeug abgelehnt</string>
 
     <!-- Editeur de profil : categories -->

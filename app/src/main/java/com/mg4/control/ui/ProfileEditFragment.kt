@@ -19,6 +19,7 @@ import com.mg4.control.hardware.MG4Hardware.ElkMode
 import com.mg4.control.hardware.MG4Hardware.ElkSensitivity
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.DriveMode
+import com.mg4.control.model.AirFlow
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.profile.ProfileManager
@@ -82,6 +83,9 @@ class ProfileEditFragment : Fragment() {
                 ctx.getColor(if (active) R.color.dash_accent_dim else R.color.dash_btn))
             btn.setTextColor(ctx.getColor(
                 if (active) R.color.dash_accent else R.color.text_secondary))
+            // Sans effet sur un bouton sans icône ; ceux de la ligne « Air » en portent une.
+            btn.iconTint = ColorStateList.valueOf(ctx.getColor(
+                if (active) R.color.dash_accent else R.color.text_secondary))
             btn.strokeColor = ColorStateList.valueOf(
                 ctx.getColor(if (active) R.color.dash_accent else R.color.dash_border))
         }
@@ -127,6 +131,7 @@ class ProfileEditFragment : Fragment() {
         var hvacDfSel       = data.hvacDefrostFront
         var hvacDrSel       = data.hvacDefrostRear
         var hvacLoopSel     = data.hvacLoopMode
+        var hvacAirSel      = data.hvacAirFlow   // bits AirFlow, null = inchangé
         // Index 0/1/2, ou null quand le profil ne s'est jamais prononcé (créé avant la
         // fonctionnalité). L'éditeur propose alors Normal, mais rien n'est enregistré tant que
         // l'utilisateur n'a pas sauvegardé — un ancien profil Personnalisé ne se met donc pas à
@@ -307,6 +312,14 @@ class ProfileEditFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_hvac_dr_on),
             view.findViewById<MaterialButton>(R.id.btn_hvac_dr_none)
         )
+        // Ligne « Air » : bouton → bit du profil. Cumulables, contrairement aux groupes ci-dessus.
+        val airBtns = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_hvac_air_face)             to AirFlow.FACE,
+            view.findViewById<MaterialButton>(R.id.btn_hvac_air_feet)             to AirFlow.FEET,
+            view.findViewById<MaterialButton>(R.id.btn_hvac_air_windshield_front) to AirFlow.WINDSHIELD,
+            view.findViewById<MaterialButton>(R.id.btn_hvac_air_windshield_rear)  to AirFlow.REAR_DEFROST
+        )
+        val btnAirNone = view.findViewById<MaterialButton>(R.id.btn_hvac_air_none)
 
         /**
          * Trois grisages en cascade, qui reproduisent des règles du véhicule et non des choix
@@ -320,7 +333,8 @@ class ProfileEditFragment : Fragment() {
             val actif  = hvacEnabledSel
             val allume = actif && hvacPowerSel
             setBtnsEnabled(listOf(btnPower), actif)
-            setBtnsEnabled(listOf(btnAc, btnAuto) + loopBtns + dfBtns + drBtns, allume)
+            setBtnsEnabled(listOf(btnAc, btnAuto) + loopBtns + dfBtns + drBtns +
+                airBtns.map { it.first } + btnAirNone, allume)
             listOf(sldTemp, sldFan).forEach { it.isEnabled = allume }
             sldFan.isEnabled = allume && !hvacAutoSel
             sldTemp.alpha = if (allume) 1f else 0.35f
@@ -341,6 +355,24 @@ class ProfileEditFragment : Fragment() {
         bindGroup(listOf(
             drBtns[0] to false, drBtns[1] to true, drBtns[2] to null
         ), hvacDrSel) { hvacDrSel = it }
+
+        /**
+         * Ligne « Air » : « Inchangé » allumé ⇔ aucun bouton coché (null). Hors « Inchangé », le
+         * profil applique exactement ce qui est affiché — un dégivrage non coché sera ÉTEINT.
+         * Tout décocher revient à « Inchangé » : un profil ne peut pas « n'envoyer l'air nulle part ».
+         */
+        fun majAir() {
+            airBtns.forEach { (btn, bit) -> activateBtn(btn, (hvacAirSel ?: 0) and bit != 0) }
+            activateBtn(btnAirNone, hvacAirSel == null)
+        }
+        airBtns.forEach { (btn, bit) ->
+            btn.setOnClickListener {
+                hvacAirSel = ((hvacAirSel ?: 0) xor bit).takeIf { it != 0 }
+                majAir()
+            }
+        }
+        btnAirNone.setOnClickListener { hvacAirSel = null; majAir() }
+        majAir()
 
         // Bascules et non groupes : ce sont les mêmes commandes que sur le Dashboard, où un
         // bouton unique s'allume quand le réglage est actif.
@@ -702,6 +734,7 @@ class ProfileEditFragment : Fragment() {
                 hvacDefrostFront = hvacDfSel,
                 hvacDefrostRear  = hvacDrSel,
                 hvacLoopMode     = hvacLoopSel,
+                hvacAirFlow      = hvacAirSel,
                 btDeviceMac    = selectedBtMac   // [BT-PROFILES]
             )
             manager.save(profile)
