@@ -142,8 +142,6 @@ object ProfileApplier {
                     autoMode     = profile.hvacAuto,
                     targetTemp   = profile.hvacTemp,
                     fanLevel     = profile.hvacFan,
-                    defrostFront = profile.hvacDefrostFront,
-                    defrostRear  = profile.hvacDefrostRear,
                     loopMode     = profile.hvacLoopMode,
                     airFlow      = profile.hvacAirFlow
                 )

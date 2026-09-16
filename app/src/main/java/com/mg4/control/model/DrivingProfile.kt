@@ -85,7 +85,11 @@ data class DrivingProfile(
     val hvacAuto: Boolean = false,
     val hvacTemp: Int = 21,
     val hvacFan: Int = 4,
-    /** `null` = ne pas y toucher. Même convention que l'automatisation A/C. */
+    /**
+     * ANCIENNES lignes « Dég. AV / Dég. AR », retirées de l'éditeur le 2026-09-17 au profit de
+     * [hvacAirFlow]. Conservées pour relire les profils existants : ProfileManager.getAll() les
+     * reprend dans [hvacAirFlow] puis les remet à `null`. Plus rien ne les applique.
+     */
     val hvacDefrostFront: Boolean? = null,
     val hvacDefrostRear: Boolean? = null,
     /** `null` = inchangé, sinon 0=Intérieur, 1=Extérieur, 2=Auto. */

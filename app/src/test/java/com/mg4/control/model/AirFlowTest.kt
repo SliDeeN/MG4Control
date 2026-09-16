@@ -53,6 +53,25 @@ class AirFlowTest {
         assertEquals(6, AirFlow.directionForMask(AirFlow.FACE or AirFlow.WINDSHIELD or AirFlow.REAR_DEFROST))
     }
 
+    // ── Reprise des anciennes lignes Dég. AV / Dég. AR ─────────────────────
+
+    @Test
+    fun `un ancien degivrage en marche devient le bouton correspondant`() {
+        assertEquals(AirFlow.WINDSHIELD, AirFlow.fromLegacyDefrost(front = true, rear = null))
+        assertEquals(AirFlow.REAR_DEFROST, AirFlow.fromLegacyDefrost(front = null, rear = true))
+        assertEquals(AirFlow.WINDSHIELD or AirFlow.REAR_DEFROST,
+            AirFlow.fromLegacyDefrost(front = true, rear = true))
+    }
+
+    @Test
+    fun `un ancien profil sans degivrage en marche reste inchange`() {
+        // « Off » seul n'a pas d'équivalent dans la ligne Air : un masque vide y signifie
+        // « Inchangé ». Mieux vaut ne plus rien imposer que forcer un sens de l'air inventé.
+        assertNull(AirFlow.fromLegacyDefrost(front = null, rear = null))
+        assertNull(AirFlow.fromLegacyDefrost(front = false, rear = false))
+        assertNull(AirFlow.fromLegacyDefrost(front = false, rear = null))
+    }
+
     @Test
     fun `le degivrage arriere seul ne touche pas au sens de l air`() {
         // La lunette arrière n'est pas dans l'échelle du sens de l'air : elle a sa propre commande.

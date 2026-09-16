@@ -3,6 +3,7 @@ package com.mg4.control.profile
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.mg4.control.model.AirFlow
 import com.mg4.control.model.DrivingProfile
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -46,6 +47,17 @@ class ProfileManager(private val context: Context) {
             // On les initialise à AEB activé + mode Alerte+Freinage par défaut.
             list.map { p ->
                 if (p.aebMode == 0) p.copy(aebEnabled = true, aebMode = 2) else p
+            }.map { p ->
+                // Migration : anciennes lignes « Dég. AV / Dég. AR » (retirées le 2026-09-17) →
+                // ligne « Air ». Faite à la lecture, comme l'AEB : sans elle, un réglage devenu
+                // invisible dans l'éditeur continuerait de s'appliquer sans qu'on puisse le changer.
+                // Une ligne Air déjà renseignée l'emporte : c'est le choix le plus récent.
+                if (p.hvacDefrostFront == null && p.hvacDefrostRear == null) p
+                else p.copy(
+                    hvacAirFlow      = p.hvacAirFlow ?: AirFlow.fromLegacyDefrost(p.hvacDefrostFront, p.hvacDefrostRear),
+                    hvacDefrostFront = null,
+                    hvacDefrostRear  = null
+                )
             }
         } catch (_: Exception) { emptyList() }
     }

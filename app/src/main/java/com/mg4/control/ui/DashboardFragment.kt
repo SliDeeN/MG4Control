@@ -1235,8 +1235,6 @@ class DashboardFragment : Fragment() {
     private var climBtnPower: MaterialButton? = null
     private var climBtnAc: MaterialButton? = null
     private var climBtnAuto: MaterialButton? = null
-    private var climBtnDefFront: MaterialButton? = null
-    private var climBtnDefRear: MaterialButton? = null
     private var climLoopButtons: Map<Int, MaterialButton?> = emptyMap()
     private var climBtnAirFace: MaterialButton? = null
     private var climBtnAirFeet: MaterialButton? = null
@@ -1276,8 +1274,6 @@ class DashboardFragment : Fragment() {
         climBtnPower       = view.findViewById(R.id.clim_btn_power)
         climBtnAc          = view.findViewById(R.id.clim_btn_ac)
         climBtnAuto        = view.findViewById(R.id.clim_btn_auto)
-        climBtnDefFront    = view.findViewById(R.id.clim_btn_defrost_front)
-        climBtnDefRear     = view.findViewById(R.id.clim_btn_defrost_rear)
         climLoopButtons = mapOf(
             MG4Hardware.LoopMode.INNER   to view.findViewById<MaterialButton>(R.id.clim_btn_loop_inner),
             MG4Hardware.LoopMode.OUTSIDE to view.findViewById<MaterialButton>(R.id.clim_btn_loop_outside),
@@ -1352,12 +1348,6 @@ class DashboardFragment : Fragment() {
         climBtnAuto?.setOnClickListener {
             climLastState?.autoOn?.let { cur -> climateWrite { MG4Hardware.setClimateAuto(!cur) } }
         }
-        climBtnDefFront?.setOnClickListener {
-            climLastState?.defrostFront?.let { cur -> climateWrite { MG4Hardware.setClimateDefrostFront(!cur) } }
-        }
-        climBtnDefRear?.setOnClickListener {
-            climLastState?.defrostRear?.let { cur -> climateWrite { MG4Hardware.setClimateDefrostRear(!cur) } }
-        }
         climLoopButtons.forEach { (mode, btn) ->
             btn?.setOnClickListener { climateWrite { MG4Hardware.setClimateLoopMode(mode) } }
         }
@@ -1379,6 +1369,10 @@ class DashboardFragment : Fragment() {
                 return
             }
             AppLogger.i(CLIM_UI_TAG, "Sens de l'air : appui → $lu ⇒ $cible")
+            // Relue par le rafraîchissement qui suit l'écriture ; d'ici là, un second appui
+            // rapide doit partir de la combinaison DEMANDÉE. Sans ça, il recomposait depuis
+            // l'ancienne valeur et pouvait être ignoré (constaté sur SWI133 le 2026-09-17).
+            climLastState = climLastState?.copy(airFlow = cible)
             climateWrite { MG4Hardware.setClimateAirFlow(cible) }
         }
         climBtnAirFace?.setOnClickListener       { basculerAir(face = true) }
@@ -1386,7 +1380,10 @@ class DashboardFragment : Fragment() {
         climBtnAirWindshield?.setOnClickListener { basculerAir(windshield = true) }
         // Lunette arrière : hors de l'échelle du sens de l'air, c'est le dégivrage arrière.
         climBtnAirRear?.setOnClickListener {
-            climLastState?.defrostRear?.let { cur -> climateWrite { MG4Hardware.setClimateDefrostRear(!cur) } }
+            climLastState?.defrostRear?.let { cur ->
+                climLastState = climLastState?.copy(defrostRear = !cur)   // même raison
+                climateWrite { MG4Hardware.setClimateDefrostRear(!cur) }
+            }
         }
     }
 
@@ -1425,8 +1422,6 @@ class DashboardFragment : Fragment() {
                 bindClimToggle(climBtnPower, s.powerOn)
                 bindClimToggle(climBtnAc, s.acOn)
                 bindClimToggle(climBtnAuto, s.autoOn)
-                bindClimToggle(climBtnDefFront, s.defrostFront)
-                bindClimToggle(climBtnDefRear, s.defrostRear)
 
                 // Valeur illisible → boutons grisés. Valeur lue mais hors échelle (7 « aucun »)
                 // → boutons actifs, aucun allumé : l'utilisateur peut choisir un sens.

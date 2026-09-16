@@ -2177,7 +2177,7 @@
     </LinearLayout>
 
     <!-- ══════════════════════════════════════════════════════════════════ -->
-    <!--  CARTE : Interrupteurs | Recirculation | Dégivrages               -->
+    <!--  CARTE : Interrupteurs | Recirculation               -->
     <!-- ══════════════════════════════════════════════════════════════════ -->
     <LinearLayout
         android:layout_width="match_parent"
@@ -2281,8 +2281,7 @@
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:background="@drawable/bg_section_rounded"
-                android:padding="9dp"
-                android:layout_marginEnd="5dp">
+                android:padding="9dp">
 
                 <TextView
                     android:layout_width="match_parent"
@@ -2338,66 +2337,14 @@
 
             </LinearLayout>
 
-            <!-- ── Colonne 3 : Dégivrages ──────────────────────────── -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:background="@drawable/bg_section_rounded"
-                android:padding="9dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/clim_section_defrost"
-                    android:textColor="@color/dash_text_lo"
-                    android:textSize="13sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.08"
-                    android:textAllCaps="true"
-                    android:layout_marginBottom="6dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/clim_btn_defrost_front"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:layout_marginBottom="4dp"
-                    android:text="@string/clim_defrost_front"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
-                    android:textAllCaps="true"
-                    app:backgroundTint="@color/dash_btn"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/dash_border"
-                    app:cornerRadius="8dp" />
-
-                <!-- Dégivrage arrière : commandé par un bouton PHYSIQUE sur le véhicule.
-                     Reste ici pour vérifier si le service l'expose aussi ; il se grise
-                     automatiquement si l'état n'est pas lisible. -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/clim_btn_defrost_rear"
-                    android:layout_width="match_parent"
-                    android:layout_height="52dp"
-                    android:text="@string/clim_defrost_rear"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
-                    android:textAllCaps="true"
-                    app:backgroundTint="@color/dash_btn"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/dash_border"
-                    app:cornerRadius="8dp" />
-
-            </LinearLayout>
-
         </LinearLayout>
 
     </LinearLayout>
 
     <!-- ══════════════════════════════════════════════════════════════════ -->
     <!--  CARTE : Sens de l'air — boutons CUMULABLES (voir model.AirFlow)   -->
-    <!--  Les dégivrages de la carte Modes restent, le temps de valider sur -->
-    <!--  véhicule que « Pare-brise AV » et le dégivrage avant se recouvrent. -->
+    <!--  « Pare-brise AV / AR » remplacent les anciens boutons Dégivrage   -->
+    <!--  (validé SWI133 le 2026-09-17).                                   -->
     <!-- ══════════════════════════════════════════════════════════════════ -->
     <LinearLayout
         android:id="@+id/clim_airflow_card"

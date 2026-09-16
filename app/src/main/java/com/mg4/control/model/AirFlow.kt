@@ -57,6 +57,17 @@ object AirFlow {
         else -> null
     }
 
+    /**
+     * Reprise des anciennes lignes « Dég. AV » / « Dég. AR » du profil, retirées le 2026-09-17
+     * une fois « Pare-brise AV / AR » validés sur véhicule (SWI133) : un dégivrage en marche
+     * devient le bouton correspondant. Un « Off » n'a pas d'équivalent — un masque vide vaut
+     * « Inchangé » — et se perd donc : c'est le seul cas où l'ancien profil agissait davantage.
+     */
+    fun fromLegacyDefrost(front: Boolean?, rear: Boolean?): Int? {
+        val mask = (if (front == true) WINDSHIELD else 0) or (if (rear == true) REAR_DEFROST else 0)
+        return mask.takeIf { it != 0 }
+    }
+
     /** Valeur à écrire pour les boutons cochés d'un profil ; la lunette arrière n'y compte pas. */
     fun directionForMask(mask: Int): Int? = directionFor(
         face       = mask and FACE != 0,

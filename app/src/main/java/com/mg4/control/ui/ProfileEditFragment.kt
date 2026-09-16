@@ -128,8 +128,6 @@ class ProfileEditFragment : Fragment() {
         // hors de [valueFrom, valueTo] — l'éditeur planterait à l'ouverture d'un ancien profil.
         var hvacTempSel     = data.hvacTemp.coerceIn(HVAC_TEMP_MIN, HVAC_TEMP_MAX)
         var hvacFanSel      = data.hvacFan.coerceIn(HVAC_FAN_MIN, HVAC_FAN_MAX)
-        var hvacDfSel       = data.hvacDefrostFront
-        var hvacDrSel       = data.hvacDefrostRear
         var hvacLoopSel     = data.hvacLoopMode
         var hvacAirSel      = data.hvacAirFlow   // bits AirFlow, null = inchangé
         // Index 0/1/2, ou null quand le profil ne s'est jamais prononcé (créé avant la
@@ -302,16 +300,6 @@ class ProfileEditFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_hvac_loop_auto),
             view.findViewById<MaterialButton>(R.id.btn_hvac_loop_none)
         )
-        val dfBtns = listOf(
-            view.findViewById<MaterialButton>(R.id.btn_hvac_df_off),
-            view.findViewById<MaterialButton>(R.id.btn_hvac_df_on),
-            view.findViewById<MaterialButton>(R.id.btn_hvac_df_none)
-        )
-        val drBtns = listOf(
-            view.findViewById<MaterialButton>(R.id.btn_hvac_dr_off),
-            view.findViewById<MaterialButton>(R.id.btn_hvac_dr_on),
-            view.findViewById<MaterialButton>(R.id.btn_hvac_dr_none)
-        )
         // Ligne « Air » : bouton → bit du profil. Cumulables, contrairement aux groupes ci-dessus.
         val airBtns = listOf(
             view.findViewById<MaterialButton>(R.id.btn_hvac_air_face)             to AirFlow.FACE,
@@ -333,7 +321,7 @@ class ProfileEditFragment : Fragment() {
             val actif  = hvacEnabledSel
             val allume = actif && hvacPowerSel
             setBtnsEnabled(listOf(btnPower), actif)
-            setBtnsEnabled(listOf(btnAc, btnAuto) + loopBtns + dfBtns + drBtns +
+            setBtnsEnabled(listOf(btnAc, btnAuto) + loopBtns +
                 airBtns.map { it.first } + btnAirNone, allume)
             listOf(sldTemp, sldFan).forEach { it.isEnabled = allume }
             sldFan.isEnabled = allume && !hvacAutoSel
@@ -349,12 +337,6 @@ class ProfileEditFragment : Fragment() {
         bindGroup(listOf(
             loopBtns[0] to 0, loopBtns[1] to 1, loopBtns[2] to 2, loopBtns[3] to null
         ), hvacLoopSel) { hvacLoopSel = it }
-        bindGroup(listOf(
-            dfBtns[0] to false, dfBtns[1] to true, dfBtns[2] to null
-        ), hvacDfSel) { hvacDfSel = it }
-        bindGroup(listOf(
-            drBtns[0] to false, drBtns[1] to true, drBtns[2] to null
-        ), hvacDrSel) { hvacDrSel = it }
 
         /**
          * Ligne « Air » : « Inchangé » allumé ⇔ aucun bouton coché (null). Hors « Inchangé », le
@@ -731,8 +713,9 @@ class ProfileEditFragment : Fragment() {
                 hvacAuto         = hvacAutoSel,
                 hvacTemp         = hvacTempSel,
                 hvacFan          = hvacFanSel,
-                hvacDefrostFront = hvacDfSel,
-                hvacDefrostRear  = hvacDrSel,
+                // Anciennes lignes Dég. AV / AR : reprises dans hvacAirFlow à la lecture.
+                hvacDefrostFront = null,
+                hvacDefrostRear  = null,
                 hvacLoopMode     = hvacLoopSel,
                 hvacAirFlow      = hvacAirSel,
                 btDeviceMac    = selectedBtMac   // [BT-PROFILES]

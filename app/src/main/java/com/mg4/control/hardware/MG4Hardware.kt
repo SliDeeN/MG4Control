@@ -5491,7 +5491,7 @@ object MG4Hardware {
      * n'ayant pas la même intention.
      *
      * Les `null` valent « ne pas y toucher », comme dans l'automatisation : un profil qui ne se
-     * prononce pas sur le dégivrage ne doit pas l'éteindre au passage.
+     * prononce pas sur le recyclage ou le sens de l'air ne doit pas les modifier au passage.
      */
     fun applyProfileClimate(
         power: Boolean,
@@ -5499,10 +5499,8 @@ object MG4Hardware {
         autoMode: Boolean,
         targetTemp: Int,
         fanLevel: Int,
-        defrostFront: Boolean?,
-        defrostRear: Boolean?,
         loopMode: Int?,
-        airFlow: Int? = null
+        airFlow: Int?
     ): Boolean {
         val state = getClimateState() ?: run {
             AppLogger.w(CLIM_TAG, "Profil : état clim illisible → abandon")
@@ -5528,13 +5526,6 @@ object MG4Hardware {
             ok = setClimateFan(fanLevel.coerceIn(state.fanMin, state.fanMax)) && ok
         }
 
-        // Deux conditions : que le profil se prononce, ET que le véhicule expose le réglage.
-        if (defrostFront != null && state.defrostFront != null) {
-            ok = setClimateDefrostFront(defrostFront) && ok
-        }
-        if (defrostRear != null && state.defrostRear != null) {
-            ok = setClimateDefrostRear(defrostRear) && ok
-        }
         if (loopMode != null) {
             val mode = when (loopMode) {
                 0    -> LoopMode.INNER
@@ -5544,10 +5535,10 @@ object MG4Hardware {
             ok = setClimateLoopMode(mode) && ok
         }
 
-        // Ligne « Air » (boutons cumulables), APRÈS les anciennes lignes de dégivrage, qui
-        // coexistent le temps de valider le lien dégivrage ⇔ pare-brise : si les deux portent
-        // sur la lunette arrière, c'est la ligne Air qui l'emporte. Hors « Inchangé », le profil
-        // applique ce qui est affiché : lunette arrière non cochée = dégivrage arrière ÉTEINT.
+        // Ligne « Air » (boutons cumulables) — elle remplace les anciennes lignes Dég. AV / AR
+        // depuis leur validation sur SWI133. « Pare-brise AV » passe par la VALEUR du sens de
+        // l'air, la lunette arrière par le dégivrage arrière. Hors « Inchangé », le profil applique
+        // ce qui est affiché : lunette arrière non cochée = dégivrage arrière ÉTEINT.
         if (airFlow != null) {
             AirFlow.directionForMask(airFlow)?.let { ok = setClimateAirFlow(it) && ok }
             if (state.defrostRear != null) {
@@ -5557,8 +5548,7 @@ object MG4Hardware {
 
         AppLogger.i(CLIM_TAG, "Profil : clim=ON A/C=$ac consigne=$targetTemp " +
             (if (autoMode) "ventilation=AUTO" else "vent=$fanLevel") +
-            " dégAV=${defrostFront ?: "inchangé"} dégAR=${defrostRear ?: "inchangé"} " +
-            "recyclage=${loopMode ?: "inchangé"} " +
+            " recyclage=${loopMode ?: "inchangé"} " +
             "air=${airFlow?.let { "boutons=$it valeur=${AirFlow.directionForMask(it)}" } ?: "inchangé"} → ok=$ok")
         return ok
     }
