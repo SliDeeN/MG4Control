@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:sharedUserId="android.uid.system">
 
     <!-- Permissions — same as original DriveHub Dort -->
@@ -13,12 +14,14 @@
 
     <!-- Consommation de donnees : signature|privileged, accessible car l app est signee
          avec la cle plateforme. Sans elle, NetworkStatsManager leve une SecurityException. -->
-    <uses-permission android:name="android.permission.READ_NETWORK_USAGE_HISTORY" />
+    <uses-permission android:name="android.permission.READ_NETWORK_USAGE_HISTORY"
+        tools:ignore="ProtectedPermissions" />
     <!-- Pilotage des sessions média (piste suivante, lecture/pause). Voie du launcher
          d'origine sur les firmwares A9, et seule voie pour CarPlay/Android Auto sur
          SWI68/165. signature|privileged : obtenue parce que l'app tourne en
          android.uid.system. -->
-    <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL" />
+    <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL"
+        tools:ignore="ProtectedPermissions" />
     <!-- Vehicle control permissions (Android Automotive / SAIC) -->
     <uses-permission android:name="android.car.permission.CAR_ENERGY" />
     <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />

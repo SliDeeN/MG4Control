@@ -52,16 +52,12 @@ enum class ShortcutAction(val id: Int) {
     VOLUME_DOWN(35);
 
     companion object {
-        fun fromId(id: Int) = values().firstOrNull { it.id == id } ?: NONE
+        fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: NONE
     }
 }
 
 enum class PressType(val key: String) {
     SINGLE("single"),
     LONG("long"),
-    DOUBLE("double");
-
-    companion object {
-        fun fromKey(key: String) = values().firstOrNull { it.key == key } ?: LONG
-    }
+    DOUBLE("double")
 }

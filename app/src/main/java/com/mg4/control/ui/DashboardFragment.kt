@@ -9,7 +9,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ScrollView
 import android.widget.Button
-import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
@@ -184,7 +183,6 @@ class DashboardFragment : Fragment() {
     // ═════════════════════════════════════════════════════════════════════════
 
     private companion object {
-        const val TAB_DRIVE = 0
         const val TAB_SAFETY = 1
         const val TAB_COMFORT = 2
         /** Tag des appuis « Sens de l'air » : le même que le filtre de la sonde MG4_AIR. */

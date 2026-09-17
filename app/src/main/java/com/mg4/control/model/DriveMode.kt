@@ -8,6 +8,6 @@ enum class DriveMode(val value: Int, val label: String) {
     CUSTOM(7, "Custom");
 
     companion object {
-        fun fromValue(v: Int): DriveMode = values().firstOrNull { it.value == v } ?: NORMAL
+        fun fromValue(v: Int): DriveMode = entries.firstOrNull { it.value == v } ?: NORMAL
     }
 }

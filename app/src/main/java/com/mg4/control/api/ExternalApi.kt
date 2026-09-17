@@ -177,7 +177,7 @@ object ExternalApi {
 
     // ── Lecture (ContentProvider) ────────────────────────────────────────────
 
-    /**
+    /*
      * `content://<applicationId>.state/state` → une ligne, une colonne par valeur.
      *
      * ⚠️ L'authority suit l'applicationId, elle n'est donc PAS une constante : la variante
@@ -185,7 +185,6 @@ object ExternalApi {
      * (INSTALL_FAILED_CONFLICTING_PROVIDER). Les intégrateurs doivent viser
      * `com.mg4.control.state` ou `com.mg4.control.offline.state` selon la variante installée.
      */
-    fun authority(context: Context): String = context.packageName + ".state"
 
     const val PATH_STATE = "state"
 

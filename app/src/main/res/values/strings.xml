@@ -10,10 +10,7 @@
     <string name="clean_apk_none">✓ Aucun fichier</string>
 
     <!-- Bottom navigation -->
-    <string name="nav_drive">Drive</string>
-    <string name="nav_climate">Climat</string>
     <string name="nav_profiles">Profils</string>
-    <string name="nav_adas">ADAS</string>
     <string name="nav_settings">Réglages</string>
     <string name="nav_shortcuts">Raccourcis</string>
 
@@ -25,7 +22,6 @@
     <string name="shortcuts_action_one_pedal">1 Pédale</string>
     <string name="shortcuts_press_single">Simple</string>
     <string name="shortcuts_press_long">Long</string>
-    <string name="shortcuts_press_double">Double</string>
 
     <!-- Actions raccourcis -->
     <string name="shortcuts_action_aeb">Système Anticollision</string>
@@ -47,7 +43,6 @@
     <string name="overlay_countdown">Fermeture dans %1$ds</string>
     <string name="shortcuts_profile_prefix">Lancer le profil</string>
     <string name="shortcuts_pick_profile_title">Choisir un profil</string>
-    <string name="shortcuts_profile_not_found">Profil introuvable</string>
     <string name="shortcuts_no_profiles">Aucun profil créé</string>
     <string name="shortcuts_action_open_app">Ouvrir MG4Control</string>
     <string name="shortcuts_action_open_custom_app">Lancer une application</string>
@@ -59,12 +54,10 @@
 
     <!-- Config raccourcis -->
     <string name="shortcuts_cfg_one_pedal">1 Pédale — Regen retour</string>
-    <string name="shortcuts_cfg_aeb">AEB — Alternance</string>
     <string name="shortcuts_cfg_adas">ADAS — Alternance</string>
     <string name="shortcuts_cfg_retour">Retour</string>
     <string name="shortcuts_cfg_mode1">Mode 1</string>
     <string name="shortcuts_cfg_mode2">Mode 2</string>
-    <string name="shortcuts_cfg_aeb_brake">Al.+Fr.</string>
 
     <!-- Drive modes -->
     <string name="drive_eco">ECO</string>
@@ -102,13 +95,11 @@
     <string name="climate_seat_right">Siège droit</string>
     <string name="climate_off">Off</string>
     <string name="climate_on">On</string>
-    <string name="climate_level">Niv.</string>
     <string name="climate_level_1">Niv. 1</string>
     <string name="climate_level_2">Niv. 2</string>
     <string name="climate_level_3">Niv. 3</string>
 
     <!-- Profiles -->
-    <string name="profiles_title">Profils de conduite</string>
     <string name="profile_add">Nouveau profil</string>
     <string name="profile_default_badge">PAR DÉFAUT</string>
     <string name="profile_apply_now">Appliquer maintenant</string>
@@ -122,7 +113,6 @@
     <string name="profile_cancel">Annuler</string>
     <string name="profile_applied">Profil appliqué : %s</string>
     <string name="profile_max_reached">Maximum %d profils atteint</string>
-    <string name="profile_auto_applied">Profil par défaut appliqué au démarrage</string>
     <!-- [BT-PROFILES] -->
     <string name="profile_bt_device_label">Appareil Bluetooth</string>
 
@@ -130,22 +120,17 @@
     <string name="profile_hvac_title">Climatisation</string>
     <string name="profile_hvac_row_clim">Clim</string>
     <string name="profile_hvac_row_loop">Recycl.</string>
-    <string name="profile_hvac_row_def_front">Dég. AV</string>
-    <string name="profile_hvac_row_def_rear">Dég. AR</string>
     <string name="profile_hvac_row_air">Air</string>
     <string name="profile_hvac_on">Marche</string>
     <string name="profile_hvac_unchanged">Inchangé</string>
     <string name="profile_hvac_temp_value">%1$d °C</string>
     <string name="profile_bt_none">Aucun</string>
-    <string name="profile_bt_applied">Profil BT appliqué : %s</string>
 
     <!-- ADAS -->
     <string name="adas_section_sounds">Alertes sonores</string>
     <string name="adas_overspeed_alarm">Alerte excès de vitesse</string>
     <string name="adas_speed_limit_tone">Alerte changement de limite</string>
-    <string name="adas_section_drive">Assistance à la conduite</string>
     <string name="adas_off">Off</string>
-    <string name="adas_limiteur">Limiteur</string>
     <string name="adas_limiteur_short">Lim. Manuel</string>
     <string name="adas_auto">Lim. Auto</string>
     <string name="adas_acc">ACC</string>
@@ -199,7 +184,6 @@
     <string name="update_network_error">✕  Erreur réseau</string>
     <string name="btn_infos">Infos</string>
     <string name="info_title">À propos</string>
-    <string name="info_app_label">Application</string>
     <string name="info_version_label">Version</string>
     <string name="info_firmware_label">Firmware</string>
     <string name="info_github_link">github.com/SliDeeN/MG4Control</string>
@@ -210,7 +194,6 @@
     <string name="info_close">Fermer</string>
 
     <!-- Dashboard — en-têtes de cartes -->
-    <string name="card_drive">Paramètres de conduite</string>
     <string name="card_climate">Paramètres de climatisation</string>
     <string name="card_alerts">Alertes</string>
 
@@ -230,8 +213,6 @@
     <string name="update_close">Fermer</string>
     <string name="update_downloading">Téléchargement en cours…</string>
     <string name="update_downloading_pct">Téléchargement… %d%%</string>
-    <string name="update_installing">Installation en cours…</string>
-    <string name="update_installed">✅ Mise à jour installée avec succès !</string>
     <string name="update_error_download">Erreur lors du téléchargement. Vérifiez la connexion.</string>
     <string name="update_error_signature">Mise à jour refusée : la signature de l\'APK téléchargé ne correspond pas. Fichier supprimé.</string>
     <string name="write_refused_moving">Réglage de conduite refusé : %1$s km/h (limite %2$d km/h). Ralentissez pour modifier.</string>
@@ -239,18 +220,13 @@
     <string name="settings_speed_gate_desc">Bloquer les réglages de conduite au-delà d\'une vitesse</string>
     <string name="settings_speed_gate_max_label">Vitesse maximale (km/h)</string>
     <string name="settings_speed_gate_max_hint">0–250</string>
-    <string name="update_error_install">Erreur lors de l\'installation.</string>
-    <string name="update_install_error">Erreur d\'installation : %s</string>
     <string name="update_manual_title">Installation manuelle</string>
     <string name="update_manual_instructions">1. Scannez le QR code ou ouvrez le lien ci-contre\n2. Téléchargez le fichier MG4Control.apk\n3. Copiez-le sur une clé USB formatée en FAT32\n4. Insérez la clé dans votre MG4\n5. Ouvrez le Gestionnaire de fichiers\n6. Sélectionnez le fichier APK et installez-le</string>
-    <string name="update_downloaded_title">APK téléchargé ✓</string>
     <string name="update_downloaded_instructions">Le dossier Téléchargements vient de s\'ouvrir.\n\nAppuyez sur MG4Control-*.apk pour lancer l\'installation.\n\nSi le dossier ne s\'est pas ouvert, ouvrez le gestionnaire de fichiers et allez dans Téléchargements.</string>
     <string name="update_gh_releases_link">github.com/SliDeeN/MG4Control/releases</string>
     <string name="update_skip_btn">Ne plus me rappeler</string>
 
     <!-- Console (debug) -->
-    <string name="console_title">⬛  Console MG4</string>
-    <string name="console_clear">Effacer</string>
 
     <!-- Firmware inconnu -->
     <string name="fw_unknown_title">⚠ Firmware non reconnu</string>
@@ -289,7 +265,6 @@
     <string name="settings_theme_auto">Auto</string>
     <string name="settings_theme_dark">Mode sombre</string>
     <string name="settings_theme_light">Mode clair</string>
-    <string name="settings_theme_desc">Basculer entre le thème sombre et le thème clair</string>
     <string name="settings_text_size">Taille du texte</string>
     <string name="settings_text_size_standard">Standard</string>
     <string name="settings_text_size_large">Grand</string>
@@ -302,16 +277,10 @@
     <string name="settings_language_pt">Português</string>
     <string name="settings_language_it">Italiano</string>
     <string name="settings_language_pick_title">Choisissez votre langue</string>
-    <string name="settings_language_pick_msg">Vous pourrez la modifier dans Réglages.</string>
     <string name="settings_firmware_version">Version firmware</string>
     <string name="settings_firmware_loading">Lecture…</string>
 
     <!-- [BT-PROFILES] Profils Bluetooth -->
-    <string name="bt_section_title">Bluetooth</string>
-    <string name="bt_no_device">Aucun</string>
-    <string name="bt_pick_device_title">Appareil Bluetooth</string>
-    <string name="bt_profile_applied">Profil appliqué via Bluetooth : %s</string>
-    <string name="bt_no_paired_devices">Aucun appareil associé</string>
     <!-- Écran Audio (A9 uniquement) -->
     <string name="nav_audio">Audio</string>
     <string name="door_volume_title">Volume à l\'ouverture de porte</string>
@@ -334,7 +303,6 @@
     <string name="automation_profile_label">Profil à appliquer</string>
     <string name="automation_auto_execute">Exécuter automatiquement</string>
     <string name="automation_no_profile">Aucun profil</string>
-    <string name="automation_confirm_title">Automatisation température</string>
     <string name="automation_confirm_msg">La température extérieure est en dessous de %1$d°C\n(%2$s°C température actuelle)\nVoulez-vous appliquer le profil « %3$s » ?</string>
     <string name="automation_confirm_yes">OUI</string>
     <string name="automation_confirm_no">NON</string>
@@ -371,9 +339,6 @@
     <string name="clim_loop_inner">Intérieur</string>
     <string name="clim_loop_outside">Extérieur</string>
     <string name="clim_loop_auto">Auto</string>
-    <string name="clim_section_defrost">Dégivrage</string>
-    <string name="clim_defrost_front">Avant</string>
-    <string name="clim_defrost_rear">Arrière</string>
     <string name="clim_section_airflow">Sens de l\'air</string>
     <string name="clim_air_face">Visage</string>
     <string name="clim_air_feet">Pieds</string>
@@ -386,7 +351,6 @@
     <string name="profile_cat_safety">Sécurité</string>
     <string name="profile_cat_comfort">Confort</string>
     <string name="climate_seat_heat">Sièges chauffants</string>
-    <string name="profile_heat_toggle_hint">Prise en compte du chauffage : si désactivé, le profil ne touche pas à ce réglage.</string>
 
     <!-- Reglages : categories -->
     <string name="settings_cat_lang">Langues</string>
@@ -396,8 +360,6 @@
     <string name="settings_maintenance">Maintenance</string>
 
     <!-- Raccourcis : categories -->
-    <string name="shortcuts_cat_buttons">Boutons</string>
-    <string name="shortcuts_cat_actions">Actions</string>
 
     <!-- API externe (issue #79) -->
     <string name="settings_external_api">API externe (KeyMapper, Tasker…)</string>
@@ -449,8 +411,6 @@
     <string name="adv_sc_status_off">Service inactif</string>
     <string name="adv_sc_record">Enregistrer une touche</string>
     <string name="adv_sc_recording">Appuyez sur une touche du volant…</string>
-    <string name="adv_sc_cancel">Annuler</string>
-    <string name="adv_sc_last_key">Dernière touche détectée</string>
     <string name="adv_sc_none">aucune</string>
     <string name="shortcuts_cat_classic">Raccourcis</string>
     <string name="adv_sc_list_title">Liste des raccourcis</string>

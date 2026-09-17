@@ -10,10 +10,7 @@
     <string name="clean_apk_none">✓ Nothing to clean</string>
 
     <!-- Bottom navigation -->
-    <string name="nav_drive">Drive</string>
-    <string name="nav_climate">Climate</string>
     <string name="nav_profiles">Profiles</string>
-    <string name="nav_adas">ADAS</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_shortcuts">Shortcuts</string>
 
@@ -25,7 +22,6 @@
     <string name="shortcuts_action_one_pedal">1 Pedal</string>
     <string name="shortcuts_press_single">Single</string>
     <string name="shortcuts_press_long">Long</string>
-    <string name="shortcuts_press_double">Double</string>
 
     <!-- Shortcut actions -->
     <string name="shortcuts_action_aeb">Anticollision system</string>
@@ -47,7 +43,6 @@
     <string name="overlay_countdown">Closing in %1$ds</string>
     <string name="shortcuts_profile_prefix">Launch profile</string>
     <string name="shortcuts_pick_profile_title">Choose a profile</string>
-    <string name="shortcuts_profile_not_found">Profile not found</string>
     <string name="shortcuts_no_profiles">No profiles created</string>
     <string name="shortcuts_action_open_app">Open MG4Control</string>
     <string name="shortcuts_action_open_custom_app">Launch an app</string>
@@ -59,12 +54,10 @@
 
     <!-- Shortcut config -->
     <string name="shortcuts_cfg_one_pedal">1 Pedal — Return regen</string>
-    <string name="shortcuts_cfg_aeb">AEB — Cycle</string>
     <string name="shortcuts_cfg_adas">ADAS — Cycle</string>
     <string name="shortcuts_cfg_retour">Return</string>
     <string name="shortcuts_cfg_mode1">Mode 1</string>
     <string name="shortcuts_cfg_mode2">Mode 2</string>
-    <string name="shortcuts_cfg_aeb_brake">Al.+Br.</string>
 
     <!-- Drive modes -->
     <string name="drive_eco">ECO</string>
@@ -101,13 +94,11 @@
     <string name="climate_seat_right">Right seat</string>
     <string name="climate_off">Off</string>
     <string name="climate_on">On</string>
-    <string name="climate_level">Lvl.</string>
     <string name="climate_level_1">Lvl. 1</string>
     <string name="climate_level_2">Lvl. 2</string>
     <string name="climate_level_3">Lvl. 3</string>
 
     <!-- Profiles -->
-    <string name="profiles_title">Driving profiles</string>
     <string name="profile_add">New profile</string>
     <string name="profile_default_badge">DEFAULT</string>
     <string name="profile_apply_now">Apply now</string>
@@ -121,29 +112,23 @@
     <string name="profile_cancel">Cancel</string>
     <string name="profile_applied">Profile applied: %s</string>
     <string name="profile_max_reached">Maximum %d profiles reached</string>
-    <string name="profile_auto_applied">Default profile applied at startup</string>
     <string name="profile_bt_device_label">Bluetooth device</string>
 
     <!-- Bloc climatisation du profil (onglet Confort) -->
     <string name="profile_hvac_title">Air conditioning</string>
     <string name="profile_hvac_row_clim">A/C</string>
     <string name="profile_hvac_row_loop">Recirc.</string>
-    <string name="profile_hvac_row_def_front">Defr. front</string>
-    <string name="profile_hvac_row_def_rear">Defr. rear</string>
     <string name="profile_hvac_row_air">Air</string>
     <string name="profile_hvac_on">On</string>
     <string name="profile_hvac_unchanged">Unchanged</string>
     <string name="profile_hvac_temp_value">%1$d °C</string>
     <string name="profile_bt_none">None</string>
-    <string name="profile_bt_applied">BT profile applied: %s</string>
 
     <!-- ADAS -->
     <string name="adas_section_sounds">Sound alerts</string>
     <string name="adas_overspeed_alarm">Overspeed alert</string>
     <string name="adas_speed_limit_tone">Speed limit change tone</string>
-    <string name="adas_section_drive">Driving assistance</string>
     <string name="adas_off">Off</string>
-    <string name="adas_limiteur">Limiter</string>
     <string name="adas_limiteur_short">Lim. Manual</string>
     <string name="adas_auto">Lim. Auto</string>
     <string name="adas_acc">ACC</string>
@@ -197,7 +182,6 @@
     <string name="update_network_error">✕  Network error</string>
     <string name="btn_infos">Info</string>
     <string name="info_title">About</string>
-    <string name="info_app_label">Application</string>
     <string name="info_version_label">Version</string>
     <string name="info_firmware_label">Firmware</string>
     <string name="info_github_link">github.com/SliDeeN/MG4Control</string>
@@ -208,7 +192,6 @@
     <string name="info_close">Close</string>
 
     <!-- Dashboard — card headers -->
-    <string name="card_drive">Drive settings</string>
     <string name="card_climate">Climate settings</string>
     <string name="card_alerts">Alerts</string>
 
@@ -228,8 +211,6 @@
     <string name="update_close">Close</string>
     <string name="update_downloading">Downloading…</string>
     <string name="update_downloading_pct">Downloading… %d%%</string>
-    <string name="update_installing">Installing…</string>
-    <string name="update_installed">✅ Update installed successfully!</string>
     <string name="update_error_download">Download failed. Check your connection.</string>
     <string name="update_error_signature">Update refused: the downloaded APK is not signed by the expected key. File deleted.</string>
     <string name="write_refused_moving">Driving setting refused: %1$s km/h (limit %2$d km/h). Slow down to change it.</string>
@@ -237,18 +218,13 @@
     <string name="settings_speed_gate_desc">Block driving settings above a speed</string>
     <string name="settings_speed_gate_max_label">Maximum speed (km/h)</string>
     <string name="settings_speed_gate_max_hint">0–250</string>
-    <string name="update_error_install">Installation failed.</string>
-    <string name="update_install_error">Install error: %s</string>
     <string name="update_manual_title">Manual installation</string>
     <string name="update_manual_instructions">1. Scan the QR code or open the link\n2. Download the MG4Control.apk file\n3. Copy it to a FAT32 USB drive\n4. Plug the USB drive into your MG4\n5. Open the File Manager\n6. Select the APK file and install it</string>
-    <string name="update_downloaded_title">APK downloaded ✓</string>
     <string name="update_downloaded_instructions">The Downloads folder should have opened automatically.\n\nTap MG4Control-*.apk to install.\n\nIf the folder did not open, go to the File Manager and navigate to Downloads.</string>
     <string name="update_gh_releases_link">github.com/SliDeeN/MG4Control/releases</string>
     <string name="update_skip_btn">Don\'t remind me again</string>
 
     <!-- Console (debug) -->
-    <string name="console_title">⬛  MG4 Console</string>
-    <string name="console_clear">Clear</string>
 
     <!-- Unknown firmware -->
     <string name="fw_unknown_title">⚠ Unknown firmware</string>
@@ -287,7 +263,6 @@
     <string name="settings_theme_auto">Auto</string>
     <string name="settings_theme_dark">Dark mode</string>
     <string name="settings_theme_light">Light mode</string>
-    <string name="settings_theme_desc">Switch between dark and light theme</string>
     <string name="settings_text_size">Text size</string>
     <string name="settings_text_size_standard">Standard</string>
     <string name="settings_text_size_large">Large</string>
@@ -300,16 +275,10 @@
     <string name="settings_language_pt">Português</string>
     <string name="settings_language_it">Italiano</string>
     <string name="settings_language_pick_title">Choose your language</string>
-    <string name="settings_language_pick_msg">This can be changed later in Settings.</string>
     <string name="settings_firmware_version">Firmware version</string>
     <string name="settings_firmware_loading">Reading…</string>
 
     <!-- [BT-PROFILES] Bluetooth profiles -->
-    <string name="bt_section_title">Bluetooth</string>
-    <string name="bt_no_device">None</string>
-    <string name="bt_pick_device_title">Bluetooth device</string>
-    <string name="bt_profile_applied">Profile applied via Bluetooth: %s</string>
-    <string name="bt_no_paired_devices">No paired devices</string>
     <!-- Audio screen (A9 only) -->
     <string name="nav_audio">Audio</string>
     <string name="door_volume_title">Door-open volume</string>
@@ -332,7 +301,6 @@
     <string name="automation_profile_label">Profile to apply</string>
     <string name="automation_auto_execute">Apply automatically</string>
     <string name="automation_no_profile">No profile</string>
-    <string name="automation_confirm_title">Temperature automation</string>
     <string name="automation_confirm_msg">The outside temperature is below %1$d°C\n(%2$s°C current temperature)\nApply profile “%3$s”?</string>
     <string name="automation_confirm_yes">YES</string>
     <string name="automation_confirm_no">NO</string>
@@ -369,9 +337,6 @@
     <string name="clim_loop_inner">Inside</string>
     <string name="clim_loop_outside">Outside</string>
     <string name="clim_loop_auto">Auto</string>
-    <string name="clim_section_defrost">Defrost</string>
-    <string name="clim_defrost_front">Front</string>
-    <string name="clim_defrost_rear">Rear</string>
     <string name="clim_section_airflow">Air direction</string>
     <string name="clim_air_face">Face</string>
     <string name="clim_air_feet">Feet</string>
@@ -384,7 +349,6 @@
     <string name="profile_cat_safety">Safety</string>
     <string name="profile_cat_comfort">Comfort</string>
     <string name="climate_seat_heat">Heated seats</string>
-    <string name="profile_heat_toggle_hint">Heating control: when off, the profile leaves this setting untouched.</string>
 
     <!-- Reglages : categories -->
     <string name="settings_cat_lang">Languages</string>
@@ -394,8 +358,6 @@
     <string name="settings_maintenance">Maintenance</string>
 
     <!-- Raccourcis : categories -->
-    <string name="shortcuts_cat_buttons">Buttons</string>
-    <string name="shortcuts_cat_actions">Actions</string>
 
     <!-- API externe (issue #79) -->
     <string name="settings_external_api">External API (KeyMapper, Tasker…)</string>
@@ -447,8 +409,6 @@
     <string name="adv_sc_status_off">Service inactive</string>
     <string name="adv_sc_record">Record a key</string>
     <string name="adv_sc_recording">Press a steering wheel key…</string>
-    <string name="adv_sc_cancel">Cancel</string>
-    <string name="adv_sc_last_key">Last key detected</string>
     <string name="adv_sc_none">none</string>
     <string name="shortcuts_cat_classic">Shortcuts</string>
     <string name="adv_sc_list_title">Shortcut list</string>

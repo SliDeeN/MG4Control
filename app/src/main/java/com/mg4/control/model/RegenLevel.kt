@@ -9,7 +9,7 @@ enum class RegenLevel(val value: Int, val label: String) {
     ONE_PEDAL(6, "One Pedal");
 
     companion object {
-        fun fromValue(v: Int): RegenLevel = values().firstOrNull { it.value == v } ?: MEDIUM
+        fun fromValue(v: Int): RegenLevel = entries.firstOrNull { it.value == v } ?: MEDIUM
 
         /**
          * Ordre d'USAGE des niveaux — celui du launcher d'origine, et surtout PAS l'ordre de

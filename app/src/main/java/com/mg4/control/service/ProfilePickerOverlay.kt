@@ -101,14 +101,6 @@ object ProfilePickerOverlay {
         handler.post { showOnMainThread(context, profiles, onAutoDismiss) }
     }
 
-    /**
-     * Ferme l'overlay immédiatement (sans déclencher onAutoDismiss).
-     * Peut être appelé depuis n'importe quel thread.
-     */
-    fun dismiss(context: Context) {
-        handler.post { dismissOnMainThread(context, fireAutoDismiss = false) }
-    }
-
     // ── Implémentation (main thread) ─────────────────────────────────────────
 
     private fun showOnMainThread(
@@ -123,7 +115,7 @@ object ProfilePickerOverlay {
         // affiche le toast « vitesse (limite) » au moment du choix du profil.
 
         // Si déjà affiché → on remplace (sans déclencher l'ancien onAutoDismiss)
-        dismissOnMainThread(context, fireAutoDismiss = false)
+        dismissOnMainThread(context)
 
         val profilesToShow = profiles ?: ProfileManager(context).getAll()
         if (profilesToShow.isEmpty()) {
@@ -157,7 +149,7 @@ object ProfilePickerOverlay {
         /** Boutons de profil par ligne de la grille, pour la navigation au joystick. */
         val lignesProfils = mutableListOf<List<View>>()
 
-        fun makeProfileButton(profile: com.mg4.control.model.DrivingProfile) =
+        fun makeProfileButton(profile: DrivingProfile) =
             MaterialButton(themedContext).apply {
                 text      = profile.name
                 textSize  = 19f
@@ -198,7 +190,7 @@ object ProfilePickerOverlay {
 
             // Nombre impair → placeholder invisible pour garder la symétrie
             if (row.size == 1) {
-                val spacer = android.view.View(themedContext).apply {
+                val spacer = View(themedContext).apply {
                     layoutParams = LinearLayout.LayoutParams(0, dp(90f), 1f)
                 }
                 rowLayout.addView(spacer)
@@ -277,10 +269,10 @@ object ProfilePickerOverlay {
         // ── Fermeture automatique ─────────────────────────────────────────
         // onAutoDismiss est appelé UNIQUEMENT ici (timeout sans sélection).
         // Si l'utilisateur choisit un profil ou appuie sur Fermer,
-        // dismissOnMainThread(fireAutoDismiss=false) annule ce runnable.
+        // dismissOnMainThread() annule ce runnable.
         val dr = Runnable {
             AppLogger.i(TAG, "Overlay — timeout, fallback onAutoDismiss")
-            dismissOnMainThread(context, fireAutoDismiss = false)
+            dismissOnMainThread(context)
             onAutoDismiss?.invoke()
         }
         dismissRunnable = dr
@@ -525,7 +517,7 @@ object ProfilePickerOverlay {
         }
     }
 
-    private fun dismissOnMainThread(context: Context, fireAutoDismiss: Boolean = false) {
+    private fun dismissOnMainThread(context: Context) {
         dismissRunnable?.let  { handler.removeCallbacks(it) }
         countdownRunnable?.let { handler.removeCallbacks(it) }
         dismissRunnable   = null

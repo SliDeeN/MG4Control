@@ -14,7 +14,6 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.service.MG4ControlService
 import com.mg4.control.service.ProfilePickerOverlay
 import com.mg4.control.shortcut.PressType
-import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.GarageMode
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors

@@ -1,6 +1,6 @@
 package com.mg4.control.util
 
-import android.content.Context
+import android.annotation.SuppressLint
 import com.mg4.control.debug.AppLogger
 
 /**
@@ -15,7 +15,7 @@ object FirmwareHelper {
 
     @Volatile private var cachedVersion: String? = null
 
-    fun getMpuVersion(context: Context, onResult: (String?) -> Unit) {
+    fun getMpuVersion(onResult: (String?) -> Unit) {
         if (cachedVersion != null) { onResult(cachedVersion); return }
 
         val version = readSystemProperty(PROP_KEY)
@@ -33,6 +33,7 @@ object FirmwareHelper {
 
     private fun readSystemProperty(key: String): String? {
         return try {
+            @SuppressLint("PrivateApi")   // SystemProperties : API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
             val sp  = Class.forName("android.os.SystemProperties")
             val get = sp.getMethod("get", String::class.java, String::class.java)
             (get.invoke(null, key, "") as? String)?.takeIf { it.isNotBlank() && it != "0" }
@@ -41,6 +42,4 @@ object FirmwareHelper {
             null
         }
     }
-
-    fun invalidateCache() { cachedVersion = null }
 }

@@ -1,5 +1,6 @@
 package com.mg4.control.service
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.Notification
 import android.app.NotificationChannel
@@ -268,6 +269,8 @@ class MG4ControlService : Service() {
         externalApiReceiver = null
     }
 
+    // POST_NOTIFICATIONS n'existe qu'à partir d'Android 13 ; la voiture est en Android 9.
+    @SuppressLint("NotificationPermission")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         AppLogger.i(TAG, "onStartCommand")
         // Relais de l'API externe (issue #79) : traité AVANT la routine de démarrage, sinon un
@@ -301,7 +304,7 @@ class MG4ControlService : Service() {
             return true
         }
         val nom = intent.getStringExtra(EXTRA_ADV_ACTION).orEmpty()
-        val sc = ShortcutAction.values().firstOrNull { it.name == nom }
+        val sc = ShortcutAction.entries.firstOrNull { it.name == nom }
         if (sc == null || sc == ShortcutAction.NONE) {
             AppLogger.w(TAG, "raccourci avancé : action inconnue '$nom'")
             return true
@@ -338,7 +341,7 @@ class MG4ControlService : Service() {
                 AppLogger.w(ExternalApi.LOG_TAG, "REFUS '$name' — commande non exposée à l'API externe")
                 return true
             }
-            val sc = ShortcutAction.values().firstOrNull { it.name.equals(name, ignoreCase = true) }
+            val sc = ShortcutAction.entries.firstOrNull { it.name.equals(name, ignoreCase = true) }
             if (sc == null || sc == ShortcutAction.NONE) {
                 AppLogger.w(ExternalApi.LOG_TAG, "action inconnue : '$name'")
                 return true
@@ -375,10 +378,10 @@ class MG4ControlService : Service() {
             // Toutes ces écritures passent par MG4Hardware, donc par VehicleWriteGate : refusées
             // en roulant sans que l'API ait à s'en préoccuper.
             val ok = when (key) {
-                ExternalApi.SET_DRIVE_MODE -> DriveMode.values()
+                ExternalApi.SET_DRIVE_MODE -> DriveMode.entries
                     .firstOrNull { it.name.equals(v, true) }
                     ?.let { MG4Hardware.setDriveMode(it); true } ?: false
-                ExternalApi.SET_REGEN -> RegenLevel.values()
+                ExternalApi.SET_REGEN -> RegenLevel.entries
                     .firstOrNull { it.name.equals(v, true) }
                     ?.let { MG4Hardware.setRegenLevel(it); true } ?: false
                 ExternalApi.SET_SEAT_HEAT_LEFT ->
@@ -1211,7 +1214,8 @@ class MG4ControlService : Service() {
 
         MG4Hardware.whenKatman1Ready {
             val temp = MG4Hardware.getOutsideTempCelsius()
-            val outcome = AutomationDecision.evaluate(cfg.enabled, temp, cfg.threshold, cfg.direction, profile != null)
+            // enabled = true : désactivée, on est déjà sorti plus haut (cfg est un instantané).
+            val outcome = AutomationDecision.evaluate(true, temp, cfg.threshold, cfg.direction, profile != null)
             AppLogger.i(TAG, "Auto temp: config → dir=${cfg.direction} seuil=${cfg.threshold}°C " +
                 "profil='${profile?.name ?: "AUCUN"}' auto=${cfg.autoExecute} | temp lue=${temp ?: "illisible"} → $outcome")
             if (outcome != AutomationDecision.Outcome.APPLY || profile == null || temp == null) {

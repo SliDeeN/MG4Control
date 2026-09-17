@@ -2,7 +2,6 @@ package com.mg4.control.update
 
 import android.content.Context
 import android.content.pm.PackageManager
-import android.os.Build
 import com.mg4.control.debug.AppLogger
 import java.io.File
 import java.net.URI
@@ -131,10 +130,9 @@ object ApkSignatureVerifier {
         // zéro certificat, alors que la même lecture sur le paquet INSTALLÉ fonctionnait : d'où
         // le « archive=0, installee=1 » qui a fait accuser tour à tour la clé puis le réseau.
         // On demande les DEUX drapeaux et [signatureDigests] prend celui qui est rempli.
+        // minSdk 28 (= P) : GET_SIGNING_CERTIFICATES est toujours disponible.
         @Suppress("DEPRECATION")
-        val flags = PackageManager.GET_SIGNATURES or
-            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-                PackageManager.GET_SIGNING_CERTIFICATES else 0)
+        val flags = PackageManager.GET_SIGNATURES or PackageManager.GET_SIGNING_CERTIFICATES
         val info = context.packageManager.getPackageArchiveInfo(apk.absolutePath, flags)
         signatureDigests(info)
     } catch (e: Exception) {
@@ -144,11 +142,8 @@ object ApkSignatureVerifier {
 
     /** Empreintes SHA-256 des certificats signant l'app en cours d'exécution. */
     private fun fingerprintsOfInstalled(context: Context): Set<String> = try {
-        @Suppress("DEPRECATION")
-        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P)
-            PackageManager.GET_SIGNING_CERTIFICATES
-        else
-            PackageManager.GET_SIGNATURES
+        // minSdk 28 (= P) : la branche GET_SIGNATURES n'était jamais prise.
+        val flags = PackageManager.GET_SIGNING_CERTIFICATES
         val info = context.packageManager.getPackageInfo(context.packageName, flags)
         signatureDigests(info)
     } catch (e: Exception) {
@@ -158,11 +153,10 @@ object ApkSignatureVerifier {
 
     private fun signatureDigests(info: android.content.pm.PackageInfo?): Set<String> {
         if (info == null) return emptySet()
-        val moderne = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            info.signingInfo?.let { si ->
-                if (si.hasMultipleSigners()) si.apkContentsSigners else si.signingCertificateHistory
-            }
-        } else null
+        // minSdk 28 (= P) : signingInfo existe toujours — il peut seulement être null (archive).
+        val moderne = info.signingInfo?.let { si ->
+            if (si.hasMultipleSigners()) si.apkContentsSigners else si.signingCertificateHistory
+        }
         // Repli volontaire sur l'API dépréciée : pour une archive sur API 28, `signatures` est le
         // SEUL champ renseigné. Ne pas « moderniser » ce repli sans l'avoir testé sur véhicule.
         @Suppress("DEPRECATION")

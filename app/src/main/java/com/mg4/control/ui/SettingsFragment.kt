@@ -9,7 +9,6 @@ import android.content.res.ColorStateList
 import androidx.appcompat.app.AppCompatDelegate
 import com.mg4.control.MainActivity
 import com.mg4.control.util.ThemeHelper
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -502,8 +501,8 @@ class SettingsFragment : Fragment() {
 
         // Passe le bouton en vert "à jour"
         btn.text = getString(R.string.update_up_to_date)
-        btn.backgroundTintList = android.content.res.ColorStateList.valueOf(ecoDim)
-        btn.strokeColor        = android.content.res.ColorStateList.valueOf(eco)
+        btn.backgroundTintList = ColorStateList.valueOf(ecoDim)
+        btn.strokeColor        = ColorStateList.valueOf(eco)
         btn.setTextColor(eco)
         btn.isEnabled = false
 
@@ -511,8 +510,8 @@ class SettingsFragment : Fragment() {
         btn.postDelayed({
             if (isAdded) {
                 btn.text = originalText
-                btn.backgroundTintList = android.content.res.ColorStateList.valueOf(accentDim)
-                btn.strokeColor        = android.content.res.ColorStateList.valueOf(accent)
+                btn.backgroundTintList = ColorStateList.valueOf(accentDim)
+                btn.strokeColor        = ColorStateList.valueOf(accent)
                 btn.setTextColor(accent)
                 btn.isEnabled = true
             }
@@ -529,16 +528,16 @@ class SettingsFragment : Fragment() {
         val accent    = ctx.getColor(R.color.dash_accent)
 
         btn.text = getString(R.string.update_network_error)
-        btn.backgroundTintList = android.content.res.ColorStateList.valueOf(dangerDim)
-        btn.strokeColor        = android.content.res.ColorStateList.valueOf(danger)
+        btn.backgroundTintList = ColorStateList.valueOf(dangerDim)
+        btn.strokeColor        = ColorStateList.valueOf(danger)
         btn.setTextColor(danger)
         btn.isEnabled = false
 
         btn.postDelayed({
             if (isAdded) {
                 btn.text = originalText
-                btn.backgroundTintList = android.content.res.ColorStateList.valueOf(accentDim)
-                btn.strokeColor        = android.content.res.ColorStateList.valueOf(accent)
+                btn.backgroundTintList = ColorStateList.valueOf(accentDim)
+                btn.strokeColor        = ColorStateList.valueOf(accent)
                 btn.setTextColor(accent)
                 btn.isEnabled = true
             }
@@ -589,7 +588,7 @@ class SettingsFragment : Fragment() {
             container.addView(tvCrash)
 
             // Séparateur
-            val divider = android.view.View(ctx).apply {
+            val divider = View(ctx).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     (1 * resources.displayMetrics.density).toInt()
@@ -721,7 +720,7 @@ class SettingsFragment : Fragment() {
 
         // Version firmware (lecture asynchrone)
         val tvFirmware = dialogView.findViewById<TextView>(R.id.tv_firmware_info)
-        FirmwareHelper.getMpuVersion(requireContext()) { version ->
+        FirmwareHelper.getMpuVersion { version ->
             requireActivity().runOnUiThread {
                 if (isAdded) tvFirmware.text = version ?: "N/A"
             }
@@ -778,7 +777,7 @@ class SettingsFragment : Fragment() {
             R.id.tv_data_week  to DataUsage.startOfWeek(),
             R.id.tv_data_month to DataUsage.startOfMonth(),
             R.id.tv_data_30d   to fin - 30L * 24 * 3600 * 1000
-        ).map { (id, debut) -> view.findViewById<android.widget.TextView>(id) to debut }
+        ).map { (id, debut) -> view.findViewById<TextView>(id) to debut }
 
         CoroutineScope(Dispatchers.IO).launch {
             val lues = periodes.map { (tv, debut) -> tv to DataUsage.ethernet(ctx, debut, fin) }
@@ -912,7 +911,7 @@ class SettingsFragment : Fragment() {
         // l'explication, et le gras reste réservé à la phrase la plus forte.
         text.setSpan(android.text.style.ForegroundColorSpan(danger),
             0, warn.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        text.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+        text.setSpan(android.text.style.StyleSpan(Typeface.BOLD),
             0, warn.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         text.setSpan(android.text.style.ForegroundColorSpan(danger),
             riskStart, text.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)

@@ -1,5 +1,6 @@
 package com.mg4.control.util
 
+import android.annotation.SuppressLint
 import android.content.Context
 
 /**
@@ -122,6 +123,7 @@ object FirmwareInfo {
     fun isSWI165(): Boolean = getGeneration() == Gen.SWI165
 
     private fun readProp(key: String): String? = try {
+        @SuppressLint("PrivateApi")   // SystemProperties : API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
         val sp  = Class.forName("android.os.SystemProperties")
         val get = sp.getMethod("get", String::class.java, String::class.java)
         (get.invoke(null, key, "") as? String)?.takeIf { it.isNotBlank() && it != "0" }

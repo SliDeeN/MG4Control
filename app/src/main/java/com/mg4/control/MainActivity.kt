@@ -169,10 +169,10 @@ class MainActivity : AppCompatActivity() {
 
     // ── Navigation vers l'écran par défaut au démarrage ─────────────────────
 
-    private fun navigateToDefaultScreen(savedInstanceState: android.os.Bundle?) {
+    private fun navigateToDefaultScreen(savedInstanceState: Bundle?) {
         // Ne naviguer que si c'est un vrai démarrage (pas une rotation / recreate)
         if (savedInstanceState != null) return
-        val prefs = getSharedPreferences("mg4_settings", android.content.Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("mg4_settings", MODE_PRIVATE)
         when (prefs.getString("default_screen", "dashboard")) {
             "profiles"  -> navController.navigate(R.id.profileFragment)
             "shortcuts" -> navController.navigate(R.id.shortcutsFragment)
@@ -184,7 +184,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkForUpdates() {
         if (BuildConfig.OFFLINE) return  // build offline : aucune vérif réseau
-        val prefs = getSharedPreferences("mg4_settings", android.content.Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("mg4_settings", MODE_PRIVATE)
         if (!prefs.getBoolean("auto_check_update", true)) return
 
         UpdateChecker.check(

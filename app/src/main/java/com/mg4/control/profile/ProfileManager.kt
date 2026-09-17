@@ -100,11 +100,6 @@ class ProfileManager(private val context: Context) {
         triggerBackup()
     }
 
-    fun clearDefault() {
-        prefs.edit().remove(KEY_DEFAULT_ID).apply()
-        triggerBackup()
-    }
-
     fun getDefaultProfile(): DrivingProfile? {
         val defaultId = prefs.getString(KEY_DEFAULT_ID, null) ?: return null
         return getAll().firstOrNull { it.id == defaultId }
@@ -121,8 +116,6 @@ class ProfileManager(private val context: Context) {
     // -------------------------------------------------------------------------
     // Sauvegarde / restauration (fichier mémoire voiture — survit à la désinstallation)
     // -------------------------------------------------------------------------
-
-    fun hasBackup(): Boolean = backupManager.backupExists()
 
     /** Lit la sauvegarde sans rien modifier (pour proposer la restauration). */
     fun readBackup() = backupManager.readBackup()

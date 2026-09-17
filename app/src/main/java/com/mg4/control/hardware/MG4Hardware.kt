@@ -1,5 +1,6 @@
 package com.mg4.control.hardware
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -158,7 +159,6 @@ object MG4Hardware {
 
     // Katman5 — VehicleConditionManager (IVehicleConditionService via IHubService "vehiclecondition")
     private const val VCM_CLASS          = "com.saicmotor.sdk.vehiclesettings.manager.VehicleConditionManager"
-    private const val VCM_LISTENER_CLASS = "com.saicmotor.sdk.vehiclesettings.IVehicleConditionListener"
 
     // Katman5 SWI69/SWI131 — ICarGeneralService via CarAdapterClient (queryClient(0x1))
     private const val CAR_GENERAL_CLIENT_CLASS = "com.saicmotor.carapi.client.CarGeneralClient"
@@ -243,9 +243,6 @@ object MG4Hardware {
     @Volatile private var sCarBindAttempted = false
     @Volatile var logEnabled = true
 
-    @Volatile private var sDriveModeListener: DriveModeListener? = null
-    @Volatile private var sHvacListener: HvacListener? = null
-
     // ── Katman5 — IGNITION_STATE via CarPropertyManager (standard AAOS) ──────
     @Volatile private var sIgnitionCallbackProxy: Any? = null
     @Volatile private var sIgnitionCallbackRegistered = false
@@ -257,7 +254,6 @@ object MG4Hardware {
     @Volatile private var sVcmCallbackRegistered = false
     @Volatile private var sLastVcmIgnitionState = -1   // filtre les faux RUN répétés
     private val vehicleConditionCallbacks = java.util.concurrent.CopyOnWriteArrayList<(Int) -> Unit>()
-    private val katman5ReadyListeners     = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
     /** Listeners notifiés dès que Katman1 (CPM + HVAC) est opérationnel. */
     private val katman1ReadyListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
@@ -286,11 +282,6 @@ object MG4Hardware {
         if (ready) action() else katman4ReadyListeners.add(action)
     }
 
-    /** Exécute [action] dès que Katman5 (IVehicleConditionService) est opérationnel. */
-    fun whenKatman5Ready(action: () -> Unit) {
-        if (sVcmCallbackRegistered) action() else katman5ReadyListeners.add(action)
-    }
-
     /** Enregistre un callback invoqué à chaque changement d'état d'allumage (CarIgnitionItem). */
     fun registerVehicleConditionListener(callback: (Int) -> Unit) {
         vehicleConditionCallbacks.add(callback)
@@ -298,33 +289,6 @@ object MG4Hardware {
 
     fun unregisterVehicleConditionListener(callback: (Int) -> Unit) {
         vehicleConditionCallbacks.remove(callback)
-    }
-
-    /** Enregistre un callback sur IGNITION_STATE via CarPropertyManager (standard AAOS). */
-    fun registerIgnitionCallback(callback: (Int) -> Unit) {
-        ignitionCallbacks.add(callback)
-        if (sCarPropertyManager != null) registerIgnitionPropertyCallback()
-    }
-
-    fun unregisterIgnitionCallback(callback: (Int) -> Unit) {
-        ignitionCallbacks.remove(callback)
-    }
-
-    /** Désenregistre le proxy CarPropertyManager (appeler depuis Service.onDestroy). */
-    fun unregisterIgnitionPropertyCallback() {
-        val cpm = sCarPropertyManager ?: return
-        val proxy = sIgnitionCallbackProxy ?: return
-        try {
-            val m = cpm.javaClass.methods.firstOrNull {
-                it.name == "unregisterCallback" && it.parameterCount == 1
-            } ?: return
-            m.invoke(cpm, proxy)
-            sIgnitionCallbackProxy = null
-            sIgnitionCallbackRegistered = false
-            AppLogger.i(TAG, "  IGNITION_STATE callback unregistered ✓")
-        } catch (e: Exception) {
-            AppLogger.d(TAG, "  IGNITION: unregisterCallback error: ${e.message}")
-        }
     }
 
     /**
@@ -357,12 +321,6 @@ object MG4Hardware {
 
     /** Contexte applicatif, pour les messages utilisateur du verrou d'écriture. */
     internal fun appContext(): Context? = sAppContext
-
-    interface DriveModeListener { fun onDriveModeChanged(mode: DriveMode) }
-    interface HvacListener {
-        fun onSeatHeatChanged(left: Int, right: Int)
-        fun onSteeringHeatChanged(on: Boolean)
-    }
 
     // -------------------------------------------------------------------------
     // Init
@@ -407,6 +365,7 @@ object MG4Hardware {
     // Katman1 — android.car.Car (async, mirrors original bindCarService exactly)
     // -------------------------------------------------------------------------
 
+    @SuppressLint("PrivateApi")   // android.car.Car : API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
     private fun bindCarService(context: Context) {
         if (sCarBindAttempted) return
         sCarBindAttempted = true
@@ -552,6 +511,7 @@ object MG4Hardware {
 
     private fun getBinderService(serviceName: String): IBinder? {
         return try {
+            @SuppressLint("PrivateApi")   // API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
             val sm = Class.forName("android.os.ServiceManager")
             val method = sm.getMethod("getService", String::class.java)
             (method.invoke(null, serviceName) as? IBinder).also {
@@ -623,7 +583,7 @@ object MG4Hardware {
         tryInvoke("vpm.bindService()") { vpm!!.javaClass.getMethod("bindService").invoke(vpm) }
 
         // 2) init(Context, IVehicleServiceListener) via dynamic proxy — reçoit onServiceConnected
-        initWithServiceListener(vpm!!, context, launcherCtx)
+        initWithServiceListener(vpm!!, context)
 
         // 3) VehicleSettingManager pour SWI133 (ELK) — même singleton que SWI68
         tryInitVsm133(launcherCtx, context)
@@ -652,7 +612,7 @@ object MG4Hardware {
         AppLogger.i(TAG, "  Katman4: VPM prêt — mIVehiclePropertyService=${if (sVpmService != null) "OK ✓" else "null (en attente)"}")
     }
 
-    private fun initWithServiceListener(vpm: Any, context: Context, launcherCtx: Context) {
+    private fun initWithServiceListener(vpm: Any, context: Context) {
         val vpmClass = vpm.javaClass
 
         // Log all methods for diagnostics
@@ -2593,12 +2553,6 @@ object MG4Hardware {
         }
     }
 
-    /** Retourne true si l'ELK est activé (mode ≠ OFF). */
-    fun isElkEnabled(): Boolean {
-        val mode = getElkMode()
-        return mode > 0 && mode != ElkMode.OFF
-    }
-
     /**
      * SWI132 — Alerte sonore (LAS Warning Sound) : 0=OFF, 1=ON.
      * Retourne -1 si erreur ou firmware non SWI132.
@@ -2887,8 +2841,6 @@ object MG4Hardware {
         if (FirmwareInfo.isVsmBased()) sVsm != null && sVsmService != null
         else                           sVpm != null && sVpmService != null
     fun isKatman4VpmCreated(): Boolean      = sVpm != null || sVsm != null
-    fun isCarPropertyManagerReady(): Boolean = sCarPropertyManager != null
-    fun isCarHvacManagerReady(): Boolean     = sCarHvacManager != null
 
     // -------------------------------------------------------------------------
     // IGNITION_STATE — CarPropertyManager callback (standard AAOS, tous firmwares)
@@ -3111,10 +3063,6 @@ object MG4Hardware {
                 sVcmCallbackRegistered = true
                 AppLogger.i(TAG, "  Katman5 SWI69: ICarGeneralCallback enregistré ✓")
 
-                val toNotify = katman5ReadyListeners.toList()
-                katman5ReadyListeners.clear()
-                Handler(Looper.getMainLooper()).post { toNotify.forEach { it() } }
-
                 Handler(Looper.getMainLooper()).postDelayed({
                     try {
                         val ignition = generalClientClass.getMethod("getIgnitionState").invoke(client) as? Int
@@ -3180,7 +3128,7 @@ object MG4Hardware {
         if (existing != null) {
             AppLogger.i(TAG, "  Katman5: singleton VCM déjà existant ✓")
             sVcm = existing
-            setupVcmCallback(existing, launcherCtx)
+            setupVcmCallback(existing)
             return
         }
 
@@ -3209,7 +3157,7 @@ object MG4Hardware {
                                 } catch (_: Exception) { null }
                                 if (instance != null) {
                                     sVcm = instance
-                                    setupVcmCallback(instance, launcherCtx)
+                                    setupVcmCallback(instance)
                                 }
                             }
                             "onServiceDisconnected" -> {
@@ -3249,16 +3197,16 @@ object MG4Hardware {
                     if (mgr != null && sVcm == null) {
                         AppLogger.i(TAG, "  Katman5: singleton récupéré @${delay}ms")
                         sVcm = mgr
-                        setupVcmCallback(mgr, launcherCtx)
+                        setupVcmCallback(mgr)
                     } else if (sVcm != null && !sVcmCallbackRegistered) {
-                        setupVcmCallback(sVcm!!, launcherCtx)
+                        setupVcmCallback(sVcm!!)
                     }
                 }
             }, delay)
         }
     }
 
-    private fun setupVcmCallback(vcm: Any, launcherCtx: Context) {
+    private fun setupVcmCallback(vcm: Any) {
         if (sVcmCallbackRegistered) return
 
         val registerMethod = vcm.javaClass.methods.firstOrNull { m ->
@@ -3306,10 +3254,6 @@ object MG4Hardware {
             sVcmCallbackRegistered = true
             AppLogger.i(TAG, "  Katman5: callback enregistré ✓")
 
-            val toNotify = katman5ReadyListeners.toList()
-            katman5ReadyListeners.clear()
-            Handler(Looper.getMainLooper()).post { toNotify.forEach { it() } }
-
             // Lecture immédiate (le callback ne se déclenche que sur CHANGEMENT)
             Handler(Looper.getMainLooper()).postDelayed({
                 val ignition = try {
@@ -3346,18 +3290,8 @@ object MG4Hardware {
     }
 
     // -------------------------------------------------------------------------
-    // Listener management
-    // -------------------------------------------------------------------------
-
-    fun setDriveModeListener(listener: DriveModeListener?) { sDriveModeListener = listener }
-    fun setHvacListener(listener: HvacListener?) { sHvacListener = listener }
-
-    // -------------------------------------------------------------------------
     // Diagnostic
     // -------------------------------------------------------------------------
-
-    /** Retourne true si le binder IVehicleSettingService est disponible. */
-    fun isVehicleBinderAvailable(): Boolean = sVehicleBinder != null
 
     /**
      * Génère un rapport de diagnostic complet :
@@ -3457,7 +3391,6 @@ object MG4Hardware {
             fun vsmGet(method: String): Int = try {
                 (callVsm(method) as? Int) ?: -1
             } catch (_: Exception) { -1 }
-            fun fmtVsm(v: Int, ok: String) = if (v >= 0) "$v → $ok" else "-1 ← ERREUR (méthode absente ou sVsm null)"
 
             // ACC/TJA
             val accTjaRaw = getAccTjaMode()
@@ -3593,26 +3526,10 @@ object MG4Hardware {
     private const val TX_QUERY_AUDIO_CLIENT = 1
     private const val HELPER_AUDIO_CODE     = 10
 
-    private const val AUDIO_SET_FADER_FRONT   = 12
-    private const val AUDIO_SET_BALANCE_RIGHT = 13
-    private const val AUDIO_SET_SPEED_VOL     = 17
-    private const val AUDIO_GET_SPEED_VOL     = 18
-    private const val AUDIO_SET_3D_EFFECT     = 26
-    private const val AUDIO_GET_3D_EFFECT     = 27
-    private const val AUDIO_SET_SOUND_FIELD   = 30
-    private const val AUDIO_GET_BALANCE       = 31
-    private const val AUDIO_GET_FADER         = 32
-    private const val AUDIO_SET_BOSE_SOUND    = 36
-    private const val AUDIO_GET_BOSE_SOUND    = 37
-    private const val AUDIO_SET_TONE          = 40
-    private const val AUDIO_GET_TONE          = 41
-
     @Volatile private var sCarAdapterBinder: IBinder? = null
     @Volatile private var sAudioHelper: IBinder? = null
     @Volatile private var sAudioDescriptor: String = ""
     @Volatile private var sAudioServiceConn: ServiceConnection? = null
-
-    val isAudioAvailable: Boolean get() = sAudioHelper?.isBinderAlive == true
 
     fun initAudio(context: Context) {
         // Le bind caradapter ne concerne que l'A9. Sur old-SDK, le loudness passe par
@@ -3662,38 +3579,6 @@ object MG4Hardware {
         } finally { data.recycle(); reply.recycle() }
     }
 
-    private fun audioGet(txCode: Int): Int {
-        val h = sAudioHelper ?: return -1
-        if (!h.isBinderAlive) { sAudioHelper = null; return -1 }
-        val data = Parcel.obtain(); val reply = Parcel.obtain()
-        return try {
-            data.writeInterfaceToken(sAudioDescriptor)
-            if (h.transact(txCode, data, reply, 0)) { reply.readException(); reply.readInt() } else -1
-        } catch (_: Exception) { -1 } finally { data.recycle(); reply.recycle() }
-    }
-
-    private fun audioSet(txCode: Int, value: Int): Boolean {
-        val h = sAudioHelper ?: return false
-        if (!h.isBinderAlive) { sAudioHelper = null; return false }
-        val data = Parcel.obtain(); val reply = Parcel.obtain()
-        return try {
-            data.writeInterfaceToken(sAudioDescriptor)
-            data.writeInt(value)
-            h.transact(txCode, data, reply, 0).also { if (it) reply.readException() }
-        } catch (_: Exception) { false } finally { data.recycle(); reply.recycle() }
-    }
-
-    private const val AUDIO_TYPE_MIN  = 0
-    private const val AUDIO_TYPE_MAX  = 3
-    private const val AUDIO_LEVEL_MIN = -9
-    private const val AUDIO_LEVEL_MAX =  9
-
-    fun getBoseSoundType(): Int              = audioGet(AUDIO_GET_BOSE_SOUND)
-    fun setBoseSoundType(t: Int): Boolean    = audioSet(AUDIO_SET_BOSE_SOUND, t.coerceIn(AUDIO_TYPE_MIN, AUDIO_TYPE_MAX))
-    fun getAudioBalance(): Int               = audioGet(AUDIO_GET_BALANCE)
-    fun setAudioBalance(v: Int): Boolean     = audioSet(AUDIO_SET_BALANCE_RIGHT, v.coerceIn(AUDIO_LEVEL_MIN, AUDIO_LEVEL_MAX))
-    fun getAudioFader(): Int                 = audioGet(AUDIO_GET_FADER)
-    fun setAudioFader(v: Int): Boolean       = audioSet(AUDIO_SET_FADER_FRONT, v.coerceIn(AUDIO_LEVEL_MIN, AUDIO_LEVEL_MAX))
     // ── Volume média — VOL_TYPE_MEDIA=0 ────────────────────────────────────────
     // Routage par firmware : old-SDK (133/68/165) → SmartSoundManager (reflection) ;
     // A9 (69/131/132) → ICarAudioService via binder caradapter (tx getMax=0x5 / getVol=0x6 / setVol=0x7).
@@ -3770,11 +3655,6 @@ object MG4Hardware {
             h.transact(txCode, data, reply, 0).also { if (it) reply.readException() }
         } catch (_: Exception) { false } finally { data.recycle(); reply.recycle() }
     }
-
-    // Diagnostic A9 : le param de getVolume/getMaxVolume est-il un "type" (0=media) ou un
-    // "group id" (AAOS) ? On logge les deux pour comparer au max réel de la voiture.
-    private const val AUDIO_GET_GROUP_FOR_USAGE = 0xe   // getVolumeGroupIdForUsage(usage)
-    private const val USAGE_MEDIA_AAOS = 1              // AudioAttributes.USAGE_MEDIA
 
     // ── Baisse du volume à l'ouverture d'une porte avant (v1 : SWI133) ──────────
     // Détection via l'API Car AOSP **CarPropertyManager** (service "property") + permission
@@ -4893,11 +4773,7 @@ object MG4Hardware {
     @Volatile private var sAirCondition: Any? = null
 
     // Voie CPM (secondaire). ⚠ SAIC a INVERSÉ current/set (0x…502/503) par rapport à l'AAOS.
-    private const val PROP_ENV_OUTSIDE_TEMP  = 0x11600703  // ENV_OUTSIDE_TEMPERATURE (AAOS std — renvoie 0 ici)
     private const val PROP_HVAC_TEMP_OUTCAR  = 0x15602511  // HVAC_TEMPERATURE_OUTCAR (vendor SAIC = temp extérieure)
-    private const val PROP_HVAC_AMBIENT_TEMP = 0x1560252a  // HVAC_AMBIENT_TEMPERATURE (vendor SAIC)
-    private const val PROP_HVAC_TEMP_CURRENT = 0x15600502  // HVAC_TEMPERATURE_CURRENT (SAIC — inversé vs AAOS)
-    private val TEMP_HVAC_AREAS = intArrayOf(0x1, 0x2, 0x4, AREA_HVAC, AREA_GLOBAL, 0)
 
     /** Lit un getter float sans argument sur le manager clim SAIC (réflexion). */
     private fun acFloat(name: String): Float? {
@@ -4973,57 +4849,8 @@ object MG4Hardware {
         return null
     }
 
-    // ── Sonde vitesse (bouton Diagnostic) ─────────────────────────────────────
-    private const val SPEED_TAG = "MG4_SPEED"
-
-    // ── Sonde climatisation (bouton Diagnostic) ───────────────────────────────
+    // ── Climatisation ─────────────────────────────────────────────────────────
     private const val CLIM_TAG = "MG4_CLIM"
-
-    /**
-     * Propriétés HVAC vendor SAIC (table YFVehicleProperty), zone SEAT — mêmes famille et
-     * zone (0x75) que les sièges chauffants et la temp extérieure, qui fonctionnent déjà.
-     * Le type se lit dans l'ID : 0x..6..=FLOAT, 0x..2..=BOOLEAN, sinon INT32.
-     */
-    private val CLIMATE_PROPS: List<Pair<String, Int>> = listOf(
-        "POWER_ON"        to 0x15400510,
-        "POWER_STATUS"    to 0x1540250f,
-        "AC_ON"           to 0x15402500,
-        "AUTO_ON"         to 0x15402502,
-        "FAN_SPEED"       to 0x15400500,
-        "BLOWER_SPEED"    to 0x1540250d,
-        "FAN_DIRECTION"   to 0x15400501,
-        "DRVTEMP_SET"     to 0x1560250b,
-        "PSGTEMP_SET"     to 0x1560250c,
-        "TEMPERATURE_SET" to 0x15600503,
-        "RECIRC_ON"       to 0x15200508,
-        "AC_LOOP_MODE"    to 0x15402507,
-        "ECON_ON"         to 0x15402504,
-        "DUAL_ON"         to 0x15402501,
-        "DEFROST_FRONT"   to 0x15402515,   // orthographe SAIC : FORNT
-        "DEFROST_REAR"    to 0x15402516,
-        "SEAT_VENT_DRV"   to 0x15402525,
-        "SEAT_VENT_PSG"   to 0x15402526,
-        "PM25_CONCENTR"   to 0x15402509,
-        "ANION_STATUS"    to 0x15402510
-    )
-
-    /**
-     * Candidats pour la CONSIGNE de température. Les variantes FLOAT (…SET) ont échoué à la
-     * zone 0x75 ; la table SAIC propose aussi des variantes ENTIÈRES suffixées "SWA", et la
-     * consigne est une propriété par siège → la bonne zone n'est peut-être pas le masque 0x75.
-     */
-    private val TEMP_SETPOINT_CANDIDATES: List<Pair<String, Int>> = listOf(
-        "DRVTEMP_SET"         to 0x1560250b,   // FLOAT
-        "PSGTEMP_SET"         to 0x1560250c,   // FLOAT
-        "TEMPERATURE_SET"     to 0x15600503,   // FLOAT
-        "AC_DRVRTEMSWA"       to 0x1540252e,   // INT  ← variante entière
-        "AC_PSNGTEMSWA"       to 0x15402544,   // INT  ← variante entière
-        "REAR_TEMPERATURE"    to 0x15602536,
-        "SEAT_TEMPERATURE"    to 0x1540050b,
-        "TEMPERATURE_CURRENT" to 0x15600502
-    )
-
-    private val TEMP_SETPOINT_AREAS = intArrayOf(AREA_HVAC, 0x1, 0x2, 0x4, AREA_GLOBAL, 0)
 
     // ── Voie A9 (SWI69/131/132) : carapi CarHvacClient via queryClient(0x7) ──────
     // Le SDK vehiclesettings est ABSENT sur A9 ; la clim passe par l'adaptateur carapi,
@@ -5606,6 +5433,7 @@ object MG4Hardware {
         val ctx = sAppContext ?: return
         sDoorConnecting = true
         try {
+            @SuppressLint("PrivateApi")   // API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
             val carCls = ctx.classLoader.loadClass("android.car.Car")
             val conn = object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -5754,6 +5582,7 @@ object MG4Hardware {
         // rate=5f (et non 0f) : si le VHAL déclare la prop CONTINUOUS, un rate 0 = aucune mise à jour.
         if (!sDoorSubProperty) sCarPropMgr?.let { m ->
             try {
+                @SuppressLint("PrivateApi")   // API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
                 val iface = cl.loadClass("android.car.hardware.property.CarPropertyManager\$CarPropertyEventListener")
                 val proxy = Proxy.newProxyInstance(cl, arrayOf(iface), doorEventHandler("property"))
                 val ok = m.javaClass.getMethod("registerListener", iface,
@@ -5770,6 +5599,7 @@ object MG4Hardware {
         // Voie B — CarDoorLockManager.registerCallback(CarDoorLockEventCallback) — voie de l'OEM
         if (!sDoorSubDoorlock) sCarDoorMgr?.let { m ->
             try {
+                @SuppressLint("PrivateApi")   // API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
                 val iface = cl.loadClass("android.car.hardware.doorlock.CarDoorLockManager\$CarDoorLockEventCallback")
                 val proxy = Proxy.newProxyInstance(cl, arrayOf(iface), doorEventHandler("doorlock"))
                 m.javaClass.getMethod("registerCallback", iface).invoke(m, proxy)
@@ -5781,13 +5611,4 @@ object MG4Hardware {
             }
         }
     }
-
-    fun getSpeedVolumeLevel(): Int           = audioGet(AUDIO_GET_SPEED_VOL)
-    fun setSpeedVolumeLevel(l: Int): Boolean = audioSet(AUDIO_SET_SPEED_VOL, l.coerceIn(AUDIO_TYPE_MIN, AUDIO_TYPE_MAX))
-    fun getSoundFieldType(): Int             = -1
-    fun setSoundFieldType(t: Int): Boolean   = audioSet(AUDIO_SET_SOUND_FIELD, t)
-    fun get3dEffectType(): Int               = audioGet(AUDIO_GET_3D_EFFECT)
-    fun set3dEffectType(t: Int): Boolean     = audioSet(AUDIO_SET_3D_EFFECT, t.coerceIn(AUDIO_TYPE_MIN, AUDIO_TYPE_MAX))
-    fun getToneControl(): Int                = audioGet(AUDIO_GET_TONE)
-    fun setToneControl(v: Int): Boolean      = audioSet(AUDIO_SET_TONE, v.coerceIn(AUDIO_LEVEL_MIN, AUDIO_LEVEL_MAX))
 }

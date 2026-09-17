@@ -11,7 +11,6 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.KeyEvent
 import android.widget.ScrollView
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -35,9 +34,6 @@ import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.util.FirmwareInfo
 
 class ShortcutsFragment : Fragment() {
-
-    /** Interrupteur des raccourcis avances. Defaut false : la voie classique reste la norme. */
-    private val PREF_ADV_SHORTCUTS = "advanced_shortcuts_enabled"
 
     private val PREFS = "mg4_shortcuts"
 

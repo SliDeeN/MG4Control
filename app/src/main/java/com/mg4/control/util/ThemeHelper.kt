@@ -4,7 +4,6 @@ import android.app.UiModeManager
 import android.content.Context
 import android.provider.Settings
 import androidx.appcompat.app.AppCompatDelegate
-import com.mg4.control.debug.AppLogger
 
 /**
  * Gestion du thème de l'application (sombre / clair / auto-sync launcher).
@@ -119,13 +118,5 @@ object ThemeHelper {
     fun notifyThemeChanged() {
         onThemeChanged?.invoke()
     }
-
-    // ── Sonde diagnostic ─────────────────────────────────────────────────────
-
-    private const val DIAG_TAG = "MG4_THEME"
-
-    /** URI du fournisseur de thème SAIC (voie SWI133 : le launcher, SystemUI et VehicleSettings
-     *  y posent un ContentObserver — c'est leur seul mécanisme de synchro). */
-    private const val SKIN_PROVIDER_URI = "content://com.saicmotor.skinProvider/current"
 
 }

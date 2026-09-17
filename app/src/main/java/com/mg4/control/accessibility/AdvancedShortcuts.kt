@@ -122,7 +122,7 @@ object AdvancedShortcuts {
                              else reste.substring(coupure + 1).takeIf { it.isNotEmpty() }
                 // Le suffixe est cherché par correspondance exacte, sans valeur de repli : une
                 // clé inconnue doit être IGNORÉE, pas rattachée arbitrairement à un type d'appui.
-                val press = PressType.values().firstOrNull { partieTouche.endsWith("_${it.key}") }
+                val press = PressType.entries.firstOrNull { partieTouche.endsWith("_${it.key}") }
                     ?: return@mapNotNull null
                 val code = partieTouche.removeSuffix("_${press.key}").toIntOrNull()
                     ?: return@mapNotNull null
@@ -209,7 +209,7 @@ object AdvancedShortcuts {
      * même le délai d'un renvoi.
      */
     fun isClaimedNow(context: Context, keyCode: Int): Boolean =
-        PressType.values().any { resolve(context, keyCode, it) != null }
+        PressType.entries.any { resolve(context, keyCode, it) != null }
 
     /**
      * Vrai si CETTE TOUCHE porte au moins un raccourci — quel que soit le type d'appui ET quel que
