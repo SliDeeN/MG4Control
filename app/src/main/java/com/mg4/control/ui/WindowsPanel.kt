@@ -1,24 +1,19 @@
 package com.mg4.control.ui
 
 import android.annotation.SuppressLint
-import android.content.Context
 import android.content.res.ColorStateList
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.text.format.DateFormat
 import android.view.MotionEvent
 import android.view.View
-import android.widget.Switch
 import android.widget.TextView
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
 import com.mg4.control.hardware.PowerWindows
-import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.model.PowerWindow
 import com.mg4.control.model.WindowCommand
 import com.mg4.control.model.WindowCommand.Direction
-import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -44,11 +39,11 @@ class WindowsPanel {
     private val tiles = mutableListOf<Tile>()
     private val rawWindowButtons = linkedMapOf<PowerWindow, MaterialButton>()
     private val calibration = WindowCalibrationPanel()
+    private val autoClose = WindowAutoClosePanel()
     private var rawWindow = PowerWindow.FRONT_RIGHT
     private var root: View? = null
     private var diagLive: TextView? = null
     private var diagProbe: TextView? = null
-    private var autoStatus: TextView? = null
     private var shown = false
     private var lastSubscribeTry = 0L
 
@@ -101,15 +96,7 @@ class WindowsPanel {
         view.findViewById<MaterialButton>(R.id.btn_win_all_close).setOnClickListener { PowerWindows.autoAll(Direction.UP) }
         view.findViewById<MaterialButton>(R.id.btn_win_all_open).setOnClickListener { PowerWindows.autoAll(Direction.DOWN) }
 
-        autoStatus = view.findViewById(R.id.win_auto_status)
-        view.findViewById<Switch>(R.id.switch_win_autoclose).apply {
-            isChecked = WindowAutoClose.isEnabled(context)
-            setOnCheckedChangeListener { sw, on ->
-                WindowAutoClose.setEnabled(sw.context, on)
-                refreshAutoStatus(sw.context)
-            }
-        }
-
+        autoClose.bind(view)
         calibration.bind(view)
 
         diagLive = view.findViewById(R.id.win_diag_live)
@@ -221,7 +208,7 @@ class WindowsPanel {
                     else                                     -> ctx.getString(R.string.win_value, rawTxt)
                 }
             }
-            refreshAutoStatus(ctx)
+            autoClose.refreshStatus(ctx)
             val yes = ctx.getString(R.string.win_yes)
             val no = ctx.getString(R.string.win_no)
             diagLive?.text = listOf(
@@ -235,30 +222,6 @@ class WindowsPanel {
                 PowerWindows.ensureSubscribed()
             }
         }
-    }
-
-    /** État de la fermeture automatique : armement, porte conducteur lue, dernière fermeture. */
-    private fun refreshAutoStatus(ctx: Context) {
-        val st = WindowAutoClose.status(ctx)
-        if (!st.enabled) {
-            autoStatus?.setText(R.string.win_auto_off)
-            return
-        }
-        val door = when (st.driverDoorOpen) {
-            true  -> R.string.win_auto_door_open
-            false -> R.string.win_auto_door_closed
-            null  -> R.string.win_auto_door_unknown
-        }
-        val at = DateFormat.getTimeFormat(ctx).format(Date(st.lastResultAt))
-        val last = when (st.lastResult) {
-            null                             -> ctx.getString(R.string.win_auto_last_none)
-            WindowAutoClose.Result.PENDING   -> ctx.getString(R.string.win_auto_last_pending)
-            WindowAutoClose.Result.DONE      -> ctx.getString(R.string.win_auto_last_done, at)
-            WindowAutoClose.Result.PARTIAL   -> ctx.getString(R.string.win_auto_last_partial, at)
-            WindowAutoClose.Result.CANCELLED -> ctx.getString(R.string.win_auto_last_cancelled, at)
-        }
-        autoStatus?.text = ctx.getString(R.string.win_auto_status,
-            ctx.getString(if (st.armed) R.string.win_yes else R.string.win_no), ctx.getString(door), last)
     }
 
     private fun runProbe(origin: String) {

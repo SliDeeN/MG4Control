@@ -297,23 +297,6 @@ object MG4Hardware {
      */
     fun lastVehicleIgnitionState(): Int = sLastVcmIgnitionState
 
-    // ── Portes avant : écouteurs de changement (fermeture auto des vitres) ─────────────────
-    private val doorListeners = java.util.concurrent.CopyOnWriteArrayList<(area: Int, previous: Int?, value: Int) -> Unit>()
-
-    /**
-     * S'abonne aux changements de DLOCK_DOOR_OPEN_STS des portes avant (area 0x1 gauche, 0x4 droite ;
-     * 1 = ouverte). Lance la connexion au watcher porte si besoin, indépendamment de la baisse de
-     * volume. [previous] null = première lecture (pas un front). Appelé sur le fil principal.
-     */
-    fun addDoorListener(listener: (area: Int, previous: Int?, value: Int) -> Unit) {
-        doorListeners.add(listener)
-        connectCarProperty()
-    }
-
-    fun removeDoorListener(listener: (area: Int, previous: Int?, value: Int) -> Unit) {
-        doorListeners.remove(listener)
-    }
-
     /**
      * Lit l'état d'allumage courant via CarPropertyManager.
      * Retourne -1 si CPM non prêt, 0 si propriété non supportée.
@@ -1467,6 +1450,31 @@ object MG4Hardware {
         return if (gear < 0) null else gear == GEAR_PARK_VALUE
     }
 
+    // ── État READY (SENSOR_EPTRDY) : fermeture auto des vitres en quittant la voiture ──────
+    //   • SWI133        : VPM getIntProperty(0x5030048) — SENSOR_TYPE_EPTRDY (VehiclePropertyID vehiclesettings SWI133)
+    //   • SWI68/165     : VehicleConditionManager.getEngineState() — lit SENSOR_EPTRDY 0x2140157c
+    //   • A9 (132/131/69): CarStateClient.getSensorEptrdyState() — voie de winclose (validée SWI69)
+    private const val PROP_EPTRDY_VPM = 0x5030048
+
+    /**
+     * Valeur brute de l'état READY, sans journal (lue chaque seconde) ; null si le canal du firmware
+     * n'est pas prêt. Interprétation : [com.mg4.control.model.WindowAutoCloseTrigger.readyFromRaw].
+     */
+    fun readEptReadyRaw(): Int? {
+        val gen = FirmwareInfo.getGeneration()
+        return when {
+            gen == FirmwareInfo.Gen.SWI133 ->
+                if (sVpm == null) null else getIntPropertyVpm(PROP_EPTRDY_VPM)
+            FirmwareInfo.isNewGenVsm() || gen == FirmwareInfo.Gen.SWI132 ->
+                a9CarState()?.let { cs ->
+                    runCatching { cs.javaClass.getMethod("getSensorEptrdyState").invoke(cs) as? Int }.getOrNull()
+                }
+            gen == FirmwareInfo.Gen.SWI68 || gen == FirmwareInfo.Gen.SWI165 ->
+                sVcm?.let { vcm -> runCatching { vcm.javaClass.getMethod("getEngineState").invoke(vcm) as? Int }.getOrNull() }
+            else -> null
+        }
+    }
+
     // ── Lecture gear SWI68/165 (poll direct) + A9 (CarStateClient) ───────────
     private const val CAR_STATE_CLIENT_CLASS = "com.saicmotor.carapi.client.CarStateClient"
     private const val CAR_STATE_SERVICE_CODE = 0xb
@@ -1484,21 +1492,33 @@ object MG4Hardware {
 
     /** A9 : CarStateClient.getGearState() via CarAdapterClient.queryClient(0xb). */
     private fun readA9GearState(): Int {
-        val cl = sVsm?.javaClass?.classLoader ?: return Int.MIN_VALUE
+        val cs = a9CarState() ?: return Int.MIN_VALUE
         return try {
-            if (sCarState == null) {
-                val adapterClass = cl.loadClass(CAR_ADAPTER_CLIENT_CLASS)
-                val adapter = adapterClass.getMethod("getInstance", Context::class.java).invoke(null, sAppContext)
-                val binder = adapterClass.getMethod("queryClient", Int::class.javaPrimitiveType)
-                    .invoke(adapter, CAR_STATE_SERVICE_CODE) as? android.os.IBinder ?: return Int.MIN_VALUE
-                val stateClass = cl.loadClass(CAR_STATE_CLIENT_CLASS)
-                sCarState = stateClass.getConstructor(android.os.IBinder::class.java).newInstance(binder)
-            }
-            (sCarState!!.javaClass.getMethod("getGearState").invoke(sCarState) as? Int) ?: Int.MIN_VALUE
+            (cs.javaClass.getMethod("getGearState").invoke(cs) as? Int) ?: Int.MIN_VALUE
         } catch (e: Exception) {
             AppLogger.w(TAG, "  A9 getGearState err: ${e.javaClass.simpleName}: ${e.message}"); Int.MIN_VALUE
         }
     }
+
+    /** A9 : CarStateClient (rapport, READY), créé à la première demande ; null si indisponible. */
+    private fun a9CarState(): Any? {
+        sCarState?.let { return it }
+        val cl = sVsm?.javaClass?.classLoader ?: return null
+        return try {
+            val adapterClass = cl.loadClass(CAR_ADAPTER_CLIENT_CLASS)
+            val adapter = adapterClass.getMethod("getInstance", Context::class.java).invoke(null, sAppContext)
+            val binder = adapterClass.getMethod("queryClient", Int::class.javaPrimitiveType)
+                .invoke(adapter, CAR_STATE_SERVICE_CODE) as? android.os.IBinder ?: return null
+            val stateClass = cl.loadClass(CAR_STATE_CLIENT_CLASS)
+            stateClass.getConstructor(android.os.IBinder::class.java).newInstance(binder).also { sCarState = it }
+        } catch (e: Exception) {
+            // READY est lu chaque seconde : une seule trace, pas une par tentative.
+            if (!sCarStateErrLogged) AppLogger.w(TAG, "  A9 CarStateClient err: ${e.javaClass.simpleName}: ${e.message}")
+            sCarStateErrLogged = true
+            null
+        }
+    }
+    @Volatile private var sCarStateErrLogged = false
 
     private fun getMixIntProperty(propId: Int): Int {
         val vpm = sVpm ?: return -1
@@ -5531,8 +5551,6 @@ object MG4Hardware {
         if (prev == null || prev != v) {
             sDoorReadLast[area] = v
             AppLogger.i(DOORWATCH_TAG, "area=0x${area.toString(16)} ${prev ?: "?"} → $v")
-            val listeners = doorListeners.toList()
-            if (listeners.isNotEmpty()) Handler(Looper.getMainLooper()).post { listeners.forEach { it(area, prev, v) } }
         }
         evaluateDoorTrigger()
     }

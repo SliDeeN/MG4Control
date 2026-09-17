@@ -512,13 +512,21 @@
     <string name="win_all_open">Tout ouvrir</string>
     <string name="win_auto_title">Fermeture automatique</string>
     <string name="win_auto_label">Fermer les vitres en quittant la voiture</string>
-    <string name="win_auto_desc">Après avoir roulé (20 km/h atteints ou 5 min allumée), voiture en P : à l\'ouverture de la porte conducteur, bips pendant 5 s puis fermeture de toutes les vitres. Rouvrir la porte annule. Si la fermeture va au bout, les vitres sont considérées fermées au démarrage suivant.</string>
+    <string name="win_auto_desc">Voiture en P, une fois armée selon les conditions ci-dessous : quand la voiture sort du mode READY (ouverture de la porte conducteur ou extinction), toutes les vitres se ferment après le délai choisi. Un retour en READY avant annule. Si la fermeture va au bout, les vitres sont considérées fermées au démarrage suivant.</string>
     <string name="win_auto_warning">Sans anti-pincement sur les vitres autres que conducteur : personne près des vitres en partant.</string>
-    <string name="win_auto_status">Armée : %1$s · porte conducteur : %2$s · dernière fermeture : %3$s</string>
+    <string name="win_auto_arming_title">Armement : après avoir roulé</string>
+    <string name="win_auto_speed_label">Vitesse atteinte</string>
+    <string name="win_auto_time_label">Voiture allumée depuis</string>
+    <string name="win_auto_combine_any">L\'une ou l\'autre</string>
+    <string name="win_auto_combine_all">Les deux</string>
+    <string name="win_auto_need_one">Gardez au moins une condition d\'armement</string>
+    <string name="win_auto_speed_value" translatable="false">%1$d km/h</string>
+    <string name="win_auto_time_value" translatable="false">%1$d min</string>
+    <string name="win_auto_status">Armée : %1$s · READY : %2$s · dernière fermeture : %3$s</string>
+    <string name="win_auto_ready_unknown">illisible</string>
+    <string name="win_auto_delay_label">Délai avant fermeture</string>
+    <string name="win_auto_delay_value" translatable="false">%1$d s</string>
     <string name="win_auto_off">Option désactivée</string>
-    <string name="win_auto_door_open">ouverte</string>
-    <string name="win_auto_door_closed">fermée</string>
-    <string name="win_auto_door_unknown">illisible</string>
     <string name="win_auto_last_none">aucune</string>
     <string name="win_auto_last_pending">en attente…</string>
     <string name="win_auto_last_done">complète à %1$s</string>
