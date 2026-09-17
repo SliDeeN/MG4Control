@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Ecran principal — rail de categories a gauche, contenu defilant a droite.
-    Le ViewPager2 a ete retire : une seule vue porte les trois pages, masquees/affichees
+    Le ViewPager2 a ete retire : une seule vue porte les pages, masquees/affichees
     par le rail. Consequence importante : les trois anciens layouts de page sont fusionnes
     dans CET arbre, ce qui est sûr car leurs ids ne se recouvrent pas (verifie).
 -->
@@ -54,6 +54,20 @@
                 android:layout_height="64dp"
                 android:layout_marginBottom="8dp"
                 android:text="@string/profile_cat_comfort"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                android:textAllCaps="true"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_dash_cat_windows"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/dash_cat_windows"
                 android:textColor="@color/text_secondary"
                 android:textSize="16sp"
                 android:textAllCaps="true"
@@ -2480,6 +2494,9 @@
 
                 </LinearLayout>
             </LinearLayout>
+
+            <!-- ═══════════ VITRES ═══════════ -->
+            <include layout="@layout/dash_page_windows" />
 
         </LinearLayout>
 

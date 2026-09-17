@@ -41,8 +41,11 @@ import kotlinx.coroutines.withContext
 class DashboardFragment : Fragment() {
 
     // ── ViewPager ────────────────────────────────────────────────────────────
-    /** Onglet courant du rail : 0=Conduite, 1=Securite, 2=Confort. Remplace pager.currentItem. */
+    /** Onglet courant du rail : 0=Conduite, 1=Securite, 2=Confort, 3=Vitres. Remplace pager.currentItem. */
     private var currentTab = 0
+
+    /** Onglet Vitres (V0 de test) : logique tactile et sondes dans sa propre classe. */
+    private val windowsPanel = WindowsPanel()
 
     // ── Page 0 — Drive mode ─────────────────────────────────────────────────
     private val driveModeButtons = mutableMapOf<DriveMode, Button>()
@@ -163,6 +166,7 @@ class DashboardFragment : Fragment() {
         refreshClimate()
         refreshClimatePage(force = true)   // page 2 — no-op si elle n'a pas été créée (A9)
         if (currentTab == TAB_COMFORT) startClimatePolling()
+        if (currentTab == TAB_WINDOWS) windowsPanel.onShown()
         MG4Hardware.whenKatman4Ready {
             if (isAdded) {
                 refreshAdas()
@@ -176,6 +180,7 @@ class DashboardFragment : Fragment() {
     override fun onPause() {
         super.onPause()
         stopClimatePolling()   // pas de sondage binder quand l'écran n'est plus visible
+        windowsPanel.onHidden() // idem, et aucune vitre ne reste en mouvement manuel
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -185,6 +190,7 @@ class DashboardFragment : Fragment() {
     private companion object {
         const val TAB_SAFETY = 1
         const val TAB_COMFORT = 2
+        const val TAB_WINDOWS = 3
         /** Tag des appuis « Sens de l'air » : le même que le filtre de la sonde MG4_AIR. */
         const val CLIM_UI_TAG = "MG4_AIR"
     }
@@ -209,6 +215,9 @@ class DashboardFragment : Fragment() {
             if (hasClim) View.VISIBLE else View.GONE
         if (hasClim) bindClimatePage(root)
 
+        // Vitres : visible sur tous les firmwares (même propriété partout), V0 de test.
+        windowsPanel.bind(root)
+
         bindCategoryRail(root)
     }
 
@@ -220,7 +229,8 @@ class DashboardFragment : Fragment() {
         val tabs = listOf(
             root.findViewById<MaterialButton>(R.id.btn_dash_cat_drive)   to root.findViewById<ViewGroup>(R.id.page_dash_drive),
             root.findViewById<MaterialButton>(R.id.btn_dash_cat_safety)  to root.findViewById<ViewGroup>(R.id.page_dash_safety),
-            root.findViewById<MaterialButton>(R.id.btn_dash_cat_comfort) to root.findViewById<ViewGroup>(R.id.page_dash_comfort)
+            root.findViewById<MaterialButton>(R.id.btn_dash_cat_comfort) to root.findViewById<ViewGroup>(R.id.page_dash_comfort),
+            root.findViewById<MaterialButton>(R.id.btn_dash_cat_windows) to root.findViewById<ViewGroup>(R.id.page_dash_windows)
         )
         val scroll   = root.findViewById<ScrollView>(R.id.scroll_dashboard)
         val dimColor = requireContext().getColor(R.color.dash_accent_dim)
@@ -256,6 +266,7 @@ class DashboardFragment : Fragment() {
             } else {
                 stopClimatePolling()
             }
+            if (index == TAB_WINDOWS) windowsPanel.onShown() else windowsPanel.onHidden()
         }
 
         tabs.forEachIndexed { i, (btn, _) -> btn.setOnClickListener { select(i) } }

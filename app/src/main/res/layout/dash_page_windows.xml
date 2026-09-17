@@ -1,0 +1,569 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Page « Vitres » du tableau de bord (V0 de test), incluse dans fragment_dashboard.xml.
+    L'id de la page est porté par la racine : l'<include> n'en redéfinit pas.
+    Les boutons de vitre sont pilotés au toucher par WindowsPanel
+    (appui court = course auto, appui long = manuel tant que le doigt reste posé).
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/page_dash_windows"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:divider="@drawable/spacer_v12"
+    android:showDividers="middle"
+    android:visibility="gone">
+
+    <!-- ══════════════════ CARTE : les quatre vitres ══════════════════ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card_rounded"
+        android:layout_marginEnd="5dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/win_card_title"
+            android:textColor="@color/dash_text_lo"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.12"
+            android:textAllCaps="true"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="7dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/dash_border" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/win_hint"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp" />
+
+        <!-- Rangée avant -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="10dp">
+
+            <include
+                android:id="@+id/win_tile_front_left"
+                layout="@layout/dash_window_tile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="5dp" />
+
+            <include
+                android:id="@+id/win_tile_front_right"
+                layout="@layout/dash_window_tile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="5dp" />
+
+        </LinearLayout>
+
+        <!-- Rangée arrière -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="10dp">
+
+            <include
+                android:id="@+id/win_tile_rear_left"
+                layout="@layout/dash_window_tile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="5dp" />
+
+            <include
+                android:id="@+id/win_tile_rear_right"
+                layout="@layout/dash_window_tile"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="5dp" />
+
+        </LinearLayout>
+
+        <!-- Toutes les vitres -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="10dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_all_close"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="5dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="@string/win_all_close"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:icon="@drawable/ic_window_all_up"
+                app:iconGravity="textStart"
+                app:iconSize="28dp"
+                app:iconTint="@color/text_secondary"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_all_open"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="5dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="@string/win_all_open"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:icon="@drawable/ic_window_all_down"
+                app:iconGravity="textStart"
+                app:iconSize="28dp"
+                app:iconTint="@color/text_secondary"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- ══════════════════ CARTE : sécurité enfant ══════════════════ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card_rounded"
+        android:layout_marginEnd="5dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/win_child_lock_title"
+            android:textColor="@color/dash_text_lo"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.12"
+            android:textAllCaps="true"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="7dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/dash_border" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:padding="14dp">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_marginEnd="12dp"
+                android:src="@drawable/ic_window_lock"
+                android:contentDescription="@null"
+                app:tint="@color/text_secondary" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/win_child_lock_label"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/win_child_lock_desc"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+            <Switch
+                android:id="@+id/switch_win_child_lock"
+                android:scaleX="1.3"
+                android:scaleY="1.3"
+                android:layout_marginHorizontal="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+        </LinearLayout>
+
+        <!-- Résultat du verrou natif (écriture + relecture), rempli après chaque bascule -->
+        <TextView
+            android:id="@+id/win_child_lock_status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="12dp"
+            android:visibility="gone" />
+
+    </LinearLayout>
+
+    <!-- ══════════════════ CARTE : diagnostic (sondes MG4_WIN) ══════════════════ -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card_rounded"
+        android:layout_marginEnd="5dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/win_diag_title"
+            android:textColor="@color/dash_text_lo"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:letterSpacing="0.12"
+            android:textAllCaps="true"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="7dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/dash_border" />
+
+        <TextView
+            android:id="@+id/win_diag_live"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_primary"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="10dp" />
+
+        <TextView
+            android:id="@+id/win_diag_probe"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:fontFamily="monospace"
+            android:textIsSelectable="true"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_win_probe"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_margin="10dp"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:text="@string/win_probe"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp"
+            app:backgroundTint="@color/dash_btn"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/dash_border"
+            app:cornerRadius="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/win_raw_title"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp" />
+
+        <!-- Test brut : vitre ciblée (sélection), puis la valeur est envoyée d'un appui. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:paddingTop="8dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_raw_fl"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/win_short_front_left"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_raw_fr"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/win_short_front_right"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_raw_rl"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/win_short_rear_left"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_raw_rr"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/win_short_rear_right"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="10dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_raw_0"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/win_raw_value_0"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_raw_1"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/win_raw_value_1"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_raw_2"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/win_raw_value_2"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_raw_3"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/win_raw_value_3"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_raw_4"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/win_raw_value_4"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_raw_5"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/win_raw_value_5"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_raw_6"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/win_raw_value_6"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_raw_7"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:paddingStart="0dp"
+                android:paddingEnd="0dp"
+                android:text="@string/win_raw_value_7"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>

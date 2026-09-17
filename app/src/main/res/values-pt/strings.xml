@@ -490,4 +490,36 @@
     <!-- Raccourcis : volume -->
     <string name="shortcuts_action_volume_up">Volume +</string>
     <string name="shortcuts_action_volume_down">Volume -</string>
+
+    <!-- Onglet Vitres (V0 de test) -->
+    <string name="dash_cat_windows">Vidros</string>
+    <string name="win_card_title">Vidros</string>
+    <string name="win_hint">Toque curto: abertura ou fecho automático · Toque longo: o vidro move-se enquanto o dedo estiver pousado</string>
+    <string name="win_front_left">Dianteiro esquerdo</string>
+    <string name="win_front_right">Dianteiro direito</string>
+    <string name="win_rear_left">Traseiro esquerdo</string>
+    <string name="win_rear_right">Traseiro direito</string>
+    <string name="win_short_front_left">DE</string>
+    <string name="win_short_front_right">DD</string>
+    <string name="win_short_rear_left">TE</string>
+    <string name="win_short_rear_right">TD</string>
+    <string name="win_close">Fechar</string>
+    <string name="win_open">Abrir</string>
+    <string name="win_all_close">Fechar todos</string>
+    <string name="win_all_open">Abrir todos</string>
+    <string name="win_locked">Bloqueado (segurança infantil)</string>
+    <string name="win_child_lock_title">Segurança infantil</string>
+    <string name="win_child_lock_label">Bloquear vidros traseiros</string>
+    <string name="win_child_lock_desc">Os botões da app ficam bloqueados; é tentado o bloqueio do veículo.</string>
+    <string name="win_refused_child_lock">Vidro traseiro bloqueado pela segurança infantil</string>
+    <string name="win_diag_title">Diagnóstico</string>
+    <string name="win_probe">Repetir a sonda</string>
+    <string name="win_probe_running">Sonda em curso…</string>
+    <string name="win_raw_title">Teste direto: escolha o vidro e depois o valor a enviar</string>
+    <string name="win_value">Valor lido: %1$s</string>
+    <string name="win_value_unknown">ilegível</string>
+    <string name="win_diag_link">Ligação ao veículo: %1$s · subscrição: %2$s</string>
+    <string name="win_diag_last">Último comando: %1$s</string>
+    <string name="win_yes">sim</string>
+    <string name="win_no">não</string>
 </resources>

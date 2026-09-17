@@ -490,4 +490,36 @@
     <!-- Raccourcis : volume -->
     <string name="shortcuts_action_volume_up">Lautstärke +</string>
     <string name="shortcuts_action_volume_down">Lautstärke -</string>
+
+    <!-- Onglet Vitres (V0 de test) -->
+    <string name="dash_cat_windows">Fenster</string>
+    <string name="win_card_title">Fenster</string>
+    <string name="win_hint">Kurz drücken: automatisch öffnen oder schließen · Lang drücken: das Fenster bewegt sich, solange der Finger bleibt</string>
+    <string name="win_front_left">Vorne links</string>
+    <string name="win_front_right">Vorne rechts</string>
+    <string name="win_rear_left">Hinten links</string>
+    <string name="win_rear_right">Hinten rechts</string>
+    <string name="win_short_front_left">VL</string>
+    <string name="win_short_front_right">VR</string>
+    <string name="win_short_rear_left">HL</string>
+    <string name="win_short_rear_right">HR</string>
+    <string name="win_close">Schließen</string>
+    <string name="win_open">Öffnen</string>
+    <string name="win_all_close">Alle schließen</string>
+    <string name="win_all_open">Alle öffnen</string>
+    <string name="win_locked">Gesperrt (Kindersicherung)</string>
+    <string name="win_child_lock_title">Kindersicherung</string>
+    <string name="win_child_lock_label">Hintere Fenster sperren</string>
+    <string name="win_child_lock_desc">Die Tasten der App sind gesperrt; die Fahrzeugsperre wird versucht.</string>
+    <string name="win_refused_child_lock">Hinteres Fenster durch Kindersicherung gesperrt</string>
+    <string name="win_diag_title">Diagnose</string>
+    <string name="win_probe">Messung erneut starten</string>
+    <string name="win_probe_running">Messung läuft…</string>
+    <string name="win_raw_title">Rohtest: Fenster wählen, dann den zu sendenden Wert</string>
+    <string name="win_value">Gelesener Wert: %1$s</string>
+    <string name="win_value_unknown">nicht lesbar</string>
+    <string name="win_diag_link">Fahrzeugverbindung: %1$s · Abonnement: %2$s</string>
+    <string name="win_diag_last">Letzter Befehl: %1$s</string>
+    <string name="win_yes">ja</string>
+    <string name="win_no">nein</string>
 </resources>

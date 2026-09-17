@@ -322,6 +322,9 @@ object MG4Hardware {
     /** Contexte applicatif, pour les messages utilisateur du verrou d'écriture. */
     internal fun appContext(): Context? = sAppContext
 
+    /** CarPropertyManager de la connexion Car principale, null tant qu'elle n'est pas prête (vitres). */
+    internal fun carPropertyManager(): Any? = sCarPropertyManager
+
     // -------------------------------------------------------------------------
     // Init
     // -------------------------------------------------------------------------

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google Material Symbols « keyboard_double_arrow_up » (Outlined, 24 px) — Apache License 2.0.
+     Source : github.com/google/material-design-icons, symbols/android/keyboard_double_arrow_up.
+     Teinte d'origine retirée : c'est le bouton qui colore l'icône (iconTint). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M296,736L240,680L480,440L720,680L664,736L480,553L296,736ZM296,496L240,440L480,200L720,440L664,496L480,313L296,496Z"/>
+</vector>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Google Material Symbols « keyboard_arrow_down » (Outlined, 24 px) — Apache License 2.0.
+     Source : github.com/google/material-design-icons, symbols/android/keyboard_arrow_down.
+     Teinte d'origine retirée : c'est le bouton qui colore l'icône (iconTint). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="960"
+    android:viewportHeight="960">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M480,616L240,376L296,320L480,504L664,320L720,376L480,616Z"/>
+</vector>

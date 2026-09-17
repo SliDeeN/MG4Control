@@ -492,4 +492,44 @@
     <!-- Raccourcis : volume -->
     <string name="shortcuts_action_volume_up">Volume +</string>
     <string name="shortcuts_action_volume_down">Volume -</string>
+
+    <!-- Onglet Vitres (V0 de test) -->
+    <string name="dash_cat_windows">Vitres</string>
+    <string name="win_card_title">Vitres</string>
+    <string name="win_hint">Appui court : ouverture ou fermeture automatique · Appui long : la vitre bouge tant que le doigt reste posé</string>
+    <string name="win_front_left">Avant gauche</string>
+    <string name="win_front_right">Avant droite</string>
+    <string name="win_rear_left">Arrière gauche</string>
+    <string name="win_rear_right">Arrière droite</string>
+    <string name="win_short_front_left">AVG</string>
+    <string name="win_short_front_right">AVD</string>
+    <string name="win_short_rear_left">ARG</string>
+    <string name="win_short_rear_right">ARD</string>
+    <string name="win_close">Fermer</string>
+    <string name="win_open">Ouvrir</string>
+    <string name="win_all_close">Tout fermer</string>
+    <string name="win_all_open">Tout ouvrir</string>
+    <string name="win_locked">Bloquée (sécurité enfant)</string>
+    <string name="win_child_lock_title">Sécurité enfant</string>
+    <string name="win_child_lock_label">Bloquer les vitres arrière</string>
+    <string name="win_child_lock_desc">Les boutons de l\'app sont bloqués ; le verrou du véhicule est tenté.</string>
+    <string name="win_refused_child_lock">Vitre arrière bloquée par la sécurité enfant</string>
+    <string name="win_diag_title">Diagnostic</string>
+    <string name="win_probe">Relancer la sonde</string>
+    <string name="win_probe_running">Sonde en cours…</string>
+    <string name="win_raw_title">Test brut : choisir la vitre, puis la valeur à envoyer</string>
+    <string name="win_value">Valeur lue : %1$s</string>
+    <string name="win_value_unknown">illisible</string>
+    <string name="win_diag_link">Liaison véhicule : %1$s · abonnement : %2$s</string>
+    <string name="win_diag_last">Dernière commande : %1$s</string>
+    <string name="win_yes">oui</string>
+    <string name="win_no">non</string>
+    <string name="win_raw_value_0" translatable="false">0</string>
+    <string name="win_raw_value_1" translatable="false">1</string>
+    <string name="win_raw_value_2" translatable="false">2</string>
+    <string name="win_raw_value_3" translatable="false">3</string>
+    <string name="win_raw_value_4" translatable="false">4</string>
+    <string name="win_raw_value_5" translatable="false">5</string>
+    <string name="win_raw_value_6" translatable="false">6</string>
+    <string name="win_raw_value_7" translatable="false">7</string>
 </resources>

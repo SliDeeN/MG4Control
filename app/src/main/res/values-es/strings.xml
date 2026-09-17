@@ -490,4 +490,36 @@
     <!-- Raccourcis : volume -->
     <string name="shortcuts_action_volume_up">Volumen +</string>
     <string name="shortcuts_action_volume_down">Volumen -</string>
+
+    <!-- Onglet Vitres (V0 de test) -->
+    <string name="dash_cat_windows">Ventanillas</string>
+    <string name="win_card_title">Ventanillas</string>
+    <string name="win_hint">Pulsación corta: apertura o cierre automático · Pulsación larga: la ventanilla se mueve mientras mantienes el dedo</string>
+    <string name="win_front_left">Delantera izquierda</string>
+    <string name="win_front_right">Delantera derecha</string>
+    <string name="win_rear_left">Trasera izquierda</string>
+    <string name="win_rear_right">Trasera derecha</string>
+    <string name="win_short_front_left">DI</string>
+    <string name="win_short_front_right">DD</string>
+    <string name="win_short_rear_left">TI</string>
+    <string name="win_short_rear_right">TD</string>
+    <string name="win_close">Cerrar</string>
+    <string name="win_open">Abrir</string>
+    <string name="win_all_close">Cerrar todas</string>
+    <string name="win_all_open">Abrir todas</string>
+    <string name="win_locked">Bloqueada (seguridad infantil)</string>
+    <string name="win_child_lock_title">Seguridad infantil</string>
+    <string name="win_child_lock_label">Bloquear ventanillas traseras</string>
+    <string name="win_child_lock_desc">Los botones de la app quedan bloqueados; se intenta el bloqueo del vehículo.</string>
+    <string name="win_refused_child_lock">Ventanilla trasera bloqueada por la seguridad infantil</string>
+    <string name="win_diag_title">Diagnóstico</string>
+    <string name="win_probe">Repetir la sonda</string>
+    <string name="win_probe_running">Sonda en curso…</string>
+    <string name="win_raw_title">Prueba directa: elige la ventanilla y luego el valor a enviar</string>
+    <string name="win_value">Valor leído: %1$s</string>
+    <string name="win_value_unknown">ilegible</string>
+    <string name="win_diag_link">Conexión con el vehículo: %1$s · suscripción: %2$s</string>
+    <string name="win_diag_last">Último comando: %1$s</string>
+    <string name="win_yes">sí</string>
+    <string name="win_no">no</string>
 </resources>

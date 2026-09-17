@@ -490,4 +490,36 @@
     <!-- Raccourcis : volume -->
     <string name="shortcuts_action_volume_up">Volume +</string>
     <string name="shortcuts_action_volume_down">Volume -</string>
+
+    <!-- Onglet Vitres (V0 de test) -->
+    <string name="dash_cat_windows">Finestrini</string>
+    <string name="win_card_title">Finestrini</string>
+    <string name="win_hint">Pressione breve: apertura o chiusura automatica · Pressione lunga: il finestrino si muove finché tieni il dito</string>
+    <string name="win_front_left">Anteriore sinistro</string>
+    <string name="win_front_right">Anteriore destro</string>
+    <string name="win_rear_left">Posteriore sinistro</string>
+    <string name="win_rear_right">Posteriore destro</string>
+    <string name="win_short_front_left">AS</string>
+    <string name="win_short_front_right">AD</string>
+    <string name="win_short_rear_left">PS</string>
+    <string name="win_short_rear_right">PD</string>
+    <string name="win_close">Chiudi</string>
+    <string name="win_open">Apri</string>
+    <string name="win_all_close">Chiudi tutti</string>
+    <string name="win_all_open">Apri tutti</string>
+    <string name="win_locked">Bloccato (sicurezza bambini)</string>
+    <string name="win_child_lock_title">Sicurezza bambini</string>
+    <string name="win_child_lock_label">Blocca i finestrini posteriori</string>
+    <string name="win_child_lock_desc">I pulsanti dell\'app sono bloccati; viene tentato il blocco del veicolo.</string>
+    <string name="win_refused_child_lock">Finestrino posteriore bloccato dalla sicurezza bambini</string>
+    <string name="win_diag_title">Diagnostica</string>
+    <string name="win_probe">Ripeti la sonda</string>
+    <string name="win_probe_running">Sonda in corso…</string>
+    <string name="win_raw_title">Test diretto: scegli il finestrino, poi il valore da inviare</string>
+    <string name="win_value">Valore letto: %1$s</string>
+    <string name="win_value_unknown">illeggibile</string>
+    <string name="win_diag_link">Collegamento veicolo: %1$s · sottoscrizione: %2$s</string>
+    <string name="win_diag_last">Ultimo comando: %1$s</string>
+    <string name="win_yes">sì</string>
+    <string name="win_no">no</string>
 </resources>

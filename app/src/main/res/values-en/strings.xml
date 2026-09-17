@@ -490,4 +490,36 @@
     <!-- Raccourcis : volume -->
     <string name="shortcuts_action_volume_up">Volume +</string>
     <string name="shortcuts_action_volume_down">Volume -</string>
+
+    <!-- Onglet Vitres (V0 de test) -->
+    <string name="dash_cat_windows">Windows</string>
+    <string name="win_card_title">Windows</string>
+    <string name="win_hint">Short press: automatic open or close · Long press: the window moves while your finger stays down</string>
+    <string name="win_front_left">Front left</string>
+    <string name="win_front_right">Front right</string>
+    <string name="win_rear_left">Rear left</string>
+    <string name="win_rear_right">Rear right</string>
+    <string name="win_short_front_left">FL</string>
+    <string name="win_short_front_right">FR</string>
+    <string name="win_short_rear_left">RL</string>
+    <string name="win_short_rear_right">RR</string>
+    <string name="win_close">Close</string>
+    <string name="win_open">Open</string>
+    <string name="win_all_close">Close all</string>
+    <string name="win_all_open">Open all</string>
+    <string name="win_locked">Locked (child safety)</string>
+    <string name="win_child_lock_title">Child safety</string>
+    <string name="win_child_lock_label">Lock rear windows</string>
+    <string name="win_child_lock_desc">App buttons are blocked; the vehicle lock is attempted.</string>
+    <string name="win_refused_child_lock">Rear window locked by child safety</string>
+    <string name="win_diag_title">Diagnostics</string>
+    <string name="win_probe">Run probe again</string>
+    <string name="win_probe_running">Probing…</string>
+    <string name="win_raw_title">Raw test: pick the window, then the value to send</string>
+    <string name="win_value">Read value: %1$s</string>
+    <string name="win_value_unknown">unreadable</string>
+    <string name="win_diag_link">Vehicle link: %1$s · subscription: %2$s</string>
+    <string name="win_diag_last">Last command: %1$s</string>
+    <string name="win_yes">yes</string>
+    <string name="win_no">no</string>
 </resources>
