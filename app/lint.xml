@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Règles Lint désactivées pour MG4Control.
+
+    L'app ne tourne que sur l'écran de l'infodivertissement MG4 : paysage fixe, pas de clavier,
+    pas de saisie automatique, langues latines uniquement, et une charte visuelle choisie
+    (tailles de texte réglables par l'utilisateur, interrupteurs Android natifs). Les règles
+    ci-dessous ne signalent que des préférences de style ou des micro-optimisations d'affichage
+    sans effet mesurable sur ce matériel : elles noyaient les vrais avertissements.
+
+    Ce fichier ne change NI le code compilé NI le comportement de l'app : uniquement ce que Lint
+    signale. Restent volontairement actives les règles qui peuvent révéler un défaut réel :
+    textes non traduits (HardcodedText), pluriels, accessibilité, sécurité, permissions.
+-->
+<lint>
+    <!-- Style : Switch Android natif conservé exprès (charte actuelle, validée sur véhicule). -->
+    <issue id="UseSwitchCompatOrMaterialXml" severity="ignore" />
+    <issue id="UseSwitchCompatOrMaterialCode" severity="ignore" />
+
+    <!-- Style : boutons de dialogue/barres volontairement encadrés, plus lisibles en voiture. -->
+    <issue id="ButtonStyle" severity="ignore" />
+
+    <!-- Style : petites étiquettes voulues ; la taille du texte est réglable (Réglages › Interface). -->
+    <issue id="SmallSp" severity="ignore" />
+
+    <!-- Pas de saisie de formulaire ni de gestionnaire de mots de passe sur l'écran voiture. -->
+    <issue id="Autofill" severity="ignore" />
+
+    <!-- Aucune langue de droite à gauche parmi les 6 langues de l'app. -->
+    <issue id="RtlSymmetry" severity="ignore" />
+
+    <!-- Micro-optimisations de mise en page, sans effet mesurable sur l'écran de l'infodivertissement. -->
+    <issue id="DisableBaselineAlignment" severity="ignore" />
+    <issue id="Overdraw" severity="ignore" />
+    <issue id="NestedWeights" severity="ignore" />
+    <issue id="UselessParent" severity="ignore" />
+    <issue id="TooManyViews" severity="ignore" />
+    <issue id="TooDeepLayout" severity="ignore" />
+    <issue id="UseCompoundDrawables" severity="ignore" />
+</lint>
