@@ -983,6 +983,9 @@ class DashboardFragment : Fragment() {
             val puissance = MG4Hardware.getCustomPower()
             val direction = MG4Hardware.getCustomSteering()
             val pedale    = MG4Hardware.getCustomPedal()
+            // Une ligne illisible : on relève les valeurs brutes de toutes les voies (tag MG4_CUSTOM),
+            // seul moyen de vérifier l'échelle retenue sur un firmware qu'on n'a pas sous la main.
+            if (puissance == null || direction == null || pedale == null) MG4Hardware.probeCustomDrive("mode Personnalisé")
             withContext(Dispatchers.Main) {
                 if (!isAdded) return@withContext
                 // L'état a pu changer pendant la lecture (l'utilisateur quitte le mode) : on

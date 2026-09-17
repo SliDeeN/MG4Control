@@ -20,6 +20,7 @@ import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.AirFlow
+import com.mg4.control.model.CustomDriveScale
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.util.FirmwareInfo
@@ -1703,79 +1704,81 @@ object MG4Hardware {
     private const val SIG_CUSTOM_STEERING = 0x2040004
     private const val SIG_CUSTOM_PEDAL    = 0x2040005
 
-    /** Index manipulés par l'application — jamais les valeurs véhicule, voir [valeurPuissance]. */
+    /** Index manipulés par l'application — jamais les valeurs véhicule, voir [CustomDriveScale]. */
     object CustomDrive {
         const val ECO_COMFORT = 0
         const val NORMAL      = 1
         const val SPORT       = 2
     }
 
+    /** Propriétés écrites par le service véhicule SWI68/165 derrière les méthodes du SDK — sondées. */
+    private const val AAD_CUSTOM_POWER    = 0x2140a18c
+    private const val AAD_CUSTOM_STEERING = 0x2140a18d
+    private const val AAD_CUSTOM_PEDAL    = 0x2140a18e
+
     /**
-     * A9 : SWI69, SWI131, SWI132. Même ensemble que la clim, mais fonction distincte à dessein —
-     * changer la règle d'un domaine ne doit pas déplacer l'autre en silence.
+     * Voie d'accès du mode Personnalisé selon le firmware :
+     * - A9 (SWI69/131/132) : méthodes `…Mode` du CarVehicleSettingClient ;
+     * - SWI68/165 : méthodes `…Level` du VehicleSettingManager SAIC (le VehiclePropertyManager
+     *   n'existe pas sur ces firmwares, d'où les trois lignes absentes jusqu'ici) ;
+     * - SWI133 : propriétés VPM.
      */
-    private fun isDriveCustomA9(): Boolean {
+    private fun customFamily(): CustomDriveScale.Family {
         val gen = FirmwareInfo.getGeneration()
-        return gen == FirmwareInfo.Gen.SWI69 || gen == FirmwareInfo.Gen.SWI131 ||
-               gen == FirmwareInfo.Gen.SWI132
+        return when (gen) {
+            FirmwareInfo.Gen.SWI69, FirmwareInfo.Gen.SWI131, FirmwareInfo.Gen.SWI132 -> CustomDriveScale.Family.A9
+            FirmwareInfo.Gen.SWI68, FirmwareInfo.Gen.SWI165                          -> CustomDriveScale.Family.VSM_68
+            else                                                                      -> CustomDriveScale.Family.VPM_133
+        }
     }
 
-    // ⚠️ TROIS ÉCHELLES DIFFÉRENTES, relevées dans le code d'origine des deux familles :
-    //  • direction : 1/2/3 partout ;
-    //  • pédale : 1/0/2 partout — Normal vaut ZÉRO, et non la valeur du milieu. Le smali SWI133
-    //    réassigne le registre entre deux branches, ce qui se lit 1/2/3 si on va trop vite ;
-    //    le dispatch A9 sur les libellés comfort/normal/sport donne le même résultat ;
-    //  • puissance : 1/2/3 en old-SDK mais 2/3/4 sur A9, où la voiture réutilise l'échelle des
-    //    modes de conduite (ÉCO=2, NORMAL=3, SPORT=4).
-    //
-    // D'où l'index 0/1/2 exposé au reste de l'application : personne d'autre ne manipule ces
-    // nombres, et une échelle qui changerait ne se corrige qu'ici.
-    private fun valeurPuissance(index: Int): Int = index + (if (isDriveCustomA9()) 2 else 1)
-    private fun valeurDirection(index: Int): Int = index + 1
-    private fun valeurPedale(index: Int): Int = when (index) {
-        CustomDrive.ECO_COMFORT -> 1
-        CustomDrive.SPORT       -> 2
-        else                    -> 0
+    /** Méthode du SDK selon la famille (null = voie propriété VPM). */
+    private fun customMethod(setting: CustomDriveScale.Setting, write: Boolean): String? {
+        val prefix = if (write) "set" else "get"
+        return when (customFamily()) {
+            CustomDriveScale.Family.A9 -> prefix + when (setting) {
+                CustomDriveScale.Setting.POWER    -> "DrivingPowerTrainMode"
+                CustomDriveScale.Setting.STEERING -> "SteeringMode"
+                CustomDriveScale.Setting.PEDAL    -> "BrakePedalMode"
+            }
+            CustomDriveScale.Family.VSM_68 -> prefix + when (setting) {
+                CustomDriveScale.Setting.POWER    -> "ElectricPowertrainLevel"
+                CustomDriveScale.Setting.STEERING -> "SteeringLevel"
+                CustomDriveScale.Setting.PEDAL    -> "BrakePedalLevel"
+            }
+            CustomDriveScale.Family.VPM_133 -> null
+        }
     }
 
-    private fun indexPuissance(v: Int): Int? =
-        (v - (if (isDriveCustomA9()) 2 else 1)).takeIf { it in 0..2 }
-    private fun indexDirection(v: Int): Int? = (v - 1).takeIf { it in 0..2 }
-    private fun indexPedale(v: Int): Int? = when (v) {
-        1    -> CustomDrive.ECO_COMFORT
-        0    -> CustomDrive.NORMAL
-        2    -> CustomDrive.SPORT
-        else -> null
+    private fun customVpmProperty(setting: CustomDriveScale.Setting): Int = when (setting) {
+        CustomDriveScale.Setting.POWER    -> SIG_CUSTOM_POWER
+        CustomDriveScale.Setting.STEERING -> SIG_CUSTOM_STEERING
+        CustomDriveScale.Setting.PEDAL    -> SIG_CUSTOM_PEDAL
     }
 
-    /** Puissance en chevaux du mode Personnalisé. [index] : 0=Éco, 1=Normal, 2=Sport. */
-    fun setCustomPower(index: Int): Boolean {
-        if (index !in 0..2) return false
-        val v = valeurPuissance(index)
-        if (logEnabled) AppLogger.i(TAG, "setCustomPower → index=$index valeur=$v")
-        return if (isDriveCustomA9()) callVsmVoid("setDrivingPowerTrainMode", v)
-               else setIntPropertyVpmRecovery(SIG_CUSTOM_POWER, v)
+    private fun setCustom(setting: CustomDriveScale.Setting, index: Int): Boolean {
+        val value = CustomDriveScale.value(setting, index, customFamily()) ?: return false
+        if (logEnabled) AppLogger.i(CUSTOM_TAG, "$setting ← index=$index valeur=$value (${customFamily()})")
+        val method = customMethod(setting, write = true)
+        return if (method != null) callVsmVoid(method, value)
+               else setIntPropertyVpmRecovery(customVpmProperty(setting), value)
     }
+
+    private fun getCustom(setting: CustomDriveScale.Setting): Int? {
+        val method = customMethod(setting, write = false)
+        val raw = if (method != null) (callVsm(method) as? Int) ?: -1
+                  else getIntPropertyVpm(customVpmProperty(setting))
+        return CustomDriveScale.index(setting, raw, customFamily())
+    }
+
+    /** Puissance du mode Personnalisé. [index] : 0=Éco, 1=Normal, 2=Sport. */
+    fun setCustomPower(index: Int): Boolean = setCustom(CustomDriveScale.Setting.POWER, index)
 
     /** Direction du mode Personnalisé. [index] : 0=Confort, 1=Normal, 2=Sport. */
-    fun setCustomSteering(index: Int): Boolean {
-        if (index !in 0..2) return false
-        val v = valeurDirection(index)
-        if (logEnabled) AppLogger.i(TAG, "setCustomSteering → index=$index valeur=$v")
-        // A9 : setSteeringMode, et NON setDrivingEpsMode — les deux existent, seule la première
-        // est appelée par l'app d'origine. Vérifié en traçant fragment → presenter → model.
-        return if (isDriveCustomA9()) callVsmVoid("setSteeringMode", v)
-               else setIntPropertyVpmRecovery(SIG_CUSTOM_STEERING, v)
-    }
+    fun setCustomSteering(index: Int): Boolean = setCustom(CustomDriveScale.Setting.STEERING, index)
 
     /** Force exercée sur la pédale. [index] : 0=Confort, 1=Normal, 2=Sport. */
-    fun setCustomPedal(index: Int): Boolean {
-        if (index !in 0..2) return false
-        val v = valeurPedale(index)
-        if (logEnabled) AppLogger.i(TAG, "setCustomPedal → index=$index valeur=$v")
-        return if (isDriveCustomA9()) callVsmVoid("setBrakePedalMode", v)
-               else setIntPropertyVpmRecovery(SIG_CUSTOM_PEDAL, v)
-    }
+    fun setCustomPedal(index: Int): Boolean = setCustom(CustomDriveScale.Setting.PEDAL, index)
 
     /**
      * Lectures — `null` si le véhicule ne répond pas OU rend une valeur hors échelle.
@@ -1784,17 +1787,43 @@ object MG4Hardware {
      * ils existent sur les six firmwares, mais rien ne dit qu'ils sont montés sur toutes les
      * finitions. Un `null` fait masquer la ligne plutôt que d'offrir un bouton sans effet.
      */
-    fun getCustomPower(): Int? = indexPuissance(
-        if (isDriveCustomA9()) (callVsm("getDrivingPowerTrainMode") as? Int) ?: -1
-        else getIntPropertyVpm(SIG_CUSTOM_POWER))
+    fun getCustomPower(): Int? = getCustom(CustomDriveScale.Setting.POWER)
 
-    fun getCustomSteering(): Int? = indexDirection(
-        if (isDriveCustomA9()) (callVsm("getSteeringMode") as? Int) ?: -1
-        else getIntPropertyVpm(SIG_CUSTOM_STEERING))
+    fun getCustomSteering(): Int? = getCustom(CustomDriveScale.Setting.STEERING)
 
-    fun getCustomPedal(): Int? = indexPedale(
-        if (isDriveCustomA9()) (callVsm("getBrakePedalMode") as? Int) ?: -1
-        else getIntPropertyVpm(SIG_CUSTOM_PEDAL))
+    fun getCustomPedal(): Int? = getCustom(CustomDriveScale.Setting.PEDAL)
+
+    // ── Sonde du mode Personnalisé ────────────────────────────────────────────
+    private const val CUSTOM_TAG = "MG4_CUSTOM"
+    private const val CUSTOM_PROBE_THROTTLE_MS = 30_000L
+    @Volatile private var sCustomProbeMs = 0L
+
+    /**
+     * Relève les valeurs BRUTES des trois réglages par toutes les voies du firmware, pour vérifier
+     * l'échelle retenue ([CustomDriveScale]) — surtout sur SWI68/165 où elle est supposée.
+     * Limitée à une fois toutes les 30 s : l'écran réessaie toutes les 3 s quand rien n'est lisible.
+     */
+    fun probeCustomDrive(origin: String) {
+        val now = SystemClock.elapsedRealtime()
+        if (now - sCustomProbeMs < CUSTOM_PROBE_THROTTLE_MS) return
+        sCustomProbeMs = now
+        val family = customFamily()
+        AppLogger.i(CUSTOM_TAG, "SONDE [$origin] firmware=${FirmwareInfo.getGeneration()} famille=$family " +
+            "vsm=${sVsm != null} vpm=${sVpm != null} cpm=${sCarPropertyManager != null}")
+        CustomDriveScale.Setting.entries.forEach { setting ->
+            val voies = mutableListOf<String>()
+            customMethod(setting, write = false)?.let { m -> voies += "$m=${callVsm(m) ?: "null"}" }
+            if (sVpm != null) voies += "VPM 0x${customVpmProperty(setting).toString(16)}=${getIntPropertyVpm(customVpmProperty(setting))}"
+            val aad = when (setting) {
+                CustomDriveScale.Setting.POWER    -> AAD_CUSTOM_POWER
+                CustomDriveScale.Setting.STEERING -> AAD_CUSTOM_STEERING
+                CustomDriveScale.Setting.PEDAL    -> AAD_CUSTOM_PEDAL
+            }
+            voies += "CPM 0x${aad.toString(16)}@global=${getIntPropertyCPM(aad, AREA_GLOBAL)} @0=${getIntPropertyCPM(aad, 0)}"
+            AppLogger.i(CUSTOM_TAG, "SONDE [$origin] $setting : ${voies.joinToString(" · ")} " +
+                "→ index retenu=${getCustom(setting) ?: "inconnu"}")
+        }
+    }
 
     fun setRegenLevel(level: RegenLevel): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setRegenLevel → ${level.label} (${level.value})")
