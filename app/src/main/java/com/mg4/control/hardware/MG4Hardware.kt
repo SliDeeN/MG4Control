@@ -292,6 +292,29 @@ object MG4Hardware {
     }
 
     /**
+     * Dernier état d'allumage reçu (CarIgnitionItem), -1 si aucun. Les écouteurs ne sont prévenus
+     * qu'aux CHANGEMENTS : un abonné arrivé après le RUN du démarrage doit lire l'état ici.
+     */
+    fun lastVehicleIgnitionState(): Int = sLastVcmIgnitionState
+
+    // ── Portes avant : écouteurs de changement (fermeture auto des vitres) ─────────────────
+    private val doorListeners = java.util.concurrent.CopyOnWriteArrayList<(area: Int, previous: Int?, value: Int) -> Unit>()
+
+    /**
+     * S'abonne aux changements de DLOCK_DOOR_OPEN_STS des portes avant (area 0x1 gauche, 0x4 droite ;
+     * 1 = ouverte). Lance la connexion au watcher porte si besoin, indépendamment de la baisse de
+     * volume. [previous] null = première lecture (pas un front). Appelé sur le fil principal.
+     */
+    fun addDoorListener(listener: (area: Int, previous: Int?, value: Int) -> Unit) {
+        doorListeners.add(listener)
+        connectCarProperty()
+    }
+
+    fun removeDoorListener(listener: (area: Int, previous: Int?, value: Int) -> Unit) {
+        doorListeners.remove(listener)
+    }
+
+    /**
      * Lit l'état d'allumage courant via CarPropertyManager.
      * Retourne -1 si CPM non prêt, 0 si propriété non supportée.
      */
@@ -5508,6 +5531,8 @@ object MG4Hardware {
         if (prev == null || prev != v) {
             sDoorReadLast[area] = v
             AppLogger.i(DOORWATCH_TAG, "area=0x${area.toString(16)} ${prev ?: "?"} → $v")
+            val listeners = doorListeners.toList()
+            if (listeners.isNotEmpty()) Handler(Looper.getMainLooper()).post { listeners.forEach { it(area, prev, v) } }
         }
         evaluateDoorTrigger()
     }

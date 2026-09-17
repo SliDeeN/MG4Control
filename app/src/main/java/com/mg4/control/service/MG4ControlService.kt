@@ -31,6 +31,7 @@ import com.mg4.control.model.DriveMode
 import com.mg4.control.bluetooth.BluetoothProfileManager
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.hardware.MG4Hardware.AebMode
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.RegenLevel
@@ -162,6 +163,8 @@ class MG4ControlService : Service() {
         registerSkinChangeReceiver()   // [THEME-AUTO]
         registerExternalApiReceiver()  // issue #79
         registerIgnitionListener()
+        // Fermeture auto des vitres en quittant la voiture : doit surveiller dès le boot, onglet ouvert ou non.
+        WindowAutoClose.startIfEnabled(applicationContext)
         // Vérification de mise à jour, cinq secondes après le démarrage automatique.
         //
         // Pourquoi attendre du tout : à t=0 la liaison données de la voiture n'est pas encore

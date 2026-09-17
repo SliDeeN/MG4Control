@@ -30,7 +30,8 @@ import java.util.concurrent.ConcurrentHashMap
  * physiques restent utilisables en roulant.
  *
  * Vitres sans capteur : position estimée ([WindowEstimator]) à partir de leur calibration,
- * remise à « inconnue » à chaque démarrage de la voiture.
+ * remise à « inconnue » à chaque démarrage de la voiture — sauf si la fermeture automatique en
+ * quittant la voiture ([WindowAutoClose]) est allée au bout : les vitres partent alors fermées.
  *
  * Sondes (tag [TAG]) : liste des propriétés déclarées, lectures par zone, chaque commande avec
  * son résultat, chaque changement de valeur reçu du véhicule avec le délai depuis la dernière
@@ -78,13 +79,32 @@ object PowerWindows {
      * Commande répétée en cours, par vitre : doigt posé ([finger]) ou course auto émulée.
      * Lu et écrit uniquement sur [worker].
      */
-    private class Hold(val value: Int, val startMs: Long, val finger: Boolean, val label: String, val repeat: Runnable) {
+    private class Hold(
+        val value: Int,
+        val startMs: Long,
+        val finger: Boolean,
+        val label: String,
+        val repeat: Runnable,
+        /** Fait partie de la fermeture automatique en quittant la voiture ([closeAllAutomatically]). */
+        val autoClose: Boolean,
+    ) {
         var sent = 0
         var failed = 0
-        /** Arrêtée si l'utilisateur quitte l'onglet : doigt posé, ou fermeture émulée. */
-        val stopOnLeave: Boolean get() = finger || WindowCommand.stopsWhenUnattended(value)
+        /** Arrêtée si l'utilisateur quitte l'onglet : doigt posé, ou fermeture émulée lancée depuis l'onglet. */
+        val stopOnLeave: Boolean get() = finger || (WindowCommand.stopsWhenUnattended(value) && !autoClose)
     }
     private val holds = HashMap<PowerWindow, Hold>()
+
+    /** Raison de fin d'une course émulée allée au bout (seule issue qui compte comme « complète »). */
+    private const val COURSE_DONE = "course terminée"
+
+    /** Fermeture automatique en cours : vitres émulées pas encore arrivées. Sur [worker]. */
+    private val autoClosePending = HashSet<PowerWindow>()
+    private var autoCloseOk = true
+    private var autoCloseDone: ((Boolean) -> Unit)? = null
+
+    /** Marqueur « toutes les vitres fermées par la fermeture automatique, sans commande depuis ». */
+    private const val KEY_CLOSED_MARKER = "win_closed_marker"
 
     data class Snapshot(
         val cpmReady: Boolean,
@@ -96,13 +116,46 @@ object PowerWindows {
     )
 
     init {
-        // Un interrupteur physique a pu servir voiture éteinte : toute estimation redevient inconnue.
         MG4Hardware.registerVehicleConditionListener { state ->
             if (state == MG4Hardware.CarIgnitionItem.RUN) worker.post {
-                if (estimators.isNotEmpty()) AppLogger.i(TAG, "démarrage : positions estimées remises à inconnues")
-                estimators.values.forEach { it.reset() }
+                val firstLoad = !estimatorsLoaded
+                loadEstimators()
+                // Premier chargement pendant ce RUN : il vient d'appliquer (et consommer) le marqueur.
+                if (!firstLoad) applyStartupPosition("démarrage", consume = true)
             }
         }
+    }
+
+    /** Force l'initialisation (écouteur de démarrage) sans attendre l'ouverture de l'onglet. */
+    fun prepare() {
+        worker.post { loadEstimators() }
+    }
+
+    /**
+     * Sur [worker]. Position des vitres estimées au démarrage : fermées si la fermeture automatique
+     * est active ET que sa dernière séquence est allée au bout sans commande depuis ; sinon
+     * inconnues (un interrupteur physique a pu servir), une course complète les recalera.
+     *
+     * Le marqueur ne vaut que pour UN démarrage : il est consommé au démarrage réel de la voiture
+     * ([consume]), pas quand le processus se charge voiture éteinte — sans quoi le RUN qui suit
+     * ne le trouverait plus et remettrait les positions à inconnues.
+     */
+    private fun applyStartupPosition(origin: String, consume: Boolean) {
+        if (estimators.isEmpty()) return
+        val context = MG4Hardware.appContext() ?: return
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val closed = WindowAutoClose.isEnabled(context) && prefs.getBoolean(KEY_CLOSED_MARKER, false)
+        if (closed && consume) prefs.edit { remove(KEY_CLOSED_MARKER) }
+        estimators.values.forEach { if (closed) it.setClosed() else it.reset() }
+        AppLogger.i(TAG, "$origin : positions estimées " +
+            if (closed) "= fermées (fermeture automatique complète)" else "remises à inconnues")
+    }
+
+    /** Une commande de l'app après la fermeture automatique : on ne peut plus supposer les vitres fermées. */
+    private fun clearClosedMarker() {
+        val context = MG4Hardware.appContext() ?: return
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_CLOSED_MARKER, false)) prefs.edit { remove(KEY_CLOSED_MARKER) }
     }
 
     // ── Calibration ─────────────────────────────────────────────────────────
@@ -133,6 +186,10 @@ object PowerWindows {
         val context = MG4Hardware.appContext() ?: return
         PowerWindow.entries.forEach { w -> calibration(context, w)?.let { estimators[w] = WindowEstimator(it) } }
         estimatorsLoaded = true
+        // Processus (re)lancé : même règle qu'au démarrage de la voiture. L'écouteur ne voit que les
+        // changements d'allumage : voiture déjà en marche = ce chargement EST le démarrage.
+        applyStartupPosition("chargement",
+            consume = MG4Hardware.lastVehicleIgnitionState() == MG4Hardware.CarIgnitionItem.RUN)
     }
 
     /** Sur [worker] : suit la commande envoyée pour estimer la position ; journalise en fin de mouvement. */
@@ -166,6 +223,7 @@ object PowerWindows {
      */
     fun shortPress(window: PowerWindow, direction: Direction) {
         val now = SystemClock.elapsedRealtime()
+        clearClosedMarker()
         worker.post {
             if (!window.hasNativeAuto) {
                 if (!endRepeat(window, "appui court")) startEmulatedCourse(window, direction, "appui court")
@@ -183,6 +241,7 @@ object PowerWindows {
 
     /** Tout ouvrir / tout fermer : toujours la course automatique, jamais le stop. */
     fun autoAll(direction: Direction) {
+        clearClosedMarker()
         val origin = "tout ${if (direction == Direction.UP) "fermer" else "ouvrir"}"
         worker.post { PowerWindow.entries.forEach { startAuto(it, direction, origin) } }
     }
@@ -192,6 +251,7 @@ object PowerWindows {
      * pour atteindre la butée même si une ancienne calibration était trop courte.
      */
     fun closeForCalibration(window: PowerWindow) {
+        clearClosedMarker()
         lastAutoMs.remove(window)
         worker.post { startAuto(window, Direction.UP, "calibration", minEmulatedMs = WindowCommand.EMULATED_COURSE_MS) }
     }
@@ -220,6 +280,7 @@ object PowerWindows {
 
     /** Appui long : commande manuelle répétée jusqu'à [stopHold], comme un doigt sur l'interrupteur. */
     fun startHold(window: PowerWindow, direction: Direction) {
+        clearClosedMarker()
         lastAutoMs.remove(window)
         worker.post {
             startRepeat(window, WindowCommand.manual(direction), WindowCommand.HOLD_MAX_MS,
@@ -244,6 +305,7 @@ object PowerWindows {
     /** Test brut de l'onglet Diagnostic : n'importe quelle valeur de 0 à 7, pour décoder l'échelle. */
     fun sendRaw(window: PowerWindow, value: Int) {
         if (!WindowCommand.isValid(value)) return
+        clearClosedMarker()
         lastAutoMs.remove(window)
         worker.post {
             endRepeat(window, "test brut")
@@ -252,22 +314,26 @@ object PowerWindows {
     }
 
     /** Sur [worker]. Remplace la répétition en cours sur cette vitre, s'il y en a une. */
-    private fun startRepeat(window: PowerWindow, value: Int, maxMs: Long, finger: Boolean, label: String) {
-        holds.remove(window)?.let { worker.removeCallbacks(it.repeat) }
+    private fun startRepeat(window: PowerWindow, value: Int, maxMs: Long, finger: Boolean, label: String,
+                            autoClose: Boolean = false) {
+        holds.remove(window)?.let {
+            worker.removeCallbacks(it.repeat)
+            if (it.autoClose) finishAutoCloseWindow(window, completed = false, reason = "remplacée par $label")
+        }
         lateinit var hold: Hold
         val repeat = object : Runnable {
             override fun run() {
                 if (holds[window] !== hold) return
                 if (SystemClock.elapsedRealtime() - hold.startMs >= maxMs) {
                     if (finger) AppLogger.w(TAG, "${window.shortName} $label : $maxMs ms dépassés, arrêt de sécurité")
-                    endRepeat(window, if (finger) "arrêt de sécurité" else "course terminée")
+                    endRepeat(window, if (finger) "arrêt de sécurité" else COURSE_DONE)
                     return
                 }
                 if (send(window, value, label, quiet = true)) hold.sent++ else hold.failed++
                 worker.postDelayed(this, WindowCommand.HOLD_REPEAT_MS)
             }
         }
-        hold = Hold(value, SystemClock.elapsedRealtime(), finger, label, repeat)
+        hold = Hold(value, SystemClock.elapsedRealtime(), finger, label, repeat, autoClose)
         holds[window] = hold
         AppLogger.i(TAG, "${window.shortName} $label : début ← $value toutes les " +
             "${WindowCommand.HOLD_REPEAT_MS} ms (max $maxMs ms)")
@@ -282,7 +348,65 @@ object PowerWindows {
         AppLogger.i(TAG, "${window.shortName} ${hold.label} : fin ($reason) ← ${hold.value} ×${hold.sent} " +
             "(échecs ${hold.failed}) en $ms ms")
         send(window, WindowCommand.STOP, reason)
+        if (hold.autoClose) finishAutoCloseWindow(window, completed = reason == COURSE_DONE && hold.failed == 0, reason = reason)
         return true
+    }
+
+    // ── Fermeture automatique en quittant la voiture ────────────────────────
+
+    /**
+     * Ferme toutes les vitres (déclenchée par [WindowAutoClose]) : course native pour le conducteur,
+     * course émulée pour les autres. [onDone] (fil principal) reçoit vrai si toutes les courses
+     * émulées sont allées au bout sans échec ni interruption ; alors seulement le marqueur « vitres
+     * fermées » est posé pour le prochain démarrage.
+     */
+    fun closeAllAutomatically(onDone: (Boolean) -> Unit) {
+        worker.post {
+            clearClosedMarker()
+            loadEstimators()
+            autoClosePending.clear()
+            autoCloseOk = true
+            autoCloseDone = onDone
+            val origin = "fermeture auto en quittant"
+            PowerWindow.entries.forEach { w ->
+                if (w.hasNativeAuto) {
+                    lastAutoMs[w] = SystemClock.elapsedRealtime()
+                    endRepeat(w, "$origin demandée")
+                    if (!send(w, WindowCommand.AUTO_UP, origin)) autoCloseOk = false
+                } else {
+                    // Ajout APRÈS le démarrage : remplacer une course d'une séquence précédente ne
+                    // doit pas compter comme l'interruption de celle-ci.
+                    startRepeat(w, WindowCommand.MANUAL_UP,
+                        WindowCommand.emulatedCourseMs(Direction.UP, estimators[w]?.calibration),
+                        finger = false, label = origin, autoClose = true)
+                    autoClosePending += w
+                }
+            }
+            if (autoClosePending.isEmpty()) completeAutoClose()
+        }
+    }
+
+    /** Sur [worker]. Une vitre de la fermeture automatique a fini (au bout ou non). */
+    private fun finishAutoCloseWindow(window: PowerWindow, completed: Boolean, reason: String) {
+        if (!autoClosePending.remove(window)) return
+        if (!completed) {
+            autoCloseOk = false
+            AppLogger.w(TAG, "fermeture auto ${window.shortName} incomplète ($reason)")
+        }
+        if (autoClosePending.isEmpty()) completeAutoClose()
+    }
+
+    /** Sur [worker]. */
+    private fun completeAutoClose() {
+        val ok = autoCloseOk
+        val done = autoCloseDone ?: return
+        autoCloseDone = null
+        MG4Hardware.appContext()?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)?.edit {
+            if (ok) putBoolean(KEY_CLOSED_MARKER, true) else remove(KEY_CLOSED_MARKER)
+        }
+        AppLogger.i(TAG, "fermeture auto terminée : " +
+            if (ok) "complète → vitres considérées fermées au prochain démarrage" else "incomplète → positions inconnues au prochain démarrage")
+        main.post { done(ok) }
     }
 
     /** À appeler sur [worker]. [quiet] : pas de log par envoi (répétition du maintien, résumée à la fin). */
