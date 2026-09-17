@@ -779,6 +779,9 @@ class DashboardFragment : Fragment() {
         CoroutineScope(Dispatchers.IO).launch {
             val mode  = MG4Hardware.getDriveMode()
             val regen = MG4Hardware.getRegenLevel()
+            // Mode illisible = carte du mode Personnalisé invisible quoi qu'il arrive : on relève
+            // les deux voies de lecture (tag MG4_CUSTOM) plutôt que de laisser l'écran muet.
+            if (mode == null) MG4Hardware.probeCustomDrive("mode de conduite illisible")
             withContext(Dispatchers.Main) {
                 if (!isAdded) return@withContext
                 mode?.let  { applyDriveModeUI(it) }
@@ -967,10 +970,14 @@ class DashboardFragment : Fragment() {
      * Deux niveaux de masquage, et ils ne disent pas la même chose :
      *  • la CARTE n'apparaît que si la voiture est réellement en mode Personnalisé — ces trois
      *    réglages n'ont aucun effet ailleurs ;
-     *  • une LIGNE disparaît si le véhicule ne rend pas son état. Les six firmwares exposent la
-     *    commande, mais rien ne garantit que la finition porte l'équipement — une direction à
+     *  • une LIGNE disparaît quand le véhicule ne répond pas du tout. Les six firmwares exposent
+     *    la commande, mais rien ne garantit que la finition porte l'équipement — une direction à
      *    assistance variable, par exemple. Un bouton qui n'écrirait nulle part vaut moins que
      *    pas de bouton du tout.
+     *
+     * En revanche une réponse hors barème garde sa ligne, sans rien de surligné : l'équipement
+     * répond, seule sa position manque. C'est ce cas-là qui faisait disparaître la carte entière
+     * sur SWI68 alors que les trois réglages s'écrivaient très bien.
      */
     private fun refreshCustomDrive(mode: DriveMode?) {
         val vue = view ?: return
@@ -980,29 +987,26 @@ class DashboardFragment : Fragment() {
             return
         }
         CoroutineScope(Dispatchers.IO).launch {
-            val puissance = MG4Hardware.getCustomPower()
-            val direction = MG4Hardware.getCustomSteering()
-            val pedale    = MG4Hardware.getCustomPedal()
-            // Une ligne illisible : on relève les valeurs brutes de toutes les voies (tag MG4_CUSTOM),
-            // seul moyen de vérifier l'échelle retenue sur un firmware qu'on n'a pas sous la main.
-            if (puissance == null || direction == null || pedale == null) MG4Hardware.probeCustomDrive("mode Personnalisé")
+            val lignes = listOf(
+                Triple(customPowerButtons, MG4Hardware.getCustomPower(),    R.id.row_cd_power),
+                Triple(customSteerButtons, MG4Hardware.getCustomSteering(), R.id.row_cd_steer),
+                Triple(customPedalButtons, MG4Hardware.getCustomPedal(),    R.id.row_cd_pedal)
+            )
+            // Une position inconnue : on relève les valeurs brutes de toutes les voies (tag
+            // MG4_CUSTOM), seul moyen de vérifier l'échelle sur un firmware qu'on n'a pas sous la main.
+            if (lignes.any { it.second.index == null }) MG4Hardware.probeCustomDrive("mode Personnalisé")
             withContext(Dispatchers.Main) {
                 if (!isAdded) return@withContext
                 // L'état a pu changer pendant la lecture (l'utilisateur quitte le mode) : on
                 // revérifie avant d'afficher, sinon la carte réapparaîtrait toute seule.
                 if (currentDriveMode != DriveMode.CUSTOM) { carte.visibility = View.GONE; return@withContext }
-                val lignes = listOf(
-                    Triple(customPowerButtons, puissance, R.id.row_cd_power),
-                    Triple(customSteerButtons, direction, R.id.row_cd_steer),
-                    Triple(customPedalButtons, pedale,    R.id.row_cd_pedal)
-                )
-                lignes.forEach { (boutons, valeur, rowId) ->
+                lignes.forEach { (boutons, etat, rowId) ->
                     vue.findViewById<View>(rowId)?.visibility =
-                        if (valeur == null) View.GONE else View.VISIBLE
-                    highlightCustomRow(boutons, valeur)
+                        if (etat.answered) View.VISIBLE else View.GONE
+                    highlightCustomRow(boutons, etat.index)
                 }
-                // Aucune ligne lisible : la carte n'aurait qu'un titre à montrer.
-                val lisible = lignes.any { it.second != null }
+                // Aucune réponse des trois : la carte n'aurait qu'un titre à montrer.
+                val lisible = lignes.any { it.second.answered }
                 carte.visibility = if (lisible) View.VISIBLE else View.GONE
                 // Trois lectures nulles d'un coup, c'est plus vraisemblablement une couche
                 // véhicule pas encore prête qu'une voiture dépourvue des trois équipements.

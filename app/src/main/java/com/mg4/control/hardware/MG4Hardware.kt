@@ -1764,11 +1764,38 @@ object MG4Hardware {
                else setIntPropertyVpmRecovery(customVpmProperty(setting), value)
     }
 
-    private fun getCustom(setting: CustomDriveScale.Setting): Int? {
+    /**
+     * État d'un réglage du mode Personnalisé tel que le véhicule le rend.
+     *
+     * [Unavailable] et [Unknown] ne disent pas la même chose : la première est une voie muette
+     * (méthode absente, service pas encore lié, -1 du SDK) ; la seconde est une voiture qui
+     * répond, mais une valeur hors barème — l'équipement est là, sa position pas encore.
+     */
+    sealed class CustomSetting {
+        /** Position lue : 0 = Éco/Confort, 1 = Normal, 2 = Sport. */
+        data class Known(val position: Int) : CustomSetting()
+
+        /** Le véhicule répond, mais [raw] ne correspond à aucune position. */
+        data class Unknown(val raw: Int) : CustomSetting()
+
+        /** Aucune réponse du véhicule. */
+        object Unavailable : CustomSetting()
+
+        /** Position à surligner, ou null tant qu'elle n'est pas connue. */
+        val index: Int? get() = (this as? Known)?.position
+
+        /** Vrai si le véhicule a répondu : la ligne a sa place à l'écran. */
+        val answered: Boolean get() = this !is Unavailable
+    }
+
+    private fun getCustom(setting: CustomDriveScale.Setting): CustomSetting {
         val method = customMethod(setting, write = false)
-        val raw = if (method != null) (callVsm(method) as? Int) ?: -1
+        val raw = if (method != null) (callVsm(method) as? Int) ?: return CustomSetting.Unavailable
                   else getIntPropertyVpm(customVpmProperty(setting))
+        // -1 est le « je ne sais pas » des deux voies : service non lié côté SDK, exception côté VPM.
+        if (raw < 0) return CustomSetting.Unavailable
         return CustomDriveScale.index(setting, raw, customFamily())
+            ?.let { CustomSetting.Known(it) } ?: CustomSetting.Unknown(raw)
     }
 
     /** Puissance du mode Personnalisé. [index] : 0=Éco, 1=Normal, 2=Sport. */
@@ -1781,17 +1808,19 @@ object MG4Hardware {
     fun setCustomPedal(index: Int): Boolean = setCustom(CustomDriveScale.Setting.PEDAL, index)
 
     /**
-     * Lectures — `null` si le véhicule ne répond pas OU rend une valeur hors échelle.
+     * Lectures des trois réglages.
      *
-     * C'est le seul garde-fou honnête pour savoir si la voiture porte réellement ces réglages :
-     * ils existent sur les six firmwares, mais rien ne dit qu'ils sont montés sur toutes les
-     * finitions. Un `null` fait masquer la ligne plutôt que d'offrir un bouton sans effet.
+     * Le garde-fou n'a pas changé d'esprit — pas de bouton sans effet — mais il se règle sur la
+     * RÉPONSE du véhicule et non sur la valeur : une voiture qui répond hors barème garde sa
+     * ligne, simplement sans rien de surligné. Sur SWI68/165 la position vient du calculateur
+     * d'aide à la conduite et peut manquer à l'ouverture de l'écran ; masquer la ligne pour
+     * autant privait le conducteur d'un réglage qui, lui, s'écrit sans problème.
      */
-    fun getCustomPower(): Int? = getCustom(CustomDriveScale.Setting.POWER)
+    fun getCustomPower(): CustomSetting = getCustom(CustomDriveScale.Setting.POWER)
 
-    fun getCustomSteering(): Int? = getCustom(CustomDriveScale.Setting.STEERING)
+    fun getCustomSteering(): CustomSetting = getCustom(CustomDriveScale.Setting.STEERING)
 
-    fun getCustomPedal(): Int? = getCustom(CustomDriveScale.Setting.PEDAL)
+    fun getCustomPedal(): CustomSetting = getCustom(CustomDriveScale.Setting.PEDAL)
 
     // ── Sonde du mode Personnalisé ────────────────────────────────────────────
     private const val CUSTOM_TAG = "MG4_CUSTOM"
@@ -1810,6 +1839,11 @@ object MG4Hardware {
         val family = customFamily()
         AppLogger.i(CUSTOM_TAG, "SONDE [$origin] firmware=${FirmwareInfo.getGeneration()} famille=$family " +
             "vsm=${sVsm != null} vpm=${sVpm != null} cpm=${sCarPropertyManager != null}")
+        // Le mode de conduite commande l'affichage de toute la carte : illisible, rien ne s'ouvre.
+        AppLogger.i(CUSTOM_TAG, "SONDE [$origin] mode de conduite : " +
+            "CPM 0x${PROP_DRIVE_MODE.toString(16)}=${getIntPropertyCPM(PROP_DRIVE_MODE, AREA_GLOBAL)} · " +
+            "${driveModeGetter()}=${callVsm(driveModeGetter()) ?: "muet"} " +
+            "→ ${getDriveMode()?.label ?: "illisible"}")
         CustomDriveScale.Setting.entries.forEach { setting ->
             val voies = mutableListOf<String>()
             customMethod(setting, write = false)?.let { m -> voies += "$m=${callVsm(m) ?: "null"}" }
@@ -1821,7 +1855,7 @@ object MG4Hardware {
             }
             voies += "CPM 0x${aad.toString(16)}@global=${getIntPropertyCPM(aad, AREA_GLOBAL)} @0=${getIntPropertyCPM(aad, 0)}"
             AppLogger.i(CUSTOM_TAG, "SONDE [$origin] $setting : ${voies.joinToString(" · ")} " +
-                "→ index retenu=${getCustom(setting) ?: "inconnu"}")
+                "→ état retenu=${getCustom(setting)}")
         }
     }
 
@@ -1873,15 +1907,29 @@ object MG4Hardware {
     fun getSteeringHeatOrNull(): Boolean? =
         getIntPropertyHvac(PROP_STEERING_HEAT, AREA_HVAC).takeIf { it >= 0 }?.let { it > 0 }
 
+    /**
+     * Mode de conduite courant, `null` s'il reste illisible.
+     *
+     * Deux voies dans cet ordre : la propriété véhicule (la seule disponible sur SWI133), puis
+     * la méthode du SDK — celle qu'emploie l'écran d'origine sur les firmwares à
+     * VehicleSettingManager (SWI68/165) et CarVehicleSettingClient (A9). Une valeur hors barème
+     * n'est plus repliée sur « Normal » : ce repli silencieux faisait croire que la voiture
+     * n'était jamais en mode Personnalisé, et la carte des trois réglages restait masquée.
+     */
     fun getDriveMode(): DriveMode? {
-        val cpm = sCarPropertyManager ?: return null
-        return try {
-            val raw = (cpm.javaClass
-                .getMethod("getIntProperty", Int::class.java, Int::class.java)
-                .invoke(cpm, PROP_DRIVE_MODE, AREA_GLOBAL) as? Int) ?: return null
-            DriveMode.fromValue(raw)
-        } catch (_: Exception) { null }
+        val rawCpm = getIntPropertyCPM(PROP_DRIVE_MODE, AREA_GLOBAL)
+        DriveMode.fromValueOrNull(rawCpm)?.let { return it }
+        val rawSdk = (callVsm(driveModeGetter()) as? Int)
+        val mode = rawSdk?.let { DriveMode.fromValueOrNull(it) }
+        if (mode == null && logEnabled)
+            AppLogger.d(TAG, "  mode de conduite illisible : CPM=$rawCpm " +
+                "${driveModeGetter()}=${rawSdk ?: "muet"}")
+        return mode
     }
+
+    /** Méthode du SDK qui rend le mode de conduite (l'A9 la nomme autrement). */
+    private fun driveModeGetter(): String =
+        if (customFamily() == CustomDriveScale.Family.A9) "getDrivingMode" else "getDriveMode"
 
     fun getRegenLevel(): RegenLevel? {
         val cpm = sCarPropertyManager ?: return null
