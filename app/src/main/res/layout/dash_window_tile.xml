@@ -79,15 +79,4 @@
 
     </LinearLayout>
 
-    <!-- Affichée quand la sécurité enfant bloque cette vitre (arrière uniquement) -->
-    <TextView
-        android:id="@+id/win_tile_locked"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:text="@string/win_locked"
-        android:textColor="@color/dash_danger"
-        android:textSize="13sp"
-        android:visibility="gone" />
-
 </LinearLayout>

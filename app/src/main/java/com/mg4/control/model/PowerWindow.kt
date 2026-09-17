@@ -8,25 +8,26 @@ package com.mg4.control.model
  * A9 via `CarVehicleSettingClient.setVehicleWindowStatus` : tous deux finissent en
  * `setFloatProperty(propriété, 0x1000000, valeur)`.
  *
- * [lockArea] : zone de la vitre pour le verrou AOSP `WINDOW_LOCK` (VehicleAreaWindow ROW_x_LEFT/RIGHT).
- * Aucune appli d'origine ne s'en sert : sa prise en compte par le véhicule reste à vérifier.
+ * Mesuré en voiture le 2026-09-17 (peut dépendre de la finition, codes de configuration relevés
+ * par la sonde) :
+ * - [hasNativeAutoDown] : la descente auto n'ouvre que la vitre conducteur ; la montée auto (3) marche
+ *   sur les quatre. Ailleurs, l'ouverture auto est émulée par la descente manuelle répétée.
+ * - [hasPositionSensor] : seule la vitre conducteur remonte une position ; les autres restent figées
+ *   hors plage (127.5 / 255) et leur position est estimée après calibration ([WindowEstimator]).
  *
- * [hasNativeAutoDown] : mesuré en voiture le 2026-09-17 — la commande de descente auto n'ouvre que
- * la vitre conducteur ; la montée auto (3) marche sur les quatre. Pour les autres, l'ouverture auto
- * est émulée par la descente manuelle répétée. Peut dépendre de la finition (codes de configuration
- * relevés par la sonde).
+ * Pas de sécurité enfant : le verrou AOSP `WINDOW_LOCK` est ignoré par le véhicule (interrupteurs
+ * arrière toujours actifs), et sans capteur l'app ne voit pas ces interrupteurs.
  */
 enum class PowerWindow(
     val propId: Int,
-    val isRear: Boolean,
-    val lockArea: Int,
     val hasNativeAutoDown: Boolean,
+    val hasPositionSensor: Boolean,
     val shortName: String,
 ) {
-    FRONT_LEFT (0x11603801, isRear = false, lockArea = 0x10,  hasNativeAutoDown = true,  shortName = "AVG"),
-    FRONT_RIGHT(0x11603802, isRear = false, lockArea = 0x40,  hasNativeAutoDown = false, shortName = "AVD"),
-    REAR_LEFT  (0x11603803, isRear = true,  lockArea = 0x100, hasNativeAutoDown = false, shortName = "ARG"),
-    REAR_RIGHT (0x11603804, isRear = true,  lockArea = 0x400, hasNativeAutoDown = false, shortName = "ARD"),
+    FRONT_LEFT (0x11603801, hasNativeAutoDown = true,  hasPositionSensor = true,  shortName = "AVG"),
+    FRONT_RIGHT(0x11603802, hasNativeAutoDown = false, hasPositionSensor = false, shortName = "AVD"),
+    REAR_LEFT  (0x11603803, hasNativeAutoDown = false, hasPositionSensor = false, shortName = "ARG"),
+    REAR_RIGHT (0x11603804, hasNativeAutoDown = false, hasPositionSensor = false, shortName = "ARD"),
 }
 
 /**
@@ -46,7 +47,7 @@ object WindowCommand {
 
     /** Au-delà, un appui court n'est plus pris pour un « stop » : la course auto est finie. */
     const val AUTO_TRAVEL_MS = 6_000L
-    /** Durée de l'ouverture auto émulée (descente manuelle répétée) : une course complète. */
+    /** Durée de l'ouverture auto émulée tant que la vitre n'est pas calibrée. */
     const val EMULATED_OPEN_MS = AUTO_TRAVEL_MS
     /**
      * Plus grande position valide. Le service véhicule SWI68 rejette toute lecture au-delà
@@ -67,10 +68,20 @@ object WindowCommand {
 
     fun auto(direction: Direction): Int = if (direction == Direction.UP) AUTO_UP else AUTO_DOWN
 
+    /** Sens de mouvement d'une commande ; null pour le stop et les valeurs inconnues (5 à 7). */
+    fun directionOf(value: Int): Direction? = when (value) {
+        MANUAL_UP, AUTO_UP     -> Direction.UP
+        MANUAL_DOWN, AUTO_DOWN -> Direction.DOWN
+        else                   -> null
+    }
+
     fun isValid(value: Int): Boolean = value in 0..MAX
 
     /** Position utilisable, ou null (illisible, ou valeur de remplacement d'une vitre sans capteur). */
     fun position(raw: Float?): Float? = raw?.takeIf { it in 0f..POSITION_MAX }
+
+    /** Durée de l'ouverture émulée : la course calibrée si elle existe, sinon la valeur par défaut. */
+    fun emulatedOpenMs(calibration: WindowCalibration?): Long = calibration?.emulatedOpenMs ?: EMULATED_OPEN_MS
 
     /**
      * Appui court : lance la course automatique, sauf si une course vient d'être lancée sur cette
@@ -81,10 +92,4 @@ object WindowCommand {
         val elapsed = if (lastAutoMs == null) -1L else nowMs - lastAutoMs
         return if (elapsed in 0 until AUTO_TRAVEL_MS) STOP else auto(direction)
     }
-
-    /** Sécurité enfant : l'app ne commande plus les vitres arrière. */
-    fun isBlocked(window: PowerWindow, childLock: Boolean): Boolean = childLock && window.isRear
-
-    fun targetsForAll(childLock: Boolean): List<PowerWindow> =
-        PowerWindow.entries.filterNot { isBlocked(it, childLock) }
 }

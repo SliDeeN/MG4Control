@@ -8,7 +8,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Vitres électriques — logique pure : propriétés, commandes, appui court et sécurité enfant.
+ * Vitres électriques — logique pure : propriétés, commandes, appui court, capteurs.
  *
  * Les identifiants viennent des firmwares (VEHICLE_DRIVERWINDOW… dans com.android.car de SWI131,
  * SWI133 et SWI165) : une vitre inversée ferait bouger la mauvaise, sans rien signaler.
@@ -24,24 +24,15 @@ class PowerWindowTest {
     }
 
     @Test
-    fun `seules les vitres arriere sont arriere`() {
-        assertEquals(
-            listOf(PowerWindow.REAR_LEFT, PowerWindow.REAR_RIGHT),
-            PowerWindow.entries.filter { it.isRear }
-        )
-    }
-
-    @Test
-    fun `zones du verrou natif = rangee 2 gauche et droite`() {
-        // VehicleAreaWindow AOSP : ROW_2_LEFT = 0x100, ROW_2_RIGHT = 0x400.
-        assertEquals(0x100, PowerWindow.REAR_LEFT.lockArea)
-        assertEquals(0x400, PowerWindow.REAR_RIGHT.lockArea)
-    }
-
-    @Test
     fun `seule la vitre conducteur a la descente auto native`() {
         // Mesuré en voiture le 2026-09-17 : la commande 4 n'ouvre que la vitre conducteur.
         assertEquals(listOf(PowerWindow.FRONT_LEFT), PowerWindow.entries.filter { it.hasNativeAutoDown })
+    }
+
+    @Test
+    fun `seule la vitre conducteur a un capteur de position`() {
+        // Mesuré en voiture : les autres restent figées sur 127.5 / 255 → calibration possible.
+        assertEquals(listOf(PowerWindow.FRONT_LEFT), PowerWindow.entries.filter { it.hasPositionSensor })
     }
 
     @Test
@@ -62,13 +53,22 @@ class PowerWindowTest {
     }
 
     @Test
-    fun `commandes connues de winclose`() {
+    fun `commandes connues`() {
         assertEquals(0, WindowCommand.STOP)
         assertEquals(1, WindowCommand.manual(Direction.UP))
-        assertEquals(3, WindowCommand.auto(Direction.UP))
-        // Descente : supposée, à confirmer par le test brut en voiture.
         assertEquals(2, WindowCommand.manual(Direction.DOWN))
+        assertEquals(3, WindowCommand.auto(Direction.UP))
         assertEquals(4, WindowCommand.auto(Direction.DOWN))
+    }
+
+    @Test
+    fun `sens de mouvement de chaque commande`() {
+        assertEquals(Direction.UP, WindowCommand.directionOf(WindowCommand.MANUAL_UP))
+        assertEquals(Direction.UP, WindowCommand.directionOf(WindowCommand.AUTO_UP))
+        assertEquals(Direction.DOWN, WindowCommand.directionOf(WindowCommand.MANUAL_DOWN))
+        assertEquals(Direction.DOWN, WindowCommand.directionOf(WindowCommand.AUTO_DOWN))
+        assertNull(WindowCommand.directionOf(WindowCommand.STOP))
+        (5..7).forEach { assertNull("valeur $it", WindowCommand.directionOf(it)) }
     }
 
     @Test
@@ -105,20 +105,9 @@ class PowerWindowTest {
     }
 
     @Test
-    fun `securite enfant bloque les seules vitres arriere`() {
-        assertTrue(WindowCommand.isBlocked(PowerWindow.REAR_LEFT, childLock = true))
-        assertTrue(WindowCommand.isBlocked(PowerWindow.REAR_RIGHT, childLock = true))
-        assertFalse(WindowCommand.isBlocked(PowerWindow.FRONT_LEFT, childLock = true))
-        assertFalse(WindowCommand.isBlocked(PowerWindow.FRONT_RIGHT, childLock = true))
-        PowerWindow.entries.forEach { assertFalse(WindowCommand.isBlocked(it, childLock = false)) }
-    }
-
-    @Test
-    fun `tout ouvrir ou fermer ignore les vitres bloquees`() {
-        assertEquals(PowerWindow.entries.toList(), WindowCommand.targetsForAll(childLock = false))
-        assertEquals(
-            listOf(PowerWindow.FRONT_LEFT, PowerWindow.FRONT_RIGHT),
-            WindowCommand.targetsForAll(childLock = true)
-        )
+    fun `ouverture emulee sans calibration = duree par defaut`() {
+        assertEquals(WindowCommand.EMULATED_OPEN_MS, WindowCommand.emulatedOpenMs(null))
+        val cal = WindowCalibration(downMs = 3_000, upMs = 3_500)
+        assertEquals(cal.emulatedOpenMs, WindowCommand.emulatedOpenMs(cal))
     }
 }

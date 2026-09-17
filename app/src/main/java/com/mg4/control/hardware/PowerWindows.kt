@@ -9,8 +9,10 @@ import android.os.SystemClock
 import androidx.core.content.edit
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.PowerWindow
+import com.mg4.control.model.WindowCalibration
 import com.mg4.control.model.WindowCommand
 import com.mg4.control.model.WindowCommand.Direction
+import com.mg4.control.model.WindowEstimator
 import com.mg4.control.util.FirmwareInfo
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
@@ -27,9 +29,12 @@ import java.util.concurrent.ConcurrentHashMap
  * Pas de verrou de vitesse ([VehicleWriteGate]) : c'est du confort, et les interrupteurs
  * physiques restent utilisables en roulant.
  *
+ * Vitres sans capteur : position estimée ([WindowEstimator]) à partir de leur calibration,
+ * remise à « inconnue » à chaque démarrage de la voiture.
+ *
  * Sondes (tag [TAG]) : liste des propriétés déclarées, lectures par zone, chaque commande avec
- * son résultat, et chaque changement de valeur reçu du véhicule avec le délai depuis la dernière
- * commande de l'app — un mouvement sans commande récente vient donc de l'interrupteur physique.
+ * son résultat, chaque changement de valeur reçu du véhicule avec le délai depuis la dernière
+ * commande de l'app, et chaque estimation de position en fin de mouvement.
  */
 object PowerWindows {
 
@@ -37,11 +42,8 @@ object PowerWindows {
 
     /** Store partagé avec les Réglages. */
     private const val PREFS_NAME = "mg4_settings"
-    private const val KEY_CHILD_LOCK = "windows_child_lock"
 
     private const val AREA_GLOBAL = 0x1000000
-    /** AOSP WINDOW_LOCK (booléen, zone VehicleAreaWindow) — utilisé par aucune appli d'origine. */
-    private const val PROP_WINDOW_LOCK = 0x13200bc4
     /** AOSP WINDOW_POS / WINDOW_MOVE : déclarées dans les firmwares, sondées pour information. */
     private const val PROP_WINDOW_POS  = 0x13400bc0
     private const val PROP_WINDOW_MOVE = 0x13400bc1
@@ -68,6 +70,10 @@ object PowerWindows {
     @Volatile private var listenerProxy: Any? = null
     private val subscribed get() = listenerProxy != null
 
+    /** Estimation des vitres calibrées sans capteur. Lu et écrit uniquement sur [worker]. */
+    private val estimators = HashMap<PowerWindow, WindowEstimator>()
+    private var estimatorsLoaded = false
+
     /**
      * Commande répétée en cours, par vitre : doigt posé ([finger]) ou ouverture auto émulée.
      * Lu et écrit uniquement sur [worker].
@@ -82,47 +88,72 @@ object PowerWindows {
         val cpmReady: Boolean,
         val subscribed: Boolean,
         val values: Map<PowerWindow, Float?>,
+        /** Vitres calibrées → position estimée (null = inconnue jusqu'à la prochaine course complète). */
+        val estimates: Map<PowerWindow, Float?>,
         val lastCommand: String,
     )
 
-    // ── Sécurité enfant ─────────────────────────────────────────────────────
-
-    fun isChildLockOn(context: Context): Boolean =
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_CHILD_LOCK, false)
-
-    /**
-     * Enregistre le choix, arrête un maintien en cours sur une vitre arrière, puis tente le verrou
-     * natif `WINDOW_LOCK` sur les deux zones arrière avec relecture. Le blocage des commandes de
-     * l'app ne dépend PAS de ce verrou : il vaut même si le véhicule l'ignore.
-     */
-    fun setChildLock(context: Context, on: Boolean, onResult: (String) -> Unit) {
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit { putBoolean(KEY_CHILD_LOCK, on) }
-        AppLogger.i(TAG, "sécurité enfant ${if (on) "ON" else "OFF"} (choix utilisateur)")
-        if (on) PowerWindow.entries.filter { it.isRear }.forEach { stopHold(it) }
-        worker.post {
-            val result = applyNativeLock(on)
-            main.post { onResult(result) }
-        }
-    }
-
-    private fun applyNativeLock(on: Boolean): String {
-        val cpm = MG4Hardware.carPropertyManager() ?: return "CarPropertyManager indisponible".also {
-            AppLogger.w(TAG, "WINDOW_LOCK ← $on : $it")
-        }
-        return PowerWindow.entries.filter { it.isRear }.joinToString("\n") { w ->
-            val area = "0x${w.lockArea.toString(16)}"
-            val write = runCatching {
-                cpm.javaClass.getMethod("setBooleanProperty", Int::class.java, Int::class.java, Boolean::class.java)
-                    .invoke(cpm, PROP_WINDOW_LOCK, w.lockArea, on)
+    init {
+        // Un interrupteur physique a pu servir voiture éteinte : toute estimation redevient inconnue.
+        MG4Hardware.registerVehicleConditionListener { state ->
+            if (state == MG4Hardware.CarIgnitionItem.RUN) worker.post {
+                if (estimators.isNotEmpty()) AppLogger.i(TAG, "démarrage : positions estimées remises à inconnues")
+                estimators.values.forEach { it.reset() }
             }
-            val readBack = readBoolean(cpm, PROP_WINDOW_LOCK, w.lockArea)
-            val line = "WINDOW_LOCK ${w.shortName} ($area) ← $on : " +
-                (if (write.isSuccess) "écrit" else "refusé (${describe(write.exceptionOrNull())})") +
-                ", relu = ${readBack ?: "illisible"}"
-            if (write.isSuccess && readBack == on) AppLogger.i(TAG, line) else AppLogger.w(TAG, line)
-            line
         }
     }
+
+    // ── Calibration ─────────────────────────────────────────────────────────
+
+    private fun calKey(window: PowerWindow, part: String) = "win_cal_${window.name.lowercase(Locale.ROOT)}_$part"
+
+    fun calibration(context: Context, window: PowerWindow): WindowCalibration? {
+        if (window.hasPositionSensor) return null
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val down = prefs.getLong(calKey(window, "down_ms"), 0L)
+        val up = prefs.getLong(calKey(window, "up_ms"), 0L)
+        return WindowCalibration(down, up).takeIf { WindowCalibration.isValidMeasure(down) && WindowCalibration.isValidMeasure(up) }
+    }
+
+    /** Enregistre la calibration ; l'assistant finit sur une montée complète, la vitre est donc fermée. */
+    fun saveCalibration(context: Context, window: PowerWindow, cal: WindowCalibration) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putLong(calKey(window, "down_ms"), cal.downMs)
+            putLong(calKey(window, "up_ms"), cal.upMs)
+        }
+        AppLogger.i(TAG, "calibration ${window.shortName} enregistrée : descente ${cal.downMs} ms, montée ${cal.upMs} ms")
+        worker.post { estimators[window] = WindowEstimator(cal).apply { setClosed() } }
+    }
+
+    /** Sur [worker] : charge une fois les calibrations enregistrées. */
+    private fun loadEstimators() {
+        if (estimatorsLoaded) return
+        val context = MG4Hardware.appContext() ?: return
+        PowerWindow.entries.forEach { w -> calibration(context, w)?.let { estimators[w] = WindowEstimator(it) } }
+        estimatorsLoaded = true
+    }
+
+    /** Sur [worker] : suit la commande envoyée pour estimer la position ; journalise en fin de mouvement. */
+    private fun trackEstimate(window: PowerWindow, value: Int) {
+        loadEstimators()
+        val estimator = estimators[window] ?: return
+        val now = SystemClock.elapsedRealtime()
+        val direction = WindowCommand.directionOf(value)
+        when {
+            direction != null -> estimator.start(direction, now)
+            value == WindowCommand.STOP -> {
+                val before = estimator.current(now)
+                estimator.stop(now)
+                AppLogger.i(TAG, "estimation ${window.shortName} : ${pct(before)} (fin de mouvement)")
+            }
+            else -> {
+                estimator.reset()
+                AppLogger.i(TAG, "estimation ${window.shortName} : valeur $value inconnue → position inconnue")
+            }
+        }
+    }
+
+    private fun pct(position: Float?) = position?.let { "≈ ${it.toInt()} %" } ?: "inconnue"
 
     // ── Commandes ───────────────────────────────────────────────────────────
 
@@ -141,21 +172,28 @@ object PowerWindows {
     }
 
     /** Tout ouvrir / tout fermer : toujours la course automatique, jamais le stop. */
-    fun autoAll(windows: List<PowerWindow>, direction: Direction) {
+    fun autoAll(direction: Direction) {
         val now = SystemClock.elapsedRealtime()
-        windows.forEach { lastAutoMs[it] = now }
+        PowerWindow.entries.forEach { lastAutoMs[it] = now }
         val origin = "tout ${if (direction == Direction.UP) "fermer" else "ouvrir"}"
-        worker.post { windows.forEach { startAuto(it, direction, origin) } }
+        worker.post { PowerWindow.entries.forEach { startAuto(it, direction, origin) } }
+    }
+
+    /** Étape 1 de la calibration : montée automatique, pour partir d'une vitre fermée. */
+    fun closeForCalibration(window: PowerWindow) {
+        lastAutoMs.remove(window)
+        worker.post { startAuto(window, Direction.UP, "calibration") }
     }
 
     /**
      * Sur [worker]. Course automatique ; sans descente auto native (toutes les vitres sauf le
      * conducteur, mesuré en voiture), l'ouverture est la descente manuelle répétée le temps d'une
-     * course — ce que faisait l'utilisateur en gardant le doigt posé.
+     * course — la course calibrée si elle existe.
      */
     private fun startAuto(window: PowerWindow, direction: Direction, origin: String) {
         if (direction == Direction.DOWN && !window.hasNativeAutoDown) {
-            startRepeat(window, WindowCommand.MANUAL_DOWN, WindowCommand.EMULATED_OPEN_MS,
+            loadEstimators()
+            startRepeat(window, WindowCommand.MANUAL_DOWN, WindowCommand.emulatedOpenMs(estimators[window]?.calibration),
                 finger = false, label = "$origin, ouverture auto émulée")
         } else {
             // Une ouverture émulée en cours ne doit pas contrarier la montée demandée.
@@ -263,6 +301,7 @@ object PowerWindows {
                 if (ok) "envoyé" else "refusé (${describe(result.exceptionOrNull())})"
             if (ok) AppLogger.i(TAG, msg) else AppLogger.w(TAG, msg)
         }
+        if (ok) trackEstimate(window, value)
         return ok
     }
 
@@ -278,15 +317,18 @@ object PowerWindows {
                 else if (cpm != null && unreadable.add(w)) AppLogger.i(TAG, "${w.shortName} : lecture directe impossible, suivi par événements seulement")
                 read ?: lastValue[w]
             }
-            val snap = Snapshot(cpm != null, subscribed, values, lastCommand)
+            loadEstimators()
+            val now = SystemClock.elapsedRealtime()
+            val estimates = estimators.mapValues { it.value.current(now) }
+            val snap = Snapshot(cpm != null, subscribed, values, estimates, lastCommand)
             main.post { onResult(snap) }
         }
     }
 
     /**
-     * Abonnement aux changements des 4 vitres et de WINDOW_LOCK, une fois pour tout le processus.
+     * Abonnement aux changements des 4 vitres, une fois pour tout le processus.
      * Sur plusieurs firmwares une propriété n'est PAS lisible à la demande mais poussée en
-     * changement (constaté pour les portes) : c'est l'abonnement qui voit l'interrupteur physique.
+     * changement (constaté pour les portes).
      */
     fun ensureSubscribed() {
         worker.post {
@@ -295,8 +337,7 @@ object PowerWindows {
                 AppLogger.w(TAG, "abonnement reporté : CarPropertyManager indisponible")
                 return@post
             }
-            val props = PowerWindow.entries.map { it.propId } + PROP_WINDOW_LOCK
-            listenerProxy = register(cpm, props)
+            listenerProxy = register(cpm, PowerWindow.entries.map { it.propId })
         }
     }
 
@@ -348,10 +389,6 @@ object PowerWindows {
         val pid  = cpv.javaClass.getMethod("getPropertyId").invoke(cpv) as? Int ?: return
         val area = cpv.javaClass.getMethod("getAreaId").invoke(cpv) as? Int ?: 0
         val raw  = cpv.javaClass.getMethod("getValue").invoke(cpv)
-        if (pid == PROP_WINDOW_LOCK) {
-            AppLogger.i(TAG, "événement WINDOW_LOCK zone 0x${area.toString(16)} = $raw")
-            return
-        }
         val window = PowerWindow.entries.firstOrNull { it.propId == pid } ?: return
         val v = (raw as? Number)?.toFloat() ?: return
         val prev = lastValue.put(window, v)
@@ -359,19 +396,15 @@ object PowerWindows {
         val sinceCmd = lastCommandMs[window]?.let { SystemClock.elapsedRealtime() - it }
         val origin = if (sinceCmd != null && sinceCmd < OWN_COMMAND_WINDOW_MS) "après commande app (+$sinceCmd ms)"
                      else "sans commande app récente → interrupteur physique ?"
-        val context = MG4Hardware.appContext()
-        val lockNote = if (window.isRear && context != null && isChildLockOn(context))
-            " ⚠ sécurité enfant ON" else ""
         val sensor = if (WindowCommand.position(v) == null) " [hors 0..100 : pas de capteur]" else ""
-        val msg = "événement ${window.shortName} zone 0x${area.toString(16)} : ${prev ?: "?"} → $v ($origin)$sensor$lockNote"
-        if (lockNote.isEmpty()) AppLogger.i(TAG, msg) else AppLogger.w(TAG, msg)
+        AppLogger.i(TAG, "événement ${window.shortName} zone 0x${area.toString(16)} : ${prev ?: "?"} → $v ($origin)$sensor")
     }
 
     // ── Sonde complète ──────────────────────────────────────────────────────
 
     /**
      * Relevé complet, journalisé et rendu en texte pour la carte Diagnostic : propriétés déclarées
-     * (zones, accès, mode de changement), lecture de chaque zone, verrou natif, abonnement.
+     * (zones, accès, mode de changement), lecture de chaque zone, configuration, calibrations.
      */
     fun probe(origin: String, onResult: (String) -> Unit) {
         worker.post {
@@ -394,18 +427,19 @@ object PowerWindows {
                     }
                     lines += "${w.shortName} 0x${w.propId.toString(16)} ${describeConfig(cfg, areas)} · $reads"
                 }
-                listOf(PROP_WINDOW_LOCK to "WINDOW_LOCK", PROP_WINDOW_POS to "WINDOW_POS", PROP_WINDOW_MOVE to "WINDOW_MOVE")
-                    .forEach { (p, name) ->
-                        val cfg = byId[p]
-                        lines += "$name 0x${p.toString(16)} ${describeConfig(cfg, cfg?.let { cfgAreas(it) }.orEmpty())}"
-                    }
+                listOf(PROP_WINDOW_POS to "WINDOW_POS", PROP_WINDOW_MOVE to "WINDOW_MOVE").forEach { (p, name) ->
+                    val cfg = byId[p]
+                    lines += "$name 0x${p.toString(16)} ${describeConfig(cfg, cfg?.let { cfgAreas(it) }.orEmpty())}"
+                }
                 // Codes de configuration du véhicule (finition) : ce que le service SWI68 lit pour
                 // savoir si la vitre conducteur / les vitres arrière ont la fonction automatique.
                 listOf(PROP_CFG_DRIVER_WINDOW to "config vitre conducteur", PROP_CFG_REAR_WINDOW_AUTO to "config vitres AR auto")
                     .forEach { (p, name) -> lines += "$name 0x${p.toString(16)} = ${readBytes(cpm, p)}" }
-                PowerWindow.entries.filter { it.isRear }.forEach { w ->
-                    lines += "WINDOW_LOCK ${w.shortName} (0x${w.lockArea.toString(16)}) = ${readBoolean(cpm, PROP_WINDOW_LOCK, w.lockArea) ?: "illisible"}"
-                }
+            }
+            loadEstimators()
+            PowerWindow.entries.filterNot { it.hasPositionSensor }.forEach { w ->
+                lines += "calibration ${w.shortName} : " + (estimators[w]?.calibration
+                    ?.let { "descente ${it.downMs} ms, montée ${it.upMs} ms" } ?: "aucune")
             }
             lines.forEach { AppLogger.i(TAG, "SONDE [$origin] $it") }
             val text = lines.joinToString("\n")
@@ -450,11 +484,6 @@ object PowerWindows {
         }
         return "illisible (${describe(last)})"
     }
-
-    private fun readBoolean(cpm: Any, propId: Int, area: Int): Boolean? = runCatching {
-        cpm.javaClass.getMethod("getBooleanProperty", Int::class.java, Int::class.java)
-            .invoke(cpm, propId, area) as? Boolean
-    }.getOrNull()
 
     /** Cause réelle d'un échec par réflexion (InvocationTargetException n'a pas de message). */
     private fun describe(t: Throwable?): String {

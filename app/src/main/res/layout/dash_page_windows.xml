@@ -158,18 +158,19 @@
 
     </LinearLayout>
 
-    <!-- ══════════════════ CARTE : sécurité enfant ══════════════════ -->
+    <!-- ══════════════════ CARTE : calibration (vitres sans capteur) ══════════════════ -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:background="@drawable/bg_card_rounded"
-        android:layout_marginEnd="5dp">
+        android:layout_marginEnd="5dp"
+        android:paddingBottom="6dp">
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/win_child_lock_title"
+            android:text="@string/win_cal_title"
             android:textColor="@color/dash_text_lo"
             android:textSize="13sp"
             android:textStyle="bold"
@@ -185,65 +186,170 @@
             android:layout_height="1dp"
             android:background="@color/dash_border" />
 
-        <LinearLayout
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:padding="14dp">
+            android:text="@string/win_cal_hint"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="4dp" />
 
-            <ImageView
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_window_lock"
-                android:contentDescription="@null"
-                app:tint="@color/text_secondary" />
+        <include
+            android:id="@+id/win_cal_row_front_left"
+            layout="@layout/dash_window_cal_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <include
+            android:id="@+id/win_cal_row_front_right"
+            layout="@layout/dash_window_cal_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <include
+            android:id="@+id/win_cal_row_rear_left"
+            layout="@layout/dash_window_cal_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <include
+            android:id="@+id/win_cal_row_rear_right"
+            layout="@layout/dash_window_cal_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
+
+        <!-- Assistant : masqué jusqu'à « Calibrer ». Textes et bouton d'action pilotés par le code. -->
+        <LinearLayout
+            android:id="@+id/win_cal_wizard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_section_rounded"
+            android:layout_margin="10dp"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/win_cal_wizard_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/win_cal_wizard_step"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dash_text_lo"
+                android:textSize="13sp"
+                android:layout_marginTop="2dp" />
+
+            <TextView
+                android:id="@+id/win_cal_wizard_instruction"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:layout_marginTop="10dp" />
+
+            <TextView
+                android:id="@+id/win_cal_wizard_warning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/win_cal_warning"
+                android:textColor="@color/dash_warn"
+                android:textSize="13sp"
+                android:layout_marginTop="6dp" />
+
+            <TextView
+                android:id="@+id/win_cal_wizard_timer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
+                android:fontFamily="monospace"
+                android:layout_marginTop="8dp"
+                android:visibility="gone" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_cal_action"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginTop="10dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                app:iconGravity="textStart"
+                app:iconSize="32dp"
+                app:iconTint="@color/text_primary"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
 
             <LinearLayout
-                android:layout_width="0dp"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="10dp">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_cal_cancel"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
                 android:layout_weight="1"
-                android:orientation="vertical">
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="@string/win_cal_cancel"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/win_child_lock_label"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_cal_redo"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:layout_marginEnd="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="@string/win_cal_redo"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
 
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/win_child_lock_desc"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_win_cal_save"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_weight="1"
+                android:layout_marginStart="4dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="@string/win_cal_save"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
 
             </LinearLayout>
 
-            <Switch
-                android:id="@+id/switch_win_child_lock"
-                android:scaleX="1.3"
-                android:scaleY="1.3"
-                android:layout_marginHorizontal="8dp"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
-
         </LinearLayout>
-
-        <!-- Résultat du verrou natif (écriture + relecture), rempli après chaque bascule -->
-        <TextView
-            android:id="@+id/win_child_lock_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp"
-            android:fontFamily="monospace"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
-            android:paddingBottom="12dp"
-            android:visibility="gone" />
 
     </LinearLayout>
 

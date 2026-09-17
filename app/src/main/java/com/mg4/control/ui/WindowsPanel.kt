@@ -7,17 +7,15 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
-import android.widget.Switch
 import android.widget.TextView
-import android.widget.Toast
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
-import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.PowerWindows
 import com.mg4.control.model.PowerWindow
 import com.mg4.control.model.WindowCommand
 import com.mg4.control.model.WindowCommand.Direction
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * Onglet « Vitres » du tableau de bord (V0 de test), sorti de DashboardFragment pour ne pas
@@ -26,6 +24,8 @@ import java.util.Locale
  * Boutons de vitre pilotés au toucher : relâché avant [WindowCommand.HOLD_DELAY_MS] = appui
  * court (course auto, ou stop si une course est en cours) ; au-delà = commande manuelle répétée
  * jusqu'au relâché. Le clic (y compris d'accessibilité) porte l'appui court.
+ *
+ * La carte de calibration a sa propre classe ([WindowCalibrationPanel]).
  */
 class WindowsPanel {
 
@@ -34,14 +34,13 @@ class WindowsPanel {
         val value: TextView,
         val up: MaterialButton,
         val down: MaterialButton,
-        val locked: TextView,
     )
 
     private val tiles = mutableListOf<Tile>()
     private val rawWindowButtons = linkedMapOf<PowerWindow, MaterialButton>()
+    private val calibration = WindowCalibrationPanel()
     private var rawWindow = PowerWindow.FRONT_RIGHT
     private var root: View? = null
-    private var lockStatus: TextView? = null
     private var diagLive: TextView? = null
     private var diagProbe: TextView? = null
     private var shown = false
@@ -55,10 +54,16 @@ class WindowsPanel {
         }
     }
 
-    private companion object {
-        const val POLL_MS = 1_000L
-        const val SUBSCRIBE_RETRY_MS = 10_000L
-        const val DIM_ALPHA = 0.35f
+    companion object {
+        private const val POLL_MS = 1_000L
+        private const val SUBSCRIBE_RETRY_MS = 10_000L
+
+        fun nameRes(window: PowerWindow): Int = when (window) {
+            PowerWindow.FRONT_LEFT  -> R.string.win_front_left
+            PowerWindow.FRONT_RIGHT -> R.string.win_front_right
+            PowerWindow.REAR_LEFT   -> R.string.win_rear_left
+            PowerWindow.REAR_RIGHT  -> R.string.win_rear_right
+        }
     }
 
     fun bind(view: View) {
@@ -80,26 +85,16 @@ class WindowsPanel {
                 t.findViewById(R.id.win_tile_value),
                 t.findViewById(R.id.btn_win_up),
                 t.findViewById(R.id.btn_win_down),
-                t.findViewById(R.id.win_tile_locked),
             )
             bindPress(tile.up, window, Direction.UP)
             bindPress(tile.down, window, Direction.DOWN)
             tiles += tile
         }
 
-        view.findViewById<MaterialButton>(R.id.btn_win_all_close).setOnClickListener { all(Direction.UP) }
-        view.findViewById<MaterialButton>(R.id.btn_win_all_open).setOnClickListener { all(Direction.DOWN) }
+        view.findViewById<MaterialButton>(R.id.btn_win_all_close).setOnClickListener { PowerWindows.autoAll(Direction.UP) }
+        view.findViewById<MaterialButton>(R.id.btn_win_all_open).setOnClickListener { PowerWindows.autoAll(Direction.DOWN) }
 
-        lockStatus = view.findViewById(R.id.win_child_lock_status)
-        view.findViewById<Switch>(R.id.switch_win_child_lock).apply {
-            isChecked = PowerWindows.isChildLockOn(context)
-            setOnCheckedChangeListener { sw, on ->
-                lockStatus?.visibility = View.VISIBLE
-                lockStatus?.setText(R.string.win_probe_running)
-                PowerWindows.setChildLock(sw.context, on) { result -> lockStatus?.text = result }
-                applyLockVisuals()
-            }
-        }
+        calibration.bind(view)
 
         diagLive = view.findViewById(R.id.win_diag_live)
         diagProbe = view.findViewById(R.id.win_diag_probe)
@@ -122,20 +117,16 @@ class WindowsPanel {
             R.id.btn_win_raw_0, R.id.btn_win_raw_1, R.id.btn_win_raw_2, R.id.btn_win_raw_3,
             R.id.btn_win_raw_4, R.id.btn_win_raw_5, R.id.btn_win_raw_6, R.id.btn_win_raw_7,
         ).forEachIndexed { value, id ->
-            view.findViewById<MaterialButton>(id).setOnClickListener {
-                if (refuseIfBlocked(rawWindow)) return@setOnClickListener
-                PowerWindows.sendRaw(rawWindow, value)
-            }
+            view.findViewById<MaterialButton>(id).setOnClickListener { PowerWindows.sendRaw(rawWindow, value) }
         }
 
         highlightRawWindow()
-        applyLockVisuals()
     }
 
     fun onShown() {
         if (shown) return
         shown = true
-        applyLockVisuals()
+        calibration.refreshRows()
         lastSubscribeTry = SystemClock.elapsedRealtime()
         PowerWindows.ensureSubscribed()
         if (diagProbe?.text.isNullOrEmpty()) runProbe("ouverture onglet")
@@ -148,6 +139,7 @@ class WindowsPanel {
         if (!shown) return
         shown = false
         handler.removeCallbacksAndMessages(null)
+        calibration.onHidden()
         PowerWindows.stopFingerHolds()
     }
 
@@ -161,10 +153,7 @@ class WindowsPanel {
             setHoldHighlight(btn, true)
             PowerWindows.startHold(window, direction)
         }
-        btn.setOnClickListener {
-            if (refuseIfBlocked(window)) return@setOnClickListener
-            PowerWindows.shortPress(window, direction)
-        }
+        btn.setOnClickListener { PowerWindows.shortPress(window, direction) }
         btn.setOnTouchListener { v, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
@@ -172,8 +161,7 @@ class WindowsPanel {
                     v.parent?.requestDisallowInterceptTouchEvent(true)
                     v.isPressed = true
                     holdStarted = false
-                    // Vitre bloquée : pas de maintien ; le relâché passera par le clic, qui explique le refus.
-                    if (!isBlocked(window)) handler.postDelayed(startHold, WindowCommand.HOLD_DELAY_MS)
+                    handler.postDelayed(startHold, WindowCommand.HOLD_DELAY_MS)
                 }
                 MotionEvent.ACTION_UP -> {
                     v.isPressed = false
@@ -197,28 +185,6 @@ class WindowsPanel {
         PowerWindows.stopHold(window)
     }
 
-    private fun all(direction: Direction) {
-        val ctx = root?.context ?: return
-        val lock = PowerWindows.isChildLockOn(ctx)
-        val targets = WindowCommand.targetsForAll(lock)
-        if (lock) AppLogger.i(PowerWindows.TAG, "tout ${direction.name} : vitres arrière ignorées (sécurité enfant)")
-        PowerWindows.autoAll(targets, direction)
-    }
-
-    private fun isBlocked(window: PowerWindow): Boolean {
-        val ctx = root?.context ?: return true
-        return WindowCommand.isBlocked(window, PowerWindows.isChildLockOn(ctx))
-    }
-
-    /** Vrai (et l'utilisateur est prévenu) si la sécurité enfant bloque cette vitre. */
-    private fun refuseIfBlocked(window: PowerWindow): Boolean {
-        if (!isBlocked(window)) return false
-        val ctx = root?.context ?: return true
-        AppLogger.i(PowerWindows.TAG, "${window.shortName} : commande refusée, sécurité enfant active")
-        Toast.makeText(ctx, R.string.win_refused_child_lock, Toast.LENGTH_SHORT).show()
-        return true
-    }
-
     // ── Affichage ───────────────────────────────────────────────────────────
 
     private fun refresh() {
@@ -229,6 +195,10 @@ class WindowsPanel {
                 val raw = snap.values[t.window]
                 val rawTxt = raw?.let { String.format(Locale.ROOT, "%.1f", it) }
                 t.value.text = when {
+                    // Vitre calibrée : position estimée, « inconnue » tant qu'aucune course complète.
+                    snap.estimates.containsKey(t.window) -> snap.estimates[t.window]
+                        ?.let { ctx.getString(R.string.win_value_estimated, it.roundToInt()) }
+                        ?: ctx.getString(R.string.win_value_estimate_unknown)
                     rawTxt == null                           -> ctx.getString(R.string.win_value, ctx.getString(R.string.win_value_unknown))
                     // 127.5 / 255 figés : la vitre n'a pas de capteur, la valeur ne veut rien dire.
                     WindowCommand.position(raw) == null      -> ctx.getString(R.string.win_value_no_sensor, rawTxt)
@@ -255,18 +225,6 @@ class WindowsPanel {
         PowerWindows.probe(origin) { text -> diagProbe?.text = text }
     }
 
-    private fun applyLockVisuals() {
-        val ctx = root?.context ?: return
-        val lock = PowerWindows.isChildLockOn(ctx)
-        tiles.forEach { t ->
-            val blocked = WindowCommand.isBlocked(t.window, lock)
-            // Boutons laissés actifs : un appui sur une vitre bloquée doit expliquer le refus.
-            t.up.alpha = if (blocked) DIM_ALPHA else 1f
-            t.down.alpha = if (blocked) DIM_ALPHA else 1f
-            t.locked.visibility = if (blocked) View.VISIBLE else View.GONE
-        }
-    }
-
     private fun setHoldHighlight(btn: MaterialButton, on: Boolean) {
         val ctx = btn.context
         btn.backgroundTintList = ColorStateList.valueOf(ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn))
@@ -281,12 +239,5 @@ class WindowsPanel {
             btn.setTextColor(ctx.getColor(if (on) R.color.dash_accent else R.color.text_secondary))
             btn.strokeColor = ColorStateList.valueOf(ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border))
         }
-    }
-
-    private fun nameRes(window: PowerWindow): Int = when (window) {
-        PowerWindow.FRONT_LEFT  -> R.string.win_front_left
-        PowerWindow.FRONT_RIGHT -> R.string.win_front_right
-        PowerWindow.REAR_LEFT   -> R.string.win_rear_left
-        PowerWindow.REAR_RIGHT  -> R.string.win_rear_right
     }
 }
