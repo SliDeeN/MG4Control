@@ -518,6 +518,7 @@
     <string name="win_raw_title">Rohtest: Fenster wählen, dann den zu sendenden Wert</string>
     <string name="win_value">Gelesener Wert: %1$s</string>
     <string name="win_value_unknown">nicht lesbar</string>
+    <string name="win_value_no_sensor">Kein Sensor (Rohwert %1$s)</string>
     <string name="win_diag_link">Fahrzeugverbindung: %1$s · Abonnement: %2$s</string>
     <string name="win_diag_last">Letzter Befehl: %1$s</string>
     <string name="win_yes">ja</string>

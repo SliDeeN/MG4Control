@@ -518,6 +518,7 @@
     <string name="win_raw_title">Test diretto: scegli il finestrino, poi il valore da inviare</string>
     <string name="win_value">Valore letto: %1$s</string>
     <string name="win_value_unknown">illeggibile</string>
+    <string name="win_value_no_sensor">Nessun sensore (grezzo %1$s)</string>
     <string name="win_diag_link">Collegamento veicolo: %1$s · sottoscrizione: %2$s</string>
     <string name="win_diag_last">Ultimo comando: %1$s</string>
     <string name="win_yes">sì</string>

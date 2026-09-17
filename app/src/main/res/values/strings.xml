@@ -520,6 +520,7 @@
     <string name="win_raw_title">Test brut : choisir la vitre, puis la valeur à envoyer</string>
     <string name="win_value">Valeur lue : %1$s</string>
     <string name="win_value_unknown">illisible</string>
+    <string name="win_value_no_sensor">Pas de capteur (brut %1$s)</string>
     <string name="win_diag_link">Liaison véhicule : %1$s · abonnement : %2$s</string>
     <string name="win_diag_last">Dernière commande : %1$s</string>
     <string name="win_yes">oui</string>

@@ -518,6 +518,7 @@
     <string name="win_raw_title">Raw test: pick the window, then the value to send</string>
     <string name="win_value">Read value: %1$s</string>
     <string name="win_value_unknown">unreadable</string>
+    <string name="win_value_no_sensor">No sensor (raw %1$s)</string>
     <string name="win_diag_link">Vehicle link: %1$s · subscription: %2$s</string>
     <string name="win_diag_last">Last command: %1$s</string>
     <string name="win_yes">yes</string>

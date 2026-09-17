@@ -518,6 +518,7 @@
     <string name="win_raw_title">Prueba directa: elige la ventanilla y luego el valor a enviar</string>
     <string name="win_value">Valor leído: %1$s</string>
     <string name="win_value_unknown">ilegible</string>
+    <string name="win_value_no_sensor">Sin sensor (valor bruto %1$s)</string>
     <string name="win_diag_link">Conexión con el vehículo: %1$s · suscripción: %2$s</string>
     <string name="win_diag_last">Último comando: %1$s</string>
     <string name="win_yes">sí</string>

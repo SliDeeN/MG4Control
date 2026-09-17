@@ -14,6 +14,7 @@ import com.mg4.control.model.WindowCommand.Direction
 import com.mg4.control.util.FirmwareInfo
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -44,6 +45,10 @@ object PowerWindows {
     /** AOSP WINDOW_POS / WINDOW_MOVE : déclarées dans les firmwares, sondées pour information. */
     private const val PROP_WINDOW_POS  = 0x13400bc0
     private const val PROP_WINDOW_MOVE = 0x13400bc1
+    /** Codes de configuration (octets) lus par VehicleConditionBinder SWI68 : getWindowControl /
+     *  getRearWindowAutoConfigCode (« rearWindowAutomaticStatus »). Sondés pour relier finition et auto. */
+    private const val PROP_CFG_DRIVER_WINDOW    = 0x21704208
+    private const val PROP_CFG_REAR_WINDOW_AUTO = 0x21704267
     /** Changement reçu plus tard que ça après notre dernière commande = interrupteur physique. */
     private const val OWN_COMMAND_WINDOW_MS = 3_000L
 
@@ -63,8 +68,11 @@ object PowerWindows {
     @Volatile private var listenerProxy: Any? = null
     private val subscribed get() = listenerProxy != null
 
-    /** Maintien en cours, par vitre. Lu et écrit uniquement sur [worker]. */
-    private class Hold(val value: Int, val startMs: Long, val repeat: Runnable) {
+    /**
+     * Commande répétée en cours, par vitre : doigt posé ([finger]) ou ouverture auto émulée.
+     * Lu et écrit uniquement sur [worker].
+     */
+    private class Hold(val value: Int, val startMs: Long, val finger: Boolean, val label: String, val repeat: Runnable) {
         var sent = 0
         var failed = 0
     }
@@ -122,63 +130,104 @@ object PowerWindows {
     fun shortPress(window: PowerWindow, direction: Direction) {
         val now = SystemClock.elapsedRealtime()
         val value = WindowCommand.forShortPress(direction, lastAutoMs[window], now)
-        if (value == WindowCommand.STOP) lastAutoMs.remove(window) else lastAutoMs[window] = now
-        worker.post { send(window, value, "appui court") }
+        if (value == WindowCommand.STOP) {
+            lastAutoMs.remove(window)
+            // Une ouverture émulée s'arrête comme une course native : d'un seul appui.
+            worker.post { if (!endRepeat(window, "appui court")) send(window, WindowCommand.STOP, "appui court") }
+        } else {
+            lastAutoMs[window] = now
+            worker.post { startAuto(window, direction, "appui court") }
+        }
     }
 
     /** Tout ouvrir / tout fermer : toujours la course automatique, jamais le stop. */
     fun autoAll(windows: List<PowerWindow>, direction: Direction) {
         val now = SystemClock.elapsedRealtime()
-        val value = WindowCommand.auto(direction)
         windows.forEach { lastAutoMs[it] = now }
-        worker.post { windows.forEach { send(it, value, "tout ${if (direction == Direction.UP) "fermer" else "ouvrir"}") } }
+        val origin = "tout ${if (direction == Direction.UP) "fermer" else "ouvrir"}"
+        worker.post { windows.forEach { startAuto(it, direction, origin) } }
+    }
+
+    /**
+     * Sur [worker]. Course automatique ; sans descente auto native (toutes les vitres sauf le
+     * conducteur, mesuré en voiture), l'ouverture est la descente manuelle répétée le temps d'une
+     * course — ce que faisait l'utilisateur en gardant le doigt posé.
+     */
+    private fun startAuto(window: PowerWindow, direction: Direction, origin: String) {
+        if (direction == Direction.DOWN && !window.hasNativeAutoDown) {
+            startRepeat(window, WindowCommand.MANUAL_DOWN, WindowCommand.EMULATED_OPEN_MS,
+                finger = false, label = "$origin, ouverture auto émulée")
+        } else {
+            // Une ouverture émulée en cours ne doit pas contrarier la montée demandée.
+            endRepeat(window, "$origin demandé")
+            send(window, WindowCommand.auto(direction), origin)
+        }
     }
 
     /** Appui long : commande manuelle répétée jusqu'à [stopHold], comme un doigt sur l'interrupteur. */
     fun startHold(window: PowerWindow, direction: Direction) {
         lastAutoMs.remove(window)
-        val value = WindowCommand.manual(direction)
         worker.post {
-            holds.remove(window)?.let { worker.removeCallbacks(it.repeat) }
-            lateinit var hold: Hold
-            val repeat = object : Runnable {
-                override fun run() {
-                    if (holds[window] !== hold) return
-                    if (SystemClock.elapsedRealtime() - hold.startMs > WindowCommand.HOLD_MAX_MS) {
-                        AppLogger.w(TAG, "maintien ${window.shortName} : ${WindowCommand.HOLD_MAX_MS} ms dépassés, arrêt de sécurité")
-                        stopHold(window)
-                        return
-                    }
-                    if (send(window, value, "maintien", quiet = true)) hold.sent++ else hold.failed++
-                    worker.postDelayed(this, WindowCommand.HOLD_REPEAT_MS)
-                }
-            }
-            hold = Hold(value, SystemClock.elapsedRealtime(), repeat)
-            holds[window] = hold
-            AppLogger.i(TAG, "maintien ${window.shortName} début ← $value toutes les ${WindowCommand.HOLD_REPEAT_MS} ms")
-            repeat.run()
+            startRepeat(window, WindowCommand.manual(direction), WindowCommand.HOLD_MAX_MS,
+                finger = true, label = "maintien")
         }
     }
 
-    /** Fin de maintien : stop envoyé seulement si un maintien était en cours (sans effet sinon). */
+    /** Fin de maintien ou d'ouverture émulée : stop envoyé seulement si une répétition était en cours. */
     fun stopHold(window: PowerWindow) {
-        worker.post {
-            val hold = holds.remove(window) ?: return@post
-            worker.removeCallbacks(hold.repeat)
-            val ms = SystemClock.elapsedRealtime() - hold.startMs
-            AppLogger.i(TAG, "maintien ${window.shortName} fin : ← ${hold.value} ×${hold.sent} " +
-                "(échecs ${hold.failed}) en $ms ms")
-            send(window, WindowCommand.STOP, "fin de maintien")
-        }
+        worker.post { endRepeat(window, "relâché") }
     }
 
-    fun stopAllHolds() = PowerWindow.entries.forEach { stopHold(it) }
+    /**
+     * Onglet quitté : les doigts posés s'arrêtent (le relâché ne viendra peut-être jamais) ;
+     * une ouverture émulée, bornée dans le temps, va au bout comme une course native.
+     */
+    fun stopFingerHolds() {
+        worker.post { holds.filterValues { it.finger }.keys.toList().forEach { endRepeat(it, "onglet quitté") } }
+    }
 
     /** Test brut de l'onglet Diagnostic : n'importe quelle valeur de 0 à 7, pour décoder l'échelle. */
     fun sendRaw(window: PowerWindow, value: Int) {
         if (!WindowCommand.isValid(value)) return
         lastAutoMs.remove(window)
-        worker.post { send(window, value, "test brut") }
+        worker.post {
+            endRepeat(window, "test brut")
+            send(window, value, "test brut")
+        }
+    }
+
+    /** Sur [worker]. Remplace la répétition en cours sur cette vitre, s'il y en a une. */
+    private fun startRepeat(window: PowerWindow, value: Int, maxMs: Long, finger: Boolean, label: String) {
+        holds.remove(window)?.let { worker.removeCallbacks(it.repeat) }
+        lateinit var hold: Hold
+        val repeat = object : Runnable {
+            override fun run() {
+                if (holds[window] !== hold) return
+                if (SystemClock.elapsedRealtime() - hold.startMs >= maxMs) {
+                    if (finger) AppLogger.w(TAG, "${window.shortName} $label : $maxMs ms dépassés, arrêt de sécurité")
+                    endRepeat(window, if (finger) "arrêt de sécurité" else "course terminée")
+                    return
+                }
+                if (send(window, value, label, quiet = true)) hold.sent++ else hold.failed++
+                worker.postDelayed(this, WindowCommand.HOLD_REPEAT_MS)
+            }
+        }
+        hold = Hold(value, SystemClock.elapsedRealtime(), finger, label, repeat)
+        holds[window] = hold
+        AppLogger.i(TAG, "${window.shortName} $label : début ← $value toutes les " +
+            "${WindowCommand.HOLD_REPEAT_MS} ms (max $maxMs ms)")
+        repeat.run()
+    }
+
+    /** Sur [worker]. Arrête la répétition en cours et envoie le stop ; faux s'il n'y en avait pas. */
+    private fun endRepeat(window: PowerWindow, reason: String): Boolean {
+        val hold = holds.remove(window) ?: return false
+        worker.removeCallbacks(hold.repeat)
+        val ms = SystemClock.elapsedRealtime() - hold.startMs
+        AppLogger.i(TAG, "${window.shortName} ${hold.label} : fin ($reason) ← ${hold.value} ×${hold.sent} " +
+            "(échecs ${hold.failed}) en $ms ms")
+        send(window, WindowCommand.STOP, reason)
+        return true
     }
 
     /** À appeler sur [worker]. [quiet] : pas de log par envoi (répétition du maintien, résumée à la fin). */
@@ -313,7 +362,8 @@ object PowerWindows {
         val context = MG4Hardware.appContext()
         val lockNote = if (window.isRear && context != null && isChildLockOn(context))
             " ⚠ sécurité enfant ON" else ""
-        val msg = "événement ${window.shortName} zone 0x${area.toString(16)} : ${prev ?: "?"} → $v ($origin)$lockNote"
+        val sensor = if (WindowCommand.position(v) == null) " [hors 0..100 : pas de capteur]" else ""
+        val msg = "événement ${window.shortName} zone 0x${area.toString(16)} : ${prev ?: "?"} → $v ($origin)$sensor$lockNote"
         if (lockNote.isEmpty()) AppLogger.i(TAG, msg) else AppLogger.w(TAG, msg)
     }
 
@@ -349,6 +399,10 @@ object PowerWindows {
                         val cfg = byId[p]
                         lines += "$name 0x${p.toString(16)} ${describeConfig(cfg, cfg?.let { cfgAreas(it) }.orEmpty())}"
                     }
+                // Codes de configuration du véhicule (finition) : ce que le service SWI68 lit pour
+                // savoir si la vitre conducteur / les vitres arrière ont la fonction automatique.
+                listOf(PROP_CFG_DRIVER_WINDOW to "config vitre conducteur", PROP_CFG_REAR_WINDOW_AUTO to "config vitres AR auto")
+                    .forEach { (p, name) -> lines += "$name 0x${p.toString(16)} = ${readBytes(cpm, p)}" }
                 PowerWindow.entries.filter { it.isRear }.forEach { w ->
                     lines += "WINDOW_LOCK ${w.shortName} (0x${w.lockArea.toString(16)}) = ${readBoolean(cpm, PROP_WINDOW_LOCK, w.lockArea) ?: "illisible"}"
                 }
@@ -379,6 +433,23 @@ object PowerWindows {
 
     private fun readFloat(cpm: Any, propId: Int): Float? =
         readFloatArea(cpm, propId, AREA_GLOBAL).getOrNull() ?: readFloatArea(cpm, propId, 0).getOrNull()
+
+    /** Propriété octets (codes de configuration) en hexadécimal, ou la cause de l'échec. */
+    private fun readBytes(cpm: Any, propId: Int): String {
+        val getter = runCatching {
+            cpm.javaClass.getMethod("getProperty", Class::class.java, Int::class.java, Int::class.java)
+        }.getOrElse { return "getProperty introuvable" }
+        var last: Throwable? = null
+        for (area in intArrayOf(0, AREA_GLOBAL)) {
+            val r = runCatching {
+                val cpv = getter.invoke(cpm, ByteArray::class.java, propId, area)
+                cpv?.javaClass?.getMethod("getValue")?.invoke(cpv) as? ByteArray
+            }
+            r.getOrNull()?.let { bytes -> return bytes.joinToString(" ", "[", "]") { String.format(Locale.ROOT, "%02x", it) } }
+            last = r.exceptionOrNull() ?: last
+        }
+        return "illisible (${describe(last)})"
+    }
 
     private fun readBoolean(cpm: Any, propId: Int, area: Int): Boolean? = runCatching {
         cpm.javaClass.getMethod("getBooleanProperty", Int::class.java, Int::class.java)

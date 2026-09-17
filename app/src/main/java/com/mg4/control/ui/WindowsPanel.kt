@@ -148,7 +148,7 @@ class WindowsPanel {
         if (!shown) return
         shown = false
         handler.removeCallbacksAndMessages(null)
-        PowerWindows.stopAllHolds()
+        PowerWindows.stopFingerHolds()
     }
 
     // ── Appui court / long ──────────────────────────────────────────────────
@@ -226,9 +226,14 @@ class WindowsPanel {
             if (!shown) return@refresh
             val ctx = root?.context ?: return@refresh
             tiles.forEach { t ->
-                val v = snap.values[t.window]
-                val txt = v?.let { String.format(Locale.ROOT, "%.1f", it) } ?: ctx.getString(R.string.win_value_unknown)
-                t.value.text = ctx.getString(R.string.win_value, txt)
+                val raw = snap.values[t.window]
+                val rawTxt = raw?.let { String.format(Locale.ROOT, "%.1f", it) }
+                t.value.text = when {
+                    rawTxt == null                           -> ctx.getString(R.string.win_value, ctx.getString(R.string.win_value_unknown))
+                    // 127.5 / 255 figés : la vitre n'a pas de capteur, la valeur ne veut rien dire.
+                    WindowCommand.position(raw) == null      -> ctx.getString(R.string.win_value_no_sensor, rawTxt)
+                    else                                     -> ctx.getString(R.string.win_value, rawTxt)
+                }
             }
             val yes = ctx.getString(R.string.win_yes)
             val no = ctx.getString(R.string.win_no)

@@ -3,6 +3,7 @@ package com.mg4.control.model
 import com.mg4.control.model.WindowCommand.Direction
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -35,6 +36,29 @@ class PowerWindowTest {
         // VehicleAreaWindow AOSP : ROW_2_LEFT = 0x100, ROW_2_RIGHT = 0x400.
         assertEquals(0x100, PowerWindow.REAR_LEFT.lockArea)
         assertEquals(0x400, PowerWindow.REAR_RIGHT.lockArea)
+    }
+
+    @Test
+    fun `seule la vitre conducteur a la descente auto native`() {
+        // Mesuré en voiture le 2026-09-17 : la commande 4 n'ouvre que la vitre conducteur.
+        assertEquals(listOf(PowerWindow.FRONT_LEFT), PowerWindow.entries.filter { it.hasNativeAutoDown })
+    }
+
+    @Test
+    fun `position lue valide de 0 a 100`() {
+        assertEquals(0f, WindowCommand.position(0f))
+        assertEquals(42.5f, WindowCommand.position(42.5f))
+        assertEquals(100f, WindowCommand.position(100f))
+    }
+
+    @Test
+    fun `valeurs hors plage = vitre sans capteur`() {
+        // Relevées en voiture : 127.5 (arrière) et 255 (passager) ne bougent jamais.
+        assertNull(WindowCommand.position(127.5f))
+        assertNull(WindowCommand.position(255f))
+        assertNull(WindowCommand.position(-1f))
+        assertNull(WindowCommand.position(Float.NaN))
+        assertNull(WindowCommand.position(null))
     }
 
     @Test

@@ -518,6 +518,7 @@
     <string name="win_raw_title">Teste direto: escolha o vidro e depois o valor a enviar</string>
     <string name="win_value">Valor lido: %1$s</string>
     <string name="win_value_unknown">ilegível</string>
+    <string name="win_value_no_sensor">Sem sensor (bruto %1$s)</string>
     <string name="win_diag_link">Ligação ao veículo: %1$s · subscrição: %2$s</string>
     <string name="win_diag_last">Último comando: %1$s</string>
     <string name="win_yes">sim</string>
