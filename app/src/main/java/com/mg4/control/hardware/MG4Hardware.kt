@@ -1788,14 +1788,38 @@ object MG4Hardware {
         val answered: Boolean get() = this !is Unavailable
     }
 
+    /**
+     * Voie de secours SWI68/165 : l'instantané des réglages tenu par le service.
+     *
+     * C'est celle qu'emploie l'écran d'origine (`DrivingSettingsRepository` lit le bean, jamais
+     * le getter direct). Le getter direct, lui, relit la propriété du calculateur d'aide à la
+     * conduite à chaque appel et peut rester muet ; le bean, lui, garde la dernière valeur reçue.
+     * Les champs du bean portent les mêmes noms que les méthodes du manager.
+     */
+    private fun customFromBean(getter: String?): Int? {
+        if (getter == null) return null
+        val bean = callVsm("getVehicleSettingStatus") ?: return null
+        return try {
+            bean.javaClass.getMethod(getter).invoke(bean) as? Int
+        } catch (e: Exception) {
+            AppLogger.d(CUSTOM_TAG, "  bean.$getter() exc: ${e.message}")
+            null
+        }
+    }
+
     private fun getCustom(setting: CustomDriveScale.Setting): CustomSetting {
+        val family = customFamily()
         val method = customMethod(setting, write = false)
-        val raw = if (method != null) (callVsm(method) as? Int) ?: return CustomSetting.Unavailable
-                  else getIntPropertyVpm(customVpmProperty(setting))
-        // -1 est le « je ne sais pas » des deux voies : service non lié côté SDK, exception côté VPM.
-        if (raw < 0) return CustomSetting.Unavailable
-        return CustomDriveScale.index(setting, raw, customFamily())
-            ?.let { CustomSetting.Known(it) } ?: CustomSetting.Unknown(raw)
+        val direct = if (method != null) (callVsm(method) as? Int)
+                     else getIntPropertyVpm(customVpmProperty(setting))
+        val bean = if (family == CustomDriveScale.Family.VSM_68) customFromBean(method) else null
+        // La première voie qui rend une position connue l'emporte ; -1 est le « je ne sais pas »
+        // commun aux deux (service non lié côté SDK, exception côté VPM).
+        val reponses = listOfNotNull(direct, bean).filter { it >= 0 }
+        reponses.forEach { raw ->
+            CustomDriveScale.index(setting, raw, family)?.let { return CustomSetting.Known(it) }
+        }
+        return reponses.firstOrNull()?.let { CustomSetting.Unknown(it) } ?: CustomSetting.Unavailable
     }
 
     /** Puissance du mode Personnalisé. [index] : 0=Éco, 1=Normal, 2=Sport. */
@@ -1846,7 +1870,10 @@ object MG4Hardware {
             "→ ${getDriveMode()?.label ?: "illisible"}")
         CustomDriveScale.Setting.entries.forEach { setting ->
             val voies = mutableListOf<String>()
-            customMethod(setting, write = false)?.let { m -> voies += "$m=${callVsm(m) ?: "null"}" }
+            val getter = customMethod(setting, write = false)
+            getter?.let { m -> voies += "$m=${callVsm(m) ?: "null"}" }
+            if (family == CustomDriveScale.Family.VSM_68)
+                voies += "bean.$getter=${customFromBean(getter) ?: "null"}"
             if (sVpm != null) voies += "VPM 0x${customVpmProperty(setting).toString(16)}=${getIntPropertyVpm(customVpmProperty(setting))}"
             val aad = when (setting) {
                 CustomDriveScale.Setting.POWER    -> AAD_CUSTOM_POWER
