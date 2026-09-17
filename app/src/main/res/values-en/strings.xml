@@ -512,7 +512,7 @@
     <string name="win_all_open">Open all</string>
     <string name="win_auto_title">Automatic closing</string>
     <string name="win_auto_label">Close the windows when leaving the car</string>
-    <string name="win_auto_desc">Car in P, once armed by the conditions below: when the car leaves READY (driver door opened or car switched off), all windows close after the chosen delay. Going back to READY before then cancels. If closing completes, the windows are considered closed at the next start.</string>
+    <string name="win_auto_desc">Car in P, once armed by the conditions below: when the car leaves READY (driver door opened or car switched off), all windows close after the chosen delay. Going back to READY before then cancels.</string>
     <string name="win_auto_warning">No anti-pinch protection on windows other than the driver\'s: nobody near the windows when leaving.</string>
     <string name="win_auto_arming_title">Arming: after driving</string>
     <string name="win_auto_speed_label">Speed reached</string>

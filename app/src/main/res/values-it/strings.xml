@@ -512,7 +512,7 @@
     <string name="win_all_open">Apri tutti</string>
     <string name="win_auto_title">Chiusura automatica</string>
     <string name="win_auto_label">Chiudi i finestrini scendendo dall\'auto</string>
-    <string name="win_auto_desc">Auto in P, una volta armata secondo le condizioni sotto: quando l\'auto esce dalla modalità READY (porta del conducente aperta o auto spenta), tutti i finestrini si chiudono dopo il ritardo scelto. Tornare in READY prima annulla. Se la chiusura va a termine, i finestrini sono considerati chiusi all\'avvio successivo.</string>
+    <string name="win_auto_desc">Auto in P, una volta armata secondo le condizioni sotto: quando l\'auto esce dalla modalità READY (porta del conducente aperta o auto spenta), tutti i finestrini si chiudono dopo il ritardo scelto. Tornare in READY prima annulla.</string>
     <string name="win_auto_warning">Nessun antischiacciamento sui finestrini tranne quello del conducente: nessuno vicino ai finestrini quando si scende.</string>
     <string name="win_auto_arming_title">Armamento: dopo la guida</string>
     <string name="win_auto_speed_label">Velocità raggiunta</string>

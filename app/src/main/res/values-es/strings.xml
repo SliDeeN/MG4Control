@@ -512,7 +512,7 @@
     <string name="win_all_open">Abrir todas</string>
     <string name="win_auto_title">Cierre automático</string>
     <string name="win_auto_label">Cerrar las ventanillas al salir del coche</string>
-    <string name="win_auto_desc">Coche en P, una vez armado según las condiciones de abajo: cuando el coche sale del modo READY (puerta del conductor abierta o coche apagado), todas las ventanillas se cierran tras el retardo elegido. Volver a READY antes cancela. Si el cierre se completa, las ventanillas se consideran cerradas en el siguiente arranque.</string>
+    <string name="win_auto_desc">Coche en P, una vez armado según las condiciones de abajo: cuando el coche sale del modo READY (puerta del conductor abierta o coche apagado), todas las ventanillas se cierran tras el retardo elegido. Volver a READY antes cancela.</string>
     <string name="win_auto_warning">Sin antipinzamiento en las ventanillas salvo la del conductor: nadie cerca de las ventanillas al salir.</string>
     <string name="win_auto_arming_title">Armado: tras circular</string>
     <string name="win_auto_speed_label">Velocidad alcanzada</string>

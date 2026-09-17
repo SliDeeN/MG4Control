@@ -29,9 +29,8 @@ import java.util.concurrent.ConcurrentHashMap
  * Pas de verrou de vitesse ([VehicleWriteGate]) : c'est du confort, et les interrupteurs
  * physiques restent utilisables en roulant.
  *
- * Vitres sans capteur : position estimée ([WindowEstimator]) à partir de leur calibration,
- * remise à « inconnue » à chaque démarrage de la voiture — sauf si la fermeture automatique en
- * quittant la voiture ([WindowAutoClose]) est allée au bout : les vitres partent alors fermées.
+ * Vitres sans capteur : position estimée ([WindowEstimator]) à partir de leur calibration, supposée
+ * fermée (0 %) à chaque démarrage de l'app.
  *
  * Sondes (tag [TAG]) : liste des propriétés déclarées, lectures par zone, chaque commande avec
  * son résultat, chaque changement de valeur reçu du véhicule avec le délai depuis la dernière
@@ -103,59 +102,19 @@ object PowerWindows {
     private var autoCloseOk = true
     private var autoCloseDone: ((Boolean) -> Unit)? = null
 
-    /** Marqueur « toutes les vitres fermées par la fermeture automatique, sans commande depuis ». */
-    private const val KEY_CLOSED_MARKER = "win_closed_marker"
 
     data class Snapshot(
         val cpmReady: Boolean,
         val subscribed: Boolean,
         val values: Map<PowerWindow, Float?>,
-        /** Vitres calibrées → position estimée (null = inconnue jusqu'à la prochaine course complète). */
+        /** Vitres calibrées → position estimée (null = inconnue, après une commande de valeur inconnue). */
         val estimates: Map<PowerWindow, Float?>,
         val lastCommand: String,
     )
 
-    init {
-        MG4Hardware.registerVehicleConditionListener { state ->
-            if (state == MG4Hardware.CarIgnitionItem.RUN) worker.post {
-                val firstLoad = !estimatorsLoaded
-                loadEstimators()
-                // Premier chargement pendant ce RUN : il vient d'appliquer (et consommer) le marqueur.
-                if (!firstLoad) applyStartupPosition("démarrage", consume = true)
-            }
-        }
-    }
-
-    /** Force l'initialisation (écouteur de démarrage) sans attendre l'ouverture de l'onglet. */
+    /** Charge les calibrations sans attendre l'ouverture de l'onglet. */
     fun prepare() {
         worker.post { loadEstimators() }
-    }
-
-    /**
-     * Sur [worker]. Position des vitres estimées au démarrage : fermées si la fermeture automatique
-     * est active ET que sa dernière séquence est allée au bout sans commande depuis ; sinon
-     * inconnues (un interrupteur physique a pu servir), une course complète les recalera.
-     *
-     * Le marqueur ne vaut que pour UN démarrage : il est consommé au démarrage réel de la voiture
-     * ([consume]), pas quand le processus se charge voiture éteinte — sans quoi le RUN qui suit
-     * ne le trouverait plus et remettrait les positions à inconnues.
-     */
-    private fun applyStartupPosition(origin: String, consume: Boolean) {
-        if (estimators.isEmpty()) return
-        val context = MG4Hardware.appContext() ?: return
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val closed = WindowAutoClose.isEnabled(context) && prefs.getBoolean(KEY_CLOSED_MARKER, false)
-        if (closed && consume) prefs.edit { remove(KEY_CLOSED_MARKER) }
-        estimators.values.forEach { if (closed) it.setClosed() else it.reset() }
-        AppLogger.i(TAG, "$origin : positions estimées " +
-            if (closed) "= fermées (fermeture automatique complète)" else "remises à inconnues")
-    }
-
-    /** Une commande de l'app après la fermeture automatique : on ne peut plus supposer les vitres fermées. */
-    private fun clearClosedMarker() {
-        val context = MG4Hardware.appContext() ?: return
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        if (prefs.getBoolean(KEY_CLOSED_MARKER, false)) prefs.edit { remove(KEY_CLOSED_MARKER) }
     }
 
     // ── Calibration ─────────────────────────────────────────────────────────
@@ -180,16 +139,21 @@ object PowerWindows {
         worker.post { estimators[window] = WindowEstimator(cal).apply { setClosed() } }
     }
 
-    /** Sur [worker] : charge une fois les calibrations enregistrées. */
+    /**
+     * Sur [worker] : charge une fois les calibrations enregistrées. Chaque vitre calibrée part fermée
+     * (0 %) : cas le plus courant, sans exiger de course complète au démarrage de l'app.
+     */
     private fun loadEstimators() {
         if (estimatorsLoaded) return
         val context = MG4Hardware.appContext() ?: return
-        PowerWindow.entries.forEach { w -> calibration(context, w)?.let { estimators[w] = WindowEstimator(it) } }
+        PowerWindow.entries.forEach { w ->
+            val cal = calibration(context, w) ?: return@forEach
+            estimators[w] = WindowEstimator(cal).apply { setClosed() }
+        }
+        if (estimators.isNotEmpty()) {
+            AppLogger.i(TAG, "démarrage de l'app : ${estimators.keys.joinToString { it.shortName }} supposées fermées (0 %)")
+        }
         estimatorsLoaded = true
-        // Processus (re)lancé : même règle qu'au démarrage de la voiture. L'écouteur ne voit que les
-        // changements d'allumage : voiture déjà en marche = ce chargement EST le démarrage.
-        applyStartupPosition("chargement",
-            consume = MG4Hardware.lastVehicleIgnitionState() == MG4Hardware.CarIgnitionItem.RUN)
     }
 
     /** Sur [worker] : suit la commande envoyée pour estimer la position ; journalise en fin de mouvement. */
@@ -201,9 +165,8 @@ object PowerWindows {
         when {
             direction != null -> estimator.start(direction, now)
             value == WindowCommand.STOP -> {
-                val before = estimator.current(now)
                 estimator.stop(now)
-                AppLogger.i(TAG, "estimation ${window.shortName} : ${pct(before)} (fin de mouvement)")
+                AppLogger.i(TAG, "estimation ${window.shortName} : ${pct(estimator.current(now))} (fin de mouvement)")
             }
             else -> {
                 estimator.reset()
@@ -223,7 +186,6 @@ object PowerWindows {
      */
     fun shortPress(window: PowerWindow, direction: Direction) {
         val now = SystemClock.elapsedRealtime()
-        clearClosedMarker()
         worker.post {
             if (!window.hasNativeAuto) {
                 if (!endRepeat(window, "appui court")) startEmulatedCourse(window, direction, "appui court")
@@ -241,7 +203,6 @@ object PowerWindows {
 
     /** Tout ouvrir / tout fermer : toujours la course automatique, jamais le stop. */
     fun autoAll(direction: Direction) {
-        clearClosedMarker()
         val origin = "tout ${if (direction == Direction.UP) "fermer" else "ouvrir"}"
         worker.post { PowerWindow.entries.forEach { startAuto(it, direction, origin) } }
     }
@@ -251,7 +212,6 @@ object PowerWindows {
      * pour atteindre la butée même si une ancienne calibration était trop courte.
      */
     fun closeForCalibration(window: PowerWindow) {
-        clearClosedMarker()
         lastAutoMs.remove(window)
         worker.post { startAuto(window, Direction.UP, "calibration", minEmulatedMs = WindowCommand.EMULATED_COURSE_MS) }
     }
@@ -280,7 +240,6 @@ object PowerWindows {
 
     /** Appui long : commande manuelle répétée jusqu'à [stopHold], comme un doigt sur l'interrupteur. */
     fun startHold(window: PowerWindow, direction: Direction) {
-        clearClosedMarker()
         lastAutoMs.remove(window)
         worker.post {
             startRepeat(window, WindowCommand.manual(direction), WindowCommand.HOLD_MAX_MS,
@@ -305,7 +264,6 @@ object PowerWindows {
     /** Test brut de l'onglet Diagnostic : n'importe quelle valeur de 0 à 7, pour décoder l'échelle. */
     fun sendRaw(window: PowerWindow, value: Int) {
         if (!WindowCommand.isValid(value)) return
-        clearClosedMarker()
         lastAutoMs.remove(window)
         worker.post {
             endRepeat(window, "test brut")
@@ -357,12 +315,10 @@ object PowerWindows {
     /**
      * Ferme toutes les vitres (déclenchée par [WindowAutoClose]) : course native pour le conducteur,
      * course émulée pour les autres. [onDone] (fil principal) reçoit vrai si toutes les courses
-     * émulées sont allées au bout sans échec ni interruption ; alors seulement le marqueur « vitres
-     * fermées » est posé pour le prochain démarrage.
+     * émulées sont allées au bout sans échec ni interruption.
      */
     fun closeAllAutomatically(onDone: (Boolean) -> Unit) {
         worker.post {
-            clearClosedMarker()
             loadEstimators()
             autoClosePending.clear()
             autoCloseOk = true
@@ -401,11 +357,7 @@ object PowerWindows {
         val ok = autoCloseOk
         val done = autoCloseDone ?: return
         autoCloseDone = null
-        MG4Hardware.appContext()?.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)?.edit {
-            if (ok) putBoolean(KEY_CLOSED_MARKER, true) else remove(KEY_CLOSED_MARKER)
-        }
-        AppLogger.i(TAG, "fermeture auto terminée : " +
-            if (ok) "complète → vitres considérées fermées au prochain démarrage" else "incomplète → positions inconnues au prochain démarrage")
+        AppLogger.i(TAG, "fermeture auto terminée : ${if (ok) "complète" else "incomplète"}")
         main.post { done(ok) }
     }
 

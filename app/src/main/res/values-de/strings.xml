@@ -512,7 +512,7 @@
     <string name="win_all_open">Alle öffnen</string>
     <string name="win_auto_title">Automatisches Schließen</string>
     <string name="win_auto_label">Fenster beim Verlassen des Autos schließen</string>
-    <string name="win_auto_desc">Auto in P, sobald nach den Bedingungen unten scharf: Verlässt das Auto den READY-Modus (Fahrertür geöffnet oder Auto ausgeschaltet), schließen alle Fenster nach der gewählten Verzögerung. Eine Rückkehr in READY davor bricht ab. Wird das Schließen abgeschlossen, gelten die Fenster beim nächsten Start als geschlossen.</string>
+    <string name="win_auto_desc">Auto in P, sobald nach den Bedingungen unten scharf: Verlässt das Auto den READY-Modus (Fahrertür geöffnet oder Auto ausgeschaltet), schließen alle Fenster nach der gewählten Verzögerung. Eine Rückkehr in READY davor bricht ab.</string>
     <string name="win_auto_warning">Kein Einklemmschutz an den Fenstern außer dem Fahrerfenster: beim Aussteigen niemand in der Nähe der Fenster.</string>
     <string name="win_auto_arming_title">Scharfschalten: nach der Fahrt</string>
     <string name="win_auto_speed_label">Erreichte Geschwindigkeit</string>

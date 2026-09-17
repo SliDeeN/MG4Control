@@ -292,12 +292,6 @@ object MG4Hardware {
     }
 
     /**
-     * Dernier état d'allumage reçu (CarIgnitionItem), -1 si aucun. Les écouteurs ne sont prévenus
-     * qu'aux CHANGEMENTS : un abonné arrivé après le RUN du démarrage doit lire l'état ici.
-     */
-    fun lastVehicleIgnitionState(): Int = sLastVcmIgnitionState
-
-    /**
      * Lit l'état d'allumage courant via CarPropertyManager.
      * Retourne -1 si CPM non prêt, 0 si propriété non supportée.
      */

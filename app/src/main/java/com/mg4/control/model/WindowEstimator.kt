@@ -26,10 +26,9 @@ data class WindowCalibration(val downMs: Long, val upMs: Long) {
  * Position estimée d'une vitre sans capteur, en % d'ouverture (0 = fermée, 100 = ouverte).
  *
  * Seules les commandes de l'app sont chronométrées : un interrupteur physique fausse l'estimation
- * sans que l'app le voie. D'où deux règles — la position part inconnue (et le redevient à chaque
- * démarrage de la voiture), et elle ne devient connue qu'après une course complète, qui amène la
- * vitre en butée quel que soit son point de départ. À afficher comme une estimation, jamais à
- * utiliser pour une décision de sécurité.
+ * sans que l'app le voie ; une course complète la recale, la vitre arrivant en butée quel que soit
+ * son point de départ. Au démarrage de l'app, la vitre est supposée fermée. À afficher comme une
+ * estimation, jamais à utiliser pour une décision de sécurité.
  */
 class WindowEstimator(val calibration: WindowCalibration) {
 
