@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.Switch
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.slider.Slider
@@ -25,7 +26,7 @@ class AudioFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // ── Volume à l'ouverture d'une porte (SWI132/133) ───────────────────
+        // ── Volume en quittant la voiture : porte (SWI132/133) ou sortie de READY (autres) ──
         setupDoorVolume(view)
     }
 
@@ -42,6 +43,15 @@ class AudioFragment : Fragment() {
         val restore = view.findViewById<Switch>(R.id.switch_door_restore)
         val cbLeft  = view.findViewById<CheckBox>(R.id.cb_door_left)
         val cbRight = view.findViewById<CheckBox>(R.id.cb_door_right)
+
+        // Sans porte lisible, le déclencheur est la sortie de READY : il ne concerne que le conducteur
+        // (pas de choix de porte) et la restauration se fait au retour en READY.
+        if (!MG4Hardware.hasDoorDetection()) {
+            view.findViewById<TextView>(R.id.door_volume_desc_text).setText(R.string.door_volume_desc_ready)
+            view.findViewById<TextView>(R.id.door_volume_restore_label).setText(R.string.door_volume_restore_ready_title)
+            view.findViewById<View>(R.id.door_volume_doors_label).visibility = View.GONE
+            view.findViewById<View>(R.id.door_volume_doors_row).visibility = View.GONE
+        }
 
         val enabled = prefs.getBoolean("door_volume_enabled", false)
         toggle.isChecked  = enabled

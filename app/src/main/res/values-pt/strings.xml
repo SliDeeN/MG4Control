@@ -285,6 +285,8 @@
     <string name="door_volume_desc">Baixa o volume de média ao abrir uma porta dianteira</string>
     <string name="door_volume_level_label">Nível alvo</string>
     <string name="door_volume_restore_title">Restaurar ao fechar</string>
+    <string name="door_volume_desc_ready">Baixa o volume multimédia quando o carro sai do modo READY em P (porta do condutor aberta ou carro desligado)</string>
+    <string name="door_volume_restore_ready_title">Restaurar ao voltar a READY</string>
     <string name="door_volume_doors_label">Portas de ativação</string>
     <string name="door_left">Esquerda</string>
     <string name="door_right">Direita</string>

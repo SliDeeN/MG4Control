@@ -239,7 +239,7 @@ class MainActivity : AppCompatActivity() {
         val btnProfiles  = findViewById<MaterialButton>(R.id.btn_nav_profiles)
         val btnSettings  = findViewById<MaterialButton>(R.id.btn_nav_settings)
 
-        // Bouton Audio : contrôle vendor caradapter dispo uniquement sur A9 → masqué ailleurs.
+        // Bouton Audio : visible partout où le volume média est pilotable (ancien SDK et A9).
         if (MG4Hardware.hasAudioControl()) {
             btnAudio.setOnClickListener {
                 when (navController.currentDestination?.id) {

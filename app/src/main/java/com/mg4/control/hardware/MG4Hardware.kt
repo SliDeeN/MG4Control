@@ -365,7 +365,7 @@ object MG4Hardware {
         // Démarrage auto du watcher porte au boot si la feature est activée (tous firmwares).
         startDoorWatcherIfEnabled()
         // Connexion Car établie même si la feature est OFF → la sonde Diagnostic peut lire les portes.
-        if (hasDoorVolumeFeature()) connectCarProperty()
+        if (hasDoorDetection()) connectCarProperty()
 
         AppLogger.i(TAG, "========================================")
     }
@@ -3565,7 +3565,7 @@ object MG4Hardware {
         return gen == FirmwareInfo.Gen.SWI133 || gen == FirmwareInfo.Gen.SWI68 || gen == FirmwareInfo.Gen.SWI165
     }
 
-    /** Onglet Audio (baisse volume à l'ouverture de porte) : uniquement là où c'est fonctionnel. */
+    /** Onglet Audio (baisse de volume en quittant la voiture) : partout où le volume est pilotable. */
     fun hasAudioControl(): Boolean = hasDoorVolumeFeature()
 
     private const val DESCRIPTOR_CARADAPTER = "com.saicmotor.carapi.ICarAdapterService"
@@ -4741,12 +4741,19 @@ object MG4Hardware {
         }
     }
 
-    /** Baisse du volume à l'ouverture de porte : détection DLOCK_DOOR_OPEN_STS via CarPropertyManager.
-     *  Lisible/fonctionnel uniquement sur SWI132 et SWI133 ; ailleurs le prop n'est pas exposé à l'app. */
-    fun hasDoorVolumeFeature(): Boolean {
+    /** Détection réelle de l'ouverture des portes (DLOCK_DOOR_OPEN_STS via CarPropertyManager) :
+     *  lisible uniquement sur SWI132 et SWI133 ; ailleurs le prop n'est pas exposé à l'app. */
+    fun hasDoorDetection(): Boolean {
         val gen = FirmwareInfo.getGeneration()
         return gen == FirmwareInfo.Gen.SWI132 || gen == FirmwareInfo.Gen.SWI133
     }
+
+    /**
+     * Baisse du volume en quittant la voiture : partout où le volume média est pilotable (ancien SDK
+     * et A9). Déclencheur : la porte là où elle est lisible ([hasDoorDetection]), sinon la sortie du
+     * mode READY en P ([ReadyWatcher]), qui correspond sur MG4 à l'ouverture de la porte conducteur.
+     */
+    fun hasDoorVolumeFeature(): Boolean = isOldSdkSound() || isA9Sound()
 
     private fun doorVolumeEnabled(): Boolean {
         // Mode Garage : une portière qui fait chuter le volume est exactement le genre de
@@ -4779,12 +4786,67 @@ object MG4Hardware {
     fun startDoorVolumeWatcher() {
         if (!hasDoorVolumeFeature()) return
         sDoorWatcherOn = true
-        connectCarProperty()
+        if (hasDoorDetection()) connectCarProperty() else ReadyWatcher.add(readyVolumeListener)   // add idempotent
     }
 
     fun stopDoorVolumeWatcher() {
         sDoorWatcherOn = false           // poll conservé ; on ne déclenche plus la baisse
+        if (!hasDoorDetection()) ReadyWatcher.remove(readyVolumeListener)
         AppLogger.i(TAG, "  DoorVolumeWatcher: déclenchement désactivé")
+    }
+
+    /**
+     * Firmwares sans porte lisible : sortie de READY en P = départ du conducteur → baisse ; retour en
+     * READY → restauration si l'utilisateur l'a choisie. La sortie à l'extinction voiture occupée baisse
+     * aussi le volume (accepté). Rapport illisible : on baisse quand même (aucun risque, au contraire
+     * des vitres). Le premier état connu n'est pas une transition, sauf pour une restauration en
+     * attente (écran redémarré entre la baisse et le retour en READY).
+     */
+    private val readyVolumeListener = ReadyWatcher.Listener { ready, firstRead ->
+        if (!sDoorWatcherOn) return@Listener
+        if (ready) {
+            restoreMediaVolumeAfterDrop(if (firstRead) "READY à l'activation" else "retour en READY")
+            return@Listener
+        }
+        if (firstRead) return@Listener
+        if (!doorVolumeEnabled()) return@Listener   // inclut le Mode Garage
+        val inPark = isVehicleInPark()
+        if (inPark == false) {
+            AppLogger.i(DOORWATCH_TAG, "sortie de READY hors P → volume inchangé")
+            return@Listener
+        }
+        dropMediaVolumeForExit("sortie de READY (P=${inPark ?: "illisible"})")
+    }
+
+    /** Volume avant la baisse, gardé en préférences : la restauration survit à un redémarrage de l'écran. */
+    private const val KEY_VOLUME_BEFORE_DROP = "door_volume_before_drop"
+
+    private fun dropMediaVolumeForExit(origin: String) {
+        val level = doorVolumeLevel()
+        CoroutineScope(Dispatchers.IO).launch {
+            val before = getMediaVolume()
+            sVolumeBeforeDrop = before
+            if (before >= 0) sAppContext?.getSharedPreferences("mg4_settings", 0)?.edit()
+                ?.putInt(KEY_VOLUME_BEFORE_DROP, before)?.apply()
+            val ok = setMediaVolume(level)
+            AppLogger.i(DOORWATCH_TAG, "$origin → vol $before→$level = $ok")
+        }
+    }
+
+    private fun restoreMediaVolumeAfterDrop(origin: String) {
+        val prefs = sAppContext?.getSharedPreferences("mg4_settings", 0)
+        val restore = sVolumeBeforeDrop.takeIf { it >= 0 } ?: prefs?.getInt(KEY_VOLUME_BEFORE_DROP, -1) ?: -1
+        sVolumeBeforeDrop = -1
+        prefs?.edit()?.remove(KEY_VOLUME_BEFORE_DROP)?.apply()
+        if (restore < 0) return
+        if (!doorRestoreEnabled()) {
+            AppLogger.i(DOORWATCH_TAG, "$origin → restauration désactivée (volume laissé tel quel)")
+            return
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            val ok = setMediaVolume(restore)
+            AppLogger.i(DOORWATCH_TAG, "$origin → restauration vol $restore = $ok")
+        }
     }
 
     /** Sonde du bouton Diagnostic : logge le volume + l'état des portes à l'instant du clic. */
@@ -4792,6 +4854,11 @@ object MG4Hardware {
         AppLogger.i(VOL_TAG, "── DIAG (bouton Diagnostic) ──")
         getMediaVolumeMax()
         getMediaVolume()
+        if (!hasDoorDetection()) {
+            AppLogger.i(DOORWATCH_TAG, "DIAG pas de porte lisible sur ${FirmwareInfo.getGeneration()} → READY brut = " +
+                "${readEptReadyRaw() ?: "illisible"} (surveillance ${if (ReadyWatcher.ready != null) "active" else "inactive"})")
+            return
+        }
         connectCarProperty()   // idempotent ; normalement déjà connecté depuis l'init
         registerDoorCallback() // re-tente la souscription si pas encore posée
         probeDoorSnapshot()
@@ -5562,21 +5629,9 @@ object MG4Hardware {
         val triggerAreas = doorTriggerAreas()
         val anyOpen = triggerAreas.any { sDoorReadLast[it] == 1 }
         if (anyOpen && !sAnyFrontOpenPrev) {
-            val level = doorVolumeLevel()
-            CoroutineScope(Dispatchers.IO).launch {
-                sVolumeBeforeDrop = getMediaVolume()
-                val ok = setMediaVolume(level)
-                AppLogger.i(DOORWATCH_TAG, "porte ouverte → vol $sVolumeBeforeDrop→$level = $ok")
-            }
+            dropMediaVolumeForExit("porte ouverte")
         } else if (!anyOpen && sAnyFrontOpenPrev) {
-            val restore = sVolumeBeforeDrop
-            sVolumeBeforeDrop = -1
-            if (doorRestoreEnabled() && restore >= 0) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    val ok = setMediaVolume(restore)
-                    AppLogger.i(DOORWATCH_TAG, "porte fermée → restauration vol $restore = $ok")
-                }
-            }
+            restoreMediaVolumeAfterDrop("porte fermée")
         }
         sAnyFrontOpenPrev = anyOpen
     }

@@ -285,6 +285,8 @@
     <string name="door_volume_desc">Abbassa il volume multimediale all\'apertura di una porta anteriore</string>
     <string name="door_volume_level_label">Livello target</string>
     <string name="door_volume_restore_title">Ripristina alla chiusura</string>
+    <string name="door_volume_desc_ready">Abbassa il volume multimediale quando l\'auto esce dalla modalità READY in P (porta del conducente aperta o auto spenta)</string>
+    <string name="door_volume_restore_ready_title">Ripristina al ritorno in READY</string>
     <string name="door_volume_doors_label">Porte di attivazione</string>
     <string name="door_left">Sinistra</string>
     <string name="door_right">Destra</string>

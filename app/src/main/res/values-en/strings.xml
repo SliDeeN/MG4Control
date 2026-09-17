@@ -285,6 +285,8 @@
     <string name="door_volume_desc">Lowers media volume when a front door opens</string>
     <string name="door_volume_level_label">Target level</string>
     <string name="door_volume_restore_title">Restore on close</string>
+    <string name="door_volume_desc_ready">Lowers media volume when the car leaves READY in P (driver door opened or car switched off)</string>
+    <string name="door_volume_restore_ready_title">Restore when back to READY</string>
     <string name="door_volume_doors_label">Trigger doors</string>
     <string name="door_left">Left</string>
     <string name="door_right">Right</string>

@@ -285,6 +285,8 @@
     <string name="door_volume_desc">Senkt die Medienlautstärke beim Öffnen einer Vordertür</string>
     <string name="door_volume_level_label">Zielpegel</string>
     <string name="door_volume_restore_title">Beim Schließen wiederherstellen</string>
+    <string name="door_volume_desc_ready">Senkt die Medienlautstärke, wenn das Auto in P den READY-Modus verlässt (Fahrertür geöffnet oder Auto ausgeschaltet)</string>
+    <string name="door_volume_restore_ready_title">Bei Rückkehr in READY wiederherstellen</string>
     <string name="door_volume_doors_label">Auslösende Türen</string>
     <string name="door_left">Links</string>
     <string name="door_right">Rechts</string>

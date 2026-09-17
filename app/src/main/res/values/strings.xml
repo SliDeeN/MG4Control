@@ -287,6 +287,8 @@
     <string name="door_volume_desc">Baisse le volume média à l\'ouverture d\'une porte avant</string>
     <string name="door_volume_level_label">Niveau cible</string>
     <string name="door_volume_restore_title">Restaurer à la fermeture</string>
+    <string name="door_volume_desc_ready">Baisse le volume média quand la voiture sort du mode READY en P (ouverture de la porte conducteur ou extinction)</string>
+    <string name="door_volume_restore_ready_title">Restaurer au retour en READY</string>
     <string name="door_volume_doors_label">Portes déclencheuses</string>
     <string name="door_left">Gauche</string>
     <string name="door_right">Droite</string>
