@@ -17,7 +17,7 @@ class CustomDriveScaleTest {
     private val indexes = 0..2
 
     @Test
-    fun `puissance - ancien SDK 1-2-3, A9 2-3-4, SWI68 1-2-3`() {
+    fun `puissance - 1-2-3 partout sauf A9 en 2-3-4`() {
         assertEquals(listOf(1, 2, 3), indexes.map { CustomDriveScale.value(Setting.POWER, it, Family.VPM_133) })
         assertEquals(listOf(2, 3, 4), indexes.map { CustomDriveScale.value(Setting.POWER, it, Family.A9) })
         assertEquals(listOf(1, 2, 3), indexes.map { CustomDriveScale.value(Setting.POWER, it, Family.VSM_68) })
@@ -32,12 +32,12 @@ class CustomDriveScaleTest {
     }
 
     @Test
-    fun `pedale - Normal vaut ZERO sauf sur SWI68-165`() {
-        // Relevé dans le smali SWI133 et le dispatch A9 : confort=1, normal=0, sport=2.
-        assertEquals(listOf(1, 0, 2), indexes.map { CustomDriveScale.value(Setting.PEDAL, it, Family.VPM_133) })
-        assertEquals(listOf(1, 0, 2), indexes.map { CustomDriveScale.value(Setting.PEDAL, it, Family.A9) })
-        // SWI68/165 : service véhicule borné à 0..3 ; échelle supposée 1/2/3, à confirmer par la sonde.
-        assertEquals(listOf(1, 2, 3), indexes.map { CustomDriveScale.value(Setting.PEDAL, it, Family.VSM_68) })
+    fun `pedale - Normal vaut ZERO sur les trois familles`() {
+        // Relevé dans les écrans d'origine (SWI133, dispatch A9, DrivingSettingsViewModel SWI68/165).
+        Family.entries.forEach { family ->
+            assertEquals("famille $family", listOf(1, 0, 2),
+                indexes.map { CustomDriveScale.value(Setting.PEDAL, it, family) })
+        }
     }
 
     @Test
@@ -64,7 +64,7 @@ class CustomDriveScaleTest {
         assertNull(CustomDriveScale.index(Setting.POWER, -1, Family.VPM_133))
         assertNull(CustomDriveScale.index(Setting.POWER, 1, Family.A9))       // A9 commence à 2
         assertNull(CustomDriveScale.index(Setting.PEDAL, 3, Family.VPM_133))  // pédale : 1/0/2 seulement
-        assertNull(CustomDriveScale.index(Setting.PEDAL, 0, Family.VSM_68))   // SWI68 : 1/2/3
+        assertNull(CustomDriveScale.index(Setting.PEDAL, 4, Family.VSM_68))
         assertNull(CustomDriveScale.index(Setting.STEERING, 255, Family.VSM_68))
     }
 }
