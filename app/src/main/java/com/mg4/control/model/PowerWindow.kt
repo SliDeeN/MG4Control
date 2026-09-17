@@ -10,8 +10,10 @@ package com.mg4.control.model
  *
  * Mesuré en voiture le 2026-09-17 (peut dépendre de la finition, codes de configuration relevés
  * par la sonde) :
- * - [hasNativeAutoDown] : la descente auto n'ouvre que la vitre conducteur ; la montée auto (3) marche
- *   sur les quatre. Ailleurs, l'ouverture auto est émulée par la descente manuelle répétée.
+ * - [hasNativeAuto] : la descente auto (4) n'ouvre que la vitre conducteur, et la montée auto (3), qui
+ *   fermait les quatre au premier essai, a cessé de fermer les autres après la calibration (état interne
+ *   du module de vitre, invisible pour l'app). Ailleurs, les courses auto sont donc émulées dans les deux
+ *   sens par la commande manuelle répétée — sans l'anti-pincement de la course native.
  * - [hasPositionSensor] : seule la vitre conducteur remonte une position ; les autres restent figées
  *   hors plage (127.5 / 255) et leur position est estimée après calibration ([WindowEstimator]).
  *
@@ -20,20 +22,20 @@ package com.mg4.control.model
  */
 enum class PowerWindow(
     val propId: Int,
-    val hasNativeAutoDown: Boolean,
+    val hasNativeAuto: Boolean,
     val hasPositionSensor: Boolean,
     val shortName: String,
 ) {
-    FRONT_LEFT (0x11603801, hasNativeAutoDown = true,  hasPositionSensor = true,  shortName = "AVG"),
-    FRONT_RIGHT(0x11603802, hasNativeAutoDown = false, hasPositionSensor = false, shortName = "AVD"),
-    REAR_LEFT  (0x11603803, hasNativeAutoDown = false, hasPositionSensor = false, shortName = "ARG"),
-    REAR_RIGHT (0x11603804, hasNativeAutoDown = false, hasPositionSensor = false, shortName = "ARD"),
+    FRONT_LEFT (0x11603801, hasNativeAuto = true,  hasPositionSensor = true,  shortName = "AVG"),
+    FRONT_RIGHT(0x11603802, hasNativeAuto = false, hasPositionSensor = false, shortName = "AVD"),
+    REAR_LEFT  (0x11603803, hasNativeAuto = false, hasPositionSensor = false, shortName = "ARG"),
+    REAR_RIGHT (0x11603804, hasNativeAuto = false, hasPositionSensor = false, shortName = "ARD"),
 }
 
 /**
  * Valeurs de commande d'une vitre. 0, 1 et 3 viennent du projet winclose (SWI69) ; 2 et 4 ont été
- * essayées en voiture le 2026-09-17 via l'onglet Vitres : 4 n'ouvre que la vitre conducteur (voir
- * [PowerWindow.hasNativeAutoDown]). 5 à 7 restent inconnues (test brut). Le service SWI68 refuse
+ * essayées en voiture le 2026-09-17 via l'onglet Vitres : 3 et 4 ne sont fiables que sur la vitre
+ * conducteur (voir [PowerWindow.hasNativeAuto]). 5 à 7 restent inconnues (test brut). Le service SWI68 refuse
  * toute valeur hors de 0..7.
  */
 object WindowCommand {
@@ -42,13 +44,13 @@ object WindowCommand {
     const val MANUAL_UP   = 1
     const val MANUAL_DOWN = 2
     const val AUTO_UP     = 3
-    const val AUTO_DOWN   = 4   // conducteur seulement
+    const val AUTO_DOWN   = 4
     const val MAX         = 7
 
-    /** Au-delà, un appui court n'est plus pris pour un « stop » : la course auto est finie. */
+    /** Au-delà, un appui court n'est plus pris pour un « stop » : la course auto native est finie. */
     const val AUTO_TRAVEL_MS = 6_000L
-    /** Durée de l'ouverture auto émulée tant que la vitre n'est pas calibrée. */
-    const val EMULATED_OPEN_MS = AUTO_TRAVEL_MS
+    /** Durée d'une course auto émulée tant que la vitre n'est pas calibrée. */
+    const val EMULATED_COURSE_MS = AUTO_TRAVEL_MS
     /**
      * Plus grande position valide. Le service véhicule SWI68 rejette toute lecture au-delà
      * (`max_vehicle_window_get` = 100) ; en voiture, 127.5 et 255 restent figés sur les vitres
@@ -80,8 +82,17 @@ object WindowCommand {
     /** Position utilisable, ou null (illisible, ou valeur de remplacement d'une vitre sans capteur). */
     fun position(raw: Float?): Float? = raw?.takeIf { it in 0f..POSITION_MAX }
 
-    /** Durée de l'ouverture émulée : la course calibrée si elle existe, sinon la valeur par défaut. */
-    fun emulatedOpenMs(calibration: WindowCalibration?): Long = calibration?.emulatedOpenMs ?: EMULATED_OPEN_MS
+    /** Durée d'une course émulée : la course calibrée dans ce sens si elle existe, sinon la valeur par défaut. */
+    fun emulatedCourseMs(direction: Direction, calibration: WindowCalibration?): Long = when (direction) {
+        Direction.DOWN -> calibration?.emulatedOpenMs
+        Direction.UP   -> calibration?.emulatedCloseMs
+    } ?: EMULATED_COURSE_MS
+
+    /**
+     * Une fermeture émulée n'a pas l'anti-pincement de la course native : elle ne continue que
+     * sous les yeux de l'utilisateur (arrêtée si l'onglet est quitté). Une ouverture peut finir seule.
+     */
+    fun stopsWhenUnattended(value: Int): Boolean = directionOf(value) == Direction.UP
 
     /**
      * Appui court : lance la course automatique, sauf si une course vient d'être lancée sur cette

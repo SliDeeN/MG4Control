@@ -75,12 +75,14 @@ object PowerWindows {
     private var estimatorsLoaded = false
 
     /**
-     * Commande répétée en cours, par vitre : doigt posé ([finger]) ou ouverture auto émulée.
+     * Commande répétée en cours, par vitre : doigt posé ([finger]) ou course auto émulée.
      * Lu et écrit uniquement sur [worker].
      */
     private class Hold(val value: Int, val startMs: Long, val finger: Boolean, val label: String, val repeat: Runnable) {
         var sent = 0
         var failed = 0
+        /** Arrêtée si l'utilisateur quitte l'onglet : doigt posé, ou fermeture émulée. */
+        val stopOnLeave: Boolean get() = finger || WindowCommand.stopsWhenUnattended(value)
     }
     private val holds = HashMap<PowerWindow, Hold>()
 
@@ -157,49 +159,63 @@ object PowerWindows {
 
     // ── Commandes ───────────────────────────────────────────────────────────
 
-    /** Appui court : course automatique, ou stop si une course vient d'être lancée. */
+    /**
+     * Appui court. Vitre à courses natives (conducteur) : course auto, ou stop si elle vient d'être
+     * lancée. Autres vitres : course émulée, ou stop si une course émulée est en cours — c'est la
+     * répétition en cours qui fait foi, pas le temps écoulé depuis l'appui précédent.
+     */
     fun shortPress(window: PowerWindow, direction: Direction) {
         val now = SystemClock.elapsedRealtime()
-        val value = WindowCommand.forShortPress(direction, lastAutoMs[window], now)
-        if (value == WindowCommand.STOP) {
-            lastAutoMs.remove(window)
-            // Une ouverture émulée s'arrête comme une course native : d'un seul appui.
-            worker.post { if (!endRepeat(window, "appui court")) send(window, WindowCommand.STOP, "appui court") }
-        } else {
-            lastAutoMs[window] = now
-            worker.post { startAuto(window, direction, "appui court") }
+        worker.post {
+            if (!window.hasNativeAuto) {
+                if (!endRepeat(window, "appui court")) startEmulatedCourse(window, direction, "appui court")
+                return@post
+            }
+            val value = WindowCommand.forShortPress(direction, lastAutoMs[window], now)
+            if (value == WindowCommand.STOP) {
+                lastAutoMs.remove(window)
+                if (!endRepeat(window, "appui court")) send(window, WindowCommand.STOP, "appui court")
+            } else {
+                startAuto(window, direction, "appui court")
+            }
         }
     }
 
     /** Tout ouvrir / tout fermer : toujours la course automatique, jamais le stop. */
     fun autoAll(direction: Direction) {
-        val now = SystemClock.elapsedRealtime()
-        PowerWindow.entries.forEach { lastAutoMs[it] = now }
         val origin = "tout ${if (direction == Direction.UP) "fermer" else "ouvrir"}"
         worker.post { PowerWindow.entries.forEach { startAuto(it, direction, origin) } }
     }
 
-    /** Étape 1 de la calibration : montée automatique, pour partir d'une vitre fermée. */
+    /**
+     * Étape 1 de la calibration : fermeture complète. Émulée, elle dure au moins la course par défaut,
+     * pour atteindre la butée même si une ancienne calibration était trop courte.
+     */
     fun closeForCalibration(window: PowerWindow) {
         lastAutoMs.remove(window)
-        worker.post { startAuto(window, Direction.UP, "calibration") }
+        worker.post { startAuto(window, Direction.UP, "calibration", minEmulatedMs = WindowCommand.EMULATED_COURSE_MS) }
+    }
+
+    /** Sur [worker]. Course automatique : native pour le conducteur, émulée pour les autres vitres. */
+    private fun startAuto(window: PowerWindow, direction: Direction, origin: String, minEmulatedMs: Long = 0L) {
+        if (!window.hasNativeAuto) {
+            startEmulatedCourse(window, direction, origin, minEmulatedMs)
+            return
+        }
+        lastAutoMs[window] = SystemClock.elapsedRealtime()
+        endRepeat(window, "$origin demandé")
+        send(window, WindowCommand.auto(direction), origin)
     }
 
     /**
-     * Sur [worker]. Course automatique ; sans descente auto native (toutes les vitres sauf le
-     * conducteur, mesuré en voiture), l'ouverture est la descente manuelle répétée le temps d'une
-     * course — la course calibrée si elle existe.
+     * Sur [worker]. Course émulée : commande manuelle répétée le temps d'une course (la course
+     * calibrée si elle existe), ce que ferait un doigt posé. L'estimation suit donc le vrai mouvement.
      */
-    private fun startAuto(window: PowerWindow, direction: Direction, origin: String) {
-        if (direction == Direction.DOWN && !window.hasNativeAutoDown) {
-            loadEstimators()
-            startRepeat(window, WindowCommand.MANUAL_DOWN, WindowCommand.emulatedOpenMs(estimators[window]?.calibration),
-                finger = false, label = "$origin, ouverture auto émulée")
-        } else {
-            // Une ouverture émulée en cours ne doit pas contrarier la montée demandée.
-            endRepeat(window, "$origin demandé")
-            send(window, WindowCommand.auto(direction), origin)
-        }
+    private fun startEmulatedCourse(window: PowerWindow, direction: Direction, origin: String, minMs: Long = 0L) {
+        loadEstimators()
+        val ms = maxOf(minMs, WindowCommand.emulatedCourseMs(direction, estimators[window]?.calibration))
+        val what = if (direction == Direction.UP) "fermeture" else "ouverture"
+        startRepeat(window, WindowCommand.manual(direction), ms, finger = false, label = "$origin, $what auto émulée")
     }
 
     /** Appui long : commande manuelle répétée jusqu'à [stopHold], comme un doigt sur l'interrupteur. */
@@ -217,11 +233,12 @@ object PowerWindows {
     }
 
     /**
-     * Onglet quitté : les doigts posés s'arrêtent (le relâché ne viendra peut-être jamais) ;
-     * une ouverture émulée, bornée dans le temps, va au bout comme une course native.
+     * Onglet quitté : s'arrêtent les doigts posés (le relâché ne viendra peut-être jamais) et les
+     * fermetures émulées (pas d'anti-pincement hors de la vue de l'utilisateur). Une ouverture
+     * émulée, bornée dans le temps, va au bout comme une course native.
      */
-    fun stopFingerHolds() {
-        worker.post { holds.filterValues { it.finger }.keys.toList().forEach { endRepeat(it, "onglet quitté") } }
+    fun stopUnattendedMoves() {
+        worker.post { holds.filterValues { it.stopOnLeave }.keys.toList().forEach { endRepeat(it, "onglet quitté") } }
     }
 
     /** Test brut de l'onglet Diagnostic : n'importe quelle valeur de 0 à 7, pour décoder l'échelle. */

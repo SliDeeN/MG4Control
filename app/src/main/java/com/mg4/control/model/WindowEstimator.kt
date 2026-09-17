@@ -8,14 +8,15 @@ import com.mg4.control.model.WindowCommand.Direction
  */
 data class WindowCalibration(val downMs: Long, val upMs: Long) {
 
-    /** Ouverture auto émulée : la course mesurée plus une marge, pour finir en butée malgré l'imprécision. */
-    val emulatedOpenMs: Long get() = downMs + OPEN_MARGIN_MS
+    /** Courses auto émulées : la course mesurée plus une marge, pour finir en butée malgré l'imprécision. */
+    val emulatedOpenMs: Long get() = downMs + COURSE_MARGIN_MS
+    val emulatedCloseMs: Long get() = upMs + COURSE_MARGIN_MS
 
     companion object {
         /** Plus court : appui manqué. Plus long : le garde-fou du maintien a coupé la vitre avant la butée. */
         const val MIN_MS = 800L
         const val MAX_MS = WindowCommand.HOLD_MAX_MS
-        const val OPEN_MARGIN_MS = 500L
+        const val COURSE_MARGIN_MS = 500L
 
         fun isValidMeasure(ms: Long): Boolean = ms in MIN_MS..MAX_MS
     }

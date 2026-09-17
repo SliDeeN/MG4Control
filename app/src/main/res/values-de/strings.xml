@@ -494,7 +494,8 @@
     <!-- Onglet Vitres (V0 de test) -->
     <string name="dash_cat_windows">Fenster</string>
     <string name="win_card_title">Fenster</string>
-    <string name="win_hint">Kurz drücken: automatisch öffnen oder schließen · Lang drücken: das Fenster bewegt sich, solange der Finger bleibt</string>
+    <string name="win_hint">Kurz drücken: vollständig öffnen oder schließen (erneut drücken stoppt) · Lang drücken: das Fenster bewegt sich, solange der Finger bleibt</string>
+    <string name="win_close_warning">Automatisches Schließen durch die App ohne Einklemmschutz (außer Fahrerfenster): Fenster beobachten. Es stoppt, wenn Sie den Tab verlassen.</string>
     <string name="win_front_left">Vorne links</string>
     <string name="win_front_right">Vorne rechts</string>
     <string name="win_rear_left">Hinten links</string>

@@ -494,7 +494,8 @@
     <!-- Onglet Vitres (V0 de test) -->
     <string name="dash_cat_windows">Ventanillas</string>
     <string name="win_card_title">Ventanillas</string>
-    <string name="win_hint">Pulsación corta: apertura o cierre automático · Pulsación larga: la ventanilla se mueve mientras mantienes el dedo</string>
+    <string name="win_hint">Pulsación corta: apertura o cierre completo (otra pulsación lo detiene) · Pulsación larga: la ventanilla se mueve mientras mantienes el dedo</string>
+    <string name="win_close_warning">El cierre automático desde la app no tiene antipinzamiento (salvo la ventanilla del conductor): vigila la ventanilla. Se detiene si sales de la pestaña.</string>
     <string name="win_front_left">Delantera izquierda</string>
     <string name="win_front_right">Delantera derecha</string>
     <string name="win_rear_left">Trasera izquierda</string>

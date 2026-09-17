@@ -53,6 +53,17 @@
             android:paddingEnd="16dp"
             android:paddingTop="8dp" />
 
+        <!-- Les courses émulées n'ont pas l'anti-pincement de la course native du véhicule -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/win_close_warning"
+            android:textColor="@color/dash_warn"
+            android:textSize="13sp"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="4dp" />
+
         <!-- Rangée avant -->
         <LinearLayout
             android:layout_width="match_parent"

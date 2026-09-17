@@ -494,7 +494,8 @@
     <!-- Onglet Vitres (V0 de test) -->
     <string name="dash_cat_windows">Vidros</string>
     <string name="win_card_title">Vidros</string>
-    <string name="win_hint">Toque curto: abertura ou fecho automático · Toque longo: o vidro move-se enquanto o dedo estiver pousado</string>
+    <string name="win_hint">Toque curto: abertura ou fecho completo (novo toque para parar) · Toque longo: o vidro move-se enquanto o dedo estiver pousado</string>
+    <string name="win_close_warning">O fecho automático pela app não tem antientalamento (exceto o vidro do condutor): vigie o vidro. Para se sair do separador.</string>
     <string name="win_front_left">Dianteiro esquerdo</string>
     <string name="win_front_right">Dianteiro direito</string>
     <string name="win_rear_left">Traseiro esquerdo</string>

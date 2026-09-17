@@ -494,7 +494,8 @@
     <!-- Onglet Vitres (V0 de test) -->
     <string name="dash_cat_windows">Windows</string>
     <string name="win_card_title">Windows</string>
-    <string name="win_hint">Short press: automatic open or close · Long press: the window moves while your finger stays down</string>
+    <string name="win_hint">Short press: full open or close (press again to stop) · Long press: the window moves while your finger stays down</string>
+    <string name="win_close_warning">Automatic closing by the app has no anti-pinch protection (except the driver window): watch the window. It stops if you leave the tab.</string>
     <string name="win_front_left">Front left</string>
     <string name="win_front_right">Front right</string>
     <string name="win_rear_left">Rear left</string>

@@ -125,7 +125,17 @@ class WindowEstimatorTest {
     }
 
     @Test
-    fun `ouverture emulee = course mesuree plus la marge`() {
-        assertEquals(4_000 + WindowCalibration.OPEN_MARGIN_MS, cal.emulatedOpenMs)
+    fun `courses emulees = course mesuree plus la marge`() {
+        assertEquals(4_000 + WindowCalibration.COURSE_MARGIN_MS, cal.emulatedOpenMs)
+        assertEquals(5_000 + WindowCalibration.COURSE_MARGIN_MS, cal.emulatedCloseMs)
+    }
+
+    @Test
+    fun `fermeture emulee complete depuis ouverte = fermee`() {
+        // La course émulée dure la montée + la marge : l'estimation finit recalée à 0.
+        val e = WindowEstimator(cal).apply { setOpen() }
+        e.start(Direction.UP, 0)
+        e.stop(cal.emulatedCloseMs)
+        assertEquals(0f, e.current(cal.emulatedCloseMs))
     }
 }

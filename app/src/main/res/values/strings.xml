@@ -496,7 +496,8 @@
     <!-- Onglet Vitres (V0 de test) -->
     <string name="dash_cat_windows">Vitres</string>
     <string name="win_card_title">Vitres</string>
-    <string name="win_hint">Appui court : ouverture ou fermeture automatique · Appui long : la vitre bouge tant que le doigt reste posé</string>
+    <string name="win_hint">Appui court : ouverture ou fermeture complète (un nouvel appui l\'arrête) · Appui long : la vitre bouge tant que le doigt reste posé</string>
+    <string name="win_close_warning">Fermeture automatique par l\'app sans anti-pincement (sauf vitre conducteur) : surveillez la vitre. Elle s\'arrête si vous quittez l\'onglet.</string>
     <string name="win_front_left">Avant gauche</string>
     <string name="win_front_right">Avant droite</string>
     <string name="win_rear_left">Arrière gauche</string>

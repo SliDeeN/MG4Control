@@ -24,9 +24,10 @@ class PowerWindowTest {
     }
 
     @Test
-    fun `seule la vitre conducteur a la descente auto native`() {
-        // Mesuré en voiture le 2026-09-17 : la commande 4 n'ouvre que la vitre conducteur.
-        assertEquals(listOf(PowerWindow.FRONT_LEFT), PowerWindow.entries.filter { it.hasNativeAutoDown })
+    fun `seule la vitre conducteur a les courses auto natives`() {
+        // Mesuré en voiture : 4 n'ouvre que la vitre conducteur, et 3 a cessé de fermer les autres
+        // après la calibration — leurs courses auto sont donc émulées dans les deux sens.
+        assertEquals(listOf(PowerWindow.FRONT_LEFT), PowerWindow.entries.filter { it.hasNativeAuto })
     }
 
     @Test
@@ -105,9 +106,22 @@ class PowerWindowTest {
     }
 
     @Test
-    fun `ouverture emulee sans calibration = duree par defaut`() {
-        assertEquals(WindowCommand.EMULATED_OPEN_MS, WindowCommand.emulatedOpenMs(null))
+    fun `course emulee sans calibration = duree par defaut, dans les deux sens`() {
+        assertEquals(WindowCommand.EMULATED_COURSE_MS, WindowCommand.emulatedCourseMs(Direction.DOWN, null))
+        assertEquals(WindowCommand.EMULATED_COURSE_MS, WindowCommand.emulatedCourseMs(Direction.UP, null))
+    }
+
+    @Test
+    fun `course emulee calibree = duree mesuree du bon sens`() {
         val cal = WindowCalibration(downMs = 3_000, upMs = 3_500)
-        assertEquals(cal.emulatedOpenMs, WindowCommand.emulatedOpenMs(cal))
+        assertEquals(cal.emulatedOpenMs, WindowCommand.emulatedCourseMs(Direction.DOWN, cal))
+        assertEquals(cal.emulatedCloseMs, WindowCommand.emulatedCourseMs(Direction.UP, cal))
+    }
+
+    @Test
+    fun `seule la fermeture emulee s'arrete quand on quitte l'onglet`() {
+        // Pas d'anti-pincement sur une fermeture émulée : elle n'avance que sous les yeux de l'utilisateur.
+        assertTrue(WindowCommand.stopsWhenUnattended(WindowCommand.MANUAL_UP))
+        assertFalse(WindowCommand.stopsWhenUnattended(WindowCommand.MANUAL_DOWN))
     }
 }

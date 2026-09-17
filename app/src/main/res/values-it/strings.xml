@@ -494,7 +494,8 @@
     <!-- Onglet Vitres (V0 de test) -->
     <string name="dash_cat_windows">Finestrini</string>
     <string name="win_card_title">Finestrini</string>
-    <string name="win_hint">Pressione breve: apertura o chiusura automatica · Pressione lunga: il finestrino si muove finché tieni il dito</string>
+    <string name="win_hint">Pressione breve: apertura o chiusura completa (una nuova pressione la ferma) · Pressione lunga: il finestrino si muove finché tieni il dito</string>
+    <string name="win_close_warning">La chiusura automatica dall\'app non ha l\'antischiacciamento (tranne il finestrino del conducente): sorveglia il finestrino. Si ferma se esci dalla scheda.</string>
     <string name="win_front_left">Anteriore sinistro</string>
     <string name="win_front_right">Anteriore destro</string>
     <string name="win_rear_left">Posteriore sinistro</string>

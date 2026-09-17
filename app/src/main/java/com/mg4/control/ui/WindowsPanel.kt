@@ -55,7 +55,8 @@ class WindowsPanel {
     }
 
     companion object {
-        private const val POLL_MS = 1_000L
+        /** Assez rapide pour que le % estimé suive la vitre en mouvement. */
+        private const val POLL_MS = 500L
         private const val SUBSCRIBE_RETRY_MS = 10_000L
 
         fun nameRes(window: PowerWindow): Int = when (window) {
@@ -134,13 +135,13 @@ class WindowsPanel {
         handler.postDelayed(poll, POLL_MS)
     }
 
-    /** Onglet quitté ou écran en pause : plus de sondage, et aucune vitre ne reste en mouvement manuel. */
+    /** Onglet quitté ou écran en pause : plus de sondage, ni doigt posé ni fermeture émulée en cours. */
     fun onHidden() {
         if (!shown) return
         shown = false
         handler.removeCallbacksAndMessages(null)
         calibration.onHidden()
-        PowerWindows.stopFingerHolds()
+        PowerWindows.stopUnattendedMoves()
     }
 
     // ── Appui court / long ──────────────────────────────────────────────────
