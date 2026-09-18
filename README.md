@@ -54,8 +54,8 @@ L'application communique avec le véhicule via le SDK propriétaire SAIC, en acc
 #### Mode de conduite Personnalisé
 Trois réglages que le véhicule n'expose que dans ce mode : **puissance** (Éco / Normal / Sport),
 **direction** et **force sur la pédale** (Confort / Normal / Sport). Disponibles sur les six
-firmwares, par deux voies distinctes — signaux `VehiclePropertyManager` en SWI133/68/165,
-méthodes `CarVehicleSettingClient` sur A9.
+firmwares, par trois voies distinctes — signaux `VehiclePropertyManager` en SWI133, méthodes
+`VehicleSettingManager` en SWI68/165, méthodes `CarVehicleSettingClient` sur A9.
 
 Présents à deux endroits, avec une règle d'apparition différente :
 
@@ -94,8 +94,11 @@ enregistré avant cette fonctionnalité n'écrit rien tant qu'il n'a pas été r
 - **Climatisation** : consigne de température, ventilation, marche/arrêt, A/C, AUTO,
   recirculation (intérieur / extérieur / auto), dégivrage avant et arrière
 - **Luminosité de l'écran**
-- **Volume à l'ouverture de porte** : baisse le volume média quand une porte avant s'ouvre, avec
-  choix des portes déclencheuses et restauration à la fermeture
+- **Baisse du volume en quittant la voiture** : le volume média descend au moment du départ, sur
+  les six firmwares. Là où la voiture signale ses portes (SWI133, SWI132), le déclencheur reste
+  l'ouverture d'une porte avant, avec choix des portes et restauration à la fermeture ; ailleurs,
+  faute de capteur atteignable, c'est la **sortie du mode READY** qui sert de signal et la
+  restauration, si elle est demandée, se fait au retour en READY
 - **Audio** (firmwares A9) : type de son Bose, balance, fader, volume selon la vitesse
 
 ### ADAS (Assistance à la conduite)
@@ -135,6 +138,7 @@ Actions disponibles — celles qui dépendent du firmware n'apparaissent pas sur
 | Conduite | 1 Pédale · Cycle Régénération Personnalisé · Éco. énergie |
 | Sécurité | ESC · Somnolence · Somnolence : sensibilité · Système Anticollision · ADAS · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son |
 | Confort | Siège chauffant gauche · Siège chauffant droit · Volant chauffant · Clim ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant · Dégivrage arrière · Recirculation · Luminosité ± |
+| Vitres | Ouvrir toutes les vitres · Fermer toutes les vitres |
 | Média | Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume - |
 | Application et véhicule | Lancer un profil · Sélecteur de profil · Ouvrir MG4Control · Lancer une application · Éteindre la voiture |
 
@@ -194,6 +198,30 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
   automatique et la recirculation
 - Chaque automatisation est dépliable indépendamment de son interrupteur d'activation
 
+#### Vitres électriques
+Troisième carte de l'onglet, repliée par défaut, en trois sections.
+
+- **Commande** — les quatre vitres. Appui court : course complète (un nouvel appui l'arrête).
+  Appui long : la vitre bouge tant que le doigt reste posé. Plus *Tout ouvrir* et *Tout fermer*.
+- **Calibration** — seule la vitre conducteur remonte sa position. Pour les trois autres,
+  l'application chronomètre une course complète, puis estime le pourcentage à partir de la durée
+  de chaque commande.
+- **Fermeture automatique en quittant la voiture** — voiture en P et fermeture armée : quand la
+  voiture sort du mode READY (porte conducteur ouverte ou extinction), toutes les vitres se
+  ferment après le délai choisi ; un retour en READY avant la fin annule. L'armement se règle
+  (vitesse atteinte et/ou durée d'allumage, l'une ou l'autre ou les deux), le délai va de 0 à
+  30 s, et un bip d'avertissement facultatif, au volume réglable, peut accompagner le décompte.
+
+Deux limites tiennent à l'absence de capteur : l'estimation **ne voit pas les interrupteurs de
+portière** (le véhicule ne les signale pas), et toutes les vitres sont supposées fermées à chaque
+démarrage de l'application. La fermeture automatique reste donc **verrouillée tant que les trois
+vitres sans capteur ne sont pas calibrées** — elle ferme au temps mesuré, pas à la position lue.
+
+> [!WARNING]
+> Les courses commandées par l'application n'ont pas l'anti-pincement du véhicule, sauf sur la
+> vitre conducteur. Personne près des vitres pendant une fermeture, et en particulier pendant une
+> fermeture automatique, qui part alors que vous êtes déjà dehors.
+
 ### Gestion de profils
 - Sauvegarde jusqu'à **5 profils** personnalisés
 - Application instantanée d'un profil en un clic
@@ -230,7 +258,7 @@ sur le moment :
 | Raccourcis avancés | Les touches réclamées sont **rendues** : le service d'accessibilité ne consomme plus rien |
 | Profil au démarrage et au contact | Y compris la résolution Bluetooth |
 | Automatisations par température | Profil comme climatisation |
-| Baisse de volume à l'ouverture de porte | |
+| Baisse de volume en quittant la voiture | |
 | API externe | Les commandes tierces sont refusées |
 | Alerte de mise à jour sur l'écran du véhicule | |
 
@@ -927,8 +955,8 @@ The app communicates with the vehicle through the proprietary SAIC SDK, accessin
 #### Custom drive mode
 Three settings the vehicle only exposes in that mode: **power** (Eco / Normal / Sport),
 **steering** and **pedal force** (Comfort / Normal / Sport). Available on all six firmwares
-through two distinct routes — `VehiclePropertyManager` signals on SWI133/68/165, and
-`CarVehicleSettingClient` methods on A9.
+through three distinct routes — `VehiclePropertyManager` signals on SWI133,
+`VehicleSettingManager` methods on SWI68/165, and `CarVehicleSettingClient` methods on A9.
 
 Present in two places, with a different reveal rule:
 
@@ -966,8 +994,11 @@ feature writes nothing until it has been reopened and saved.
 - **Climate control**: temperature setpoint, fan speed, power, A/C, AUTO, recirculation
   (inner / outside / auto), front and rear defrost
 - **Screen brightness**
-- **Door-opening volume**: lowers media volume when a front door opens, with selectable trigger
-  doors and restore on close
+- **Volume drop when leaving the car**: media volume goes down as you leave, on all six
+  firmwares. Where the car reports its doors (SWI133, SWI132) the trigger stays a front door
+  opening, with selectable doors and restore on close; elsewhere, no door sensor being reachable,
+  **leaving READY state** is used instead and the restore, when asked for, happens on the way back
+  to READY
 - **Audio** (A9 firmwares): Bose sound type, balance, fader, speed-dependent volume
 
 ### ADAS (Advanced Driver Assistance)
@@ -1005,6 +1036,7 @@ Available actions — those depending on the firmware do not show up on the othe
 | Driving | One Pedal · Custom Regeneration Cycle · Energy saving |
 | Safety | ESC · Drowsiness · Drowsiness: sensitivity · Forward collision · ADAS · Traffic signs (TSR) · Overspeed alert · Speed limit change alert · Sound |
 | Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Brightness ± |
+| Windows | Open all windows · Close all windows |
 | Media | Play / Pause · Next track · Previous track · Volume + · Volume - |
 | App and vehicle | Apply a profile · Profile picker · Open MG4Control · Launch an app · Power the car off |
 
@@ -1062,6 +1094,29 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
   setpoint, fan level, defrosters, automatic mode and recirculation
 - Each automation folds open independently of its enable switch
 
+#### Power windows
+Third card of the tab, folded by default, in three sections.
+
+- **Controls** — the four windows. Short press: full travel (another press stops it). Long press:
+  the window moves as long as the finger stays down. Plus *Open all* and *Close all*.
+- **Calibration** — only the driver's window reports its position. For the other three, the app
+  times a full travel, then estimates the percentage from the duration of each command.
+- **Close on leaving the car** — car in P and closing armed: when the car leaves READY state
+  (driver door opened, or car switched off), every window closes after the chosen delay; going
+  back to READY before the end cancels it. Arming is configurable (speed reached and/or time
+  switched on, either or both), the delay ranges from 0 to 30 s, and an optional warning beep,
+  with adjustable volume, can accompany the countdown.
+
+Two limits come from the missing sensor: the estimate **cannot see the door switches** (the
+vehicle does not report them), and every window is assumed closed each time the app starts. Hence
+automatic closing stays **locked until the three sensorless windows have been calibrated** — it
+closes on the measured time, not on a read position.
+
+> [!WARNING]
+> Travels commanded by the app have no anti-pinch protection, except on the driver's window.
+> Keep clear of the windows during a closing sequence, especially an automatic one, which starts
+> once you are already outside.
+
 ### Profile Management
 - Save up to **5 custom profiles**
 - Instant one-tap profile application
@@ -1096,7 +1151,7 @@ moment:
 | Advanced shortcuts | Claimed keys are **released**: the accessibility service consumes nothing |
 | Profile at startup and at ignition | Bluetooth resolution included |
 | Temperature automations | Profile and climate alike |
-| Volume drop when a door opens | |
+| Volume drop when leaving the car | |
 | External API | Third-party commands are refused |
 | Update alert on the vehicle screen | |
 
@@ -1742,6 +1797,10 @@ Made with ❤ by **SliDeeN** and **Claude IA**
 Basé sur l'application **DriveHub Dort** développée par **Merth4n** & **hotboy_ist**
 
 Merci à **confor1max**, **FrAsErTaG**, **sixty4h**, **hojnikb** et **depippi.p** pour les tests avant chaque release 🙏
+
+Le pilotage des vitres doit beaucoup à **[winclose](https://github.com/Skittle6938/winclose)** de
+**Skittle6938** : identifiants et valeurs de commande des vitres, et principe de la fermeture
+automatique en quittant la voiture, repris puis étendus aux six firmwares. Merci 🙏
 
 [![GitHub](https://img.shields.io/badge/GitHub-SliDeeN%2FMG4Control-181717?logo=github)](https://github.com/SliDeeN/MG4Control)
 
