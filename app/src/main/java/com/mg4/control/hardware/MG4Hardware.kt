@@ -326,6 +326,9 @@ object MG4Hardware {
     /** CarPropertyManager de la connexion Car principale, null tant qu'elle n'est pas prête (vitres). */
     internal fun carPropertyManager(): Any? = sCarPropertyManager
 
+    /** Objet `Car` lié, pour obtenir un gestionnaire SAIC par son nom ([EnergyProbe]). */
+    internal fun car(): Any? = sCar
+
     // -------------------------------------------------------------------------
     // Init
     // -------------------------------------------------------------------------
@@ -3498,6 +3501,13 @@ object MG4Hardware {
         sb.appendLine("Katman5 prêt : ${if (sVcmCallbackRegistered) "✓ ($katman5Path)" else "✗ ($katman5Path)"}")
         sb.appendLine("Katman5 ign  : ${carIgnitionName(sLastVcmIgnitionState)} ($sLastVcmIgnitionState)")
         sb.appendLine()
+
+        // Sonde énergie : TOUS les relevés gardés, pas seulement le dernier — c'est leur
+        // comparaison (avant et après un trajet, pendant et après une charge) qui répond.
+        EnergyProbe.reports.forEach {
+            sb.appendLine(it)
+            sb.appendLine()
+        }
 
         if (gen == FirmwareInfo.Gen.SWI132) {
 

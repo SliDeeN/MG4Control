@@ -38,6 +38,7 @@ import com.mg4.control.util.QrCode
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.util.DataUsage
 import com.mg4.control.debug.CrashLogger
+import com.mg4.control.hardware.EnergyProbe
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.VehicleWriteGate
 import com.mg4.control.update.ApkCleanup
@@ -683,6 +684,11 @@ class SettingsFragment : Fragment() {
 
         // Génération du rapport matériel sur le thread IO
         CoroutineScope(Dispatchers.IO).launch {
+            // Sonde énergie : un relevé par ouverture du diagnostic — c'est ce qui permet à un
+            // testeur d'en prendre plusieurs (avant un trajet, après, pendant une charge) sans
+            // autre manipulation. Sur le fil IO : une trentaine de propriétés, plusieurs voies
+            // chacune, ça ne passe pas sur le fil principal.
+            EnergyProbe.run("diagnostic")
             val report = MG4Hardware.buildDiagnosticReport(appVersion)
             withContext(Dispatchers.Main) {
                 if (isAdded) tvReport.text = report
