@@ -99,6 +99,17 @@ object EnergyProbe {
         Signal("Trajet combiné : vitesse moyenne", 0x21407b80, null),
         Signal("Trajet combiné : conso moyenne", 0x21407b82, null),
         Signal("Autonomie restante", 0x21401565, null),
+
+        // ── Les six drapeaux « V » de la famille BMS ────────────────────────
+        // Relevé du 2026-09-18 : le SoC était JUSTE avec son drapeau à false, et deux sentinelles
+        // (1023, 511,5) avaient le leur à true. Le drapeau semble donc signaler l'INVALIDITÉ.
+        // On relève les six pour le vérifier, une charge en cours devant les faire basculer.
+        Signal("Drapeau 0x2120f422 (SoC affiché)", 0x2120f422, BMS_SERVICE),
+        Signal("Drapeau 0x2120f423", 0x2120f423, BMS_SERVICE),
+        Signal("Drapeau 0x2120f424 (courant de charge)", 0x2120f424, BMS_SERVICE),
+        Signal("Drapeau 0x2120f425", 0x2120f425, BMS_SERVICE),
+        Signal("Drapeau 0x2120f426 (temps restant)", 0x2120f426, BMS_SERVICE),
+        Signal("Drapeau 0x2120f427", 0x2120f427, BMS_SERVICE),
     )
 
     /**

@@ -1782,7 +1782,10 @@ object MG4Hardware {
         data class Unknown(val raw: Int) : CustomSetting()
 
         /** Aucune réponse du véhicule. */
-        object Unavailable : CustomSetting()
+        object Unavailable : CustomSetting() {
+            // Sans ça, R8 renomme la classe et le journal affiche « o1.u@d1c1c66 ».
+            override fun toString() = "Unavailable"
+        }
 
         /** Position à surligner, ou null tant qu'elle n'est pas connue. */
         val index: Int? get() = (this as? Known)?.position
