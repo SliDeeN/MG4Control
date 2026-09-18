@@ -1,6 +1,8 @@
 package com.mg4.control.hardware
 
 import android.content.Context
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -35,8 +37,20 @@ object WindowAutoClose {
     private const val KEY_TIME_MIN = "win_autoclose_time_min"
     private const val KEY_BOTH = "win_autoclose_both"
     private const val KEY_DELAY_S = "win_autoclose_delay_s"
+    private const val KEY_BEEP = "win_autoclose_beep"
+    private const val KEY_BEEP_VOLUME = "win_autoclose_beep_volume"
 
     private const val TICK_MS = 1_000L
+
+    /** Bip d'avertissement, repris de winclose : un par seconde pendant le délai. */
+    private const val BEEP_MS = 150
+    /** Volume du [ToneGenerator], en pour cent. Le minimum n'est pas 0 : couper, c'est décocher. */
+    const val BEEP_VOLUME_MIN = 10
+    const val BEEP_VOLUME_MAX = 100
+    const val BEEP_VOLUME_STEP = 5
+    const val BEEP_VOLUME_DEFAULT = 80
+    /** Bip d'essai hors surveillance : on rend la piste audio peu après. */
+    private const val PREVIEW_RELEASE_MS = 2_000L
 
     enum class Result { PENDING, DONE, PARTIAL, CANCELLED }
 
@@ -58,6 +72,8 @@ object WindowAutoClose {
         val timeMin: Int,
         val requireBoth: Boolean,
         val delayS: Int,
+        val beep: Boolean,
+        val beepVolume: Int,
     ) {
         fun toArming() = Arming(
             speedKmh = if (speedOn) speedKmh.toFloat() else null,
@@ -71,6 +87,12 @@ object WindowAutoClose {
     private var running = false
     private var lastResult: Result? = null
     private var lastResultAt = 0L
+    /** Recopié depuis les réglages : le tic ne doit pas relire les préférences chaque seconde. */
+    private var beepOn = false
+    private var beepVolume = BEEP_VOLUME_DEFAULT
+    private var tone: ToneGenerator? = null
+    /** Volume du générateur en place : il se fixe à la construction, pas à l'appel. */
+    private var toneVolume = -1
 
     fun isEnabled(context: Context): Boolean =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getBoolean(KEY_ENABLED, false)
@@ -94,6 +116,11 @@ object WindowAutoClose {
             requireBoth = p.getBoolean(KEY_BOTH, false),
             delayS = p.getInt(KEY_DELAY_S, WindowAutoCloseTrigger.DELAY_DEFAULT_S)
                 .coerceIn(WindowAutoCloseTrigger.DELAY_MIN_S, WindowAutoCloseTrigger.DELAY_MAX_S),
+            // Décoché par défaut : le bip est une gêne pour qui n'en veut pas, et la fermeture
+            // automatique est déjà une option qu'on active en connaissance de cause.
+            beep = p.getBoolean(KEY_BEEP, false),
+            beepVolume = p.getInt(KEY_BEEP_VOLUME, BEEP_VOLUME_DEFAULT)
+                .coerceIn(BEEP_VOLUME_MIN, BEEP_VOLUME_MAX),
         )
     }
 
@@ -106,6 +133,8 @@ object WindowAutoClose {
             putInt(KEY_TIME_MIN, s.timeMin)
             putBoolean(KEY_BOTH, s.requireBoth)
             putInt(KEY_DELAY_S, s.delayS)
+            putBoolean(KEY_BEEP, s.beep)
+            putInt(KEY_BEEP_VOLUME, s.beepVolume)
         }
         main.post { apply(s) }
         AppLogger.i(TAG, "fermeture auto : réglages = ${describe(s)}")
@@ -122,6 +151,9 @@ object WindowAutoClose {
     private fun apply(s: Settings) {
         trigger.arming = s.toArming()
         trigger.delayMs = s.delayS * 1000L
+        beepOn = s.beep
+        beepVolume = s.beepVolume
+        if (!beepOn) releaseTone()
     }
 
     private fun describe(s: Settings): String {
@@ -131,7 +163,8 @@ object WindowAutoClose {
         )
         val arming = if (parts.isEmpty()) "aucune condition (jamais armée)"
                      else parts.joinToString(if (s.requireBoth) " ET " else " OU ")
-        return "armement $arming, délai ${s.delayS} s"
+        val bip = if (s.beep) "oui à ${s.beepVolume} %" else "non"
+        return "armement $arming, délai ${s.delayS} s, bip $bip"
     }
 
     // ── Surveillance ────────────────────────────────────────────────────────
@@ -163,6 +196,7 @@ object WindowAutoClose {
             running = false
             main.removeCallbacks(tick)
             ReadyWatcher.remove(readyListener)
+            releaseTone()
             if (trigger.cancelPending()) {
                 setResult(Result.CANCELLED)
                 AppLogger.i(TAG, "fermeture auto : attente abandonnée (option désactivée)")
@@ -210,14 +244,65 @@ object WindowAutoClose {
 
     private fun handle(outcome: WindowAutoCloseTrigger.Outcome) {
         when (outcome.action) {
-            Action.SCHEDULE -> setResult(Result.PENDING)
+            Action.SCHEDULE -> {
+                setResult(Result.PENDING)
+                beep()
+            }
             Action.CANCEL   -> {
                 setResult(Result.CANCELLED)
+                releaseTone()
                 AppLogger.i(TAG, "fermeture auto : annulée (${outcome.reason})")
             }
-            Action.CLOSE    -> closeAll(outcome.reason)
-            Action.NONE     -> Unit
+            Action.CLOSE    -> {
+                releaseTone()
+                closeAll(outcome.reason)
+            }
+            // Rien à faire, sauf le bip de chaque seconde d'attente.
+            Action.NONE     -> if (trigger.isPending) beep()
         }
+    }
+
+    /**
+     * Un bip par seconde pendant le délai, comme winclose : le seul avertissement possible pour
+     * qui est à côté de la voiture, l'écran ne se voyant pas de l'extérieur. Décoché par défaut.
+     * Un échec (piste audio occupée, flux refusé) ne doit jamais empêcher la fermeture.
+     */
+    private fun beep() {
+        if (beepOn) playBeep(beepVolume)
+    }
+
+    /**
+     * Bip d'essai pendant que l'utilisateur déplace le curseur : régler un volume à l'aveugle
+     * n'aurait pas de sens. Muet si l'avertissement est décoché.
+     */
+    fun previewBeep(context: Context) {
+        val s = settings(context)
+        if (!s.beep) return
+        playBeep(s.beepVolume)
+        // Hors surveillance, personne ne viendra rendre la piste audio : on s'en charge.
+        if (!running) {
+            main.removeCallbacks(releasePreview)
+            main.postDelayed(releasePreview, PREVIEW_RELEASE_MS)
+        }
+    }
+
+    private val releasePreview = Runnable { if (!running) releaseTone() }
+
+    private fun playBeep(volume: Int) {
+        runCatching {
+            // Le volume est figé à la construction : un réglage déplacé impose un nouveau générateur.
+            if (toneVolume != volume) releaseTone()
+            val t = tone ?: ToneGenerator(AudioManager.STREAM_NOTIFICATION, volume)
+                .also { tone = it; toneVolume = volume }
+            t.startTone(ToneGenerator.TONE_PROP_BEEP, BEEP_MS)
+        }.onFailure { AppLogger.w(TAG, "fermeture auto : bip impossible (${it.javaClass.simpleName}: ${it.message})") }
+    }
+
+    /** Le générateur tient une piste audio : on le rend dès que l'attente est finie. */
+    private fun releaseTone() {
+        tone?.release()
+        tone = null
+        toneVolume = -1
     }
 
     private fun closeAll(reason: String) {

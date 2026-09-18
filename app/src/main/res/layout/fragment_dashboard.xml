@@ -62,20 +62,6 @@
                 app:strokeColor="@color/dash_border"
                 app:cornerRadius="8dp" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_dash_cat_windows"
-                android:layout_width="match_parent"
-                android:layout_height="64dp"
-                android:layout_marginBottom="8dp"
-                android:text="@string/dash_cat_windows"
-                android:textColor="@color/text_secondary"
-                android:textSize="16sp"
-                android:textAllCaps="true"
-                app:backgroundTint="@color/dash_btn"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/dash_border"
-                app:cornerRadius="8dp" />
-
     </LinearLayout>
 
     <View
@@ -2496,8 +2482,6 @@
             </LinearLayout>
 
             <!-- ═══════════ VITRES ═══════════ -->
-            <include layout="@layout/dash_page_windows" />
-
         </LinearLayout>
 
     </ScrollView>

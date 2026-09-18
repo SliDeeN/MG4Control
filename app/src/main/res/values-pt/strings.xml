@@ -494,18 +494,12 @@
     <string name="shortcuts_action_volume_down">Volume -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="dash_cat_windows">Vidros</string>
-    <string name="win_card_title">Vidros</string>
     <string name="win_hint">Toque curto: abertura ou fecho completo (novo toque para parar) · Toque longo: o vidro move-se enquanto o dedo estiver pousado</string>
     <string name="win_close_warning">O fecho automático pela app não tem antientalamento (exceto o vidro do condutor): vigie o vidro. Para se sair do separador.</string>
     <string name="win_front_left">Dianteiro esquerdo</string>
     <string name="win_front_right">Dianteiro direito</string>
     <string name="win_rear_left">Traseiro esquerdo</string>
     <string name="win_rear_right">Traseiro direito</string>
-    <string name="win_short_front_left">DE</string>
-    <string name="win_short_front_right">DD</string>
-    <string name="win_short_rear_left">TE</string>
-    <string name="win_short_rear_right">TD</string>
     <string name="win_close">Fechar</string>
     <string name="win_open">Abrir</string>
     <string name="win_all_close">Fechar todos</string>
@@ -514,22 +508,24 @@
     <string name="win_auto_label">Fechar os vidros ao sair do carro</string>
     <string name="win_auto_desc">Carro em P, depois de armado pelas condições abaixo: quando o carro sai do modo READY (porta do condutor aberta ou carro desligado), todos os vidros fecham após o atraso escolhido. Voltar a READY antes cancela.</string>
     <string name="win_auto_warning">Sem antientalamento nos vidros exceto o do condutor: ninguém perto dos vidros ao sair.</string>
+    <string name="win_auto_need_cal">Calibre primeiro os vidros, na secção acima: o fecho ao sair baseia-se no tempo medido. Falta: %1$s.</string>
     <string name="win_auto_arming_title">Armar: depois de conduzir</string>
     <string name="win_auto_speed_label">Velocidade atingida</string>
     <string name="win_auto_time_label">Carro ligado há</string>
     <string name="win_auto_combine_any">Qualquer uma</string>
     <string name="win_auto_combine_all">Ambas</string>
     <string name="win_auto_need_one">Mantenha pelo menos uma condição</string>
-    <string name="win_auto_status">Armado: %1$s · READY: %2$s · último fecho: %3$s</string>
-    <string name="win_auto_ready_unknown">ilegível</string>
     <string name="win_auto_delay_label">Atraso antes do fecho</string>
-    <string name="win_auto_off">Opção desativada</string>
-    <string name="win_auto_last_none">nenhum</string>
-    <string name="win_auto_last_pending">pendente…</string>
-    <string name="win_auto_last_done">completo às %1$s</string>
-    <string name="win_auto_last_partial">incompleto às %1$s</string>
-    <string name="win_auto_last_cancelled">cancelado às %1$s</string>
+    <string name="win_auto_beep_label">Aviso sonoro</string>
+    <string name="win_auto_beep_desc">Um bip por segundo durante o atraso, antes de as janelas fecharem.</string>
+    <string name="win_auto_beep_volume_label">Volume do aviso</string>
+    <string name="win_auto_beep_value" translatable="false">%1$d %%</string>
     <string name="win_cal_title">Calibração dos vidros</string>
+    <string name="win_automation_title">Vidros elétricos</string>
+    <string name="win_section_command">Comando</string>
+    <string name="win_cal_limits">O que a estimativa não vê: os interruptores da porta (o carro não os comunica, a posição mostrada fica errada até ao comando seguinte a partir da aplicação) e o estado no arranque (todos os vidros são considerados fechados sempre que a aplicação inicia).</string>
+    <string name="shortcuts_action_windows_open">Abrir todos os vidros</string>
+    <string name="shortcuts_action_windows_close">Fechar todos os vidros</string>
     <string name="win_cal_hint">Vidros sem sensor: a app cronometra um curso completo e depois estima a posição a cada comando.</string>
     <string name="win_cal_sensor">Sensor de origem</string>
     <string name="win_cal_none">Não calibrado</string>
@@ -556,15 +552,7 @@
     <string name="win_cal_saved">Calibração guardada</string>
     <string name="win_value_estimated">≈ %1$d %% aberto</string>
     <string name="win_value_estimate_unknown">Posição desconhecida: faça um curso completo</string>
-    <string name="win_diag_title">Diagnóstico</string>
-    <string name="win_probe">Repetir a sonda</string>
-    <string name="win_probe_running">Sonda em curso…</string>
-    <string name="win_raw_title">Teste direto: escolha o vidro e depois o valor a enviar</string>
     <string name="win_value">Valor lido: %1$s</string>
     <string name="win_value_unknown">ilegível</string>
     <string name="win_value_no_sensor">Sem sensor (bruto %1$s)</string>
-    <string name="win_diag_link">Ligação ao veículo: %1$s · subscrição: %2$s</string>
-    <string name="win_diag_last">Último comando: %1$s</string>
-    <string name="win_yes">sim</string>
-    <string name="win_no">não</string>
 </resources>

@@ -49,7 +49,13 @@ enum class ShortcutAction(val id: Int) {
     // Volume : réglage du VÉHICULE, contrairement aux trois précédentes. Il ne dépend d'aucune
     // application et fonctionne donc même quand les touches média restent sans effet.
     VOLUME_UP(34),
-    VOLUME_DOWN(35);
+    VOLUME_DOWN(35),
+
+    // Vitres : actions directes, sans état à suivre — chaque pression lance la course complète
+    // des quatre vitres. La voiture ne renvoyant rien sur leur position (hors vitre conducteur),
+    // une bascule mémorisée n'aurait rien à quoi se raccrocher.
+    WINDOWS_OPEN_ALL(36),
+    WINDOWS_CLOSE_ALL(37);
 
     companion object {
         fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: NONE

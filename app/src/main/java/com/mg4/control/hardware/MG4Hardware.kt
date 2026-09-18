@@ -1815,11 +1815,31 @@ object MG4Hardware {
         val bean = if (family == CustomDriveScale.Family.VSM_68) customFromBean(method) else null
         // La première voie qui rend une position connue l'emporte ; -1 est le « je ne sais pas »
         // commun aux deux (service non lié côté SDK, exception côté VPM).
-        val reponses = listOfNotNull(direct, bean).filter { it >= 0 }
-        reponses.forEach { raw ->
-            CustomDriveScale.index(setting, raw, family)?.let { return CustomSetting.Known(it) }
+        listOf("directe" to direct, "instantané" to bean).forEach { (nom, raw) ->
+            if (raw == null || raw < 0) return@forEach
+            CustomDriveScale.index(setting, raw, family)?.let {
+                logCustomSource(setting, nom, direct, bean)
+                return CustomSetting.Known(it)
+            }
         }
-        return reponses.firstOrNull()?.let { CustomSetting.Unknown(it) } ?: CustomSetting.Unavailable
+        val repondu = listOfNotNull(direct, bean).firstOrNull { it >= 0 }
+        return repondu?.let { CustomSetting.Unknown(it) } ?: CustomSetting.Unavailable
+    }
+
+    /**
+     * Une ligne par réglage et par démarrage : quelle voie a répondu, et ce que rendaient les
+     * autres. C'est le seul moyen de savoir laquelle garder — une fois les six firmwares passés,
+     * les voies inutiles et ce journal partent ensemble.
+     */
+    private val sCustomSourceSeen =
+        java.util.Collections.synchronizedSet(mutableSetOf<CustomDriveScale.Setting>())
+
+    private fun logCustomSource(
+        setting: CustomDriveScale.Setting, retenue: String, direct: Int?, bean: Int?
+    ) {
+        if (!sCustomSourceSeen.add(setting)) return
+        AppLogger.i(CUSTOM_TAG, "SOURCE $setting : voie $retenue retenue — " +
+            "directe=${direct ?: "muette"} · instantané=${bean ?: "n/a"} (${customFamily()})")
     }
 
     /** Puissance du mode Personnalisé. [index] : 0=Éco, 1=Normal, 2=Sport. */
@@ -1945,13 +1965,26 @@ object MG4Hardware {
      */
     fun getDriveMode(): DriveMode? {
         val rawCpm = getIntPropertyCPM(PROP_DRIVE_MODE, AREA_GLOBAL)
-        DriveMode.fromValueOrNull(rawCpm)?.let { return it }
+        DriveMode.fromValueOrNull(rawCpm)?.let {
+            logDriveModeSource("propriété", rawCpm, null)
+            return it
+        }
         val rawSdk = (callVsm(driveModeGetter()) as? Int)
         val mode = rawSdk?.let { DriveMode.fromValueOrNull(it) }
-        if (mode == null && logEnabled)
+        if (mode != null) logDriveModeSource("SDK ${driveModeGetter()}", rawCpm, rawSdk)
+        else if (logEnabled)
             AppLogger.d(TAG, "  mode de conduite illisible : CPM=$rawCpm " +
                 "${driveModeGetter()}=${rawSdk ?: "muet"}")
         return mode
+    }
+
+    /** Idem pour le mode de conduite : une ligne au premier succès, puis silence. */
+    private val sDriveModeSourceLogged = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    private fun logDriveModeSource(retenue: String, rawCpm: Int, rawSdk: Int?) {
+        if (sDriveModeSourceLogged.getAndSet(true)) return
+        AppLogger.i(CUSTOM_TAG, "SOURCE mode de conduite : voie $retenue retenue — " +
+            "CPM 0x${PROP_DRIVE_MODE.toString(16)}=$rawCpm · ${driveModeGetter()}=${rawSdk ?: "non interrogé"}")
     }
 
     /** Méthode du SDK qui rend le mode de conduite (l'A9 la nomme autrement). */

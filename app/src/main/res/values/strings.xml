@@ -496,18 +496,12 @@
     <string name="shortcuts_action_volume_down">Volume -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="dash_cat_windows">Vitres</string>
-    <string name="win_card_title">Vitres</string>
     <string name="win_hint">Appui court : ouverture ou fermeture complète (un nouvel appui l\'arrête) · Appui long : la vitre bouge tant que le doigt reste posé</string>
     <string name="win_close_warning">Fermeture automatique par l\'app sans anti-pincement (sauf vitre conducteur) : surveillez la vitre. Elle s\'arrête si vous quittez l\'onglet.</string>
     <string name="win_front_left">Avant gauche</string>
     <string name="win_front_right">Avant droite</string>
     <string name="win_rear_left">Arrière gauche</string>
     <string name="win_rear_right">Arrière droite</string>
-    <string name="win_short_front_left">AVG</string>
-    <string name="win_short_front_right">AVD</string>
-    <string name="win_short_rear_left">ARG</string>
-    <string name="win_short_rear_right">ARD</string>
     <string name="win_close">Fermer</string>
     <string name="win_open">Ouvrir</string>
     <string name="win_all_close">Tout fermer</string>
@@ -516,6 +510,7 @@
     <string name="win_auto_label">Fermer les vitres en quittant la voiture</string>
     <string name="win_auto_desc">Voiture en P, une fois armée selon les conditions ci-dessous : quand la voiture sort du mode READY (ouverture de la porte conducteur ou extinction), toutes les vitres se ferment après le délai choisi. Un retour en READY avant annule.</string>
     <string name="win_auto_warning">Sans anti-pincement sur les vitres autres que conducteur : personne près des vitres en partant.</string>
+    <string name="win_auto_need_cal">Calibrez d\'abord les vitres, dans la section ci-dessus : la fermeture en quittant ferme au temps mesuré. Manque : %1$s.</string>
     <string name="win_auto_arming_title">Armement : après avoir roulé</string>
     <string name="win_auto_speed_label">Vitesse atteinte</string>
     <string name="win_auto_time_label">Voiture allumée depuis</string>
@@ -524,17 +519,18 @@
     <string name="win_auto_need_one">Gardez au moins une condition d\'armement</string>
     <string name="win_auto_speed_value" translatable="false">%1$d km/h</string>
     <string name="win_auto_time_value" translatable="false">%1$d min</string>
-    <string name="win_auto_status">Armée : %1$s · READY : %2$s · dernière fermeture : %3$s</string>
-    <string name="win_auto_ready_unknown">illisible</string>
     <string name="win_auto_delay_label">Délai avant fermeture</string>
     <string name="win_auto_delay_value" translatable="false">%1$d s</string>
-    <string name="win_auto_off">Option désactivée</string>
-    <string name="win_auto_last_none">aucune</string>
-    <string name="win_auto_last_pending">en attente…</string>
-    <string name="win_auto_last_done">complète à %1$s</string>
-    <string name="win_auto_last_partial">incomplète à %1$s</string>
-    <string name="win_auto_last_cancelled">annulée à %1$s</string>
+    <string name="win_auto_beep_label">Bip d\'avertissement</string>
+    <string name="win_auto_beep_desc">Un bip par seconde pendant le délai, avant que les vitres se ferment.</string>
+    <string name="win_auto_beep_volume_label">Volume du bip</string>
+    <string name="win_auto_beep_value" translatable="false">%1$d %%</string>
     <string name="win_cal_title">Calibration des vitres</string>
+    <string name="win_automation_title">Vitres électriques</string>
+    <string name="win_section_command">Commande</string>
+    <string name="win_cal_limits">Ce que l\'estimation ne voit pas : les interrupteurs de portière (la voiture ne les signale pas, la position affichée reste fausse jusqu\'à la commande suivante depuis l\'application) et l\'état au lancement (toutes les vitres sont supposées fermées à chaque démarrage de l\'application).</string>
+    <string name="shortcuts_action_windows_open">Ouvrir toutes les vitres</string>
+    <string name="shortcuts_action_windows_close">Fermer toutes les vitres</string>
     <string name="win_cal_hint">Vitres sans capteur : l\'app chronomètre une course complète, puis estime la position à chaque commande.</string>
     <string name="win_cal_sensor">Capteur d\'origine</string>
     <string name="win_cal_none">Non calibrée</string>
@@ -561,17 +557,9 @@
     <string name="win_cal_saved">Calibration enregistrée</string>
     <string name="win_value_estimated">≈ %1$d %% ouverte</string>
     <string name="win_value_estimate_unknown">Position inconnue : faire une course complète</string>
-    <string name="win_diag_title">Diagnostic</string>
-    <string name="win_probe">Relancer la sonde</string>
-    <string name="win_probe_running">Sonde en cours…</string>
-    <string name="win_raw_title">Test brut : choisir la vitre, puis la valeur à envoyer</string>
     <string name="win_value">Valeur lue : %1$s</string>
     <string name="win_value_unknown">illisible</string>
     <string name="win_value_no_sensor">Pas de capteur (brut %1$s)</string>
-    <string name="win_diag_link">Liaison véhicule : %1$s · abonnement : %2$s</string>
-    <string name="win_diag_last">Dernière commande : %1$s</string>
-    <string name="win_yes">oui</string>
-    <string name="win_no">non</string>
     <string name="win_raw_value_0" translatable="false">0</string>
     <string name="win_raw_value_1" translatable="false">1</string>
     <string name="win_raw_value_2" translatable="false">2</string>

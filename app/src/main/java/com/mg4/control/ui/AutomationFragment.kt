@@ -26,6 +26,9 @@ class AutomationFragment : Fragment() {
 
     private var profiles: List<DrivingProfile> = emptyList()
 
+    /** Carte des vitres : le panneau survit à la vue, comme au tableau de bord avant le déplacement. */
+    private val windowsPanel = WindowsPanel()
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View = inflater.inflate(R.layout.fragment_automation, container, false)
@@ -51,6 +54,7 @@ class AutomationFragment : Fragment() {
             prefs.edit().putBoolean(AutomationSettings.KEY_ENABLED, checked).apply()
         }
         bindExpander(view.findViewById(R.id.btn_automation_expand), rowConfig, expanded = enabled)
+        bindWindowsCard(view)
 
         fun commitTemp() {
             val clamped = AutomationSettings.clampTemp(inputTemp.text.toString().toIntOrNull())
@@ -286,6 +290,9 @@ class AutomationFragment : Fragment() {
             val prefs = requireContext().getSharedPreferences(AutomationSettings.PREFS, Context.MODE_PRIVATE)
             setupSpinner(sp, prefs)
         }
+        // Carte des vitres : le sondage ne reprend que si elle est restée dépliée.
+        if (view?.findViewById<View>(R.id.row_windows_config)?.visibility == View.VISIBLE)
+            windowsPanel.onShown()
     }
 
     private fun setupSpinner(spinner: Spinner, prefs: android.content.SharedPreferences) {
@@ -319,14 +326,38 @@ class AutomationFragment : Fragment() {
      * en repliant la carte. L'etat initial suit quand meme l'activation — une automatisation
      * eteinte s'ouvre repliee, ce qui reproduit le comportement precedent.
      */
-    private fun bindExpander(btn: MaterialButton, content: View, expanded: Boolean) {
+    private fun bindExpander(
+        btn: MaterialButton, content: View, expanded: Boolean, onToggle: ((Boolean) -> Unit)? = null
+    ) {
         var open = expanded
         fun apply() {
             content.visibility = if (open) View.VISIBLE else View.GONE
             btn.text = if (open) "▾" else "▸"   // chevron bas / droite
+            onToggle?.invoke(open)
         }
         apply()
         btn.setOnClickListener { open = !open; apply() }
+    }
+
+    /**
+     * Carte des vitres, repliée par défaut : la commande manuelle et la calibration ne sont pas
+     * des automatismes, on ne les ouvre que quand on les cherche.
+     *
+     * Le sondage des positions (et donc l'abonnement véhicule) ne tourne que carte ouverte ET
+     * écran au premier plan — ailleurs il consommerait pour une valeur que personne ne regarde.
+     */
+    private fun bindWindowsCard(view: View) {
+        windowsPanel.bind(view)
+        val content = view.findViewById<View>(R.id.row_windows_config)
+        bindExpander(view.findViewById(R.id.btn_windows_expand), content, expanded = false) { open ->
+            if (open && isResumed) windowsPanel.onShown() else windowsPanel.onHidden()
+        }
+    }
+
+    /** Écran quitté : plus de sondage, et aucune vitre ne reste en mouvement sans surveillance. */
+    override fun onPause() {
+        super.onPause()
+        windowsPanel.onHidden()
     }
 
 }

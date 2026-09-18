@@ -494,18 +494,12 @@
     <string name="shortcuts_action_volume_down">Lautstärke -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="dash_cat_windows">Fenster</string>
-    <string name="win_card_title">Fenster</string>
     <string name="win_hint">Kurz drücken: vollständig öffnen oder schließen (erneut drücken stoppt) · Lang drücken: das Fenster bewegt sich, solange der Finger bleibt</string>
     <string name="win_close_warning">Automatisches Schließen durch die App ohne Einklemmschutz (außer Fahrerfenster): Fenster beobachten. Es stoppt, wenn Sie den Tab verlassen.</string>
     <string name="win_front_left">Vorne links</string>
     <string name="win_front_right">Vorne rechts</string>
     <string name="win_rear_left">Hinten links</string>
     <string name="win_rear_right">Hinten rechts</string>
-    <string name="win_short_front_left">VL</string>
-    <string name="win_short_front_right">VR</string>
-    <string name="win_short_rear_left">HL</string>
-    <string name="win_short_rear_right">HR</string>
     <string name="win_close">Schließen</string>
     <string name="win_open">Öffnen</string>
     <string name="win_all_close">Alle schließen</string>
@@ -514,22 +508,24 @@
     <string name="win_auto_label">Fenster beim Verlassen des Autos schließen</string>
     <string name="win_auto_desc">Auto in P, sobald nach den Bedingungen unten scharf: Verlässt das Auto den READY-Modus (Fahrertür geöffnet oder Auto ausgeschaltet), schließen alle Fenster nach der gewählten Verzögerung. Eine Rückkehr in READY davor bricht ab.</string>
     <string name="win_auto_warning">Kein Einklemmschutz an den Fenstern außer dem Fahrerfenster: beim Aussteigen niemand in der Nähe der Fenster.</string>
+    <string name="win_auto_need_cal">Kalibrieren Sie zuerst die Fenster im Abschnitt darüber: das Schließen beim Aussteigen läuft über die gemessene Laufzeit. Fehlt: %1$s.</string>
     <string name="win_auto_arming_title">Scharfschalten: nach der Fahrt</string>
     <string name="win_auto_speed_label">Erreichte Geschwindigkeit</string>
     <string name="win_auto_time_label">Auto eingeschaltet seit</string>
     <string name="win_auto_combine_any">Eine von beiden</string>
     <string name="win_auto_combine_all">Beide</string>
     <string name="win_auto_need_one">Mindestens eine Bedingung beibehalten</string>
-    <string name="win_auto_status">Scharf: %1$s · READY: %2$s · letztes Schließen: %3$s</string>
-    <string name="win_auto_ready_unknown">nicht lesbar</string>
     <string name="win_auto_delay_label">Verzögerung vor dem Schließen</string>
-    <string name="win_auto_off">Option deaktiviert</string>
-    <string name="win_auto_last_none">keines</string>
-    <string name="win_auto_last_pending">ausstehend…</string>
-    <string name="win_auto_last_done">vollständig um %1$s</string>
-    <string name="win_auto_last_partial">unvollständig um %1$s</string>
-    <string name="win_auto_last_cancelled">abgebrochen um %1$s</string>
+    <string name="win_auto_beep_label">Warnton</string>
+    <string name="win_auto_beep_desc">Ein Signalton pro Sekunde während der Verzögerung, bevor die Fenster schließen.</string>
+    <string name="win_auto_beep_volume_label">Lautstärke des Signaltons</string>
+    <string name="win_auto_beep_value" translatable="false">%1$d %%</string>
     <string name="win_cal_title">Fensterkalibrierung</string>
+    <string name="win_automation_title">Elektrische Fensterheber</string>
+    <string name="win_section_command">Bedienung</string>
+    <string name="win_cal_limits">Was die Schätzung nicht sieht: die Schalter in der Tür (das Auto meldet sie nicht, die angezeigte Position bleibt bis zum nächsten Befehl aus der App falsch) und den Zustand beim Start (bei jedem Start der App gelten alle Fenster als geschlossen).</string>
+    <string name="shortcuts_action_windows_open">Alle Fenster öffnen</string>
+    <string name="shortcuts_action_windows_close">Alle Fenster schließen</string>
     <string name="win_cal_hint">Fenster ohne Sensor: Die App misst einen vollen Weg und schätzt danach die Position bei jedem Befehl.</string>
     <string name="win_cal_sensor">Serienmäßiger Sensor</string>
     <string name="win_cal_none">Nicht kalibriert</string>
@@ -556,15 +552,7 @@
     <string name="win_cal_saved">Kalibrierung gespeichert</string>
     <string name="win_value_estimated">≈ %1$d %% offen</string>
     <string name="win_value_estimate_unknown">Position unbekannt: einen vollen Weg fahren</string>
-    <string name="win_diag_title">Diagnose</string>
-    <string name="win_probe">Messung erneut starten</string>
-    <string name="win_probe_running">Messung läuft…</string>
-    <string name="win_raw_title">Rohtest: Fenster wählen, dann den zu sendenden Wert</string>
     <string name="win_value">Gelesener Wert: %1$s</string>
     <string name="win_value_unknown">nicht lesbar</string>
     <string name="win_value_no_sensor">Kein Sensor (Rohwert %1$s)</string>
-    <string name="win_diag_link">Fahrzeugverbindung: %1$s · Abonnement: %2$s</string>
-    <string name="win_diag_last">Letzter Befehl: %1$s</string>
-    <string name="win_yes">ja</string>
-    <string name="win_no">nein</string>
 </resources>

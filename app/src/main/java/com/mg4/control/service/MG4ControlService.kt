@@ -31,10 +31,12 @@ import com.mg4.control.model.DriveMode
 import com.mg4.control.bluetooth.BluetoothProfileManager
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.hardware.PowerWindows
 import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.hardware.MG4Hardware.AebMode
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.RegenLevel
+import com.mg4.control.model.WindowCommand
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
@@ -915,6 +917,23 @@ class MG4ControlService : Service() {
                 } else {
                     AppLogger.i(TAG, "SHORTCUT APPLY_PROFILE — application de '${profile.name}'")
                     ProfileApplier.apply(profile)
+                }
+            }
+            return
+        }
+
+        // Vitres : action directe, aucune bascule — une pression = une course complète.
+        // La FERMETURE emprunte le chemin de la fermeture automatique, le seul qui aille au bout
+        // sans personne devant l'écran : au volant, l'utilisateur ne regarde pas l'application.
+        if (action == ShortcutAction.WINDOWS_OPEN_ALL || action == ShortcutAction.WINDOWS_CLOSE_ALL) {
+            val ouvrir = action == ShortcutAction.WINDOWS_OPEN_ALL
+            AppLogger.i(TAG, "SHORTCUT vitres : tout ${if (ouvrir) "ouvrir" else "fermer"}")
+            PowerWindows.prepare()
+            if (ouvrir) {
+                PowerWindows.autoAll(WindowCommand.Direction.DOWN)
+            } else {
+                PowerWindows.closeAllAutomatically { ok ->
+                    AppLogger.i(TAG, "SHORTCUT vitres : fermeture ${if (ok) "complète" else "incomplète"}")
                 }
             }
             return

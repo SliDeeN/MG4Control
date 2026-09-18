@@ -18,8 +18,8 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * Onglet « Vitres » du tableau de bord (V0 de test), sorti de DashboardFragment pour ne pas
- * l'alourdir. Le fragment appelle [bind] une fois, puis [onShown] / [onHidden] selon l'onglet.
+ * Carte « Vitres » de l'onglet Automatisation. Le fragment appelle [bind] une fois, puis
+ * [onShown] / [onHidden] selon que la carte est dépliée et l'écran au premier plan.
  *
  * Boutons de vitre pilotés au toucher : relâché avant [WindowCommand.HOLD_DELAY_MS] = appui
  * court (course auto, ou stop si une course est en cours) ; au-delà = commande manuelle répétée
@@ -37,13 +37,9 @@ class WindowsPanel {
     )
 
     private val tiles = mutableListOf<Tile>()
-    private val rawWindowButtons = linkedMapOf<PowerWindow, MaterialButton>()
     private val calibration = WindowCalibrationPanel()
     private val autoClose = WindowAutoClosePanel()
-    private var rawWindow = PowerWindow.FRONT_RIGHT
     private var root: View? = null
-    private var diagLive: TextView? = null
-    private var diagProbe: TextView? = null
     private var shown = false
     private var lastSubscribeTry = 0L
 
@@ -71,7 +67,6 @@ class WindowsPanel {
     fun bind(view: View) {
         // Le panneau survit à la vue du fragment : une vue recréée ne doit pas s'ajouter à l'ancienne.
         tiles.clear()
-        rawWindowButtons.clear()
         root = view
         listOf(
             R.id.win_tile_front_left  to PowerWindow.FRONT_LEFT,
@@ -98,46 +93,21 @@ class WindowsPanel {
 
         autoClose.bind(view)
         calibration.bind(view)
-
-        diagLive = view.findViewById(R.id.win_diag_live)
-        diagProbe = view.findViewById(R.id.win_diag_probe)
-        view.findViewById<MaterialButton>(R.id.btn_win_probe).setOnClickListener { runProbe("bouton") }
-
-        listOf(
-            R.id.btn_win_raw_fl to PowerWindow.FRONT_LEFT,
-            R.id.btn_win_raw_fr to PowerWindow.FRONT_RIGHT,
-            R.id.btn_win_raw_rl to PowerWindow.REAR_LEFT,
-            R.id.btn_win_raw_rr to PowerWindow.REAR_RIGHT,
-        ).forEach { (id, window) ->
-            val btn = view.findViewById<MaterialButton>(id)
-            rawWindowButtons[window] = btn
-            btn.setOnClickListener {
-                rawWindow = window
-                highlightRawWindow()
-            }
-        }
-        listOf(
-            R.id.btn_win_raw_0, R.id.btn_win_raw_1, R.id.btn_win_raw_2, R.id.btn_win_raw_3,
-            R.id.btn_win_raw_4, R.id.btn_win_raw_5, R.id.btn_win_raw_6, R.id.btn_win_raw_7,
-        ).forEachIndexed { value, id ->
-            view.findViewById<MaterialButton>(id).setOnClickListener { PowerWindows.sendRaw(rawWindow, value) }
-        }
-
-        highlightRawWindow()
+        calibration.onCalibrationSaved = { autoClose.refreshCalibrationGate() }
     }
 
     fun onShown() {
         if (shown) return
         shown = true
         calibration.refreshRows()
+        autoClose.refreshCalibrationGate()
         lastSubscribeTry = SystemClock.elapsedRealtime()
         PowerWindows.ensureSubscribed()
-        if (diagProbe?.text.isNullOrEmpty()) runProbe("ouverture onglet")
         refresh()
         handler.postDelayed(poll, POLL_MS)
     }
 
-    /** Onglet quitté ou écran en pause : plus de sondage, ni doigt posé ni fermeture émulée en cours. */
+    /** Carte repliée ou écran en pause : plus de sondage, ni doigt posé ni fermeture émulée en cours. */
     fun onHidden() {
         if (!shown) return
         shown = false
@@ -208,14 +178,7 @@ class WindowsPanel {
                     else                                     -> ctx.getString(R.string.win_value, rawTxt)
                 }
             }
-            autoClose.refreshStatus(ctx)
-            val yes = ctx.getString(R.string.win_yes)
-            val no = ctx.getString(R.string.win_no)
-            diagLive?.text = listOf(
-                ctx.getString(R.string.win_diag_link, if (snap.cpmReady) yes else no, if (snap.subscribed) yes else no),
-                ctx.getString(R.string.win_diag_last, snap.lastCommand),
-            ).joinToString("\n")
-            // Liaison véhicule arrivée après l'ouverture de l'onglet : on retente l'abonnement, sans insister.
+            // Liaison véhicule arrivée après l'ouverture de la carte : on retente l'abonnement, sans insister.
             val now = SystemClock.elapsedRealtime()
             if (snap.cpmReady && !snap.subscribed && now - lastSubscribeTry > SUBSCRIBE_RETRY_MS) {
                 lastSubscribeTry = now
@@ -224,24 +187,9 @@ class WindowsPanel {
         }
     }
 
-    private fun runProbe(origin: String) {
-        diagProbe?.setText(R.string.win_probe_running)
-        PowerWindows.probe(origin) { text -> diagProbe?.text = text }
-    }
-
     private fun setHoldHighlight(btn: MaterialButton, on: Boolean) {
         val ctx = btn.context
         btn.backgroundTintList = ColorStateList.valueOf(ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn))
         btn.iconTint = ColorStateList.valueOf(ctx.getColor(if (on) R.color.dash_accent else R.color.text_primary))
-    }
-
-    private fun highlightRawWindow() {
-        rawWindowButtons.forEach { (window, btn) ->
-            val on = window == rawWindow
-            val ctx = btn.context
-            btn.backgroundTintList = ColorStateList.valueOf(ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn))
-            btn.setTextColor(ctx.getColor(if (on) R.color.dash_accent else R.color.text_secondary))
-            btn.strokeColor = ColorStateList.valueOf(ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border))
-        }
     }
 }

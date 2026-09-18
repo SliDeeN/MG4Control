@@ -45,6 +45,9 @@ class WindowCalibrationPanel {
     private var redo: MaterialButton? = null
     private var save: MaterialButton? = null
 
+    /** Prévenu après un enregistrement : la fermeture automatique en dépend pour se déverrouiller. */
+    var onCalibrationSaved: (() -> Unit)? = null
+
     private var window: PowerWindow? = null
     private var step = Step.CLOSE
     private var downMs = 0L
@@ -215,6 +218,7 @@ class WindowCalibrationPanel {
         Toast.makeText(ctx, R.string.win_cal_saved, Toast.LENGTH_SHORT).show()
         closeWizard("enregistrée")
         refreshRows()
+        onCalibrationSaved?.invoke()
     }
 
     private fun closeWizard(reason: String) {

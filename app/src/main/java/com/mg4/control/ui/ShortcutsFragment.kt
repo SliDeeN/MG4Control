@@ -163,6 +163,10 @@ class ShortcutsFragment : Fragment() {
             // prend le relais ailleurs, donc il y a toujours un chemin.
             add(ActionItem(getString(R.string.shortcuts_action_volume_up),       ShortcutAction.VOLUME_UP))
             add(ActionItem(getString(R.string.shortcuts_action_volume_down),     ShortcutAction.VOLUME_DOWN))
+            // Vitres : même propriété véhicule sur les six firmwares, donc aucun filtre. Les
+            // vitres sans capteur suivent la calibration de l'onglet Automatisation.
+            add(ActionItem(getString(R.string.shortcuts_action_windows_open),    ShortcutAction.WINDOWS_OPEN_ALL))
+            add(ActionItem(getString(R.string.shortcuts_action_windows_close),   ShortcutAction.WINDOWS_CLOSE_ALL))
             add(ActionItem(getString(R.string.shortcuts_action_apply_profile),   ShortcutAction.APPLY_PROFILE))
             add(ActionItem(getString(R.string.shortcuts_action_profile_picker), ShortcutAction.PROFILE_PICKER))
             add(ActionItem(getString(R.string.shortcuts_action_open_app),       ShortcutAction.OPEN_APP))

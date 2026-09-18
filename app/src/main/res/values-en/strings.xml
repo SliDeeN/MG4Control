@@ -494,18 +494,12 @@
     <string name="shortcuts_action_volume_down">Volume -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="dash_cat_windows">Windows</string>
-    <string name="win_card_title">Windows</string>
     <string name="win_hint">Short press: full open or close (press again to stop) · Long press: the window moves while your finger stays down</string>
     <string name="win_close_warning">Automatic closing by the app has no anti-pinch protection (except the driver window): watch the window. It stops if you leave the tab.</string>
     <string name="win_front_left">Front left</string>
     <string name="win_front_right">Front right</string>
     <string name="win_rear_left">Rear left</string>
     <string name="win_rear_right">Rear right</string>
-    <string name="win_short_front_left">FL</string>
-    <string name="win_short_front_right">FR</string>
-    <string name="win_short_rear_left">RL</string>
-    <string name="win_short_rear_right">RR</string>
     <string name="win_close">Close</string>
     <string name="win_open">Open</string>
     <string name="win_all_close">Close all</string>
@@ -514,22 +508,24 @@
     <string name="win_auto_label">Close the windows when leaving the car</string>
     <string name="win_auto_desc">Car in P, once armed by the conditions below: when the car leaves READY (driver door opened or car switched off), all windows close after the chosen delay. Going back to READY before then cancels.</string>
     <string name="win_auto_warning">No anti-pinch protection on windows other than the driver\'s: nobody near the windows when leaving.</string>
+    <string name="win_auto_need_cal">Calibrate the windows first, in the section above: closing on exit relies on the measured travel time. Missing: %1$s.</string>
     <string name="win_auto_arming_title">Arming: after driving</string>
     <string name="win_auto_speed_label">Speed reached</string>
     <string name="win_auto_time_label">Car switched on for</string>
     <string name="win_auto_combine_any">Either one</string>
     <string name="win_auto_combine_all">Both</string>
     <string name="win_auto_need_one">Keep at least one arming condition</string>
-    <string name="win_auto_status">Armed: %1$s · READY: %2$s · last closing: %3$s</string>
-    <string name="win_auto_ready_unknown">unreadable</string>
     <string name="win_auto_delay_label">Delay before closing</string>
-    <string name="win_auto_off">Option disabled</string>
-    <string name="win_auto_last_none">none</string>
-    <string name="win_auto_last_pending">pending…</string>
-    <string name="win_auto_last_done">complete at %1$s</string>
-    <string name="win_auto_last_partial">incomplete at %1$s</string>
-    <string name="win_auto_last_cancelled">cancelled at %1$s</string>
+    <string name="win_auto_beep_label">Warning beep</string>
+    <string name="win_auto_beep_desc">One beep per second during the delay, before the windows close.</string>
+    <string name="win_auto_beep_volume_label">Beep volume</string>
+    <string name="win_auto_beep_value" translatable="false">%1$d %%</string>
     <string name="win_cal_title">Window calibration</string>
+    <string name="win_automation_title">Power windows</string>
+    <string name="win_section_command">Controls</string>
+    <string name="win_cal_limits">What the estimate cannot see: the door switches (the car does not report them, so the displayed position stays wrong until the next command from the app) and the state at launch (every window is assumed closed each time the app starts).</string>
+    <string name="shortcuts_action_windows_open">Open all windows</string>
+    <string name="shortcuts_action_windows_close">Close all windows</string>
     <string name="win_cal_hint">Windows without a sensor: the app times a full travel, then estimates the position after each command.</string>
     <string name="win_cal_sensor">Built-in sensor</string>
     <string name="win_cal_none">Not calibrated</string>
@@ -556,15 +552,7 @@
     <string name="win_cal_saved">Calibration saved</string>
     <string name="win_value_estimated">≈ %1$d %% open</string>
     <string name="win_value_estimate_unknown">Position unknown: do a full travel</string>
-    <string name="win_diag_title">Diagnostics</string>
-    <string name="win_probe">Run probe again</string>
-    <string name="win_probe_running">Probing…</string>
-    <string name="win_raw_title">Raw test: pick the window, then the value to send</string>
     <string name="win_value">Read value: %1$s</string>
     <string name="win_value_unknown">unreadable</string>
     <string name="win_value_no_sensor">No sensor (raw %1$s)</string>
-    <string name="win_diag_link">Vehicle link: %1$s · subscription: %2$s</string>
-    <string name="win_diag_last">Last command: %1$s</string>
-    <string name="win_yes">yes</string>
-    <string name="win_no">no</string>
 </resources>

@@ -494,18 +494,12 @@
     <string name="shortcuts_action_volume_down">Volumen -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="dash_cat_windows">Ventanillas</string>
-    <string name="win_card_title">Ventanillas</string>
     <string name="win_hint">Pulsación corta: apertura o cierre completo (otra pulsación lo detiene) · Pulsación larga: la ventanilla se mueve mientras mantienes el dedo</string>
     <string name="win_close_warning">El cierre automático desde la app no tiene antipinzamiento (salvo la ventanilla del conductor): vigila la ventanilla. Se detiene si sales de la pestaña.</string>
     <string name="win_front_left">Delantera izquierda</string>
     <string name="win_front_right">Delantera derecha</string>
     <string name="win_rear_left">Trasera izquierda</string>
     <string name="win_rear_right">Trasera derecha</string>
-    <string name="win_short_front_left">DI</string>
-    <string name="win_short_front_right">DD</string>
-    <string name="win_short_rear_left">TI</string>
-    <string name="win_short_rear_right">TD</string>
     <string name="win_close">Cerrar</string>
     <string name="win_open">Abrir</string>
     <string name="win_all_close">Cerrar todas</string>
@@ -514,22 +508,24 @@
     <string name="win_auto_label">Cerrar las ventanillas al salir del coche</string>
     <string name="win_auto_desc">Coche en P, una vez armado según las condiciones de abajo: cuando el coche sale del modo READY (puerta del conductor abierta o coche apagado), todas las ventanillas se cierran tras el retardo elegido. Volver a READY antes cancela.</string>
     <string name="win_auto_warning">Sin antipinzamiento en las ventanillas salvo la del conductor: nadie cerca de las ventanillas al salir.</string>
+    <string name="win_auto_need_cal">Calibre primero las ventanillas, en la sección anterior: el cierre al salir se basa en el tiempo medido. Falta: %1$s.</string>
     <string name="win_auto_arming_title">Armado: tras circular</string>
     <string name="win_auto_speed_label">Velocidad alcanzada</string>
     <string name="win_auto_time_label">Coche encendido durante</string>
     <string name="win_auto_combine_any">Cualquiera de las dos</string>
     <string name="win_auto_combine_all">Ambas</string>
     <string name="win_auto_need_one">Mantén al menos una condición de armado</string>
-    <string name="win_auto_status">Armado: %1$s · READY: %2$s · último cierre: %3$s</string>
-    <string name="win_auto_ready_unknown">ilegible</string>
     <string name="win_auto_delay_label">Retardo antes del cierre</string>
-    <string name="win_auto_off">Opción desactivada</string>
-    <string name="win_auto_last_none">ninguno</string>
-    <string name="win_auto_last_pending">pendiente…</string>
-    <string name="win_auto_last_done">completo a las %1$s</string>
-    <string name="win_auto_last_partial">incompleto a las %1$s</string>
-    <string name="win_auto_last_cancelled">cancelado a las %1$s</string>
+    <string name="win_auto_beep_label">Pitido de aviso</string>
+    <string name="win_auto_beep_desc">Un pitido por segundo durante el retardo, antes de que se cierren las ventanillas.</string>
+    <string name="win_auto_beep_volume_label">Volumen del pitido</string>
+    <string name="win_auto_beep_value" translatable="false">%1$d %%</string>
     <string name="win_cal_title">Calibración de ventanillas</string>
+    <string name="win_automation_title">Elevalunas eléctricos</string>
+    <string name="win_section_command">Mando</string>
+    <string name="win_cal_limits">Lo que la estimación no ve: los interruptores de la puerta (el coche no los comunica, la posición mostrada queda equivocada hasta la siguiente orden desde la aplicación) y el estado al arrancar (todas las ventanillas se suponen cerradas cada vez que se abre la aplicación).</string>
+    <string name="shortcuts_action_windows_open">Abrir todas las ventanillas</string>
+    <string name="shortcuts_action_windows_close">Cerrar todas las ventanillas</string>
     <string name="win_cal_hint">Ventanillas sin sensor: la app cronometra un recorrido completo y luego estima la posición en cada orden.</string>
     <string name="win_cal_sensor">Sensor de serie</string>
     <string name="win_cal_none">Sin calibrar</string>
@@ -556,15 +552,7 @@
     <string name="win_cal_saved">Calibración guardada</string>
     <string name="win_value_estimated">≈ %1$d %% abierta</string>
     <string name="win_value_estimate_unknown">Posición desconocida: haz un recorrido completo</string>
-    <string name="win_diag_title">Diagnóstico</string>
-    <string name="win_probe">Repetir la sonda</string>
-    <string name="win_probe_running">Sonda en curso…</string>
-    <string name="win_raw_title">Prueba directa: elige la ventanilla y luego el valor a enviar</string>
     <string name="win_value">Valor leído: %1$s</string>
     <string name="win_value_unknown">ilegible</string>
     <string name="win_value_no_sensor">Sin sensor (valor bruto %1$s)</string>
-    <string name="win_diag_link">Conexión con el vehículo: %1$s · suscripción: %2$s</string>
-    <string name="win_diag_last">Último comando: %1$s</string>
-    <string name="win_yes">sí</string>
-    <string name="win_no">no</string>
 </resources>

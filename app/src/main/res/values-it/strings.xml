@@ -494,18 +494,12 @@
     <string name="shortcuts_action_volume_down">Volume -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="dash_cat_windows">Finestrini</string>
-    <string name="win_card_title">Finestrini</string>
     <string name="win_hint">Pressione breve: apertura o chiusura completa (una nuova pressione la ferma) · Pressione lunga: il finestrino si muove finché tieni il dito</string>
     <string name="win_close_warning">La chiusura automatica dall\'app non ha l\'antischiacciamento (tranne il finestrino del conducente): sorveglia il finestrino. Si ferma se esci dalla scheda.</string>
     <string name="win_front_left">Anteriore sinistro</string>
     <string name="win_front_right">Anteriore destro</string>
     <string name="win_rear_left">Posteriore sinistro</string>
     <string name="win_rear_right">Posteriore destro</string>
-    <string name="win_short_front_left">AS</string>
-    <string name="win_short_front_right">AD</string>
-    <string name="win_short_rear_left">PS</string>
-    <string name="win_short_rear_right">PD</string>
     <string name="win_close">Chiudi</string>
     <string name="win_open">Apri</string>
     <string name="win_all_close">Chiudi tutti</string>
@@ -514,22 +508,24 @@
     <string name="win_auto_label">Chiudi i finestrini scendendo dall\'auto</string>
     <string name="win_auto_desc">Auto in P, una volta armata secondo le condizioni sotto: quando l\'auto esce dalla modalità READY (porta del conducente aperta o auto spenta), tutti i finestrini si chiudono dopo il ritardo scelto. Tornare in READY prima annulla.</string>
     <string name="win_auto_warning">Nessun antischiacciamento sui finestrini tranne quello del conducente: nessuno vicino ai finestrini quando si scende.</string>
+    <string name="win_auto_need_cal">Calibra prima i finestrini, nella sezione qui sopra: la chiusura all\'uscita si basa sul tempo misurato. Manca: %1$s.</string>
     <string name="win_auto_arming_title">Armamento: dopo la guida</string>
     <string name="win_auto_speed_label">Velocità raggiunta</string>
     <string name="win_auto_time_label">Auto accesa da</string>
     <string name="win_auto_combine_any">Una delle due</string>
     <string name="win_auto_combine_all">Entrambe</string>
     <string name="win_auto_need_one">Mantieni almeno una condizione di armamento</string>
-    <string name="win_auto_status">Armata: %1$s · READY: %2$s · ultima chiusura: %3$s</string>
-    <string name="win_auto_ready_unknown">illeggibile</string>
     <string name="win_auto_delay_label">Ritardo prima della chiusura</string>
-    <string name="win_auto_off">Opzione disattivata</string>
-    <string name="win_auto_last_none">nessuna</string>
-    <string name="win_auto_last_pending">in attesa…</string>
-    <string name="win_auto_last_done">completa alle %1$s</string>
-    <string name="win_auto_last_partial">incompleta alle %1$s</string>
-    <string name="win_auto_last_cancelled">annullata alle %1$s</string>
+    <string name="win_auto_beep_label">Bip di avviso</string>
+    <string name="win_auto_beep_desc">Un bip al secondo durante il ritardo, prima della chiusura dei finestrini.</string>
+    <string name="win_auto_beep_volume_label">Volume del bip</string>
+    <string name="win_auto_beep_value" translatable="false">%1$d %%</string>
     <string name="win_cal_title">Calibrazione finestrini</string>
+    <string name="win_automation_title">Alzacristalli elettrici</string>
+    <string name="win_section_command">Comandi</string>
+    <string name="win_cal_limits">Ciò che la stima non vede: gli interruttori della portiera (l\'auto non li segnala, la posizione mostrata resta sbagliata fino al comando successivo dall\'app) e lo stato all\'avvio (a ogni avvio dell\'app tutti i finestrini sono considerati chiusi).</string>
+    <string name="shortcuts_action_windows_open">Aprire tutti i finestrini</string>
+    <string name="shortcuts_action_windows_close">Chiudere tutti i finestrini</string>
     <string name="win_cal_hint">Finestrini senza sensore: l\'app cronometra una corsa completa, poi stima la posizione a ogni comando.</string>
     <string name="win_cal_sensor">Sensore di serie</string>
     <string name="win_cal_none">Non calibrato</string>
@@ -556,15 +552,7 @@
     <string name="win_cal_saved">Calibrazione salvata</string>
     <string name="win_value_estimated">≈ %1$d %% aperto</string>
     <string name="win_value_estimate_unknown">Posizione sconosciuta: fai una corsa completa</string>
-    <string name="win_diag_title">Diagnostica</string>
-    <string name="win_probe">Ripeti la sonda</string>
-    <string name="win_probe_running">Sonda in corso…</string>
-    <string name="win_raw_title">Test diretto: scegli il finestrino, poi il valore da inviare</string>
     <string name="win_value">Valore letto: %1$s</string>
     <string name="win_value_unknown">illeggibile</string>
     <string name="win_value_no_sensor">Nessun sensore (grezzo %1$s)</string>
-    <string name="win_diag_link">Collegamento veicolo: %1$s · sottoscrizione: %2$s</string>
-    <string name="win_diag_last">Ultimo comando: %1$s</string>
-    <string name="win_yes">sì</string>
-    <string name="win_no">no</string>
 </resources>

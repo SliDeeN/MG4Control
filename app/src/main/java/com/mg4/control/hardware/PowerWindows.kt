@@ -130,6 +130,16 @@ object PowerWindows {
     }
 
     /** Enregistre la calibration ; l'assistant finit sur une montée complète, la vitre est donc fermée. */
+    /**
+     * Vitres sans capteur dont la calibration manque encore.
+     *
+     * Sert de garde-fou à la fermeture automatique : elle ferme au temps mesuré, une vitre non
+     * calibrée partirait sur la course par défaut sans que personne puisse le vérifier depuis
+     * l'extérieur de la voiture.
+     */
+    fun uncalibrated(context: Context): List<PowerWindow> =
+        PowerWindow.entries.filter { !it.hasPositionSensor && calibration(context, it) == null }
+
     fun saveCalibration(context: Context, window: PowerWindow, cal: WindowCalibration) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
             putLong(calKey(window, "down_ms"), cal.downMs)
