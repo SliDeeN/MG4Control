@@ -51,6 +51,8 @@ object WindowAutoClose {
     const val BEEP_VOLUME_DEFAULT = 80
     /** Bip d'essai hors surveillance : on rend la piste audio peu après. */
     private const val PREVIEW_RELEASE_MS = 2_000L
+    /** Marge du verrou de réveil au-dessus du délai réglé (le tic qui échoit vaut une seconde). */
+    private const val PENDING_WAKE_MARGIN_MS = 5_000L
 
     enum class Result { PENDING, DONE, PARTIAL, CANCELLED }
 
@@ -91,6 +93,13 @@ object WindowAutoClose {
     private var beepOn = false
     private var beepVolume = BEEP_VOLUME_DEFAULT
     private var tone: ToneGenerator? = null
+
+    /**
+     * Le délai compte lui aussi : il se déroule après la sortie de READY, et une suspension
+     * pendant l'attente repousserait la fermeture au prochain réveil — c'est-à-dire trop tard,
+     * l'utilisateur étant parti. Rendu dès que l'attente se termine, quelle qu'en soit l'issue.
+     */
+    private val pendingWake = WindowWakeLock("MG4Control:vitres-delai")
     /** Volume du générateur en place : il se fixe à la construction, pas à l'appel. */
     private var toneVolume = -1
 
@@ -197,6 +206,7 @@ object WindowAutoClose {
             main.removeCallbacks(tick)
             ReadyWatcher.remove(readyListener)
             releaseTone()
+            pendingWake.release()
             if (trigger.cancelPending()) {
                 setResult(Result.CANCELLED)
                 AppLogger.i(TAG, "fermeture auto : attente abandonnée (option désactivée)")
@@ -246,15 +256,20 @@ object WindowAutoClose {
         when (outcome.action) {
             Action.SCHEDULE -> {
                 setResult(Result.PENDING)
+                // Marge sur le délai réglé : l'attente ne doit pas être coupée par une suspension.
+                pendingWake.acquire(trigger.delayMs + PENDING_WAKE_MARGIN_MS)
                 beep()
             }
             Action.CANCEL   -> {
                 setResult(Result.CANCELLED)
                 releaseTone()
+                pendingWake.release()
                 AppLogger.i(TAG, "fermeture auto : annulée (${outcome.reason})")
             }
             Action.CLOSE    -> {
                 releaseTone()
+                // Les courses prennent le relais avec leur propre verrou.
+                pendingWake.release()
                 closeAll(outcome.reason)
             }
             // Rien à faire, sauf le bip de chaque seconde d'attente.

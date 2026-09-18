@@ -40,6 +40,14 @@ object PowerWindows {
 
     const val TAG = "MG4_WIN"
 
+    /**
+     * Expiration du verrou de réveil des courses : la plus longue course calibrée ([HOLD_MAX_MS])
+     * plus une marge, les quatre vitres partant ensemble. Filet de sécurité seulement — le verrou
+     * est rendu dès que la séquence se termine.
+     */
+    private const val CLOSE_WAKE_MS = WindowCommand.HOLD_MAX_MS + 10_000L
+    private val closeWake = WindowWakeLock("MG4Control:vitres")
+
     /** Store partagé avec les Réglages. */
     private const val PREFS_NAME = "mg4_settings"
 
@@ -328,6 +336,9 @@ object PowerWindows {
      * émulées sont allées au bout sans échec ni interruption.
      */
     fun closeAllAutomatically(onDone: (Boolean) -> Unit) {
+        // Les courses durent plusieurs secondes alors que la voiture s'éteint : sans ce verrou,
+        // une suspension du processeur les couperait en plein milieu (voir [WindowWakeLock]).
+        closeWake.acquire(CLOSE_WAKE_MS)
         worker.post {
             loadEstimators()
             autoClosePending.clear()
@@ -364,6 +375,7 @@ object PowerWindows {
 
     /** Sur [worker]. */
     private fun completeAutoClose() {
+        closeWake.release()
         val ok = autoCloseOk
         val done = autoCloseDone ?: return
         autoCloseDone = null
