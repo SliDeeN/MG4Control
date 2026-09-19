@@ -21,6 +21,7 @@ import com.mg4.control.R
 import com.mg4.control.hardware.StatsCollector
 import com.mg4.control.model.ChargeSession
 import com.mg4.control.model.ChargeType
+import com.mg4.control.model.StatsHistory
 import com.mg4.control.model.StatsSettings
 import com.mg4.control.model.StatsSummary
 import com.mg4.control.model.Trip
@@ -133,7 +134,7 @@ class StatsFragment : Fragment() {
     }
 
     private fun renderGeneral(
-        v: View, s: StatsSettings, sum: StatsSummary, history: StatsStore.History
+        v: View, s: StatsSettings, sum: StatsSummary, history: StatsHistory
     ) {
         if (!s.enabled) return
         val ctx = v.context

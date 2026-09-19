@@ -3,8 +3,11 @@ package com.mg4.control.stats
 import android.content.Context
 import androidx.core.content.edit
 import com.google.gson.Gson
+import com.google.gson.JsonParser
+import com.google.gson.reflect.TypeToken
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.ChargeSession
+import com.mg4.control.model.StatsHistory
 import com.mg4.control.model.StatsSettings
 import com.mg4.control.model.Trip
 import java.io.File
@@ -22,11 +25,6 @@ import java.io.File
  */
 class StatsStore(private val context: Context) {
 
-    data class History(
-        val trips: List<Trip> = emptyList(),
-        val charges: List<ChargeSession> = emptyList(),
-    )
-
     companion object {
         private const val TAG = "MG4_STATS"
         private const val FILE_NAME = "stats_history.json"
@@ -42,6 +40,21 @@ class StatsStore(private val context: Context) {
         /** Verrou de processus : le service écrit pendant que l'écran lit. */
         private val LOCK = Any()
         private val gson = Gson()
+
+        /**
+         * Types explicites pour la relecture des deux listes.
+         *
+         * Indispensable en release : R8 efface le type générique des champs, et Gson rend alors
+         * une liste de `LinkedTreeMap` qui explose au premier parcours. Les `TypeToken` anonymes,
+         * eux, sont conservés par `proguard-rules.pro` — c'est le motif déjà éprouvé par les
+         * profils, et le plantage du 2026-09-19 a montré ce qu'il en coûte de s'en écarter.
+         */
+        private val TRIPS: java.lang.reflect.Type = object : TypeToken<List<Trip>>() {}.type
+        private val CHARGES: java.lang.reflect.Type = object : TypeToken<List<ChargeSession>>() {}.type
+
+        private const val FIELD_TRIPS = "trips"
+        private const val FIELD_CHARGES = "charges"
+
     }
 
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -79,7 +92,7 @@ class StatsStore(private val context: Context) {
     // ── Historique ──────────────────────────────────────────────────────────
 
     /** Historique purgé de ce qui dépasse la durée de conservation. */
-    fun history(): History = synchronized(LOCK) { purged(read()) }
+    fun history(): StatsHistory = synchronized(LOCK) { purged(read()) }
 
     fun addTrip(trip: Trip) = synchronized(LOCK) {
         val h = read()
@@ -111,16 +124,20 @@ class StatsStore(private val context: Context) {
 
     // ── Fichier ─────────────────────────────────────────────────────────────
 
-    private fun read(): History = runCatching {
-        if (!file.exists()) return History()
-        gson.fromJson(file.readText(), History::class.java) ?: History()
+    private fun read(): StatsHistory = runCatching {
+        if (!file.exists()) return StatsHistory()
+        val racine = JsonParser.parseString(file.readText()).asJsonObject
+        StatsHistory(
+            trips = gson.fromJson(racine.get(FIELD_TRIPS), TRIPS) ?: emptyList(),
+            charges = gson.fromJson(racine.get(FIELD_CHARGES), CHARGES) ?: emptyList(),
+        )
     }.getOrElse {
         // Fichier illisible : on repart d'un historique vide plutôt que de planter l'écran.
         AppLogger.w(TAG, "historique illisible (${it.javaClass.simpleName}) — repart à vide")
-        History()
+        StatsHistory()
     }
 
-    private fun write(h: History) {
+    private fun write(h: StatsHistory) {
         runCatching {
             val temp = File(context.filesDir, "$FILE_NAME.tmp")
             temp.writeText(gson.toJson(purged(h)))
@@ -131,11 +148,11 @@ class StatsStore(private val context: Context) {
         }.onFailure { AppLogger.w(TAG, "écriture de l'historique impossible : ${it.message}") }
     }
 
-    private fun purged(h: History): History {
+    private fun purged(h: StatsHistory): StatsHistory {
         val limite = System.currentTimeMillis() - settings().retention.days * 86_400_000L
         val trips = h.trips.filter { it.endMs >= limite }
         val charges = h.charges.filter { it.endMs >= limite }
         return if (trips.size == h.trips.size && charges.size == h.charges.size) h
-               else History(trips, charges)
+               else StatsHistory(trips, charges)
     }
 }
