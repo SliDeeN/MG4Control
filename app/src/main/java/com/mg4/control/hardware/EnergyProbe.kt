@@ -98,7 +98,8 @@ object EnergyProbe {
         Signal("Trajet combiné : distance", 0x21407b81, null),
         Signal("Trajet combiné : vitesse moyenne", 0x21407b80, null),
         Signal("Trajet combiné : conso moyenne", 0x21407b82, null),
-        Signal("Autonomie restante", 0x21401565, null),
+        Signal("Autonomie restante (SENSOR)", 0x21401565, null),
+        Signal("Autonomie restante (BMS)", 0x2140f41c, BMS_SERVICE),
 
         // ── Les six drapeaux « V » de la famille BMS ────────────────────────
         // Relevé du 2026-09-18 : le SoC était JUSTE avec son drapeau à false, et deux sentinelles
@@ -146,10 +147,35 @@ object EnergyProbe {
             lignes += "  ${s.name} 0x${hex(s.id)} : ${voies.joinToString(" · ")}"
         }
 
+        // Dernière inconnue du relevé : aucune des propriétés connues ne donne une puissance de
+        // charge en kW. On balaie donc toutes les MESURES de la famille BMS (les identifiants en
+        // 0x216… sont les flottants) pendant une charge : la bonne s'y trouve nécessairement.
+        lignes += balayage(bms)
+
         val texte = lignes.joinToString("\n")
         lignes.forEach { AppLogger.i(TAG, it) }
         garde(texte)
         return texte
+    }
+
+    /**
+     * Relève toutes les mesures que le gestionnaire BMS déclare porter, en excluant celles déjà
+     * nommées plus haut. Une ligne compacte : c'est un filet pour attraper ce qu'on n'a pas su nommer.
+     */
+    private fun balayage(bms: Any?): String {
+        bms ?: return "  balayage BMS : gestionnaire absent"
+        val connus = SIGNALS.map { it.id }.toSet()
+        return try {
+            val configs = bms.javaClass.getMethod("getPropertyList").invoke(bms) as? List<*>
+                ?: return "  balayage BMS : liste nulle"
+            val mesures = configs.filterNotNull().mapNotNull { cfg ->
+                runCatching { cfg.javaClass.getMethod("getPropertyId").invoke(cfg) as? Int }.getOrNull()
+            }.filter { it !in connus && typeOf(it) == java.lang.Float::class.java }.sorted()
+            if (mesures.isEmpty()) "  balayage BMS : aucune mesure nouvelle"
+            else "  balayage BMS : " + mesures.joinToString(" · ") { "0x${hex(it)}=${lire(bms, it)}" }
+        } catch (e: Exception) {
+            "  balayage BMS : ${court(e)}"
+        }
     }
 
     @Synchronized
