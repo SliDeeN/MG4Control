@@ -24,6 +24,9 @@
         tools:ignore="ProtectedPermissions" />
     <!-- Vehicle control permissions (Android Automotive / SAIC) -->
     <uses-permission android:name="android.car.permission.CAR_ENERGY" />
+    <!-- Capacité de la batterie (INFO_EV_BATTERY_CAPACITY) : propriété statique du véhicule,
+         déclarée sous CAR_INFO dans les services véhicule SWI133, SWI165 et SWI131. -->
+    <uses-permission android:name="android.car.permission.CAR_INFO" />
     <uses-permission android:name="android.car.permission.CAR_POWERTRAIN" />
     <uses-permission android:name="android.car.permission.CAR_VENDOR_EXTENSION" />
     <uses-permission android:name="android.car.permission.CONTROL_CAR_CLIMATE" />

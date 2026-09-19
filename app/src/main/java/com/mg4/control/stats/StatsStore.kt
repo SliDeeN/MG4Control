@@ -38,6 +38,7 @@ class StatsStore(private val context: Context) {
         private const val KEY_CURRENCY = "currency"
         private const val KEY_CAPACITY = "capacity_kwh"
         private const val KEY_PENDING = "pending_state"
+        private const val KEY_CAPACITY_USER = "capacity_user_set"
 
         /** Verrou de processus : le service écrit pendant que l'écran lit. */
         private val LOCK = Any()
@@ -90,6 +91,24 @@ class StatsStore(private val context: Context) {
     }
 
     fun isEnabled(): Boolean = prefs.getBoolean(KEY_ENABLED, false)
+
+    /**
+     * Capacité fixée à la main par l'utilisateur : la valeur lue sur le véhicule ne l'écrase alors
+     * plus. Sans ce drapeau, une correction faite à l'écran serait effacée au démarrage suivant.
+     */
+    fun capacityIsUserSet(): Boolean = prefs.getBoolean(KEY_CAPACITY_USER, false)
+
+    fun markCapacityUserSet() = prefs.edit { putBoolean(KEY_CAPACITY_USER, true) }
+
+    /** Adopte la capacité annoncée par le véhicule, sauf si l'utilisateur en a choisi une. */
+    fun adoptVehicleCapacity(kwh: Float): Boolean {
+        if (capacityIsUserSet()) return false
+        val actuelle = settings().capacityKwh
+        if (kotlin.math.abs(actuelle - kwh) < 0.05f) return false
+        saveSettings(settings().copy(capacityKwh = kwh))
+        AppLogger.i(TAG, "capacité batterie lue sur le véhicule : $kwh kWh")
+        return true
+    }
 
     // ── Trajet ou charge en cours ───────────────────────────────────────────
 

@@ -79,6 +79,9 @@ object StatsCollector {
                 repris.forEach { enregistrer(s, it) }
                 s.savePending(null)
             }
+            // La voiture annonce sa capacité : meilleure valeur par défaut qu'un nombre écrit
+            // en dur, et sans effet si l'utilisateur a déjà réglé la sienne.
+            EnergyReader.batteryCapacityKwh()?.let { s.adoptVehicleCapacity(it) }
             ReadyWatcher.add(readyListener)
             worker.post(tick)
             AppLogger.i(TAG, "collecte active (capacité ${s.settings().capacityKwh} kWh)")

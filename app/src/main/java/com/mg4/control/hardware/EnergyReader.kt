@@ -3,6 +3,7 @@ package com.mg4.control.hardware
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.EnergySnapshot
+import com.mg4.control.model.StatsSettings
 
 /**
  * Lecture des grandeurs énergétiques du véhicule, **en lecture seule**.
@@ -40,6 +41,8 @@ object EnergyReader {
     private const val PROP_PACK_VOLTAGE = 0x2160f406
     private const val PROP_PACK_CURRENT = 0x2160f407
     private const val PROP_RANGE = 0x2140f41c
+    /** Statique, en Wh d'après AOSP. Gardée par `CAR_INFO`. */
+    private const val PROP_BATTERY_CAPACITY = 0x11600106
 
     /** Valeur rendue par les mesures batterie non publiées (relevé du 2026-09-19). */
     private const val SENTINEL_MEASURE = 82.3f
@@ -84,6 +87,23 @@ object EnergyReader {
     }
 
     /**
+     * Capacité de la batterie annoncée par le véhicule, en kWh — `null` si la propriété ne répond
+     * pas ou rend une valeur invraisemblable.
+     *
+     * AOSP la donne en Wh ; certains véhicules la publient déjà en kWh, d'où les deux échelles
+     * acceptées. Elle sert de valeur par défaut au réglage de l'onglet Statistiques : c'est mieux
+     * qu'un 62 arbitraire, sans priver l'utilisateur du dernier mot — la valeur annoncée peut être
+     * la capacité brute, alors que le calcul demande la capacité utile.
+     */
+    fun batteryCapacityKwh(): Float? {
+        // Propriété AOSP et non SAIC : sa zone n'est pas forcément celle des propriétés vendeur,
+        // on tente donc les deux, comme la sonde le fait pour tout le reste.
+        val brut = float(PROP_BATTERY_CAPACITY) ?: floatAt(PROP_BATTERY_CAPACITY, 0) ?: return null
+        val kwh = if (brut > 1000f) brut / 1000f else brut
+        return kwh.takeIf { it in StatsSettings.MIN_CAPACITY_KWH..StatsSettings.MAX_CAPACITY_KWH }
+    }
+
+    /**
      * Type de prise. Les deux propriétés valent 0 hors charge et la prise active passe à 2
      * (relevé sur charge alternative) : on ne teste donc pas une valeur précise mais un non-zéro.
      */
@@ -96,11 +116,13 @@ object EnergyReader {
     /** Compteur d'énergie : négatif impossible, sentinelle exclue. */
     private fun energy(prop: Int): Float? = float(prop)?.takeIf { it >= 0f }
 
-    private fun float(prop: Int): Float? {
+    private fun float(prop: Int): Float? = floatAt(prop, AREA_GLOBAL)
+
+    private fun floatAt(prop: Int, area: Int): Float? {
         val cpm = MG4Hardware.carPropertyManager() ?: return null
         val value = runCatching {
             cpm.javaClass.getMethod("getFloatProperty", Int::class.java, Int::class.java)
-                .invoke(cpm, prop, AREA_GLOBAL) as? Float
+                .invoke(cpm, prop, area) as? Float
         }.getOrNull() ?: return null
         if (!value.isFinite()) return null
         return value.takeIf { it != SENTINEL_MEASURE && it != SENTINEL_HALF }

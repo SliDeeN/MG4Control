@@ -183,6 +183,7 @@ class StatsFragment : Fragment() {
             prices.addView(numberRow(ctx, getString(R.string.stats_capacity),
                 { fmt(store.settings().capacityKwh) }) { value ->
                 store.saveSettings(store.settings().copy(capacityKwh = StatsSettings.clampCapacity(value)))
+                store.markCapacityUserSet()
             })
         } else {
             // Un champ en cours de saisie garde ce que l'utilisateur est en train d'écrire.

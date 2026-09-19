@@ -69,6 +69,8 @@ object EnergyProbe {
         Signal("SoC (BMS_PACK_SOC)", 0x2160f405, BMS_SERVICE),
         Signal("SoC (BAT_SOC)", 0x2160f45b, BMS_SERVICE),
         Signal("Niveau batterie AOSP (Wh ?)", 0x11600309, null),
+        // Statique : la capacité annoncée par le véhicule, en Wh d'après AOSP. Sous CAR_INFO.
+        Signal("Capacité batterie (Wh ?)", 0x11600106, null),
 
         // ── Charge ──────────────────────────────────────────────────────────
         Signal("État de charge (BMS_CHRG_STS)", 0x2140f409, BMS_SERVICE),
