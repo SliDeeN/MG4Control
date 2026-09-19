@@ -15,6 +15,10 @@ package com.mg4.control.model
  * **Énergie d'une charge** : différence de pourcentage × capacité utile. C'est la seule méthode qui
  * survit à un boîtier qui s'endort pendant la nuit ; la puissance mesurée, elle, n'existe que si
  * l'application a pu relever quelque chose.
+ *
+ * **Survie aux coupures** : l'état courant est exposé par [pendingState] pour être enregistré après
+ * chaque relevé, et [recover] rouvre ce qui restait en cours au démarrage suivant. Sans ça, tout
+ * trajet dont la fin coïncide avec l'extinction du boîtier — c'est-à-dire la plupart — serait perdu.
  */
 class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACITY_KWH) {
 
@@ -23,29 +27,36 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
         data class ChargeEnded(val session: ChargeSession) : Event()
     }
 
-    private data class TripState(
-        val startMs: Long,
-        val odometerStart: Int?,
-        val energyStart: Float?,
-        val socStart: Float?,
-        val tempC: Float?,
-    )
-
-    private data class ChargeState(
-        val startMs: Long,
-        val socStart: Float?,
-        val type: ChargeType?,
-        val tempC: Float?,
-        var powerSum: Float = 0f,
-        var powerCount: Int = 0,
-    )
-
-    private var trip: TripState? = null
-    private var charge: ChargeState? = null
-    private var last: EnergySnapshot? = null
+    private var trip: PendingTrip? = null
+    private var charge: PendingCharge? = null
 
     val tripInProgress: Boolean get() = trip != null
     val chargeInProgress: Boolean get() = charge != null
+
+    /** État à enregistrer après chaque relevé. */
+    fun pendingState(): PendingState = PendingState(trip, charge)
+
+    /**
+     * Reprend ce qui restait ouvert au démarrage précédent et le clôt avec son dernier relevé
+     * connu. Appelé une fois, au lancement du collecteur, avant tout nouveau relevé.
+     *
+     * Le trajet est daté de son dernier relevé, pas de maintenant : la voiture a pu rester éteinte
+     * toute la nuit, et lui attribuer le temps écoulé fausserait sa durée et sa vitesse moyenne.
+     */
+    fun recover(state: PendingState?): List<Event> {
+        state ?: return emptyList()
+        val events = mutableListOf<Event>()
+        state.trip?.let { p ->
+            trip = p
+            finishTrip()?.let { events += Event.TripEnded(it) }
+        }
+        state.charge?.let { p ->
+            charge = p
+            events += Event.ChargeEnded(finishCharge(p, p.lastMs, p.socLast))
+            charge = null
+        }
+        return events
+    }
 
     /**
      * Avale un instantané et rend ce qui vient de se terminer.
@@ -58,83 +69,100 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
         val events = mutableListOf<Event>()
 
         // ── Trajet ──────────────────────────────────────────────────────────
-        if (ready == true && trip == null) {
-            trip = TripState(
+        val enCours = trip
+        if (ready == true) {
+            trip = if (enCours == null) PendingTrip(
                 startMs = snapshot.timestampMs,
                 odometerStart = snapshot.odometerKm,
                 energyStart = snapshot.energySinceStartKwh,
                 socStart = snapshot.socPercent,
                 tempC = snapshot.outsideTempC,
+                lastMs = snapshot.timestampMs,
+                odometerLast = snapshot.odometerKm,
+                energyLast = snapshot.energySinceStartKwh,
+                socLast = snapshot.socPercent,
+                climateLast = snapshot.climateSinceStartKwh,
+                accessoriesLast = snapshot.accessoriesSinceStartKwh,
+                regenLast = snapshot.regenSinceStartKwh,
+            ) else enCours.copy(
+                lastMs = snapshot.timestampMs,
+                odometerLast = snapshot.odometerKm ?: enCours.odometerLast,
+                energyLast = snapshot.energySinceStartKwh ?: enCours.energyLast,
+                socLast = snapshot.socPercent ?: enCours.socLast,
+                climateLast = snapshot.climateSinceStartKwh ?: enCours.climateLast,
+                accessoriesLast = snapshot.accessoriesSinceStartKwh ?: enCours.accessoriesLast,
+                regenLast = snapshot.regenSinceStartKwh ?: enCours.regenLast,
             )
-        } else if (ready == false && trip != null) {
-            finishTrip(snapshot)?.let { events += Event.TripEnded(it) }
+        } else if (ready == false && enCours != null) {
+            finishTrip()?.let { events += Event.TripEnded(it) }
         }
 
         // ── Charge ──────────────────────────────────────────────────────────
-        val charging = snapshot.charging
-        val enCours = charge
-        if (charging == true) {
-            if (enCours == null) {
-                charge = ChargeState(
-                    startMs = snapshot.timestampMs,
-                    socStart = snapshot.socPercent,
-                    type = snapshot.chargeType,
-                    tempC = snapshot.outsideTempC,
-                )
-            } else {
-                // La puissance n'est relevée que si l'écran est réveillé : on garde ce qu'on a vu.
-                snapshot.powerKw?.takeIf { it > 0f }?.let {
-                    enCours.powerSum += it
-                    enCours.powerCount++
-                }
-            }
-        } else if (charging == false && enCours != null) {
-            events += Event.ChargeEnded(finishCharge(enCours, snapshot))
+        val chargeEnCours = charge
+        if (snapshot.charging == true) {
+            charge = if (chargeEnCours == null) PendingCharge(
+                startMs = snapshot.timestampMs,
+                socStart = snapshot.socPercent,
+                type = snapshot.chargeType,
+                tempC = snapshot.outsideTempC,
+                powerSum = 0f,
+                powerCount = 0,
+                lastMs = snapshot.timestampMs,
+                socLast = snapshot.socPercent,
+            ) else chargeEnCours.copy(
+                // La puissance n'est relevée que si l'écran est réveillé : on garde ce qu'on voit.
+                powerSum = chargeEnCours.powerSum + (snapshot.powerKw?.takeIf { it > 0f } ?: 0f),
+                powerCount = chargeEnCours.powerCount + if ((snapshot.powerKw ?: 0f) > 0f) 1 else 0,
+                lastMs = snapshot.timestampMs,
+                socLast = snapshot.socPercent ?: chargeEnCours.socLast,
+                type = chargeEnCours.type ?: snapshot.chargeType,
+            )
+        } else if (snapshot.charging == false && chargeEnCours != null) {
+            events += Event.ChargeEnded(
+                finishCharge(chargeEnCours, snapshot.timestampMs, snapshot.socPercent ?: chargeEnCours.socLast)
+            )
             charge = null
         }
 
-        last = snapshot
         return events
     }
 
     /**
-     * Fin de trajet. Rend null pour un trajet sans distance ni énergie : mettre le contact pour
-     * régler la climatisation n'est pas un trajet, et remplirait la liste de lignes vides.
+     * Fin de trajet, à partir du dernier relevé observé. Rend null pour un trajet sans distance ni
+     * énergie : mettre le contact pour régler la climatisation n'est pas un trajet, et remplirait
+     * la liste de lignes vides.
      */
-    private fun finishTrip(end: EnergySnapshot): Trip? {
-        val state = trip ?: return null
+    private fun finishTrip(): Trip? {
+        val p = trip ?: return null
         trip = null
-        val reference = last ?: end     // le dernier instantané du trajet, pas celui d'après
-        val distance = diffKm(state.odometerStart, reference.odometerKm)
-        val energy = counterDelta(state.energyStart, reference.energySinceStartKwh) ?: 0f
+        val distance = diffKm(p.odometerStart, p.odometerLast)
+        val energy = counterDelta(p.energyStart, p.energyLast) ?: 0f
         if (distance <= 0 && energy <= 0f) return null
         return Trip(
-            startMs = state.startMs,
-            endMs = reference.timestampMs,
+            startMs = p.startMs,
+            endMs = p.lastMs,
             distanceKm = distance,
             energyKwh = energy.roundTenth(),
-            climateKwh = reference.climateSinceStartKwh,
-            accessoriesKwh = reference.accessoriesSinceStartKwh,
-            regenKwh = reference.regenSinceStartKwh,
-            socStart = state.socStart,
-            socEnd = reference.socPercent,
-            outsideTempC = state.tempC ?: reference.outsideTempC,
+            climateKwh = p.climateLast,
+            accessoriesKwh = p.accessoriesLast,
+            regenKwh = p.regenLast,
+            socStart = p.socStart,
+            socEnd = p.socLast,
+            outsideTempC = p.tempC,
         )
     }
 
-    private fun finishCharge(state: ChargeState, end: EnergySnapshot): ChargeSession {
-        val socEnd = end.socPercent ?: last?.socPercent
-        val delta = if (state.socStart != null && socEnd != null) socEnd - state.socStart else null
+    private fun finishCharge(p: PendingCharge, endMs: Long, socEnd: Float?): ChargeSession {
+        val delta = if (p.socStart != null && socEnd != null) socEnd - p.socStart else null
         return ChargeSession(
-            startMs = state.startMs,
-            endMs = end.timestampMs,
-            type = state.type ?: end.chargeType,
-            socStart = state.socStart,
+            startMs = p.startMs,
+            endMs = endMs,
+            type = p.type,
+            socStart = p.socStart,
             socEnd = socEnd,
             energyKwh = delta?.takeIf { it > 0f }?.let { (it / 100f * capacityKwh).roundTenth() },
-            measuredPowerKw = if (state.powerCount > 0)
-                (state.powerSum / state.powerCount).roundTenth() else null,
-            outsideTempC = state.tempC ?: end.outsideTempC,
+            measuredPowerKw = if (p.powerCount > 0) (p.powerSum / p.powerCount).roundTenth() else null,
+            outsideTempC = p.tempC,
         )
     }
 

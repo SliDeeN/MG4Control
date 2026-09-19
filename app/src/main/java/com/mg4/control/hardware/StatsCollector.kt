@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.StatsTracker
+import com.mg4.control.model.PendingState
 import com.mg4.control.stats.StatsStore
 
 /**
@@ -35,8 +36,12 @@ object StatsCollector {
     @Volatile
     private var running = false
 
-    /** Écoute passive : le relevé lit `ReadyWatcher.ready`, encore faut-il qu'il soit alimenté. */
-    private val readyListener = ReadyWatcher.Listener { _, _ -> }
+    /**
+     * Un trajet se termine à l'instant où la voiture quitte READY — et c'est aussi l'instant où le
+     * boîtier s'apprête à couper l'application. Attendre le tic suivant, trente secondes plus tard,
+     * revenait à jouer le trajet à pile ou face : on relève donc **immédiatement** au changement.
+     */
+    private val readyListener = ReadyWatcher.Listener { _, _ -> worker.post { sample() } }
 
     private val tick = object : Runnable {
         override fun run() {
@@ -64,7 +69,16 @@ object StatsCollector {
             running = true
             val s = StatsStore(app)
             store = s
-            tracker = StatsTracker(s.settings().capacityKwh)
+            val t = StatsTracker(s.settings().capacityKwh)
+            tracker = t
+            // Ce qui restait ouvert au démarrage précédent se referme ici, avec son dernier relevé
+            // connu : c'est ce qui sauve les trajets dont la fin coïncide avec l'extinction.
+            val repris = t.recover(s.pending())
+            if (repris.isNotEmpty()) {
+                AppLogger.i(TAG, "reprise au démarrage : ${repris.size} enregistrement(s) en attente")
+                repris.forEach { enregistrer(s, it) }
+                s.savePending(null)
+            }
             ReadyWatcher.add(readyListener)
             worker.post(tick)
             AppLogger.i(TAG, "collecte active (capacité ${s.settings().capacityKwh} kWh)")
@@ -89,12 +103,15 @@ object StatsCollector {
         val t = tracker ?: return
         runCatching {
             val snapshot = EnergyReader.read()
-            t.onSnapshot(snapshot, ReadyWatcher.ready).forEach { event ->
-                when (event) {
-                    is StatsTracker.Event.TripEnded   -> s.addTrip(event.trip)
-                    is StatsTracker.Event.ChargeEnded -> s.addCharge(event.session)
-                }
-            }
+            t.onSnapshot(snapshot, ReadyWatcher.ready).forEach { enregistrer(s, it) }
+            // L'état courant est réécrit après CHAQUE relevé : si le boîtier coupe entre deux,
+            // le démarrage suivant retrouve le trajet et le clôt à son dernier point connu.
+            s.savePending(t.pendingState().takeIf { !it.isEmpty })
         }.onFailure { AppLogger.w(TAG, "relevé manqué : ${it.javaClass.simpleName} ${it.message}") }
+    }
+
+    private fun enregistrer(s: StatsStore, event: StatsTracker.Event) = when (event) {
+        is StatsTracker.Event.TripEnded   -> s.addTrip(event.trip)
+        is StatsTracker.Event.ChargeEnded -> s.addCharge(event.session)
     }
 }

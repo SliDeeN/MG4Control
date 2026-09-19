@@ -7,6 +7,7 @@ import com.google.gson.JsonParser
 import com.google.gson.reflect.TypeToken
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.ChargeSession
+import com.mg4.control.model.PendingState
 import com.mg4.control.model.StatsHistory
 import com.mg4.control.model.StatsSettings
 import com.mg4.control.model.Trip
@@ -36,6 +37,7 @@ class StatsStore(private val context: Context) {
         private const val KEY_PRICE_DC = "price_dc"
         private const val KEY_CURRENCY = "currency"
         private const val KEY_CAPACITY = "capacity_kwh"
+        private const val KEY_PENDING = "pending_state"
 
         /** Verrou de processus : le service écrit pendant que l'écran lit. */
         private val LOCK = Any()
@@ -88,6 +90,23 @@ class StatsStore(private val context: Context) {
     }
 
     fun isEnabled(): Boolean = prefs.getBoolean(KEY_ENABLED, false)
+
+    // ── Trajet ou charge en cours ───────────────────────────────────────────
+
+    /**
+     * L'état en cours va dans les préférences et non dans le fichier d'historique : il est réécrit
+     * à chaque relevé, alors que l'historique ne bouge qu'à la fin d'un trajet.
+     */
+    fun savePending(state: PendingState?) {
+        prefs.edit {
+            if (state == null || state.isEmpty) remove(KEY_PENDING)
+            else putString(KEY_PENDING, gson.toJson(state))
+        }
+    }
+
+    fun pending(): PendingState? = runCatching {
+        prefs.getString(KEY_PENDING, null)?.let { gson.fromJson(it, PendingState::class.java) }
+    }.getOrNull()
 
     // ── Historique ──────────────────────────────────────────────────────────
 

@@ -110,6 +110,48 @@ class StatsTrackerTest {
     }
 
     @Test
+    fun `un trajet interrompu par une coupure est clos au demarrage suivant`() {
+        // Une session : le trajet commence et roule, puis le boîtier coupe l'application.
+        val premier = StatsTracker()
+        premier.onSnapshot(snap(odo = 10_000, energie = 0f), ready = true)
+        premier.onSnapshot(snap(odo = 10_042, energie = 8.1f, regen = 1.2f), ready = true)
+        val enAttente = premier.pendingState()
+        assertTrue("le trajet est bien en attente", enAttente.trip != null)
+
+        // Session suivante : le collecteur redémarre et reprend ce qui restait ouvert.
+        val second = StatsTracker()
+        val trip = (second.recover(enAttente).single() as StatsTracker.Event.TripEnded).trip
+        assertEquals(42, trip.distanceKm)
+        assertEquals(8.1f, trip.energyKwh, 0.01f)
+        assertEquals("daté du dernier relevé, pas de maintenant", enAttente.trip!!.lastMs, trip.endMs)
+        assertEquals(false, second.tripInProgress)
+    }
+
+    @Test
+    fun `une charge interrompue par une coupure est close au demarrage suivant`() {
+        val premier = StatsTracker(capacityKwh = 60f)
+        premier.onSnapshot(snap(soc = 30f, charge = true, type = ChargeType.AC), ready = false)
+        premier.onSnapshot(snap(soc = 45f, charge = true, type = ChargeType.AC, puissance = 5f), ready = false)
+
+        val second = StatsTracker(capacityKwh = 60f)
+        val session = (second.recover(premier.pendingState()).single()
+            as StatsTracker.Event.ChargeEnded).session
+        assertEquals(9f, session.energyKwh!!, 0.01f)
+        assertEquals(ChargeType.AC, session.type)
+        assertEquals(false, second.chargeInProgress)
+    }
+
+    @Test
+    fun `l'etat en attente se vide quand le trajet se termine normalement`() {
+        val t = StatsTracker()
+        t.onSnapshot(snap(odo = 10_000, energie = 0f), ready = true)
+        t.onSnapshot(snap(odo = 10_010, energie = 2f), ready = true)
+        assertTrue(t.pendingState().trip != null)
+        t.onSnapshot(snap(odo = 10_010, energie = 2f), ready = false)
+        assertTrue("plus rien à reprendre", t.pendingState().isEmpty)
+    }
+
+    @Test
     fun `un instantane vide n'ouvre ni trajet ni charge`() {
         val t = StatsTracker()
         assertTrue(t.onSnapshot(EnergySnapshot(timestampMs = 1L), ready = true).isEmpty())
