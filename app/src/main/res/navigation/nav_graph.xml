@@ -23,6 +23,12 @@
         android:name="com.mg4.control.ui.ProfileEditFragment"
         android:label="@string/profile_edit" />
 
+    <!-- Statistiques : trajets, recharges et coût (bouton STATISTIQUES) -->
+    <fragment
+        android:id="@+id/statsFragment"
+        android:name="com.mg4.control.ui.StatsFragment"
+        android:label="@string/nav_stats" />
+
     <!-- Réglages (bouton RÉGLAGES dans la top-bar) -->
     <fragment
         android:id="@+id/settingsFragment"

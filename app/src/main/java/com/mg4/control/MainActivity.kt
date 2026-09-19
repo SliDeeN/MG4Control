@@ -234,6 +234,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupNavButtons() {
         val btnAutomation = findViewById<MaterialButton>(R.id.btn_nav_automation)
+        val btnStats     = findViewById<MaterialButton>(R.id.btn_nav_stats)
         val btnAudio     = findViewById<MaterialButton>(R.id.btn_nav_audio)
         val btnShortcuts = findViewById<MaterialButton>(R.id.btn_nav_shortcuts)
         val btnProfiles  = findViewById<MaterialButton>(R.id.btn_nav_profiles)
@@ -255,6 +256,13 @@ class MainActivity : AppCompatActivity() {
             when (navController.currentDestination?.id) {
                 R.id.automationFragment -> navController.popBackStack(R.id.dashboardFragment, false)
                 else                    -> navController.navigate(R.id.automationFragment)
+            }
+        }
+
+        btnStats.setOnClickListener {
+            when (navController.currentDestination?.id) {
+                R.id.statsFragment -> navController.popBackStack(R.id.dashboardFragment, false)
+                else               -> navController.navigate(R.id.statsFragment)
             }
         }
 
@@ -284,6 +292,9 @@ class MainActivity : AppCompatActivity() {
             val inactive = getColor(R.color.dash_btn)
             btnAutomation.backgroundTintList = android.content.res.ColorStateList.valueOf(
                 if (destination.id == R.id.automationFragment) accent else inactive
+            )
+            btnStats.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                if (destination.id == R.id.statsFragment) accent else inactive
             )
             btnAudio.backgroundTintList = android.content.res.ColorStateList.valueOf(
                 if (destination.id == R.id.audioFragment) accent else inactive

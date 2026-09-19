@@ -32,6 +32,7 @@ import com.mg4.control.bluetooth.BluetoothProfileManager
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.PowerWindows
+import com.mg4.control.hardware.StatsCollector
 import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.hardware.MG4Hardware.AebMode
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
@@ -167,6 +168,8 @@ class MG4ControlService : Service() {
         registerIgnitionListener()
         // Fermeture auto des vitres en quittant la voiture : doit surveiller dès le boot, onglet ouvert ou non.
         WindowAutoClose.startIfEnabled(applicationContext)
+        // Statistiques : ne relève rien tant que l'utilisateur n'a pas activé l'enregistrement.
+        StatsCollector.startIfEnabled(applicationContext)
         // Vérification de mise à jour, cinq secondes après le démarrage automatique.
         //
         // Pourquoi attendre du tout : à t=0 la liaison données de la voiture n'est pas encore

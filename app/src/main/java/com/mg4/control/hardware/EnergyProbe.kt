@@ -79,6 +79,12 @@ object EnergyProbe {
         Signal("Courant de charge", 0x2160f40a, BMS_SERVICE, validity = 0x2120f424),
         Signal("SoC cible", 0x2140f40c, BMS_SERVICE),
         Signal("Puissance de charge AOSP (mW ?)", 0x1160030c, null),
+        // Trouvés par le balayage le 2026-09-19, en charge alternative à 5,2 kW annoncés :
+        // 408,25 V × 12,8 A = 5,23 kW. Le courant est NÉGATIF quand la batterie se remplit.
+        Signal("Tension batterie (V)", 0x2160f406, BMS_SERVICE),
+        Signal("Courant batterie (A, négatif = charge)", 0x2160f407, BMS_SERVICE),
+        Signal("Température batterie (°C)", 0x2160f43c, BMS_SERVICE),
+        Signal("Tension secteur (V)", 0x2160f43d, BMS_SERVICE),
         Signal("Prise connectée AOSP", 0x1120030b, null),
 
         // ── Énergie : les compteurs qui feraient les trajets ────────────────
@@ -147,7 +153,11 @@ object EnergyProbe {
             lignes += "  ${s.name} 0x${hex(s.id)} : ${voies.joinToString(" · ")}"
         }
 
-        // Dernière inconnue du relevé : aucune des propriétés connues ne donne une puissance de
+        // La puissance de charge n'a pas de propriété dédiée : c'est le produit de la tension et du
+        // courant de la batterie. Calculée ici pour que le relevé se lise sans sortir la calculette.
+        lignes += puissance(bms)
+
+        // Filet pour les autres firmwares : aucune des propriétés connues ne donne une puissance de
         // charge en kW. On balaie donc toutes les MESURES de la famille BMS (les identifiants en
         // 0x216… sont les flottants) pendant une charge : la bonne s'y trouve nécessairement.
         lignes += balayage(bms)
@@ -157,6 +167,35 @@ object EnergyProbe {
         garde(texte)
         return texte
     }
+
+    /**
+     * Puissance déduite de la tension et du courant batterie.
+     *
+     * ⚠️ **82,3 est une sentinelle** de cette famille, pas une valeur : cinq propriétés la rendaient
+     * en même temps sur SWI133 (dont la « consommation moyenne » 0x2160f421). Toute mesure qui vaut
+     * exactement 82,3 doit être tenue pour non publiée.
+     */
+    private fun puissance(bms: Any?): String {
+        bms ?: return "  puissance calculée : gestionnaire absent"
+        val volts = mesure(bms, 0x2160f406)
+        val amperes = mesure(bms, 0x2160f407)
+        if (volts == null || amperes == null) return "  puissance calculée : tension ou courant illisible"
+        val kw = volts * amperes / 1000f
+        val sens = if (amperes < 0f) "charge" else "décharge"
+        return "  puissance calculée : %.2f V × %.2f A = %.2f kW (%s)".format(volts, amperes, -kw, sens)
+    }
+
+    /** Mesure flottante utilisable, ou null : la sentinelle 82,3 ne compte pas pour une valeur. */
+    private fun mesure(bms: Any, id: Int): Float? {
+        val brut = runCatching {
+            bms.javaClass.getMethod("getGlobalProperty", Class::class.java, Int::class.javaPrimitiveType)
+                .invoke(bms, java.lang.Float::class.java, id) as? Float
+        }.getOrNull() ?: return null
+        return brut.takeIf { it != SENTINELLE }
+    }
+
+    /** Valeur rendue par les mesures BMS non publiées sur SWI133 (relevé du 2026-09-19). */
+    private const val SENTINELLE = 82.3f
 
     /**
      * Relève toutes les mesures que le gestionnaire BMS déclare porter, en excluant celles déjà
