@@ -616,6 +616,9 @@
     <string name="stats_tariff_fixed">tarif corrigé</string>
     <string name="stats_tariff_instead">corrigé, au lieu de %1$s</string>
     <string name="stats_tariff_default">Tarif par défaut</string>
+    <string name="stats_detail_motor">Moteur</string>
+    <string name="stats_detail_consumption">Consommation moyenne</string>
+    <string name="stats_detail_consumption_short">trajet trop court pour un ratio fiable</string>
     <string name="stats_detail_climate">Climatisation</string>
     <string name="stats_detail_accessories">Accessoires</string>
     <string name="stats_detail_regen">Récupération au freinage</string>

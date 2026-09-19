@@ -603,6 +603,9 @@
     <string name="stats_tariff_fixed">tariffa corretta</string>
     <string name="stats_tariff_instead">corretta, invece di %1$s</string>
     <string name="stats_tariff_default">Tariffa predefinita</string>
+    <string name="stats_detail_motor">Motore</string>
+    <string name="stats_detail_consumption">Consumo medio</string>
+    <string name="stats_detail_consumption_short">viaggio troppo breve per un dato affidabile</string>
     <string name="stats_detail_climate">Climatizzazione</string>
     <string name="stats_detail_accessories">Accessori</string>
     <string name="stats_detail_regen">Frenata rigenerativa</string>

@@ -49,6 +49,15 @@ class StatsFragment : Fragment() {
     }
 
     private lateinit var store: StatsStore
+
+    /**
+     * Champs de la carte des prix, gardés entre deux rendus.
+     *
+     * Les reconstruire à chaque rendu ferait disparaître celui qui a le focus au moment où
+     * l'utilisateur passe au suivant — et Android plante au dessin d'après, faute de pouvoir
+     * faire défiler jusqu'à une vue qui n'est plus dans l'arbre.
+     */
+    private val priceFields = mutableListOf<Pair<EditText, () -> String>>()
     private var page = PAGE_GENERAL
     private var shortPeriod = true
     /** Ligne dépliée d'une liste, repérée par l'horodatage de son enregistrement. */
@@ -140,7 +149,8 @@ class StatsFragment : Fragment() {
         val ctx = v.context
 
         val tiles = v.findViewById<LinearLayout>(R.id.stats_summary_tiles)
-        tiles.removeAllViews()
+        tiles
+        vider(tiles)
         tiles.addView(periodRow(ctx))
         grid(ctx, tiles, listOf(
             getString(R.string.stats_tile_distance) to km(sum.distanceKm),
@@ -156,22 +166,31 @@ class StatsFragment : Fragment() {
         ))
 
         val prices = v.findViewById<LinearLayout>(R.id.stats_price_rows)
-        prices.removeAllViews()
-        prices.addView(textRow(ctx, getString(R.string.stats_currency), s.currency) { saisi ->
-            store.saveSettings(store.settings().copy(currency = saisi.take(3).ifBlank { "€" }))
-        })
-        prices.addView(numberRow(ctx, getString(R.string.stats_price_ac), s.priceAc, 3) { value ->
-            store.saveSettings(store.settings().copy(priceAc = StatsSettings.clampPrice(value)))
-        })
-        prices.addView(numberRow(ctx, getString(R.string.stats_price_dc), s.priceDc, 3) { value ->
-            store.saveSettings(store.settings().copy(priceDc = StatsSettings.clampPrice(value)))
-        })
-        prices.addView(numberRow(ctx, getString(R.string.stats_capacity), s.capacityKwh, 1) { value ->
-            store.saveSettings(store.settings().copy(capacityKwh = StatsSettings.clampCapacity(value)))
-        })
+        if (prices.childCount == 0) {
+            // Vue recréée : les anciens champs ne doivent pas rester dans la liste.
+            priceFields.clear()
+            prices.addView(textRow(ctx, getString(R.string.stats_currency), { store.settings().currency }) { saisi ->
+                store.saveSettings(store.settings().copy(currency = saisi.take(3).ifBlank { "€" }))
+            })
+            prices.addView(numberRow(ctx, getString(R.string.stats_price_ac),
+                { fmt3(store.settings().priceAc) }) { value ->
+                store.saveSettings(store.settings().copy(priceAc = StatsSettings.clampPrice(value)))
+            })
+            prices.addView(numberRow(ctx, getString(R.string.stats_price_dc),
+                { fmt3(store.settings().priceDc) }) { value ->
+                store.saveSettings(store.settings().copy(priceDc = StatsSettings.clampPrice(value)))
+            })
+            prices.addView(numberRow(ctx, getString(R.string.stats_capacity),
+                { fmt(store.settings().capacityKwh) }) { value ->
+                store.saveSettings(store.settings().copy(capacityKwh = StatsSettings.clampCapacity(value)))
+            })
+        } else {
+            // Un champ en cours de saisie garde ce que l'utilisateur est en train d'écrire.
+            priceFields.forEach { (champ, valeur) -> if (!champ.hasFocus()) champ.setText(valeur()) }
+        }
 
         val retention = v.findViewById<LinearLayout>(R.id.stats_retention_row)
-        retention.removeAllViews()
+        vider(retention)
         StatsSettings.Retention.entries.forEach { r ->
             retention.addView(choice(ctx, retentionLabel(r), r == s.retention) {
                 store.saveSettings(store.settings().copy(retention = r))
@@ -188,7 +207,8 @@ class StatsFragment : Fragment() {
     private fun renderTrips(v: View, s: StatsSettings, sum: StatsSummary, trips: List<Trip>) {
         val ctx = v.context
         val tiles = v.findViewById<LinearLayout>(R.id.stats_trips_tiles)
-        tiles.removeAllViews()
+        tiles
+        vider(tiles)
         tiles.addView(periodRow(ctx))
         grid(ctx, tiles, listOf(
             getString(R.string.stats_tile_trips) to sum.tripCount.toString(),
@@ -198,7 +218,8 @@ class StatsFragment : Fragment() {
         ))
 
         val list = v.findViewById<LinearLayout>(R.id.stats_trips_list)
-        list.removeAllViews()
+        list
+        vider(list)
         if (trips.isEmpty()) {
             list.addView(emptyNote(ctx, R.string.stats_no_trip))
             return
@@ -221,7 +242,8 @@ class StatsFragment : Fragment() {
     ) {
         val ctx = v.context
         val tiles = v.findViewById<LinearLayout>(R.id.stats_charges_tiles)
-        tiles.removeAllViews()
+        tiles
+        vider(tiles)
         tiles.addView(periodRow(ctx))
         grid(ctx, tiles, listOf(
             getString(R.string.stats_tile_charged) to kwh(sum.chargedKwh),
@@ -232,7 +254,8 @@ class StatsFragment : Fragment() {
         ))
 
         val list = v.findViewById<LinearLayout>(R.id.stats_charges_list)
-        list.removeAllViews()
+        list
+        vider(list)
         if (charges.isEmpty()) {
             list.addView(emptyNote(ctx, R.string.stats_no_charge))
             return
@@ -264,9 +287,15 @@ class StatsFragment : Fragment() {
     // ═════════════════════════════════════════════════════════════════════════
 
     private fun tripDetail(ctx: Context, trip: Trip): View = detailBox(ctx, listOfNotNull(
+        // L'énergie du moteur n'est pas publiée : c'est le total moins les postes annexes.
+        trip.motorKwh?.let { getString(R.string.stats_detail_motor) to kwh(it) },
         trip.climateKwh?.let { getString(R.string.stats_detail_climate) to kwh(it) },
         trip.accessoriesKwh?.let { getString(R.string.stats_detail_accessories) to kwh(it) },
         trip.regenKwh?.let { getString(R.string.stats_detail_regen) to "+ ${kwh(it)}" },
+        // Sous la distance plancher on dit POURQUOI il n'y a pas de ratio, plutôt qu'un tiret muet.
+        getString(R.string.stats_detail_consumption) to (trip.consumptionPer100
+            ?.let { fmt(it) + " " + getString(R.string.stats_unit_per100) }
+            ?: getString(R.string.stats_detail_consumption_short)),
         soc(trip.socStart, trip.socEnd)?.let { getString(R.string.stats_detail_battery) to it },
         trip.outsideTempC?.let { getString(R.string.stats_detail_temp) to "${fmt(it)} °C" },
     ))
@@ -349,6 +378,18 @@ class StatsFragment : Fragment() {
     // ═════════════════════════════════════════════════════════════════════════
     //  Fabrique de vues
     // ═════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Vide un conteneur **sans laisser derrière lui une vue qui a le focus**.
+     *
+     * Retirer la vue focalisée fait planter le système au dessin suivant — « parameter must be a
+     * descendant of this view » : il cherche à faire défiler jusqu'à une vue qui n'appartient plus
+     * à l'arbre. Constaté le 2026-09-19 en changeant un tarif.
+     */
+    private fun vider(container: LinearLayout) {
+        if (container.findFocus() != null) container.clearFocus()
+        container.removeAllViews()
+    }
 
     /** Deux tuiles par ligne : au-delà, les nombres deviennent illisibles sur cet écran. */
     private fun grid(ctx: Context, parent: LinearLayout, tiles: List<Pair<String, String>>) {
@@ -479,21 +520,19 @@ class StatsFragment : Fragment() {
 
     /** Ligne « libellé + champ » : la saisie est enregistrée à la validation et au départ du focus. */
     private fun textRow(
-        ctx: Context, label: String, value: String, onCommit: (String) -> Unit
+        ctx: Context, label: String, value: () -> String, onCommit: (String) -> Unit
     ): View = fieldRow(ctx, label, value, InputType.TYPE_CLASS_TEXT) { onCommit(it) }
 
     private fun numberRow(
-        ctx: Context, label: String, value: Float, decimals: Int, onCommit: (Float) -> Unit
+        ctx: Context, label: String, value: () -> String, onCommit: (Float) -> Unit
     ): View = fieldRow(
-        ctx, label,
-        if (decimals == 3) fmt3(value) else fmt(value),
-        InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
+        ctx, label, value, InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
     ) { saisi ->
         saisi.replace(',', '.').toFloatOrNull()?.let { onCommit(it) }
     }
 
     private fun fieldRow(
-        ctx: Context, labelText: String, value: String, type: Int, onCommit: (String) -> Unit
+        ctx: Context, labelText: String, value: () -> String, type: Int, onCommit: (String) -> Unit
     ): View {
         val ligne = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -504,7 +543,7 @@ class StatsFragment : Fragment() {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         })
         val champ = EditText(ctx).apply {
-            setText(value)
+            setText(value())
             inputType = type
             textSize = 16f
             gravity = Gravity.END
@@ -512,9 +551,12 @@ class StatsFragment : Fragment() {
             setTextColor(ctx.getColor(R.color.text_primary))
             layoutParams = LinearLayout.LayoutParams(dp(ctx, 140), LinearLayout.LayoutParams.WRAP_CONTENT)
         }
+        priceFields += champ to value
         fun commit() {
             onCommit(champ.text.toString())
-            render()
+            // Rendu différé : redessiner pendant le transfert de focus retirerait la vue que le
+            // système est en train de suivre.
+            champ.post { if (isAdded) render() }
         }
         champ.setOnFocusChangeListener { _, focus -> if (!focus) commit() }
         champ.setOnEditorActionListener { _, action, _ ->

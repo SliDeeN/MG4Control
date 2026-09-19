@@ -56,7 +56,7 @@ class StatsTrackerTest {
     fun `mettre le contact sans rouler ne cree pas de trajet`() {
         val t = StatsTracker()
         t.onSnapshot(snap(odo = 10_000, energie = 0f), ready = true)
-        // Régler la climatisation à l'arrêt : ni distance, ni énergie de traction.
+        // Régler la climatisation à l'arrêt : ni distance, ni énergie moteur.
         assertTrue(t.onSnapshot(snap(odo = 10_000, energie = 0f), ready = false).isEmpty())
     }
 

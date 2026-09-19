@@ -603,6 +603,9 @@
     <string name="stats_tariff_fixed">rate corrected</string>
     <string name="stats_tariff_instead">corrected, instead of %1$s</string>
     <string name="stats_tariff_default">Default rate</string>
+    <string name="stats_detail_motor">Motor</string>
+    <string name="stats_detail_consumption">Average consumption</string>
+    <string name="stats_detail_consumption_short">trip too short for a reliable ratio</string>
     <string name="stats_detail_climate">Climate control</string>
     <string name="stats_detail_accessories">Accessories</string>
     <string name="stats_detail_regen">Regenerative braking</string>

@@ -34,6 +34,21 @@ data class Trip(
         get() = if (distanceKm >= MIN_DISTANCE_FOR_RATIO_KM && distanceKm > 0)
             energyKwh * 100f / distanceKm else null
 
+    /**
+     * Énergie du moteur : ce qui reste du total une fois la climatisation et les accessoires
+     * retirés. Le véhicule ne la publie pas — il ne donne que le total et ses postes annexes.
+     *
+     * Nommée « moteur » et non « traction » : la MG4 est une propulsion, et la XPower une quatre
+     * roues motrices. Null tant qu'aucun poste n'est connu, sinon on présenterait le total comme
+     * une mesure séparée qui n'existe pas.
+     */
+    val motorKwh: Float?
+        get() {
+            if (climateKwh == null && accessoriesKwh == null) return null
+            val reste = energyKwh - (climateKwh ?: 0f) - (accessoriesKwh ?: 0f)
+            return reste.coerceAtLeast(0f).roundTenth()
+        }
+
     /** Vitesse moyenne en km/h, même réserve de précision que la consommation. */
     val averageSpeedKmh: Float?
         get() {
