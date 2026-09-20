@@ -29,6 +29,7 @@ import com.mg4.control.stats.StatsStore
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * Onglet Statistiques : trois sous-onglets dans le même écran (Général, Trajets, Recharge).
@@ -227,7 +228,7 @@ class StatsFragment : Fragment() {
         }
         trips.forEach { trip ->
             list.addView(row(ctx, when1 = dateLine(trip.startMs, trip.endMs),
-                when2 = "${duration(trip.durationMs)} · ${km(trip.distanceKm)}",
+                when2 = "${duration(trip.durationMs)} · ${km(trip.distance)}",
                 value1 = trip.consumptionPer100?.let { fmt(it) + " " + getString(R.string.stats_unit_per100) } ?: "—",
                 value2 = listOfNotNull(
                     trip.averageSpeedKmh?.let { "${it.toInt()} km/h" },
@@ -581,7 +582,12 @@ class StatsFragment : Fragment() {
 
     private fun fmt3(value: Float): String = String.format(Locale.getDefault(), "%.3f", value)
 
-    private fun km(value: Int): String = "$value km"
+    /**
+     * Distance. Le dixième n'est montré que sous cent kilomètres et seulement s'il a été mesuré :
+     * au-delà il n'apporte rien, et l'odomètre du véhicule, lui, reste au kilomètre entier.
+     */
+    private fun km(value: Float): String =
+        if (value < 100f && value % 1f != 0f) "${fmt(value)} km" else "${value.roundToInt()} km"
 
     private fun kwh(value: Float): String = "${fmt(value)} kWh"
 

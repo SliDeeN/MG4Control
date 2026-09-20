@@ -16,6 +16,11 @@ package com.mg4.control.model
  * survit à un boîtier qui s'endort pendant la nuit ; la puissance mesurée, elle, n'existe que si
  * l'application a pu relever quelque chose.
  *
+ * **Distance d'un trajet** : l'odomètre donne le kilomètre entier, et c'est tout ce que le
+ * véhicule publie (les trois autres odomètres du firmware ont été sondés le 2026-09-20, tous à
+ * zéro). La distance fine vient donc de l'intégration de la vitesse par la méthode des trapèzes ;
+ * l'odomètre reste le garde-fou qui détecte une intégration partielle.
+ *
  * **Survie aux coupures** : l'état courant est exposé par [pendingState] pour être enregistré après
  * chaque relevé, et [recover] rouvre ce qui restait en cours au démarrage suivant. Sans ça, tout
  * trajet dont la fin coïncide avec l'extinction du boîtier — c'est-à-dire la plupart — serait perdu.
@@ -71,6 +76,9 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
         // ── Trajet ──────────────────────────────────────────────────────────
         val enCours = trip
         if (ready == true) {
+            // Calculé avant la recopie : il dit à la fois combien ajouter et si l'intervalle
+            // comptait, ce qui n'est pas la même chose qu'ajouter zéro.
+            val pas = enCours?.let { integrationStep(it, snapshot) }
             trip = if (enCours == null) PendingTrip(
                 startMs = snapshot.timestampMs,
                 odometerStart = snapshot.odometerKm,
@@ -84,6 +92,7 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
                 climateLast = snapshot.climateSinceStartKwh,
                 accessoriesLast = snapshot.accessoriesSinceStartKwh,
                 regenLast = snapshot.regenSinceStartKwh,
+                lastSpeedKmh = snapshot.speedKmh,
             ) else enCours.copy(
                 lastMs = snapshot.timestampMs,
                 odometerLast = snapshot.odometerKm ?: enCours.odometerLast,
@@ -92,8 +101,23 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
                 climateLast = snapshot.climateSinceStartKwh ?: enCours.climateLast,
                 accessoriesLast = snapshot.accessoriesSinceStartKwh ?: enCours.accessoriesLast,
                 regenLast = snapshot.regenSinceStartKwh ?: enCours.regenLast,
+                integratedKm = enCours.integratedKm + (pas ?: 0f),
+                integrated = enCours.integrated || pas != null,
+                // Une vitesse manquée ne réinitialise pas le trapèze : le prochain intervalle
+                // repart de la dernière vitesse connue, ce qui sous-estime sans jamais inventer.
+                lastSpeedKmh = snapshot.speedKmh ?: enCours.lastSpeedKmh,
             )
         } else if (ready == false && enCours != null) {
+            // Entre le dernier relevé sous contact et celui qui le coupe, la voiture roulait
+            // encore : sans ce dernier trapèze, chaque trajet perdrait sa fin. Seules la distance
+            // et l'heure de fin sont reprises — les compteurs d'énergie restent ceux du dernier
+            // relevé sous contact, dont on sait qu'ils étaient valides.
+            val fin = integrationStep(enCours, snapshot)
+            if (fin != null) trip = enCours.copy(
+                lastMs = snapshot.timestampMs,
+                integratedKm = enCours.integratedKm + fin,
+                integrated = true,
+            )
             finishTrip()?.let { events += Event.TripEnded(it) }
         }
 
@@ -128,6 +152,22 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
     }
 
     /**
+     * Distance parcourue depuis le relevé précédent, par la méthode des trapèzes.
+     *
+     * Rend null quand l'intervalle n'est pas mesurable : vitesse inconnue d'un côté ou de l'autre,
+     * ou trou de plus de [MAX_SAMPLE_GAP_MS] — passé ce délai, prolonger la dernière vitesse connue
+     * ne serait plus une mesure mais une supposition. L'intervalle est alors simplement perdu, et
+     * la comparaison avec l'odomètre se chargera de dire que le total n'est plus fiable.
+     */
+    private fun integrationStep(p: PendingTrip, s: EnergySnapshot): Float? {
+        val avant = p.lastSpeedKmh ?: return null
+        val apres = s.speedKmh ?: return null
+        val dt = s.timestampMs - p.lastMs
+        if (dt <= 0L || dt > MAX_SAMPLE_GAP_MS) return null
+        return (avant + apres) / 2f * (dt / 3_600_000f)
+    }
+
+    /**
      * Fin de trajet, à partir du dernier relevé observé. Rend null pour un trajet sans distance ni
      * énergie : mettre le contact pour régler la climatisation n'est pas un trajet, et remplirait
      * la liste de lignes vides.
@@ -137,7 +177,10 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
         trip = null
         val distance = diffKm(p.odometerStart, p.odometerLast)
         val energy = counterDelta(p.energyStart, p.energyLast) ?: 0f
-        if (distance <= 0 && energy <= 0f) return null
+        // La distance intégrée compte dans ce test : un trajet de six cents mètres est un vrai
+        // trajet, même si l'odomètre n'a pas changé de kilomètre.
+        val integre = if (p.integrated) p.integratedKm.roundTenth() else null
+        if (distance <= 0 && energy <= 0f && (integre ?: 0f) <= 0f) return null
         return Trip(
             startMs = p.startMs,
             endMs = p.lastMs,
@@ -149,6 +192,7 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
             socStart = p.socStart,
             socEnd = p.socLast,
             outsideTempC = p.tempC,
+            integratedKm = integre,
         )
     }
 
@@ -180,5 +224,14 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
         end ?: return null
         if (start == null || end < start) return end
         return end - start
+    }
+
+    companion object {
+        /**
+         * Trou maximal accepté entre deux relevés pour intégrer la vitesse. Le collecteur relève
+         * toutes les dix secondes en roulant : une minute laisse passer cinq relevés manqués, bien
+         * au-delà d'un simple retard de l'ordonnanceur, mais sans couvrir une mise en veille.
+         */
+        const val MAX_SAMPLE_GAP_MS = 60_000L
     }
 }

@@ -27,6 +27,13 @@ object StatsCollector {
     /** Assez fin pour dater un trajet à la demi-minute, assez lâche pour ne rien coûter. */
     private const val TICK_MS = 30_000L
 
+    /**
+     * Cadence en roulant. La distance vient de l'intégration de la vitesse, faute d'odomètre plus
+     * fin que le kilomètre : à trente secondes, un trapèze couvrirait un demi-kilomètre de route
+     * sur une seule droite, et l'intégration ne ferait pas mieux que l'odomètre qu'elle remplace.
+     */
+    private const val TICK_DRIVING_MS = 10_000L
+
     private val thread = HandlerThread("mg4-stats").apply { start() }
     private val worker = Handler(thread.looper)
 
@@ -41,13 +48,26 @@ object StatsCollector {
      * boîtier s'apprête à couper l'application. Attendre le tic suivant, trente secondes plus tard,
      * revenait à jouer le trajet à pile ou face : on relève donc **immédiatement** au changement.
      */
-    private val readyListener = ReadyWatcher.Listener { _, _ -> worker.post { sample() } }
+    private val readyListener = ReadyWatcher.Listener { _, _ ->
+        worker.post {
+            if (running) {
+                sample()
+                // La cadence dépend du contact : on la réarme tout de suite au lieu d'attendre
+                // un tic qui peut être à trente secondes.
+                worker.removeCallbacks(tick)
+                worker.postDelayed(tick, interval())
+            }
+        }
+    }
+
+    private fun interval(): Long =
+        if (ReadyWatcher.ready == true) TICK_DRIVING_MS else TICK_MS
 
     private val tick = object : Runnable {
         override fun run() {
             if (!running) return
             sample()
-            worker.postDelayed(this, TICK_MS)
+            worker.postDelayed(this, interval())
         }
     }
 

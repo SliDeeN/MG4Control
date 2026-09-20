@@ -23,6 +23,15 @@ data class PendingTrip(
     val climateLast: Float?,
     val accessoriesLast: Float?,
     val regenLast: Float?,
+    /** Distance accumulée en intégrant la vitesse, en km. Voir [Trip.integratedKm]. */
+    val integratedKm: Float = 0f,
+    /** Vitesse du relevé précédent, l'autre côté du trapèze. */
+    val lastSpeedKmh: Float? = null,
+    /**
+     * Vrai dès qu'un intervalle a pu être intégré. Sans ce drapeau, une distance de 0 km ne se
+     * distinguerait pas d'une distance jamais mesurée — et l'écran annoncerait un trajet immobile.
+     */
+    val integrated: Boolean = false,
 )
 
 data class PendingCharge(

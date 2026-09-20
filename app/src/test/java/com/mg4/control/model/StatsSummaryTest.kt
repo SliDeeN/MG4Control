@@ -45,7 +45,7 @@ class StatsSummaryTest {
     fun `la consommation de periode se calcule sur les totaux`() {
         // 2 km à 40 kWh/100 et 200 km à 15 kWh/100 : la moyenne des moyennes dirait 27,5.
         val sum = StatsSummary.of(listOf(trip(2, 0.8f), trip(200, 30f)), emptyList(), settings)
-        assertEquals(202, sum.distanceKm)
+        assertEquals(202f, sum.distanceKm, 0.01f)
         assertEquals(30.8f * 100f / 202f, sum.consumptionPer100!!, 0.05f)
     }
 

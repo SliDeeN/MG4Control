@@ -33,6 +33,13 @@ data class EnergySnapshot(
     val powerKw: Float? = null,
     /** Autonomie annoncée par la voiture, en kilomètres. */
     val rangeKm: Int? = null,
+    /**
+     * Vitesse instantanée en km/h, toujours positive.
+     *
+     * C'est la seule voie vers une distance plus fine que le kilomètre : sondés le 2026-09-20,
+     * l'odomètre AOSP, celui du combiné et la carte de trajet rendent tous zéro sur SWI133.
+     */
+    val speedKmh: Float? = null,
     /** Température extérieure en °C, pour expliquer une consommation. */
     val outsideTempC: Float? = null,
 ) {

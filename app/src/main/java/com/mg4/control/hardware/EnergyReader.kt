@@ -82,6 +82,8 @@ object EnergyReader {
             // Pas de propriété de puissance : c'est le produit, le courant étant négatif en charge.
             powerKw = if (volts != null && amperes != null) -volts * amperes / 1000f else null,
             rangeKm = int(PROP_RANGE)?.takeIf { it in 1..1500 },
+            // Déjà en km/h chez SAIC malgré la spec AOSP : voir MG4Hardware.getVehicleSpeedKmh().
+            speedKmh = MG4Hardware.getVehicleSpeedKmh()?.takeIf { it in 0f..300f },
             outsideTempC = MG4Hardware.getOutsideTempCelsius(),
         )
     }
@@ -89,6 +91,10 @@ object EnergyReader {
     /**
      * Capacité de la batterie annoncée par le véhicule, en kWh — `null` si la propriété ne répond
      * pas ou rend une valeur invraisemblable.
+     *
+     * **La MG4 ne la publie pas** : sondée le 2026-09-20 sur SWI133, la propriété rend 0,0. Le
+     * réglage manuel reste donc la seule source. La lecture est gardée parce qu'elle ne coûte rien
+     * et que les firmwares A9 pourraient, eux, répondre.
      *
      * AOSP la donne en Wh ; certains véhicules la publient déjà en kWh, d'où les deux échelles
      * acceptées. Elle sert de valeur par défaut au réglage de l'onglet Statistiques : c'est mieux

@@ -1,5 +1,6 @@
 package com.mg4.control.model
 
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -12,6 +13,10 @@ import kotlin.math.roundToInt
 data class Trip(
     val startMs: Long,
     val endMs: Long,
+    /**
+     * Distance lue sur l'odomètre du véhicule, **au kilomètre entier** — c'est tout ce qu'il
+     * publie. Elle sert de contrôle à [integratedKm], plus fine mais susceptible de dériver.
+     */
     val distanceKm: Int,
     /**
      * Énergie **brute** relevée sur le compteur du véhicule : la régénération n'en est PAS déduite.
@@ -27,8 +32,35 @@ data class Trip(
     val socStart: Float?,
     val socEnd: Float?,
     val outsideTempC: Float?,
+    /**
+     * Distance obtenue en intégrant la vitesse, au dixième de kilomètre.
+     *
+     * L'odomètre du véhicule est entier et aucune autre source n'a répondu (sondés le 2026-09-20 :
+     * odomètre AOSP, odomètre du combiné, carte de trajet — tous à zéro). Null sur les trajets
+     * enregistrés avant cette mesure, et null si la vitesse n'a jamais pu être relevée.
+     */
+    val integratedKm: Float? = null,
 ) {
     val durationMs: Long get() = max(0L, endMs - startMs)
+
+    /**
+     * Distance retenue pour l'affichage et les ratios.
+     *
+     * L'intégration l'emporte quand elle existe ET qu'elle concorde avec l'odomètre : elle est dix
+     * fois plus fine. En cas de désaccord franc — plus de 2 km ou 15 % —, on retombe sur
+     * l'odomètre : lui ne dérive jamais, et un tel écart trahirait des relevés manqués plutôt
+     * qu'une meilleure mesure.
+     */
+    val distance: Float
+        get() {
+            val integre = integratedKm ?: return distanceKm.toFloat()
+            if (distanceKm <= 0) return integre
+            val ecart = abs(integre - distanceKm)
+            return if (ecart <= max(2f, distanceKm * 0.15f)) integre else distanceKm.toFloat()
+        }
+
+    /** Vrai quand la distance affichée vient de l'intégration, donc connue au dixième. */
+    val distancePrecise: Boolean get() = integratedKm != null && distance == integratedKm
 
     /**
      * Énergie réellement sortie de la batterie : brute moins ce que la régénération a rendu.
@@ -42,13 +74,13 @@ data class Trip(
     /**
      * Consommation moyenne en kWh/100 km, **null sous la distance plancher**.
      *
-     * L'odomètre du véhicule est au kilomètre entier : sur 2 km, la distance est connue à ±50 %
-     * près et le ratio n'aurait aucun sens. Mieux vaut ne rien afficher que d'afficher un chiffre
-     * faux — l'énergie et la distance, elles, restent justes et restent affichées.
+     * Le plancher dépend de la source. Au kilomètre entier, 2 km sont connus à ±50 % près et le
+     * ratio n'aurait aucun sens ; au dixième, un seul kilomètre donne déjà un chiffre honnête.
+     * Mieux vaut ne rien afficher qu'un chiffre faux — l'énergie et la distance, elles, restent
+     * justes et restent affichées.
      */
     val consumptionPer100: Float?
-        get() = if (distanceKm >= MIN_DISTANCE_FOR_RATIO_KM && distanceKm > 0)
-            netEnergyKwh * 100f / distanceKm else null
+        get() = if (distance >= ratioFloor) netEnergyKwh * 100f / distance else null
 
     /**
      * Énergie du moteur : ce qui reste du total une fois la climatisation et les accessoires
@@ -69,13 +101,19 @@ data class Trip(
     /** Vitesse moyenne en km/h, même réserve de précision que la consommation. */
     val averageSpeedKmh: Float?
         get() {
-            if (distanceKm < MIN_DISTANCE_FOR_RATIO_KM || durationMs <= 0L) return null
-            return distanceKm * 3_600_000f / durationMs
+            if (distance < ratioFloor || durationMs <= 0L) return null
+            return distance * 3_600_000f / durationMs
         }
 
+    private val ratioFloor: Float
+        get() = if (distancePrecise) MIN_DISTANCE_PRECISE_KM else MIN_DISTANCE_ODOMETER_KM
+
     companion object {
-        /** En deçà, on n'affiche aucun ratio : l'odomètre est au kilomètre entier. */
-        const val MIN_DISTANCE_FOR_RATIO_KM = 5
+        /** Plancher des ratios quand la distance vient de l'odomètre, au kilomètre entier. */
+        const val MIN_DISTANCE_ODOMETER_KM = 5f
+
+        /** Idem quand elle vient de l'intégration de la vitesse, au dixième. */
+        const val MIN_DISTANCE_PRECISE_KM = 1f
     }
 }
 

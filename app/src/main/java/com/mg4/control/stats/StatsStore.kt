@@ -135,7 +135,7 @@ class StatsStore(private val context: Context) {
     fun addTrip(trip: Trip) = synchronized(LOCK) {
         val h = read()
         write(h.copy(trips = h.trips + trip))
-        AppLogger.i(TAG, "trajet enregistré : ${trip.distanceKm} km · ${trip.energyKwh} kWh")
+        AppLogger.i(TAG, "trajet enregistré : ${trip.distance} km · ${trip.netEnergyKwh} kWh")
     }
 
     fun addCharge(session: ChargeSession) = synchronized(LOCK) {

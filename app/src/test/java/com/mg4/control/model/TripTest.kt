@@ -1,7 +1,9 @@
 package com.mg4.control.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -17,6 +19,7 @@ class TripTest {
         kwh: Float = 20f,
         clim: Float? = null,
         accessoires: Float? = null,
+        integre: Float? = null,
     ) = Trip(
         startMs = 0L,
         endMs = 3_600_000L,
@@ -28,6 +31,7 @@ class TripTest {
         socStart = null,
         socEnd = null,
         outsideTempC = null,
+        integratedKm = integre,
     )
 
     @Test
@@ -80,6 +84,41 @@ class TripTest {
     @Test
     fun `au dela du plancher la consommation se calcule`() {
         assertEquals(20f, trip(km = 100, kwh = 20f).consumptionPer100!!, 0.01f)
+    }
+
+    @Test
+    fun `la distance integree l'emporte quand elle concorde avec l'odometre`() {
+        val t = trip(km = 34, integre = 34.9f)
+        assertEquals(34.9f, t.distance, 0.01f)
+        assertTrue(t.distancePrecise)
+    }
+
+    @Test
+    fun `une integration en desaccord franc avec l'odometre est ecartee`() {
+        // 40 km intégrés contre 34 à l'odomètre : des relevés ont été manqués, ou la vitesse a
+        // été mal lue. L'odomètre, lui, ne dérive jamais.
+        val t = trip(km = 34, integre = 40f)
+        assertEquals(34f, t.distance, 0.01f)
+        assertFalse(t.distancePrecise)
+    }
+
+    @Test
+    fun `sans odometre la distance integree est prise telle quelle`() {
+        // Trajet plus court qu'un kilomètre : l'odomètre n'a pas bougé, l'intégration si.
+        val t = trip(km = 0, integre = 0.6f)
+        assertEquals(0.6f, t.distance, 0.01f)
+        assertTrue(t.distancePrecise)
+    }
+
+    @Test
+    fun `au dixieme de kilometre le plancher des ratios descend a un kilometre`() {
+        val t = trip(km = 2, kwh = 0.4f, integre = 2.4f)
+        assertEquals("2,4 km mesurés au dixième : le ratio a un sens", 16.7f, t.consumptionPer100!!, 0.1f)
+    }
+
+    @Test
+    fun `sous un kilometre aucun ratio meme avec l'integration`() {
+        assertNull(trip(km = 0, kwh = 0.1f, integre = 0.6f).consumptionPer100)
     }
 
     @Test

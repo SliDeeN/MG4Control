@@ -12,10 +12,10 @@ package com.mg4.control.model
  */
 data class StatsSummary(
     val tripCount: Int,
-    val distanceKm: Int,
+    val distanceKm: Float,
     val energyKwh: Float,
     val regenKwh: Float,
-    val longestTripKm: Int,
+    val longestTripKm: Float,
     val drivingMs: Long,
     val chargeCount: Int,
     val chargedKwh: Float,
@@ -26,22 +26,29 @@ data class StatsSummary(
     val averagePricePerKwh: Float?,
     /** Coût estimé de l'énergie consommée en roulant. */
     val drivingCost: Float?,
+    /**
+     * Vrai si **tous** les trajets de la période ont une distance intégrée. Le plancher des ratios
+     * en dépend : il serait incohérent qu'une ligne de trajet annonce une consommation que le
+     * résumé de la même période refuse d'afficher.
+     */
+    val precise: Boolean,
 ) {
+    private val floor: Float
+        get() = if (precise) Trip.MIN_DISTANCE_PRECISE_KM else Trip.MIN_DISTANCE_ODOMETER_KM
+
     /** kWh/100 km sur la période, null en dessous de la distance plancher. */
     val consumptionPer100: Float?
-        get() = if (distanceKm >= Trip.MIN_DISTANCE_FOR_RATIO_KM)
-            energyKwh * 100f / distanceKm else null
+        get() = if (distanceKm >= floor) energyKwh * 100f / distanceKm else null
 
     val averageSpeedKmh: Float?
-        get() = if (distanceKm >= Trip.MIN_DISTANCE_FOR_RATIO_KM && drivingMs > 0L)
+        get() = if (distanceKm >= floor && drivingMs > 0L)
             distanceKm * 3_600_000f / drivingMs else null
 
     /** Coût aux 100 km, pour comparer avec un plein de carburant. */
     val costPer100: Float?
         get() {
             val cout = drivingCost ?: return null
-            return if (distanceKm >= Trip.MIN_DISTANCE_FOR_RATIO_KM)
-                cout * 100f / distanceKm else null
+            return if (distanceKm >= floor) cout * 100f / distanceKm else null
         }
 
     companion object {
@@ -56,10 +63,10 @@ data class StatsSummary(
             val energie = trips.sumOf { it.netEnergyKwh.toDouble() }.toFloat()
             return StatsSummary(
                 tripCount = trips.size,
-                distanceKm = trips.sumOf { it.distanceKm },
+                distanceKm = trips.sumOf { it.distance.toDouble() }.toFloat().roundTenth(),
                 energyKwh = energie.roundTenth(),
                 regenKwh = trips.sumOf { (it.regenKwh ?: 0f).toDouble() }.toFloat().roundTenth(),
-                longestTripKm = trips.maxOfOrNull { it.distanceKm } ?: 0,
+                longestTripKm = trips.maxOfOrNull { it.distance } ?: 0f,
                 drivingMs = trips.sumOf { it.durationMs },
                 chargeCount = charges.size,
                 chargedKwh = chargedKwh.roundTenth(),
@@ -70,6 +77,7 @@ data class StatsSummary(
                 // Faute de charge sur la période, on retombe sur le tarif alternatif : c'est une
                 // estimation, et l'écran l'annonce comme telle.
                 drivingCost = energie * (prixMoyen ?: settings.priceAc),
+                precise = trips.isNotEmpty() && trips.all { it.distancePrecise },
             )
         }
     }

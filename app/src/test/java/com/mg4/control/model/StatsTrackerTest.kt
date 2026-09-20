@@ -25,8 +25,10 @@ class StatsTrackerTest {
         type: ChargeType? = null,
         puissance: Float? = null,
         regen: Float? = null,
+        vitesse: Float? = null,
+        pasMs: Long = 30_000L,
     ): EnergySnapshot {
-        horloge += 30_000L
+        horloge += pasMs
         return EnergySnapshot(
             timestampMs = horloge,
             socPercent = soc,
@@ -36,8 +38,14 @@ class StatsTrackerTest {
             chargeType = type,
             powerKw = puissance,
             regenSinceStartKwh = regen,
+            speedKmh = vitesse,
         )
     }
+
+    /** Fin de trajet d'une suite de relevés, ou null si rien ne s'est terminé. */
+    private fun finDe(events: List<StatsTracker.Event>): Trip? =
+        (events.firstOrNull { it is StatsTracker.Event.TripEnded }
+            as? StatsTracker.Event.TripEnded)?.trip
 
     @Test
     fun `un trajet se borne au contact et retient distance et energie`() {
@@ -53,11 +61,50 @@ class StatsTrackerTest {
     }
 
     @Test
+    fun `la vitesse integree donne une distance au dixieme`() {
+        val t = StatsTracker()
+        // Une minute à 60 km/h relevée toutes les dix secondes, puis la coupure du contact.
+        t.onSnapshot(snap(odo = 10_000, vitesse = 60f, pasMs = 10_000L), ready = true)
+        repeat(6) { t.onSnapshot(snap(odo = 10_000, vitesse = 60f, pasMs = 10_000L), ready = true) }
+        val trip = finDe(t.onSnapshot(snap(odo = 10_000, vitesse = 0f, pasMs = 10_000L), ready = false))!!
+        // Six intervalles pleins font le kilomètre, le septième descend de 60 km/h à l'arrêt et
+        // vaut 83 mètres : c'est bien la fin du trajet, elle doit compter.
+        assertEquals(1.08f, trip.integratedKm!!, 0.05f)
+        // L'odomètre n'a pas changé de kilomètre : sans intégration, ce trajet n'existerait pas.
+        assertEquals(0, trip.distanceKm)
+        assertEquals(1.08f, trip.distance, 0.05f)
+    }
+
+    @Test
+    fun `un trou de releve trop long n'est pas integre`() {
+        val t = StatsTracker()
+        t.onSnapshot(snap(odo = 10_000, vitesse = 90f, pasMs = 10_000L), ready = true)
+        // Cinq minutes sans relevé : prolonger 90 km/h inventerait 7,5 km.
+        t.onSnapshot(snap(odo = 10_007, vitesse = 90f, pasMs = 300_000L), ready = true)
+        t.onSnapshot(snap(odo = 10_007, vitesse = 90f, pasMs = 10_000L), ready = true)
+        val trip = finDe(t.onSnapshot(snap(odo = 10_007, vitesse = 0f, pasMs = 10_000L), ready = false))!!
+        // Seuls les deux derniers intervalles comptent : 250 m + 125 m.
+        assertEquals(0.4f, trip.integratedKm!!, 0.05f)
+        // Et l'écart avec l'odomètre fait retomber l'affichage sur celui-ci.
+        assertEquals(7f, trip.distance, 0.01f)
+    }
+
+    @Test
+    fun `sans vitesse lisible le trajet garde l'odometre seul`() {
+        val t = StatsTracker()
+        t.onSnapshot(snap(odo = 10_000), ready = true)
+        t.onSnapshot(snap(odo = 10_020), ready = true)
+        val trip = finDe(t.onSnapshot(snap(odo = 10_020), ready = false))!!
+        assertNull("aucun intervalle intégré : pas de fausse précision", trip.integratedKm)
+        assertEquals(20f, trip.distance, 0.01f)
+    }
+
+    @Test
     fun `mettre le contact sans rouler ne cree pas de trajet`() {
         val t = StatsTracker()
-        t.onSnapshot(snap(odo = 10_000, energie = 0f), ready = true)
-        // Régler la climatisation à l'arrêt : ni distance, ni énergie moteur.
-        assertTrue(t.onSnapshot(snap(odo = 10_000, energie = 0f), ready = false).isEmpty())
+        t.onSnapshot(snap(odo = 10_000, energie = 0f, vitesse = 0f), ready = true)
+        // Régler la climatisation à l'arrêt : ni distance, ni énergie moteur, vitesse nulle.
+        assertTrue(t.onSnapshot(snap(odo = 10_000, energie = 0f, vitesse = 0f), ready = false).isEmpty())
     }
 
     @Test
