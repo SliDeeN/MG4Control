@@ -610,7 +610,7 @@
     <string name="stats_detail_accessories">Nebenverbraucher</string>
     <string name="stats_detail_regen">Rekuperation</string>
     <string name="stats_detail_battery">Batterie</string>
-    <string name="stats_detail_temp">Außentemperatur</string>
+    <string name="stats_detail_temp">Durchschnittstemperatur</string>
     <string name="stats_detail_power_measured">Mittlere Leistung, gemessen</string>
     <string name="stats_detail_power_computed">Mittlere Leistung, abgeleitet (Energie ÷ Dauer)</string>
     <string name="stats_detail_tariff">Angewandter Tarif</string>

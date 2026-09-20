@@ -85,6 +85,8 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
                 energyStart = snapshot.energySinceStartKwh,
                 socStart = snapshot.socPercent,
                 tempC = snapshot.outsideTempC,
+                tempSum = snapshot.outsideTempC ?: 0f,
+                tempCount = if (snapshot.outsideTempC != null) 1 else 0,
                 lastMs = snapshot.timestampMs,
                 odometerLast = snapshot.odometerKm,
                 energyLast = snapshot.energySinceStartKwh,
@@ -101,6 +103,9 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
                 climateLast = snapshot.climateSinceStartKwh ?: enCours.climateLast,
                 accessoriesLast = snapshot.accessoriesSinceStartKwh ?: enCours.accessoriesLast,
                 regenLast = snapshot.regenSinceStartKwh ?: enCours.regenLast,
+                // Moyenne et non valeur de départ : voir [moyenne].
+                tempSum = enCours.tempSum + (snapshot.outsideTempC ?: 0f),
+                tempCount = enCours.tempCount + if (snapshot.outsideTempC != null) 1 else 0,
                 integratedKm = enCours.integratedKm + (pas ?: 0f),
                 integrated = enCours.integrated || pas != null,
                 // Une vitesse manquée ne réinitialise pas le trapèze : le prochain intervalle
@@ -129,6 +134,8 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
                 socStart = snapshot.socPercent,
                 type = snapshot.chargeType,
                 tempC = snapshot.outsideTempC,
+                tempSum = snapshot.outsideTempC ?: 0f,
+                tempCount = if (snapshot.outsideTempC != null) 1 else 0,
                 powerSum = 0f,
                 powerCount = 0,
                 lastMs = snapshot.timestampMs,
@@ -140,6 +147,10 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
                 lastMs = snapshot.timestampMs,
                 socLast = snapshot.socPercent ?: chargeEnCours.socLast,
                 type = chargeEnCours.type ?: snapshot.chargeType,
+                // Une charge de nuit traverse plusieurs degrés : la moyenne dit quelque chose,
+                // la température du branchement ne dit rien.
+                tempSum = chargeEnCours.tempSum + (snapshot.outsideTempC ?: 0f),
+                tempCount = chargeEnCours.tempCount + if (snapshot.outsideTempC != null) 1 else 0,
             )
         } else if (snapshot.charging == false && chargeEnCours != null) {
             events += Event.ChargeEnded(
@@ -191,7 +202,7 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
             regenKwh = p.regenLast,
             socStart = p.socStart,
             socEnd = p.socLast,
-            outsideTempC = p.tempC,
+            outsideTempC = p.averageTempC,
             integratedKm = integre,
         )
     }
@@ -206,7 +217,7 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
             socEnd = socEnd,
             energyKwh = delta?.takeIf { it > 0f }?.let { (it / 100f * capacityKwh).roundTenth() },
             measuredPowerKw = if (p.powerCount > 0) (p.powerSum / p.powerCount).roundTenth() else null,
-            outsideTempC = p.tempC,
+            outsideTempC = p.averageTempC,
         )
     }
 

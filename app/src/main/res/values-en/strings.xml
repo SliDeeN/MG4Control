@@ -610,7 +610,7 @@
     <string name="stats_detail_accessories">Accessories</string>
     <string name="stats_detail_regen">Regenerative braking</string>
     <string name="stats_detail_battery">Battery</string>
-    <string name="stats_detail_temp">Outside temperature</string>
+    <string name="stats_detail_temp">Average temperature</string>
     <string name="stats_detail_power_measured">Average power, measured</string>
     <string name="stats_detail_power_computed">Average power, derived (energy ÷ duration)</string>
     <string name="stats_detail_tariff">Rate applied</string>

@@ -623,7 +623,7 @@
     <string name="stats_detail_accessories">Accessoires</string>
     <string name="stats_detail_regen">Récupération au freinage</string>
     <string name="stats_detail_battery">Batterie</string>
-    <string name="stats_detail_temp">Température extérieure</string>
+    <string name="stats_detail_temp">Température moyenne</string>
     <string name="stats_detail_power_measured">Puissance moyenne mesurée</string>
     <string name="stats_detail_power_computed">Puissance moyenne déduite (énergie ÷ durée)</string>
     <string name="stats_detail_tariff">Tarif appliqué</string>

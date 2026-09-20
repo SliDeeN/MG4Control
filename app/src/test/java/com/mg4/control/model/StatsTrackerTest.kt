@@ -27,6 +27,7 @@ class StatsTrackerTest {
         regen: Float? = null,
         vitesse: Float? = null,
         pasMs: Long = 30_000L,
+        temp: Float? = null,
     ): EnergySnapshot {
         horloge += pasMs
         return EnergySnapshot(
@@ -39,6 +40,7 @@ class StatsTrackerTest {
             powerKw = puissance,
             regenSinceStartKwh = regen,
             speedKmh = vitesse,
+            outsideTempC = temp,
         )
     }
 
@@ -97,6 +99,27 @@ class StatsTrackerTest {
         val trip = finDe(t.onSnapshot(snap(odo = 10_020), ready = false))!!
         assertNull("aucun intervalle intégré : pas de fausse précision", trip.integratedKm)
         assertEquals(20f, trip.distance, 0.01f)
+    }
+
+    @Test
+    fun `la temperature retenue est la moyenne du trajet, pas celle du depart`() {
+        val t = StatsTracker()
+        // Départ dans un garage à 18°, puis la vraie température dehors.
+        t.onSnapshot(snap(odo = 10_000, temp = 18f), ready = true)
+        t.onSnapshot(snap(odo = 10_010, temp = 6f), ready = true)
+        t.onSnapshot(snap(odo = 10_020, temp = 4f), ready = true)
+        val trip = finDe(t.onSnapshot(snap(odo = 10_020, temp = 4f), ready = false))!!
+        assertEquals("(18 + 6 + 4) / 3", 9.3f, trip.outsideTempC!!, 0.05f)
+    }
+
+    @Test
+    fun `une charge de nuit retient la temperature moyenne`() {
+        val t = StatsTracker()
+        t.onSnapshot(snap(charge = true, soc = 20f, temp = 12f, type = ChargeType.AC), ready = false)
+        t.onSnapshot(snap(charge = true, soc = 50f, temp = 6f, pasMs = 3_600_000L), ready = false)
+        val session = (t.onSnapshot(snap(charge = false, soc = 80f, temp = 3f, pasMs = 3_600_000L), ready = false)
+            .single() as StatsTracker.Event.ChargeEnded).session
+        assertEquals("(12 + 6) / 2 — le relevé de fin clôt la session", 9f, session.outsideTempC!!, 0.05f)
     }
 
     @Test

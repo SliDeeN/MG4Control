@@ -610,7 +610,7 @@
     <string name="stats_detail_accessories">Accesorios</string>
     <string name="stats_detail_regen">Frenada regenerativa</string>
     <string name="stats_detail_battery">Batería</string>
-    <string name="stats_detail_temp">Temperatura exterior</string>
+    <string name="stats_detail_temp">Temperatura media</string>
     <string name="stats_detail_power_measured">Potencia media, medida</string>
     <string name="stats_detail_power_computed">Potencia media, deducida (energía ÷ duración)</string>
     <string name="stats_detail_tariff">Tarifa aplicada</string>
