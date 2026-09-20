@@ -600,6 +600,9 @@
     <string name="stats_charge_ac">Wechselstrom</string>
     <string name="stats_charge_dc">Gleichstrom</string>
     <string name="stats_charge_unknown">Art unbekannt</string>
+    <string name="stats_charge_reconstructed">rekonstruiert</string>
+    <string name="stats_detail_origin">Herkunft</string>
+    <string name="stats_detail_origin_estimated">aus dem Batteriestand geschätzt — die App lief nicht</string>
     <string name="stats_tariff_fixed">Tarif korrigiert</string>
     <string name="stats_tariff_instead">korrigiert, statt %1$s</string>
     <string name="stats_tariff_default">Standardtarif</string>

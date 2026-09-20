@@ -5,6 +5,28 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
+ * Ce que le véhicule publie, et avec quelle finesse. Toute l'incertitude des ratios vient de là.
+ *
+ * Les compteurs d'énergie sortent au dixième de kWh : sur un trajet de deux kilomètres, ce seul pas
+ * vaut déjà plusieurs kWh/100 km. Annoncer « 12,5 » quand la vraie valeur peut être 9,4 serait une
+ * précision inventée — d'où [APPROXIMATE_ABOVE], au-delà duquel l'écran passe au signe « ≈ » et
+ * laisse tomber la décimale.
+ */
+object Resolution {
+    /** Demi-pas des compteurs d'énergie, publiés au dixième de kWh. */
+    const val ENERGY_KWH = 0.05f
+
+    /** Demi-pas de la distance intégrée, arrondie au dixième de kilomètre. */
+    const val DISTANCE_PRECISE_KM = 0.05f
+
+    /** Demi-pas de l'odomètre du véhicule, entier — dix fois plus grossier. */
+    const val DISTANCE_ODOMETER_KM = 0.5f
+
+    /** Incertitude relative au-delà de laquelle une consommation est annoncée comme approchée. */
+    const val APPROXIMATE_ABOVE = 0.10f
+}
+
+/**
  * Un trajet enregistré : ce qui reste d'une période de conduite une fois la voiture éteinte.
  *
  * Les durées sont en millisecondes d'horloge murale (elles servent à dater, pas à mesurer une
@@ -83,6 +105,37 @@ data class Trip(
         get() = if (distance >= ratioFloor) netEnergyKwh * 100f / distance else null
 
     /**
+     * Incertitude relative de [consumptionPer100], due à la seule résolution des compteurs.
+     *
+     * Les deux termes s'additionnent au lieu de se compenser en quadrature : sur deux grandeurs
+     * seulement, une estimation prudente vaut mieux qu'une élégante. La part énergie double quand
+     * la régénération est connue, puisque le net est la différence de deux valeurs arrondies.
+     *
+     * Null quand elle n'a pas de sens : pas de ratio, ou une énergie nette nulle — ce dernier cas
+     * étant justement celui où l'on ne garantit rien du tout.
+     */
+    val consumptionUncertainty: Float?
+        get() {
+            consumptionPer100 ?: return null
+            if (netEnergyKwh <= 0f || distance <= 0f) return null
+            val energie = Resolution.ENERGY_KWH * (if (regenKwh != null) 2f else 1f)
+            val kilometres =
+                if (distancePrecise) Resolution.DISTANCE_PRECISE_KM
+                else Resolution.DISTANCE_ODOMETER_KM
+            return energie / netEnergyKwh + kilometres / distance
+        }
+
+    /** Vrai quand la consommation doit être annoncée comme approchée. */
+    val consumptionApproximate: Boolean
+        get() {
+            consumptionPer100 ?: return false
+            // Incertitude indéterminée (énergie nette nulle) : c'est le pire des cas, pas le
+            // meilleur — on ne va pas l'afficher comme une mesure.
+            val u = consumptionUncertainty ?: return true
+            return u > Resolution.APPROXIMATE_ABOVE
+        }
+
+    /**
      * Énergie du moteur : ce qui reste du total une fois la climatisation et les accessoires
      * retirés. Le véhicule ne la publie pas — il ne donne que le total et ses postes annexes.
      *
@@ -137,18 +190,33 @@ data class ChargeSession(
     val outsideTempC: Float?,
     /** Prix du kWh corrigé à la main pour cette session ; null = tarif par défaut du type. */
     val tariffOverride: Float? = null,
+    /**
+     * Vrai quand l'application n'a pas vu toute la charge — typiquement une charge de nuit, boîtier
+     * coupé, déduite après coup de la remontée du pourcentage.
+     *
+     * Ce qui subsiste alors est l'**énergie** (différence de pourcentage × capacité, méthode
+     * recoupée avec la puissance mesurée le 2026-09-20). Ce qui disparaît est la **durée** — les
+     * deux dates encadrent la charge sans la mesurer — et donc toute puissance.
+     */
+    val reconstructed: Boolean = false,
 ) {
     val durationMs: Long get() = max(0L, endMs - startMs)
 
     /**
      * Puissance à afficher : celle qui a été mesurée si elle existe, sinon énergie ÷ durée.
      * Le second cas est une déduction, pas une mesure — l'écran doit le dire.
+     *
+     * Rien du tout pour une charge reconstituée : diviser l'énergie par l'intervalle entre deux
+     * réveils donnerait une puissance ridiculement basse, et surtout fausse.
      */
     val powerKw: Float?
-        get() = measuredPowerKw ?: run {
-            val heures = durationMs / 3_600_000f
-            val kwh = energyKwh ?: return null
-            if (heures <= 0.05f) null else kwh / heures
+        get() {
+            if (reconstructed) return null
+            return measuredPowerKw ?: run {
+                val heures = durationMs / 3_600_000f
+                val kwh = energyKwh ?: return null
+                if (heures <= 0.05f) null else kwh / heures
+            }
         }
 
     /** Prix payé pour cette session, selon le tarif corrigé ou celui de son type de prise. */

@@ -198,17 +198,92 @@ class StatsTrackerTest {
     }
 
     @Test
-    fun `une charge interrompue par une coupure est close au demarrage suivant`() {
+    fun `une charge interrompue par une coupure se poursuit jusqu'au reveil`() {
         val premier = StatsTracker(capacityKwh = 60f)
         premier.onSnapshot(snap(soc = 30f, charge = true, type = ChargeType.AC), ready = false)
         premier.onSnapshot(snap(soc = 45f, charge = true, type = ChargeType.AC, puissance = 5f), ready = false)
 
+        // La reprise rouvre la session sans la fermer : la nuit entière reste devant elle.
         val second = StatsTracker(capacityKwh = 60f)
-        val session = (second.recover(premier.pendingState()).single()
-            as StatsTracker.Event.ChargeEnded).session
-        assertEquals(9f, session.energyKwh!!, 0.01f)
+        assertTrue(second.recover(premier.pendingState()).isEmpty())
+        assertTrue(second.chargeInProgress)
+
+        // Au réveil, la voiture ne charge plus et affiche 90 % : c'est ce relevé qui clôt.
+        val session = (second.onSnapshot(snap(soc = 90f, charge = false), ready = false)
+            .single() as StatsTracker.Event.ChargeEnded).session
+        assertEquals("30 → 90 %, et non 30 → 45", 36f, session.energyKwh!!, 0.01f)
         assertEquals(ChargeType.AC, session.type)
+        assertTrue("l'application n'a pas vu toute la charge", session.reconstructed)
+        assertNull("donc aucune puissance annoncée", session.powerKw)
         assertEquals(false, second.chargeInProgress)
+    }
+
+    @Test
+    fun `une charge de nuit non observee est reconstituee au reveil`() {
+        val t = StatsTracker(capacityKwh = 60f)
+        val veille = LastReading(timestampMs = 1_000_000L, socPercent = 40f)
+        assertTrue(t.recover(null, veille).isEmpty())
+
+        // Premier relevé du matin : plus de charge en cours, mais la batterie est pleine.
+        val session = (t.onSnapshot(snap(soc = 85f, charge = false), ready = false)
+            .single() as StatsTracker.Event.ChargeEnded).session
+        assertEquals(27f, session.energyKwh!!, 0.01f)
+        assertTrue(session.reconstructed)
+        assertNull("aucune durée vraie, donc aucune puissance", session.powerKw)
+        assertNull("le type de prise n'est plus lisible après coup", session.type)
+        assertEquals("la session couvre l'intervalle entre les deux relevés", 1_000_000L, session.startMs)
+    }
+
+    @Test
+    fun `une charge encore en cours au reveil est antidatee`() {
+        val t = StatsTracker(capacityKwh = 60f)
+        t.recover(null, LastReading(timestampMs = 1_000_000L, socPercent = 40f))
+
+        // Toujours branchée au matin : rien n'est clos, la session reprend depuis la veille.
+        assertTrue(t.onSnapshot(snap(soc = 85f, charge = true, type = ChargeType.AC), ready = false).isEmpty())
+        assertTrue(t.chargeInProgress)
+
+        val session = (t.onSnapshot(snap(soc = 86f, charge = false), ready = false)
+            .single() as StatsTracker.Event.ChargeEnded).session
+        assertEquals("40 → 86 %, la nuit comprise", 27.6f, session.energyKwh!!, 0.05f)
+        assertTrue(session.reconstructed)
+    }
+
+    @Test
+    fun `une remontee de quelques dixiemes ne fabrique pas une charge`() {
+        val t = StatsTracker(capacityKwh = 60f)
+        // La batterie se détend après un trajet : le pourcentage remonte tout seul.
+        t.recover(null, LastReading(timestampMs = 1_000_000L, socPercent = 57.3f))
+        assertTrue(t.onSnapshot(snap(soc = 57.9f, charge = false), ready = false).isEmpty())
+    }
+
+    @Test
+    fun `un ecart de plusieurs semaines ne reconstitue rien`() {
+        val t = StatsTracker(capacityKwh = 60f)
+        // Enregistrement coupé pendant un mois, puis rallumé : la remontée couvre des charges
+        // multiples et l'encadrement n'encadre plus rien.
+        t.recover(null, LastReading(timestampMs = horloge - 30L * 24 * 3_600_000L, socPercent = 20f))
+        assertTrue(t.onSnapshot(snap(soc = 80f, charge = false), ready = false).isEmpty())
+    }
+
+    @Test
+    fun `un releve sans pourcentage garde le point de comparaison pour le suivant`() {
+        val t = StatsTracker(capacityKwh = 60f)
+        t.recover(null, LastReading(timestampMs = 1_000_000L, socPercent = 40f))
+        // Lecture ratée du pourcentage : l'odomètre suffit à rendre l'instantané exploitable.
+        assertTrue(t.onSnapshot(snap(soc = null, charge = false), ready = false).isEmpty())
+        // Le relevé suivant, lui, conclut.
+        val session = (t.onSnapshot(snap(soc = 85f, charge = false), ready = false)
+            .single() as StatsTracker.Event.ChargeEnded).session
+        assertEquals(27f, session.energyKwh!!, 0.01f)
+    }
+
+    @Test
+    fun `une prise branchee sans rien injecter ne laisse pas de session`() {
+        val t = StatsTracker(capacityKwh = 60f)
+        t.onSnapshot(snap(soc = 50f, charge = true, type = ChargeType.AC), ready = false)
+        // Débranchée aussitôt, au même pourcentage : il n'y a rien à raconter.
+        assertTrue(t.onSnapshot(snap(soc = 50f, charge = false), ready = false).isEmpty())
     }
 
     @Test

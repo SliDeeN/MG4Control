@@ -7,6 +7,7 @@ import com.google.gson.JsonParser
 import com.google.gson.reflect.TypeToken
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.ChargeSession
+import com.mg4.control.model.LastReading
 import com.mg4.control.model.PendingState
 import com.mg4.control.model.StatsHistory
 import com.mg4.control.model.StatsSettings
@@ -37,6 +38,8 @@ class StatsStore(private val context: Context) {
         private const val KEY_PRICE_DC = "price_dc"
         private const val KEY_CURRENCY = "currency"
         private const val KEY_CAPACITY = "capacity_kwh"
+        private const val KEY_LAST_MS = "last_reading_ms"
+        private const val KEY_LAST_SOC = "last_reading_soc"
         private const val KEY_PENDING = "pending_state"
         private const val KEY_CAPACITY_USER = "capacity_user_set"
 
@@ -123,6 +126,28 @@ class StatsStore(private val context: Context) {
         }
     }
 
+    /**
+     * Dernier relevé connu. Deux valeurs simples plutôt qu'un JSON : elles sont écrites après
+     * chaque échantillon, autant que ce soit le moins cher possible.
+     */
+    fun saveLastReading(last: LastReading?) {
+        prefs.edit {
+            if (last == null) {
+                remove(KEY_LAST_MS)
+                remove(KEY_LAST_SOC)
+            } else {
+                putLong(KEY_LAST_MS, last.timestampMs)
+                putFloat(KEY_LAST_SOC, last.socPercent)
+            }
+        }
+    }
+
+    fun lastReading(): LastReading? {
+        val ms = prefs.getLong(KEY_LAST_MS, 0L)
+        val soc = prefs.getFloat(KEY_LAST_SOC, -1f)
+        return if (ms > 0L && soc >= 0f) LastReading(ms, soc) else null
+    }
+
     fun pending(): PendingState? = runCatching {
         prefs.getString(KEY_PENDING, null)?.let { gson.fromJson(it, PendingState::class.java) }
     }.getOrNull()
@@ -146,7 +171,8 @@ class StatsStore(private val context: Context) {
         val h = read()
         write(h.copy(charges = h.charges + session))
         AppLogger.i(TAG, "charge enregistrée : ${session.energyKwh ?: "?"} kWh · " +
-            "${session.socStart ?: "?"} % → ${session.socEnd ?: "?"} %")
+            "${session.socStart ?: "?"} % → ${session.socEnd ?: "?"} %" +
+            if (session.reconstructed) " · reconstituée" else "")
     }
 
     /** Corrige le prix d'une session précise, ou rétablit le tarif par défaut avec `null`. */

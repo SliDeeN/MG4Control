@@ -600,6 +600,9 @@
     <string name="stats_charge_ac">Corriente alterna</string>
     <string name="stats_charge_dc">Corriente continua</string>
     <string name="stats_charge_unknown">Tipo desconocido</string>
+    <string name="stats_charge_reconstructed">reconstruida</string>
+    <string name="stats_detail_origin">Origen</string>
+    <string name="stats_detail_origin_estimated">estimada a partir del nivel de batería — la aplicación no estaba en marcha</string>
     <string name="stats_tariff_fixed">tarifa corregida</string>
     <string name="stats_tariff_instead">corregida, en vez de %1$s</string>
     <string name="stats_tariff_default">Tarifa por defecto</string>

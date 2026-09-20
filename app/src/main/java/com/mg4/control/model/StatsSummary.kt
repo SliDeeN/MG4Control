@@ -32,7 +32,20 @@ data class StatsSummary(
      * résumé de la même période refuse d'afficher.
      */
     val precise: Boolean,
+    /**
+     * Incertitude relative de [consumptionPer100] sur la période, cumulée trajet par trajet.
+     * Voir [Trip.consumptionUncertainty] : même règle, mêmes résolutions, addition prudente.
+     */
+    val consumptionUncertainty: Float?,
 ) {
+    /** Vrai quand la consommation de la période doit être annoncée comme approchée. */
+    val consumptionApproximate: Boolean
+        get() {
+            consumptionPer100 ?: return false
+            val u = consumptionUncertainty ?: return true
+            return u > Resolution.APPROXIMATE_ABOVE
+        }
+
     private val floor: Float
         get() = if (precise) Trip.MIN_DISTANCE_PRECISE_KM else Trip.MIN_DISTANCE_ODOMETER_KM
 
@@ -61,9 +74,20 @@ data class StatsSummary(
             // Net, comme l'affichage d'origine : le compteur du véhicule est brut, régénération
             // comprise. Voir [Trip.energyKwh].
             val energie = trips.sumOf { it.netEnergyKwh.toDouble() }.toFloat()
+            val distance = trips.sumOf { it.distance.toDouble() }.toFloat().roundTenth()
+            // Chaque trajet apporte son propre arrondi : sur une période, ils se diluent dans des
+            // totaux plus gros, ce qui fait justement disparaître le « ≈ » au bout de quelques
+            // trajets.
+            val uEnergie = trips.sumOf {
+                (Resolution.ENERGY_KWH * if (it.regenKwh != null) 2f else 1f).toDouble()
+            }.toFloat()
+            val uDistance = trips.sumOf {
+                (if (it.distancePrecise) Resolution.DISTANCE_PRECISE_KM
+                 else Resolution.DISTANCE_ODOMETER_KM).toDouble()
+            }.toFloat()
             return StatsSummary(
                 tripCount = trips.size,
-                distanceKm = trips.sumOf { it.distance.toDouble() }.toFloat().roundTenth(),
+                distanceKm = distance,
                 energyKwh = energie.roundTenth(),
                 regenKwh = trips.sumOf { (it.regenKwh ?: 0f).toDouble() }.toFloat().roundTenth(),
                 longestTripKm = trips.maxOfOrNull { it.distance } ?: 0f,
@@ -78,6 +102,8 @@ data class StatsSummary(
                 // estimation, et l'écran l'annonce comme telle.
                 drivingCost = energie * (prixMoyen ?: settings.priceAc),
                 precise = trips.isNotEmpty() && trips.all { it.distancePrecise },
+                consumptionUncertainty = if (energie > 0f && distance > 0f)
+                    uEnergie / energie + uDistance / distance else null,
             )
         }
     }

@@ -1,6 +1,7 @@
 package com.mg4.control.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -64,6 +65,16 @@ class StatsSummaryTest {
         assertEquals(16f, sum.energyKwh, 0.01f)
         assertEquals(16f, sum.consumptionPer100!!, 0.01f)
         assertEquals("la régénération reste affichée à part", 4f, sum.regenKwh, 0.01f)
+    }
+
+    @Test
+    fun `les arrondis se diluent sur une periode`() {
+        // Un seul trajet juste au-dessus du plancher : la période hérite de son incertitude.
+        val court = StatsSummary.of(listOf(trip(5, 0.7f)), emptyList(), settings)
+        assertTrue(court.consumptionApproximate)
+        // Deux cents kilomètres : le même pas de 0,1 kWh ne pèse plus rien.
+        val long = StatsSummary.of(listOf(trip(200, 30f)), emptyList(), settings)
+        assertFalse(long.consumptionApproximate)
     }
 
     @Test

@@ -4,8 +4,8 @@ import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.LastReading
 import com.mg4.control.model.StatsTracker
-import com.mg4.control.model.PendingState
 import com.mg4.control.stats.StatsStore
 
 /**
@@ -16,9 +16,10 @@ import com.mg4.control.stats.StatsStore
  * activé l'enregistrement**. Sans ce garde-fou, une fonctionnalité de confort se mettrait à écrire
  * l'historique de déplacements de quelqu'un qui ne l'a pas demandé.
  *
- * Aucune écriture véhicule, aucun verrou de réveil : si le boîtier s'endort pendant une charge de
- * nuit, les relevés s'arrêtent avec lui. Ce n'est pas un défaut à corriger ici — l'énergie d'une
- * charge se calcule sur la différence de pourcentage, qui survit au sommeil.
+ * Aucune écriture véhicule, aucun verrou de réveil : quand le boîtier se coupe pour la nuit, les
+ * relevés s'arrêtent avec lui — et tenir la machine éveillée des heures durant viderait la batterie
+ * 12 V pour rien. La charge de nuit est donc **reconstituée au réveil**, en confrontant le premier
+ * échantillon au dernier relevé enregistré : voir [StatsTracker.recover].
  */
 object StatsCollector {
 
@@ -79,7 +80,14 @@ object StatsCollector {
         val s = StatsStore(context)
         s.saveSettings(s.settings().copy(enabled = on))
         AppLogger.i(TAG, "enregistrement ${if (on) "activé" else "désactivé"}")
-        if (on) start(context) else stop()
+        if (on) {
+            start(context)
+        } else {
+            // Sans ça, une reprise des mois plus tard reconstituerait une « charge » couvrant
+            // tout l'intervalle. Le point de comparaison meurt avec l'enregistrement.
+            s.saveLastReading(null)
+            stop()
+        }
     }
 
     private fun start(context: Context) {
@@ -93,7 +101,7 @@ object StatsCollector {
             tracker = t
             // Ce qui restait ouvert au démarrage précédent se referme ici, avec son dernier relevé
             // connu : c'est ce qui sauve les trajets dont la fin coïncide avec l'extinction.
-            val repris = t.recover(s.pending())
+            val repris = t.recover(s.pending(), s.lastReading())
             if (repris.isNotEmpty()) {
                 AppLogger.i(TAG, "reprise au démarrage : ${repris.size} enregistrement(s) en attente")
                 repris.forEach { enregistrer(s, it) }
@@ -130,6 +138,9 @@ object StatsCollector {
             // L'état courant est réécrit après CHAQUE relevé : si le boîtier coupe entre deux,
             // le démarrage suivant retrouve le trajet et le clôt à son dernier point connu.
             s.savePending(t.pendingState().takeIf { !it.isEmpty })
+            // Et le dernier pourcentage connu, lui, est gardé même quand rien n'est en cours :
+            // c'est le point de comparaison qui rendra visible une charge de nuit.
+            snapshot.socPercent?.let { s.saveLastReading(LastReading(snapshot.timestampMs, it)) }
         }.onFailure { AppLogger.w(TAG, "relevé manqué : ${it.javaClass.simpleName} ${it.message}") }
     }
 

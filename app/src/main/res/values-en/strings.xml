@@ -600,6 +600,9 @@
     <string name="stats_charge_ac">Alternating current</string>
     <string name="stats_charge_dc">Direct current</string>
     <string name="stats_charge_unknown">Unknown type</string>
+    <string name="stats_charge_reconstructed">reconstructed</string>
+    <string name="stats_detail_origin">Source</string>
+    <string name="stats_detail_origin_estimated">estimated from the battery level — the app was not running</string>
     <string name="stats_tariff_fixed">rate corrected</string>
     <string name="stats_tariff_instead">corrected, instead of %1$s</string>
     <string name="stats_tariff_default">Default rate</string>

@@ -52,9 +52,21 @@ data class PendingCharge(
     val socLast: Float?,
     val tempSum: Float = 0f,
     val tempCount: Int = 0,
+    /** Vrai quand une partie de la charge s'est déroulée sans que l'application la voie. */
+    val reconstructed: Boolean = false,
 ) {
     val averageTempC: Float? get() = moyenne(tempSum, tempCount, tempC)
 }
+
+/**
+ * Dernier relevé connu, enregistré après **chaque** échantillon — y compris quand ni trajet ni
+ * charge n'est en cours.
+ *
+ * C'est le seul moyen de voir une charge de nuit : le boîtier est coupé, donc rien n'est relevé
+ * pendant qu'elle a lieu. Au réveil, la comparaison entre ce point et le premier échantillon dit
+ * si la batterie s'est remplie entre-temps. Voir [StatsTracker.recover].
+ */
+data class LastReading(val timestampMs: Long, val socPercent: Float)
 
 /**
  * Moyenne des températures relevées pendant un trajet ou une charge, **et non celle du départ**.

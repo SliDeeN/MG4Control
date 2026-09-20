@@ -24,6 +24,11 @@ package com.mg4.control.model
  * **Survie aux coupures** : l'état courant est exposé par [pendingState] pour être enregistré après
  * chaque relevé, et [recover] rouvre ce qui restait en cours au démarrage suivant. Sans ça, tout
  * trajet dont la fin coïncide avec l'extinction du boîtier — c'est-à-dire la plupart — serait perdu.
+ *
+ * **Charge de nuit** : le boîtier est coupé pendant qu'elle a lieu, donc rien n'est relevé. Elle est
+ * rattrapée au réveil en comparant le pourcentage au dernier relevé connu ([LastReading]), et la
+ * session porte alors la mention [ChargeSession.reconstructed]. C'est le cas **normal** d'une
+ * recharge à domicile ; sans ce rattrapage, l'onglet ne saurait voir que l'exception.
  */
 class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACITY_KWH) {
 
@@ -35,6 +40,9 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
     private var trip: PendingTrip? = null
     private var charge: PendingCharge? = null
 
+    /** Dernier relevé d'avant la coupure, à confronter au premier échantillon du réveil. */
+    private var aRattraper: LastReading? = null
+
     val tripInProgress: Boolean get() = trip != null
     val chargeInProgress: Boolean get() = charge != null
 
@@ -42,24 +50,31 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
     fun pendingState(): PendingState = PendingState(trip, charge)
 
     /**
-     * Reprend ce qui restait ouvert au démarrage précédent et le clôt avec son dernier relevé
-     * connu. Appelé une fois, au lancement du collecteur, avant tout nouveau relevé.
+     * Reprend ce qui restait ouvert au démarrage précédent. Appelé une fois, au lancement du
+     * collecteur, avant tout nouveau relevé.
      *
-     * Le trajet est daté de son dernier relevé, pas de maintenant : la voiture a pu rester éteinte
-     * toute la nuit, et lui attribuer le temps écoulé fausserait sa durée et sa vitesse moyenne.
+     * Le **trajet** est clos ici, daté de son dernier relevé et pas de maintenant : la voiture a pu
+     * rester éteinte toute la nuit, et lui attribuer le temps écoulé fausserait sa durée et sa
+     * vitesse moyenne.
+     *
+     * La **charge**, elle, est rouverte et non close : c'est le premier relevé du réveil qui la
+     * fermera, avec le pourcentage du matin. Une prise branchée juste avant l'extinction devenait
+     * sinon une session de trente secondes à zéro kilowattheure, là où il fallait lire toute la nuit.
+     *
+     * [last] est le dernier relevé connu avant la coupure. Il sert au rattrapage d'une charge que
+     * personne n'a vue, et n'est consommé qu'au premier échantillon.
      */
-    fun recover(state: PendingState?): List<Event> {
+    fun recover(state: PendingState?, last: LastReading? = null): List<Event> {
+        aRattraper = last
         state ?: return emptyList()
         val events = mutableListOf<Event>()
         state.trip?.let { p ->
             trip = p
             finishTrip()?.let { events += Event.TripEnded(it) }
         }
-        state.charge?.let { p ->
-            charge = p
-            events += Event.ChargeEnded(finishCharge(p, p.lastMs, p.socLast))
-            charge = null
-        }
+        // Reprise sans fermeture, et marquée : tout ce qui s'est passé entre la coupure et le
+        // réveil s'est déroulé sans témoin.
+        state.charge?.let { charge = it.copy(reconstructed = true) }
         return events
     }
 
@@ -127,6 +142,17 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
         }
 
         // ── Charge ──────────────────────────────────────────────────────────
+        // Le rattrapage passe en premier : il peut ouvrir une session antidatée que la suite
+        // alimentera normalement. Consommé une seule fois, au premier échantillon.
+        aRattraper?.let { dernier ->
+            // Un relevé sans pourcentage ne peut rien conclure : on garde le point de
+            // comparaison pour le suivant plutôt que de le consommer pour rien.
+            if (snapshot.socPercent != null) {
+                aRattraper = null
+                rattraper(dernier, snapshot)?.let { events += Event.ChargeEnded(it) }
+            }
+        }
+
         val chargeEnCours = charge
         if (snapshot.charging == true) {
             charge = if (chargeEnCours == null) PendingCharge(
@@ -153,13 +179,67 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
                 tempCount = chargeEnCours.tempCount + if (snapshot.outsideTempC != null) 1 else 0,
             )
         } else if (snapshot.charging == false && chargeEnCours != null) {
-            events += Event.ChargeEnded(
-                finishCharge(chargeEnCours, snapshot.timestampMs, snapshot.socPercent ?: chargeEnCours.socLast)
+            val session = finishCharge(
+                chargeEnCours, snapshot.timestampMs, snapshot.socPercent ?: chargeEnCours.socLast
             )
+            // Une session sans énergie n'apprend rien : une prise branchée puis retirée sans rien
+            // injecter, ou un état repris devenu incohérent parce que la voiture a roulé entre-temps.
+            if (session.energyKwh != null) events += Event.ChargeEnded(session)
             charge = null
         }
 
         return events
+    }
+
+    /**
+     * Rattrape une charge survenue pendant que l'application ne tournait pas.
+     *
+     * Rend une session close quand la charge est finie au réveil, et n'en rend aucune quand elle est
+     * encore en cours : dans ce cas la session est **antidatée** au dernier relevé connu, puis
+     * alimentée normalement jusqu'à son terme — sans quoi toute la nuit serait perdue au profit des
+     * dernières minutes.
+     *
+     * Le seuil de [MIN_RECONSTRUCTED_RISE_PERCENT] n'est pas décoratif : l'estimation de charge du
+     * véhicule remonte de quelques dixièmes toute seule après un trajet, la batterie se détendant
+     * une fois l'effort retombé (relevé le 2026-09-20). En dessous, une remontée ne prouve rien.
+     */
+    private fun rattraper(dernier: LastReading, s: EnergySnapshot): ChargeSession? {
+        if (charge != null) return null          // une session reprise couvre déjà la période
+        val soc = s.socPercent ?: return null
+        // Au-delà d'une semaine, la remontée peut couvrir plusieurs charges et l'encadrement
+        // n'a plus de sens : mieux vaut ne rien enregistrer qu'une session inventée.
+        if (s.timestampMs - dernier.timestampMs > MAX_RECONSTRUCTED_GAP_MS) return null
+        val monte = soc - dernier.socPercent
+        if (monte < MIN_RECONSTRUCTED_RISE_PERCENT) return null
+        if (s.charging == true) {
+            charge = PendingCharge(
+                startMs = dernier.timestampMs,
+                socStart = dernier.socPercent,
+                type = s.chargeType,
+                tempC = s.outsideTempC,
+                powerSum = 0f,
+                powerCount = 0,
+                lastMs = s.timestampMs,
+                socLast = soc,
+                tempSum = s.outsideTempC ?: 0f,
+                tempCount = if (s.outsideTempC != null) 1 else 0,
+                reconstructed = true,
+            )
+            return null
+        }
+        return ChargeSession(
+            startMs = dernier.timestampMs,
+            endMs = s.timestampMs,
+            // Le type de prise n'est plus lisible une fois la charge finie : mieux vaut l'avouer
+            // que de supposer, d'autant que le tarif se corrige session par session.
+            type = null,
+            socStart = dernier.socPercent,
+            socEnd = soc,
+            energyKwh = (monte / 100f * capacityKwh).roundTenth(),
+            measuredPowerKw = null,
+            outsideTempC = s.outsideTempC,
+            reconstructed = true,
+        )
     }
 
     /**
@@ -218,6 +298,7 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
             energyKwh = delta?.takeIf { it > 0f }?.let { (it / 100f * capacityKwh).roundTenth() },
             measuredPowerKw = if (p.powerCount > 0) (p.powerSum / p.powerCount).roundTenth() else null,
             outsideTempC = p.averageTempC,
+            reconstructed = p.reconstructed,
         )
     }
 
@@ -244,5 +325,14 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
          * au-delà d'un simple retard de l'ordonnanceur, mais sans couvrir une mise en veille.
          */
         const val MAX_SAMPLE_GAP_MS = 60_000L
+
+        /**
+         * Remontée minimale du pourcentage pour conclure à une charge non observée. En dessous,
+         * c'est la batterie qui se détend après l'effort, pas une prise.
+         */
+        const val MIN_RECONSTRUCTED_RISE_PERCENT = 1f
+
+        /** Écart maximal entre les deux relevés qui encadrent une charge reconstituée. */
+        const val MAX_RECONSTRUCTED_GAP_MS = 7L * 24 * 3_600_000L
     }
 }

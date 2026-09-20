@@ -156,7 +156,7 @@ class StatsFragment : Fragment() {
         grid(ctx, tiles, listOf(
             getString(R.string.stats_tile_distance) to km(sum.distanceKm),
             getString(R.string.stats_tile_consumption) to
-                (sum.consumptionPer100?.let { fmt(it) + " " + getString(R.string.stats_unit_per100) } ?: "—"),
+                (conso(sum.consumptionPer100, sum.consumptionApproximate) ?: "—"),
             getString(R.string.stats_tile_speed) to
                 (sum.averageSpeedKmh?.let { "${it.toInt()} km/h" } ?: "—"),
             getString(R.string.stats_tile_energy) to kwh(sum.energyKwh),
@@ -229,7 +229,7 @@ class StatsFragment : Fragment() {
         trips.forEach { trip ->
             list.addView(row(ctx, when1 = dateLine(trip.startMs, trip.endMs),
                 when2 = "${duration(trip.durationMs)} · ${km(trip.distance)}",
-                value1 = trip.consumptionPer100?.let { fmt(it) + " " + getString(R.string.stats_unit_per100) } ?: "—",
+                value1 = conso(trip.consumptionPer100, trip.consumptionApproximate) ?: "—",
                 value2 = listOfNotNull(
                     trip.averageSpeedKmh?.let { "${it.toInt()} km/h" },
                     kwh(trip.netEnergyKwh),
@@ -272,7 +272,11 @@ class StatsFragment : Fragment() {
                 " · " + getString(R.string.stats_tariff_fixed) else ""
             list.addView(row(ctx,
                 when1 = dateLine(session.startMs, session.endMs) + corrige,
-                when2 = "$type · ${duration(session.durationMs)}",
+                // Pour une charge reconstituée, la « durée » serait l'intervalle entre deux
+                // réveils et non celle de la charge : on annonce l'origine à la place.
+                when2 = if (session.reconstructed)
+                    "$type · ${getString(R.string.stats_charge_reconstructed)}"
+                else "$type · ${duration(session.durationMs)}",
                 value1 = session.energyKwh?.let { "+ ${kwh(it)}" } ?: "—",
                 value2 = listOfNotNull(
                     session.powerKw?.let { fmt(it) + " kW" },
@@ -297,16 +301,20 @@ class StatsFragment : Fragment() {
         // climatisation + accessoires − récupération donne bien le total affiché sur la ligne.
         trip.regenKwh?.let { getString(R.string.stats_detail_regen) to "− ${kwh(it)}" },
         // Sous la distance plancher on dit POURQUOI il n'y a pas de ratio, plutôt qu'un tiret muet.
-        getString(R.string.stats_detail_consumption) to (trip.consumptionPer100
-            ?.let { fmt(it) + " " + getString(R.string.stats_unit_per100) }
-            ?: getString(R.string.stats_detail_consumption_short)),
+        getString(R.string.stats_detail_consumption) to
+            (conso(trip.consumptionPer100, trip.consumptionApproximate)
+                ?: getString(R.string.stats_detail_consumption_short)),
         soc(trip.socStart, trip.socEnd)?.let { getString(R.string.stats_detail_battery) to it },
         trip.outsideTempC?.let { getString(R.string.stats_detail_temp) to "${fmt(it)} °C" },
     ))
 
     private fun chargeDetail(ctx: Context, session: ChargeSession, s: StatsSettings): View {
         val box = detailBox(ctx, listOfNotNull(
-            session.measuredPowerKw?.let { getString(R.string.stats_detail_power_measured) to "${fmt(it)} kW" }
+            // Ni puissance mesurée ni durée vraie quand l'application n'a pas vu la charge :
+            // la seule chose honnête à montrer est d'où sort le chiffre.
+            if (session.reconstructed)
+                getString(R.string.stats_detail_origin) to getString(R.string.stats_detail_origin_estimated)
+            else session.measuredPowerKw?.let { getString(R.string.stats_detail_power_measured) to "${fmt(it)} kW" }
                 ?: session.powerKw?.let { getString(R.string.stats_detail_power_computed) to "${fmt(it)} kW" },
             soc(session.socStart, session.socEnd)?.let { getString(R.string.stats_detail_battery) to it },
             session.outsideTempC?.let { getString(R.string.stats_detail_temp) to "${fmt(it)} °C" },
@@ -586,6 +594,17 @@ class StatsFragment : Fragment() {
      * Distance. Le dixième n'est montré que sous cent kilomètres et seulement s'il a été mesuré :
      * au-delà il n'apporte rien, et l'odomètre du véhicule, lui, reste au kilomètre entier.
      */
+    /**
+     * Consommation mise en forme. Le signe « ≈ » et la décimale qui disparaît disent ensemble que
+     * la résolution des compteurs du véhicule ne garantit pas mieux que ± 10 % : sur un trajet de
+     * deux kilomètres, un seul pas de 0,1 kWh vaut cinq kWh/100 km.
+     */
+    private fun conso(value: Float?, approche: Boolean): String? {
+        value ?: return null
+        val unite = getString(R.string.stats_unit_per100)
+        return if (approche) "≈ ${value.roundToInt()} $unite" else "${fmt(value)} $unite"
+    }
+
     private fun km(value: Float): String =
         if (value < 100f && value % 1f != 0f) "${fmt(value)} km" else "${value.roundToInt()} km"
 

@@ -613,6 +613,9 @@
     <string name="stats_charge_ac">Courant alternatif</string>
     <string name="stats_charge_dc">Courant continu</string>
     <string name="stats_charge_unknown">Type inconnu</string>
+    <string name="stats_charge_reconstructed">reconstituée</string>
+    <string name="stats_detail_origin">Origine</string>
+    <string name="stats_detail_origin_estimated">estimée d’après le niveau de batterie — l’application ne tournait pas</string>
     <string name="stats_tariff_fixed">tarif corrigé</string>
     <string name="stats_tariff_instead">corrigé, au lieu de %1$s</string>
     <string name="stats_tariff_default">Tarif par défaut</string>

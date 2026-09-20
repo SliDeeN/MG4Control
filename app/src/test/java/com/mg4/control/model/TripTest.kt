@@ -122,6 +122,41 @@ class TripTest {
     }
 
     @Test
+    fun `un trajet court annonce une consommation approchee`() {
+        // Relevé réel du 2026-09-20 : 1,6 km pour 0,2 kWh. Le pas de 0,1 kWh vaut à lui seul
+        // 3,1 kWh/100 km ici — afficher « 12,5 » donnerait une précision que rien ne garantit.
+        val t = trip(km = 1, kwh = 0.2f, integre = 1.6f)
+        assertEquals(12.5f, t.consumptionPer100!!, 0.01f)
+        assertTrue(t.consumptionApproximate)
+        assertTrue("± 25 % environ", t.consumptionUncertainty!! > 0.2f)
+    }
+
+    @Test
+    fun `un trajet assez long annonce une consommation ferme`() {
+        // 34,9 km pour 4,8 kWh nets : le pas de 0,1 kWh ne pèse plus que 1 % du résultat.
+        val t = Trip(
+            startMs = 0L, endMs = 2_220_000L, distanceKm = 34, energyKwh = 5.8f,
+            climateKwh = 0f, accessoriesKwh = 0.1f, regenKwh = 1f,
+            socStart = 69.1f, socEnd = 60.5f, outsideTempC = 25f, integratedKm = 34.9f,
+        )
+        assertFalse(t.consumptionApproximate)
+        assertTrue(t.consumptionUncertainty!! < 0.03f)
+    }
+
+    @Test
+    fun `une energie nette nulle ne passe jamais pour une mesure`() {
+        // Trajet du 2026-09-20 : 0,2 kWh bruts entièrement annulés par 0,2 récupérés.
+        val t = Trip(
+            startMs = 0L, endMs = 180_000L, distanceKm = 0, energyKwh = 0.2f,
+            climateKwh = 0f, accessoriesKwh = 0f, regenKwh = 0.2f,
+            socStart = 58.5f, socEnd = 57.9f, outsideTempC = 17.7f, integratedKm = 1.2f,
+        )
+        assertEquals(0f, t.consumptionPer100!!, 0.01f)
+        assertNull("incertitude indéterminée", t.consumptionUncertainty)
+        assertTrue("donc approchée, pas exacte", t.consumptionApproximate)
+    }
+
+    @Test
     fun `la consommation suit le net, pas le brut`() {
         val t = Trip(
             startMs = 0L, endMs = 3_600_000L, distanceKm = 100, energyKwh = 20f,
