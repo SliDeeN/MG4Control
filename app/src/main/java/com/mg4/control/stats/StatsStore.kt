@@ -135,7 +135,11 @@ class StatsStore(private val context: Context) {
     fun addTrip(trip: Trip) = synchronized(LOCK) {
         val h = read()
         write(h.copy(trips = h.trips + trip))
-        AppLogger.i(TAG, "trajet enregistré : ${trip.distance} km · ${trip.netEnergyKwh} kWh")
+        // Les deux distances sont journalisées séparément : sur un trajet dont l'odomètre tombe
+        // rond, c'est le seul moyen de dire si l'intégration de la vitesse a bien travaillé.
+        AppLogger.i(TAG, "trajet enregistré : ${trip.distance} km " +
+            "(odomètre ${trip.distanceKm}, intégré ${trip.integratedKm ?: "aucun"}) · " +
+            "${trip.netEnergyKwh} kWh · ${trip.outsideTempC ?: "?"} °C")
     }
 
     fun addCharge(session: ChargeSession) = synchronized(LOCK) {
