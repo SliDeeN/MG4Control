@@ -620,5 +620,11 @@
     <string name="stats_fix_tariff">Tarif korrigieren</string>
     <string name="stats_fix_tariff_note">Ändert nur diesen Vorgang. Durchschnittspreis und Fahrtkosten folgen.</string>
     <string name="stats_save">Speichern</string>
+    <string name="stats_complete_session">Sitzung vervollständigen</string>
+    <string name="stats_complete_note">Die App hat diesen Ladevorgang nicht gesehen. Mit beiden Uhrzeiten lässt sich die mittlere Leistung berechnen.</string>
+    <string name="stats_complete_type">Anschlussart</string>
+    <string name="stats_complete_start">Beginn (hh:mm)</string>
+    <string name="stats_complete_end">Ende (hh:mm)</string>
+    <string name="stats_detail_origin_completed">aus dem Batteriestand geschätzt, Uhrzeiten von Hand eingetragen</string>
 
 </resources>

@@ -199,19 +199,44 @@ data class ChargeSession(
      * deux dates encadrent la charge sans la mesurer — et donc toute puissance.
      */
     val reconstructed: Boolean = false,
+    /**
+     * Horaires réels de la charge, saisis à la main quand l'utilisateur les connaît.
+     *
+     * [startMs] et [endMs] restent la **fenêtre relevée** : ils identifient la session et ne
+     * bougent jamais. Ces deux-là sont ce que l'utilisateur affirme, et leur seule présence suffit
+     * à rendre la durée — donc la puissance moyenne — de nouveau calculable.
+     */
+    val userStartMs: Long? = null,
+    val userEndMs: Long? = null,
 ) {
-    val durationMs: Long get() = max(0L, endMs - startMs)
+    /** Bornes à afficher : celles de l'utilisateur s'il en a donné, sinon la fenêtre relevée. */
+    val displayStartMs: Long get() = userStartMs ?: startMs
+    val displayEndMs: Long get() = userEndMs ?: endMs
+
+    /** Vrai quand les deux horaires sont connus : la durée est alors une vraie durée. */
+    val timesKnown: Boolean get() = userStartMs != null && userEndMs != null
+
+    val durationMs: Long get() = max(0L, displayEndMs - displayStartMs)
 
     /**
      * Puissance à afficher : celle qui a été mesurée si elle existe, sinon énergie ÷ durée.
      * Le second cas est une déduction, pas une mesure — l'écran doit le dire.
      *
-     * Rien du tout pour une charge reconstituée : diviser l'énergie par l'intervalle entre deux
-     * réveils donnerait une puissance ridiculement basse, et surtout fausse.
+     * Rien du tout pour une charge reconstituée tant que ses horaires sont inconnus : diviser
+     * l'énergie par l'intervalle entre deux réveils donnerait une puissance ridiculement basse, et
+     * surtout fausse. Dès que l'utilisateur donne les deux heures, le calcul redevient légitime —
+     * et il reste une déduction, que l'écran annonce comme telle.
      */
     val powerKw: Float?
         get() {
-            if (reconstructed) return null
+            if (reconstructed) {
+                if (!timesKnown) return null
+                // La moyenne relevée ne couvrirait qu'une poignée de minutes de la fin : la
+                // présenter comme la moyenne de la session serait trompeur.
+                val kwh = energyKwh ?: return null
+                val heures = durationMs / 3_600_000f
+                return if (heures <= 0.05f) null else kwh / heures
+            }
             return measuredPowerKw ?: run {
                 val heures = durationMs / 3_600_000f
                 val kwh = energyKwh ?: return null

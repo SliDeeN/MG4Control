@@ -620,5 +620,11 @@
     <string name="stats_fix_tariff">Corrigir a tarifa</string>
     <string name="stats_fix_tariff_note">Altera apenas esta sessão. O preço médio e o custo das viagens vão acompanhar.</string>
     <string name="stats_save">Guardar</string>
+    <string name="stats_complete_session">Completar a sessão</string>
+    <string name="stats_complete_note">A aplicação não viu esta carga. Indicar as duas horas torna a potência média calculável.</string>
+    <string name="stats_complete_type">Tipo de tomada</string>
+    <string name="stats_complete_start">Início (hh:mm)</string>
+    <string name="stats_complete_end">Fim (hh:mm)</string>
+    <string name="stats_detail_origin_completed">estimada a partir do nível da bateria, horas introduzidas à mão</string>
 
 </resources>

@@ -27,6 +27,7 @@ import com.mg4.control.model.StatsSummary
 import com.mg4.control.model.Trip
 import com.mg4.control.stats.StatsStore
 import java.text.DateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -271,10 +272,10 @@ class StatsFragment : Fragment() {
             val corrige = if (session.tariffOverride != null)
                 " · " + getString(R.string.stats_tariff_fixed) else ""
             list.addView(row(ctx,
-                when1 = dateLine(session.startMs, session.endMs) + corrige,
-                // Pour une charge reconstituée, la « durée » serait l'intervalle entre deux
-                // réveils et non celle de la charge : on annonce l'origine à la place.
-                when2 = if (session.reconstructed)
+                when1 = dateLine(session.displayStartMs, session.displayEndMs) + corrige,
+                // Sans horaires, la « durée » d'une charge reconstituée serait l'intervalle entre
+                // deux réveils et non celle de la charge : on annonce l'origine à la place.
+                when2 = if (session.reconstructed && !session.timesKnown)
                     "$type · ${getString(R.string.stats_charge_reconstructed)}"
                 else "$type · ${duration(session.durationMs)}",
                 value1 = session.energyKwh?.let { "+ ${kwh(it)}" } ?: "—",
@@ -313,13 +314,24 @@ class StatsFragment : Fragment() {
             // Ni puissance mesurée ni durée vraie quand l'application n'a pas vu la charge :
             // la seule chose honnête à montrer est d'où sort le chiffre.
             if (session.reconstructed)
-                getString(R.string.stats_detail_origin) to getString(R.string.stats_detail_origin_estimated)
+                getString(R.string.stats_detail_origin) to getString(
+                    if (session.timesKnown) R.string.stats_detail_origin_completed
+                    else R.string.stats_detail_origin_estimated
+                )
             else session.measuredPowerKw?.let { getString(R.string.stats_detail_power_measured) to "${fmt(it)} kW" }
                 ?: session.powerKw?.let { getString(R.string.stats_detail_power_computed) to "${fmt(it)} kW" },
+            // Reconstituée mais datée à la main : la puissance se calcule de nouveau, et reste
+            // annoncée comme une déduction.
+            session.takeIf { it.reconstructed }?.powerKw
+                ?.let { getString(R.string.stats_detail_power_computed) to "${fmt(it)} kW" },
             soc(session.socStart, session.socEnd)?.let { getString(R.string.stats_detail_battery) to it },
             session.outsideTempC?.let { getString(R.string.stats_detail_temp) to "${fmt(it)} °C" },
             (getString(R.string.stats_detail_tariff) to tariffLine(session, s)),
         ))
+        // Une charge que l'application n'a pas vue peut être complétée : elle seule a des trous.
+        if (session.reconstructed) box.addView(dialogButton(ctx, R.string.stats_complete_session) {
+            askCompletion(session)
+        })
         box.addView(MaterialButton(ctx).apply {
             text = getString(R.string.stats_fix_tariff)
             setTextColor(ctx.getColor(R.color.text_primary))
@@ -344,6 +356,130 @@ class StatsFragment : Fragment() {
         else if (session.type == ChargeType.DC) getString(R.string.stats_charge_dc)
         else getString(R.string.stats_charge_ac)
         return "${fmt3(prix)} ${s.currency}/kWh · $origine"
+    }
+
+    /** Bouton d'action d'un détail, au même gabarit que celui du tarif. */
+    private fun dialogButton(ctx: Context, texte: Int, action: () -> Unit): MaterialButton =
+        MaterialButton(ctx).apply {
+            text = getString(texte)
+            setTextColor(ctx.getColor(R.color.text_primary))
+            backgroundTintList = ColorStateList.valueOf(ctx.getColor(R.color.dash_btn))
+            strokeColor = ColorStateList.valueOf(ctx.getColor(R.color.dash_border))
+            strokeWidth = dp(ctx, 1)
+            cornerRadius = dp(ctx, 8)
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, dp(ctx, 52)
+            ).also { it.topMargin = dp(ctx, 10) }
+            setOnClickListener { action() }
+        }
+
+    /**
+     * Complète une charge que l'application n'a pas vue : type de prise et horaires réels.
+     *
+     * Seules les heures sont demandées, jamais les dates : une charge de nuit enjambe deux jours,
+     * et [heureProche] retrouve seule la bonne en se calant sur le relevé qui encadre la charge.
+     */
+    private fun askCompletion(session: ChargeSession) {
+        val ctx = requireContext()
+        var type = session.type
+        val boutons = mutableListOf<Pair<MaterialButton, ChargeType?>>()
+
+        fun peindre() = boutons.forEach { (b, valeur) ->
+            val on = valeur == type
+            b.backgroundTintList = ColorStateList.valueOf(
+                ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn))
+            b.setTextColor(ctx.getColor(if (on) R.color.dash_accent else R.color.text_secondary))
+            b.strokeColor = ColorStateList.valueOf(
+                ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border))
+        }
+
+        fun champ(valeur: Long?) = EditText(ctx).apply {
+            // Vingt-quatre heures, quelle que soit la langue : le champ est relu tel quel, et un
+            // « 10:30 PM » relu comme 10 h 30 fausserait la durée de douze heures.
+            inputType = InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME
+            setText(valeur?.let { hhmm(it) } ?: "")
+            setTextColor(ctx.getColor(R.color.text_primary))
+        }
+        val debut = champ(session.userStartMs)
+        val fin = champ(session.userEndMs)
+
+        val corps = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(ctx, 20), dp(ctx, 4), dp(ctx, 20), 0)
+            addView(label(ctx, getString(R.string.stats_complete_type), 13f, R.color.text_secondary))
+            addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                listOf(
+                    ChargeType.AC to R.string.stats_charge_ac,
+                    ChargeType.DC to R.string.stats_charge_dc,
+                    null to R.string.stats_charge_unknown,
+                ).forEach { (valeur, libelle) ->
+                    addView(MaterialButton(ctx).apply {
+                        text = getString(libelle)
+                        textSize = 13f
+                        isAllCaps = false
+                        strokeWidth = dp(ctx, 1)
+                        cornerRadius = dp(ctx, 8)
+                        layoutParams = LinearLayout.LayoutParams(0, dp(ctx, 52), 1f)
+                            .also { it.marginEnd = dp(ctx, 6) }
+                        setOnClickListener { type = valeur; peindre() }
+                        boutons += this to valeur
+                    })
+                }
+            })
+            addView(label(ctx, getString(R.string.stats_complete_start), 13f, R.color.text_secondary))
+            addView(debut)
+            addView(label(ctx, getString(R.string.stats_complete_end), 13f, R.color.text_secondary))
+            addView(fin)
+        }
+        peindre()
+
+        AlertDialog.Builder(ctx)
+            .setTitle(R.string.stats_complete_session)
+            .setMessage(getString(R.string.stats_complete_note))
+            .setView(corps)
+            .setPositiveButton(R.string.stats_save) { _, _ ->
+                val d = heureProche(debut.text.toString(), session.startMs)
+                // Une fin antérieure au début n'a pas de sens : plutôt que d'inventer une durée
+                // négative, on ne retient rien et la puissance reste masquée.
+                val f = heureProche(fin.text.toString(), session.endMs)?.takeIf { d == null || it > d }
+                store.completeCharge(session.startMs, type, d, f)
+                render()
+            }
+            .setNegativeButton(R.string.nav_close, null)
+            .show()
+    }
+
+    /** Heure sur vingt-quatre heures, indépendante de la langue, pour remplir et relire un champ. */
+    private fun hhmm(ms: Long): String {
+        val cal = Calendar.getInstance().apply { timeInMillis = ms }
+        return "%02d:%02d".format(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))
+    }
+
+    /**
+     * Transforme une heure saisie en instant réel, en la plaçant à la date qui va bien.
+     *
+     * Une charge de nuit enjambe deux jours : demander la date en plus serait une corvée pour rien,
+     * alors que l'occurrence la plus proche du relevé qui encadre la charge est toujours la bonne.
+     * « 02:10 » saisi en face d'un relevé du matin désigne donc bien cette nuit-là, et « 22:30 » en
+     * face d'un relevé du soir désigne la veille au soir.
+     */
+    private fun heureProche(saisie: String, ancre: Long): Long? {
+        val m = Regex("^\\D*(\\d{1,2})\\D+(\\d{2})\\D*$").find(saisie.trim()) ?: return null
+        val h = m.groupValues[1].toInt()
+        val min = m.groupValues[2].toInt()
+        if (h > 23 || min > 59) return null
+        val cal = Calendar.getInstance().apply {
+            timeInMillis = ancre
+            set(Calendar.HOUR_OF_DAY, h)
+            set(Calendar.MINUTE, min)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val douzeHeures = 12 * 3_600_000L
+        if (cal.timeInMillis - ancre > douzeHeures) cal.add(Calendar.DAY_OF_MONTH, -1)
+        else if (ancre - cal.timeInMillis > douzeHeures) cal.add(Calendar.DAY_OF_MONTH, 1)
+        return cal.timeInMillis
     }
 
     private fun askTariff(session: ChargeSession, s: StatsSettings) {

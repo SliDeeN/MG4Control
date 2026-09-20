@@ -7,6 +7,7 @@ import com.google.gson.JsonParser
 import com.google.gson.reflect.TypeToken
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.ChargeSession
+import com.mg4.control.model.ChargeType
 import com.mg4.control.model.LastReading
 import com.mg4.control.model.PendingState
 import com.mg4.control.model.StatsHistory
@@ -182,6 +183,22 @@ class StatsStore(private val context: Context) {
             if (it.startMs == startMs) it.copy(tariffOverride = price) else it
         }))
     }
+
+    /**
+     * Complète une session reconstituée avec ce que l'utilisateur sait : le type de prise et les
+     * horaires réels. Les bornes relevées ne sont pas touchées — elles identifient la session.
+     */
+    fun completeCharge(startMs: Long, type: ChargeType?, debutMs: Long?, finMs: Long?) =
+        synchronized(LOCK) {
+            val h = read()
+            write(h.copy(charges = h.charges.map {
+                if (it.startMs == startMs)
+                    it.copy(type = type, userStartMs = debutMs, userEndMs = finMs)
+                else it
+            }))
+            AppLogger.i(TAG, "session complétée : type=${type ?: "inconnu"} " +
+                "horaires=${if (debutMs != null && finMs != null) "saisis" else "absents"}")
+        }
 
     fun clear() = synchronized(LOCK) {
         runCatching { file.delete() }

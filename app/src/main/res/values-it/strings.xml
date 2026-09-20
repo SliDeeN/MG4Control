@@ -620,5 +620,11 @@
     <string name="stats_fix_tariff">Correggere la tariffa</string>
     <string name="stats_fix_tariff_note">Cambia solo questa sessione. Il prezzo medio e i costi dei viaggi seguiranno.</string>
     <string name="stats_save">Salvare</string>
+    <string name="stats_complete_session">Completa la sessione</string>
+    <string name="stats_complete_note">L’app non ha visto questa ricarica. Indicare entrambi gli orari rende calcolabile la potenza media.</string>
+    <string name="stats_complete_type">Tipo di presa</string>
+    <string name="stats_complete_start">Inizio (hh:mm)</string>
+    <string name="stats_complete_end">Fine (hh:mm)</string>
+    <string name="stats_detail_origin_completed">stimata dal livello della batteria, orari inseriti a mano</string>
 
 </resources>

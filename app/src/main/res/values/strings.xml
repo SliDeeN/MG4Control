@@ -633,6 +633,12 @@
     <string name="stats_fix_tariff">Corriger le tarif</string>
     <string name="stats_fix_tariff_note">Ne change que cette session. Le prix moyen et le coût des trajets suivront.</string>
     <string name="stats_save">Enregistrer</string>
+    <string name="stats_complete_session">Compléter la session</string>
+    <string name="stats_complete_note">L’application n’a pas vu cette charge. Renseigner les deux horaires rend la puissance moyenne calculable.</string>
+    <string name="stats_complete_type">Type de prise</string>
+    <string name="stats_complete_start">Début (hh:mm)</string>
+    <string name="stats_complete_end">Fin (hh:mm)</string>
+    <string name="stats_detail_origin_completed">estimée d’après le niveau de batterie, horaires saisis à la main</string>
     <string name="stats_unit_per100" translatable="false">kWh/100 km</string>
 
 </resources>

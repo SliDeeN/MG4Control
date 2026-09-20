@@ -620,5 +620,11 @@
     <string name="stats_fix_tariff">Correct the rate</string>
     <string name="stats_fix_tariff_note">Changes this session only. The average price and trip costs will follow.</string>
     <string name="stats_save">Save</string>
+    <string name="stats_complete_session">Complete this session</string>
+    <string name="stats_complete_note">The app did not see this charge. Filling in both times makes the average power computable.</string>
+    <string name="stats_complete_type">Plug type</string>
+    <string name="stats_complete_start">Start (hh:mm)</string>
+    <string name="stats_complete_end">End (hh:mm)</string>
+    <string name="stats_detail_origin_completed">estimated from the battery level, times entered by hand</string>
 
 </resources>
