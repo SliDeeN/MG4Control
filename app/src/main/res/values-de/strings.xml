@@ -274,6 +274,7 @@
     <string name="settings_language_es">Español</string>
     <string name="settings_language_pt">Português</string>
     <string name="settings_language_it">Italiano</string>
+    <string name="settings_language_tr">Türkçe</string>
     <string name="settings_language_pick_title">Sprache wählen</string>
     <string name="settings_firmware_version">Firmware-Version</string>
     <string name="settings_firmware_loading">Lesen…</string>

@@ -90,7 +90,8 @@ class SettingsFragment : Fragment() {
             "de" to view.findViewById(R.id.btn_lang_de),
             "es" to view.findViewById(R.id.btn_lang_es),
             "pt" to view.findViewById(R.id.btn_lang_pt),
-            "it" to view.findViewById(R.id.btn_lang_it)
+            "it" to view.findViewById(R.id.btn_lang_it),
+            "tr" to view.findViewById(R.id.btn_lang_tr)
         )
 
         fun updateLangButtons(lang: String) {

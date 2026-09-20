@@ -1,0 +1,631 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MG4 Control</string>
+
+    <!-- Close button (back to dashboard) -->
+    <string name="nav_close">Kapat</string>
+    <!-- APK cleanup -->
+    <string name="btn_clean_apk">APK temizle</string>
+    <string name="clean_apk_done">✓ %1$d dosya silindi</string>
+    <string name="clean_apk_none">✓ Temizlenecek bir şey yok</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_profiles">Profiller</string>
+    <string name="nav_settings">Ayarlar</string>
+    <string name="nav_shortcuts">Kısayollar</string>
+
+    <!-- Steering wheel shortcuts -->
+    <string name="shortcuts_enabled_label">Direksiyon kısayollarını etkinleştir</string>
+    <string name="shortcuts_btn1_label">★ Sol düğme</string>
+    <string name="shortcuts_btn2_label">★ Sağ düğme</string>
+    <string name="shortcuts_action_none">Yok</string>
+    <string name="shortcuts_action_one_pedal">Tek pedal</string>
+    <string name="shortcuts_press_single">Tek</string>
+    <string name="shortcuts_press_long">Uzun</string>
+
+    <!-- Shortcut actions -->
+    <string name="shortcuts_action_aeb">Çarpışma önleme sistemi</string>
+    <string name="shortcuts_action_sound">Ses</string>
+    <string name="shortcuts_action_overspeed">Hız aşımı uyarısı</string>
+    <string name="shortcuts_action_speed_limit">Hız sınırı uyarısı</string>
+    <string name="shortcuts_action_adas">ADAS</string>
+    <string name="shortcuts_action_energy_saving">Enerji tasarrufu</string>
+    <string name="shortcuts_action_tsr">Levhalar (TSR)</string>
+    <string name="shortcuts_action_apply_profile">Bir profil başlat</string>
+    <string name="shortcuts_action_profile_picker">Profil seçici (açılır pencere)</string>
+    <string name="shortcuts_action_vehicle_power_off">Aracı kapat</string>
+        <string name="overlay_brightness_title">Parlaklık</string>
+    <string name="overlay_brightness_night">Gece</string>
+    <string name="overlay_brightness_mid">Orta</string>
+    <string name="overlay_brightness_day">Gündüz</string>
+<string name="overlay_profile_title">Sürüş profilleri</string>
+    <string name="overlay_open_app">MG4Control\'ü aç</string>
+    <string name="overlay_countdown">%1$d sn içinde kapanıyor</string>
+    <string name="shortcuts_profile_prefix">Profili başlat</string>
+    <string name="shortcuts_pick_profile_title">Bir profil seçin</string>
+    <string name="shortcuts_no_profiles">Oluşturulmuş profil yok</string>
+    <string name="shortcuts_action_open_app">MG4Control\'ü aç</string>
+    <string name="shortcuts_action_open_custom_app">Bir uygulama başlat</string>
+    <string name="shortcuts_pick_app_title">Bir uygulama seçin</string>
+    <string name="shortcuts_open_custom_prefix">Başlat</string>
+    <string name="shortcuts_warning_title">Direksiyon kısayolları</string>
+    <string name="shortcuts_warning_message">⚠ Bir düğmeye resmî başlatıcıdan bir işlev atanmışsa, o işlev MG4Control\'ün önüne geçer.\n\nÖrnek: başlatıcıda tek basışa 360° kamera atanmışsa, MG4Control o düğmeyi yakalayamaz ve onun yerine kamera açılır.\n\nÇakışmaları önlemek için resmî başlatıcının kısayollarını kapatmanız önerilir.</string>
+    <string name="shortcuts_warning_ok">Anladım</string>
+
+    <!-- Shortcut config -->
+    <string name="shortcuts_cfg_one_pedal">Tek pedal — Dönüş seviyesi</string>
+    <string name="shortcuts_cfg_adas">ADAS — Döngü</string>
+    <string name="shortcuts_cfg_retour">Dönüş</string>
+    <string name="shortcuts_cfg_mode1">Mod 1</string>
+    <string name="shortcuts_cfg_mode2">Mod 2</string>
+
+    <!-- Drive modes -->
+    <string name="drive_eco">ECO</string>
+    <string name="drive_normal">NORMAL</string>
+    <string name="drive_sport">SPORT</string>
+    <string name="drive_snow">SNOW</string>
+    <string name="drive_custom">CUSTOM</string>
+    <string name="drive_energy_saving">Enerji tasarrufu</string>
+
+    <!-- Drive tab section headers -->
+    <string name="drive_section_mode">Sürüş modu</string>
+    <string name="drive_section_regen">Rejenerasyon</string>
+
+    <!-- Mode de conduite Personnalisé -->
+    <string name="drive_section_custom">Özel mod</string>
+    <string name="drive_custom_power">Güç</string>
+    <string name="drive_custom_steering">Direksiyon</string>
+    <string name="drive_custom_pedal">Pedal</string>
+    <string name="drive_custom_comfort">Konfor</string>
+
+    <!-- Regen levels -->
+    <string name="regen_off">Kapalı</string>
+    <string name="regen_low">Düşük</string>
+    <string name="regen_medium">Orta</string>
+    <string name="regen_high">Yüksek</string>
+    <string name="regen_adaptive">Uyarlanabilir</string>
+    <string name="regen_one_pedal">Tek pedal</string>
+    <string name="regen_adaptive_short">Uyarl.</string>
+    <string name="regen_one_pedal_short">1 Ped.</string>
+
+    <!-- Climate -->
+    <string name="climate_steering_heat">Direksiyon ısıtma</string>
+    <string name="climate_seat_left">Sol koltuk</string>
+    <string name="climate_seat_right">Sağ koltuk</string>
+    <string name="climate_off">Kapalı</string>
+    <string name="climate_on">Açık</string>
+    <string name="climate_level_1">Kad. 1</string>
+    <string name="climate_level_2">Kad. 2</string>
+    <string name="climate_level_3">Kad. 3</string>
+
+    <!-- Profiles -->
+    <string name="profile_add">Yeni profil</string>
+    <string name="profile_default_badge">VARSAYILAN</string>
+    <string name="profile_apply_now">Şimdi uygula</string>
+    <string name="profile_set_default">Varsayılan yap</string>
+    <string name="profile_set_as_default">Varsayılan profil yap</string>
+    <string name="profile_delete">Sil</string>
+    <string name="profile_edit">Düzenle</string>
+    <string name="profile_name_hint">Profil adı</string>
+    <string name="profile_name_required">Ad zorunludur</string>
+    <string name="profile_save">Kaydet</string>
+    <string name="profile_cancel">İptal</string>
+    <string name="profile_applied">Profil uygulandı: %s</string>
+    <string name="profile_max_reached">En fazla %d profile ulaşıldı</string>
+    <string name="profile_bt_device_label">Bluetooth cihazı</string>
+
+    <!-- Bloc climatisation du profil (onglet Confort) -->
+    <string name="profile_hvac_title">Klima</string>
+    <string name="profile_hvac_row_clim">A/C</string>
+    <string name="profile_hvac_row_loop">Sirkül.</string>
+    <string name="profile_hvac_row_air">Hava</string>
+    <string name="profile_hvac_on">Açık</string>
+    <string name="profile_hvac_unchanged">Değişmez</string>
+    <string name="profile_hvac_temp_value">%1$d °C</string>
+    <string name="profile_bt_none">Yok</string>
+
+    <!-- ADAS -->
+    <string name="adas_section_sounds">Sesli uyarılar</string>
+    <string name="adas_overspeed_alarm">Hız aşımı uyarısı</string>
+    <string name="adas_speed_limit_tone">Hız sınırı değişim sesi</string>
+    <string name="adas_off">Kapalı</string>
+    <string name="adas_limiteur_short">Sın. Manuel</string>
+    <string name="adas_auto">Sın. Oto</string>
+    <string name="adas_acc">ACC</string>
+    <string name="adas_ica">ICA</string>
+    <!-- ADAS SWI68 -->
+    <string name="adas_tsr">Levha tanıma</string>
+    <string name="adas_sound_warning">Sesli uyarı</string>
+    <string name="adas_desactiver">Devre dışı bırak</string>
+    <string name="adas_tja">TJA</string>
+    <!-- ELK — Lane departure assistant -->
+    <string name="elk_card_title">Şeritten çıkma asistanı</string>
+    <string name="elk_section_toggle">Etkinleştirme</string>
+    <string name="elk_section_mode">Asistan modu</string>
+    <string name="elk_mode_alert">Uyarı</string>
+    <string name="elk_mode_assist">Destek</string>
+    <string name="elk_mode_emergency">Acil durumda tutma</string>
+    <string name="elk_section_sensitivity">Hassasiyet</string>
+    <string name="elk_sensitivity_low">Düşük</string>
+    <string name="elk_sensitivity_standard">Standart</string>
+    <string name="elk_sensitivity_high">Yüksek</string>
+    <string name="elk_sound_warning">Sesli uyarı</string>
+    <string name="elk_vibration_reminder">Titreşimli hatırlatma</string>
+    <string name="elk_label_enable">Etkinleştir</string>
+    <string name="elk_profile_label">Şeritten çıkma</string>
+    <!-- AEB — Forward collision assist (SWI133 + SWI68) -->
+    <string name="aeb_card_title">Öne çarpışma asistanı</string>
+    <string name="adas_section_aeb">Aktif güvenlik</string>
+    <string name="adas_aeb_switch">Öne çarpışma asistanı</string>
+    <string name="adas_aeb_alarm">Uyarı</string>
+    <string name="adas_aeb_alarm_brake">Uyarı + Oto fren</string>
+    <string name="aeb_section_sensitivity">Hassasiyet</string>
+    <string name="aeb_sensitivity_low">Düşük</string>
+    <string name="aeb_sensitivity_standard">Standart</string>
+    <string name="aeb_sensitivity_high">Yüksek</string>
+
+    <!-- Diagnostic -->
+    <string name="btn_diagnostic">Tanılama</string>
+    <string name="diagnostic_unlocked">Tanılama açıldı</string>
+    <string name="diag_title">Tanılama</string>
+    <string name="diag_copy">Kopyala</string>
+    <string name="diag_copied">Kopyalandı!</string>
+    <string name="diag_loading">İnceleniyor…</string>
+    <string name="diag_clear_crash">Çökme kaydını temizle</string>
+    <string name="diag_download">İndir</string>
+    <string name="diag_downloaded">Kaydedildi: %1$s</string>
+    <string name="diag_download_failed">İndirme başarısız: %1$s</string>
+
+    <!-- Infos / About -->
+    <string name="btn_check_update">Güncellemeleri denetle</string>
+    <string name="update_up_to_date">✓  Güncel</string>
+    <string name="update_network_error">✕  Ağ hatası</string>
+    <string name="btn_infos">Bilgi</string>
+    <string name="info_title">Hakkında</string>
+    <string name="info_version_label">Sürüm</string>
+    <string name="info_firmware_label">Firmware</string>
+    <string name="info_github_link">github.com/SliDeeN/MG4Control</string>
+    <string name="info_gitlab_link">gitlab.com/SliDeeN/mg4control</string>
+    <string name="info_made_with_love">SliDeeN ve Claude IA tarafından ❤ ile yapıldı</string>
+    <string name="info_special_thanks">Her sürümden önce test ettikleri için confor1max, FrAsErTaG, sixty4h, hojnikb ve depippi.p’ye teşekkürler 🙏</string>
+    <string name="info_based_on">Merth4n &amp; hotboy_ist tarafından yapılan DriveHub Dort temel alınmıştır</string>
+    <string name="info_close">Kapat</string>
+
+    <!-- Dashboard — card headers -->
+    <string name="card_climate">Klima ayarları</string>
+    <string name="card_alerts">Uyarılar</string>
+
+    <!-- Auto-update -->
+    <string name="update_available_title">Güncelleme mevcut</string>
+    <string name="update_current_label">Mevcut sürüm</string>
+    <string name="update_new_label">Yeni sürüm</string>
+    <string name="update_release_notes_label">Sürüm notları</string>
+    <string name="update_data_warning">⚠️ WiFi algılanmadı — bu indirme aracınızın mobil verisini kullanacak.</string>
+    <string name="update_auto_btn">APK indir</string>
+    <string name="update_manual_btn">Elle kurulum</string>
+    <string name="update_later_btn">Daha sonra</string>
+    <string name="update_data_warn_title">Mobil veri</string>
+    <string name="update_data_warn_message">Aracınız WiFi’ye bağlı görünmüyor. İndirme (~10 MB) aracınızın mobil verisini kullanacak. Devam edilsin mi?</string>
+    <string name="update_continue">Devam</string>
+    <string name="update_cancel">İptal</string>
+    <string name="update_close">Kapat</string>
+    <string name="update_downloading">İndiriliyor…</string>
+    <string name="update_downloading_pct">İndiriliyor… %d%%</string>
+    <string name="update_error_download">İndirme başarısız. Bağlantınızı denetleyin.</string>
+    <string name="update_error_signature">Güncelleme reddedildi: indirilen APK beklenen anahtarla imzalanmamış. Dosya silindi.</string>
+    <string name="write_refused_moving">Sürüş ayarı reddedildi: %1$s km/s (sınır %2$d km/s). Değiştirmek için yavaşlayın.</string>
+    <string name="write_refused_unknown_speed">Ayar reddedildi: araç hızı okunamadı.</string>
+    <string name="settings_speed_gate_desc">Sürüş ayarlarını belirli bir hızın üzerinde engelle</string>
+    <string name="settings_speed_gate_max_label">Azami hız (km/s)</string>
+    <string name="settings_speed_gate_max_hint">0–250</string>
+    <string name="update_manual_title">Elle kurulum</string>
+    <string name="update_manual_instructions">1. QR kodu okutun ya da bağlantıyı açın\n2. MG4Control.apk dosyasını indirin\n3. FAT32 bir USB belleğe kopyalayın\n4. USB belleği MG4’ünüze takın\n5. Dosya Yöneticisi’ni açın\n6. APK dosyasını seçip kurun</string>
+    <string name="update_downloaded_instructions">İndirilenler klasörünün kendiliğinden açılmış olması gerekir.\n\nKurmak için MG4Control-*.apk dosyasına dokunun.\n\nKlasör açılmadıysa Dosya Yöneticisi’nden İndirilenler klasörüne gidin.</string>
+    <string name="update_gh_releases_link">github.com/SliDeeN/MG4Control/releases</string>
+    <string name="update_skip_btn">Bir daha hatırlatma</string>
+
+    <!-- Console (debug) -->
+
+    <!-- Unknown firmware -->
+    <string name="fw_unknown_title">⚠ Bilinmeyen firmware</string>
+    <string name="fw_unknown_body">Bu firmware MG4 Control tarafından henüz doğrudan desteklenmiyor.\n\nElle bir uyumluluk modu seçerek devam edebilirsiniz, ancak bazı işlevler düzgün çalışmayabilir.</string>
+    <string name="fw_unknown_hint">Bu pencereyi kapattıktan sonra uyumluluk modunuzu seçmek için üst çubuktaki SWI133 ya da SWI68 düğmesine dokunun.</string>
+    <string name="fw_unknown_btn_close">Uygulamayı kapat</string>
+    <string name="fw_unknown_btn_continue">Devam</string>
+
+    <!-- Settings -->
+    <string name="settings_default_screen">Açılış ekranı</string>
+    <string name="settings_default_screen_dashboard">Panel</string>
+    <string name="settings_auto_apply">Ek ayarlar</string>
+    <string name="settings_garage_mode">Garaj modu</string>
+    <string name="settings_garage_mode_desc">MG4Control’ü tamamen uyutur: kısayol yok (düğmeler özgün işlevlerine döner), açılışta profil uygulanmaz, otomasyon çalışmaz. Aracı servise bırakırken uygulamayı kaldırmak zorunda kalmamak için kullanışlıdır. Ayarlarınız korunur ve mod kapatılır kapatılmaz geri gelir.</string>
+    <string name="notif_service_active">Hizmet çalışıyor</string>
+    <string name="notif_garage_mode">Garaj modu — uykuda</string>
+    <string name="settings_auto_update_desc">Açılışta güncellemeleri kendiliğinden denetle</string>
+
+    <!-- Popup « mise à jour disponible » par-dessus l'infodivertissement -->
+    <string name="update_overlay_title">Bir MG4Control güncellemesi mevcut</string>
+    <string name="update_overlay_versions">%1$s  →  %2$s</string>
+    <string name="update_overlay_install">Güncellemeyi kur</string>
+    <string name="update_overlay_skip">Bu sürümü atla</string>
+    <string name="update_overlay_disable">Güncellemeleri bana bildirme</string>
+    <string name="update_overlay_disabled_toast">Uyarılar kapatıldı. Ayarlar > Güncellemeler bölümünden yeniden açabilirsiniz.</string>
+    <string name="settings_update_overlay">Araç ekranında bildir</string>
+    <string name="settings_update_overlay_desc">Güncelleme çıktığında bilgi-eğlence ekranının üzerinde, yalnızca araç dururken bir mesaj gösterir</string>
+    <string name="settings_vehicle_power_desc">Ekranı açık tutarak aracı kapat</string>
+    <string name="settings_vehicle_power_btn">Kapat</string>
+    <string name="vehicle_power_dialog_title">Aracı kapat</string>
+    <string name="vehicle_power_dialog_msg">Araç kapatılacak, ekran açık kalacak. Yalnızca araç dururken ve vites P konumundayken kullanılabilir.</string>
+    <string name="vehicle_power_dialog_confirm">Kapat</string>
+    <string name="vehicle_power_dialog_cancel">İptal</string>
+    <string name="vehicle_power_need_park">Araç durmuş ve vites P konumunda olmalı.</string>
+    <string name="settings_theme">Görünüm</string>
+    <string name="settings_theme_auto">Otomatik</string>
+    <string name="settings_theme_dark">Koyu tema</string>
+    <string name="settings_theme_light">Açık tema</string>
+    <string name="settings_text_size">Yazı boyutu</string>
+    <string name="settings_text_size_standard">Standart</string>
+    <string name="settings_text_size_large">Büyük</string>
+    <string name="settings_text_size_xlarge">Çok büyük</string>
+    <string name="settings_language">Dil</string>
+    <string name="settings_language_fr">Français</string>
+    <string name="settings_language_en">English</string>
+    <string name="settings_language_de">Deutsch</string>
+    <string name="settings_language_es">Español</string>
+    <string name="settings_language_pt">Português</string>
+    <string name="settings_language_it">Italiano</string>
+    <string name="settings_language_tr">Türkçe</string>
+    <string name="settings_language_pick_title">Dilinizi seçin</string>
+    <string name="settings_firmware_version">Firmware sürümü</string>
+    <string name="settings_firmware_loading">Okunuyor…</string>
+
+    <!-- [BT-PROFILES] Bluetooth profiles -->
+    <!-- Audio screen (A9 only) -->
+    <string name="nav_audio">Ses</string>
+    <string name="door_volume_title">Kapı açılınca ses düzeyi</string>
+    <string name="door_volume_desc">Ön kapılardan biri açılınca medya sesini kısar</string>
+    <string name="door_volume_level_label">Hedef düzey</string>
+    <string name="door_volume_restore_title">Kapanınca geri yükle</string>
+    <string name="door_volume_desc_ready">Araç P konumundayken READY durumundan çıkınca (sürücü kapısı açıldığında ya da araç kapatıldığında) medya sesini kısar</string>
+    <string name="door_volume_restore_ready_title">READY durumuna dönünce geri yükle</string>
+    <string name="door_volume_doors_label">Tetikleyen kapılar</string>
+    <string name="door_left">Sol</string>
+    <string name="door_right">Sağ</string>
+    <!-- Profile backup / restore -->
+    <string name="profile_restore_title">Profiller geri yüklensin mi?</string>
+    <string name="profile_restore_msg">Bu araçta kayıtlı %d profil bulundu. Geri yüklensin mi?</string>
+    <string name="profile_restore_confirm">Geri yükle</string>
+    <string name="profile_restore_cancel">Yoksay</string>
+    <string name="profile_restore_done">%d profil geri yüklendi</string>
+    <string name="nav_automation">Otomasyon</string>
+    <string name="automation_desc">Dış sıcaklığa göre bir profil uygular</string>
+    <string name="automation_threshold_label">Eşik sıcaklığı (°C)</string>
+    <string name="automation_threshold_hint">0–60</string>
+    <string name="automation_profile_label">Uygulanacak profil</string>
+    <string name="automation_auto_execute">Kendiliğinden uygula</string>
+    <string name="automation_no_profile">Profil yok</string>
+    <string name="automation_confirm_msg">Dış sıcaklık %1$d°C değerinin altında\n(şu anki sıcaklık %2$s°C)\n“%3$s” profili uygulansın mı?</string>
+    <string name="automation_confirm_yes">EVET</string>
+    <string name="automation_confirm_no">HAYIR</string>
+    <string name="automation_direction_label">Şu durumda tetikle — dış sıcaklık:</string>
+    <string name="automation_dir_below">Altında</string>
+    <string name="automation_dir_above">Üstünde</string>
+    <string name="automation_confirm_msg_above">Dış sıcaklık %1$d°C değerinin üstünde\n(şu anki sıcaklık %2$s°C)\n“%3$s” profili uygulansın mı?</string>
+    <string name="automation_profile_title">Sıcaklığa göre bir profil uygula</string>
+
+    <!-- A/C automation -->
+    <string name="ac_auto_title">Sıcaklığa göre klimayı tetikle</string>
+    <string name="ac_auto_desc">Klimayı dış sıcaklığa göre ayarlar</string>
+    <string name="ac_auto_hot">Sıcaklık şunun üstünde</string>
+    <string name="ac_auto_cold">Sıcaklık şunun altında</string>
+    <string name="ac_auto_threshold_hot_label">Tetikleme eşiği (°C)</string>
+    <string name="ac_auto_threshold_cold_label">Tetikleme eşiği (°C)</string>
+    <string name="ac_auto_threshold_hint">-20–60</string>
+    <string name="ac_auto_target_label">Hedef sıcaklık (°C)</string>
+    <string name="ac_auto_target_hint">15–33</string>
+    <string name="ac_auto_fan_label">Fan hızı</string>
+    <string name="ac_auto_fan_hint">1–10</string>
+    <string name="ac_auto_def_front">Ön cam buz çözme</string>
+    <string name="ac_auto_def_rear">Arka cam buz çözme</string>
+    <string name="ac_auto_note">Araç çalıştığında uygulanır: klima ve A/C açılır, ardından yukarıdaki ayarlar gönderilir.</string>
+    <string name="clim_card_title">Klima</string>
+    <string name="clim_temperature">Sıcaklık</string>
+    <string name="clim_fan">Fan</string>
+    <string name="clim_modes_title">Modlar</string>
+    <string name="clim_section_switches">Kumandalar</string>
+    <string name="clim_power">AÇ/KAPA</string>
+    <string name="clim_ac">A/C</string>
+    <string name="clim_auto">Oto</string>
+    <string name="clim_section_loop">Sirkülasyon</string>
+    <string name="clim_loop_inner">İç hava</string>
+    <string name="clim_loop_outside">Dış hava</string>
+    <string name="clim_loop_auto">Oto</string>
+    <string name="clim_section_airflow">Hava yönü</string>
+    <string name="clim_air_face">Yüz</string>
+    <string name="clim_air_feet">Ayak</string>
+    <string name="clim_air_windshield_front">Ön cam</string>
+    <string name="clim_air_windshield_rear">Arka cam</string>
+    <string name="clim_write_failed">Klima ayarı araç tarafından reddedildi</string>
+
+    <!-- Editeur de profil : categories -->
+    <string name="profile_cat_drive">Sürüş</string>
+    <string name="profile_cat_safety">Güvenlik</string>
+    <string name="profile_cat_comfort">Konfor</string>
+    <string name="climate_seat_heat">Koltuk ısıtma</string>
+
+    <!-- Reglages : categories -->
+    <string name="settings_cat_lang">Diller</string>
+    <string name="settings_cat_ui">Arayüz</string>
+    <string name="settings_cat_advanced">Gelişmiş ayarlar</string>
+    <string name="settings_cat_info">Bilgi</string>
+    <string name="settings_maintenance">Bakım</string>
+
+    <!-- Raccourcis : categories -->
+
+    <!-- API externe (issue #79) -->
+    <string name="settings_external_api">Dış API (KeyMapper, Tasker…)</string>
+    <string name="settings_external_api_warn">⚠ Kurulu her uygulamanın sürüş ayarlarını denetlemesine izin verir. Hız kilidi yine de geçerlidir. İhtiyacınız yoksa kapalı bırakın.</string>
+
+    <!-- Confirmation d'activation de l'API externe (issue #79) -->
+    <string name="external_api_confirm_title">Dış API etkinleştirilsin mi?</string>
+    <string name="external_api_confirm_warn">KURULU HER UYGULAMA ARACIN DENETİMİNİ ELE ALABİLECEK.</string>
+    <string name="external_api_confirm_msg">Sürüş modu, rejenerasyon, koltuk ve direksiyon ısıtma, klima ve profiller, sizden başka bir onay alınmadan üçüncü taraf bir uygulamanın denetimine açılır.\n\nHız kilidi etkin kalır.\n\nBunu yalnızca gerçekten KeyMapper, Tasker ya da benzeri bir araç kullanıyorsanız açın.</string>
+    <string name="external_api_confirm_risk">Bunu <b>kendi sorumluluğunuzda</b> etkinleştirirsiniz: üçüncü taraf bir uygulamanın aracınıza yaptığı her şeyden yalnızca siz sorumlusunuz.</string>
+    <string name="external_api_confirm_ok">Onayla</string>
+
+    <!-- Canal beta OTA -->
+    <string name="settings_beta_channel">Beta güncelleme kanalı</string>
+    <string name="settings_beta_channel_desc">Resmî olarak yayımlanmadan önce test sürümlerini alır. Hata içerebilirler. Güncelleyici üzerinden eski bir sürüme dönmek mümkün değildir.</string>
+
+    <!-- Somnolence / sensibilite d'alerte / ESC (SWI133) -->
+    <string name="safety_drowsiness">Sürücü dikkat uyarısı</string>
+    <string name="safety_drowsiness_sensitivity">Uyarı hassasiyeti</string>
+    <string name="safety_esc">ESC</string>
+    <string name="sens_low">Düşük</string>
+    <string name="sens_medium">Standart</string>
+    <string name="sens_high">Yüksek</string>
+    <string name="common_on">AÇIK</string>
+    <string name="common_off">KAPALI</string>
+
+    <!-- Automatisation clim : mode auto + recyclage -->
+    <string name="ac_auto_auto_mode">Otomatik mod</string>
+    <string name="ac_auto_recirc_force">İç hava sirkülasyonunu zorla</string>
+    <string name="recirc_inner">İç hava</string>
+    <string name="recirc_outside">Dış hava</string>
+    <string name="recirc_auto">Oto</string>
+
+    <!-- Consommation de donnees (Reglages > Infos) -->
+    <string name="data_usage_title">Veri kullanımı</string>
+    <string name="data_usage_month">Bu ay</string>
+    <string name="data_usage_30d">Son 30 gün</string>
+    <string name="data_usage_unavailable">Kullanılamıyor</string>
+    <string name="data_usage_today">Bugün</string>
+    <string name="data_usage_week">Bu hafta</string>
+
+    <!-- Raccourcis avances (service d accessibilite) -->
+    <string name="shortcuts_cat_advanced">Gelişmiş</string>
+    <string name="adv_sc_title">Gelişmiş kısayollar</string>
+    <string name="adv_sc_desc">MG4Control’ün direksiyon tuşlarını başlatıcıdan önce görmesini sağlar. Erişilebilirlik hizmetinin açılması gerekir.</string>
+    <string name="adv_sc_service_desc">Direksiyon tuşlarını MG4Control kısayolu olarak kullanmanızı sağlar.</string>
+    <string name="adv_sc_open_accessibility">Erişilebilirliği aç</string>
+    <string name="adv_sc_status_on">Hizmet etkin</string>
+    <string name="adv_sc_status_off">Hizmet etkin değil</string>
+    <string name="adv_sc_record">Bir tuş kaydet</string>
+    <string name="adv_sc_recording">Bir direksiyon tuşuna basın…</string>
+    <string name="adv_sc_none">yok</string>
+    <string name="shortcuts_cat_classic">Kısayollar</string>
+    <string name="adv_sc_list_title">Kısayol listesi</string>
+
+    <!-- Cycle de régénération personnalisable -->
+    <string name="shortcuts_cat_onepedal">Tek pedal</string>
+    <string name="shortcuts_cat_adas">ADAS</string>
+    <string name="shortcuts_cat_regen_cycle">Rejenerasyon döngüsü</string>
+    <string name="shortcuts_cfg_regen_cycle">Rejenerasyon döngüsü</string>
+    <string name="shortcuts_cfg_regen_hint">Dolaşmak istediğiniz sırayla modlara dokunun, sonra kaydedin.</string>
+    <string name="shortcuts_cfg_regen_summary">Döngü: %1$s</string>
+    <string name="shortcuts_cfg_regen_clear">Tümünü temizle</string>
+    <string name="shortcuts_cfg_regen_save">Kaydet</string>
+    <string name="shortcuts_cfg_regen_saved">Döngü kaydedildi</string>
+    <string name="shortcuts_cfg_regen_min">Bir döngü için en az iki mod gerekir.</string>
+    <string name="adv_sc_new">Yeni kısayol</string>
+    <string name="adv_sc_step_key">1 · Tuş</string>
+    <string name="adv_sc_step_press">2 · Basış türü</string>
+    <string name="adv_sc_step_action">3 · İşlev</string>
+    <string name="adv_sc_step_profile">4 · Profil</string>
+    <string name="adv_sc_all_profiles">Tüm profiller</string>
+    <string name="adv_sc_profile_missing">Silinmiş profil</string>
+    <string name="adv_sc_group_title">%1$s · %2$s</string>
+    <string name="adv_sc_no_fallback">Diğer profiller için kısayol yok: tuş orada özgün işlevini korur.</string>
+    <string name="adv_sc_edit_conflict">Bu profilde bu tuş ve basış türü için zaten bir kısayol var.</string>
+    <string name="adv_sc_empty">Kayıtlı gelişmiş kısayol yok.</string>
+    <string name="adv_sc_claimed_warning">Kısayolu olmayan basışlar tuşun özgün işlevini korur. Çift basış atanmış bir tuşta, özgün tek basış hafif bir gecikmeyle (0,3 sn) gelir.</string>
+    <string name="adv_sc_delete">Sil</string>
+    <string name="adv_sc_status_label">Hizmet durumu</string>
+    <string name="adv_sc_saved">Kısayol kaydedildi</string>
+    <string name="adv_sc_create">Kısayol oluştur</string>
+    <string name="adv_sc_need_key">Önce bir tuş kaydedin</string>
+    <string name="adv_sc_need_action">Bir işlev seçin</string>
+    <string name="adv_sc_record_cancelled">Kayıt iptal edildi</string>
+
+    <!-- Nouvelles actions de raccourci -->
+    <string name="shortcuts_action_esc">ESC (AÇ/KAPA)</string>
+    <string name="shortcuts_action_drowsiness">Yorgunluk (AÇ/KAPA)</string>
+    <string name="shortcuts_action_drowsiness_sen">Yorgunluk: hassasiyet</string>
+    <string name="shortcuts_action_hvac_toggle">Klima (AÇ/KAPA)</string>
+    <string name="shortcuts_action_hvac_temp_up">Klima: sıcaklık +</string>
+    <string name="shortcuts_action_hvac_temp_down">Klima: sıcaklık -</string>
+    <string name="shortcuts_action_hvac_fan_up">Klima: fan +</string>
+    <string name="shortcuts_action_hvac_fan_down">Klima: fan -</string>
+
+    <!-- Raccourcis : confort et affichage -->
+    <string name="shortcuts_action_regen_cycle">Özel rejenerasyon döngüsü</string>
+    <string name="shortcuts_action_seat_heat_left">Sol koltuk ısıtma: döngü</string>
+    <string name="shortcuts_action_seat_heat_right">Sağ koltuk ısıtma: döngü</string>
+    <string name="shortcuts_action_steering_heat">Direksiyon ısıtma (AÇ/KAPA)</string>
+    <string name="shortcuts_action_defrost_front">Ön cam buz çözme (AÇ/KAPA)</string>
+    <string name="shortcuts_action_defrost_rear">Arka cam buz çözme (AÇ/KAPA)</string>
+    <string name="shortcuts_action_hvac_recirc">Sirkülasyon: döngü</string>
+    <string name="shortcuts_action_brightness_up">Parlaklık +</string>
+    <string name="shortcuts_action_brightness_down">Parlaklık -</string>
+
+    <!-- Liste des raccourcis avances : modification et remplacement -->
+    <string name="adv_sc_edit">Düzenle</string>
+    <string name="adv_sc_edit_title">Kısayolu düzenle</string>
+    <string name="adv_sc_updated">Kısayol güncellendi</string>
+    <string name="adv_sc_press_short">Kısa basış</string>
+    <string name="adv_sc_press_long_lbl">Uzun basış</string>
+    <string name="adv_sc_key_unknown">Tuş %1$d</string>
+    <string name="adv_sc_replace_title">Düğme zaten kullanılıyor</string>
+    <string name="adv_sc_replace_msg">%2$s üzerinde %1$s zaten şunu çalıştırıyor: %3$s.\n\nYeni işlevle değiştirilsin mi?</string>
+    <string name="adv_sc_replace_ok">Değiştir</string>
+    <string name="adv_sc_press_double">Çift basış</string>
+
+    <!-- Avertissement a l'activation des raccourcis avances -->
+    <string name="adv_sc_enable_warn_title">Atanan düğmelerin rolü değişir</string>
+    <string name="adv_sc_enable_warn_msg">MG4Control, atanan düğmeleri başlatıcıdan önce yakalar.\n\nKısayol taşıyan bir basış, düğmenin özgün işlevinin yerini alır. Diğerleri işlevini korur: Home düğmesine çift basış atayın, tek basış yine MG başlatıcısına döner.\n\nTek ödün: çift basış atanmış bir düğmede tek basış hafif bir gecikmeyle (0,3 sn) gelir; bu süre, ardından ikinci bir basış gelmediğinden emin olmak içindir.\n\nKısayol, Kısayol listesinden silindiği anda her şey normale döner.</string>
+    <string name="adv_sc_enable_warn_ok">Etkinleştir</string>
+
+    <!-- Raccourcis : pistes audio -->
+    <string name="shortcuts_action_media_next">Sonraki parça</string>
+    <string name="shortcuts_action_media_prev">Önceki parça</string>
+    <string name="shortcuts_action_media_play_pause">Oynat / Duraklat</string>
+
+    <!-- Raccourcis : volume -->
+    <string name="shortcuts_action_volume_up">Ses +</string>
+    <string name="shortcuts_action_volume_down">Ses -</string>
+
+    <!-- Onglet Vitres (V0 de test) -->
+    <string name="win_hint">Kısa basış: tamamen aç ya da kapat (durdurmak için yeniden basın) · Uzun basış: parmağınız basılı kaldıkça cam hareket eder</string>
+    <string name="win_close_warning">Uygulamanın kendiliğinden kapatmasında sıkışma koruması yoktur (sürücü camı dışında): cama dikkat edin. Sekmeden çıkarsanız durur.</string>
+    <string name="win_front_left">Ön sol</string>
+    <string name="win_front_right">Ön sağ</string>
+    <string name="win_rear_left">Arka sol</string>
+    <string name="win_rear_right">Arka sağ</string>
+    <string name="win_close">Kapat</string>
+    <string name="win_open">Aç</string>
+    <string name="win_all_close">Tümünü kapat</string>
+    <string name="win_all_open">Tümünü aç</string>
+    <string name="win_auto_title">Kendiliğinden kapatma</string>
+    <string name="win_auto_label">Araçtan inerken camları kapat</string>
+    <string name="win_auto_desc">Araç P konumundayken ve aşağıdaki koşullarla devreye alınmışsa: araç READY durumundan çıkınca (sürücü kapısı açıldığında ya da araç kapatıldığında) tüm camlar seçilen gecikmenin ardından kapanır. O süre dolmadan READY durumuna dönülürse iptal olur.</string>
+    <string name="win_auto_warning">Sürücü camı dışındaki camlarda sıkışma koruması yoktur: inerken camların yakınında kimse olmasın.</string>
+    <string name="win_auto_need_cal">Önce yukarıdaki bölümden camları kalibre edin: inişte kapatma, ölçülen hareket süresine dayanır. Eksik: %1$s.</string>
+    <string name="win_auto_arming_title">Devreye alma: sürüşten sonra</string>
+    <string name="win_auto_speed_label">Ulaşılan hız</string>
+    <string name="win_auto_time_label">Aracın açık kaldığı süre</string>
+    <string name="win_auto_combine_any">Herhangi biri</string>
+    <string name="win_auto_combine_all">İkisi birden</string>
+    <string name="win_auto_need_one">En az bir devreye alma koşulu bırakın</string>
+    <string name="win_auto_delay_label">Kapanmadan önceki gecikme</string>
+    <string name="win_auto_beep_label">Uyarı bipi</string>
+    <string name="win_auto_beep_desc">Camlar kapanmadan önce, gecikme boyunca saniyede bir bip.</string>
+    <string name="win_auto_beep_volume_label">Bip ses düzeyi</string>
+    <string name="win_auto_beep_value" translatable="false">%1$d %%</string>
+    <string name="win_cal_title">Cam kalibrasyonu</string>
+    <string name="win_automation_title">Elektrikli camlar</string>
+    <string name="win_section_command">Kumandalar</string>
+    <string name="win_cal_limits">Tahminin göremedikleri: kapı düğmeleri (araç bunları bildirmez, bu yüzden uygulamadan gelecek bir sonraki komuta kadar gösterilen konum yanlış kalır) ve açılıştaki durum (uygulama her başladığında tüm camlar kapalı varsayılır).</string>
+    <string name="shortcuts_action_windows_open">Tüm camları aç</string>
+    <string name="shortcuts_action_windows_close">Tüm camları kapat</string>
+    <string name="win_cal_hint">Sensörü olmayan camlar: uygulama tam bir hareketin süresini ölçer, sonra her komuttan sonra konumu tahmin eder.</string>
+    <string name="win_cal_sensor">Yerleşik sensör</string>
+    <string name="win_cal_none">Kalibre edilmedi</string>
+    <string name="win_cal_done">Kalibre edildi · iniş %1$s sn · çıkış %2$s sn</string>
+    <string name="win_cal_start">Kalibre et</string>
+    <string name="win_cal_redo_row">Yinele</string>
+    <string name="win_cal_wizard_title">Kalibrasyon · %1$s</string>
+    <string name="win_cal_step">Adım %1$d / 4</string>
+    <string name="win_cal_close_instruction">Tam kapanma: cam tamamen kapalı başlasın diye uygulama kendiliğinden kapatma komutunu gönderir.</string>
+    <string name="win_cal_close_action">Camı kapat</string>
+    <string name="win_cal_closed_action">Cam kapandı: devam</string>
+    <string name="win_cal_down_instruction">Parmağınızı “Aç” üzerinde tutun ve cam tamamen indiği anda bırakın.</string>
+    <string name="win_cal_down_action">Aç (basılı tut)</string>
+    <string name="win_cal_up_instruction">Parmağınızı “Kapat” üzerinde tutun ve cam kapandığı anda bırakın.</string>
+    <string name="win_cal_up_action">Kapat (basılı tut)</string>
+    <string name="win_cal_warning">Araç dursun, camın yakınında kimse olmasın.</string>
+    <string name="win_cal_too_short">Çok kısa (%1$s sn): tam kapanmadan yeniden başlanıyor.</string>
+    <string name="win_cal_too_long">Çok uzun (%1$s sn): tam kapanmadan yeniden başlanıyor.</string>
+    <string name="win_cal_result">İniş %1$s sn · çıkış %2$s sn. Kaydedin ya da geç bıraktıysanız yeniden başlayın.</string>
+    <string name="win_cal_seconds">%1$s sn</string>
+    <string name="win_cal_cancel">İptal</string>
+    <string name="win_cal_redo">Yeniden başla</string>
+    <string name="win_cal_save">Kaydet</string>
+    <string name="win_cal_saved">Kalibrasyon kaydedildi</string>
+    <string name="win_value_estimated">≈ %1$d %% açık</string>
+    <string name="win_value_estimate_unknown">Konum bilinmiyor: tam bir hareket yapın</string>
+    <string name="win_value">Okunan değer: %1$s</string>
+    <string name="win_value_unknown">okunamıyor</string>
+    <string name="win_value_no_sensor">Sensör yok (ham %1$s)</string>
+
+    <!-- ══════════ Statistiques : trajets, recharges, coût ══════════ -->
+    <string name="nav_stats">İstatistikler</string>
+    <string name="stats_cat_general">Genel</string>
+    <string name="stats_cat_trips">Yolculuklar</string>
+    <string name="stats_cat_charges">Şarj</string>
+    <string name="stats_enable_label">İstatistikleri kaydet</string>
+    <string name="stats_enable_desc">Yolculuklar ve şarjlar araçta, yalnızca bu ekranda saklanır. Hiçbir yere gönderilmez.</string>
+    <string name="stats_disabled_note">Kapalı: hiçbir şey kaydedilmez, Yolculuklar ve Şarj sekmeleri boş kalır.</string>
+    <string name="stats_summary_title">Özet</string>
+    <string name="stats_price_title">Elektrik fiyatı</string>
+    <string name="stats_price_note">Bu tarifeler varsayılandır: belirli bir oturumun fiyatı Şarj sekmesinden düzeltilebilir. Bir yolculuğun maliyeti, gerçekte şarj edilen enerjinin ortalama fiyatını izler.</string>
+    <string name="stats_retention_title">Verileri saklama süresi</string>
+    <string name="stats_retention_note">Bu sürenin ötesindeki en eski yolculuk ve şarjlar kendiliğinden silinir.</string>
+    <string name="stats_clear">Tümünü sil</string>
+    <string name="stats_clear_confirm">%1$d yolculuk ve %2$d şarj silinecek. Bu geri alınamaz.</string>
+    <string name="stats_history_size">%1$d yolculuk · %2$d şarj · %3$d kB</string>
+    <string name="stats_tile_distance">Mesafe</string>
+    <string name="stats_tile_consumption">Ortalama tüketim</string>
+    <string name="stats_tile_speed">Ortalama hız</string>
+    <string name="stats_tile_energy">Harcanan enerji</string>
+    <string name="stats_tile_regen">Geri kazanılan enerji</string>
+    <string name="stats_tile_charged">Şarj edilen enerji</string>
+    <string name="stats_tile_cost">Tahmini maliyet</string>
+    <string name="stats_tile_cost_per100">100 km maliyeti</string>
+    <string name="stats_tile_trips">Yolculuklar</string>
+    <string name="stats_tile_longest">En uzun</string>
+    <string name="stats_tile_cost_total">Toplam maliyet</string>
+    <string name="stats_tile_avg_price">Ortalama fiyat</string>
+    <string name="stats_tile_sessions">Oturumlar</string>
+    <string name="stats_currency">Para birimi</string>
+    <string name="stats_price_ac">Yavaş şarj, evde</string>
+    <string name="stats_price_dc">Hızlı şarj, halka açık</string>
+    <string name="stats_capacity">Kullanılabilir kapasite (kWh)</string>
+    <string name="stats_retention_30d">30 gün</string>
+    <string name="stats_retention_3m">3 ay</string>
+    <string name="stats_retention_6m">6 ay</string>
+    <string name="stats_retention_1y">1 yıl</string>
+    <string name="stats_period_short">%1$d gün</string>
+    <string name="stats_period_all">Tümü</string>
+    <string name="stats_no_trip">Bu dönemde kayıtlı yolculuk yok.</string>
+    <string name="stats_no_charge">Bu dönemde kayıtlı şarj yok.</string>
+    <string name="stats_charge_ac">Alternatif akım</string>
+    <string name="stats_charge_dc">Doğru akım</string>
+    <string name="stats_charge_unknown">Tür bilinmiyor</string>
+    <string name="stats_charge_reconstructed">yeniden oluşturuldu</string>
+    <string name="stats_detail_origin">Kaynak</string>
+    <string name="stats_detail_origin_estimated">batarya düzeyinden tahmin edildi — uygulama çalışmıyordu</string>
+    <string name="stats_tariff_fixed">tarife düzeltildi</string>
+    <string name="stats_tariff_instead">düzeltildi, %1$s yerine</string>
+    <string name="stats_tariff_default">Varsayılan tarife</string>
+    <string name="stats_detail_motor">Motor</string>
+    <string name="stats_detail_consumption">Ortalama tüketim</string>
+    <string name="stats_detail_consumption_short">güvenilir bir oran için yolculuk çok kısa</string>
+    <string name="stats_detail_climate">Klima</string>
+    <string name="stats_detail_accessories">Aksesuarlar</string>
+    <string name="stats_detail_regen">Rejeneratif frenleme</string>
+    <string name="stats_detail_battery">Batarya</string>
+    <string name="stats_detail_temp">Ortalama sıcaklık</string>
+    <string name="stats_detail_power_measured">Ortalama güç, ölçülen</string>
+    <string name="stats_detail_power_computed">Ortalama güç, hesaplanan (enerji ÷ süre)</string>
+    <string name="stats_detail_tariff">Uygulanan tarife</string>
+    <string name="stats_fix_tariff">Tarifeyi düzelt</string>
+    <string name="stats_fix_tariff_note">Yalnızca bu oturumu değiştirir. Ortalama fiyat ve yolculuk maliyetleri buna uyar.</string>
+    <string name="stats_save">Kaydet</string>
+    <string name="stats_complete_session">Oturumu tamamla</string>
+    <string name="stats_complete_note">Uygulama bu şarjı görmedi. İki saati de girmek ortalama gücü hesaplanabilir kılar.</string>
+    <string name="stats_complete_type">Priz türü</string>
+    <string name="stats_complete_start">Başlangıç (ss:dd)</string>
+    <string name="stats_complete_end">Bitiş (ss:dd)</string>
+    <string name="stats_detail_origin_completed">batarya düzeyinden tahmin edildi, saatler elle girildi</string>
+
+</resources>

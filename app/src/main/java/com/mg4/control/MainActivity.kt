@@ -329,7 +329,8 @@ class MainActivity : AppCompatActivity() {
             R.id.btn_pick_de to "de",
             R.id.btn_pick_es to "es",
             R.id.btn_pick_pt to "pt",
-            R.id.btn_pick_it to "it"
+            R.id.btn_pick_it to "it",
+            R.id.btn_pick_tr to "tr"
         )
         buttons.forEach { (viewId, code) ->
             dialogView.findViewById<MaterialButton>(viewId).setOnClickListener {
