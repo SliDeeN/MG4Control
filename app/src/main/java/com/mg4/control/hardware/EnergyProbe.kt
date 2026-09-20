@@ -103,6 +103,11 @@ object EnergyProbe {
         // ── Distance ────────────────────────────────────────────────────────
         Signal("Odomètre AOSP", 0x11600204, null),
         Signal("Kilométrage total SAIC", 0x21401566, null),
+        // Candidats à un odomètre plus fin que le kilomètre entier : le premier est dans la liste
+        // énumérée par le gestionnaire BMS, les deux autres viennent du combiné.
+        Signal("Odomètre BMS", 0x2140f447, BMS_SERVICE, validity = 0x2120f448),
+        Signal("Odomètre combiné", 0x21407b13, null),
+        Signal("Trajet combiné : départ", 0x21407b86, null),
         Signal("Trajet combiné : distance", 0x21407b81, null),
         Signal("Trajet combiné : vitesse moyenne", 0x21407b80, null),
         Signal("Trajet combiné : conso moyenne", 0x21407b82, null),

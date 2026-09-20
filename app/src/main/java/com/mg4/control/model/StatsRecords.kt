@@ -13,6 +13,13 @@ data class Trip(
     val startMs: Long,
     val endMs: Long,
     val distanceKm: Int,
+    /**
+     * Énergie **brute** relevée sur le compteur du véhicule : la régénération n'en est PAS déduite.
+     *
+     * Vérifié le 2026-09-20 en comparant avec l'écran d'origine — la voiture affichait 14,1
+     * kWh/100 km là où ce compteur donnait 17,1 sur la même distance, l'écart valant exactement la
+     * régénération. C'est donc [netEnergyKwh] qu'il faut montrer et facturer.
+     */
     val energyKwh: Float,
     val climateKwh: Float?,
     val accessoriesKwh: Float?,
@@ -24,6 +31,15 @@ data class Trip(
     val durationMs: Long get() = max(0L, endMs - startMs)
 
     /**
+     * Énergie réellement sortie de la batterie : brute moins ce que la régénération a rendu.
+     *
+     * C'est la convention de tout le monde — la voiture elle-même, Tesla, les planificateurs — et
+     * c'est la seule qui ait un sens pour le coût : on ne recharge que ce qu'on a vraiment dépensé.
+     */
+    val netEnergyKwh: Float
+        get() = (energyKwh - (regenKwh ?: 0f)).coerceAtLeast(0f).roundTenth()
+
+    /**
      * Consommation moyenne en kWh/100 km, **null sous la distance plancher**.
      *
      * L'odomètre du véhicule est au kilomètre entier : sur 2 km, la distance est connue à ±50 %
@@ -32,7 +48,7 @@ data class Trip(
      */
     val consumptionPer100: Float?
         get() = if (distanceKm >= MIN_DISTANCE_FOR_RATIO_KM && distanceKm > 0)
-            energyKwh * 100f / distanceKm else null
+            netEnergyKwh * 100f / distanceKm else null
 
     /**
      * Énergie du moteur : ce qui reste du total une fois la climatisation et les accessoires
@@ -45,6 +61,7 @@ data class Trip(
     val motorKwh: Float?
         get() {
             if (climateKwh == null && accessoriesKwh == null) return null
+            // Sur le BRUT : moteur + climatisation + accessoires − régénération = énergie nette.
             val reste = energyKwh - (climateKwh ?: 0f) - (accessoriesKwh ?: 0f)
             return reste.coerceAtLeast(0f).roundTenth()
         }

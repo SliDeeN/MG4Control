@@ -231,7 +231,7 @@ class StatsFragment : Fragment() {
                 value1 = trip.consumptionPer100?.let { fmt(it) + " " + getString(R.string.stats_unit_per100) } ?: "—",
                 value2 = listOfNotNull(
                     trip.averageSpeedKmh?.let { "${it.toInt()} km/h" },
-                    kwh(trip.energyKwh),
+                    kwh(trip.netEnergyKwh),
                 ).joinToString(" · "),
                 onClick = { expanded = if (expanded == trip.startMs) null else trip.startMs; render() }))
             if (expanded == trip.startMs) list.addView(tripDetail(ctx, trip))
@@ -292,7 +292,9 @@ class StatsFragment : Fragment() {
         trip.motorKwh?.let { getString(R.string.stats_detail_motor) to kwh(it) },
         trip.climateKwh?.let { getString(R.string.stats_detail_climate) to kwh(it) },
         trip.accessoriesKwh?.let { getString(R.string.stats_detail_accessories) to kwh(it) },
-        trip.regenKwh?.let { getString(R.string.stats_detail_regen) to "+ ${kwh(it)}" },
+        // Signe négatif : dans un détail de consommation, la régénération RETRANCHE. Moteur +
+        // climatisation + accessoires − récupération donne bien le total affiché sur la ligne.
+        trip.regenKwh?.let { getString(R.string.stats_detail_regen) to "− ${kwh(it)}" },
         // Sous la distance plancher on dit POURQUOI il n'y a pas de ratio, plutôt qu'un tiret muet.
         getString(R.string.stats_detail_consumption) to (trip.consumptionPer100
             ?.let { fmt(it) + " " + getString(R.string.stats_unit_per100) }
@@ -586,10 +588,15 @@ class StatsFragment : Fragment() {
     private fun money(value: Float?, s: StatsSettings): String =
         value?.let { "${fmt(it)} ${s.currency}" } ?: "—"
 
+    /**
+     * Le véhicule publie le pourcentage au dixième (69,4 et non 69) : l'arrondir à l'entier jetait
+     * une précision déjà acquise, et rendait invérifiable un trajet court — 1 % vaut plus d'un demi
+     * kilowattheure sur cette batterie.
+     */
     private fun soc(start: Float?, end: Float?): String? {
         if (start == null && end == null) return null
-        val a = start?.let { "${it.toInt()} %" } ?: "?"
-        val b = end?.let { "${it.toInt()} %" } ?: "?"
+        val a = start?.let { "${fmt(it)} %" } ?: "?"
+        val b = end?.let { "${fmt(it)} %" } ?: "?"
         return "$a → $b"
     }
 

@@ -16,14 +16,14 @@ class StatsSummaryTest {
 
     private val settings = StatsSettings(priceAc = 0.2f, priceDc = 0.5f, capacityKwh = 60f)
 
-    private fun trip(km: Int, kwh: Float, dureeMin: Long = 30) = Trip(
+    private fun trip(km: Int, kwh: Float, dureeMin: Long = 30, regen: Float = 0f) = Trip(
         startMs = 0L,
         endMs = dureeMin * 60_000L,
         distanceKm = km,
         energyKwh = kwh,
         climateKwh = null,
         accessoriesKwh = null,
-        regenKwh = 1f,
+        regenKwh = regen,
         socStart = null,
         socEnd = null,
         outsideTempC = null,
@@ -55,6 +55,15 @@ class StatsSummaryTest {
         assertNull("odomètre au km entier : le ratio n'aurait pas de sens", sum.consumptionPer100)
         assertNull(sum.averageSpeedKmh)
         assertNull(sum.costPer100)
+    }
+
+    @Test
+    fun `le resume compte l'energie NETTE des trajets`() {
+        // Le compteur du véhicule est brut : 20 kWh dont 4 rendus par la régénération font 16 nets.
+        val sum = StatsSummary.of(listOf(trip(100, 20f, regen = 4f)), emptyList(), settings)
+        assertEquals(16f, sum.energyKwh, 0.01f)
+        assertEquals(16f, sum.consumptionPer100!!, 0.01f)
+        assertEquals("la régénération reste affichée à part", 4f, sum.regenKwh, 0.01f)
     }
 
     @Test

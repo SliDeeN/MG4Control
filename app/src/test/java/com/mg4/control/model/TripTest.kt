@@ -53,6 +53,24 @@ class TripTest {
     }
 
     @Test
+    fun `l'energie nette retranche la regeneration`() {
+        val t = Trip(
+            startMs = 0L, endMs = 2_040_000L, distanceKm = 34, energyKwh = 5.8f,
+            climateKwh = 0f, accessoriesKwh = 0.1f, regenKwh = 1f,
+            socStart = 69f, socEnd = 60f, outsideTempC = 25f,
+        )
+        assertEquals(4.8f, t.netEnergyKwh, 0.01f)
+        // Relevé réel du 2026-09-20 : la voiture affichait 14,1 kWh/100 km sur ce trajet, quand le
+        // compteur brut donnait 17,1. Notre calcul doit tomber du côté de la voiture.
+        assertEquals(14.1f, t.consumptionPer100!!, 0.4f)
+    }
+
+    @Test
+    fun `sans regeneration connue le net vaut le brut`() {
+        assertEquals(20f, trip(kwh = 20f).netEnergyKwh, 0.01f)
+    }
+
+    @Test
     fun `sous cinq kilometres aucun ratio n'est annonce`() {
         val court = trip(km = 2, kwh = 0.4f)
         assertNull(court.consumptionPer100)
@@ -62,5 +80,15 @@ class TripTest {
     @Test
     fun `au dela du plancher la consommation se calcule`() {
         assertEquals(20f, trip(km = 100, kwh = 20f).consumptionPer100!!, 0.01f)
+    }
+
+    @Test
+    fun `la consommation suit le net, pas le brut`() {
+        val t = Trip(
+            startMs = 0L, endMs = 3_600_000L, distanceKm = 100, energyKwh = 20f,
+            climateKwh = null, accessoriesKwh = null, regenKwh = 4f,
+            socStart = null, socEnd = null, outsideTempC = null,
+        )
+        assertEquals(16f, t.consumptionPer100!!, 0.01f)
     }
 }

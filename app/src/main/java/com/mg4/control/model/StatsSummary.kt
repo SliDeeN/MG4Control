@@ -51,7 +51,9 @@ data class StatsSummary(
             val chargeCost = charges.sumOf { (it.cost(settings) ?: 0f).toDouble() }.toFloat()
             // Prix moyen réel : une session corrigée à la main tire donc la moyenne avec elle.
             val prixMoyen = if (chargedKwh > 0f) chargeCost / chargedKwh else null
-            val energie = trips.sumOf { it.energyKwh.toDouble() }.toFloat()
+            // Net, comme l'affichage d'origine : le compteur du véhicule est brut, régénération
+            // comprise. Voir [Trip.energyKwh].
+            val energie = trips.sumOf { it.netEnergyKwh.toDouble() }.toFloat()
             return StatsSummary(
                 tripCount = trips.size,
                 distanceKm = trips.sumOf { it.distanceKm },
