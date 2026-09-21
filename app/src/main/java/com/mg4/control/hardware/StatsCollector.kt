@@ -44,6 +44,9 @@ object StatsCollector {
     @Volatile
     private var running = false
 
+    /** Pour ne signaler l'horloge fausse qu'une fois par épisode, et non à chaque relevé. */
+    private var horlogeSignalee = false
+
     /**
      * Un trajet se termine à l'instant où la voiture quitte READY — et c'est aussi l'instant où le
      * boîtier s'apprête à couper l'application. Attendre le tic suivant, trente secondes plus tard,
@@ -134,6 +137,20 @@ object StatsCollector {
         val t = tracker ?: return
         runCatching {
             val snapshot = EnergyReader.read()
+            // Horloge d'usine au réveil : on n'écrit rien, surtout pas le point de comparaison —
+            // daté de 2018, il ferait d'une charge de nuit une session de sept ans.
+            if (!StatsTracker.clockPlausible(snapshot.timestampMs)) {
+                if (!horlogeSignalee) {
+                    horlogeSignalee = true
+                    AppLogger.w(TAG, "horloge non synchronisée " +
+                        "(${java.util.Date(snapshot.timestampMs)}) : relevés ignorés")
+                }
+                return@runCatching
+            }
+            if (horlogeSignalee) {
+                horlogeSignalee = false
+                AppLogger.i(TAG, "horloge synchronisée : relevés repris")
+            }
             t.onSnapshot(snapshot, ReadyWatcher.ready).forEach { enregistrer(s, it) }
             // L'état courant est réécrit après CHAQUE relevé : si le boîtier coupe entre deux,
             // le démarrage suivant retrouve le trajet et le clôt à son dernier point connu.

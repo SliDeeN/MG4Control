@@ -65,16 +65,20 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
      * personne n'a vue, et n'est consommé qu'au premier échantillon.
      */
     fun recover(state: PendingState?, last: LastReading? = null): List<Event> {
-        aRattraper = last
+        // Tout ce qui a été daté par une horloge d'usine est écarté : un point de comparaison ou
+        // une session ouverte à « 2019 » fabriquerait des durées de plusieurs années.
+        aRattraper = last?.takeIf { clockPlausible(it.timestampMs) }
         state ?: return emptyList()
         val events = mutableListOf<Event>()
-        state.trip?.let { p ->
+        state.trip?.takeIf { clockPlausible(it.startMs) }?.let { p ->
             trip = p
             finishTrip()?.let { events += Event.TripEnded(it) }
         }
         // Reprise sans fermeture, et marquée : tout ce qui s'est passé entre la coupure et le
         // réveil s'est déroulé sans témoin.
-        state.charge?.let { charge = it.copy(reconstructed = true) }
+        state.charge?.takeIf { clockPlausible(it.startMs) }?.let {
+            charge = it.copy(reconstructed = true)
+        }
         return events
     }
 
@@ -86,6 +90,10 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
      */
     fun onSnapshot(snapshot: EnergySnapshot, ready: Boolean?): List<Event> {
         if (!snapshot.usable) return emptyList()
+        // Horloge pas encore synchronisée : les mesures sont justes, mais leur date ne l'est pas,
+        // et toute cette machine repose sur des dates. Le point de comparaison du rattrapage,
+        // lui, reste intact pour le premier relevé bien daté.
+        if (!clockPlausible(snapshot.timestampMs)) return emptyList()
         val events = mutableListOf<Event>()
 
         // ── Trajet ──────────────────────────────────────────────────────────
@@ -334,5 +342,18 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
 
         /** Écart maximal entre les deux relevés qui encadrent une charge reconstituée. */
         const val MAX_RECONSTRUCTED_GAP_MS = 7L * 24 * 3_600_000L
+
+        /**
+         * Plancher de vraisemblance de l'horloge : aucun relevé de cette application ne peut dater
+         * d'avant 2025.
+         *
+         * Réveillé par une charge nocturne, le boîtier a tourné avec son horloge d'usine (fin
+         * 2018) le temps de la synchroniser — vu le 2026-09-21 sur une session datée du
+         * 31/12/2018, longue de 67 681 heures. Un relevé pris dans cet état a des mesures justes
+         * et une date fausse ; il ne sert donc à rien ici.
+         */
+        const val MIN_PLAUSIBLE_CLOCK_MS = 1_735_689_600_000L   // 2025-01-01T00:00Z
+
+        fun clockPlausible(ms: Long): Boolean = ms >= MIN_PLAUSIBLE_CLOCK_MS
     }
 }

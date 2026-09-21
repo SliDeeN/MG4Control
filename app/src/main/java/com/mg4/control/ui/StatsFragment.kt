@@ -20,6 +20,7 @@ import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
 import com.mg4.control.hardware.StatsCollector
 import com.mg4.control.model.ChargeSession
+import com.mg4.control.model.ChargeTimes
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.StatsHistory
 import com.mg4.control.model.StatsSettings
@@ -27,7 +28,6 @@ import com.mg4.control.model.StatsSummary
 import com.mg4.control.model.Trip
 import com.mg4.control.stats.StatsStore
 import java.text.DateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -376,8 +376,8 @@ class StatsFragment : Fragment() {
     /**
      * Complète une charge que l'application n'a pas vue : type de prise et horaires réels.
      *
-     * Seules les heures sont demandées, jamais les dates : une charge de nuit enjambe deux jours,
-     * et [heureProche] retrouve seule la bonne en se calant sur le relevé qui encadre la charge.
+     * Seules les heures sont demandées, jamais les dates : [ChargeTimes.resolve] retrouve seule
+     * la bonne.
      */
     private fun askCompletion(session: ChargeSession) {
         val ctx = requireContext()
@@ -394,10 +394,8 @@ class StatsFragment : Fragment() {
         }
 
         fun champ(valeur: Long?) = EditText(ctx).apply {
-            // Vingt-quatre heures, quelle que soit la langue : le champ est relu tel quel, et un
-            // « 10:30 PM » relu comme 10 h 30 fausserait la durée de douze heures.
             inputType = InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME
-            setText(valeur?.let { hhmm(it) } ?: "")
+            setText(valeur?.let { ChargeTimes.hhmm(it) } ?: "")
             setTextColor(ctx.getColor(R.color.text_primary))
         }
         val debut = champ(session.userStartMs)
@@ -439,47 +437,14 @@ class StatsFragment : Fragment() {
             .setMessage(getString(R.string.stats_complete_note))
             .setView(corps)
             .setPositiveButton(R.string.stats_save) { _, _ ->
-                val d = heureProche(debut.text.toString(), session.startMs)
-                // Une fin antérieure au début n'a pas de sens : plutôt que d'inventer une durée
-                // négative, on ne retient rien et la puissance reste masquée.
-                val f = heureProche(fin.text.toString(), session.endMs)?.takeIf { d == null || it > d }
+                val (d, f) = ChargeTimes.resolve(
+                    debut.text.toString(), fin.text.toString(), session.startMs, session.endMs
+                )
                 store.completeCharge(session.startMs, type, d, f)
                 render()
             }
             .setNegativeButton(R.string.nav_close, null)
             .show()
-    }
-
-    /** Heure sur vingt-quatre heures, indépendante de la langue, pour remplir et relire un champ. */
-    private fun hhmm(ms: Long): String {
-        val cal = Calendar.getInstance().apply { timeInMillis = ms }
-        return "%02d:%02d".format(cal.get(Calendar.HOUR_OF_DAY), cal.get(Calendar.MINUTE))
-    }
-
-    /**
-     * Transforme une heure saisie en instant réel, en la plaçant à la date qui va bien.
-     *
-     * Une charge de nuit enjambe deux jours : demander la date en plus serait une corvée pour rien,
-     * alors que l'occurrence la plus proche du relevé qui encadre la charge est toujours la bonne.
-     * « 02:10 » saisi en face d'un relevé du matin désigne donc bien cette nuit-là, et « 22:30 » en
-     * face d'un relevé du soir désigne la veille au soir.
-     */
-    private fun heureProche(saisie: String, ancre: Long): Long? {
-        val m = Regex("^\\D*(\\d{1,2})\\D+(\\d{2})\\D*$").find(saisie.trim()) ?: return null
-        val h = m.groupValues[1].toInt()
-        val min = m.groupValues[2].toInt()
-        if (h > 23 || min > 59) return null
-        val cal = Calendar.getInstance().apply {
-            timeInMillis = ancre
-            set(Calendar.HOUR_OF_DAY, h)
-            set(Calendar.MINUTE, min)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }
-        val douzeHeures = 12 * 3_600_000L
-        if (cal.timeInMillis - ancre > douzeHeures) cal.add(Calendar.DAY_OF_MONTH, -1)
-        else if (ancre - cal.timeInMillis > douzeHeures) cal.add(Calendar.DAY_OF_MONTH, 1)
-        return cal.timeInMillis
     }
 
     private fun askTariff(session: ChargeSession, s: StatsSettings) {
