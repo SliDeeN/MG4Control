@@ -107,7 +107,7 @@ p { margin: 0 0 .9em; }
 .nav::-webkit-scrollbar { display: none; }
 .nav a {
   color: var(--ink-2); text-decoration: none; font-size: 14px; font-weight: 500;
-  padding: 7px 10px; border-radius: 8px; white-space: nowrap;
+  padding: 7px 8px; border-radius: 8px; white-space: nowrap;
 }
 .nav a:hover, .nav a.on { color: var(--ink); background: var(--bg-alt); }
 @media (min-width: 980px) { .nav { display: flex; } }
@@ -121,6 +121,20 @@ p { margin: 0 0 .9em; }
 }
 .icon-btn:hover { color: var(--ink); border-color: var(--ink-3); }
 .icon-btn svg { width: 18px; height: 18px; }
+/* Liens GitHub (discussion, bug / suggestion) : icône + texte sur grand écran, icône seule en
+   dessous, et dans le menu ☰ sur téléphone où l'en-tête n'a plus la place. */
+.head-link {
+  display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 11px; border-radius: 9px;
+  border: 1px solid var(--line-2); background: var(--surface); color: var(--ink-2);
+  font: 600 13px var(--font); text-decoration: none; white-space: nowrap; flex: 0 0 auto;
+}
+.head-link:hover { color: var(--ink); border-color: var(--ink-3); }
+.head-link svg { width: 17px; height: 17px; flex: 0 0 auto; }
+@media (max-width: 1099px) { .nav a { padding: 7px 6px; } }
+@media (max-width: 1239px) { .head-link { width: 36px; padding: 0; justify-content: center; } .head-link-txt { display: none; } }
+@media (max-width: 559px) { .head-link { display: none; } }
+.mobile-nav .mn-ext { font-weight: 600; color: var(--ink); }
+@media (min-width: 560px) { .mobile-nav .mn-ext { display: none; } }
 .menu-btn { display: inline-grid; }
 @media (min-width: 980px) { .menu-btn { display: none; } }
 .mobile-nav { display: none; border-top: 1px solid var(--line); padding: 10px 16px 16px; }

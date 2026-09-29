@@ -29,7 +29,10 @@
     const md = document.querySelector('meta[name="description"]');
     if (md && md.getAttribute('data-' + l)) md.setAttribute('content', md.getAttribute('data-' + l));
     document.querySelectorAll('[data-lang-btn]').forEach((b) => b.setAttribute('aria-pressed', b.getAttribute('data-lang-btn') === l ? 'true' : 'false'));
-    document.querySelectorAll('[data-aria-fr]').forEach((n) => n.setAttribute('aria-label', n.getAttribute('data-aria-' + l)));
+    document.querySelectorAll('[data-aria-fr]').forEach((n) => {
+      n.setAttribute('aria-label', n.getAttribute('data-aria-' + l));
+      if (n.hasAttribute('title')) n.title = n.getAttribute('data-aria-' + l);   // infobulle dans la même langue
+    });
     if (window.MG4Sim) window.MG4Sim.refresh();
     refreshWidgets();
   }
