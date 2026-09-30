@@ -207,6 +207,14 @@ class StatsFragment : Fragment() {
         )
     }
 
+    /**
+     * Coût d'un trajet, au prix réellement payé sur la période — la même règle que le total de
+     * l'écran. Sans aucune charge enregistrée, on retombe sur le tarif alternatif, qui est une
+     * estimation et non un relevé.
+     */
+    private fun tripCost(trip: Trip, sum: StatsSummary, s: StatsSettings): Float =
+        trip.netEnergyKwh * (sum.averagePricePerKwh ?: s.priceAc)
+
     private fun renderTrips(v: View, s: StatsSettings, sum: StatsSummary, trips: List<Trip>) {
         val ctx = v.context
         val tiles = v.findViewById<LinearLayout>(R.id.stats_trips_tiles)
@@ -229,7 +237,11 @@ class StatsFragment : Fragment() {
         }
         trips.forEach { trip ->
             list.addView(row(ctx, when1 = dateLine(trip.startMs, trip.endMs),
-                when2 = "${duration(trip.durationMs)} · ${km(trip.distance)}",
+                when2 = listOfNotNull(
+                    duration(trip.durationMs),
+                    km(trip.distance),
+                    money(tripCost(trip, sum, s), s).takeIf { it != "—" },
+                ).joinToString(" · "),
                 value1 = conso(trip.consumptionPer100, trip.consumptionApproximate) ?: "—",
                 value2 = listOfNotNull(
                     trip.averageSpeedKmh?.let { "${it.toInt()} km/h" },

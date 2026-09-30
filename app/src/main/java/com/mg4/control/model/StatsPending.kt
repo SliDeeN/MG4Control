@@ -13,6 +13,15 @@ data class PendingTrip(
     val startMs: Long,
     val odometerStart: Int?,
     val energyStart: Float?,
+    /**
+     * Valeur de départ des postes annexes. Comme le total, ils comptent « depuis le contact » et
+     * ne se remettent pas toujours à zéro entre deux trajets rapprochés : seule la différence a
+     * un sens. Voir [StatsTracker] — deux trajets à cinq minutes d'intervalle l'ont prouvé le
+     * 2026-09-30, le second héritant de la régénération du premier.
+     */
+    val climateStart: Float?,
+    val accessoriesStart: Float?,
+    val regenStart: Float?,
     val socStart: Float?,
     /** Première température relevée. Ne sert plus qu'à reprendre un état de l'ancien format. */
     val tempC: Float?,

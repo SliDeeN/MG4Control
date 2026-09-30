@@ -11,6 +11,10 @@ package com.mg4.control.model
  * **Énergie d'un trajet** : différence du compteur entre début et fin, SAUF si la valeur finale est
  * inférieure à l'initiale — signe qu'il a été remis à zéro en cours de route, auquel cas la valeur
  * finale est le total. Cette règle marche que l'application ait démarré avant ou pendant le trajet.
+ * Elle vaut pour **les quatre compteurs** : total, climatisation, accessoires et récupération. Le
+ * 2026-09-30, deux trajets séparés de cinq minutes ont montré que le véhicule ne remet pas toujours
+ * ces compteurs à zéro entre les deux — le second trajet affichait la récupération du premier, au
+ * point que son énergie nette tombait à zéro.
  *
  * **Énergie d'une charge** : différence de pourcentage × capacité utile. C'est la seule méthode qui
  * survit à un boîtier qui s'endort pendant la nuit ; la puissance mesurée, elle, n'existe que si
@@ -106,6 +110,9 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
                 startMs = snapshot.timestampMs,
                 odometerStart = snapshot.odometerKm,
                 energyStart = snapshot.energySinceStartKwh,
+                climateStart = snapshot.climateSinceStartKwh,
+                accessoriesStart = snapshot.accessoriesSinceStartKwh,
+                regenStart = snapshot.regenSinceStartKwh,
                 socStart = snapshot.socPercent,
                 tempC = snapshot.outsideTempC,
                 tempSum = snapshot.outsideTempC ?: 0f,
@@ -285,9 +292,11 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
             endMs = p.lastMs,
             distanceKm = distance,
             energyKwh = energy.roundTenth(),
-            climateKwh = p.climateLast,
-            accessoriesKwh = p.accessoriesLast,
-            regenKwh = p.regenLast,
+            // Différence, comme le total : un compteur qui n'a pas été remis à zéro depuis le
+            // trajet précédent lui ferait sinon porter la récupération du voisin.
+            climateKwh = counterDelta(p.climateStart, p.climateLast)?.roundTenth(),
+            accessoriesKwh = counterDelta(p.accessoriesStart, p.accessoriesLast)?.roundTenth(),
+            regenKwh = counterDelta(p.regenStart, p.regenLast)?.roundTenth(),
             socStart = p.socStart,
             socEnd = p.socLast,
             outsideTempC = p.averageTempC,

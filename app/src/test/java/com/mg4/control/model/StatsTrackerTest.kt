@@ -126,6 +126,28 @@ class StatsTrackerTest {
     }
 
     @Test
+    fun `un poste non remis a zero ne contamine pas le trajet suivant`() {
+        // Cas réel du 2026-09-30 : deux trajets à cinq minutes d'intervalle. Le véhicule n'a pas
+        // remis les compteurs à zéro, et le second héritait de la récupération du premier.
+        val t = StatsTracker()
+        t.onSnapshot(snap(odo = 10_000, energie = 4.5f, regen = 0.7f), ready = true)
+        t.onSnapshot(snap(odo = 10_007, energie = 5.5f, regen = 1.0f), ready = true)
+        val trip = finDe(t.onSnapshot(snap(odo = 10_007, energie = 5.5f, regen = 1.0f), ready = false))!!
+        assertEquals("1,0 − 0,7, pas 1,0", 0.3f, trip.regenKwh!!, 0.01f)
+        assertEquals(1f, trip.energyKwh, 0.01f)
+        assertEquals("le net ne tombe plus à zéro", 0.7f, trip.netEnergyKwh, 0.01f)
+    }
+
+    @Test
+    fun `un poste remis a zero au contact garde sa valeur finale`() {
+        val t = StatsTracker()
+        t.onSnapshot(snap(odo = 10_000, energie = 0f, regen = 0f), ready = true)
+        t.onSnapshot(snap(odo = 10_030, energie = 4.5f, regen = 0.7f), ready = true)
+        val trip = finDe(t.onSnapshot(snap(odo = 10_030, energie = 4.5f, regen = 0.7f), ready = false))!!
+        assertEquals(0.7f, trip.regenKwh!!, 0.01f)
+    }
+
+    @Test
     fun `mettre le contact sans rouler ne cree pas de trajet`() {
         val t = StatsTracker()
         t.onSnapshot(snap(odo = 10_000, energie = 0f, vitesse = 0f), ready = true)
