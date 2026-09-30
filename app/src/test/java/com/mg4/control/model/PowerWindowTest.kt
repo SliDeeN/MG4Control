@@ -107,8 +107,10 @@ class PowerWindowTest {
 
     @Test
     fun `course emulee sans calibration = duree par defaut, dans les deux sens`() {
-        assertEquals(WindowCommand.EMULATED_COURSE_MS, WindowCommand.emulatedCourseMs(Direction.DOWN, null))
-        assertEquals(WindowCommand.EMULATED_COURSE_MS, WindowCommand.emulatedCourseMs(Direction.UP, null))
+        assertEquals(WindowCommand.DEFAULT_COURSE_MS, WindowCommand.emulatedCourseMs(Direction.DOWN, null))
+        assertEquals(WindowCommand.DEFAULT_COURSE_MS, WindowCommand.emulatedCourseMs(Direction.UP, null))
+        // Durée réglée par l'utilisateur : elle remplace la valeur par défaut, pas le calibrage.
+        assertEquals(8_000L, WindowCommand.emulatedCourseMs(Direction.UP, null, 8_000L))
     }
 
     @Test

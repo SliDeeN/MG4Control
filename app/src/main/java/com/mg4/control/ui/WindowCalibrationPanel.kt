@@ -46,7 +46,6 @@ class WindowCalibrationPanel {
     private var save: MaterialButton? = null
 
     /** Prévenu après un enregistrement : la fermeture automatique en dépend pour se déverrouiller. */
-    var onCalibrationSaved: (() -> Unit)? = null
 
     private var window: PowerWindow? = null
     private var step = Step.CLOSE
@@ -110,7 +109,7 @@ class WindowCalibrationPanel {
             }
             val cal = PowerWindows.calibration(ctx, row.window)
             row.status.text = cal?.let { ctx.getString(R.string.win_cal_done, seconds(it.downMs), seconds(it.upMs)) }
-                ?: ctx.getString(R.string.win_cal_none)
+                ?: ctx.getString(R.string.win_cal_general)
             row.start.setText(if (cal != null) R.string.win_cal_redo_row else R.string.win_cal_start)
         }
     }
@@ -218,7 +217,6 @@ class WindowCalibrationPanel {
         Toast.makeText(ctx, R.string.win_cal_saved, Toast.LENGTH_SHORT).show()
         closeWizard("enregistrée")
         refreshRows()
-        onCalibrationSaved?.invoke()
     }
 
     private fun closeWizard(reason: String) {

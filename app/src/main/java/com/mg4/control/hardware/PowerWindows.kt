@@ -129,7 +129,56 @@ object PowerWindows {
 
     private fun calKey(window: PowerWindow, part: String) = "win_cal_${window.name.lowercase(Locale.ROOT)}_$part"
 
-    fun calibration(context: Context, window: PowerWindow): WindowCalibration? {
+    private const val KEY_COURSE_MS = "win_course_ms"
+    private const val KEY_CAL_ADVANCED = "win_cal_advanced"
+
+    /** Durée de course retenue pour les vitres sans calibrage propre, lue une fois par le worker. */
+    @Volatile
+    private var courseMs = WindowCommand.DEFAULT_COURSE_MS
+
+    fun courseMs(context: Context): Long = WindowCommand.clampCourseMs(
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .getLong(KEY_COURSE_MS, WindowCommand.DEFAULT_COURSE_MS))
+
+    fun setCourseMs(context: Context, ms: Long) {
+        val valeur = WindowCommand.clampCourseMs(ms)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putLong(KEY_COURSE_MS, valeur)
+        }
+        courseMs = valeur
+        AppLogger.i(TAG, "durée de course : $valeur ms")
+    }
+
+    /**
+     * Calibrage par vitre, option avancée.
+     *
+     * Éteint, chaque vitre sans capteur suit la durée de course générale, **mais les mesures déjà
+     * faites restent enregistrées** : rallumer l'option les remet en service sans refaire
+     * l'assistant. À la première lecture, l'option s'allume d'elle-même si des mesures existent
+     * déjà — personne ne doit perdre sa précision à la mise à jour.
+     */
+    fun advancedCalibration(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        if (!prefs.contains(KEY_CAL_ADVANCED)) {
+            val dejaCalibre = PowerWindow.entries.any { storedCalibration(context, it) != null }
+            prefs.edit { putBoolean(KEY_CAL_ADVANCED, dejaCalibre) }
+            if (dejaCalibre) AppLogger.i(TAG, "calibrage existant : option avancée activée d'office")
+            return dejaCalibre
+        }
+        return prefs.getBoolean(KEY_CAL_ADVANCED, false)
+    }
+
+    fun setAdvancedCalibration(context: Context, on: Boolean) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
+            putBoolean(KEY_CAL_ADVANCED, on)
+        }
+        AppLogger.i(TAG, "calibrage par vitre ${if (on) "activé" else "désactivé"}")
+        // Les estimateurs portent la calibration : ils doivent repartir de la nouvelle règle.
+        reloadEstimators()
+    }
+
+    /** Mesures enregistrées pour cette vitre, sans tenir compte de l'option avancée. */
+    private fun storedCalibration(context: Context, window: PowerWindow): WindowCalibration? {
         if (window.hasPositionSensor) return null
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val down = prefs.getLong(calKey(window, "down_ms"), 0L)
@@ -137,17 +186,11 @@ object PowerWindows {
         return WindowCalibration(down, up).takeIf { WindowCalibration.isValidMeasure(down) && WindowCalibration.isValidMeasure(up) }
     }
 
-    /** Enregistre la calibration ; l'assistant finit sur une montée complète, la vitre est donc fermée. */
-    /**
-     * Vitres sans capteur dont la calibration manque encore.
-     *
-     * Sert de garde-fou à la fermeture automatique : elle ferme au temps mesuré, une vitre non
-     * calibrée partirait sur la course par défaut sans que personne puisse le vérifier depuis
-     * l'extérieur de la voiture.
-     */
-    fun uncalibrated(context: Context): List<PowerWindow> =
-        PowerWindow.entries.filter { !it.hasPositionSensor && calibration(context, it) == null }
+    /** Calibrage réellement appliqué : null quand l'option avancée est éteinte. */
+    fun calibration(context: Context, window: PowerWindow): WindowCalibration? =
+        if (advancedCalibration(context)) storedCalibration(context, window) else null
 
+    /** Enregistre la calibration ; l'assistant finit sur une montée complète, la vitre est donc fermée. */
     fun saveCalibration(context: Context, window: PowerWindow, cal: WindowCalibration) {
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit {
             putLong(calKey(window, "down_ms"), cal.downMs)
@@ -161,9 +204,19 @@ object PowerWindows {
      * Sur [worker] : charge une fois les calibrations enregistrées. Chaque vitre calibrée part fermée
      * (0 %) : cas le plus courant, sans exiger de course complète au démarrage de l'app.
      */
+    /** Relit calibrations et durée de course après un changement de réglage. */
+    private fun reloadEstimators() {
+        worker.post {
+            estimators.clear()
+            estimatorsLoaded = false
+            loadEstimators()
+        }
+    }
+
     private fun loadEstimators() {
         if (estimatorsLoaded) return
         val context = MG4Hardware.appContext() ?: return
+        courseMs = courseMs(context)
         PowerWindow.entries.forEach { w ->
             val cal = calibration(context, w) ?: return@forEach
             estimators[w] = WindowEstimator(cal).apply { setClosed() }
@@ -231,7 +284,7 @@ object PowerWindows {
      */
     fun closeForCalibration(window: PowerWindow) {
         lastAutoMs.remove(window)
-        worker.post { startAuto(window, Direction.UP, "calibration", minEmulatedMs = WindowCommand.EMULATED_COURSE_MS) }
+        worker.post { startAuto(window, Direction.UP, "calibration", minEmulatedMs = courseMs) }
     }
 
     /** Sur [worker]. Course automatique : native pour le conducteur, émulée pour les autres vitres. */
@@ -251,7 +304,7 @@ object PowerWindows {
      */
     private fun startEmulatedCourse(window: PowerWindow, direction: Direction, origin: String, minMs: Long = 0L) {
         loadEstimators()
-        val ms = maxOf(minMs, WindowCommand.emulatedCourseMs(direction, estimators[window]?.calibration))
+        val ms = maxOf(minMs, WindowCommand.emulatedCourseMs(direction, estimators[window]?.calibration, courseMs))
         val what = if (direction == Direction.UP) "fermeture" else "ouverture"
         startRepeat(window, WindowCommand.manual(direction), ms, finger = false, label = "$origin, $what auto émulée")
     }
@@ -354,7 +407,7 @@ object PowerWindows {
                     // Ajout APRÈS le démarrage : remplacer une course d'une séquence précédente ne
                     // doit pas compter comme l'interruption de celle-ci.
                     startRepeat(w, WindowCommand.MANUAL_UP,
-                        WindowCommand.emulatedCourseMs(Direction.UP, estimators[w]?.calibration),
+                        WindowCommand.emulatedCourseMs(Direction.UP, estimators[w]?.calibration, courseMs),
                         finger = false, label = origin, autoClose = true)
                     autoClosePending += w
                 }

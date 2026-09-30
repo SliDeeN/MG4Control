@@ -49,8 +49,22 @@ object WindowCommand {
 
     /** Au-delà, un appui court n'est plus pris pour un « stop » : la course auto native est finie. */
     const val AUTO_TRAVEL_MS = 6_000L
-    /** Durée d'une course auto émulée tant que la vitre n'est pas calibrée. */
-    const val EMULATED_COURSE_MS = AUTO_TRAVEL_MS
+
+    /**
+     * Durée d'une course auto émulée pour une vitre sans calibrage propre — le cas normal.
+     *
+     * Cinq secondes : la valeur qu'emploie winclose sur MG4 sans jamais rien mesurer. Réglable par
+     * l'utilisateur, parce qu'une vitre arrière fatiguée est plus lente ; trop courte, elle reste
+     * entrouverte, et rien ne peut le signaler puisque l'application croit avoir fini.
+     */
+    const val DEFAULT_COURSE_MS = 5_000L
+    const val MIN_COURSE_MS = 2_000L
+    const val MAX_COURSE_MS = 10_000L
+    const val COURSE_STEP_MS = 500L
+
+    /** Ramène une durée saisie dans les bornes, sur un pas entier. */
+    fun clampCourseMs(ms: Long): Long =
+        (ms / COURSE_STEP_MS * COURSE_STEP_MS).coerceIn(MIN_COURSE_MS, MAX_COURSE_MS)
     /**
      * Plus grande position valide. Le service véhicule SWI68 rejette toute lecture au-delà
      * (`max_vehicle_window_get` = 100) ; en voiture, 127.5 et 255 restent figés sur les vitres
@@ -82,11 +96,15 @@ object WindowCommand {
     /** Position utilisable, ou null (illisible, ou valeur de remplacement d'une vitre sans capteur). */
     fun position(raw: Float?): Float? = raw?.takeIf { it in 0f..POSITION_MAX }
 
-    /** Durée d'une course émulée : la course calibrée dans ce sens si elle existe, sinon la valeur par défaut. */
-    fun emulatedCourseMs(direction: Direction, calibration: WindowCalibration?): Long = when (direction) {
+    /** Durée d'une course émulée : la course calibrée dans ce sens si elle existe, sinon [defaultMs]. */
+    fun emulatedCourseMs(
+        direction: Direction,
+        calibration: WindowCalibration?,
+        defaultMs: Long = DEFAULT_COURSE_MS,
+    ): Long = when (direction) {
         Direction.DOWN -> calibration?.emulatedOpenMs
         Direction.UP   -> calibration?.emulatedCloseMs
-    } ?: EMULATED_COURSE_MS
+    } ?: defaultMs
 
     /**
      * Une fermeture émulée n'a pas l'anti-pincement de la course native : elle ne continue que

@@ -495,21 +495,17 @@
     <string name="shortcuts_action_volume_down">Volume -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="win_hint">Short press: full open or close (press again to stop) · Long press: the window moves while your finger stays down</string>
     <string name="win_close_warning">Automatic closing by the app has no anti-pinch protection (except the driver window): watch the window. It stops if you leave the tab.</string>
     <string name="win_front_left">Front left</string>
     <string name="win_front_right">Front right</string>
     <string name="win_rear_left">Rear left</string>
     <string name="win_rear_right">Rear right</string>
-    <string name="win_close">Close</string>
-    <string name="win_open">Open</string>
     <string name="win_all_close">Close all</string>
     <string name="win_all_open">Open all</string>
     <string name="win_auto_title">Automatic closing</string>
     <string name="win_auto_label">Close the windows when leaving the car</string>
     <string name="win_auto_desc">Car in P, once armed by the conditions below: when the car leaves READY (driver door opened or car switched off), all windows close after the chosen delay. Going back to READY before then cancels.</string>
     <string name="win_auto_warning">No anti-pinch protection on windows other than the driver\'s: nobody near the windows when leaving.</string>
-    <string name="win_auto_need_cal">Calibrate the windows first, in the section above: closing on exit relies on the measured travel time. Missing: %1$s.</string>
     <string name="win_auto_arming_title">Arming: after driving</string>
     <string name="win_auto_speed_label">Speed reached</string>
     <string name="win_auto_time_label">Car switched on for</string>
@@ -522,14 +518,20 @@
     <string name="win_auto_beep_volume_label">Beep volume</string>
     <string name="win_auto_beep_value" translatable="false">%1$d %%</string>
     <string name="win_cal_title">Window calibration</string>
+    <string name="win_course_title">Travel time</string>
+    <string name="win_course_label">Full travel</string>
+    <string name="win_course_hint">How long the app drives the windows without a sensor, for a full open or close. The driver window keeps its own automatic travel. Too short, and the window stays ajar.</string>
+    <string name="win_cal_advanced_title">Advanced</string>
+    <string name="win_cal_advanced_label">Per-window calibration</string>
+    <string name="win_cal_advanced_desc">Measures each window\'s real travel, more accurate than the general time. Measurements are kept if you turn the option off.</string>
+    <string name="win_cal_general">General time</string>
     <string name="win_automation_title">Power windows</string>
     <string name="win_section_command">Controls</string>
-    <string name="win_cal_limits">What the estimate cannot see: the door switches (the car does not report them, so the displayed position stays wrong until the next command from the app) and the state at launch (every window is assumed closed each time the app starts).</string>
+    <string name="win_cal_limits">The app cannot see the door switches: an emulated travel always runs for the measured time, whatever position the window started from.</string>
     <string name="shortcuts_action_windows_open">Open all windows</string>
     <string name="shortcuts_action_windows_close">Close all windows</string>
-    <string name="win_cal_hint">Windows without a sensor: the app times a full travel, then estimates the position after each command.</string>
+    <string name="win_cal_hint">Windows without a sensor: the app times a full travel and uses it as that window\'s travel time.</string>
     <string name="win_cal_sensor">Built-in sensor</string>
-    <string name="win_cal_none">Not calibrated</string>
     <string name="win_cal_done">Calibrated · down %1$s s · up %2$s s</string>
     <string name="win_cal_start">Calibrate</string>
     <string name="win_cal_redo_row">Redo</string>
@@ -551,11 +553,6 @@
     <string name="win_cal_redo">Start again</string>
     <string name="win_cal_save">Save</string>
     <string name="win_cal_saved">Calibration saved</string>
-    <string name="win_value_estimated">≈ %1$d %% open</string>
-    <string name="win_value_estimate_unknown">Position unknown: do a full travel</string>
-    <string name="win_value">Read value: %1$s</string>
-    <string name="win_value_unknown">unreadable</string>
-    <string name="win_value_no_sensor">No sensor (raw %1$s)</string>
 
     <!-- ══════════ Statistiques : trajets, recharges, coût ══════════ -->
     <string name="nav_stats">Statistics</string>

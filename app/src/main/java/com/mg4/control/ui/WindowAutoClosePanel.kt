@@ -22,7 +22,6 @@ class WindowAutoClosePanel {
 
     private var root: View? = null
     private var enableSwitch: Switch? = null
-    private var calNotice: TextView? = null
     private var paramsGroup: View? = null
     private var speedSwitch: Switch? = null
     private var timeSwitch: Switch? = null
@@ -59,18 +58,14 @@ class WindowAutoClosePanel {
         anyButton = view.findViewById(R.id.btn_win_auto_any)
         allButton = view.findViewById(R.id.btn_win_auto_all)
 
-        calNotice = view.findViewById(R.id.win_auto_cal_notice)
         paramsGroup = view.findViewById(R.id.row_win_auto_config)
         enableSwitch = view.findViewById<Switch>(R.id.switch_win_autoclose).apply {
             isChecked = WindowAutoClose.isEnabled(context)
             setOnCheckedChangeListener { sw, on ->
                 WindowAutoClose.setEnabled(sw.context, on)
-                // Option relâchée sans calibration complète : le verrou reprend la main.
-                refreshCalibrationGate()
                 render()
             }
         }
-        refreshCalibrationGate()
 
         val s = WindowAutoClose.settings(view.context)
         requireBoth = s.requireBoth
@@ -131,25 +126,6 @@ class WindowAutoClosePanel {
         beep = beepSwitch?.isChecked == true,
         beepVolume = beepSlider?.value?.toInt() ?: WindowAutoClose.BEEP_VOLUME_DEFAULT,
     )
-
-    /**
-     * Verrouille l'activation tant que les vitres sans capteur ne sont pas calibrées : la
-     * fermeture en quittant ne connaît la durée de course que par la calibration.
-     *
-     * Le verrou ne porte que sur l'ACTIVATION. Une option déjà active reste débrayable — sinon
-     * un utilisateur l'ayant activée avant ce garde-fou se retrouverait sans moyen de l'arrêter.
-     */
-    fun refreshCalibrationGate() {
-        val ctx = root?.context ?: return
-        val manquantes = PowerWindows.uncalibrated(ctx)
-        calNotice?.visibility = if (manquantes.isEmpty()) View.GONE else View.VISIBLE
-        if (manquantes.isNotEmpty()) calNotice?.text = ctx.getString(
-            R.string.win_auto_need_cal,
-            manquantes.joinToString(", ") { ctx.getString(WindowsPanel.nameRes(it)) })
-        val sw = enableSwitch ?: return
-        sw.isEnabled = manquantes.isEmpty() || sw.isChecked
-        sw.alpha = if (sw.isEnabled) 1f else 0.4f
-    }
 
     /** Un Slider refuse une valeur qui ne tombe pas sur un pas : on l'y ramène. */
     private fun beepStep(volume: Int): Int =

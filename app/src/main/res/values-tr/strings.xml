@@ -495,21 +495,17 @@
     <string name="shortcuts_action_volume_down">Ses -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="win_hint">Kısa basış: tamamen aç ya da kapat (durdurmak için yeniden basın) · Uzun basış: parmağınız basılı kaldıkça cam hareket eder</string>
     <string name="win_close_warning">Uygulamanın kendiliğinden kapatmasında sıkışma koruması yoktur (sürücü camı dışında): cama dikkat edin. Sekmeden çıkarsanız durur.</string>
     <string name="win_front_left">Ön sol</string>
     <string name="win_front_right">Ön sağ</string>
     <string name="win_rear_left">Arka sol</string>
     <string name="win_rear_right">Arka sağ</string>
-    <string name="win_close">Kapat</string>
-    <string name="win_open">Aç</string>
     <string name="win_all_close">Tümünü kapat</string>
     <string name="win_all_open">Tümünü aç</string>
     <string name="win_auto_title">Kendiliğinden kapatma</string>
     <string name="win_auto_label">Araçtan inerken camları kapat</string>
     <string name="win_auto_desc">Araç P konumundayken ve aşağıdaki koşullarla devreye alınmışsa: araç READY durumundan çıkınca (sürücü kapısı açıldığında ya da araç kapatıldığında) tüm camlar seçilen gecikmenin ardından kapanır. O süre dolmadan READY durumuna dönülürse iptal olur.</string>
     <string name="win_auto_warning">Sürücü camı dışındaki camlarda sıkışma koruması yoktur: inerken camların yakınında kimse olmasın.</string>
-    <string name="win_auto_need_cal">Önce yukarıdaki bölümden camları kalibre edin: inişte kapatma, ölçülen hareket süresine dayanır. Eksik: %1$s.</string>
     <string name="win_auto_arming_title">Devreye alma: sürüşten sonra</string>
     <string name="win_auto_speed_label">Ulaşılan hız</string>
     <string name="win_auto_time_label">Aracın açık kaldığı süre</string>
@@ -522,14 +518,20 @@
     <string name="win_auto_beep_volume_label">Bip ses düzeyi</string>
     <string name="win_auto_beep_value" translatable="false">%1$d %%</string>
     <string name="win_cal_title">Cam kalibrasyonu</string>
+    <string name="win_course_title">Hareket süresi</string>
+    <string name="win_course_label">Tam hareket</string>
+    <string name="win_course_hint">Sensörü olmayan camlara gönderilen darbenin süresi, tam açma ya da kapatma için. Sürücü camı kendi otomatik hareketini korur. Çok kısa olursa cam aralık kalır.</string>
+    <string name="win_cal_advanced_title">Gelişmiş</string>
+    <string name="win_cal_advanced_label">Cam başına kalibrasyon</string>
+    <string name="win_cal_advanced_desc">Her camın gerçek hareketini ölçer; genel süreden daha isabetlidir. Seçeneği kapatırsanız ölçümler saklı kalır.</string>
+    <string name="win_cal_general">Genel süre</string>
     <string name="win_automation_title">Elektrikli camlar</string>
     <string name="win_section_command">Kumandalar</string>
-    <string name="win_cal_limits">Tahminin göremedikleri: kapı düğmeleri (araç bunları bildirmez, bu yüzden uygulamadan gelecek bir sonraki komuta kadar gösterilen konum yanlış kalır) ve açılıştaki durum (uygulama her başladığında tüm camlar kapalı varsayılır).</string>
+    <string name="win_cal_limits">Uygulama kapı düğmelerini göremez: taklit edilen bir hareket, cam hangi konumda başlarsa başlasın, hep ölçülen süre kadar sürer.</string>
     <string name="shortcuts_action_windows_open">Tüm camları aç</string>
     <string name="shortcuts_action_windows_close">Tüm camları kapat</string>
-    <string name="win_cal_hint">Sensörü olmayan camlar: uygulama tam bir hareketin süresini ölçer, sonra her komuttan sonra konumu tahmin eder.</string>
+    <string name="win_cal_hint">Sensörü olmayan camlar: uygulama tam bir hareketi süreyle ölçer ve bunu o camın hareket süresi olarak kullanır.</string>
     <string name="win_cal_sensor">Yerleşik sensör</string>
-    <string name="win_cal_none">Kalibre edilmedi</string>
     <string name="win_cal_done">Kalibre edildi · iniş %1$s sn · çıkış %2$s sn</string>
     <string name="win_cal_start">Kalibre et</string>
     <string name="win_cal_redo_row">Yinele</string>
@@ -551,11 +553,6 @@
     <string name="win_cal_redo">Yeniden başla</string>
     <string name="win_cal_save">Kaydet</string>
     <string name="win_cal_saved">Kalibrasyon kaydedildi</string>
-    <string name="win_value_estimated">≈ %1$d %% açık</string>
-    <string name="win_value_estimate_unknown">Konum bilinmiyor: tam bir hareket yapın</string>
-    <string name="win_value">Okunan değer: %1$s</string>
-    <string name="win_value_unknown">okunamıyor</string>
-    <string name="win_value_no_sensor">Sensör yok (ham %1$s)</string>
 
     <!-- ══════════ Statistiques : trajets, recharges, coût ══════════ -->
     <string name="nav_stats">İstatistikler</string>
