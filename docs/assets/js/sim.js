@@ -138,7 +138,10 @@
         advOn: false, advService: false,
         adv: []                    // { key, press, action, scope (profil ; null = tous), app?, profileId? (cible) }
       },
+      // Mesures du calibrage par vitre (ms), conservées même quand l'option avancée est éteinte.
       winCal: { FL: 'sensor', FR: null, RL: null, RR: null },
+      winCalAdv: false,            // option « Calibrage par vitre » (PowerWindows.advancedCalibration)
+      winCourse: 5000,             // durée de course générale, 2 à 10 s par pas de 0,5 s
       winAuto: { on: false, speedOn: true, speed: 20, timeOn: true, time: 5, both: false, delay: 5, beep: true, beepVol: 60 },
       stats: { enabled: false, period: 30, currency: '€', priceAc: 0.187, priceDc: 0.45, capacity: 62, retention: 90,
                trips: sample.trips, charges: sample.charges },
@@ -379,18 +382,29 @@
   }
 
   // ── Vitres électriques : moteur de déplacement ───────────────────────────
-  const WIN_TRAVEL_MS = 6000;       // course automatique complète (PowerWindow.AUTO_TRAVEL_MS)
+  // La position n'est plus affichée (l'app ne la montre plus) : elle sert à l'assistant de calibration.
+  const WIN_TRAVEL_MS = 6000;       // course automatique native du conducteur (WindowCommand.AUTO_TRAVEL_MS)
   const winMotion = {};
   let winTimer = null;
+  /**
+   * Durée d'une course complète, comme PowerWindows : course native pour le conducteur ; pour les
+   * autres, la mesure du calibrage par vitre si l'option avancée est allumée, sinon la durée générale.
+   */
+  function winCourseMs(w, dir) {
+    const cal = state.winCal[w];
+    if (cal === 'sensor') return WIN_TRAVEL_MS;
+    if (state.winCalAdv && cal) return dir > 0 ? cal.down : cal.up;
+    return state.winCourse;
+  }
   function moveWindow(w, dir) {
     if (!dir) delete winMotion[w]; else winMotion[w] = dir;
     if (!winTimer && Object.keys(winMotion).length) winTimer = setInterval(winTick, 150);
     commit();
   }
   function winTick() {
-    const step = 100 * 150 / WIN_TRAVEL_MS;
     Object.keys(winMotion).forEach((w) => {
-      const pos = clamp(car().windows[w] + winMotion[w] * step, 0, 100);
+      const dir = winMotion[w];
+      const pos = clamp(car().windows[w] + dir * 100 * 150 / winCourseMs(w, dir), 0, 100);
       car().windows[w] = Math.round(pos * 10) / 10;
       if (pos <= 0 || pos >= 100) delete winMotion[w];
     });
@@ -398,7 +412,13 @@
     commit();
   }
   const allWindows = (dir) => WINDOWS.forEach((w) => moveWindow(w, dir));
-  const winCalibrated = () => WINDOWS.every((w) => state.winCal[w]);
+  /** Note du simulateur : dans la maquette on ne voit pas les vitres, on dit donc ce qui part. */
+  function winAllNote(dir) {
+    const calibrated = state.winCalAdv && WINDOWS.some((w) => state.winCal[w] && state.winCal[w] !== 'sensor');
+    return (dir < 0 ? L('Toutes les vitres se ferment', 'All windows are closing') : L('Toutes les vitres s\'ouvrent', 'All windows are opening')) +
+      L(' · conducteur : course d\'origine · autres : ', ' · driver: native travel · others: ') +
+      (calibrated ? L('durée mesurée, sinon ', 'measured time, otherwise ') : '') + fmtS(state.winCourse) + ' s';
+  }
   function winArmed() {
     const a = state.winAuto, c = car();
     const speedOk = a.speedOn && c.maxSpeed >= a.speed;
@@ -423,14 +443,13 @@
       }
       const a = state.winAuto;
       if (a.on) {
-        if (!winCalibrated()) trace.push(L('fermeture des vitres verrouillée : calibration incomplète', 'window closing locked: calibration incomplete'));
-        else if (c.speed > 0) trace.push(L('vitres : voiture pas en P', 'windows: car not in P'));
+        if (c.speed > 0) trace.push(L('vitres : voiture pas en P', 'windows: car not in P'));
         else if (!winArmed()) trace.push(L('fermeture des vitres non armée (conditions de roulage non atteintes)', 'window closing not armed (driving conditions not met)'));
         else {
           let left = a.delay;
           trace.push(L('fermeture des vitres dans ', 'windows closing in ') + left + ' s');
           const step = () => {
-            if (left <= 0) { leaveTimer = null; allWindows(-1); hud(L('Fermeture automatique : toutes les vitres se ferment', 'Auto close: all windows are closing')); return; }
+            if (left <= 0) { leaveTimer = null; allWindows(-1); hud(L('Fermeture automatique : ', 'Auto close: ') + winAllNote(-1)); return; }
             hud((a.beep ? '🔔 ' : '') + L('Vitres : fermeture dans ', 'Windows: closing in ') + left + ' s');
             left -= 1;
             leaveTimer = setTimeout(step, 1000);
@@ -1409,42 +1428,28 @@
       return '<div class="a-page"><div class="a-scroll"><div class="a-stack">' + card1 + card2 + card3 + '</div></div><button class="b close" data-a="close">' + esc(S('nav_close')) + '</button></div>';
     }
 
-    /** Carte « Vitres électriques », repliée par défaut. */
+    /**
+     * Carte « Vitres électriques », repliée par défaut. Même ordre que automation_card_windows.xml :
+     * commande (toutes les vitres), durée de course, fermeture automatique, puis l'option avancée
+     * « Calibrage par vitre ». Ni commande vitre par vitre ni position affichée, comme dans l'app.
+     */
     windowsCard() {
-      const u = this.ui, c = car(), a = state.winAuto;
+      const u = this.ui, a = state.winAuto;
       let h = '<div class="a-card" data-hl="windows"><div class="fold-head" data-a="foldW"><span class="a-title">' + esc(S('win_automation_title')) + '</span><span class="chev' + (u.winOpen ? ' open' : '') + '">' + ICON_CHEV + '</span></div>';
       if (!u.winOpen) return h + '</div>';
-      const pos = (w) => {
-        const v = Math.round(c.windows[w]);
-        if (state.winCal[w] === 'sensor') return S('win_value', v + ' %');
-        if (state.winCal[w]) return S('win_value_estimated', v);
-        return S('win_value_no_sensor', winMotion[w] ? '…' : '0');
-      };
-      const tile = (w) => '<div class="win-tile" data-hl="win-tile"><div class="win-top"><b>' + esc(S(WIN_KEY[w])) + '</b><span class="win-pos">' + esc(pos(w)) + '</span></div>' +
-        '<div class="win-bar"><i style="height:' + (100 - c.windows[w]) + '%"></i></div>' +
-        // Comme dash_window_tile.xml : boutons à icône seule (flèche de 40 dp), libellé en description.
-        '<div class="a-grid g2"><button class="b win-btn" data-win="' + w + ':-1" title="' + esc(S('win_close')) + '" aria-label="' + esc(S('win_close')) + '">' + winSvg('up') + '</button><button class="b win-btn" data-win="' + w + ':1" title="' + esc(S('win_open')) + '" aria-label="' + esc(S('win_open')) + '">' + winSvg('down') + '</button></div></div>';
-      h += '<div class="a-sub" style="margin-top:10px">' + esc(S('win_section_command')) + '</div><div class="a-desc">' + esc(S('win_hint')) + '</div>' +
-        '<div class="a-desc" style="color:var(--dash-warn);margin-top:4px">⚠ ' + esc(S('win_close_warning')) + '</div>' +
-        '<div class="win-grid" data-hl="win-command">' + WINDOWS.map(tile).join('') + '</div>' +
-        '<div class="a-grid g2" style="margin-top:6px"><button class="b win-all" data-a="winAll" data-v="-1">' + winSvg('allUp') + esc(S('win_all_close')) + '</button><button class="b win-all" data-a="winAll" data-v="1">' + winSvg('allDown') + esc(S('win_all_open')) + '</button></div>';
-      // Calibration
-      const calRow = (w) => {
-        const cal = state.winCal[w];
-        const st = cal === 'sensor' ? S('win_cal_sensor') : cal ? S('win_cal_done', fmtS(cal.down), fmtS(cal.up)) : S('win_cal_none');
-        return '<div class="a-row"><span class="lbl">' + esc(S(WIN_KEY[w])) + '<small>' + esc(st) + '</small></span>' +
-          (cal === 'sensor' ? '' : '<button class="b sm' + (cal ? '' : ' primary') + '" style="padding:0 16px" data-a="calStart" data-v="' + w + '">' + esc(S(cal ? 'win_cal_redo_row' : 'win_cal_start')) + '</button>') + '</div>';
-      };
-      h += '<div class="a-sec" style="margin-top:10px" data-hl="win-cal"><div class="a-h">' + esc(S('win_cal_title')) + '</div><div class="a-desc">' + esc(S('win_cal_hint')) + '</div>' +
-        WINDOWS.map(calRow).join('') + '<div class="a-desc" style="font-size:12px">' + esc(S('win_cal_limits')) + '</div></div>';
-      // Fermeture automatique
-      const missing = WINDOWS.filter((w) => !state.winCal[w]).map((w) => S(WIN_KEY[w]));
-      const locked = missing.length > 0;
+      // Commande
+      h += '<div data-hl="win-command"><div class="a-sub" style="margin-top:10px">' + esc(S('win_section_command')) + '</div>' +
+        '<div class="a-desc" style="color:var(--dash-warn)">⚠ ' + esc(S('win_close_warning')) + '</div>' +
+        '<div class="a-grid g2" style="margin-top:8px"><button class="b win-all" data-a="winAll" data-v="-1">' + winSvg('allUp') + esc(S('win_all_close')) + '</button><button class="b win-all" data-a="winAll" data-v="1">' + winSvg('allDown') + esc(S('win_all_open')) + '</button></div></div>';
+      // Durée de course (secondes côté curseur, millisecondes dans l'état)
+      h += '<div class="a-sec" style="margin-top:10px" data-hl="win-course"><div class="a-h">' + esc(S('win_course_title')) + '</div>' +
+        '<div class="a-row"><span class="lbl" style="flex:0 0 190px">' + esc(S('win_course_label')) + '</span><div style="flex:1">' + range('winCourse', 2, 10, state.winCourse / 1000, false, '', 0.5) + '</div><span class="a-val" data-out="winCourse">' + esc(S('win_cal_seconds', fmtS(state.winCourse))) + '</span></div>' +
+        '<div class="a-desc">' + esc(S('win_course_hint')) + '</div></div>';
+      // Fermeture automatique (plus de verrou de calibration : la durée de course suffit)
       h += '<div class="a-sec" style="margin-top:10px" data-hl="win-auto"><div class="a-h">' + esc(S('win_auto_title')) + '</div>' +
-        '<div class="a-row"><span class="lbl">' + esc(S('win_auto_label')) + '<small>' + esc(S('win_auto_desc')) + '</small></span>' + sw(a.on && !locked, 'winAutoOn', locked) + '</div>' +
-        (locked ? '<div class="a-desc" style="color:var(--dash-warn)">' + esc(S('win_auto_need_cal', missing.join(', '))) + '</div>' : '') +
+        '<div class="a-row"><span class="lbl">' + esc(S('win_auto_label')) + '<small>' + esc(S('win_auto_desc')) + '</small></span>' + sw(a.on, 'winAutoOn') + '</div>' +
         '<div class="a-desc" style="color:var(--dash-danger)">⚠ ' + esc(S('win_auto_warning')) + '</div>';
-      if (a.on && !locked) {
+      if (a.on) {
         h += '<div class="a-sub" style="margin-top:8px">' + esc(S('win_auto_arming_title')) + '</div>' +
           '<div class="a-row">' + sw(a.speedOn, 'waSpeedOn') + '<span class="lbl" style="flex:0 0 190px">' + esc(S('win_auto_speed_label')) + '</span><div style="flex:1">' + range('waSpeed', 5, 50, a.speed, !a.speedOn, '', 5) + '</div><span class="a-val" data-out="waSpeed">' + a.speed + ' km/h</span></div>' +
           '<div class="a-row">' + sw(a.timeOn, 'waTimeOn') + '<span class="lbl" style="flex:0 0 190px">' + esc(S('win_auto_time_label')) + '</span><div style="flex:1">' + range('waTime', 1, 15, a.time, !a.timeOn) + '</div><span class="a-val" data-out="waTime">' + a.time + ' min</span></div>' +
@@ -1453,7 +1458,19 @@
           '<div class="a-row"><span class="lbl">' + esc(S('win_auto_beep_label')) + '<small>' + esc(S('win_auto_beep_desc')) + '</small></span>' + sw(a.beep, 'waBeep') + '</div>' +
           (a.beep ? '<div class="a-row"><span class="lbl" style="flex:0 0 236px">' + esc(S('win_auto_beep_volume_label')) + '</span><div style="flex:1">' + range('waBeepVol', 0, 100, a.beepVol) + '</div><span class="a-val" data-out="waBeepVol">' + a.beepVol + ' %</span></div>' : '');
       }
-      return h + '</div></div>';
+      h += '</div>';
+      // Avancé : calibrage par vitre. Éteint, les mesures restent enregistrées mais ne servent plus.
+      const calRow = (w) => {
+        const cal = state.winCal[w];
+        const st = cal === 'sensor' ? S('win_cal_sensor') : cal ? S('win_cal_done', fmtS(cal.down), fmtS(cal.up)) : S('win_cal_general');
+        return '<div class="a-row"><span class="lbl">' + esc(S(WIN_KEY[w])) + '<small>' + esc(st) + '</small></span>' +
+          (cal === 'sensor' ? '' : '<button class="b sm' + (cal ? '' : ' primary') + '" style="padding:0 16px" data-a="calStart" data-v="' + w + '">' + esc(S(cal ? 'win_cal_redo_row' : 'win_cal_start')) + '</button>') + '</div>';
+      };
+      h += '<div class="a-sec" style="margin-top:10px" data-hl="win-cal"><div class="a-h">' + esc(S('win_cal_advanced_title')) + '</div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('win_cal_advanced_label')) + '<small>' + esc(S('win_cal_advanced_desc')) + '</small></span>' + sw(state.winCalAdv, 'winCalAdv') + '</div>' +
+        (state.winCalAdv ? '<div class="a-desc">' + esc(S('win_cal_hint')) + '</div><div class="a-desc" style="font-size:12px">' + esc(S('win_cal_limits')) + '</div>' + WINDOWS.map(calRow).join('') : '') +
+        '</div>';
+      return h + '</div>';
     }
 
     // ── Audio ──────────────────────────────────────────────────────────────
@@ -1852,19 +1869,8 @@
       this.app.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && e.target.matches('input.a-input')) e.target.blur();
       });
-      // Vitres : appui court = course complète (un nouvel appui l'arrête) ;
-      // appui maintenu (> 400 ms) = la vitre bouge tant que le doigt reste posé.
+      // Assistant de calibration : la vitre bouge tant que le bouton reste enfoncé, et l'appui est chronométré.
       this.app.addEventListener('pointerdown', (e) => {
-        const w = e.target.closest('[data-win]');
-        if (w) {
-          e.preventDefault();
-          const [win, dir] = w.getAttribute('data-win').split(':');
-          const wasMoving = !!winMotion[win];
-          this._winPress = { win, dir: +dir, long: false, wasMoving };
-          clearTimeout(this._winPressT);
-          this._winPressT = setTimeout(() => { if (this._winPress) { this._winPress.long = true; moveWindow(win, +dir); } }, 400);
-          return;
-        }
         const h = e.target.closest('[data-hold]');
         const d = this.ui.dialog;
         if (h && d && d.type === 'cal') {
@@ -1874,14 +1880,6 @@
         }
       });
       const release = () => {
-        const p = this._winPress;
-        if (p) {
-          clearTimeout(this._winPressT); this._winPress = null;
-          if (p.long) moveWindow(p.win, 0);
-          else if (p.wasMoving) moveWindow(p.win, 0);
-          else moveWindow(p.win, p.dir);
-          return;
-        }
         const d = this.ui.dialog;
         if (d && d.type === 'cal' && d.holding) {
           const ms = Math.round(performance.now() - d.holding);
@@ -1897,7 +1895,7 @@
       };
       this.app.addEventListener('pointerup', release);
       this.app.addEventListener('pointercancel', release);
-      window.addEventListener('pointerup', () => { if (this._winPress || (this.ui.dialog && this.ui.dialog.holding)) release(); });
+      window.addEventListener('pointerup', () => { if (this.ui.dialog && this.ui.dialog.holding) release(); });
     }
 
     act(a, v, el) {
@@ -2117,8 +2115,9 @@
           it.action = d.action; it.scope = d.scope || null; u.dialog = null; r(); return this.toast(S('adv_sc_updated'));
         }
         case 'foldW': u.winOpen = !u.winOpen; return this.render();
-        case 'winAll': allWindows(+v); return;
+        case 'winAll': allWindows(+v); hud(winAllNote(+v)); return;
         case 'winAutoOn': state.winAuto.on = !state.winAuto.on; return r();
+        case 'winCalAdv': state.winCalAdv = !state.winCalAdv; return r();
         case 'waSpeedOn': case 'waTimeOn': {
           const wa = state.winAuto, f = a === 'waSpeedOn' ? 'speedOn' : 'timeOn';
           const other = f === 'speedOn' ? 'timeOn' : 'speedOn';
@@ -2195,6 +2194,7 @@
         case 'waTime': state.winAuto.time = +t.value; return commit();
         case 'waDelay': state.winAuto.delay = +t.value; return commit();
         case 'waBeepVol': state.winAuto.beepVol = +t.value; return commit();
+        case 'winCourse': state.winCourse = Math.round(+t.value * 1000); return commit();
         case 'stCurrency': state.stats.currency = (t.value || '').slice(0, 3) || '€'; return commit();
         case 'stPriceAc': case 'stPriceDc': {
           const x = parseFloat(t.value);
@@ -2289,7 +2289,8 @@
           // Révèle la page « Cycle regen » : la fonction doit être attribuée quelque part.
           if (!this.assigned('REGEN_CYCLE')) { state.sc.map.btn2_single = 'REGEN_CYCLE'; delete state.sc.extra.btn2_single; }
           u.screen = 'shortcuts'; u.tabs.sc = 'regen'; return commit();
-        case 'calibrate': u.screen = 'automation'; u.winOpen = true; u.dialog = { type: 'cal', w: 'FR', step: 1 }; return this.render();
+        // L'assistant vit dans l'option avancée « Calibrage par vitre » : on l'allume d'abord.
+        case 'calibrate': state.winCalAdv = true; u.screen = 'automation'; u.winOpen = true; u.dialog = { type: 'cal', w: 'FR', step: 1 }; return commit();
         case 'statsOn': state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 0; return commit();
         case 'garageOn': state.settings.garage = true; u.screen = 'settings'; u.tabs.set = 2; return commit();
         default: return;
@@ -2315,6 +2316,7 @@
       case 'waTime': return v + ' min';
       case 'waDelay': return v + ' s';
       case 'waBeepVol': return v + ' %';
+      case 'winCourse': return S('win_cal_seconds', fmtS(+v * 1000));
       default: return String(v);
     }
   }
@@ -2329,10 +2331,8 @@
   };
   const airSvg = (k) => '<svg class="air-ico" viewBox="0 0 960 960" fill="currentColor" aria-hidden="true"><path d="' + AIR_PATH[k] + '"/></svg>';
   const AIR_ICON = { face: airSvg('face'), feet: airSvg('feet'), ws: airSvg('ws'), rear: airSvg('rear') };
-  // Vitres (res/drawable/ic_window_*.xml) : Material Symbols keyboard_arrow_up/down et keyboard_double_arrow_up/down.
+  // Tout fermer / Tout ouvrir (res/drawable/ic_window_all_*.xml) : Material Symbols keyboard_double_arrow_up/down.
   const WIN_PATH = {
-    up: 'M480,432L296,616L240,560L480,320L720,560L664,616L480,432Z',
-    down: 'M480,616L240,376L296,320L480,504L664,320L720,376L480,616Z',
     allUp: 'M296,736L240,680L480,440L720,680L664,736L480,553L296,736ZM296,496L240,440L480,200L720,440L664,496L480,313L296,496Z',
     allDown: 'M480,760L240,520L296,464L480,647L664,464L720,520L480,760ZM480,520L240,280L296,224L480,407L664,224L720,280L480,520Z',
   };

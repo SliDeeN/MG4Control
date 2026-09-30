@@ -703,31 +703,31 @@
   <div class="grp-head">
     <div class="sec-kicker"><span data-l="fr">Automatisation</span><span data-l="en">Automation</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></div>
     <h2><span data-l="fr">Vitres électriques</span><span data-l="en">Power windows</span></h2>
-    <p data-l="fr">Les quatre vitres pilotées depuis l'écran, avec fermeture automatique en quittant la voiture. Sur les six firmwares.</p>
-    <p data-l="en">All four windows controlled from the screen, with automatic closing when you leave the car. On all six firmwares.</p>
+    <p data-l="fr">Toutes les vitres fermées ou ouvertes d'un appui depuis l'écran, et fermées automatiquement quand vous quittez la voiture. Sur les six firmwares.</p>
+    <p data-l="en">Every window closed or opened in one tap from the screen, and closed automatically when you leave the car. On all six firmwares.</p>
     <div class="demo-bar">
       <span class="lbl"><span data-l="fr">Essayer :</span><span data-l="en">Try:</span></span>
       <button type="button" data-demo-btn="calibrate"><span data-l="fr">Calibrer une vitre</span><span data-l="en">Calibrate a window</span></button>
       <button type="button" data-demo-btn="leave"><span data-l="fr">🚪 Quitter la voiture</span><span data-l="en">🚪 Leave the car</span></button>
     </div>
   </div>
-  <div class="points three">
+  <div class="points">
     <div class="pt is-new" id="f-windows" data-hl-key="win-command" data-demo="windows">
-      <h3><span data-l="fr">Commande</span><span data-l="en">Controls</span></h3>
-      <p data-l="fr">Appui court pour une course complète, appui long pour doser, plus Tout ouvrir et Tout fermer.</p>
-      <p data-l="en">Short press for full travel, long press to fine-tune, plus Open all and Close all.</p>
+      <h3><span data-l="fr">Tout fermer, tout ouvrir</span><span data-l="en">Close all, open all</span></h3>
+      <p data-l="fr">Toutes les vitres d'un appui, depuis l'écran ou un bouton physique.</p>
+      <p data-l="en">Every window in one tap, from the screen or a physical button.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Un nouvel appui arrête la course. L'appui long (au-delà de 0,4 s) fait bouger la vitre tant que le doigt reste posé. Tout ouvrir et Tout fermer existent aussi en raccourcis sur les boutons physiques. La commande s'arrête si vous quittez l'écran.</p>
-        <p data-l="en">Another press stops the travel. A long press (over 0.4 s) moves the window as long as the finger stays down. Open all and Close all are also available as physical-button shortcuts. Movement stops if you leave the screen.</p>
+        <p data-l="fr">La vitre conducteur fait sa course automatique d'origine. Les trois autres, sans capteur, reçoivent l'ordre pendant la durée de course. Tout fermer et Tout ouvrir existent aussi en raccourcis sur les boutons physiques et dans l'API externe. Lancée depuis l'écran, la commande s'arrête si vous quittez l'onglet.</p>
+        <p data-l="en">The driver's window runs its native automatic travel. The other three, which have no sensor, get the command for the travel time. Close all and Open all are also available as physical-button shortcuts and in the external API. Started from the screen, movement stops if you leave the tab.</p>
       </details>
     </div>
-    <div class="pt is-new" data-hl-key="win-cal" data-demo="windows">
-      <h3><span data-l="fr">Calibration</span><span data-l="en">Calibration</span></h3>
-      <p data-l="fr">Un assistant chronomètre chaque vitre pour estimer sa position.</p>
-      <p data-l="en">A wizard times each window to estimate its position.</p>
+    <div class="pt is-new" data-hl-key="win-course" data-demo="windows">
+      <h3><span data-l="fr">Durée de course</span><span data-l="en">Travel time</span></h3>
+      <p data-l="fr">Les vitres sans capteur bougent pendant une durée réglable : 5 s par défaut, de 2 à 10 s.</p>
+      <p data-l="en">Windows without a sensor move for an adjustable time: 5 s by default, from 2 to 10 s.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Seule la vitre conducteur remonte sa position. Pour les trois autres, l'assistant en 4 étapes chronomètre une descente et une montée complètes (entre 0,8 et 15 s). Limites : les interrupteurs de portière ne sont pas vus, et toutes les vitres sont supposées fermées au lancement de l'app.</p>
-        <p data-l="en">Only the driver's window reports its position. For the other three, the 4-step wizard times a full descent and ascent (between 0.8 and 15 s). Limits: door switches aren't seen, and every window is assumed closed when the app starts.</p>
+        <p data-l="fr">Seule la vitre conducteur signale sa position. Pour les trois autres, l'app ne sait pas quand la vitre arrive en butée : elle envoie l'ordre pendant cette durée. Trop courte, la vitre reste entrouverte, et une vitre arrière fatiguée peut demander un peu plus. Cinq secondes, c'est la valeur qu'utilise winclose sur MG4.</p>
+        <p data-l="en">Only the driver's window reports its position. For the other three, the app can't tell when the window reaches its end stop: it sends the command for this long. Too short and the window stays ajar, and a tired rear window may need a little more. Five seconds is the value winclose uses on the MG4.</p>
       </details>
     </div>
     <div class="pt is-new" data-hl-key="win-auto" data-demo="windows">
@@ -735,8 +735,17 @@
       <p data-l="fr">Toutes les vitres se ferment quand vous sortez, après un délai réglable.</p>
       <p data-l="en">Every window closes when you get out, after an adjustable delay.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Voiture en P et fermeture <b>armée</b> (vitesse atteinte, 20 km/h par défaut, et/ou voiture allumée depuis 5 min). À la sortie de READY (porte conducteur ouverte ou extinction), fermeture après 0 à 30 s (5 s par défaut), avec un bip facultatif. Un retour en READY annule. Verrouillée tant que les trois vitres sans capteur ne sont pas calibrées.</p>
-        <p data-l="en">Car in P and closing <b>armed</b> (speed reached, 20 km/h by default, and/or car on for 5 min). When leaving READY (driver door opened or car switched off), closing after 0 to 30 s (5 s by default), with an optional beep. Going back to READY cancels. Locked until the three sensorless windows are calibrated.</p>
+        <p data-l="fr">Voiture en P et fermeture <b>armée</b> (vitesse atteinte, 20 km/h par défaut, et/ou voiture allumée depuis 5 min). À la sortie de READY (porte conducteur ouverte ou extinction), fermeture après 0 à 30 s (5 s par défaut), avec un bip facultatif. Un retour en READY annule. Les vitres sans capteur se ferment pendant la durée de course.</p>
+        <p data-l="en">Car in P and closing <b>armed</b> (speed reached, 20 km/h by default, and/or car on for 5 min). When leaving READY (driver door opened or car switched off), closing after 0 to 30 s (5 s by default), with an optional beep. Going back to READY cancels. Windows without a sensor close for the travel time.</p>
+      </details>
+    </div>
+    <div class="pt is-new" data-hl-key="win-cal" data-demo="windows">
+      <h3><span data-l="fr">Calibrage par vitre (avancé)</span><span data-l="en">Per-window calibration (advanced)</span></h3>
+      <p data-l="fr">En option, un assistant chronomètre chaque vitre pour une durée plus juste que la durée générale.</p>
+      <p data-l="en">Optionally, a wizard times each window for a more accurate travel time than the general one.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">L'assistant en 4 étapes chronomètre une descente et une montée complètes (entre 0,8 et 15 s), puis cette vitre utilise ses propres durées. Désactiver l'option revient à la durée générale sans effacer les mesures. L'app ne voit pas les interrupteurs de porte : une course dure toujours le temps mesuré, quelle que soit la position de départ de la vitre.</p>
+        <p data-l="en">The 4-step wizard times a full descent and ascent (between 0.8 and 15 s), then that window uses its own times. Turning the option off goes back to the general travel time without erasing the measurements. The app can't see the door switches: a travel always lasts the measured time, whatever the window's starting position.</p>
       </details>
     </div>
   </div>

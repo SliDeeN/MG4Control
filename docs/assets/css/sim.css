@@ -663,22 +663,12 @@
 .sc-nofb { color: var(--dash-warn); margin: 0 0 6px 2px; font-size: calc(13px * var(--ts, 1)); }
 
 /* Vitres électriques */
-.win-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
-.win-tile { border: 1px solid var(--dash-border); border-radius: 12px; padding: 10px; display: grid; grid-template-columns: 1fr 34px; grid-template-rows: auto auto; gap: 8px; align-items: center; }
-.win-top { display: flex; flex-direction: column; gap: 2px; }
-.win-top b { font-size: calc(15px * var(--ts, 1)); }
-.win-pos { font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); }
-.win-tile .a-grid { grid-column: 1 / -1; }
-/* Boutons de vitre (dash_window_tile.xml) : icône seule de 40 dp, 64 dp de haut. */
-.b.win-btn { height: 64px; padding: 0; display: flex; align-items: center; justify-content: center; color: var(--text-primary); }
-.b.win-btn .win-ico { width: 40px; height: 40px; }
 /* Tout fermer / Tout ouvrir (automation_card_windows.xml) : double flèche de 28 dp avant le texte, 52 dp de haut. */
 .b.win-all { height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; }
 .b.win-all .win-ico { width: 28px; height: 28px; flex: 0 0 auto; }
-.win-bar { grid-row: 1; grid-column: 2; width: 34px; height: 52px; border-radius: 6px 6px 3px 3px; border: 2px solid var(--dash-border); background: var(--dash-section); position: relative; overflow: hidden; }
-.win-bar i { position: absolute; left: 0; right: 0; bottom: 0; background: color-mix(in srgb, var(--dash-accent) 45%, transparent); transition: height .15s linear; }
-.win-bar.wide { width: 100%; height: 16px; border-radius: 8px; margin: 6px 0; }
-.win-bar.wide i { top: 0; bottom: 0; left: 0; right: auto; height: auto; transition: width .15s linear; }
+/* Progression de la vitre dans l'assistant de calibration (repère du simulateur). */
+.win-bar { width: 100%; height: 16px; border-radius: 8px; margin: 6px 0; border: 2px solid var(--dash-border); background: var(--dash-section); position: relative; overflow: hidden; }
+.win-bar i { position: absolute; top: 0; bottom: 0; left: 0; background: color-mix(in srgb, var(--dash-accent) 45%, transparent); transition: width .15s linear; }
 .cal-hold { display: flex; align-items: center; gap: 16px; margin: 10px 0; }
 .cal-btn { height: 70px; padding: 0 28px; font-size: calc(18px * var(--ts, 1)); touch-action: none; }
 

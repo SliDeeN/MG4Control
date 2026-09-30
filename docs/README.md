@@ -45,8 +45,8 @@ depuis le dossier `docs/`, puis ouvrir `http://localhost:8000`. (Ouvrir `index.h
 
 ## Version documentée
 
-Le site et le simulateur décrivent la **2.6.7** (code de la branche `beta` au 21/09/2026, commit
-`de1b762`). Ils sont prévus pour être publiés en même temps que la release 2.6.7 : le bouton
+Le site et le simulateur décrivent la **2.6.7** (code de la branche `beta` au 30/09/2026, commit
+`4127f65`, refonte de l'écran des vitres). Ils sont prévus pour être publiés en même temps que la release 2.6.7 : le bouton
 « Télécharger la dernière version » pointe vers `releases/latest`.
 
 Les nouveautés portent le badge `<span class="badge-new">` (« Nouveau · 2.6.7 ») ; le filtre
