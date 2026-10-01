@@ -27,24 +27,29 @@ import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import kotlin.math.abs
+import kotlin.math.min
 
 /**
- * Luminosité automatique au démarrage : au passage en READY, l'écran prend la luminosité que la
- * courbe de l'utilisateur associe à la lumière extérieure estimée.
+ * Luminosité automatique : l'écran prend la luminosité que la courbe de l'utilisateur associe à
+ * la lumière extérieure estimée.
  *
- * La voiture ne mesure pas la lumière (sonde du 2026-10-01 : `OUTSIDE_AMBIENT_LIGHT` vaut 0 au
- * garage comme au soleil). On l'ESTIME donc :
- *  - hauteur du soleil, calculée sans réseau d'après la position GPS et l'heure ;
- *  - rayonnement prévu par Open-Meteo, mis en cache trois jours, le réseau n'étant pas toujours
- *    monté au READY. Sans prévision : ciel dégagé supposé.
+ * **Quand :**
+ *  - au passage en READY, une fois (4 s après ; démarrage à froid : 15 s) ;
+ *  - option « Suivre la lumière en roulant » : à chaque bascule confirmée des feux de position
+ *    (tunnel, garage, tombée de la nuit), et dès que la lumière estimée — recalculée chaque minute,
+ *    sans réseau — s'écarte de [SEUIL_POINTS] points du dernier réglage ;
+ *  - sans ce suivi mais avec les feux : une fois à la sortie du garage, si le READY s'est fait
+ *    feux allumés (dans les [SURVEILLANCE_GARAGE_MS] qui suivent) ;
+ *  - bouton « Tester maintenant ».
+ * Un réglage à la main suspend tout jusqu'au prochain READY.
  *
- * Garde-fou : les feux de position allumés au READY (garage, tunnel, nuit — seul signal du
- * véhicule qui suive la lumière) imposent le point « Nuit ». S'ils s'éteignent dans les
- * [SURVEILLANCE_MS] qui suivent (sortie du garage), le réglage est refait d'après la lumière, une
- * fois — sauf si l'utilisateur a entre-temps changé la luminosité à la main.
+ * **Comment :** la voiture ne mesure pas la lumière (sonde du 2026-10-01 : `OUTSIDE_AMBIENT_LIGHT`
+ * vaut 0 au garage comme au soleil). On l'ESTIME : hauteur du soleil (position GPS + heure), et
+ * rayonnement prévu par Open-Meteo, mis en cache trois jours — sans prévision, ciel dégagé. Option
+ * « feux » : feux de position allumés = point Nuit, seul signal du véhicule qui suive la lumière.
+ * Chaque changement se fait en fondu d'environ une seconde.
  *
- * En dehors de ça, une seule action par démarrage : ensuite la luminosité reste celle de
- * l'utilisateur. Journal : [TAG], sans coordonnées.
+ * Journal : [TAG], sans coordonnées, une ligne par changement d'écran.
  */
 object AutoBrightness {
 
@@ -69,25 +74,39 @@ object AutoBrightness {
      */
     private const val REESSAI_APRES_MS = 15 * 60_000L
     private const val JOUR_MS = 24 * 3_600_000L
-    /** Fenêtre de surveillance des feux après un réglage « feux allumés ». */
-    private const val SURVEILLANCE_MS = 10 * 60_000L
-    private const val SONDAGE_FEUX_MS = 1_000L
-    /** Lectures « feux éteints » consécutives exigées, contre un clignotement des feux auto. */
-    private const val FEUX_ETEINTS_CONFIRMES = 2
+
+    /** Rythme du suivi : feux et réglage à la main relus chaque seconde. */
+    private const val TICK_MS = 1_000L
+    /** Lecture identique exigée deux fois de suite avant d'agir sur une bascule des feux. */
+    private const val FEUX_CONFIRMATIONS = 2
+    /** La lumière estimée est recalculée chaque minute : calcul local, aucune requête. */
+    private const val ESTIMATION_MS = 60_000L
+    /**
+     * Écart à partir duquel le suivi réajuste l'écran. Simulation du 2026-10-01 (Paris, ciel
+     * dégagé) : 8 réglages entre 17 h 30 et 20 h, rapprochés au coucher du soleil, là où un
+     * minuteur aurait fait des réglages inutiles l'après-midi et un saut de 24 points à 19 h 15.
+     */
+    const val SEUIL_POINTS = 10
+    /** Sans suivi : fenêtre de la seule sortie de garage. */
+    private const val SURVEILLANCE_GARAGE_MS = 10 * 60_000L
     /** Écart au-delà duquel on considère que l'utilisateur a réglé l'écran lui-même. */
     private const val TOLERANCE_MANUELLE = 2
+    /** Fondu : durée totale et nombre maximal de pas. */
+    private const val FONDU_MS = 1_000L
+    private const val FONDU_PAS_MAX = 10
 
     enum class Source { LIGHTS, FORECAST, SUN }
 
     data class Result(val source: Source, val lux: Double, val percent: Int)
 
-    /** Résultat + de quoi entretenir le cache une fois l'écran réglé. */
+    /** Résultat, de quoi entretenir le cache, et le détail du calcul pour le journal. */
     private class Calcul(
         val result: Result,
         val lat: Double?,
         val lon: Double?,
         val maintenant: Long?,
         val telechargee: Boolean,
+        val detail: String,
     )
 
     @Volatile private var appContext: Context? = null
@@ -96,17 +115,28 @@ object AutoBrightness {
         Handler(HandlerThread("mg4-autobri").also { it.start() }.looper)
     }
     private val CYCLE = Any()
-    private val SURVEILLANCE = Any()
+    private val SUIVI = Any()
+
+    // ── État du trajet : fil de l'automatisme uniquement ─────────────────────
+    /** Dernière valeur écrite par l'automatisme, pour reconnaître un réglage à la main. */
+    private var dernierApplique: Int? = null
+    private var feuxConfirmes: Boolean? = null
+    private var feuxLus: Boolean? = null
+    private var feuxLectures = 0
+    private var prochaineEstimation = 0L
+    /** Sans suivi : fin de la surveillance de sortie de garage (0 = aucune). */
+    private var finGarage = 0L
 
     private val readyListener = ReadyWatcher.Listener { ready, firstRead ->
-        handler.removeCallbacksAndMessages(SURVEILLANCE)
+        // READY perdu ou nouveau READY : le trajet précédent est terminé, réglage en attente compris.
+        handler.removeCallbacksAndMessages(SUIVI)
+        handler.removeCallbacksAndMessages(CYCLE)
         if (!ready) return@Listener
         // READY déjà là à la première lecture : démarrage à froid (le conducteur a été plus
         // rapide que le boîtier) si celui-ci vient de démarrer — on règle, une fois les services
         // liés. Sinon c'est l'application qui redémarre en roulant (mise à jour) : on ne change
         // pas l'écran sous les yeux du conducteur.
         if (firstRead && SystemClock.elapsedRealtime() > DEMARRAGE_RECENT_MS) return@Listener
-        handler.removeCallbacksAndMessages(CYCLE)
         handler.postDelayed({ cycle(test = false) }, CYCLE,
             if (firstRead) DELAI_DEMARRAGE_FROID_MS else DELAI_APRES_READY_MS)
     }
@@ -116,7 +146,10 @@ object AutoBrightness {
         ReadyWatcher.add(readyListener)
     }
 
-    /** Bouton « Tester maintenant » : le même calcul, appliqué tout de suite, option activée ou non. */
+    /**
+     * Bouton « Tester maintenant » : le même calcul, appliqué tout de suite, option activée ou non.
+     * Il lève aussi une pause due à un réglage à la main, et relance le suivi si on roule.
+     */
     fun testNow(context: Context, done: (Result?) -> Unit) {
         appContext = context.applicationContext
         handler.post {
@@ -135,19 +168,114 @@ object AutoBrightness {
             return null
         }
         val origine = if (test) "test" else "READY"
-        val calcul = calculer(ctx, cfg.curve, origine, ignorerFeux = false, attendreReseau = test)
+        if (!test) {
+            dernierApplique = null
+            finGarage = 0L
+        }
+        ctx.getSharedPreferences(AutoBrightnessSettings.PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(AutoBrightnessSettings.KEY_PAUSED, false).apply()
+
+        val calcul = calculer(ctx, cfg.curve, ignorerFeux = !cfg.useLights, attendreReseau = test)
             ?: return null
-        appliquer(ctx, calcul, origine)
+        regler(ctx, calcul, origine)
         entretenirCache(ctx, calcul)
-        if (calcul.result.source == Source.LIGHTS && !test) surveillerFeux(ctx, cfg.curve, calcul.result.percent)
+        if (!test || (cfg.enabled && ReadyWatcher.ready == true)) demarrerSuivi(ctx, cfg, calcul)
         return calcul.result
     }
 
+    // ── Suivi en roulant ─────────────────────────────────────────────────────
+
+    private fun demarrerSuivi(ctx: Context, cfg: AutoBrightnessSettings.Config, calcul: Calcul) {
+        handler.removeCallbacksAndMessages(SUIVI)
+        feuxConfirmes = if (cfg.useLights) MG4Hardware.isSideLightOn() else null
+        feuxLus = feuxConfirmes
+        feuxLectures = FEUX_CONFIRMATIONS
+        prochaineEstimation = SystemClock.elapsedRealtime() + ESTIMATION_MS
+        finGarage = if (!cfg.follow && cfg.useLights && calcul.result.source == Source.LIGHTS)
+            SystemClock.elapsedRealtime() + SURVEILLANCE_GARAGE_MS else 0L
+        if (cfg.follow || finGarage > 0L) handler.postDelayed(suivi, SUIVI, TICK_MS)
+    }
+
+    private val suivi = object : Runnable {
+        override fun run() {
+            val ctx = appContext ?: return
+            val cfg = AutoBrightnessSettings.read(ctx)
+            val maintenant = SystemClock.elapsedRealtime()
+            val garageSeul = !cfg.follow && finGarage > 0L
+            // L'option a pu être coupée en route, ou le Mode Garage activé.
+            if (!cfg.enabled || (!cfg.follow && !garageSeul) || GarageMode.isOn(ctx)) return
+            if (garageSeul && maintenant > finGarage) {
+                AppLogger.i(TAG, "feux toujours allumés après ${SURVEILLANCE_GARAGE_MS / 60_000} min : " +
+                    "réglage Nuit conservé")
+                return
+            }
+            if (reglageManuel(ctx)) return
+
+            val bascule = if (cfg.useLights) basculeFeux() else null
+            when {
+                bascule == true && !garageSeul -> regler(ctx, nuit(cfg.curve), "feux allumés")
+                bascule == false -> {
+                    calculer(ctx, cfg.curve, ignorerFeux = true, attendreReseau = false)?.let {
+                        regler(ctx, it, "feux éteints")
+                        entretenirCache(ctx, it)
+                    }
+                    if (garageSeul) return   // la sortie du garage était la seule chose attendue
+                }
+                cfg.follow && maintenant >= prochaineEstimation && !(cfg.useLights && feuxConfirmes == true) -> {
+                    prochaineEstimation = maintenant + ESTIMATION_MS
+                    calculer(ctx, cfg.curve, ignorerFeux = true, attendreReseau = false)?.let { c ->
+                        val dernier = dernierApplique
+                        if (dernier == null || abs(c.result.percent - dernier) >= SEUIL_POINTS) {
+                            regler(ctx, c, "suivi")
+                        }
+                        entretenirCache(ctx, c)
+                    }
+                }
+            }
+            handler.postDelayed(this, SUIVI, TICK_MS)
+        }
+    }
+
+    /** Bascule CONFIRMÉE des feux depuis la précédente : true = allumés, false = éteints, null = rien. */
+    private fun basculeFeux(): Boolean? {
+        val lu = MG4Hardware.isSideLightOn() ?: return null
+        if (lu != feuxLus) {
+            feuxLus = lu
+            feuxLectures = 1
+        } else {
+            feuxLectures++
+        }
+        if (feuxLectures < FEUX_CONFIRMATIONS || lu == feuxConfirmes) return null
+        feuxConfirmes = lu
+        return lu
+    }
+
+    /**
+     * Vrai si l'écran ne montre plus la valeur que l'automatisme a écrite : l'utilisateur a pris
+     * la main (popup, réglages d'origine…). Tout s'arrête alors jusqu'au prochain READY.
+     */
+    private fun reglageManuel(ctx: Context): Boolean {
+        val attendu = dernierApplique ?: return false
+        val actuel = MG4Hardware.getScreenBrightnessPercent(journal = false)
+        if (actuel < 0 || abs(actuel - attendu) <= TOLERANCE_MANUELLE) return false
+        AppLogger.i(TAG, "réglage à la main ($attendu → $actuel %) : automatisme suspendu jusqu'au prochain READY")
+        ctx.getSharedPreferences(AutoBrightnessSettings.PREFS, Context.MODE_PRIVATE).edit()
+            .putBoolean(AutoBrightnessSettings.KEY_PAUSED, true).apply()
+        return true
+    }
+
+    // ── Calcul et application ────────────────────────────────────────────────
+
+    private fun nuit(curve: BrightnessCurve) = Calcul(
+        Result(Source.LIGHTS, BrightnessCurve.LUX_NIGHT, curve.night),
+        lat = null, lon = null, maintenant = null, telechargee = false,
+        detail = "feux de position allumés → point Nuit",
+    )
+
     private fun calculer(
-        ctx: Context, curve: BrightnessCurve, origine: String,
-        ignorerFeux: Boolean, attendreReseau: Boolean,
+        ctx: Context, curve: BrightnessCurve, ignorerFeux: Boolean, attendreReseau: Boolean,
     ): Calcul? {
-        val feux = MG4Hardware.isSideLightOn()
+        val feux = if (ignorerFeux) null else MG4Hardware.isSideLightOn()
         val cache = lireCache(ctx)
         val loc = position(ctx)
         // Sans position, celle de la dernière prévision : la voiture n'a pas bougé depuis l'arrêt.
@@ -155,25 +283,24 @@ object AutoBrightness {
         val lon = loc?.longitude ?: cache?.longitude
         val maintenant = heure(loc)
 
-        if (feux == true && !ignorerFeux) {
-            AppLogger.i(TAG, "[$origine] feux de position allumés → point Nuit (${curve.night} %)")
-            return Calcul(Result(Source.LIGHTS, BrightnessCurve.LUX_NIGHT, curve.night),
-                lat, lon, maintenant, telechargee = false)
+        if (feux == true) {
+            return Calcul(nuit(curve).result, lat, lon, maintenant, telechargee = false,
+                detail = "feux de position allumés → point Nuit")
         }
         if (lat == null || lon == null) {
-            AppLogger.w(TAG, "[$origine] position inconnue — aucun réglage")
+            AppLogger.w(TAG, "position inconnue — aucun réglage")
             return null
         }
         if (maintenant == null) {
-            AppLogger.w(TAG, "[$origine] horloge non synchronisée et aucune heure GPS — aucun réglage")
+            AppLogger.w(TAG, "horloge non synchronisée et aucune heure GPS — aucun réglage")
             return null
         }
 
         val hauteur = SunPosition.elevationDeg(lat, lon, maintenant)
         // Jamais d'attente réseau avant de régler l'écran : le cache s'il couvre l'instant, sinon
-        // le ciel dégagé, et la prévision se télécharge APRÈS, pour le démarrage suivant. Relevé
-        // du 2026-10-01 : 8 s de délai dépassé sur le Wi-Fi d'un garage, pendant lesquelles
-        // l'écran restait sombre en plein jour. Seul le bouton « Tester » attend : on l'a demandé.
+        // le ciel dégagé, et la prévision se télécharge APRÈS, pour la fois suivante. Relevé du
+        // 2026-10-01 : 8 s de délai dépassé sur le Wi-Fi d'un garage, pendant lesquelles l'écran
+        // restait sombre en plein jour. Seul le bouton « Tester » attend : on l'a demandé.
         var prevision = cache?.takeIf { it.covers(lat, lon, maintenant) }
         var telechargee = false
         if (prevision == null && attendreReseau && reseauDisponible(ctx)) {
@@ -181,19 +308,24 @@ object AutoBrightness {
         }
         val ghi = prevision?.ghiAt(maintenant)
         val lux = OutdoorLight.estimateLux(hauteur, ghi)
-        val result = Result(if (ghi != null) Source.FORECAST else Source.SUN, lux, curve.percentFor(lux))
         val meteo = if (ghi == null) "sans prévision (ciel dégagé supposé)"
-                    else String.format(Locale.ROOT, "prévision %.0f W/m² (%s)", ghi,
-                        if (telechargee) "téléchargée" else "cache")
-        AppLogger.i(TAG, String.format(Locale.ROOT, "[%s] soleil %.1f° · %s · ≈ %.0f lx → %d %%",
-            origine, hauteur, meteo, lux, result.percent))
-        return Calcul(result, lat, lon, maintenant, telechargee)
+                    else String.format(Locale.ROOT, "prévision %.0f W/m²", ghi)
+        return Calcul(
+            Result(if (ghi != null) Source.FORECAST else Source.SUN, lux, curve.percentFor(lux)),
+            lat, lon, maintenant, telechargee,
+            String.format(Locale.ROOT, "soleil %.1f° · %s · ≈ %.0f lx", hauteur, meteo, lux),
+        )
     }
 
-    private fun appliquer(ctx: Context, calcul: Calcul, origine: String) {
+    /** Écrit le réglage en fondu, puis le mémorise pour la ligne d'état et la détection manuelle. */
+    private fun regler(ctx: Context, calcul: Calcul, origine: String) {
         val r = calcul.result
-        val ok = MG4Hardware.setScreenBrightnessPercent(r.percent)
-        AppLogger.i(TAG, "[$origine] luminosité ${r.percent} % (${r.source}) → $ok")
+        val de = MG4Hardware.getScreenBrightnessPercent(journal = false)
+        val ok = fondu(de, r.percent)
+        dernierApplique = r.percent
+        prochaineEstimation = SystemClock.elapsedRealtime() + ESTIMATION_MS
+        AppLogger.i(TAG, "[$origine] ${calcul.detail} → " +
+            (if (de >= 0) "$de → " else "") + "${r.percent} % (${r.source}) → $ok")
         ctx.getSharedPreferences(AutoBrightnessSettings.PREFS, Context.MODE_PRIVATE).edit()
             .putLong(AutoBrightnessSettings.KEY_LAST_AT, calcul.maintenant ?: System.currentTimeMillis())
             .putString(AutoBrightnessSettings.KEY_LAST_SOURCE, r.source.name)
@@ -203,35 +335,18 @@ object AutoBrightness {
     }
 
     /**
-     * Feux allumés au READY : dès qu'ils s'éteignent (sortie du garage), le réglage est refait
-     * d'après la lumière — une seule fois, et pas si l'utilisateur a touché à l'écran entre-temps.
+     * De [de] à [vers] en ~1 s, par petits pas : passer de 90 à 15 % d'un coup en entrant dans un
+     * tunnel surprend. Les pas intermédiaires ne sont pas journalisés ; la valeur finale l'est.
      */
-    private fun surveillerFeux(ctx: Context, curve: BrightnessCurve, applique: Int) {
-        val fin = SystemClock.elapsedRealtime() + SURVEILLANCE_MS
-        val sonde = object : Runnable {
-            var eteints = 0
-            override fun run() {
-                if (SystemClock.elapsedRealtime() > fin) {
-                    AppLogger.i(TAG, "feux toujours allumés après ${SURVEILLANCE_MS / 60_000} min : réglage Nuit conservé")
-                    return
-                }
-                eteints = if (MG4Hardware.isSideLightOn() == false) eteints + 1 else 0
-                if (eteints < FEUX_ETEINTS_CONFIRMES) {
-                    handler.postDelayed(this, SURVEILLANCE, SONDAGE_FEUX_MS)
-                    return
-                }
-                val actuel = MG4Hardware.getScreenBrightnessPercent()
-                if (actuel >= 0 && abs(actuel - applique) > TOLERANCE_MANUELLE) {
-                    AppLogger.i(TAG, "feux éteints, mais luminosité réglée à la main ($applique → $actuel %) : inchangée")
-                    return
-                }
-                val calcul = calculer(ctx, curve, "sortie", ignorerFeux = true, attendreReseau = false)
-                    ?: return
-                appliquer(ctx, calcul, "sortie")
-                entretenirCache(ctx, calcul)
-            }
+    private fun fondu(de: Int, vers: Int): Boolean {
+        if (de < 0 || de == vers) return MG4Hardware.setScreenBrightnessPercent(vers)
+        val ecart = vers - de
+        val pas = min(FONDU_PAS_MAX, abs(ecart))
+        for (i in 1 until pas) {
+            MG4Hardware.setScreenBrightnessPercent(de + ecart * i / pas, journal = false)
+            SystemClock.sleep(FONDU_MS / pas)
         }
-        handler.postDelayed(sonde, SURVEILLANCE, SONDAGE_FEUX_MS)
+        return MG4Hardware.setScreenBrightnessPercent(vers)
     }
 
     // ── Position et heure ────────────────────────────────────────────────────
@@ -298,7 +413,7 @@ object AutoBrightness {
     }
 
     /**
-     * Rafraîchit la prévision APRÈS le réglage, pour le démarrage suivant : quand elle a plus de
+     * Rafraîchit la prévision APRÈS le réglage, pour la fois suivante : quand elle a plus de
      * [RAFRAICHIR_APRES_MS], qu'elle ne couvre plus demain, ou qu'elle vaut pour un autre endroit
      * — et jamais moins de [REESSAI_APRES_MS] après la requête précédente.
      */
@@ -319,7 +434,7 @@ object AutoBrightness {
         if (maintenant - dernierEssai in 0 until REESSAI_APRES_MS) return
         if (!reseauDisponible(ctx)) return
         telecharger(ctx, lat, lon, maintenant)?.let {
-            AppLogger.i(TAG, "prévision rafraîchie pour les prochains démarrages")
+            AppLogger.i(TAG, "prévision rafraîchie pour les prochains réglages")
         }
     }
 

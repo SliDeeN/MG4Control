@@ -319,8 +319,13 @@
     <string name="battery_auto_threshold_label">Batarya eşiği</string>
     <string name="battery_auto_note">Batarya eşiğin altına düştüğünde, açılışta ya da sürüş sırasında bir kez tetiklenir. Her açılışta ya da eşiğin üzerinde bir şarjdan sonra yeniden devreye girer. Sürüş güvenliği bu hızda ayarları engelliyorsa profil bir sonraki duruşu bekler.</string>
     <string name="battery_auto_confirm_msg">Batarya %1$d %% altına düştü\n(şu an %2$s %%)\n“%3$s” profili uygulansın mı?</string>
-    <string name="autobri_title">Açılışta otomatik parlaklık</string>
+    <string name="autobri_title">Otomatik parlaklık</string>
     <string name="autobri_desc">READY\'ye geçişte ekran parlaklığını dış ışığa göre ayarla</string>
+    <string name="autobri_follow">Sürüş sırasında ışığı takip et (ekranı yalnızca açılışta değil, yolda da ayarlar)</string>
+    <string name="autobri_follow_desc">Işık her dakika yeniden hesaplanır; ekran yalnızca fark 10 puana ulaşırsa yeniden ayarlanır. Elle yapılan bir ayar, otomasyonu bir sonraki açılışa kadar durdurur.</string>
+    <string name="autobri_lights">Farların yanıp sönmesini kullan (garajda, tünelde veya gece ekran kısılır)</string>
+    <string name="autobri_lights_desc">Park lambaları açık: Gece ayarı; söner sönmez ışığa göre ayar — açılışta ya da takip açıksa her zaman. Gündüz farlar açık sürüyorsanız işareti kaldırın.</string>
+    <string name="autobri_status_paused">Bir sonraki açılışa kadar duraklatıldı: parlaklık elle ayarlandı.</string>
     <string name="autobri_curve_label">Dış ışığa göre ekran parlaklığı</string>
     <string name="autobri_night">Gece · 10 lx</string>
     <string name="autobri_twilight">Alacakaranlık · 400 lx</string>
@@ -333,8 +338,8 @@
     <string name="autobri_source_lights">farlar açık</string>
     <string name="autobri_source_forecast">hava tahmini</string>
     <string name="autobri_source_sun">güneş konumu</string>
-    <string name="autobri_note">READY\'ye park lambaları açıkken geçildiğinde (garaj, tünel, gece) Gece ayarı uygulanır, lambalar söner sönmez ışığa göre ayar yapılır (garajdan çıkış, 10 dk içinde). Aksi halde dış ışık, güneşin yüksekliği ve Open-Meteo güneşlenme tahmininden (CC BY 4.0) tahmin edilir; tahmin 3 günlüğüne, yaklaşık 10 km\'ye yuvarlanmış konumla indirilir. Tahmin yoksa açık gökyüzü varsayılır. Sonrasında parlaklık elle ayarlanabilir.</string>
-    <string name="autobri_note_offline">Çevrimdışı sürüm: dış ışık yalnızca güneşin yüksekliğinden tahmin edilir (açık gökyüzü varsayılır). READY\'ye park lambaları açıkken geçildiğinde Gece ayarı uygulanır, lambalar sönünce ışığa göre ayar yapılır.</string>
+    <string name="autobri_note">Dış ışık, güneşin yüksekliği ve Open-Meteo güneşlenme tahmininden (CC BY 4.0) tahmin edilir; tahmin 3 günlüğüne indirilir, en fazla 8 saatte bir güncellenir, konum yaklaşık 10 km\'ye yuvarlanır. Tahmin yoksa açık gökyüzü varsayılır. Her değişiklik bir saniyelik geçişle yapılır.</string>
+    <string name="autobri_note_offline">Çevrimdışı sürüm: dış ışık yalnızca güneşin yüksekliğinden tahmin edilir (açık gökyüzü varsayılır). Her değişiklik bir saniyelik geçişle yapılır.</string>
 
     <!-- A/C automation -->
     <string name="ac_auto_title">Sıcaklığa göre klimayı tetikle</string>

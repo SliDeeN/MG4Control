@@ -319,8 +319,13 @@
     <string name="battery_auto_threshold_label">Limiar da bateria</string>
     <string name="battery_auto_note">Ativa-se uma vez quando a bateria desce abaixo do limiar, no arranque ou em andamento. Rearma a cada arranque, ou após uma carga acima do limiar. Se a segurança de condução bloquear os ajustes a esta velocidade, o perfil espera pela próxima paragem.</string>
     <string name="battery_auto_confirm_msg">A bateria desceu abaixo de %1$d %%\n(%2$s %% agora)\nAplicar o perfil «%3$s»?</string>
-    <string name="autobri_title">Brilho automático no arranque</string>
-    <string name="autobri_desc">Ajustar o brilho do ecrã ao passar a READY conforme a luz exterior</string>
+    <string name="autobri_title">Brilho automático</string>
+    <string name="autobri_desc">Ajustar o brilho do ecrã conforme a luz exterior ao passar a READY</string>
+    <string name="autobri_follow">Seguir a luz em andamento (reajusta o ecrã em viagem, não só no arranque)</string>
+    <string name="autobri_follow_desc">A luz é recalculada a cada minuto; o ecrã só é reajustado se a diferença atingir 10 pontos. Um ajuste manual suspende a automatização até ao próximo arranque.</string>
+    <string name="autobri_lights">Usar o acender e apagar das luzes (ecrã escurecido na garagem, em túneis ou de noite)</string>
+    <string name="autobri_lights_desc">Luzes de presença acesas: ajuste Noite; assim que se apagam, ajuste conforme a luz — no arranque, ou a qualquer momento com o seguimento. Desmarque se circula com as luzes acesas de dia.</string>
+    <string name="autobri_status_paused">Em pausa até ao próximo arranque: brilho ajustado à mão.</string>
     <string name="autobri_curve_label">Brilho do ecrã conforme a luz exterior</string>
     <string name="autobri_night">Noite · 10 lx</string>
     <string name="autobri_twilight">Crepúsculo · 400 lx</string>
@@ -333,8 +338,8 @@
     <string name="autobri_source_lights">luzes acesas</string>
     <string name="autobri_source_forecast">previsão meteorológica</string>
     <string name="autobri_source_sun">posição do sol</string>
-    <string name="autobri_note">Ao passar a READY com as luzes de presença acesas (garagem, túnel, noite), aplica-se o ajuste Noite e, depois, o ajuste conforme a luz assim que se apagam (saída da garagem, em 10 min). Caso contrário, a luz exterior é estimada a partir da altura do sol e da previsão de insolação da Open-Meteo (CC BY 4.0), descarregada para 3 dias com uma posição arredondada a ~10 km. Sem previsão, assume-se céu limpo. Depois, o brilho continua ajustável à mão.</string>
-    <string name="autobri_note_offline">Versão offline: a luz exterior é estimada apenas a partir da altura do sol (céu limpo assumido). Ao passar a READY com as luzes de presença acesas, aplica-se o ajuste Noite e, depois, o ajuste conforme a luz assim que se apagam.</string>
+    <string name="autobri_note">A luz exterior é estimada a partir da altura do sol e da previsão de insolação da Open-Meteo (CC BY 4.0), descarregada para 3 dias e atualizada no máximo a cada 8 h, com uma posição arredondada a ~10 km. Sem previsão, assume-se céu limpo. Cada mudança faz-se com uma transição de um segundo.</string>
+    <string name="autobri_note_offline">Versão offline: a luz exterior é estimada apenas a partir da altura do sol (céu limpo assumido). Cada mudança faz-se com uma transição de um segundo.</string>
 
     <!-- Automação do A/C -->
     <string name="ac_auto_title">Ativação do A/C consoante a temperatura</string>

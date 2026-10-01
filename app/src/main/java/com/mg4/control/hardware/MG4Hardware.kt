@@ -982,27 +982,32 @@ object MG4Hardware {
     fun hasBrightnessControl(): Boolean = FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
 
     /** Lit la luminosité écran en % (0–100), ou -1 si indisponible. */
-    fun getScreenBrightnessPercent(): Int =
-        if (isA9Brightness()) getBrightnessA9() else getBrightnessOldSdk()
+    /**
+     * [journal] faux : sans ligne dans le journal. La luminosité automatique relit l'écran chaque
+     * seconde (réglage à la main ?) et l'écrit par petits pas (fondu) : journalisé, chaque trajet
+     * chasserait du rapport tout le reste.
+     */
+    fun getScreenBrightnessPercent(journal: Boolean = true): Int =
+        if (isA9Brightness()) getBrightnessA9() else getBrightnessOldSdk(journal)
 
     /**
      * Règle la luminosité écran en % (0–100). Plancher de sécurité à BRIGHTNESS_MIN_PERCENT
      * pour ne jamais éteindre l'écran.
      */
-    fun setScreenBrightnessPercent(pct: Int): Boolean {
+    fun setScreenBrightnessPercent(pct: Int, journal: Boolean = true): Boolean {
         val clamped = pct.coerceIn(BRIGHTNESS_MIN_PERCENT, 100)
-        return if (isA9Brightness()) setBrightnessA9(clamped) else setBrightnessOldSdk(clamped)
+        return if (isA9Brightness()) setBrightnessA9(clamped, journal) else setBrightnessOldSdk(clamped, journal)
     }
 
     // ── Ancien SDK (SWI133/68/165) — GeneralManager.setBrightness(Int), plage native 0..255 ──
 
-    private fun getBrightnessOldSdk(): Int {
+    private fun getBrightnessOldSdk(journal: Boolean = true): Int {
         val g = sGeneral ?: return -1
         return try {
             val native = (g.javaClass.getMethod("getBrightness").invoke(g) as? Int) ?: return -1
             if (native < 0) return -1
             val pct = (native * 100 / BRIGHTNESS_NATIVE_MAX).coerceIn(0, 100)
-            AppLogger.d(TAG, "  getBrightness native=$native → $pct%")
+            if (journal) AppLogger.d(TAG, "  getBrightness native=$native → $pct%")
             pct
         } catch (e: Exception) {
             AppLogger.w(TAG, "  getBrightness exc: ${e.message}")
@@ -1010,10 +1015,10 @@ object MG4Hardware {
         }
     }
 
-    private fun setBrightnessOldSdk(clampedPct: Int): Boolean {
+    private fun setBrightnessOldSdk(clampedPct: Int, journal: Boolean = true): Boolean {
         val g = sGeneral ?: return false
         val native = (clampedPct * BRIGHTNESS_NATIVE_MAX / 100).coerceIn(0, BRIGHTNESS_NATIVE_MAX)
-        if (logEnabled) AppLogger.i(TAG, "setBrightness → $clampedPct% (native=$native/255)")
+        if (logEnabled && journal) AppLogger.i(TAG, "setBrightness → $clampedPct% (native=$native/255)")
         return try {
             g.javaClass.getMethod("setBrightness", Int::class.javaPrimitiveType).invoke(g, native)
             true
@@ -1042,7 +1047,7 @@ object MG4Hardware {
         return (native * 100 / A9_BRIGHTNESS_NATIVE_MAX).coerceIn(0, 100)
     }
 
-    private fun setBrightnessA9(clampedPct: Int): Boolean {
+    private fun setBrightnessA9(clampedPct: Int, journal: Boolean = true): Boolean {
         val resolver = sAppContext?.contentResolver ?: return false
         val native = (clampedPct.coerceIn(0, 100) * A9_BRIGHTNESS_NATIVE_MAX / 100).coerceIn(1, A9_BRIGHTNESS_NATIVE_MAX)
         return try {
@@ -1052,7 +1057,7 @@ object MG4Hardware {
                 android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
             android.provider.Settings.System.putInt(resolver,
                 android.provider.Settings.System.SCREEN_BRIGHTNESS, native)
-            if (logEnabled) AppLogger.i(TAG, "A9 brightness → Settings.System.SCREEN_BRIGHTNESS=$native ($clampedPct%)")
+            if (logEnabled && journal) AppLogger.i(TAG, "A9 brightness → Settings.System.SCREEN_BRIGHTNESS=$native ($clampedPct%)")
             true
         } catch (e: Exception) {
             AppLogger.w(TAG, "  A9 setBrightness Settings.System exc: ${e.message}")

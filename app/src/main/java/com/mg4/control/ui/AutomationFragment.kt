@@ -174,6 +174,20 @@ class AutomationFragment : Fragment() {
         bindExpander(view.findViewById(R.id.btn_autobri_expand), view.findViewById(R.id.row_autobri_config),
             expanded = cfg.enabled)
 
+        // Pris en compte au tick suivant, en route compris : le suivi relit ses options chaque seconde.
+        view.findViewById<CheckBox>(R.id.check_autobri_follow).apply {
+            isChecked = cfg.follow
+            setOnCheckedChangeListener { _, c ->
+                prefs.edit().putBoolean(AutoBrightnessSettings.KEY_FOLLOW, c).apply()
+            }
+        }
+        view.findViewById<CheckBox>(R.id.check_autobri_lights).apply {
+            isChecked = cfg.useLights
+            setOnCheckedChangeListener { _, c ->
+                prefs.edit().putBoolean(AutoBrightnessSettings.KEY_USE_LIGHTS, c).apply()
+            }
+        }
+
         bindPercentSlider(view, R.id.slider_autobri_night, R.id.autobri_night_value,
             AutoBrightnessSettings.KEY_NIGHT, cfg.curve.night, prefs)
         bindPercentSlider(view, R.id.slider_autobri_twilight, R.id.autobri_twilight_value,
@@ -234,8 +248,10 @@ class AutomationFragment : Fragment() {
         val heure = android.text.format.DateFormat.getTimeFormat(requireContext()).format(Date(quand))
         val lux = String.format(Locale.getDefault(), "%,d",
             prefs.getFloat(AutoBrightnessSettings.KEY_LAST_LUX, 0f).toDouble().roundToLong())
-        tv.text = getString(R.string.autobri_status, heure, source, lux,
+        val etat = getString(R.string.autobri_status, heure, source, lux,
             prefs.getInt(AutoBrightnessSettings.KEY_LAST_PERCENT, 0))
+        tv.text = if (prefs.getBoolean(AutoBrightnessSettings.KEY_PAUSED, false))
+            etat + "\n" + getString(R.string.autobri_status_paused) else etat
     }
 
     // ══════════ Automatisation « Déclenchement A/C via la température » ══════════

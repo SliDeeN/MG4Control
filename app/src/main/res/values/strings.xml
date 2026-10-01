@@ -321,8 +321,13 @@
     <string name="battery_auto_threshold_label">Seuil de batterie</string>
     <string name="battery_auto_note">Se déclenche une fois quand la batterie passe sous le seuil, au démarrage comme en roulant. Se réarme à chaque démarrage, ou après une recharge au-dessus du seuil. Si la sécurité conduite bloque les réglages à cette vitesse, le profil attend le prochain arrêt.</string>
     <string name="battery_auto_confirm_msg">La batterie est passée sous %1$d %%\n(%2$s %% actuellement)\nVoulez-vous appliquer le profil « %3$s » ?</string>
-    <string name="autobri_title">Luminosité automatique au démarrage</string>
-    <string name="autobri_desc">Régler la luminosité de l\'écran au passage en READY selon la lumière extérieure</string>
+    <string name="autobri_title">Luminosité automatique</string>
+    <string name="autobri_desc">Régler la luminosité de l\'écran selon la lumière extérieure, au passage en READY</string>
+    <string name="autobri_follow">Suivre la lumière en roulant (réajuste l\'écran en route, pas seulement au démarrage)</string>
+    <string name="autobri_follow_desc">La lumière est recalculée chaque minute ; l\'écran n\'est réajusté que si l\'écart atteint 10 points. Un réglage à la main suspend l\'automatisme jusqu\'au prochain démarrage.</string>
+    <string name="autobri_lights">Utiliser l\'allumage et l\'extinction des feux (écran baissé au garage, en tunnel ou de nuit)</string>
+    <string name="autobri_lights_desc">Feux de position allumés : réglage Nuit ; dès qu\'ils s\'éteignent, réglage selon la lumière — au démarrage, ou à tout moment avec le suivi. À décocher si vous roulez feux allumés en journée.</string>
+    <string name="autobri_status_paused">En pause jusqu\'au prochain démarrage : luminosité réglée à la main.</string>
     <string name="autobri_curve_label">Luminosité de l\'écran selon la lumière extérieure</string>
     <string name="autobri_night">Nuit · 10 lx</string>
     <string name="autobri_twilight">Crépuscule · 400 lx</string>
@@ -335,8 +340,8 @@
     <string name="autobri_source_lights">feux allumés</string>
     <string name="autobri_source_forecast">prévision météo</string>
     <string name="autobri_source_sun">position du soleil</string>
-    <string name="autobri_note">Au passage en READY avec les feux de position allumés (garage, tunnel, nuit), le réglage Nuit s\'applique, puis le réglage selon la lumière dès qu\'ils s\'éteignent (sortie de garage, dans les 10 min). Sinon, la lumière extérieure est estimée d\'après la hauteur du soleil et la prévision d\'ensoleillement Open-Meteo (CC BY 4.0), téléchargée pour 3 jours avec une position arrondie à ~10 km. Sans prévision, ciel dégagé supposé. La luminosité reste ensuite réglable à la main.</string>
-    <string name="autobri_note_offline">Version hors ligne : la lumière extérieure est estimée d\'après la seule hauteur du soleil (ciel dégagé supposé). Au passage en READY avec les feux de position allumés, le réglage Nuit s\'applique, puis le réglage selon la lumière dès qu\'ils s\'éteignent.</string>
+    <string name="autobri_note">La lumière extérieure est estimée d\'après la hauteur du soleil et la prévision d\'ensoleillement Open-Meteo (CC BY 4.0), téléchargée pour 3 jours et actualisée toutes les 8 h au plus, avec une position arrondie à ~10 km. Sans prévision, ciel dégagé supposé. Chaque changement se fait en fondu d\'une seconde.</string>
+    <string name="autobri_note_offline">Version hors ligne : la lumière extérieure est estimée d\'après la seule hauteur du soleil (ciel dégagé supposé). Chaque changement se fait en fondu d\'une seconde.</string>
     <string name="autobri_percent" translatable="false">%1$d %%</string>
     <string name="battery_auto_threshold_value" translatable="false">%1$d %%</string>
 
