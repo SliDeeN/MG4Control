@@ -4,11 +4,7 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
-import android.graphics.Color
 import android.graphics.PixelFormat
-import android.graphics.Rect
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.InsetDrawable
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
@@ -26,7 +22,6 @@ import com.google.android.material.slider.Slider
 import com.mg4.control.MainActivity
 import com.mg4.control.R
 import com.mg4.control.accessibility.JoystickFocus
-import com.mg4.control.accessibility.KeyCaptureService
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.model.DrivingProfile
@@ -66,7 +61,7 @@ object ProfilePickerOverlay {
     private var countdownRunnable: Runnable? = null
 
     /** Focus au joystick du popup affiché ; vit et meurt avec la vue. Thread principal seulement. */
-    private var navigation: Navigation? = null
+    private var navigation: OverlayNavigation? = null
 
     // ── API publique ─────────────────────────────────────────────────────────
 
@@ -333,9 +328,9 @@ object ProfilePickerOverlay {
 
             // Joystick : même chemin que le glissement (écriture différée), sans quoi une rafale
             // de crans enverrait une écriture binder par appui.
-            reglerLuminosite = { delta ->
+            reglerLuminosite = { sens ->
                 slider?.let {
-                    it.value = (it.value + delta).coerceIn(it.valueFrom, it.valueTo)  // label via le listener
+                    it.value = (it.value + sens * PAS_LUMINOSITE).coerceIn(it.valueFrom, it.valueTo)  // label via le listener
                     handler.removeCallbacks(pendingApply)
                     handler.postDelayed(pendingApply, 60L)
                     resetTimers()
@@ -375,115 +370,15 @@ object ProfilePickerOverlay {
         // Focus de départ sur le premier profil : c'est ce qu'on vient chercher dans ce popup, et
         // c'est aussi celui qu'applique le délai d'un conflit Bluetooth.
         val premierProfil = grille.indexOfFirst { it.firstOrNull() === lignesProfils.firstOrNull()?.firstOrNull() }
-        navigation = Navigation(
-            grille           = grille,
-            ligneCurseur     = ligneCurseur,
-            defilement       = container.parent as? ScrollView,
-            reglerLuminosite = reglerLuminosite,
-            surDeplacement   = { resetTimers() },
-            couleur          = accentColor,
-            epaisseur        = dp(4f),
-            arrondi          = dp(12f).toFloat(),
-            depart           = JoystickFocus.Position(premierProfil.coerceAtLeast(0), 0),
-        ).also {
-            // Surligner sans service d'accessibilité promettrait une navigation qui ne viendra pas.
-            if (KeyCaptureService.isEnabled(context)) it.afficher()
-        }
-    }
-
-    /**
-     * Focus au joystick sur les cellules d'un popup affiché.
-     *
-     * Le choix de la cible est délégué à [JoystickFocus] (testé) ; cette classe ne fait que lire
-     * les positions à l'écran, dessiner l'anneau et agir. Les positions sont relues à CHAQUE appui :
-     * au premier, la mise en page vient à peine d'avoir lieu.
-     */
-    private class Navigation(
-        private val grille: List<List<View>>,
-        private val ligneCurseur: View?,
-        private val defilement: ScrollView?,
-        private val reglerLuminosite: ((Int) -> Unit)?,
-        private val surDeplacement: () -> Unit,
-        private val couleur: Int,
-        private val epaisseur: Int,
-        private val arrondi: Float,
-        depart: JoystickFocus.Position,
-    ) {
-        private var position = depart
-        private var surlignee: View? = null
-
-        fun afficher() = surligner(cellule())
-
-        fun recevoir(commande: JoystickFocus.Commande) {
-            val cellule = cellule()
-            val lateral = commande == JoystickFocus.Commande.GAUCHE || commande == JoystickFocus.Commande.DROITE
-            when {
-                // Clic réel : même chemin que le doigt, donc mêmes garde-fous (verrou de conduite,
-                // confirmation d'extinction…). Le curseur n'a rien à valider.
-                commande == JoystickFocus.Commande.VALIDER -> {
-                    AppLogger.i(TAG, "Joystick — validation de la cellule ${position.ligne}/${position.colonne}")
-                    if (cellule !== ligneCurseur) cellule.performClick()
-                }
-                // Sur le curseur, gauche/droite règlent la luminosité au lieu de déplacer le focus
-                // (la ligne n'a de toute façon qu'une cellule).
-                cellule === ligneCurseur && lateral -> reglerLuminosite?.invoke(
-                    if (commande == JoystickFocus.Commande.GAUCHE) -PAS_LUMINOSITE else PAS_LUMINOSITE
-                )
-                else -> {
-                    position = JoystickFocus.deplacer(centres(), position, commande)
-                    surligner(cellule())
-                    surDeplacement()
-                }
-            }
-        }
-
-        private fun cellule(): View {
-            val ligne = grille[position.ligne.coerceIn(0, grille.lastIndex)]
-            return ligne[position.colonne.coerceIn(0, ligne.lastIndex)]
-        }
-
-        private fun centres(): List<List<Int>> {
-            val xy = IntArray(2)
-            return grille.map { ligne ->
-                ligne.map { v -> v.getLocationOnScreen(xy); xy[0] + v.width / 2 }
-            }
-        }
-
-        private fun surligner(v: View) {
-            surlignee?.foreground = null
-            // Les MaterialButton dessinent leur fond en retrait vertical : sans le même retrait,
-            // l'anneau flotterait au-dessus et au-dessous du bouton.
-            val (haut, bas) = if (v is MaterialButton) v.insetTop to v.insetBottom else 0 to 0
-            v.foreground = InsetDrawable(GradientDrawable().apply {
-                cornerRadius = arrondi
-                setColor(Color.TRANSPARENT)
-                setStroke(epaisseur, couleur)
-            }, 0, haut, 0, bas)
-            surlignee = v
-            amenerDansLaVue(v)
-        }
-
-        /** Fait défiler la liste de profils si la cellule surlignée en dépasse. */
-        private fun amenerDansLaVue(v: View) {
-            val sv = defilement ?: return
-            if (sv.height == 0 || !estDans(v, sv)) return
-            val r = Rect()
-            v.getDrawingRect(r)
-            sv.offsetDescendantRectToMyCoords(v, r)
-            when {
-                r.top < sv.scrollY                -> sv.smoothScrollTo(0, r.top)
-                r.bottom > sv.scrollY + sv.height -> sv.smoothScrollTo(0, r.bottom - sv.height)
-            }
-        }
-
-        private fun estDans(v: View, parent: View): Boolean {
-            var p = v.parent
-            while (p != null) {
-                if (p === parent) return true
-                p = p.parent
-            }
-            return false
-        }
+        navigation = OverlayNavigation(
+            context        = context,
+            grille         = grille,
+            depart         = JoystickFocus.Position(premierProfil.coerceAtLeast(0), 0),
+            surDeplacement = { resetTimers() },
+            ligneCurseur   = ligneCurseur,
+            defilement     = container.parent as? ScrollView,
+            reglerCurseur  = reglerLuminosite,
+        ).also { it.afficher() }
     }
 
     /**

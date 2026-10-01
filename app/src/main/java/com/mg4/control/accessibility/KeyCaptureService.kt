@@ -12,6 +12,7 @@ import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.service.MG4ControlService
+import com.mg4.control.service.ProfileConfirmOverlay
 import com.mg4.control.service.ProfilePickerOverlay
 import com.mg4.control.shortcut.PressType
 import com.mg4.control.util.GarageMode
@@ -158,20 +159,28 @@ class KeyCaptureService : AccessibilityService() {
             // `false` rendu ici la laisse repartir vers l'application au premier plan.
             if (GarageMode.isOn(this)) return false
 
-            // ── Popup de profils ouvert : le joystick droit y navigue ──
+            // ── Popup de profils ou de confirmation ouvert : le joystick droit y navigue ──
             //
             // Prioritaire sur les raccourcis avancés, qui ne doivent pas se déclencher pendant
             // qu'on choisit un profil, et indépendant de leur interrupteur. Seul un PREMIER down
             // ouvre la navigation : une répétition sans premier down signale un appui commencé
             // avant l'ouverture (un appui long qui vient d'ouvrir le popup, typiquement), et son
             // relâchement appartient au raccourci qui l'a pris en charge.
+            // Si les deux sont ouverts, la confirmation passe d'abord : sa question expire en 8 s.
             val commande = JoystickFocus.commande(code)
-            if (commande != null && event.action == KeyEvent.ACTION_DOWN &&
-                event.repeatCount == 0 && ProfilePickerOverlay.isShowing()) {
-                navigationEnCours.add(code)
-                AppLogger.i(TAG, "touche $code — navigation popup profils → ${commande.name}")
-                ProfilePickerOverlay.naviguer(commande)
-                return true
+            if (commande != null && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
+                val confirmation = ProfileConfirmOverlay.isShowing()
+                if (confirmation || ProfilePickerOverlay.isShowing()) {
+                    navigationEnCours.add(code)
+                    if (confirmation) {
+                        AppLogger.i(TAG, "touche $code — navigation popup confirmation → ${commande.name}")
+                        ProfileConfirmOverlay.naviguer(commande)
+                    } else {
+                        AppLogger.i(TAG, "touche $code — navigation popup profils → ${commande.name}")
+                        ProfilePickerOverlay.naviguer(commande)
+                    }
+                    return true
+                }
             }
 
             // Tout ce qui n'est pas le PREMIER down d'un appui traverse : répétitions et UP d'un

@@ -312,6 +312,11 @@
     <string name="automation_dir_above">Üstünde</string>
     <string name="automation_confirm_msg_above">Dış sıcaklık %1$d°C değerinin üstünde\n(şu anki sıcaklık %2$s°C)\n“%3$s” profili uygulansın mı?</string>
     <string name="automation_profile_title">Sıcaklığa göre bir profil uygula</string>
+    <string name="battery_auto_title">Bataryaya göre profil uygula</string>
+    <string name="battery_auto_desc">Batarya bir eşiğin altına düştüğünde bir profil uygular</string>
+    <string name="battery_auto_threshold_label">Batarya eşiği</string>
+    <string name="battery_auto_note">Batarya eşiğin altına düştüğünde, açılışta ya da sürüş sırasında bir kez tetiklenir. Her açılışta ya da eşiğin üzerinde bir şarjdan sonra yeniden devreye girer. Sürüş güvenliği bu hızda ayarları engelliyorsa profil bir sonraki duruşu bekler.</string>
+    <string name="battery_auto_confirm_msg">Batarya %1$d %% altına düştü\n(şu an %2$s %%)\n“%3$s” profili uygulansın mı?</string>
 
     <!-- A/C automation -->
     <string name="ac_auto_title">Sıcaklığa göre klimayı tetikle</string>

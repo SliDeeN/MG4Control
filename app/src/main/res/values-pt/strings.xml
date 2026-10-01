@@ -312,6 +312,11 @@
     <string name="automation_dir_above">Superior a</string>
     <string name="automation_confirm_msg_above">A temperatura exterior está acima de %1$d°C\n(%2$s°C temperatura atual)\nAplicar o perfil «%3$s»?</string>
     <string name="automation_profile_title">Aplicar um perfil consoante a temperatura</string>
+    <string name="battery_auto_title">Aplicar um perfil conforme a bateria</string>
+    <string name="battery_auto_desc">Aplicar um perfil quando a bateria desce abaixo de um limiar</string>
+    <string name="battery_auto_threshold_label">Limiar da bateria</string>
+    <string name="battery_auto_note">Ativa-se uma vez quando a bateria desce abaixo do limiar, no arranque ou em andamento. Rearma a cada arranque, ou após uma carga acima do limiar. Se a segurança de condução bloquear os ajustes a esta velocidade, o perfil espera pela próxima paragem.</string>
+    <string name="battery_auto_confirm_msg">A bateria desceu abaixo de %1$d %%\n(%2$s %% agora)\nAplicar o perfil «%3$s»?</string>
 
     <!-- Automação do A/C -->
     <string name="ac_auto_title">Ativação do A/C consoante a temperatura</string>

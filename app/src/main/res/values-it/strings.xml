@@ -312,6 +312,11 @@
     <string name="automation_dir_above">Superiore a</string>
     <string name="automation_confirm_msg_above">La temperatura esterna è sopra i %1$d°C\n(%2$s°C temperatura attuale)\nApplicare il profilo «%3$s»?</string>
     <string name="automation_profile_title">Applicare un profilo in base alla temperatura</string>
+    <string name="battery_auto_title">Applica un profilo in base alla batteria</string>
+    <string name="battery_auto_desc">Applica un profilo quando la batteria scende sotto una soglia</string>
+    <string name="battery_auto_threshold_label">Soglia batteria</string>
+    <string name="battery_auto_note">Si attiva una volta quando la batteria scende sotto la soglia, all\'avvio come in marcia. Si riarma a ogni avvio, o dopo una ricarica sopra la soglia. Se la sicurezza di guida blocca le impostazioni a questa velocità, il profilo attende la prossima sosta.</string>
+    <string name="battery_auto_confirm_msg">La batteria è scesa sotto il %1$d %%\n(%2$s %% ora)\nApplicare il profilo «%3$s»?</string>
 
     <!-- Automazione A/C -->
     <string name="ac_auto_title">Attivazione A/C in base alla temperatura</string>

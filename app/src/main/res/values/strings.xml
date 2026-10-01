@@ -314,6 +314,12 @@
     <string name="automation_dir_above">Supérieure à</string>
     <string name="automation_confirm_msg_above">La température extérieure est au-dessus de %1$d°C\n(%2$s°C température actuelle)\nVoulez-vous appliquer le profil « %3$s » ?</string>
     <string name="automation_profile_title">Application d\'un profil via la température</string>
+    <string name="battery_auto_title">Application d\'un profil via la batterie</string>
+    <string name="battery_auto_desc">Appliquer un profil quand la batterie passe sous un seuil</string>
+    <string name="battery_auto_threshold_label">Seuil de batterie</string>
+    <string name="battery_auto_note">Se déclenche une fois quand la batterie passe sous le seuil, au démarrage comme en roulant. Se réarme à chaque démarrage, ou après une recharge au-dessus du seuil. Si la sécurité conduite bloque les réglages à cette vitesse, le profil attend le prochain arrêt.</string>
+    <string name="battery_auto_confirm_msg">La batterie est passée sous %1$d %%\n(%2$s %% actuellement)\nVoulez-vous appliquer le profil « %3$s » ?</string>
+    <string name="battery_auto_threshold_value" translatable="false">%1$d %%</string>
 
     <!-- Automatisation A/C -->
     <string name="ac_auto_title">Déclenchement A/C via la température</string>

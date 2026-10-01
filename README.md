@@ -194,6 +194,9 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
 ### Automatisation
 - **Application d'un profil selon la température extérieure** : seuil, sens
   (inférieure/supérieure), profil à appliquer, exécution directe ou popup de confirmation
+- **Application d'un profil selon la batterie** : quand le niveau passe sous un seuil réglable au
+  curseur (5–50 %), au démarrage comme en roulant ; une fois par épisode, réarmée à chaque
+  démarrage ou après une recharge ; exécution directe ou popup de confirmation
 - **Déclenchement A/C via la température** : deux règles indépendantes (température supérieure /
   inférieure), chacune avec son seuil, sa consigne, sa ventilation, ses dégivrages, le mode
   automatique et la recirculation
@@ -1091,6 +1094,9 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
 ### Automation
 - **Apply a profile from the outside temperature**: threshold, direction (below/above), profile to
   apply, direct execution or confirmation popup
+- **Apply a profile from the battery level**: when the charge drops below a threshold set with a
+  slider (5–50 %), at start-up or while driving; once per episode, re-armed at every start or after
+  charging; direct execution or confirmation popup
 - **Temperature-triggered A/C**: two independent rules (above / below), each with its threshold,
   setpoint, fan level, defrosters, automatic mode and recirculation
 - Each automation folds open independently of its enable switch

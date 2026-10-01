@@ -312,6 +312,11 @@
     <string name="automation_dir_above">Above</string>
     <string name="automation_confirm_msg_above">The outside temperature is above %1$d°C\n(%2$s°C current temperature)\nApply profile “%3$s”?</string>
     <string name="automation_profile_title">Apply a profile based on temperature</string>
+    <string name="battery_auto_title">Apply a profile based on battery level</string>
+    <string name="battery_auto_desc">Apply a profile when the battery drops below a threshold</string>
+    <string name="battery_auto_threshold_label">Battery threshold</string>
+    <string name="battery_auto_note">Triggers once when the battery drops below the threshold, at start-up or while driving. Re-arms at every start, or after charging above the threshold. If driving safety blocks settings at the current speed, the profile waits for the next stop.</string>
+    <string name="battery_auto_confirm_msg">The battery has dropped below %1$d %%\n(%2$s %% now)\nApply profile “%3$s”?</string>
 
     <!-- A/C automation -->
     <string name="ac_auto_title">Trigger A/C based on temperature</string>

@@ -89,6 +89,13 @@ object EnergyReader {
     }
 
     /**
+     * Pourcentage de batterie seul, pour l'automatisation qui le surveille en roulant : une
+     * propriété au lieu de la quinzaine que lit [read]. Mêmes garde-fous — hors de 0..100, c'est
+     * une lecture ratée, pas une valeur.
+     */
+    fun soc(): Float? = float(PROP_SOC)?.takeIf { it in 0f..100f }
+
+    /**
      * Capacité de la batterie annoncée par le véhicule, en kWh — `null` si la propriété ne répond
      * pas ou rend une valeur invraisemblable.
      *

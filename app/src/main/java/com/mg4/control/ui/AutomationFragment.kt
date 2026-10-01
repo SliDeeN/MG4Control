@@ -13,10 +13,13 @@ import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Switch
+import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.slider.Slider
 import com.mg4.control.R
 import com.mg4.control.automation.AutomationSettings
+import com.mg4.control.automation.BatteryAutomationSettings
 import com.mg4.control.automation.ClimateAutomationSettings
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.model.DrivingProfile
@@ -93,8 +96,53 @@ class AutomationFragment : Fragment() {
         btnDirBelow.setOnClickListener { setDirection(AutomationSettings.Direction.BELOW) }
         btnDirAbove.setOnClickListener { setDirection(AutomationSettings.Direction.ABOVE) }
 
-        setupSpinner(spinner, prefs)
+        setupSpinner(spinner, prefs, AutomationSettings.KEY_PROFILE_ID)
+        bindBatteryAutomation(view, prefs)
         bindClimateAutomation(view, prefs)
+    }
+
+    // ══════════ Automatisation « profil selon la batterie » (issue #112) ══════════
+
+    /**
+     * Même structure que la carte température, mais le seuil se règle au curseur : la saisie
+     * faisait surgir un clavier virtuel qui masquait la moitié de la carte.
+     */
+    private fun bindBatteryAutomation(view: View, prefs: android.content.SharedPreferences) {
+        val cfg     = BatteryAutomationSettings.read(requireContext())
+        val sw      = view.findViewById<Switch>(R.id.switch_battery_auto)
+        val content = view.findViewById<View>(R.id.row_battery_auto_config)
+        val slider  = view.findViewById<Slider>(R.id.slider_battery_auto_threshold)
+        val valeur  = view.findViewById<TextView>(R.id.battery_auto_threshold_value)
+        val check   = view.findViewById<CheckBox>(R.id.check_battery_auto_execute)
+
+        sw.isChecked = cfg.enabled
+        sw.setOnCheckedChangeListener { _, on ->
+            prefs.edit().putBoolean(BatteryAutomationSettings.KEY_ENABLED, on).apply()
+        }
+        bindExpander(view.findViewById(R.id.btn_battery_auto_expand), content, expanded = cfg.enabled)
+
+        slider.valueFrom = BatteryAutomationSettings.MIN_THRESHOLD.toFloat()
+        slider.valueTo   = BatteryAutomationSettings.MAX_THRESHOLD.toFloat()
+        slider.stepSize  = 1f
+        slider.value     = cfg.threshold.toFloat()
+        fun afficher(seuil: Int) {
+            valeur.text = getString(R.string.battery_auto_threshold_value, seuil)
+        }
+        afficher(cfg.threshold)
+        slider.addOnChangeListener { _, v, fromUser ->
+            afficher(v.toInt())
+            if (fromUser) prefs.edit()
+                .putInt(BatteryAutomationSettings.KEY_THRESHOLD, BatteryAutomationSettings.clamp(v.toInt()))
+                .apply()
+        }
+
+        check.isChecked = cfg.autoExecute
+        check.setOnCheckedChangeListener { _, c ->
+            prefs.edit().putBoolean(BatteryAutomationSettings.KEY_AUTO_EXECUTE, c).apply()
+        }
+
+        setupSpinner(view.findViewById(R.id.spinner_battery_auto_profile), prefs,
+            BatteryAutomationSettings.KEY_PROFILE_ID)
     }
 
     // ══════════ Automatisation « Déclenchement A/C via la température » ══════════
@@ -286,16 +334,20 @@ class AutomationFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         // Les profils peuvent avoir changé dans l'onglet Profils → on recharge la liste.
+        val prefs = requireContext().getSharedPreferences(AutomationSettings.PREFS, Context.MODE_PRIVATE)
         view?.findViewById<Spinner>(R.id.spinner_automation_profile)?.let { sp ->
-            val prefs = requireContext().getSharedPreferences(AutomationSettings.PREFS, Context.MODE_PRIVATE)
-            setupSpinner(sp, prefs)
+            setupSpinner(sp, prefs, AutomationSettings.KEY_PROFILE_ID)
+        }
+        view?.findViewById<Spinner>(R.id.spinner_battery_auto_profile)?.let { sp ->
+            setupSpinner(sp, prefs, BatteryAutomationSettings.KEY_PROFILE_ID)
         }
         // Carte des vitres : le sondage ne reprend que si elle est restée dépliée.
         if (view?.findViewById<View>(R.id.row_windows_config)?.visibility == View.VISIBLE)
             windowsPanel.onShown()
     }
 
-    private fun setupSpinner(spinner: Spinner, prefs: android.content.SharedPreferences) {
+    /** Liste des profils ; [key] désigne l'automatisation dont on enregistre le choix. */
+    private fun setupSpinner(spinner: Spinner, prefs: android.content.SharedPreferences, key: String) {
         profiles = ProfileManager(requireContext()).getAll()
         val labels = if (profiles.isEmpty()) listOf(getString(R.string.automation_no_profile))
                      else profiles.map { it.name }
@@ -305,14 +357,14 @@ class AutomationFragment : Fragment() {
         spinner.isEnabled = profiles.isNotEmpty()
 
         // Positionne sur le profil déjà configuré.
-        val savedId = prefs.getString(AutomationSettings.KEY_PROFILE_ID, "") ?: ""
+        val savedId = prefs.getString(key, "") ?: ""
         val idx = profiles.indexOfFirst { it.id == savedId }
         if (idx >= 0) spinner.setSelection(idx)
 
         spinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: android.widget.AdapterView<*>?, v: View?, position: Int, id: Long) {
                 if (profiles.isEmpty()) return
-                prefs.edit().putString(AutomationSettings.KEY_PROFILE_ID, profiles[position].id).apply()
+                prefs.edit().putString(key, profiles[position].id).apply()
             }
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
         }

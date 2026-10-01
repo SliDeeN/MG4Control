@@ -312,6 +312,11 @@
     <string name="automation_dir_above">Über</string>
     <string name="automation_confirm_msg_above">Die Außentemperatur liegt über %1$d°C\n(%2$s°C aktuelle Temperatur)\nProfil „%3$s“ anwenden?</string>
     <string name="automation_profile_title">Profil anhand der Temperatur anwenden</string>
+    <string name="battery_auto_title">Profil je nach Batteriestand anwenden</string>
+    <string name="battery_auto_desc">Ein Profil anwenden, wenn die Batterie unter einen Schwellenwert fällt</string>
+    <string name="battery_auto_threshold_label">Batterie-Schwellenwert</string>
+    <string name="battery_auto_note">Löst einmal aus, wenn die Batterie unter den Schwellenwert fällt – beim Start wie während der Fahrt. Wird bei jedem Start erneut aktiv oder nach einem Laden über den Schwellenwert. Sperrt die Fahrsicherheit die Einstellungen bei dieser Geschwindigkeit, wartet das Profil auf den nächsten Halt.</string>
+    <string name="battery_auto_confirm_msg">Die Batterie ist unter %1$d %% gefallen\n(aktuell %2$s %%)\nProfil „%3$s“ anwenden?</string>
 
     <!-- Klima-Automatisierung -->
     <string name="ac_auto_title">Klimaanlage über die Temperatur auslösen</string>
