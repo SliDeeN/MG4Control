@@ -15,9 +15,9 @@ object BatteryAutomationSettings {
     const val KEY_AUTO_EXECUTE = "automation_soc_auto_execute"
 
     const val DEFAULT_THRESHOLD = 20
-    /** Sous 5 %, la voiture limite déjà d'elle-même ; au-delà de 50 %, ce n'est plus une réserve. */
+    /** Sous 5 %, la voiture limite déjà d'elle-même ; au-delà de 60 %, ce n'est plus une réserve. */
     const val MIN_THRESHOLD = 5
-    const val MAX_THRESHOLD = 50
+    const val MAX_THRESHOLD = 60
 
     data class Config(
         val enabled: Boolean,

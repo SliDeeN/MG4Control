@@ -316,7 +316,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:valueFrom="5"
-                    android:valueTo="50"
+                    android:valueTo="60"
                     android:value="20"
                     android:stepSize="1"
                     app:labelBehavior="gone"
