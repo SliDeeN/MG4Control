@@ -414,6 +414,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:id="@+id/autobri_desc"
                     android:text="@string/autobri_desc"
                     android:textColor="@color/text_secondary"
                     android:textSize="16sp" />
@@ -456,6 +457,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="32dp"
+                    android:id="@+id/autobri_follow_desc"
                     android:text="@string/autobri_follow_desc"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
@@ -474,6 +476,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="32dp"
+                    android:id="@+id/autobri_lights_desc"
                     android:text="@string/autobri_lights_desc"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
@@ -485,6 +488,13 @@
                     android:background="@color/dash_border"
                     android:layout_marginTop="12dp"
                     android:layout_marginBottom="12dp" />
+
+                <!-- Version en ligne : la courbe, masquée en hors ligne -->
+                <LinearLayout
+                    android:id="@+id/section_autobri_curve"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
 
                 <!-- La courbe : quatre points, du plus sombre au plus clair -->
                 <TextView
@@ -662,6 +672,102 @@
                     app:thumbColor="@color/dash_accent"
                     app:trackColorActive="@color/dash_accent"
                     app:trackColorInactive="@color/dash_border" />
+
+                </LinearLayout>
+
+                <!-- Version hors ligne : deux niveaux, feux éteints / feux allumés (pas de courbe) -->
+                <LinearLayout
+                    android:id="@+id/section_autobri_levels"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/autobri_level_lights_off"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/autobri_lights_off_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="90dp"
+                            android:gravity="end"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:fontFamily="monospace" />
+
+                    </LinearLayout>
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_autobri_lights_off"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:valueFrom="5"
+                        android:valueTo="100"
+                        android:value="50"
+                        android:stepSize="5"
+                        app:labelBehavior="gone"
+                        app:thumbRadius="14dp"
+                        app:trackHeight="10dp"
+                        app:thumbColor="@color/dash_accent"
+                        app:trackColorActive="@color/dash_accent"
+                        app:trackColorInactive="@color/dash_border" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/autobri_level_lights_on"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/autobri_lights_on_value"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="90dp"
+                            android:gravity="end"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp"
+                            android:fontFamily="monospace" />
+
+                    </LinearLayout>
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/slider_autobri_lights_on"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:valueFrom="5"
+                        android:valueTo="100"
+                        android:value="50"
+                        android:stepSize="5"
+                        app:labelBehavior="gone"
+                        app:thumbRadius="14dp"
+                        app:trackHeight="10dp"
+                        app:thumbColor="@color/dash_accent"
+                        app:trackColorActive="@color/dash_accent"
+                        app:trackColorInactive="@color/dash_border" />
+
+                </LinearLayout>
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_autobri_test"

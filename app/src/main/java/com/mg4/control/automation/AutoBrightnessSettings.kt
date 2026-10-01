@@ -1,6 +1,7 @@
 package com.mg4.control.automation
 
 import android.content.Context
+import com.mg4.control.BuildConfig
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.model.BrightnessCurve
 
@@ -12,7 +13,7 @@ object AutoBrightnessSettings {
 
     const val PREFS         = AutomationSettings.PREFS
     const val KEY_ENABLED   = "autobri_enabled"
-    /** Suivre la lumière en roulant (feux + écart de la lumière estimée), au-delà du seul READY. */
+    /** « Ajuster la luminosité pendant la conduite » (feux + écart de la lumière estimée), au-delà du READY. */
     const val KEY_FOLLOW    = "autobri_follow"
     /** Tenir compte des feux de position (garde-fou garage/tunnel/nuit). */
     const val KEY_USE_LIGHTS = "autobri_use_lights"
@@ -20,6 +21,11 @@ object AutoBrightnessSettings {
     const val KEY_TWILIGHT  = "autobri_twilight"
     const val KEY_OVERCAST  = "autobri_overcast"
     const val KEY_SUNNY     = "autobri_sunny"
+    /** Version hors ligne : luminosité feux éteints / feux allumés (pas de courbe, pas de réseau). */
+    const val KEY_LIGHTS_OFF_PERCENT = "autobri_lights_off_percent"
+    const val KEY_LIGHTS_ON_PERCENT  = "autobri_lights_on_percent"
+    const val DEFAULT_LIGHTS_OFF_PERCENT = 80
+    const val DEFAULT_LIGHTS_ON_PERCENT  = 20
     /** Prévision Open-Meteo en cache (JSON). */
     const val KEY_FORECAST  = "autobri_forecast"
     /** Heure de la dernière requête Open-Meteo, réussie ou non. */
@@ -43,6 +49,9 @@ object AutoBrightnessSettings {
         val follow: Boolean,
         val useLights: Boolean,
         val curve: BrightnessCurve,
+        /** Version hors ligne seulement. */
+        val lightsOffPercent: Int,
+        val lightsOnPercent: Int,
     )
 
     fun read(context: Context): Config {
@@ -50,15 +59,20 @@ object AutoBrightnessSettings {
         val d = BrightnessCurve.DEFAULT
         return Config(
             enabled   = p.getBoolean(KEY_ENABLED, false),
-            follow    = p.getBoolean(KEY_FOLLOW, false),
-            // Cochée par défaut : c'est le comportement validé au garage le 2026-10-01.
-            useLights = p.getBoolean(KEY_USE_LIGHTS, true),
+            // Cochée par défaut dans les deux variantes (choix du 2026-10-01). Un choix déjà fait
+            // dans la carte est enregistré et reste prioritaire.
+            follow    = p.getBoolean(KEY_FOLLOW, true),
+            // Cochée par défaut : c'est le comportement validé au garage le 2026-10-01. Hors ligne,
+            // toujours : sans les feux, la variante n'a plus aucune source.
+            useLights = BuildConfig.OFFLINE || p.getBoolean(KEY_USE_LIGHTS, true),
             curve = BrightnessCurve(
                 night    = clamp(p.getInt(KEY_NIGHT, d.night)),
                 twilight = clamp(p.getInt(KEY_TWILIGHT, d.twilight)),
                 overcast = clamp(p.getInt(KEY_OVERCAST, d.overcast)),
                 sunny    = clamp(p.getInt(KEY_SUNNY, d.sunny)),
             ),
+            lightsOffPercent = clamp(p.getInt(KEY_LIGHTS_OFF_PERCENT, DEFAULT_LIGHTS_OFF_PERCENT)),
+            lightsOnPercent  = clamp(p.getInt(KEY_LIGHTS_ON_PERCENT, DEFAULT_LIGHTS_ON_PERCENT)),
         )
     }
 

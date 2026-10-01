@@ -161,8 +161,7 @@ class AutomationFragment : Fragment() {
      */
     private fun bindAutoBrightness(view: View, prefs: android.content.SharedPreferences) {
         val card = view.findViewById<View>(R.id.card_autobri)
-        // Version en ligne uniquement : la version hors ligne n'a pas accès à Internet, c'est voulu.
-        if (BuildConfig.OFFLINE || !MG4Hardware.hasBrightnessControl()) {
+        if (!MG4Hardware.hasBrightnessControl()) {
             card.visibility = View.GONE
             return
         }
@@ -189,6 +188,26 @@ class AutomationFragment : Fragment() {
             }
         }
 
+        // Version hors ligne (sans Internet, par choix) : rien que les feux. Pas de courbe, pas de
+        // case « feux » — ils sont toute la fonctionnalité —, deux niveaux à la place.
+        val horsLigne = BuildConfig.OFFLINE
+        view.findViewById<TextView>(R.id.autobri_desc).setText(
+            if (horsLigne) R.string.autobri_desc_offline else R.string.autobri_desc)
+        view.findViewById<TextView>(R.id.autobri_follow_desc).setText(
+            if (horsLigne) R.string.autobri_follow_desc_offline else R.string.autobri_follow_desc)
+        val enLigne = if (horsLigne) View.GONE else View.VISIBLE
+        view.findViewById<View>(R.id.check_autobri_lights).visibility = enLigne
+        view.findViewById<View>(R.id.autobri_lights_desc).visibility = enLigne
+        view.findViewById<View>(R.id.section_autobri_curve).visibility = enLigne
+        view.findViewById<View>(R.id.section_autobri_levels).visibility =
+            if (horsLigne) View.VISIBLE else View.GONE
+        if (horsLigne) {
+            bindPercentSlider(view, R.id.slider_autobri_lights_off, R.id.autobri_lights_off_value,
+                AutoBrightnessSettings.KEY_LIGHTS_OFF_PERCENT, cfg.lightsOffPercent, prefs)
+            bindPercentSlider(view, R.id.slider_autobri_lights_on, R.id.autobri_lights_on_value,
+                AutoBrightnessSettings.KEY_LIGHTS_ON_PERCENT, cfg.lightsOnPercent, prefs)
+        }
+
         bindPercentSlider(view, R.id.slider_autobri_night, R.id.autobri_night_value,
             AutoBrightnessSettings.KEY_NIGHT, cfg.curve.night, prefs)
         bindPercentSlider(view, R.id.slider_autobri_twilight, R.id.autobri_twilight_value,
@@ -198,7 +217,8 @@ class AutomationFragment : Fragment() {
         bindPercentSlider(view, R.id.slider_autobri_sunny, R.id.autobri_sunny_value,
             AutoBrightnessSettings.KEY_SUNNY, cfg.curve.sunny, prefs)
 
-        view.findViewById<TextView>(R.id.autobri_note).setText(R.string.autobri_note)
+        view.findViewById<TextView>(R.id.autobri_note).setText(
+            if (horsLigne) R.string.autobri_note_offline else R.string.autobri_note)
         val etat = view.findViewById<TextView>(R.id.autobri_status)
         afficherEtatLuminosite(etat, prefs)
         view.findViewById<MaterialButton>(R.id.btn_autobri_test).setOnClickListener { btn ->
@@ -241,15 +261,21 @@ class AutomationFragment : Fragment() {
             return
         }
         val source = when (prefs.getString(AutoBrightnessSettings.KEY_LAST_SOURCE, null)) {
-            AutoBrightness.Source.LIGHTS.name   -> getString(R.string.autobri_source_lights)
-            AutoBrightness.Source.FORECAST.name -> getString(R.string.autobri_source_forecast)
-            else                                -> getString(R.string.autobri_source_sun)
+            AutoBrightness.Source.LIGHTS.name     -> getString(R.string.autobri_source_lights)
+            AutoBrightness.Source.LIGHTS_OFF.name -> getString(R.string.autobri_source_lights_off)
+            AutoBrightness.Source.FORECAST.name   -> getString(R.string.autobri_source_forecast)
+            else                                  -> getString(R.string.autobri_source_sun)
         }
         val heure = android.text.format.DateFormat.getTimeFormat(requireContext()).format(Date(quand))
-        val lux = String.format(Locale.getDefault(), "%,d",
-            prefs.getFloat(AutoBrightnessSettings.KEY_LAST_LUX, 0f).toDouble().roundToLong())
-        val etat = getString(R.string.autobri_status, heure, source, lux,
-            prefs.getInt(AutoBrightnessSettings.KEY_LAST_PERCENT, 0))
+        val pourcent = prefs.getInt(AutoBrightnessSettings.KEY_LAST_PERCENT, 0)
+        // Hors ligne, aucune lumière n'est estimée : pas de lux à afficher.
+        val etat = if (BuildConfig.OFFLINE) {
+            getString(R.string.autobri_status_lights, heure, source, pourcent)
+        } else {
+            val lux = String.format(Locale.getDefault(), "%,d",
+                prefs.getFloat(AutoBrightnessSettings.KEY_LAST_LUX, 0f).toDouble().roundToLong())
+            getString(R.string.autobri_status, heure, source, lux, pourcent)
+        }
         tv.text = if (prefs.getBoolean(AutoBrightnessSettings.KEY_PAUSED, false))
             etat + "\n" + getString(R.string.autobri_status_paused) else etat
     }

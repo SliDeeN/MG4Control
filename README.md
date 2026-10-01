@@ -205,11 +205,12 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
   [Open-Meteo](https://open-meteo.com) mise en cache pour 3 jours et actualisée toutes les 8 h au
   plus (~2 Ko par requête), position arrondie à ~10 km.
   Feux de position allumés (garage, tunnel, nuit) : réglage Nuit, refait d'après la lumière dès
-  qu'ils s'éteignent (option décochable si l'on roule feux allumés de jour). Option « Suivre la
-  lumière en roulant » : réajuste aussi à chaque bascule des feux (tunnel) et dès que la lumière
+  qu'ils s'éteignent (option décochable si l'on roule feux allumés de jour). Option « Ajuster la
+  luminosité pendant la conduite » : réajuste aussi à chaque bascule des feux (tunnel) et dès que la lumière
   estimée s'écarte de 10 points ; un réglage à la main suspend tout jusqu'au prochain démarrage.
-  Changements en fondu d'une seconde. Bouton « Tester maintenant ». **Version en ligne
-  uniquement** : la version hors ligne n'accède pas à Internet, par choix
+  Changements en fondu d'une seconde. Bouton « Tester maintenant ». **Version hors ligne** (sans
+  Internet, par choix) : variante réduite aux feux, deux luminosités réglables — feux éteints (80 %
+  par défaut) et feux allumés (20 %) — appliquées au READY puis à chaque bascule des feux
 - **Déclenchement A/C via la température** : deux règles indépendantes (température supérieure /
   inférieure), chacune avec son seuil, sa consigne, sa ventilation, ses dégivrages, le mode
   automatique et la recirculation
@@ -1123,11 +1124,12 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
   The car does not measure light, so it is estimated from the sun height (GPS position + time,
   computed offline) and the [Open-Meteo](https://open-meteo.com) sunshine forecast, cached for
   3 days and refreshed every 8 h at most (~2 KB per request), position rounded to ~10 km. Side lights on (garage, tunnel, night): Night setting, redone
-  from the light once they switch off (can be unticked if you drive with lights on by day). "Follow
-  the light while driving" option: also readjusts at every lights change (tunnel) and as soon as the
+  from the light once they switch off (can be unticked if you drive with lights on by day). "Adjust
+  brightness while driving" option: also readjusts at every lights change (tunnel) and as soon as the
   estimated light drifts 10 points; adjusting by hand pauses it until the next start. Changes fade
-  over one second. "Test now" button. **Online version only**: the offline version has no
-  Internet access, by design
+  over one second. "Test now" button. **Offline version** (no Internet, by design): a lights-only
+  variant with two adjustable levels — lights off (80 % by default) and lights on (20 %) — applied at
+  READY and at every lights change
 - **Temperature-triggered A/C**: two independent rules (above / below), each with its threshold,
   setpoint, fan level, defrosters, automatic mode and recirculation
 - Each automation folds open independently of its enable switch

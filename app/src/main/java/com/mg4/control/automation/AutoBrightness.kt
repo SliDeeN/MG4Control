@@ -35,7 +35,7 @@ import kotlin.math.min
  *
  * **Quand :**
  *  - au passage en READY, une fois (4 s après ; démarrage à froid : 15 s) ;
- *  - option « Suivre la lumière en roulant » : à chaque bascule confirmée des feux de position
+ *  - option « Ajuster la luminosité pendant la conduite » : à chaque bascule confirmée des feux
  *    (tunnel, garage, tombée de la nuit), et dès que la lumière estimée — recalculée chaque minute,
  *    sans réseau — s'écarte de [SEUIL_POINTS] points du dernier réglage ;
  *  - sans ce suivi mais avec les feux : une fois à la sortie du garage, si le READY s'est fait
@@ -48,6 +48,12 @@ import kotlin.math.min
  * rayonnement prévu par Open-Meteo, mis en cache trois jours — sans prévision, ciel dégagé. Option
  * « feux » : feux de position allumés = point Nuit, seul signal du véhicule qui suive la lumière.
  * Chaque changement se fait en fondu d'environ une seconde.
+ *
+ * **Version hors ligne** (sans Internet, par choix) : ni position, ni prévision, ni courbe — rien
+ * que les feux. Feux éteints = réglage « éteints », feux allumés = réglage « allumés », aux mêmes
+ * moments (READY, bascules en roulant si la case est cochée, sortie de garage sinon), avec le même
+ * fondu et la même pause sur réglage manuel. Les branches en ligne sont inchangées : le drapeau
+ * [BuildConfig.OFFLINE] est une constante, chaque variante ne compile que la sienne.
  *
  * Journal : [TAG], sans coordonnées, une ligne par changement d'écran.
  */
@@ -95,7 +101,8 @@ object AutoBrightness {
     private const val FONDU_MS = 1_000L
     private const val FONDU_PAS_MAX = 10
 
-    enum class Source { LIGHTS, FORECAST, SUN }
+    /** [LIGHTS_OFF] : version hors ligne seulement, feux éteints. */
+    enum class Source { LIGHTS, FORECAST, SUN, LIGHTS_OFF }
 
     data class Result(val source: Source, val lux: Double, val percent: Int)
 
@@ -141,12 +148,8 @@ object AutoBrightness {
             if (firstRead) DELAI_DEMARRAGE_FROID_MS else DELAI_APRES_READY_MS)
     }
 
-    /**
-     * Version en ligne uniquement : la version hors ligne n'a pas accès à Internet, et c'est voulu
-     * — la fonctionnalité n'y existe pas du tout, pas même en mode « soleil seul ».
-     */
+    /** Les deux variantes : la version hors ligne n'utilise que les feux (voir l'en-tête). */
     fun start(context: Context) {
-        if (BuildConfig.OFFLINE) return
         appContext = context.applicationContext
         ReadyWatcher.add(readyListener)
     }
@@ -156,10 +159,6 @@ object AutoBrightness {
      * Il lève aussi une pause due à un réglage à la main, et relance le suivi si on roule.
      */
     fun testNow(context: Context, done: (Result?) -> Unit) {
-        if (BuildConfig.OFFLINE) {
-            done(null)
-            return
-        }
         appContext = context.applicationContext
         handler.post {
             val r = cycle(test = true)
@@ -184,7 +183,8 @@ object AutoBrightness {
         ctx.getSharedPreferences(AutoBrightnessSettings.PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(AutoBrightnessSettings.KEY_PAUSED, false).apply()
 
-        val calcul = calculer(ctx, cfg.curve, ignorerFeux = !cfg.useLights, attendreReseau = test)
+        val calcul = (if (BuildConfig.OFFLINE) horsLigne(cfg, MG4Hardware.isSideLightOn())
+                      else calculer(ctx, cfg.curve, ignorerFeux = !cfg.useLights, attendreReseau = test))
             ?: return null
         regler(ctx, calcul, origine)
         entretenirCache(ctx, calcul)
@@ -222,15 +222,16 @@ object AutoBrightness {
 
             val bascule = if (cfg.useLights) basculeFeux() else null
             when {
-                bascule == true && !garageSeul -> regler(ctx, nuit(cfg.curve), "feux allumés")
+                bascule == true && !garageSeul -> regler(ctx, cibleFeuxAllumes(cfg), "feux allumés")
                 bascule == false -> {
-                    calculer(ctx, cfg.curve, ignorerFeux = true, attendreReseau = false)?.let {
+                    cibleFeuxEteints(ctx, cfg)?.let {
                         regler(ctx, it, "feux éteints")
                         entretenirCache(ctx, it)
                     }
                     if (garageSeul) return   // la sortie du garage était la seule chose attendue
                 }
-                cfg.follow && maintenant >= prochaineEstimation && !(cfg.useLights && feuxConfirmes == true) -> {
+                !BuildConfig.OFFLINE && cfg.follow && maintenant >= prochaineEstimation &&
+                    !(cfg.useLights && feuxConfirmes == true) -> {
                     prochaineEstimation = maintenant + ESTIMATION_MS
                     calculer(ctx, cfg.curve, ignorerFeux = true, attendreReseau = false)?.let { c ->
                         val dernier = dernierApplique
@@ -274,6 +275,32 @@ object AutoBrightness {
     }
 
     // ── Calcul et application ────────────────────────────────────────────────
+
+    /** Cible quand les feux s'allument : point Nuit en ligne, réglage « allumés » hors ligne. */
+    private fun cibleFeuxAllumes(cfg: AutoBrightnessSettings.Config): Calcul =
+        if (BuildConfig.OFFLINE) horsLigne(cfg, allumes = true)!! else nuit(cfg.curve)
+
+    /** Cible quand les feux s'éteignent : lumière estimée en ligne, réglage « éteints » hors ligne. */
+    private fun cibleFeuxEteints(ctx: Context, cfg: AutoBrightnessSettings.Config): Calcul? =
+        if (BuildConfig.OFFLINE) horsLigne(cfg, allumes = false)
+        else calculer(ctx, cfg.curve, ignorerFeux = true, attendreReseau = false)
+
+    /**
+     * Version hors ligne : la valeur choisie pour l'état des feux. Feux illisibles → aucun réglage ;
+     * si le suivi tourne, la première lecture confirmée rattrapera.
+     */
+    private fun horsLigne(cfg: AutoBrightnessSettings.Config, allumes: Boolean?): Calcul? {
+        if (allumes == null) {
+            AppLogger.w(TAG, "feux illisibles — aucun réglage")
+            return null
+        }
+        val pct = if (allumes) cfg.lightsOnPercent else cfg.lightsOffPercent
+        return Calcul(
+            Result(if (allumes) Source.LIGHTS else Source.LIGHTS_OFF, 0.0, pct),
+            lat = null, lon = null, maintenant = null, telechargee = false,
+            detail = if (allumes) "feux allumés" else "feux éteints",
+        )
+    }
 
     private fun nuit(curve: BrightnessCurve) = Calcul(
         Result(Source.LIGHTS, BrightnessCurve.LUX_NIGHT, curve.night),
