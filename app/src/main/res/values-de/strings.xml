@@ -193,6 +193,8 @@
 
     <!-- Dashboard — Kartenüberschriften -->
     <string name="card_climate">Klimaeinstellungen</string>
+    <string name="card_lighting">Beleuchtung</string>
+    <string name="lighting_auto_high_beam">Fernlichtassistent</string>
     <string name="card_alerts">Warnungen</string>
 
     <!-- Automatische Aktualisierung -->

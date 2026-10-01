@@ -193,6 +193,8 @@
 
     <!-- Dashboard — intestazioni schede -->
     <string name="card_climate">Impostazioni climatizzazione</string>
+    <string name="card_lighting">Illuminazione</string>
+    <string name="lighting_auto_high_beam">Abbaglianti automatici</string>
     <string name="card_alerts">Avvisi</string>
 
     <!-- Aggiornamento automatico -->

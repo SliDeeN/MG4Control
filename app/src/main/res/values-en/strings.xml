@@ -193,6 +193,8 @@
 
     <!-- Dashboard — card headers -->
     <string name="card_climate">Climate settings</string>
+    <string name="card_lighting">Lighting</string>
+    <string name="lighting_auto_high_beam">Automatic high beam</string>
     <string name="card_alerts">Alerts</string>
 
     <!-- Auto-update -->

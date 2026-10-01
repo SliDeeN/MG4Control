@@ -193,6 +193,8 @@
 
     <!-- Dashboard — card headers -->
     <string name="card_climate">Klima ayarları</string>
+    <string name="card_lighting">Aydınlatma</string>
+    <string name="lighting_auto_high_beam">Otomatik uzun far</string>
     <string name="card_alerts">Uyarılar</string>
 
     <!-- Auto-update -->

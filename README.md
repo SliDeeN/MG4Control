@@ -94,6 +94,7 @@ enregistré avant cette fonctionnalité n'écrit rien tant qu'il n'a pas été r
 - **Sièges chauffants gauche et droit** : Off / Niveau 1 / 2 / 3
 - **Climatisation** : consigne de température, ventilation, marche/arrêt, A/C, AUTO,
   recirculation (intérieur / extérieur / auto), dégivrage avant et arrière
+- **Gestion automatique des feux de route** : On / Off
 - **Luminosité de l'écran**
 - **Baisse du volume en quittant la voiture** : le volume média descend au moment du départ, sur
   les six firmwares. Là où la voiture signale ses portes (SWI133, SWI132), le déclencheur reste
@@ -997,6 +998,7 @@ feature writes nothing until it has been reopened and saved.
 - **Heated seats (left & right)**: Off / Level 1 / 2 / 3
 - **Climate control**: temperature setpoint, fan speed, power, A/C, AUTO, recirculation
   (inner / outside / auto), front and rear defrost
+- **Automatic high beam**: On / Off
 - **Screen brightness**
 - **Volume drop when leaving the car**: media volume goes down as you leave, on all six
   firmwares. Where the car reports its doors (SWI133, SWI132) the trigger stays a front door

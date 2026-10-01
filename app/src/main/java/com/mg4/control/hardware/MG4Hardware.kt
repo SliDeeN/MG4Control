@@ -2617,6 +2617,74 @@ object MG4Hardware {
     }
 
     // -------------------------------------------------------------------------
+    // Feux de route automatiques (« Gestion automatique des feux de route »)
+    //
+    // Une seule propriété véhicule derrière les 6 firmwares : LAMP_AUTO_MAIN_BEAM 0x2140932b
+    // (YFVehicleProperty), permission CAR_VENDOR_EXTENSION comme la régénération. Chaque écran
+    // d'origine l'atteint par sa propre couche, et on emprunte la même :
+    //   • SWI133    : VPM ID_AUTO_MAIN_BEAM 0x605000f, setIntPropertyRecovery (fragment Éclairage) ;
+    //   • SWI68/165 : VehicleSettingManager get/setAutoMainBeamControl (tx 0x35/0x36, les deux) ;
+    //   • A9        : CarLampClient.setHighBeamState → CarAdapterLampManager, qui ne fait QUE
+    //                 setGlobalProperty(0x2140932b) — on écrit donc la propriété directement.
+    // Encodage identique partout, et c'est une vraie consigne (pas une bascule) : l'UI d'origine
+    // écrit l'état VOULU. 1=ON, 0=OFF ; 3=INVALID = réglage absent, l'UI d'origine masque la ligne.
+    // -------------------------------------------------------------------------
+
+    private const val VPM_AUTO_MAIN_BEAM  = 0x605000f
+    private const val PROP_AUTO_MAIN_BEAM = 0x2140932b
+    private const val BEAM_TAG = "MG4_BEAM"
+
+    fun hasAutoHighBeam(): Boolean = FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
+
+    /** Valeur brute, quelle que soit la voie. -1 si illisible. */
+    private fun readAutoHighBeamRaw(): Int = when {
+        isA9Vsm()                 -> getIntPropertyCPM(PROP_AUTO_MAIN_BEAM, AREA_GLOBAL)
+        FirmwareInfo.isVsmBased() -> (callVsm("getAutoMainBeamControl") as? Int) ?: -1
+        else                      -> getIntPropertyVpm(VPM_AUTO_MAIN_BEAM)
+    }
+
+    /** Feux de route automatiques : true=ON, false=OFF, null=illisible ou absent du véhicule. */
+    fun isAutoHighBeamOn(): Boolean? {
+        if (!hasAutoHighBeam()) return null
+        return when (readAutoHighBeamRaw()) {
+            1    -> true
+            0    -> false
+            else -> null
+        }
+    }
+
+    fun setAutoHighBeam(on: Boolean): Boolean {
+        if (!hasAutoHighBeam()) return false
+        val v = if (on) 1 else 0
+        val ok = when {
+            isA9Vsm()                 -> setIntPropertyCPM(PROP_AUTO_MAIN_BEAM, AREA_GLOBAL, v)
+            FirmwareInfo.isVsmBased() -> callVsmVoid("setAutoMainBeamControl", v)
+            else                      -> setIntPropertyVpmRecovery(VPM_AUTO_MAIN_BEAM, v)
+        }
+        AppLogger.i(BEAM_TAG, "setAutoHighBeam(${if (on) "ON" else "OFF"}) écrit $v → $ok")
+        return ok
+    }
+
+    /**
+     * Sonde des feux de route automatiques — **lecture seule**. Relève toutes les voies
+     * joignables sur ce firmware, pas seulement celle retenue : si la voie officielle reste muette
+     * sur un véhicule, le rapport dit d'emblée si la propriété brute, elle, répond.
+     */
+    fun runHighBeamDiag() {
+        AppLogger.i(BEAM_TAG, "── DIAG feux de route automatiques ──")
+        AppLogger.i(BEAM_TAG, "firmware=${FirmwareInfo.getGeneration()} géré=${hasAutoHighBeam()} " +
+            "vpm=${sVpm != null} vsm=${sVsm != null} cpm=${sCarPropertyManager != null}")
+        val voies = mutableListOf<String>()
+        if (sVpm != null) voies += "VPM 0x605000f=${getIntPropertyVpm(VPM_AUTO_MAIN_BEAM)}"
+        if (sVsm != null && FirmwareInfo.isVsmBased() && !isA9Vsm())
+            voies += "getAutoMainBeamControl=${callVsm("getAutoMainBeamControl") ?: "null"}"
+        voies += "CPM 0x2140932b@global=${getIntPropertyCPM(PROP_AUTO_MAIN_BEAM, AREA_GLOBAL)} " +
+            "@0=${getIntPropertyCPM(PROP_AUTO_MAIN_BEAM, 0)}"
+        AppLogger.i(BEAM_TAG, voies.joinToString(" · ") + " (1=ON, 0=OFF, 3=absent) → ${isAutoHighBeamOn()}")
+        AppLogger.i(BEAM_TAG, "── fin DIAG ──")
+    }
+
+    // -------------------------------------------------------------------------
     // ELK — Assistant de sortie de voie (SWI133 uniquement pour l'instant)
     // Utilise IVehicleSettingService via sVehicleBinder (TX 0x53–0x56)
     // -------------------------------------------------------------------------

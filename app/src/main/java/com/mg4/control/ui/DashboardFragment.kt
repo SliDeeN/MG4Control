@@ -108,6 +108,9 @@ class DashboardFragment : Fragment() {
     private var btnDmsSenLow: Button? = null
     private var btnDmsSenMedium: Button? = null
     private var btnDmsSenHigh: Button? = null
+    // Feux de route automatiques (page Confort, les 6 firmwares).
+    private var btnHighBeamOn: Button? = null
+    private var btnHighBeamOff: Button? = null
 
     private var btnAebSenLow: Button? = null
     private var btnAebSenStandard: Button? = null
@@ -173,6 +176,7 @@ class DashboardFragment : Fragment() {
         }
         refreshElk()  // SWI133 — sVsm133 indépendant de Katman4
         MG4Hardware.whenKatman4Ready { if (isAdded) refreshSafetyDmsEsc() }
+        MG4Hardware.whenKatman4Ready { if (isAdded) refreshHighBeam() }
     }
 
     override fun onPause() {
@@ -210,6 +214,7 @@ class DashboardFragment : Fragment() {
         root.findViewById<View>(R.id.climate_page_section)?.visibility =
             if (hasClim) View.VISIBLE else View.GONE
         if (hasClim) bindClimatePage(root)
+        bindLighting(root)
 
         bindCategoryRail(root)
     }
@@ -1131,7 +1136,7 @@ class DashboardFragment : Fragment() {
      * et l'ESC est une bascule dont l'effet doit être constaté. Afficher l'état demandé plutôt
      * que l'état obtenu ferait mentir l'écran.
      */
-    private fun writeSafety(action: () -> Unit) {
+    private fun writeSafety(refresh: () -> Unit = { refreshSafetyDmsEsc() }, action: () -> Unit) {
         CoroutineScope(Dispatchers.IO).launch {
             action()
             // ⚠️ Relire IMMÉDIATEMENT après l'écriture rend l'ancienne valeur : le calculateur
@@ -1140,7 +1145,7 @@ class DashboardFragment : Fragment() {
             // non plus — elle peint l'état demandé et attend le callback de changement.
             // Ici : peinture optimiste au clic (déjà faite), puis relecture qui fait autorité.
             delay(700)
-            withContext(Dispatchers.Main) { if (isAdded) refreshSafetyDmsEsc() }
+            withContext(Dispatchers.Main) { if (isAdded) refresh() }
         }
     }
 
@@ -1160,6 +1165,41 @@ class DashboardFragment : Fragment() {
                     // ce qui vaut mieux qu'en allumer un au hasard.
                     sen - 1
                 )
+            }
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Éclairage — feux de route automatiques (page Confort)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Mêmes boutons ON/OFF que la somnolence : l'écriture est une vraie consigne, mais l'état
+     * affiché reste celui RELU, qui seul dit si le véhicule l'a prise.
+     */
+    private fun bindLighting(root: View) {
+        if (!MG4Hardware.hasAutoHighBeam()) return
+        root.findViewById<View>(R.id.lighting_card).visibility = View.VISIBLE
+        btnHighBeamOn  = root.findViewById(R.id.btn_high_beam_on)
+        btnHighBeamOff = root.findViewById(R.id.btn_high_beam_off)
+        btnHighBeamOn?.setOnClickListener {
+            applyPairUI(btnHighBeamOn, btnHighBeamOff, true)
+            writeSafety({ refreshHighBeam() }) { MG4Hardware.setAutoHighBeam(true) }
+        }
+        btnHighBeamOff?.setOnClickListener {
+            applyPairUI(btnHighBeamOn, btnHighBeamOff, false)
+            writeSafety({ refreshHighBeam() }) { MG4Hardware.setAutoHighBeam(false) }
+        }
+        // Voies VPM/VSM liées de façon asynchrone : voir refreshSafetyDmsEsc.
+        MG4Hardware.whenKatman4Ready { if (isAdded) refreshHighBeam() }
+    }
+
+    private fun refreshHighBeam() {
+        if (!MG4Hardware.hasAutoHighBeam()) return
+        CoroutineScope(Dispatchers.IO).launch {
+            val on = MG4Hardware.isAutoHighBeamOn()
+            withContext(Dispatchers.Main) {
+                if (isAdded) applyPairUI(btnHighBeamOn, btnHighBeamOff, on)
             }
         }
     }

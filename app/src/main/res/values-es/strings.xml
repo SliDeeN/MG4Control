@@ -193,6 +193,8 @@
 
     <!-- Dashboard — encabezados de tarjetas -->
     <string name="card_climate">Parámetros de climatización</string>
+    <string name="card_lighting">Iluminación</string>
+    <string name="lighting_auto_high_beam">Luces de carretera automáticas</string>
     <string name="card_alerts">Alertas</string>
 
     <!-- Actualización automática -->

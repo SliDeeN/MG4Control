@@ -560,6 +560,8 @@ class SettingsFragment : Fragment() {
         // Sonde somnolence / sensibilité / ESC : lecture seule (elle ne bascule RIEN — un
         // rapport de diagnostic ne doit pas toucher à un organe de sécurité active).
         MG4Hardware.runSafetyDiag()
+        // Sonde feux de route automatiques : lecture seule, toutes les voies du firmware.
+        MG4Hardware.runHighBeamDiag()
 
         val appVersion = try {
             ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"

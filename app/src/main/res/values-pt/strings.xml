@@ -193,6 +193,8 @@
 
     <!-- Dashboard — cabeçalhos de cartões -->
     <string name="card_climate">Parâmetros de climatização</string>
+    <string name="card_lighting">Iluminação</string>
+    <string name="lighting_auto_high_beam">Máximos automáticos</string>
     <string name="card_alerts">Alertas</string>
 
     <!-- Atualização automática -->

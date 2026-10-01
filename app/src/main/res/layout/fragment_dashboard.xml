@@ -2021,6 +2021,93 @@
 
         </LinearLayout>
 
+        <!-- ── Carte ÉCLAIRAGE : feux de route automatiques (les 6 firmwares) -->
+        <LinearLayout
+            android:id="@+id/lighting_card"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card_rounded"
+            android:layout_marginEnd="5dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/card_lighting"
+                android:textColor="@color/dash_text_lo"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.12"
+                android:textAllCaps="true"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="7dp" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:background="@color/dash_border" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_section_rounded"
+                android:padding="9dp"
+                android:layout_margin="10dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/lighting_auto_high_beam"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    android:textAllCaps="true"
+                    android:paddingBottom="5dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border"
+                    android:layout_marginBottom="5dp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btn_high_beam_on"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="3dp"
+                        android:text="@string/common_on"
+                        android:textColor="@color/text_secondary"
+                        android:backgroundTint="@color/dash_btn"
+                        android:textSize="16sp"
+                        android:textAllCaps="true" />
+                    <Button
+                        android:id="@+id/btn_high_beam_off"
+                        android:layout_width="0dp"
+                        android:layout_height="52dp"
+                        android:layout_weight="1"
+                        android:text="@string/common_off"
+                        android:textColor="@color/text_secondary"
+                        android:backgroundTint="@color/dash_btn"
+                        android:textSize="16sp"
+                        android:textAllCaps="true" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
                 <!-- Climatisation : consigne de temperature + ventilation.
                      Masquee par le code si le firmware n'expose pas la clim. -->
                 <LinearLayout
