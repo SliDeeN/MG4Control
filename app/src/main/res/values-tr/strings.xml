@@ -319,6 +319,22 @@
     <string name="battery_auto_threshold_label">Batarya eşiği</string>
     <string name="battery_auto_note">Batarya eşiğin altına düştüğünde, açılışta ya da sürüş sırasında bir kez tetiklenir. Her açılışta ya da eşiğin üzerinde bir şarjdan sonra yeniden devreye girer. Sürüş güvenliği bu hızda ayarları engelliyorsa profil bir sonraki duruşu bekler.</string>
     <string name="battery_auto_confirm_msg">Batarya %1$d %% altına düştü\n(şu an %2$s %%)\n“%3$s” profili uygulansın mı?</string>
+    <string name="autobri_title">Açılışta otomatik parlaklık</string>
+    <string name="autobri_desc">READY\'ye geçişte ekran parlaklığını dış ışığa göre ayarla</string>
+    <string name="autobri_curve_label">Dış ışığa göre ekran parlaklığı</string>
+    <string name="autobri_night">Gece · 10 lx</string>
+    <string name="autobri_twilight">Alacakaranlık · 400 lx</string>
+    <string name="autobri_overcast">Bulutlu · 10.000 lx</string>
+    <string name="autobri_sunny">Tam güneş · 80.000 lx</string>
+    <string name="autobri_test">Şimdi dene</string>
+    <string name="autobri_status">Son ayar: %1$s · %2$s · ≈ %3$s lx → %4$d %%</string>
+    <string name="autobri_status_none">Henüz ayar yok.</string>
+    <string name="autobri_status_failed">Ayar yapılamadı: konum veya saat yok.</string>
+    <string name="autobri_source_lights">farlar açık</string>
+    <string name="autobri_source_forecast">hava tahmini</string>
+    <string name="autobri_source_sun">güneş konumu</string>
+    <string name="autobri_note">READY\'ye park lambaları açıkken geçildiğinde (garaj, tünel, gece) Gece ayarı uygulanır, lambalar söner sönmez ışığa göre ayar yapılır (garajdan çıkış, 10 dk içinde). Aksi halde dış ışık, güneşin yüksekliği ve Open-Meteo güneşlenme tahmininden (CC BY 4.0) tahmin edilir; tahmin 3 günlüğüne, yaklaşık 10 km\'ye yuvarlanmış konumla indirilir. Tahmin yoksa açık gökyüzü varsayılır. Sonrasında parlaklık elle ayarlanabilir.</string>
+    <string name="autobri_note_offline">Çevrimdışı sürüm: dış ışık yalnızca güneşin yüksekliğinden tahmin edilir (açık gökyüzü varsayılır). READY\'ye park lambaları açıkken geçildiğinde Gece ayarı uygulanır, lambalar sönünce ışığa göre ayar yapılır.</string>
 
     <!-- A/C automation -->
     <string name="ac_auto_title">Sıcaklığa göre klimayı tetikle</string>

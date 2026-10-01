@@ -319,6 +319,22 @@
     <string name="battery_auto_threshold_label">Batterie-Schwellenwert</string>
     <string name="battery_auto_note">Löst einmal aus, wenn die Batterie unter den Schwellenwert fällt – beim Start wie während der Fahrt. Wird bei jedem Start erneut aktiv oder nach einem Laden über den Schwellenwert. Sperrt die Fahrsicherheit die Einstellungen bei dieser Geschwindigkeit, wartet das Profil auf den nächsten Halt.</string>
     <string name="battery_auto_confirm_msg">Die Batterie ist unter %1$d %% gefallen\n(aktuell %2$s %%)\nProfil „%3$s“ anwenden?</string>
+    <string name="autobri_title">Automatische Helligkeit beim Start</string>
+    <string name="autobri_desc">Bildschirmhelligkeit beim Wechsel in READY nach dem Außenlicht einstellen</string>
+    <string name="autobri_curve_label">Bildschirmhelligkeit nach Außenlicht</string>
+    <string name="autobri_night">Nacht · 10 lx</string>
+    <string name="autobri_twilight">Dämmerung · 400 lx</string>
+    <string name="autobri_overcast">Bewölkt · 10.000 lx</string>
+    <string name="autobri_sunny">Volle Sonne · 80.000 lx</string>
+    <string name="autobri_test">Jetzt testen</string>
+    <string name="autobri_status">Letzte Einstellung: %1$s · %2$s · ≈ %3$s lx → %4$d %%</string>
+    <string name="autobri_status_none">Noch keine Einstellung.</string>
+    <string name="autobri_status_failed">Nicht möglich: Position oder Uhrzeit nicht verfügbar.</string>
+    <string name="autobri_source_lights">Licht an</string>
+    <string name="autobri_source_forecast">Wettervorhersage</string>
+    <string name="autobri_source_sun">Sonnenstand</string>
+    <string name="autobri_note">Beim Wechsel in READY mit eingeschaltetem Standlicht (Garage, Tunnel, Nacht) gilt die Nachteinstellung, dann die lichtabhängige Einstellung, sobald es ausgeht (Ausfahrt aus der Garage, innerhalb von 10 Min.). Sonst wird das Außenlicht aus dem Sonnenstand und der Sonnenscheinvorhersage von Open-Meteo (CC BY 4.0) geschätzt, für 3 Tage geladen, mit einer auf ~10 km gerundeten Position. Ohne Vorhersage wird klarer Himmel angenommen. Danach bleibt die Helligkeit von Hand einstellbar.</string>
+    <string name="autobri_note_offline">Offline-Version: Das Außenlicht wird nur aus dem Sonnenstand geschätzt (klarer Himmel angenommen). Beim Wechsel in READY mit eingeschaltetem Standlicht gilt die Nachteinstellung, dann die lichtabhängige Einstellung, sobald es ausgeht.</string>
 
     <!-- Klima-Automatisierung -->
     <string name="ac_auto_title">Klimaanlage über die Temperatur auslösen</string>

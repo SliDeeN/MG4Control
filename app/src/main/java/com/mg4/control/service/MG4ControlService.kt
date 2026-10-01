@@ -177,6 +177,8 @@ class MG4ControlService : Service() {
         com.mg4.control.automation.BatteryAutomation.start(applicationContext)
         // Sonde lumière/position (étude luminosité auto) : lecture seule, un relevé à chaque READY.
         com.mg4.control.hardware.LightProbe.start(applicationContext)
+        // Luminosité automatique au démarrage : relit son interrupteur à chaque READY.
+        com.mg4.control.automation.AutoBrightness.start(applicationContext)
         // Vérification de mise à jour, cinq secondes après le démarrage automatique.
         //
         // Pourquoi attendre du tout : à t=0 la liaison données de la voiture n'est pas encore

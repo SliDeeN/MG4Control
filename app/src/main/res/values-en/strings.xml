@@ -319,6 +319,22 @@
     <string name="battery_auto_threshold_label">Battery threshold</string>
     <string name="battery_auto_note">Triggers once when the battery drops below the threshold, at start-up or while driving. Re-arms at every start, or after charging above the threshold. If driving safety blocks settings at the current speed, the profile waits for the next stop.</string>
     <string name="battery_auto_confirm_msg">The battery has dropped below %1$d %%\n(%2$s %% now)\nApply profile “%3$s”?</string>
+    <string name="autobri_title">Automatic brightness at start-up</string>
+    <string name="autobri_desc">Set the screen brightness when the car goes READY, based on outdoor light</string>
+    <string name="autobri_curve_label">Screen brightness by outdoor light</string>
+    <string name="autobri_night">Night · 10 lx</string>
+    <string name="autobri_twilight">Dusk · 400 lx</string>
+    <string name="autobri_overcast">Overcast · 10,000 lx</string>
+    <string name="autobri_sunny">Full sun · 80,000 lx</string>
+    <string name="autobri_test">Test now</string>
+    <string name="autobri_status">Last setting: %1$s · %2$s · ≈ %3$s lx → %4$d %%</string>
+    <string name="autobri_status_none">No setting yet.</string>
+    <string name="autobri_status_failed">Could not set: position or time unavailable.</string>
+    <string name="autobri_source_lights">lights on</string>
+    <string name="autobri_source_forecast">weather forecast</string>
+    <string name="autobri_source_sun">sun position</string>
+    <string name="autobri_note">When the car goes READY with its side lights on (garage, tunnel, night), the Night setting applies, then the light-based setting once they switch off (leaving a garage, within 10 min). Otherwise outdoor light is estimated from the sun height and the Open-Meteo sunshine forecast (CC BY 4.0), downloaded for 3 days with a position rounded to ~10 km. Without a forecast, a clear sky is assumed. Brightness stays adjustable by hand afterwards.</string>
+    <string name="autobri_note_offline">Offline version: outdoor light is estimated from the sun height only (clear sky assumed). When the car goes READY with its side lights on, the Night setting applies, then the light-based setting once they switch off.</string>
 
     <!-- A/C automation -->
     <string name="ac_auto_title">Trigger A/C based on temperature</string>

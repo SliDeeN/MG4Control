@@ -319,6 +319,22 @@
     <string name="battery_auto_threshold_label">Umbral de batería</string>
     <string name="battery_auto_note">Se activa una vez cuando la batería baja del umbral, al arrancar o en marcha. Se rearma en cada arranque, o tras una carga por encima del umbral. Si la seguridad de conducción bloquea los ajustes a esa velocidad, el perfil espera a la próxima parada.</string>
     <string name="battery_auto_confirm_msg">La batería ha bajado del %1$d %%\n(%2$s %% ahora)\n¿Aplicar el perfil «%3$s»?</string>
+    <string name="autobri_title">Brillo automático al arrancar</string>
+    <string name="autobri_desc">Ajustar el brillo de la pantalla al pasar a READY según la luz exterior</string>
+    <string name="autobri_curve_label">Brillo de la pantalla según la luz exterior</string>
+    <string name="autobri_night">Noche · 10 lx</string>
+    <string name="autobri_twilight">Crepúsculo · 400 lx</string>
+    <string name="autobri_overcast">Nublado · 10 000 lx</string>
+    <string name="autobri_sunny">Pleno sol · 80 000 lx</string>
+    <string name="autobri_test">Probar ahora</string>
+    <string name="autobri_status">Último ajuste: %1$s · %2$s · ≈ %3$s lx → %4$d %%</string>
+    <string name="autobri_status_none">Aún no hay ajuste.</string>
+    <string name="autobri_status_failed">Ajuste imposible: posición u hora no disponibles.</string>
+    <string name="autobri_source_lights">luces encendidas</string>
+    <string name="autobri_source_forecast">previsión meteorológica</string>
+    <string name="autobri_source_sun">posición del sol</string>
+    <string name="autobri_note">Al pasar a READY con las luces de posición encendidas (garaje, túnel, noche) se aplica el ajuste Noche, y después el ajuste según la luz en cuanto se apagan (salida del garaje, en 10 min). Si no, la luz exterior se estima a partir de la altura del sol y de la previsión de sol de Open-Meteo (CC BY 4.0), descargada para 3 días con una posición redondeada a ~10 km. Sin previsión, se supone cielo despejado. Después, el brillo sigue siendo ajustable a mano.</string>
+    <string name="autobri_note_offline">Versión sin conexión: la luz exterior se estima solo a partir de la altura del sol (cielo despejado supuesto). Al pasar a READY con las luces de posición encendidas se aplica el ajuste Noche, y después el ajuste según la luz en cuanto se apagan.</string>
 
     <!-- Automatización del A/A -->
     <string name="ac_auto_title">Activación del A/A según la temperatura</string>

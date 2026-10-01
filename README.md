@@ -198,6 +198,13 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
 - **Application d'un profil selon la batterie** : quand le niveau passe sous un seuil réglable au
   curseur (5–60 %), au démarrage comme en roulant ; une fois par épisode, réarmée à chaque
   démarrage ou après une recharge ; exécution directe ou popup de confirmation
+- **Luminosité automatique au démarrage** : au passage en READY, l'écran prend la luminosité
+  qu'une courbe à quatre points réglables (nuit, crépuscule, temps couvert, plein soleil) associe à
+  la lumière extérieure. La voiture ne mesurant pas la lumière, elle est estimée d'après la hauteur
+  du soleil (position GPS + heure, calcul sans réseau) et la prévision d'ensoleillement
+  [Open-Meteo](https://open-meteo.com) mise en cache pour 3 jours, position arrondie à ~10 km.
+  Feux de position allumés (garage, tunnel, nuit) : réglage Nuit, refait d'après la lumière dès
+  qu'ils s'éteignent. Bouton « Tester maintenant ». La variante hors ligne n'utilise que le soleil
 - **Déclenchement A/C via la température** : deux règles indépendantes (température supérieure /
   inférieure), chacune avec son seuil, sa consigne, sa ventilation, ses dégivrages, le mode
   automatique et la recirculation
@@ -918,6 +925,9 @@ inclus**.
 L'avis MIT est conservé pour le code publié sous ce régime avant le basculement, contributions de
 tiers comprises. Détails dans [`LICENCE.md`](LICENCE.md).
 
+Données météo de la luminosité automatique : [Open-Meteo.com](https://open-meteo.com), sous licence
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
 </details>
 
 ---
@@ -1103,6 +1113,12 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
 - **Apply a profile from the battery level**: when the charge drops below a threshold set with a
   slider (5–60 %), at start-up or while driving; once per episode, re-armed at every start or after
   charging; direct execution or confirmation popup
+- **Automatic brightness at start-up**: when the car goes READY, the screen takes the brightness
+  that a four-point adjustable curve (night, dusk, overcast, full sun) assigns to the outdoor light.
+  The car does not measure light, so it is estimated from the sun height (GPS position + time,
+  computed offline) and the [Open-Meteo](https://open-meteo.com) sunshine forecast, cached for
+  3 days, position rounded to ~10 km. Side lights on (garage, tunnel, night): Night setting, redone
+  from the light once they switch off. "Test now" button. The offline variant uses the sun only
 - **Temperature-triggered A/C**: two independent rules (above / below), each with its threshold,
   setpoint, fan level, defrosters, automatic mode and recirculation
 - Each automation folds open independently of its enable switch
@@ -1803,6 +1819,9 @@ modified version you redistribute must also be released under the GPL, **source 
 
 The MIT notice is retained for the code published under that regime before the switch, third-party
 contributions included. Details in [`LICENCE.md`](LICENCE.md).
+
+Weather data for automatic brightness: [Open-Meteo.com](https://open-meteo.com), licensed under
+[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
 ---
 

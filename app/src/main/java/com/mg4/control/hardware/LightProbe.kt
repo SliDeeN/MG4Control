@@ -35,6 +35,14 @@ import java.util.Locale
  * Relevés automatiques à chaque passage en READY (+5 s et +90 s) et à chaque ouverture du
  * Diagnostic ; ils sont gardés dans [reports] pour le rapport. **Aucune coordonnée n'est
  * journalisée** : le rapport est souvent publié tel quel.
+ *
+ * Pendant READY, les signaux d'éclairage de [SUIVIS] sont aussi relus toutes les 2 s et chaque
+ * changement est daté : c'est ce qui permet de faire correspondre les valeurs du commodo à ses
+ * positions, et de mesurer le délai des feux automatiques (sortie de garage, tunnel).
+ *
+ * Relevé SWI133 du 2026-10-01 (garage sombre puis sortie au jour) : `OUTSIDE_AMBIENT_LIGHT` vaut
+ * 0 dans les deux cas, `NIGHT_MODE` reste false, `ID_LIGHT_SENSOR` reste à 1. Seul
+ * `VEH_SIDE_LGHT` suit la lumière (3 → 0), via les feux automatiques.
  */
 object LightProbe {
 
@@ -61,7 +69,19 @@ object LightProbe {
         Signal("NIGHT_MODE (AOSP)", 0x11200407),
         Signal("HEADLIGHTS_STATE (AOSP)", 0x11400e00),
         Signal("DISPLAY_BRIGHTNESS (AOSP)", 0x11400a03),
+        Signal("LIGHT_SWITCH_POS_STS (commodo des feux)", 0x21409337),
+        Signal("DIPD_BEAM_LGHT (feux de croisement)", 0x21209320),
+        Signal("DAY_TIME_RUN_LAMP (feux de jour)", 0x21409351),
     )
+
+    /** Relus toutes les [SUIVI_MS] pendant READY ; seuls les changements sont notés. */
+    private val SUIVIS = listOf(
+        Signal("feux de position (VEH_SIDE_LGHT)", 0x21409323),
+        Signal("commodo (LIGHT_SWITCH_POS_STS)", 0x21409337),
+        Signal("croisement (DIPD_BEAM_LGHT)", 0x21209320),
+    )
+    private const val SUIVI_MS = 2_000L
+    private const val MAX_EVENEMENTS = 60
 
     /** Lus aussi par le CarLampManager SAIC, la voie des écrans d'origine. */
     private val PAR_LAMP = setOf(0x2140934f, 0x21409323)
@@ -79,10 +99,13 @@ object LightProbe {
     )
 
     private val historique = ArrayDeque<String>()
+    private val evenements = ArrayDeque<String>()
 
-    /** Tous les relevés gardés, du plus ancien au plus récent. */
+    /** Tous les relevés gardés, du plus ancien au plus récent, puis la chronologie des changements. */
     val reports: List<String>
-        @Synchronized get() = historique.toList()
+        @Synchronized get() = historique.toList() +
+            (if (evenements.isEmpty()) emptyList()
+             else listOf("── Sonde lumière : changements pendant READY ──\n" + evenements.joinToString("\n")))
 
     @Volatile private var appContext: Context? = null
 
@@ -93,10 +116,34 @@ object LightProbe {
 
     /** Jeton des relevés programmés : un nouveau READY les annule sans toucher aux attentes de position. */
     private val RELEVES = Any()
+    /** Jeton du suivi des changements, arrêté hors READY. */
+    private val SUIVI = Any()
+
+    /** Dernière valeur vue par signal suivi. Fil de la sonde uniquement. */
+    private val derniers = HashMap<Int, String>()
+
+    private val suivi = object : Runnable {
+        override fun run() {
+            val cpm = MG4Hardware.carPropertyManager()
+            val debut = derniers.isEmpty()
+            SUIVIS.forEach { s ->
+                val v = lireCpm(cpm, s.id, AREA_GLOBAL)
+                val avant = derniers.put(s.id, v)
+                if (avant != null && avant != v) evenement("${s.name} : $avant → $v")
+            }
+            if (debut) evenement("début READY : " + SUIVIS.joinToString(" · ") { "${it.name}=${derniers[it.id]}" })
+            handler.postDelayed(this, SUIVI, SUIVI_MS)
+        }
+    }
 
     private val readyListener = ReadyWatcher.Listener { ready, firstRead ->
-        // Seules les vraies transitions vers READY : c'est le moment où la luminosité serait réglée.
-        if (!ready || firstRead) return@Listener
+        handler.removeCallbacksAndMessages(SUIVI)
+        if (!ready) return@Listener
+        handler.post { derniers.clear() }
+        handler.postDelayed(suivi, SUIVI, SUIVI_MS)
+        // Relevés complets : seulement sur une vraie transition vers READY, le moment où la
+        // luminosité serait réglée.
+        if (firstRead) return@Listener
         handler.removeCallbacksAndMessages(RELEVES)
         handler.postDelayed({ run("READY+5s"); demanderPositionsFraiches() }, RELEVES, PREMIER_RELEVE_MS)
         handler.postDelayed({ run("READY+90s") }, RELEVES, SECOND_RELEVE_MS)
@@ -241,6 +288,14 @@ object LightProbe {
     private fun note(texte: String) {
         AppLogger.i(TAG, texte)
         garde("  ⤷ $texte")
+    }
+
+    @Synchronized
+    private fun evenement(texte: String) {
+        val heure = SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(Date())
+        AppLogger.i(TAG, "suivi : $texte")
+        evenements.addLast("  $heure $texte")
+        while (evenements.size > MAX_EVENEMENTS) evenements.removeFirst()
     }
 
     // ── Réseau ───────────────────────────────────────────────────────────────

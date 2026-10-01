@@ -17,13 +17,19 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
+import com.mg4.control.BuildConfig
 import com.mg4.control.R
+import com.mg4.control.automation.AutoBrightness
+import com.mg4.control.automation.AutoBrightnessSettings
 import com.mg4.control.automation.AutomationSettings
 import com.mg4.control.automation.BatteryAutomationSettings
 import com.mg4.control.automation.ClimateAutomationSettings
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.profile.ProfileManager
+import java.util.Date
+import java.util.Locale
+import kotlin.math.roundToLong
 
 class AutomationFragment : Fragment() {
 
@@ -98,6 +104,7 @@ class AutomationFragment : Fragment() {
 
         setupSpinner(spinner, prefs, AutomationSettings.KEY_PROFILE_ID)
         bindBatteryAutomation(view, prefs)
+        bindAutoBrightness(view, prefs)
         bindClimateAutomation(view, prefs)
     }
 
@@ -143,6 +150,92 @@ class AutomationFragment : Fragment() {
 
         setupSpinner(view.findViewById(R.id.spinner_battery_auto_profile), prefs,
             BatteryAutomationSettings.KEY_PROFILE_ID)
+    }
+
+    // ══════════ Luminosité automatique au démarrage ══════════
+
+    /**
+     * Quatre curseurs pour la courbe « lumière extérieure → luminosité », un bouton pour l'essayer
+     * sans redémarrer la voiture, et la ligne d'état du dernier réglage — c'est elle qui permet
+     * d'ajuster la courbe en connaissance de cause.
+     */
+    private fun bindAutoBrightness(view: View, prefs: android.content.SharedPreferences) {
+        val card = view.findViewById<View>(R.id.card_autobri)
+        if (!MG4Hardware.hasBrightnessControl()) {
+            card.visibility = View.GONE
+            return
+        }
+        val cfg = AutoBrightnessSettings.read(requireContext())
+        val sw  = view.findViewById<Switch>(R.id.switch_autobri)
+        sw.isChecked = cfg.enabled
+        sw.setOnCheckedChangeListener { _, on ->
+            prefs.edit().putBoolean(AutoBrightnessSettings.KEY_ENABLED, on).apply()
+        }
+        bindExpander(view.findViewById(R.id.btn_autobri_expand), view.findViewById(R.id.row_autobri_config),
+            expanded = cfg.enabled)
+
+        bindPercentSlider(view, R.id.slider_autobri_night, R.id.autobri_night_value,
+            AutoBrightnessSettings.KEY_NIGHT, cfg.curve.night, prefs)
+        bindPercentSlider(view, R.id.slider_autobri_twilight, R.id.autobri_twilight_value,
+            AutoBrightnessSettings.KEY_TWILIGHT, cfg.curve.twilight, prefs)
+        bindPercentSlider(view, R.id.slider_autobri_overcast, R.id.autobri_overcast_value,
+            AutoBrightnessSettings.KEY_OVERCAST, cfg.curve.overcast, prefs)
+        bindPercentSlider(view, R.id.slider_autobri_sunny, R.id.autobri_sunny_value,
+            AutoBrightnessSettings.KEY_SUNNY, cfg.curve.sunny, prefs)
+
+        view.findViewById<TextView>(R.id.autobri_note).setText(
+            if (BuildConfig.OFFLINE) R.string.autobri_note_offline else R.string.autobri_note)
+        val etat = view.findViewById<TextView>(R.id.autobri_status)
+        afficherEtatLuminosite(etat, prefs)
+        view.findViewById<MaterialButton>(R.id.btn_autobri_test).setOnClickListener { btn ->
+            btn.isEnabled = false
+            AutoBrightness.testNow(requireContext()) { r ->
+                btn.isEnabled = true
+                if (!isAdded) return@testNow
+                if (r == null) etat.setText(R.string.autobri_status_failed)
+                else afficherEtatLuminosite(etat, prefs)
+            }
+        }
+    }
+
+    /** Curseur 5–100 % par pas de 5, aligné sur le pas : le Slider refuse toute autre valeur. */
+    private fun bindPercentSlider(
+        view: View, sliderId: Int, valueId: Int, key: String, initial: Int,
+        prefs: android.content.SharedPreferences,
+    ) {
+        val slider = view.findViewById<Slider>(sliderId)
+        val valeur = view.findViewById<TextView>(valueId)
+        val min = AutoBrightnessSettings.MIN_PERCENT
+        val pas = AutoBrightnessSettings.STEP_PERCENT
+        slider.valueFrom = min.toFloat()
+        slider.valueTo   = AutoBrightnessSettings.MAX_PERCENT.toFloat()
+        slider.stepSize  = pas.toFloat()
+        val aligne = (min + Math.round((initial - min) / pas.toFloat()) * pas)
+            .coerceIn(min, AutoBrightnessSettings.MAX_PERCENT)
+        slider.value = aligne.toFloat()
+        valeur.text = getString(R.string.autobri_percent, aligne)
+        slider.addOnChangeListener { _, v, fromUser ->
+            valeur.text = getString(R.string.autobri_percent, v.toInt())
+            if (fromUser) prefs.edit().putInt(key, AutoBrightnessSettings.clamp(v.toInt())).apply()
+        }
+    }
+
+    private fun afficherEtatLuminosite(tv: TextView, prefs: android.content.SharedPreferences) {
+        val quand = prefs.getLong(AutoBrightnessSettings.KEY_LAST_AT, 0L)
+        if (quand <= 0L) {
+            tv.setText(R.string.autobri_status_none)
+            return
+        }
+        val source = when (prefs.getString(AutoBrightnessSettings.KEY_LAST_SOURCE, null)) {
+            AutoBrightness.Source.LIGHTS.name   -> getString(R.string.autobri_source_lights)
+            AutoBrightness.Source.FORECAST.name -> getString(R.string.autobri_source_forecast)
+            else                                -> getString(R.string.autobri_source_sun)
+        }
+        val heure = android.text.format.DateFormat.getTimeFormat(requireContext()).format(Date(quand))
+        val lux = String.format(Locale.getDefault(), "%,d",
+            prefs.getFloat(AutoBrightnessSettings.KEY_LAST_LUX, 0f).toDouble().roundToLong())
+        tv.text = getString(R.string.autobri_status, heure, source, lux,
+            prefs.getInt(AutoBrightnessSettings.KEY_LAST_PERCENT, 0))
     }
 
     // ══════════ Automatisation « Déclenchement A/C via la température » ══════════
@@ -341,6 +434,8 @@ class AutomationFragment : Fragment() {
         view?.findViewById<Spinner>(R.id.spinner_battery_auto_profile)?.let { sp ->
             setupSpinner(sp, prefs, BatteryAutomationSettings.KEY_PROFILE_ID)
         }
+        // Un passage en READY a pu régler l'écran pendant qu'on était ailleurs.
+        view?.findViewById<TextView>(R.id.autobri_status)?.let { afficherEtatLuminosite(it, prefs) }
         // Carte des vitres : le sondage ne reprend que si elle est restée dépliée.
         if (view?.findViewById<View>(R.id.row_windows_config)?.visibility == View.VISIBLE)
             windowsPanel.onShown()

@@ -960,6 +960,20 @@ object MG4Hardware {
         }
     }
 
+    private const val PROP_VEH_SIDE_LGHT = 0x21409323
+
+    /**
+     * Feux de position (`VEH_SIDE_LGHT`) : true = allumés, false = éteints, null = illisible.
+     *
+     * Seul signal du véhicule qui suive la lumière, via les feux automatiques : 3 dans un garage
+     * sombre, 0 au jour (sonde SWI133 du 2026-10-01). 3 est aussi la « nuit » des écrans d'origine
+     * (SettingsService SWI68), toute autre valeur y vaut « jour » : on fait pareil.
+     */
+    fun isSideLightOn(): Boolean? {
+        val v = getIntPropertyCPM(PROP_VEH_SIDE_LGHT, AREA_GLOBAL)
+        return if (v < 0) null else v == 3
+    }
+
     /** A9 (SWI132/131/69) : luminosité via CarGeneralClient.setScreenBrightness(mode,day,night). */
     private fun isA9Brightness(): Boolean =
         FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132
