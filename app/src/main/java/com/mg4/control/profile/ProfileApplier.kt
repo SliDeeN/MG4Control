@@ -88,6 +88,19 @@ object ProfileApplier {
     private fun applyLocked(profile: DrivingProfile, autoStart: Boolean, onComplete: ((Boolean) -> Unit)?) {
             var ok = true
 
+            // Économie d'énergie EN PREMIER (issue #107). Tant qu'elle est active, le véhicule
+            // verrouille les niveaux de récupération 1 et 2 (il le signale par
+            // REGENERATIVE_LEVEL_DISB, 0x2140a19c). Écrite en dernier comme avant, elle laissait la
+            // récupération du profil refusée : il fallait appliquer le profil deux fois.
+            // Elle passe par le service ADAS (Katman4) ; s'il n'est pas encore prêt — démarrage à
+            // froid —, elle est écrite plus loin dans le bloc ADAS, suivie d'une réécriture de la
+            // récupération, voir [applyEnergySavingLate].
+            val economieEnTete = MG4Hardware.isKatman4Ready()
+            if (economieEnTete) {
+                val esOk = MG4Hardware.setEnergySavingMode(profile.energySaving)
+                AppLogger.i(TAG, "  EnergySaving=${profile.energySaving} (en tête) → $esOk")
+            }
+
             // Mode de conduite (rapide — binder call)
             val dmOk = MG4Hardware.setDriveMode(profile.driveMode)
             AppLogger.i(TAG, "  DriveMode=${profile.driveMode.label} → $dmOk")
@@ -200,8 +213,7 @@ object ProfileApplier {
                     applySafety(profile)
 
                     // Économie d'énergie — via CarVehicleSettingClient (setEnduranceMode), même path que SWI69
-                    val esOk = MG4Hardware.setEnergySavingMode(profile.energySaving)
-                    AppLogger.i(TAG, "  EnergySaving=${profile.energySaving} → $esOk")
+                    applyEnergySavingLate(profile, economieEnTete)
 
                 } else if (FirmwareInfo.isVsmBased()) {
                     // ── SWI68/SWI69/SWI131/SWI165 ──────────────────────────────────────
@@ -230,8 +242,7 @@ object ProfileApplier {
                     applySafety(profile)
 
                     // Économie d'énergie — firmwares VSM hors SWI132 (SWI68/SWI69/SWI131/SWI165)
-                    val esOk = MG4Hardware.setEnergySavingMode(profile.energySaving)
-                    AppLogger.i(TAG, "  EnergySaving=${profile.energySaving} → $esOk")
+                    applyEnergySavingLate(profile, economieEnTete)
                 } else {
                     // ── SWI133/UNKNOWN ──────────────────────────────────────────────────
                     //
@@ -260,8 +271,7 @@ object ProfileApplier {
 
                     // Économie d'énergie — SWI133 via VPM
                     if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133) {
-                        val esOk = MG4Hardware.setEnergySavingMode(profile.energySaving)
-                        AppLogger.i(TAG, "  EnergySaving=${profile.energySaving} → $esOk")
+                        applyEnergySavingLate(profile, economieEnTete)
                     }
                 }
                 // ELK — commun à tous les firmwares connus
@@ -277,6 +287,25 @@ object ProfileApplier {
                     verifyAdasWithRetry(profile)
                 }
             }
+    }
+
+    /**
+     * Économie d'énergie dans le bloc ADAS.
+     *
+     * Déjà écrite en tête de séquence quand le service ADAS était prêt : rien à refaire. Sinon
+     * (démarrage à froid), la récupération est partie AVANT elle et a pu être refusée par le
+     * verrou de l'économie encore active — on l'écrit donc à nouveau juste après, pour que l'ordre
+     * économie → récupération tienne dans tous les cas (issue #107).
+     */
+    private fun applyEnergySavingLate(profile: DrivingProfile, alreadyDone: Boolean) {
+        if (alreadyDone) {
+            AppLogger.i(TAG, "  EnergySaving déjà écrite en tête de séquence")
+            return
+        }
+        val esOk = MG4Hardware.setEnergySavingMode(profile.energySaving)
+        AppLogger.i(TAG, "  EnergySaving=${profile.energySaving} → $esOk")
+        val rlOk = MG4Hardware.setRegenLevel(profile.regenLevel)
+        AppLogger.i(TAG, "  RegenLevel=${profile.regenLevel.label} (réécrite après l'économie) → $rlOk")
     }
 
     /**
