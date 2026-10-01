@@ -175,6 +175,8 @@ class MG4ControlService : Service() {
         // Profil selon la batterie (issue #112) : tourne toujours, relit sa config à chaque
         // vérification — activer l'option suffit, sans redémarrer le service.
         com.mg4.control.automation.BatteryAutomation.start(applicationContext)
+        // Sonde lumière/position (étude luminosité auto) : lecture seule, un relevé à chaque READY.
+        com.mg4.control.hardware.LightProbe.start(applicationContext)
         // Vérification de mise à jour, cinq secondes après le démarrage automatique.
         //
         // Pourquoi attendre du tout : à t=0 la liaison données de la voiture n'est pas encore

@@ -692,6 +692,9 @@ class SettingsFragment : Fragment() {
             // autre manipulation. Sur le fil IO : une trentaine de propriétés, plusieurs voies
             // chacune, ça ne passe pas sur le fil principal.
             EnergyProbe.run("diagnostic")
+            // Sonde lumière/position : un relevé instantané, à prendre en plein jour, au crépuscule
+            // et dans un parking couvert. Ceux pris automatiquement au READY sont déjà gardés.
+            com.mg4.control.hardware.LightProbe.run("diagnostic")
             val report = MG4Hardware.buildDiagnosticReport(appVersion)
             withContext(Dispatchers.Main) {
                 if (isAdded) tvReport.text = report

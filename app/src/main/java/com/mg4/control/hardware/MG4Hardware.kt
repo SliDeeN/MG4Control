@@ -329,6 +329,12 @@ object MG4Hardware {
     /** Objet `Car` lié, pour obtenir un gestionnaire SAIC par son nom ([EnergyProbe]). */
     internal fun car(): Any? = sCar
 
+    /** Lecture VPM brute (SWI133), -1 si indisponible — pour [LightProbe]. */
+    internal fun vpmIntForProbe(propId: Int): Int = getIntPropertyVpm(propId)
+
+    /** GeneralManager de l'ancien SDK (luminosité, jour/nuit), null ailleurs — pour [LightProbe]. */
+    internal fun generalManager(): Any? = sGeneral
+
     // -------------------------------------------------------------------------
     // Init
     // -------------------------------------------------------------------------
@@ -3576,6 +3582,12 @@ object MG4Hardware {
         // Sonde énergie : TOUS les relevés gardés, pas seulement le dernier — c'est leur
         // comparaison (avant et après un trajet, pendant et après une charge) qui répond.
         EnergyProbe.reports.forEach {
+            sb.appendLine(it)
+            sb.appendLine()
+        }
+
+        // Sonde lumière/position : relevés des derniers READY et des ouvertures du Diagnostic.
+        LightProbe.reports.forEach {
             sb.appendLine(it)
             sb.appendLine()
         }
