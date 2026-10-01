@@ -139,7 +139,7 @@ Actions disponibles — celles qui dépendent du firmware n'apparaissent pas sur
 |---|---|
 | Conduite | 1 Pédale · Cycle Régénération Personnalisé · Éco. énergie |
 | Sécurité | ESC · Somnolence · Somnolence : sensibilité · Système Anticollision · ADAS · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son |
-| Confort | Siège chauffant gauche · Siège chauffant droit · Volant chauffant · Clim ON/OFF · Clim : A/C ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant · Dégivrage arrière · Recirculation · Luminosité ± |
+| Confort | Siège chauffant gauche · Siège chauffant droit · Volant chauffant · Clim ON/OFF · Clim : A/C ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant · Dégivrage arrière · Recirculation · Feux de route automatiques ON/OFF · Luminosité ± |
 | Vitres | Ouvrir toutes les vitres · Fermer toutes les vitres |
 | Média | Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume - |
 | Application et véhicule | Lancer un profil · Sélecteur de profil · Ouvrir MG4Control · Lancer une application · Éteindre la voiture |
@@ -312,6 +312,8 @@ un réglage que l'utilisateur croit global, et il l'est.
 - Le nom du profil et le réglage « profil par défaut » restent visibles sur les trois onglets
 - Volant et sièges chauffants disposent d'un interrupteur de **prise en compte** : décoché, le
   profil ne touche pas au réglage au lieu de l'éteindre
+- **Gestion automatique des feux de route** : même interrupteur, décoché par défaut — un profil
+  existant n'y touche donc pas
 - **Climatisation** : bloc facultatif de l'onglet Confort, décoché par défaut, reprenant les
   commandes du Dashboard — marche/arrêt, A/C, ventilation automatique, consigne, vitesse,
   recyclage et dégivrages
@@ -610,6 +612,7 @@ data class DrivingProfile(
     val escEnabled: Boolean?,
     val drowsinessEnabled: Boolean?,
     val drowsinessSensitivity: Int?,  // 1=Faible 2=Standard 3=Élevé
+    val autoHighBeam: Boolean?,       // Feux de route auto ; null = le profil n'y touche pas
     val btDeviceMac: String?          // Appareil Bluetooth associé
 )
 ```
@@ -632,7 +635,8 @@ Les profils sont sérialisés en JSON via **Gson** et stockés dans `SharedPrefe
 3. Volant chauffant (~2 s — polling de confirmation d'état)
 4. Siège gauche (~7 s — polling par toggle)
 5. Siège droit (~7 s — polling par toggle)
-6. Attente Katman4, puis ADAS selon firmware, anti-collision avant, ESC et somnolence, sortie de voie
+6. Attente Katman4, puis ADAS selon firmware, anti-collision avant, ESC et somnolence, sortie de voie,
+   feux de route automatiques
 
 Les réglages de sécurité sont **omis quand le profil ne les configure pas**, plutôt qu'écrits à une
 valeur par défaut : l'écriture de l'ESC est une bascule pilotée par une relecture, viser « ON » à
@@ -1041,7 +1045,7 @@ Available actions — those depending on the firmware do not show up on the othe
 |---|---|
 | Driving | One Pedal · Custom Regeneration Cycle · Energy saving |
 | Safety | ESC · Drowsiness · Drowsiness: sensitivity · Forward collision · ADAS · Traffic signs (TSR) · Overspeed alert · Speed limit change alert · Sound |
-| Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: A/C ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Brightness ± |
+| Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: A/C ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Automatic high beam ON/OFF · Brightness ± |
 | Windows | Open all windows · Close all windows |
 | Media | Play / Pause · Next track · Previous track · Volume + · Volume - |
 | App and vehicle | Apply a profile · Profile picker · Open MG4Control · Launch an app · Power the car off |
@@ -1207,6 +1211,7 @@ users read as global, and it is.
 - The profile name and the "default profile" setting stay visible across the three tabs
 - Heated steering wheel and seats have an **apply** switch: unchecked, the profile leaves the
   setting alone instead of turning it off
+- **Automatic high beam**: same switch, unchecked by default — existing profiles leave it alone
 - **Air conditioning**: an optional block in the Comfort tab, unchecked by default, carrying the
   Dashboard's own controls — on/off, A/C, auto fan, setpoint, fan speed, recirculation, defrosters
 
@@ -1496,6 +1501,7 @@ data class DrivingProfile(
     val escEnabled: Boolean?,
     val drowsinessEnabled: Boolean?,
     val drowsinessSensitivity: Int?,  // 1=Low 2=Standard 3=High
+    val autoHighBeam: Boolean?,       // Automatic high beam; null = the profile leaves it alone
     val btDeviceMac: String?          // Paired Bluetooth device
 )
 ```
@@ -1517,7 +1523,8 @@ Profiles are serialized to JSON via **Gson** and stored in `SharedPreferences`. 
 3. Heated steering wheel (~2 s — state confirmation polling)
 4. Left seat heating (~7 s — toggle polling)
 5. Right seat heating (~7 s — toggle polling)
-6. Wait for Katman4, then firmware ADAS, forward collision, ESC and drowsiness, lane keeping
+6. Wait for Katman4, then firmware ADAS, forward collision, ESC and drowsiness, lane keeping,
+   automatic high beam
 
 Safety settings are **skipped when the profile does not configure them**, rather than written to a
 default: the ESC write is a toggle driven by a prior read, so aiming for "ON" from a doubtful read

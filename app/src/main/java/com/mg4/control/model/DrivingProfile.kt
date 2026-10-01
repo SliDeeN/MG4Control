@@ -100,6 +100,12 @@ data class DrivingProfile(
      * rend pour un profil enregistré avant l'ajout du champ.
      */
     val hvacAirFlow: Int? = null,
+    /**
+     * Feux de route automatiques. `null` = le profil n'y touche pas : interrupteur de l'éditeur
+     * sur OFF, et c'est aussi ce que Gson rend pour un profil enregistré avant la fonctionnalité.
+     * Un seul champ suffit, contrairement aux chauffages : la valeur n'existe que si elle s'applique.
+     */
+    val autoHighBeam: Boolean? = null,
     // [BT-PROFILES] MAC de l'appareil Bluetooth associé à ce profil (null = aucun)
     val btDeviceMac: String? = null
 ) {

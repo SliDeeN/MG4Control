@@ -277,6 +277,10 @@ object ProfileApplier {
                 // ELK — commun à tous les firmwares connus
                 applyElk(profile.elkMode, profile.elkSensitivity, profile.lasAudibleWarning, profile.lasVibrationReminder)
 
+                // Feux de route automatiques — ici et non dans la première partie : sur SWI133
+                // et SWI68/165 ils passent par les services (VPM / VSM) que ce bloc attend.
+                applyAutoHighBeam(profile)
+
                 // ── Passe de vérification ADAS (auto-démarrage uniquement) ────────────
                 // Au démarrage à froid, le firmware peut ré-asserter certains réglages APRÈS
                 // notre écriture (alertes survitesse/ton ~400ms après le SLIF/TSR ; ELK remis à
@@ -424,6 +428,21 @@ object ProfileApplier {
                 AppLogger.i(TAG, "  Esc=$it → ${MG4Hardware.setEsc(it)}")
             }
         }
+    }
+
+    /**
+     * Feux de route automatiques. Une vraie consigne et non une bascule : la réécrire alors
+     * qu'elle est déjà en place est sans effet, aucune relecture préalable n'est nécessaire.
+     * `null` = profil qui ne s'est pas prononcé, y compris tout profil antérieur à la fonction.
+     */
+    private fun applyAutoHighBeam(profile: DrivingProfile) {
+        val voulu = profile.autoHighBeam
+        if (voulu == null) {
+            AppLogger.i(TAG, "  AutoHighBeam non pris en compte par ce profil — inchangé")
+            return
+        }
+        if (!MG4Hardware.hasAutoHighBeam()) return
+        AppLogger.i(TAG, "  AutoHighBeam=$voulu → ${MG4Hardware.setAutoHighBeam(voulu)}")
     }
 
     private fun applyElk(elkMode: Int, elkSensitivity: Int, lasAudibleWarning: Boolean = true, lasVibrationReminder: Boolean = true) {

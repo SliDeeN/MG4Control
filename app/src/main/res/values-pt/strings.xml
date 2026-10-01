@@ -460,6 +460,7 @@
     <string name="shortcuts_action_drowsiness_sen">Sonolência: sensibilidade</string>
     <string name="shortcuts_action_hvac_toggle">Clima (ON/OFF)</string>
     <string name="shortcuts_action_hvac_ac_toggle">Clima: A/C (ON/OFF)</string>
+    <string name="shortcuts_action_auto_high_beam">Máximos automáticos (ON/OFF)</string>
     <string name="shortcuts_action_hvac_temp_up">Clima: temperatura +</string>
     <string name="shortcuts_action_hvac_temp_down">Clima: temperatura -</string>
     <string name="shortcuts_action_hvac_fan_up">Clima: ventilação +</string>

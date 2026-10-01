@@ -1851,6 +1851,93 @@
                 </LinearLayout>
 
 
+                <!-- Carte FEUX DE ROUTE AUTOMATIQUES, même structure que le volant chauffant :
+                     interrupteur OFF = le profil n'y touche pas (décoché par défaut). -->
+                <LinearLayout
+                    android:id="@+id/section_high_beam_d"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_section_rounded"
+                    android:padding="14dp"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:paddingBottom="10dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/lighting_auto_high_beam"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.12"
+                            android:textAllCaps="true" />
+
+                        <Switch
+                            android:scaleX="1.3"
+                            android:scaleY="1.3"
+                            android:layout_marginHorizontal="8dp"
+                            android:id="@+id/sw_high_beam_enabled"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content" />
+
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/dash_border"
+                        android:layout_marginBottom="5dp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:orientation="horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_high_beam_off_d"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="5dp"
+                            android:text="@string/climate_off"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp"
+                            android:textAllCaps="true"
+                            android:backgroundTint="@color/dash_btn"
+                            app:strokeColor="@color/dash_border"
+                            app:strokeWidth="1dp"
+                            app:cornerRadius="8dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_high_beam_on_d"
+                            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:layout_marginStart="5dp"
+                            android:text="@string/climate_on"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp"
+                            android:textAllCaps="true"
+                            android:backgroundTint="@color/dash_btn"
+                            app:strokeColor="@color/dash_border"
+                            app:strokeWidth="1dp"
+                            app:cornerRadius="8dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
                 <!-- ── Climatisation — facultative, décochée par défaut ──────────────
                      Reprend les commandes de l'onglet Confort du Dashboard. Masquée quand le
                      firmware n'expose pas la clim.

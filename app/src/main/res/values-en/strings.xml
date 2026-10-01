@@ -460,6 +460,7 @@
     <string name="shortcuts_action_drowsiness_sen">Drowsiness: sensitivity</string>
     <string name="shortcuts_action_hvac_toggle">Climate (ON/OFF)</string>
     <string name="shortcuts_action_hvac_ac_toggle">Climate: A/C (ON/OFF)</string>
+    <string name="shortcuts_action_auto_high_beam">Automatic high beam (ON/OFF)</string>
     <string name="shortcuts_action_hvac_temp_up">Climate: temperature +</string>
     <string name="shortcuts_action_hvac_temp_down">Climate: temperature -</string>
     <string name="shortcuts_action_hvac_fan_up">Climate: fan +</string>

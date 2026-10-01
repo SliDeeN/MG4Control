@@ -96,6 +96,25 @@ class ProfileManagerTest {
     }
 
     @Test
+    fun `feux de route automatiques conserves a l enregistrement`() {
+        manager.save(profile("Nuit").copy(autoHighBeam = true))
+        manager.save(profile("Ville").copy(autoHighBeam = false))
+        assertEquals(true,  manager.getAll().single { it.name == "Nuit" }.autoHighBeam)
+        assertEquals(false, manager.getAll().single { it.name == "Ville" }.autoHighBeam)
+    }
+
+    @Test
+    fun `profil anterieur aux feux de route automatiques n y touche pas`() {
+        // JSON tel qu'enregistré avant la fonctionnalité : le champ est absent.
+        ApplicationProvider.getApplicationContext<android.content.Context>()
+            .getSharedPreferences("mg4_profiles", android.content.Context.MODE_PRIVATE).edit()
+            .putString("profiles_json",
+                """[{"id":"a","name":"Ancien","driveMode":"NORMAL","regenLevel":"MEDIUM","aebMode":2}]""")
+            .commit()
+        assertNull(manager.getAll().single().autoHighBeam)
+    }
+
+    @Test
     fun `getProfileForBtDevice ignore la casse du MAC`() {
         manager.save(profile("BT").copy(btDeviceMac = "AA:BB:CC:DD:EE:FF"))
         assertEquals("BT", manager.getProfileForBtDevice("aa:bb:cc:dd:ee:ff")?.name)

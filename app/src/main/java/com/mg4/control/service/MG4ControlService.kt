@@ -76,6 +76,7 @@ class MG4ControlService : Service() {
             ShortcutAction.DEFROST_FRONT_TOGGLE, ShortcutAction.DEFROST_REAR_TOGGLE,
             ShortcutAction.HVAC_RECIRC_CYCLE,
             ShortcutAction.BRIGHTNESS_UP, ShortcutAction.BRIGHTNESS_DOWN,
+            ShortcutAction.AUTO_HIGH_BEAM_TOGGLE,
             ShortcutAction.MEDIA_NEXT, ShortcutAction.MEDIA_PREVIOUS,
             ShortcutAction.MEDIA_PLAY_PAUSE,
             ShortcutAction.VOLUME_UP, ShortcutAction.VOLUME_DOWN
@@ -800,6 +801,16 @@ class MG4ControlService : Service() {
                 }
                 AppLogger.i(TAG, "SHORTCUT volant chauffant : $actuel → ${!actuel}")
                 MG4Hardware.setSteeringHeat(!actuel)
+            }
+
+            ShortcutAction.AUTO_HIGH_BEAM_TOGGLE -> {
+                val actuel = MG4Hardware.isAutoHighBeamOn()
+                if (actuel == null) {
+                    AppLogger.w(TAG, "SHORTCUT feux de route auto — état illisible, aucune action")
+                    return
+                }
+                AppLogger.i(TAG, "SHORTCUT feux de route auto : $actuel → ${!actuel}")
+                MG4Hardware.setAutoHighBeam(!actuel)
             }
 
             ShortcutAction.BRIGHTNESS_UP, ShortcutAction.BRIGHTNESS_DOWN -> {

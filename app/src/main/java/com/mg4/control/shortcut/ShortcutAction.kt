@@ -56,7 +56,10 @@ enum class ShortcutAction(val id: Int) {
     // une bascule mémorisée n'aurait rien à quoi se raccrocher.
     WINDOWS_OPEN_ALL(36),
     WINDOWS_CLOSE_ALL(37),
-    HVAC_AC_TOGGLE(38);
+    HVAC_AC_TOGGLE(38),
+
+    // Éclairage : famille « lue puis écrite », le réglage se change aussi depuis l'écran d'origine.
+    AUTO_HIGH_BEAM_TOGGLE(39);
 
     companion object {
         fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: NONE

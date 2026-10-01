@@ -151,6 +151,10 @@ class ShortcutsFragment : Fragment() {
                 add(ActionItem(getString(R.string.shortcuts_action_defrost_rear),    ShortcutAction.DEFROST_REAR_TOGGLE))
                 add(ActionItem(getString(R.string.shortcuts_action_hvac_recirc),     ShortcutAction.HVAC_RECIRC_CYCLE))
             }
+            // Feux de route automatiques : même condition que la carte Éclairage du Dashboard.
+            if (MG4Hardware.hasAutoHighBeam()) {
+                add(ActionItem(getString(R.string.shortcuts_action_auto_high_beam),  ShortcutAction.AUTO_HIGH_BEAM_TOGGLE))
+            }
             if (MG4Hardware.hasBrightnessControl()) {
                 add(ActionItem(getString(R.string.shortcuts_action_brightness_up),   ShortcutAction.BRIGHTNESS_UP))
                 add(ActionItem(getString(R.string.shortcuts_action_brightness_down), ShortcutAction.BRIGHTNESS_DOWN))

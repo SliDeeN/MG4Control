@@ -396,6 +396,29 @@ class ProfileEditFragment : Fragment() {
         view.findViewById<View>(R.id.section_seats_header)?.visibility    = heatVis
         view.findViewById<View>(R.id.section_seats_dialog)?.visibility    = heatVis
 
+        // ── Feux de route automatiques — facultatifs, décochés par défaut ────
+        // Une seule valeur dans le profil : interrupteur OFF = null = on n'y touche pas. Les
+        // boutons gardent un choix affiché même grisés (ON tant que rien n'a été choisi), et
+        // c'est lui qui part à l'enregistrement si l'interrupteur est coché.
+        var highBeamEnabledSel = data.autoHighBeam != null
+        var highBeamOnSel      = data.autoHighBeam ?: true
+        val highBeamBtns = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_high_beam_off_d),
+            view.findViewById<MaterialButton>(R.id.btn_high_beam_on_d)
+        )
+        bindGroup(listOf(highBeamBtns[0] to false, highBeamBtns[1] to true), highBeamOnSel) {
+            highBeamOnSel = it
+        }
+        val swHighBeam = view.findViewById<Switch>(R.id.sw_high_beam_enabled)
+        swHighBeam.isChecked = highBeamEnabledSel
+        setBtnsEnabled(highBeamBtns, highBeamEnabledSel)
+        swHighBeam.setOnCheckedChangeListener { _, checked ->
+            highBeamEnabledSel = checked
+            setBtnsEnabled(highBeamBtns, checked)
+        }
+        view.findViewById<View>(R.id.section_high_beam_d)?.visibility =
+            if (MG4Hardware.hasAutoHighBeam()) View.VISIBLE else View.GONE
+
         // ── Section AEB (commune SWI133 + SWI68 + SWI69) ─────────────────────
         val sectionAeb = view.findViewById<View>(R.id.adas_section_aeb)
         if (gen != FirmwareInfo.Gen.UNKNOWN) {
@@ -718,6 +741,7 @@ class ProfileEditFragment : Fragment() {
                 hvacDefrostRear  = null,
                 hvacLoopMode     = hvacLoopSel,
                 hvacAirFlow      = hvacAirSel,
+                autoHighBeam     = if (highBeamEnabledSel) highBeamOnSel else null,
                 btDeviceMac    = selectedBtMac   // [BT-PROFILES]
             )
             manager.save(profile)

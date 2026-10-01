@@ -460,6 +460,7 @@
     <string name="shortcuts_action_drowsiness_sen">Yorgunluk: hassasiyet</string>
     <string name="shortcuts_action_hvac_toggle">Klima (AÇ/KAPA)</string>
     <string name="shortcuts_action_hvac_ac_toggle">Klima: A/C (ON/OFF)</string>
+    <string name="shortcuts_action_auto_high_beam">Otomatik uzun far (AÇ/KAPA)</string>
     <string name="shortcuts_action_hvac_temp_up">Klima: sıcaklık +</string>
     <string name="shortcuts_action_hvac_temp_down">Klima: sıcaklık -</string>
     <string name="shortcuts_action_hvac_fan_up">Klima: fan +</string>
