@@ -161,7 +161,8 @@ class AutomationFragment : Fragment() {
      */
     private fun bindAutoBrightness(view: View, prefs: android.content.SharedPreferences) {
         val card = view.findViewById<View>(R.id.card_autobri)
-        if (!MG4Hardware.hasBrightnessControl()) {
+        // Version en ligne uniquement : la version hors ligne n'a pas accès à Internet, c'est voulu.
+        if (BuildConfig.OFFLINE || !MG4Hardware.hasBrightnessControl()) {
             card.visibility = View.GONE
             return
         }
@@ -197,8 +198,7 @@ class AutomationFragment : Fragment() {
         bindPercentSlider(view, R.id.slider_autobri_sunny, R.id.autobri_sunny_value,
             AutoBrightnessSettings.KEY_SUNNY, cfg.curve.sunny, prefs)
 
-        view.findViewById<TextView>(R.id.autobri_note).setText(
-            if (BuildConfig.OFFLINE) R.string.autobri_note_offline else R.string.autobri_note)
+        view.findViewById<TextView>(R.id.autobri_note).setText(R.string.autobri_note)
         val etat = view.findViewById<TextView>(R.id.autobri_status)
         afficherEtatLuminosite(etat, prefs)
         view.findViewById<MaterialButton>(R.id.btn_autobri_test).setOnClickListener { btn ->

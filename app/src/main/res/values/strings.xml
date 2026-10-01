@@ -341,7 +341,6 @@
     <string name="autobri_source_forecast">prévision météo</string>
     <string name="autobri_source_sun">position du soleil</string>
     <string name="autobri_note">La lumière extérieure est estimée d\'après la hauteur du soleil et la prévision d\'ensoleillement Open-Meteo (CC BY 4.0), téléchargée pour 3 jours et actualisée toutes les 8 h au plus, avec une position arrondie à ~10 km. Sans prévision, ciel dégagé supposé. Chaque changement se fait en fondu d\'une seconde.</string>
-    <string name="autobri_note_offline">Version hors ligne : la lumière extérieure est estimée d\'après la seule hauteur du soleil (ciel dégagé supposé). Chaque changement se fait en fondu d\'une seconde.</string>
     <string name="autobri_percent" translatable="false">%1$d %%</string>
     <string name="battery_auto_threshold_value" translatable="false">%1$d %%</string>
 

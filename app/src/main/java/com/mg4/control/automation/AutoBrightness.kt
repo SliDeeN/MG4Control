@@ -141,7 +141,12 @@ object AutoBrightness {
             if (firstRead) DELAI_DEMARRAGE_FROID_MS else DELAI_APRES_READY_MS)
     }
 
+    /**
+     * Version en ligne uniquement : la version hors ligne n'a pas accès à Internet, et c'est voulu
+     * — la fonctionnalité n'y existe pas du tout, pas même en mode « soleil seul ».
+     */
     fun start(context: Context) {
+        if (BuildConfig.OFFLINE) return
         appContext = context.applicationContext
         ReadyWatcher.add(readyListener)
     }
@@ -151,6 +156,10 @@ object AutoBrightness {
      * Il lève aussi une pause due à un réglage à la main, et relance le suivi si on roule.
      */
     fun testNow(context: Context, done: (Result?) -> Unit) {
+        if (BuildConfig.OFFLINE) {
+            done(null)
+            return
+        }
         appContext = context.applicationContext
         handler.post {
             val r = cycle(test = true)

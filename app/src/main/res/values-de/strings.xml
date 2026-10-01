@@ -339,7 +339,6 @@
     <string name="autobri_source_forecast">Wettervorhersage</string>
     <string name="autobri_source_sun">Sonnenstand</string>
     <string name="autobri_note">Das Außenlicht wird aus dem Sonnenstand und der Sonnenscheinvorhersage von Open-Meteo (CC BY 4.0) geschätzt, für 3 Tage geladen und höchstens alle 8 Std. aktualisiert, mit einer auf ~10 km gerundeten Position. Ohne Vorhersage wird klarer Himmel angenommen. Jede Änderung wird über eine Sekunde eingeblendet.</string>
-    <string name="autobri_note_offline">Offline-Version: Das Außenlicht wird nur aus dem Sonnenstand geschätzt (klarer Himmel angenommen). Jede Änderung wird über eine Sekunde eingeblendet.</string>
 
     <!-- Klima-Automatisierung -->
     <string name="ac_auto_title">Klimaanlage über die Temperatur auslösen</string>

@@ -208,8 +208,8 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
   qu'ils s'éteignent (option décochable si l'on roule feux allumés de jour). Option « Suivre la
   lumière en roulant » : réajuste aussi à chaque bascule des feux (tunnel) et dès que la lumière
   estimée s'écarte de 10 points ; un réglage à la main suspend tout jusqu'au prochain démarrage.
-  Changements en fondu d'une seconde. Bouton « Tester maintenant ». La variante hors ligne
-  n'utilise que le soleil
+  Changements en fondu d'une seconde. Bouton « Tester maintenant ». **Version en ligne
+  uniquement** : la version hors ligne n'accède pas à Internet, par choix
 - **Déclenchement A/C via la température** : deux règles indépendantes (température supérieure /
   inférieure), chacune avec son seuil, sa consigne, sa ventilation, ses dégivrages, le mode
   automatique et la recirculation
@@ -1126,7 +1126,8 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
   from the light once they switch off (can be unticked if you drive with lights on by day). "Follow
   the light while driving" option: also readjusts at every lights change (tunnel) and as soon as the
   estimated light drifts 10 points; adjusting by hand pauses it until the next start. Changes fade
-  over one second. "Test now" button. The offline variant uses the sun only
+  over one second. "Test now" button. **Online version only**: the offline version has no
+  Internet access, by design
 - **Temperature-triggered A/C**: two independent rules (above / below), each with its threshold,
   setpoint, fan level, defrosters, automatic mode and recirculation
 - Each automation folds open independently of its enable switch

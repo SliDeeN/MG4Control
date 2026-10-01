@@ -339,7 +339,6 @@
     <string name="autobri_source_forecast">previsión meteorológica</string>
     <string name="autobri_source_sun">posición del sol</string>
     <string name="autobri_note">La luz exterior se estima a partir de la altura del sol y de la previsión de sol de Open-Meteo (CC BY 4.0), descargada para 3 días y actualizada como máximo cada 8 h, con una posición redondeada a ~10 km. Sin previsión, se supone cielo despejado. Cada cambio se hace con un fundido de un segundo.</string>
-    <string name="autobri_note_offline">Versión sin conexión: la luz exterior se estima solo a partir de la altura del sol (cielo despejado supuesto). Cada cambio se hace con un fundido de un segundo.</string>
 
     <!-- Automatización del A/A -->
     <string name="ac_auto_title">Activación del A/A según la temperatura</string>

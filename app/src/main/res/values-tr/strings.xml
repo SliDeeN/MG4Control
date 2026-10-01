@@ -339,7 +339,6 @@
     <string name="autobri_source_forecast">hava tahmini</string>
     <string name="autobri_source_sun">güneş konumu</string>
     <string name="autobri_note">Dış ışık, güneşin yüksekliği ve Open-Meteo güneşlenme tahmininden (CC BY 4.0) tahmin edilir; tahmin 3 günlüğüne indirilir, en fazla 8 saatte bir güncellenir, konum yaklaşık 10 km\'ye yuvarlanır. Tahmin yoksa açık gökyüzü varsayılır. Her değişiklik bir saniyelik geçişle yapılır.</string>
-    <string name="autobri_note_offline">Çevrimdışı sürüm: dış ışık yalnızca güneşin yüksekliğinden tahmin edilir (açık gökyüzü varsayılır). Her değişiklik bir saniyelik geçişle yapılır.</string>
 
     <!-- A/C automation -->
     <string name="ac_auto_title">Sıcaklığa göre klimayı tetikle</string>

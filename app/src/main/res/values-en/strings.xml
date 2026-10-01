@@ -339,7 +339,6 @@
     <string name="autobri_source_forecast">weather forecast</string>
     <string name="autobri_source_sun">sun position</string>
     <string name="autobri_note">Outdoor light is estimated from the sun height and the Open-Meteo sunshine forecast (CC BY 4.0), downloaded for 3 days and refreshed every 8 h at most, with a position rounded to ~10 km. Without a forecast, a clear sky is assumed. Each change fades in over one second.</string>
-    <string name="autobri_note_offline">Offline version: outdoor light is estimated from the sun height only (clear sky assumed). Each change fades in over one second.</string>
 
     <!-- A/C automation -->
     <string name="ac_auto_title">Trigger A/C based on temperature</string>
