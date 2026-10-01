@@ -18,6 +18,8 @@ object AutoBrightnessSettings {
     const val KEY_SUNNY     = "autobri_sunny"
     /** Prévision Open-Meteo en cache (JSON). */
     const val KEY_FORECAST  = "autobri_forecast"
+    /** Heure de la dernière requête Open-Meteo, réussie ou non. */
+    const val KEY_LAST_FETCH_ATTEMPT = "autobri_last_fetch_attempt"
 
     // Dernier réglage, pour la ligne d'état de la carte.
     const val KEY_LAST_AT      = "autobri_last_at"

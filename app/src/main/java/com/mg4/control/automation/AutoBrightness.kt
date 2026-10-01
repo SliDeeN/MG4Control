@@ -58,12 +58,20 @@ object AutoBrightness {
     private const val DELAI_DEMARRAGE_FROID_MS = 15_000L
     /** Attente maximale d'une position fraîche quand aucune n'est connue. */
     private const val ATTENTE_POSITION_MS = 5_000L
-    /** Au-delà, la prévision est rafraîchie après le réglage, pour le démarrage suivant. */
-    private const val RAFRAICHIR_APRES_MS = 3 * 3_600_000L
+    /**
+     * Âge au-delà duquel la prévision est rafraîchie, après le réglage : trois requêtes par jour
+     * au plus (~2 Ko chacune). Elle couvre trois jours, rien ne presse.
+     */
+    private const val RAFRAICHIR_APRES_MS = 8 * 3_600_000L
+    /**
+     * Après une requête, réussie ou non, pas de nouvelle avant ce délai : un Wi-Fi de garage qui
+     * échoue ne doit pas relancer un essai à chaque READY et à chaque bascule des feux.
+     */
+    private const val REESSAI_APRES_MS = 15 * 60_000L
     private const val JOUR_MS = 24 * 3_600_000L
     /** Fenêtre de surveillance des feux après un réglage « feux allumés ». */
     private const val SURVEILLANCE_MS = 10 * 60_000L
-    private const val SONDAGE_FEUX_MS = 2_000L
+    private const val SONDAGE_FEUX_MS = 1_000L
     /** Lectures « feux éteints » consécutives exigées, contre un clignotement des feux auto. */
     private const val FEUX_ETEINTS_CONFIRMES = 2
     /** Écart au-delà duquel on considère que l'utilisateur a réglé l'écran lui-même. */
@@ -127,14 +135,18 @@ object AutoBrightness {
             return null
         }
         val origine = if (test) "test" else "READY"
-        val calcul = calculer(ctx, cfg.curve, origine, ignorerFeux = false) ?: return null
+        val calcul = calculer(ctx, cfg.curve, origine, ignorerFeux = false, attendreReseau = test)
+            ?: return null
         appliquer(ctx, calcul, origine)
         entretenirCache(ctx, calcul)
         if (calcul.result.source == Source.LIGHTS && !test) surveillerFeux(ctx, cfg.curve, calcul.result.percent)
         return calcul.result
     }
 
-    private fun calculer(ctx: Context, curve: BrightnessCurve, origine: String, ignorerFeux: Boolean): Calcul? {
+    private fun calculer(
+        ctx: Context, curve: BrightnessCurve, origine: String,
+        ignorerFeux: Boolean, attendreReseau: Boolean,
+    ): Calcul? {
         val feux = MG4Hardware.isSideLightOn()
         val cache = lireCache(ctx)
         val loc = position(ctx)
@@ -158,13 +170,14 @@ object AutoBrightness {
         }
 
         val hauteur = SunPosition.elevationDeg(lat, lon, maintenant)
+        // Jamais d'attente réseau avant de régler l'écran : le cache s'il couvre l'instant, sinon
+        // le ciel dégagé, et la prévision se télécharge APRÈS, pour le démarrage suivant. Relevé
+        // du 2026-10-01 : 8 s de délai dépassé sur le Wi-Fi d'un garage, pendant lesquelles
+        // l'écran restait sombre en plein jour. Seul le bouton « Tester » attend : on l'a demandé.
         var prevision = cache?.takeIf { it.covers(lat, lon, maintenant) }
         var telechargee = false
-        if (prevision == null && reseauDisponible(ctx)) {
-            prevision = OpenMeteoClient.fetch(lat, lon, maintenant)?.also {
-                ecrireCache(ctx, it)
-                telechargee = true
-            }
+        if (prevision == null && attendreReseau && reseauDisponible(ctx)) {
+            prevision = telecharger(ctx, lat, lon, maintenant)?.also { telechargee = true }
         }
         val ghi = prevision?.ghiAt(maintenant)
         val lux = OutdoorLight.estimateLux(hauteur, ghi)
@@ -212,8 +225,10 @@ object AutoBrightness {
                     AppLogger.i(TAG, "feux éteints, mais luminosité réglée à la main ($applique → $actuel %) : inchangée")
                     return
                 }
-                val calcul = calculer(ctx, curve, "sortie", ignorerFeux = true) ?: return
+                val calcul = calculer(ctx, curve, "sortie", ignorerFeux = true, attendreReseau = false)
+                    ?: return
                 appliquer(ctx, calcul, "sortie")
+                entretenirCache(ctx, calcul)
             }
         }
         handler.postDelayed(sonde, SURVEILLANCE, SONDAGE_FEUX_MS)
@@ -284,7 +299,8 @@ object AutoBrightness {
 
     /**
      * Rafraîchit la prévision APRÈS le réglage, pour le démarrage suivant : quand elle a plus de
-     * trois heures, qu'elle ne couvre plus demain, ou qu'elle vaut pour un autre endroit.
+     * [RAFRAICHIR_APRES_MS], qu'elle ne couvre plus demain, ou qu'elle vaut pour un autre endroit
+     * — et jamais moins de [REESSAI_APRES_MS] après la requête précédente.
      */
     private fun entretenirCache(ctx: Context, calcul: Calcul) {
         if (BuildConfig.OFFLINE || calcul.telechargee) return
@@ -296,11 +312,23 @@ object AutoBrightness {
             cache.distanceKm(lat, lon) <= SolarForecast.MAX_DISTANCE_KM &&
             maintenant - cache.fetchedAtMs < RAFRAICHIR_APRES_MS &&
             cache.ghiAt(maintenant + JOUR_MS) != null
-        if (aJour || !reseauDisponible(ctx)) return
-        OpenMeteoClient.fetch(lat, lon, maintenant)?.let {
-            ecrireCache(ctx, it)
+        if (aJour) return
+        val dernierEssai = ctx.getSharedPreferences(AutoBrightnessSettings.PREFS, Context.MODE_PRIVATE)
+            .getLong(AutoBrightnessSettings.KEY_LAST_FETCH_ATTEMPT, 0L)
+        // Écart négatif = horloge revenue en arrière depuis : on ne s'interdit rien.
+        if (maintenant - dernierEssai in 0 until REESSAI_APRES_MS) return
+        if (!reseauDisponible(ctx)) return
+        telecharger(ctx, lat, lon, maintenant)?.let {
             AppLogger.i(TAG, "prévision rafraîchie pour les prochains démarrages")
         }
+    }
+
+    /** Une requête Open-Meteo, notée réussie ou non pour espacer la suivante. */
+    private fun telecharger(ctx: Context, lat: Double, lon: Double, maintenant: Long): SolarForecast? {
+        ctx.getSharedPreferences(AutoBrightnessSettings.PREFS, Context.MODE_PRIVATE).edit()
+            .putLong(AutoBrightnessSettings.KEY_LAST_FETCH_ATTEMPT, maintenant)
+            .apply()
+        return OpenMeteoClient.fetch(lat, lon, maintenant)?.also { ecrireCache(ctx, it) }
     }
 
     private fun lireCache(ctx: Context): SolarForecast? {

@@ -202,7 +202,8 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
   qu'une courbe à quatre points réglables (nuit, crépuscule, temps couvert, plein soleil) associe à
   la lumière extérieure. La voiture ne mesurant pas la lumière, elle est estimée d'après la hauteur
   du soleil (position GPS + heure, calcul sans réseau) et la prévision d'ensoleillement
-  [Open-Meteo](https://open-meteo.com) mise en cache pour 3 jours, position arrondie à ~10 km.
+  [Open-Meteo](https://open-meteo.com) mise en cache pour 3 jours et actualisée toutes les 8 h au
+  plus (~2 Ko par requête), position arrondie à ~10 km.
   Feux de position allumés (garage, tunnel, nuit) : réglage Nuit, refait d'après la lumière dès
   qu'ils s'éteignent. Bouton « Tester maintenant ». La variante hors ligne n'utilise que le soleil
 - **Déclenchement A/C via la température** : deux règles indépendantes (température supérieure /
@@ -1117,7 +1118,7 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
   that a four-point adjustable curve (night, dusk, overcast, full sun) assigns to the outdoor light.
   The car does not measure light, so it is estimated from the sun height (GPS position + time,
   computed offline) and the [Open-Meteo](https://open-meteo.com) sunshine forecast, cached for
-  3 days, position rounded to ~10 km. Side lights on (garage, tunnel, night): Night setting, redone
+  3 days and refreshed every 8 h at most (~2 KB per request), position rounded to ~10 km. Side lights on (garage, tunnel, night): Night setting, redone
   from the light once they switch off. "Test now" button. The offline variant uses the sun only
 - **Temperature-triggered A/C**: two independent rules (above / below), each with its threshold,
   setpoint, fan level, defrosters, automatic mode and recirculation

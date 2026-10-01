@@ -7,7 +7,6 @@ import com.mg4.control.model.OpenMeteoResponse
 import com.mg4.control.model.SolarForecast
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.Locale
 import kotlin.math.roundToLong
 
 /**
@@ -27,13 +26,16 @@ object OpenMeteoClient {
 
     fun arrondi(x: Double): Double = (x * 10.0).roundToLong() / 10.0
 
-    /** URL de la requête, coordonnées au point décimal quelle que soit la langue de l'appareil. */
-    fun url(lat: Double, lon: Double): String = String.format(
-        Locale.ROOT,
-        "%s?latitude=%.1f&longitude=%.1f&hourly=shortwave_radiation&forecast_days=%d" +
-            "&timeformat=unixtime&timezone=GMT",
-        BASE, arrondi(lat), arrondi(lon), JOURS,
-    )
+    /**
+     * URL de la requête. Coordonnées écrites par `Double.toString`, jamais par un formateur :
+     * sur la voiture, `String.format(Locale.ROOT, "%.1f")` rend une VIRGULE (repli sur la langue
+     * de l'appareil — relevé du 2026-10-01), et Open-Meteo lit alors `latitude=48,9` comme deux
+     * lieux et répond par un tableau. `toString` ne dépend d'aucune langue, et l'arrondi au
+     * dixième exclut l'écriture scientifique.
+     */
+    fun url(lat: Double, lon: Double): String =
+        "$BASE?latitude=${arrondi(lat)}&longitude=${arrondi(lon)}" +
+            "&hourly=shortwave_radiation&forecast_days=$JOURS&timeformat=unixtime&timezone=GMT"
 
     /**
      * Télécharge la prévision ; null en cas d'échec (journalisé). Bloquant : hors du fil principal.
