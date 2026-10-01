@@ -8,6 +8,54 @@ import org.junit.Test
 /** Comparaison de versions — logique pure, aucun accès réseau ni Android. */
 class UpdateCheckerTest {
 
+    // ── Notes de version ────────────────────────────────────────────────────
+
+    /** Forme réelle du texte de la release 2.6.7 : titre, changelog, puis le bloc de la CI. */
+    private val notes267 = """
+        ## MG4Control v2.6.7
+
+        Fix : The new advanced shortcut system now allows you to keep the default shortcut.
+        Added : There is a new “Regen Cycle” shortcut that lets you choose which modes to cycle.
+        Added: Turkish language
+
+        Two variants are provided — **pick one**:
+
+        | Variant | File | Network |
+        |---|---|---|
+        | **Online** | `MG4Control-online-*.apk` | yes |
+    """.trimIndent()
+
+    @Test
+    fun `les notes ne sont plus coupees a 400 caracteres`() {
+        val long = (1..60).joinToString("\n") { "Added : feature number $it" }
+        assertEquals("tout le changelog arrive au popup", long, UpdateChecker.cleanNotes(long))
+    }
+
+    @Test
+    fun `le bloc des variantes de la CI est retire`() {
+        val propre = UpdateChecker.cleanNotes(notes267)
+        assertFalse(propre.contains("Two variants"))
+        assertFalse("pas de tableau Markdown brut", propre.contains("|"))
+        assertTrue("le changelog, lui, est entier", propre.endsWith("Added: Turkish language"))
+    }
+
+    @Test
+    fun `les marques Markdown ne s'affichent pas litteralement`() {
+        val propre = UpdateChecker.cleanNotes(notes267)
+        assertTrue(propre.startsWith("MG4Control v2.6.7"))
+        assertFalse(propre.contains("#"))
+        assertFalse(propre.contains("**"))
+    }
+
+    @Test
+    fun `un texte demesure est coupe entre deux lignes`() {
+        val enorme = (1..2_000).joinToString("\n") { "Ligne de changelog numéro $it" }
+        val propre = UpdateChecker.cleanNotes(enorme)
+        assertTrue(propre.length <= 10_002)
+        assertTrue("marque de coupure visible", propre.endsWith("\n…"))
+        assertTrue("jamais au milieu d'une ligne", propre.removeSuffix("\n…").lines().last().startsWith("Ligne de changelog"))
+    }
+
     @Test
     fun `remote patch superieur est plus recent`() {
         assertTrue(UpdateChecker.isNewer("2.6.5", "2.6.4"))

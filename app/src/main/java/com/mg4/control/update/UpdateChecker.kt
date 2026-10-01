@@ -187,7 +187,7 @@ object UpdateChecker {
             }
 
             val tagName = json.getString("tag_name")
-            val notes   = json.optString("body", "").take(400)
+            val notes   = cleanNotes(json.optString("body", ""))
             val assets  = json.optJSONArray("assets") ?: return null
             val apks = mutableListOf<Pair<String, String>>()
             for (i in 0 until assets.length()) {
@@ -233,7 +233,7 @@ object UpdateChecker {
             conn.disconnect()
 
             val tagName = json.getString("tag_name")
-            val notes   = json.optString("description", "").take(400)
+            val notes   = cleanNotes(json.optString("description", ""))
 
             // Structure GitLab : assets.links[] (contrairement à assets[] sur GitHub)
             // Le champ "name" est un libellé libre (ex: "MG4Control v1.2.0") — pas forcément
@@ -317,6 +317,44 @@ object UpdateChecker {
      * Deux versions dont les cœurs numériques sont égaux ne sont jamais "plus récentes"
      * l'une que l'autre : "2.7.0-offline" == "2.7.0".
      */
+    /**
+     * Plafond de sécurité des notes de version. Elles voyagent dans un Intent (popup par-dessus
+     * l'infodivertissement → activité), donc sous la limite d'une transaction binder ; dix mille
+     * caractères, c'est cinq fois le changelog de la 2.6.7.
+     *
+     * L'ancien plafond, 400, coupait ce même changelog à la quatrième ligne, au milieu d'un mot :
+     * le texte tenait alors dans la zone défilante, qui n'avait plus rien à faire défiler.
+     */
+    private const val MAX_NOTES_CHARS = 10_000
+
+    /**
+     * Début du bloc ajouté par `release.yml` sous le changelog : le tableau des deux variantes.
+     * Utile sur GitHub pour choisir son APK, illisible dans le popup (Markdown brut) et inutile :
+     * l'application sait déjà quelle variante télécharger.
+     */
+    private const val VARIANTS_BLOCK = "Two variants are provided"
+
+    /**
+     * Notes de version telles qu'on les montre : sans le bloc des variantes, sans les marques
+     * Markdown qu'un TextView afficherait littéralement, et coupées proprement si elles sont
+     * démesurées — jamais au milieu d'une ligne.
+     */
+    @VisibleForTesting
+    internal fun cleanNotes(raw: String): String {
+        var text = raw.replace("\r", "")
+        val fin = text.indexOf(VARIANTS_BLOCK)
+        if (fin >= 0) text = text.substring(0, fin)
+        text = text.lines().joinToString("\n") { ligne ->
+            ligne.replace(Regex("^#{1,6}\\s+"), "")
+                .replace("**", "")
+                .replace("`", "")
+        }.trim()
+        if (text.length <= MAX_NOTES_CHARS) return text
+        val coupe = text.take(MAX_NOTES_CHARS)
+        val derniereLigne = coupe.lastIndexOf('\n').takeIf { it > MAX_NOTES_CHARS / 2 } ?: coupe.length
+        return coupe.substring(0, derniereLigne).trimEnd() + "\n…"
+    }
+
     @VisibleForTesting
     internal fun isNewer(remote: String, current: String): Boolean {
         val r = segments(remote)
