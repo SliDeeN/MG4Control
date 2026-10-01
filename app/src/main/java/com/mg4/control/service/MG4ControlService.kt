@@ -67,6 +67,7 @@ class MG4ControlService : Service() {
         private val DIRECT_VEHICLE_ACTIONS = setOf(
             ShortcutAction.ESC_TOGGLE, ShortcutAction.DROWSINESS_TOGGLE,
             ShortcutAction.DROWSINESS_SEN_CYCLE, ShortcutAction.HVAC_TOGGLE,
+            ShortcutAction.HVAC_AC_TOGGLE,
             ShortcutAction.HVAC_TEMP_UP, ShortcutAction.HVAC_TEMP_DOWN,
             ShortcutAction.HVAC_FAN_UP, ShortcutAction.HVAC_FAN_DOWN,
             ShortcutAction.ADAS_CYCLE,
@@ -814,7 +815,7 @@ class MG4ControlService : Service() {
                 if (cible != actuel) MG4Hardware.setScreenBrightnessPercent(cible)
             }
 
-            ShortcutAction.HVAC_TOGGLE, ShortcutAction.HVAC_TEMP_UP,
+            ShortcutAction.HVAC_TOGGLE, ShortcutAction.HVAC_AC_TOGGLE, ShortcutAction.HVAC_TEMP_UP,
             ShortcutAction.HVAC_TEMP_DOWN, ShortcutAction.HVAC_FAN_UP,
             ShortcutAction.HVAC_FAN_DOWN, ShortcutAction.DEFROST_FRONT_TOGGLE,
             ShortcutAction.DEFROST_REAR_TOGGLE, ShortcutAction.HVAC_RECIRC_CYCLE -> {
@@ -834,6 +835,19 @@ class MG4ControlService : Service() {
                         }
                         AppLogger.i(TAG, "SHORTCUT clim : $actuel → ${!actuel}")
                         MG4Hardware.setClimatePower(!actuel)
+                    }
+                    // Compresseur seul : la ventilation continue, sans refroidir. La commande
+                    // d'origine est une BASCULE sur les deux architectures — setClimateAc
+                    // bascule puis relit jusqu'à la cible, c'est la même voie que le bouton A/C
+                    // de la page Clim et du bloc clim des profils.
+                    ShortcutAction.HVAC_AC_TOGGLE -> {
+                        val actuel = etat.acOn
+                        if (actuel == null) {
+                            AppLogger.w(TAG, "SHORTCUT A/C ON/OFF — état illisible")
+                            return
+                        }
+                        AppLogger.i(TAG, "SHORTCUT A/C : $actuel → ${!actuel}")
+                        MG4Hardware.setClimateAc(!actuel)
                     }
                     ShortcutAction.HVAC_TEMP_UP, ShortcutAction.HVAC_TEMP_DOWN -> {
                         val actuel = etat.tempC

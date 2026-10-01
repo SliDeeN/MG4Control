@@ -452,6 +452,7 @@
     <string name="shortcuts_action_drowsiness">Somnolencia (ON/OFF)</string>
     <string name="shortcuts_action_drowsiness_sen">Somnolencia: sensibilidad</string>
     <string name="shortcuts_action_hvac_toggle">Clima (ON/OFF)</string>
+    <string name="shortcuts_action_hvac_ac_toggle">Clima: A/C (ON/OFF)</string>
     <string name="shortcuts_action_hvac_temp_up">Clima: temperatura +</string>
     <string name="shortcuts_action_hvac_temp_down">Clima: temperatura -</string>
     <string name="shortcuts_action_hvac_fan_up">Clima: ventilación +</string>

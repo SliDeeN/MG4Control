@@ -452,6 +452,7 @@
     <string name="shortcuts_action_drowsiness">Müdigkeit (ON/OFF)</string>
     <string name="shortcuts_action_drowsiness_sen">Müdigkeit: Empfindlichkeit</string>
     <string name="shortcuts_action_hvac_toggle">Klima (ON/OFF)</string>
+    <string name="shortcuts_action_hvac_ac_toggle">Klima: A/C (ON/OFF)</string>
     <string name="shortcuts_action_hvac_temp_up">Klima: Temperatur +</string>
     <string name="shortcuts_action_hvac_temp_down">Klima: Temperatur -</string>
     <string name="shortcuts_action_hvac_fan_up">Klima: Gebläse +</string>

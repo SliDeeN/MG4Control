@@ -55,7 +55,8 @@ enum class ShortcutAction(val id: Int) {
     // des quatre vitres. La voiture ne renvoyant rien sur leur position (hors vitre conducteur),
     // une bascule mémorisée n'aurait rien à quoi se raccrocher.
     WINDOWS_OPEN_ALL(36),
-    WINDOWS_CLOSE_ALL(37);
+    WINDOWS_CLOSE_ALL(37),
+    HVAC_AC_TOGGLE(38);
 
     companion object {
         fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: NONE
