@@ -31,7 +31,7 @@ class MG4App : Application() {
         }
 
         // ── Migration + initialisation du thème ───────────────────────────────
-        val prefs = getSharedPreferences("mg4_settings", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("mg4_settings", MODE_PRIVATE)
 
         if (!prefs.contains(ThemeHelper.PREF_THEME_MODE)) {
             // Migration depuis l'ancien booléen "dark_theme" (version < 2.x)

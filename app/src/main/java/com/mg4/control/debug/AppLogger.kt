@@ -1,20 +1,17 @@
 package com.mg4.control.debug
 
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.concurrent.CopyOnWriteArrayList
 
 /**
  * In-app log buffer — mirrors every Log.* call to an in-memory ring buffer
- * so the ConsoleFragment can display them without ADB.
+ * so the Diagnostic report can include them without ADB.
  *
  * Le buffer est un ArrayDeque sous verrou : la CopyOnWriteArrayList précédente recopiait
  * les 400 entrées deux fois par ligne de log, sur le thread appelant — c'est-à-dire
- * pendant l'application d'un profil. Les listeners sont notifiés hors du chemin chaud.
+ * pendant l'application d'un profil.
  */
 object AppLogger {
 
@@ -46,14 +43,6 @@ object AppLogger {
     val entries: List<Entry>
         get() = synchronized(lock) { buffer.toList() }
 
-    private val listeners = CopyOnWriteArrayList<() -> Unit>()
-
-    private val mainHandler = Handler(Looper.getMainLooper())
-
-    /** Notification déjà programmée : une rafale de logs ne donne qu'un seul réveil UI. */
-    @Volatile
-    private var notifyPending = false
-
     // ---- Public log methods (mirror android.util.Log) ----
 
     fun d(tag: String, msg: String) { add(tag, Level.DEBUG, msg); Log.d(tag, msg) }
@@ -66,7 +55,6 @@ object AppLogger {
             buffer.clear()
             totalCount = 0L
         }
-        notifyListeners()
     }
 
     /**
@@ -84,11 +72,6 @@ object AppLogger {
         }
     }
 
-    // ---- Listener for live UI updates ----
-
-    fun addListener(l: () -> Unit)    { listeners.add(l) }
-    fun removeListener(l: () -> Unit) { listeners.remove(l) }
-
     // ---- Internal ----
 
     private fun add(tag: String, level: Level, msg: String) {
@@ -98,20 +81,6 @@ object AppLogger {
             while (buffer.size >= MAX_ENTRIES) buffer.removeFirst()
             buffer.addLast(entry)
             totalCount++
-        }
-        notifyListeners()
-    }
-
-    /**
-     * Réveille l'UI sur le thread principal, au plus une fois par rafale : la notification
-     * ne doit pas s'exécuter sur le thread qui journalise.
-     */
-    private fun notifyListeners() {
-        if (listeners.isEmpty() || notifyPending) return
-        notifyPending = true
-        mainHandler.post {
-            notifyPending = false
-            listeners.forEach { runCatching { it.invoke() } }
         }
     }
 }

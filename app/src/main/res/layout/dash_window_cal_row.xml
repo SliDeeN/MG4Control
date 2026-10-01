@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Une ligne de la carte « Calibration des vitres » : nom, état, bouton Calibrer / Refaire.
+    Incluse quatre fois : ids cherchés DANS la ligne (l'id de l'<include> la désigne).
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingStart="16dp"
+    android:paddingEnd="10dp"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+
+    <TextView
+        android:id="@+id/win_cal_row_name"
+        android:layout_width="180dp"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/win_cal_row_status"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btn_win_cal_row_start"
+        android:layout_width="wrap_content"
+        android:layout_height="52dp"
+        android:minWidth="140dp"
+        android:insetTop="0dp"
+        android:insetBottom="0dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="16sp"
+        app:backgroundTint="@color/dash_btn"
+        app:strokeWidth="1dp"
+        app:strokeColor="@color/dash_border"
+        app:cornerRadius="8dp" />
+
+</LinearLayout>

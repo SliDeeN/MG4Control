@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- En-tête d'un groupe de la liste : un bouton + un type d'appui.
+
+     Le regroupement n'est pas cosmétique. Une même touche et un même appui peuvent désormais
+     porter plusieurs raccourcis, un par profil, et c'est l'ORDRE d'affichage qui montre la règle
+     de résolution : « tous les profils » en tête, variantes en dessous. Une liste plate laisserait
+     deviner laquelle l'emporte. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginTop="6dp"
+    android:layout_marginBottom="6dp">
+
+    <TextView
+        android:id="@+id/adv_group_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/dash_text_lo"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.10"
+        android:textAllCaps="true"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:paddingBottom="6dp" />
+
+    <!-- Affiché quand le groupe n'a AUCUNE ligne « tous les profils » : sous les autres profils,
+         la touche est réclamée mais ne fait rien. C'est exactement le genre de chose qu'on
+         découvre au volant, autant la dire ici. -->
+    <TextView
+        android:id="@+id/adv_group_warning"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/adv_sc_no_fallback"
+        android:textColor="@color/dash_text_lo"
+        android:textSize="13sp"
+        android:paddingStart="4dp"
+        android:paddingEnd="4dp"
+        android:paddingBottom="6dp"
+        android:visibility="gone" />
+
+</LinearLayout>

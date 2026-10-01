@@ -10,10 +10,7 @@
     <string name="clean_apk_none">✓ Nessun file</string>
 
     <!-- Navigazione inferiore -->
-    <string name="nav_drive">Drive</string>
-    <string name="nav_climate">Clima</string>
     <string name="nav_profiles">Profili</string>
-    <string name="nav_adas">ADAS</string>
     <string name="nav_settings">Impostazioni</string>
     <string name="nav_shortcuts">Scorciatoie</string>
 
@@ -25,7 +22,6 @@
     <string name="shortcuts_action_one_pedal">1 Pedale</string>
     <string name="shortcuts_press_single">Semplice</string>
     <string name="shortcuts_press_long">Lungo</string>
-    <string name="shortcuts_press_double">Doppio</string>
 
     <!-- Azioni scorciatoie -->
     <string name="shortcuts_action_aeb">Sistema Anticollisione</string>
@@ -47,7 +43,6 @@
     <string name="overlay_countdown">Chiusura tra %1$ds</string>
     <string name="shortcuts_profile_prefix">Avvia profilo</string>
     <string name="shortcuts_pick_profile_title">Scegli un profilo</string>
-    <string name="shortcuts_profile_not_found">Profilo non trovato</string>
     <string name="shortcuts_no_profiles">Nessun profilo creato</string>
     <string name="shortcuts_action_open_app">Apri MG4Control</string>
     <string name="shortcuts_action_open_custom_app">Avvia un\'app</string>
@@ -59,12 +54,10 @@
 
     <!-- Configurazione scorciatoie -->
     <string name="shortcuts_cfg_one_pedal">1 Pedale — Regen ritorno</string>
-    <string name="shortcuts_cfg_aeb">AEB — Ciclo</string>
     <string name="shortcuts_cfg_adas">ADAS — Ciclo</string>
     <string name="shortcuts_cfg_retour">Indietro</string>
     <string name="shortcuts_cfg_mode1">Modalità 1</string>
     <string name="shortcuts_cfg_mode2">Modalità 2</string>
-    <string name="shortcuts_cfg_aeb_brake">Avv.+Fr.</string>
 
     <!-- Modalità di guida -->
     <string name="drive_eco">ECO</string>
@@ -77,6 +70,13 @@
     <!-- Intestazioni sezione Drive -->
     <string name="drive_section_mode">Modalità di guida</string>
     <string name="drive_section_regen">Rigenerazione</string>
+
+    <!-- Mode de conduite Personnalisé -->
+    <string name="drive_section_custom">Modalità personalizzata</string>
+    <string name="drive_custom_power">Potenza</string>
+    <string name="drive_custom_steering">Sterzo</string>
+    <string name="drive_custom_pedal">Pedale</string>
+    <string name="drive_custom_comfort">Comfort</string>
 
     <!-- Livelli di rigenerazione -->
     <string name="regen_off">Off</string>
@@ -94,13 +94,11 @@
     <string name="climate_seat_right">Sedile destro</string>
     <string name="climate_off">Off</string>
     <string name="climate_on">On</string>
-    <string name="climate_level">Liv.</string>
     <string name="climate_level_1">Liv. 1</string>
     <string name="climate_level_2">Liv. 2</string>
     <string name="climate_level_3">Liv. 3</string>
 
     <!-- Profili -->
-    <string name="profiles_title">Profili di guida</string>
     <string name="profile_add">Nuovo profilo</string>
     <string name="profile_default_badge">PREDEFINITO</string>
     <string name="profile_apply_now">Applica ora</string>
@@ -114,18 +112,23 @@
     <string name="profile_cancel">Annulla</string>
     <string name="profile_applied">Profilo applicato: %s</string>
     <string name="profile_max_reached">Massimo %d profili raggiunto</string>
-    <string name="profile_auto_applied">Profilo predefinito applicato all\'avvio</string>
     <string name="profile_bt_device_label">Dispositivo Bluetooth</string>
+
+    <!-- Bloc climatisation du profil (onglet Confort) -->
+    <string name="profile_hvac_title">Climatizzazione</string>
+    <string name="profile_hvac_row_clim">Clima</string>
+    <string name="profile_hvac_row_loop">Ricircolo</string>
+    <string name="profile_hvac_row_air">Aria</string>
+    <string name="profile_hvac_on">Acceso</string>
+    <string name="profile_hvac_unchanged">Invariato</string>
+    <string name="profile_hvac_temp_value">%1$d °C</string>
     <string name="profile_bt_none">Nessuno</string>
-    <string name="profile_bt_applied">Profilo BT applicato: %s</string>
 
     <!-- ADAS -->
     <string name="adas_section_sounds">Avvisi sonori</string>
     <string name="adas_overspeed_alarm">Avviso di eccesso di velocità</string>
     <string name="adas_speed_limit_tone">Tono cambio limite</string>
-    <string name="adas_section_drive">Assistenza alla guida</string>
     <string name="adas_off">Off</string>
-    <string name="adas_limiteur">Limitatore</string>
     <string name="adas_limiteur_short">Lim. Manuale</string>
     <string name="adas_auto">Lim. Auto</string>
     <string name="adas_acc">ACC</string>
@@ -179,7 +182,6 @@
     <string name="update_network_error">✕  Errore di rete</string>
     <string name="btn_infos">Info</string>
     <string name="info_title">Informazioni</string>
-    <string name="info_app_label">Applicazione</string>
     <string name="info_version_label">Versione</string>
     <string name="info_firmware_label">Firmware</string>
     <string name="info_github_link">github.com/SliDeeN/MG4Control</string>
@@ -190,7 +192,6 @@
     <string name="info_close">Chiudi</string>
 
     <!-- Dashboard — intestazioni schede -->
-    <string name="card_drive">Impostazioni di guida</string>
     <string name="card_climate">Impostazioni climatizzazione</string>
     <string name="card_alerts">Avvisi</string>
 
@@ -210,8 +211,6 @@
     <string name="update_close">Chiudi</string>
     <string name="update_downloading">Download in corso…</string>
     <string name="update_downloading_pct">Download… %d%%</string>
-    <string name="update_installing">Installazione in corso…</string>
-    <string name="update_installed">✅ Aggiornamento installato con successo!</string>
     <string name="update_error_download">Download fallito. Controlla la connessione.</string>
     <string name="update_error_signature">Aggiornamento rifiutato: l\'APK scaricato non è firmato con la chiave attesa. File eliminato.</string>
     <string name="write_refused_moving">Impostazione di guida rifiutata: %1$s km/h (limite %2$d km/h). Rallenta per modificarla.</string>
@@ -219,18 +218,13 @@
     <string name="settings_speed_gate_desc">Blocca le impostazioni di guida oltre una velocità</string>
     <string name="settings_speed_gate_max_label">Velocità massima (km/h)</string>
     <string name="settings_speed_gate_max_hint">0–250</string>
-    <string name="update_error_install">Installazione fallita.</string>
-    <string name="update_install_error">Errore di installazione: %s</string>
     <string name="update_manual_title">Installazione manuale</string>
     <string name="update_manual_instructions">1. Scansiona il QR code o apri il link\n2. Scarica il file MG4Control.apk\n3. Copialo su una chiavetta USB FAT32\n4. Inserisci la chiavetta nel tuo MG4\n5. Apri il Gestore file\n6. Seleziona il file APK e installalo</string>
-    <string name="update_downloaded_title">APK scaricato ✓</string>
     <string name="update_downloaded_instructions">La cartella Download è stata aperta automaticamente.\n\nTocca MG4Control-*.apk per installare.\n\nSe la cartella non si è aperta, apri il Gestore file e vai in Download.</string>
     <string name="update_gh_releases_link">github.com/SliDeeN/MG4Control/releases</string>
     <string name="update_skip_btn">Non ricordarmi più</string>
 
     <!-- Console (debug) -->
-    <string name="console_title">⬛  Console MG4</string>
-    <string name="console_clear">Cancella</string>
 
     <!-- Firmware sconosciuto -->
     <string name="fw_unknown_title">⚠ Firmware sconosciuto</string>
@@ -243,8 +237,21 @@
     <string name="settings_default_screen">Schermata predefinita</string>
     <string name="settings_default_screen_dashboard">Dashboard</string>
     <string name="settings_auto_apply">Impostazioni aggiuntive</string>
-    <string name="settings_auto_apply_desc">Il profilo predefinito viene applicato automaticamente all\'avvio</string>
+    <string name="settings_garage_mode">Modalità officina</string>
+    <string name="settings_garage_mode_desc">Mette MG4Control completamente in pausa: niente scorciatoie (i pulsanti tornano alla loro funzione originale), nessun profilo all\'avvio, nessuna automazione. Utile per lasciare l\'auto in officina senza disinstallare l\'app. Le impostazioni restano e tornano appena la modalità viene disattivata.</string>
+    <string name="notif_service_active">Servizio attivo</string>
+    <string name="notif_garage_mode">Modalità officina — in pausa</string>
     <string name="settings_auto_update_desc">Controlla aggiornamenti automaticamente all\'avvio</string>
+
+    <!-- Popup « mise à jour disponible » par-dessus l'infodivertissement -->
+    <string name="update_overlay_title">È disponibile un aggiornamento di MG4Control</string>
+    <string name="update_overlay_versions">%1$s  \u2192  %2$s</string>
+    <string name="update_overlay_install">Installa l\'aggiornamento</string>
+    <string name="update_overlay_skip">Ignora questa versione</string>
+    <string name="update_overlay_disable">Non avvisarmi più degli aggiornamenti</string>
+    <string name="update_overlay_disabled_toast">Avvisi disattivati. Riattivabili in Impostazioni > Aggiornamenti.</string>
+    <string name="settings_update_overlay">Avvisa sullo schermo del veicolo</string>
+    <string name="settings_update_overlay_desc">Mostra un messaggio sopra l\'infotainment quando c\'è un aggiornamento, solo da fermi</string>
     <string name="settings_vehicle_power_desc">Spegnere il veicolo mantenendo lo schermo acceso</string>
     <string name="settings_vehicle_power_btn">Spegni</string>
     <string name="vehicle_power_dialog_title">Spegnere il veicolo</string>
@@ -256,7 +263,10 @@
     <string name="settings_theme_auto">Auto</string>
     <string name="settings_theme_dark">Modalità scura</string>
     <string name="settings_theme_light">Modalità chiara</string>
-    <string name="settings_theme_desc">Passa dal tema scuro al tema chiaro</string>
+    <string name="settings_text_size">Dimensione del testo</string>
+    <string name="settings_text_size_standard">Standard</string>
+    <string name="settings_text_size_large">Grande</string>
+    <string name="settings_text_size_xlarge">Molto grande</string>
     <string name="settings_language">Lingua</string>
     <string name="settings_language_fr">Français</string>
     <string name="settings_language_en">English</string>
@@ -264,23 +274,20 @@
     <string name="settings_language_es">Español</string>
     <string name="settings_language_pt">Português</string>
     <string name="settings_language_it">Italiano</string>
+    <string name="settings_language_tr">Türkçe</string>
     <string name="settings_language_pick_title">Scegli la tua lingua</string>
-    <string name="settings_language_pick_msg">Potrai modificarla nelle Impostazioni.</string>
     <string name="settings_firmware_version">Versione firmware</string>
     <string name="settings_firmware_loading">Lettura…</string>
 
     <!-- [BT-PROFILES] Profili Bluetooth -->
-    <string name="bt_section_title">Bluetooth</string>
-    <string name="bt_no_device">Nessuno</string>
-    <string name="bt_pick_device_title">Dispositivo Bluetooth</string>
-    <string name="bt_profile_applied">Profilo applicato via Bluetooth: %s</string>
-    <string name="bt_no_paired_devices">Nessun dispositivo associato</string>
     <!-- Schermata Audio (solo A9) -->
     <string name="nav_audio">Audio</string>
     <string name="door_volume_title">Volume all\'apertura della porta</string>
     <string name="door_volume_desc">Abbassa il volume multimediale all\'apertura di una porta anteriore</string>
     <string name="door_volume_level_label">Livello target</string>
     <string name="door_volume_restore_title">Ripristina alla chiusura</string>
+    <string name="door_volume_desc_ready">Abbassa il volume multimediale quando l\'auto esce dalla modalità READY in P (porta del conducente aperta o auto spenta)</string>
+    <string name="door_volume_restore_ready_title">Ripristina al ritorno in READY</string>
     <string name="door_volume_doors_label">Porte di attivazione</string>
     <string name="door_left">Sinistra</string>
     <string name="door_right">Destra</string>
@@ -297,7 +304,6 @@
     <string name="automation_profile_label">Profilo da applicare</string>
     <string name="automation_auto_execute">Applica automaticamente</string>
     <string name="automation_no_profile">Nessun profilo</string>
-    <string name="automation_confirm_title">Automazione temperatura</string>
     <string name="automation_confirm_msg">La temperatura esterna è sotto i %1$d°C\n(%2$s°C temperatura attuale)\nApplicare il profilo «%3$s»?</string>
     <string name="automation_confirm_yes">SÌ</string>
     <string name="automation_confirm_no">NO</string>
@@ -334,9 +340,11 @@
     <string name="clim_loop_inner">Interno</string>
     <string name="clim_loop_outside">Esterno</string>
     <string name="clim_loop_auto">Auto</string>
-    <string name="clim_section_defrost">Sbrinamento</string>
-    <string name="clim_defrost_front">Anteriore</string>
-    <string name="clim_defrost_rear">Posteriore</string>
+    <string name="clim_section_airflow">Direzione dell\'aria</string>
+    <string name="clim_air_face">Viso</string>
+    <string name="clim_air_feet">Piedi</string>
+    <string name="clim_air_windshield_front">Parabrezza</string>
+    <string name="clim_air_windshield_rear">Lunotto</string>
     <string name="clim_write_failed">Impostazione clima rifiutata dal veicolo</string>
 
     <!-- Editeur de profil : categories -->
@@ -344,7 +352,6 @@
     <string name="profile_cat_safety">Sicurezza</string>
     <string name="profile_cat_comfort">Comfort</string>
     <string name="climate_seat_heat">Sedili riscaldati</string>
-    <string name="profile_heat_toggle_hint">Gestione del riscaldamento: se disattivato, il profilo non tocca questa impostazione.</string>
 
     <!-- Reglages : categories -->
     <string name="settings_cat_lang">Lingue</string>
@@ -354,8 +361,6 @@
     <string name="settings_maintenance">Manutenzione</string>
 
     <!-- Raccourcis : categories -->
-    <string name="shortcuts_cat_buttons">Pulsanti</string>
-    <string name="shortcuts_cat_actions">Azioni</string>
 
     <!-- API externe (issue #79) -->
     <string name="settings_external_api">API esterna (KeyMapper, Tasker…)</string>
@@ -407,17 +412,33 @@
     <string name="adv_sc_status_off">Servizio inattivo</string>
     <string name="adv_sc_record">Registra un tasto</string>
     <string name="adv_sc_recording">Premi un tasto del volante…</string>
-    <string name="adv_sc_cancel">Annulla</string>
-    <string name="adv_sc_last_key">Ultimo tasto rilevato</string>
     <string name="adv_sc_none">nessuno</string>
     <string name="shortcuts_cat_classic">Scorciatoie</string>
     <string name="adv_sc_list_title">Elenco scorciatoie</string>
+
+    <!-- Cycle de régénération personnalisable -->
+    <string name="shortcuts_cat_onepedal">1 Pedale</string>
+    <string name="shortcuts_cat_adas">ADAS</string>
+    <string name="shortcuts_cat_regen_cycle">Ciclo regen</string>
+    <string name="shortcuts_cfg_regen_cycle">Ciclo di rigenerazione</string>
+    <string name="shortcuts_cfg_regen_hint">Tocca le modalità nell\'ordine in cui vuoi scorrerle, poi salva.</string>
+    <string name="shortcuts_cfg_regen_summary">Ciclo: %1$s</string>
+    <string name="shortcuts_cfg_regen_clear">Cancella tutto</string>
+    <string name="shortcuts_cfg_regen_save">Salva</string>
+    <string name="shortcuts_cfg_regen_saved">Ciclo salvato</string>
+    <string name="shortcuts_cfg_regen_min">Un ciclo richiede almeno due modalità.</string>
     <string name="adv_sc_new">Nuova scorciatoia</string>
     <string name="adv_sc_step_key">1 · Tasto</string>
     <string name="adv_sc_step_press">2 · Tipo di pressione</string>
     <string name="adv_sc_step_action">3 · Funzione</string>
+    <string name="adv_sc_step_profile">4 · Profilo</string>
+    <string name="adv_sc_all_profiles">Tutti i profili</string>
+    <string name="adv_sc_profile_missing">Profilo eliminato</string>
+    <string name="adv_sc_group_title">%1$s · %2$s</string>
+    <string name="adv_sc_no_fallback">Nessuna scorciatoia per gli altri profili: il tasto vi mantiene la sua funzione originale.</string>
+    <string name="adv_sc_edit_conflict">Quel profilo ha già una scorciatoia su questo tasto e tipo di pressione.</string>
     <string name="adv_sc_empty">Nessuna scorciatoia avanzata registrata.</string>
-    <string name="adv_sc_claimed_warning">Il tasto assegnato non potrà più essere usato per altro che MG4Control, fino all\'eliminazione della scorciatoia in « ELENCO SCORCIATOIE ».</string>
+    <string name="adv_sc_claimed_warning">Le pressioni senza scorciatoia mantengono la funzione originale del tasto. Su un tasto con doppia pressione, la pressione singola originale arriva con un leggero ritardo (0,3 s).</string>
     <string name="adv_sc_delete">Elimina</string>
     <string name="adv_sc_status_label">Stato del servizio</string>
     <string name="adv_sc_saved">Scorciatoia salvata</string>
@@ -437,7 +458,7 @@
     <string name="shortcuts_action_hvac_fan_down">Clima: ventilazione -</string>
 
     <!-- Raccourcis : confort et affichage -->
-    <string name="shortcuts_action_regen_cycle">Rigenerazione: livello successivo</string>
+    <string name="shortcuts_action_regen_cycle">Ciclo di rigenerazione personalizzato</string>
     <string name="shortcuts_action_seat_heat_left">Sedile sinistro riscaldato: ciclo</string>
     <string name="shortcuts_action_seat_heat_right">Sedile destro riscaldato: ciclo</string>
     <string name="shortcuts_action_steering_heat">Volante riscaldato (ON/OFF)</string>
@@ -449,7 +470,7 @@
 
     <!-- Liste des raccourcis avances : modification et remplacement -->
     <string name="adv_sc_edit">Modifica</string>
-    <string name="adv_sc_edit_title">Cambia funzione</string>
+    <string name="adv_sc_edit_title">Modifica la scorciatoia</string>
     <string name="adv_sc_updated">Scorciatoia modificata</string>
     <string name="adv_sc_press_short">Pressione breve</string>
     <string name="adv_sc_press_long_lbl">Pressione lunga</string>
@@ -461,7 +482,7 @@
 
     <!-- Avertissement a l'activation des raccourcis avances -->
     <string name="adv_sc_enable_warn_title">Il pulsante assegnato cambia ruolo</string>
-    <string name="adv_sc_enable_warn_msg">Un pulsante assegnato a una scorciatoia avanzata perde la sua funzione originale: MG4Control intercetta il tasto prima del launcher, che non lo riceve più.\n\nEsempio: se assegni il pulsante Home, non riporterà più al launcher MG. Per recuperarlo, assegnagli l\'azione « Avvia un\'app » e scegli il launcher.\n\nIl tasto è riservato per intero: assegnare solo la pressione lunga annulla anche quella breve e quella doppia.\n\nTutto torna normale eliminando la scorciatoia in « Elenco scorciatoie ».</string>
+    <string name="adv_sc_enable_warn_msg">MG4Control intercetta i pulsanti assegnati prima del launcher.\n\nUna pressione con scorciatoia sostituisce la funzione originale del pulsante. Le altre la mantengono: se assegni la doppia pressione del pulsante Home, la pressione singola riporta sempre al launcher MG.\n\nUnico compromesso: su un pulsante con doppia pressione, la pressione singola arriva con un leggero ritardo (0,3 s), il tempo di verificare che non segua una seconda pressione.\n\nTutto torna normale eliminando la scorciatoia in « Elenco scorciatoie ».</string>
     <string name="adv_sc_enable_warn_ok">Attiva</string>
 
     <!-- Raccourcis : pistes audio -->
@@ -472,4 +493,136 @@
     <!-- Raccourcis : volume -->
     <string name="shortcuts_action_volume_up">Volume +</string>
     <string name="shortcuts_action_volume_down">Volume -</string>
+
+    <!-- Onglet Vitres (V0 de test) -->
+    <string name="win_close_warning">La chiusura automatica dall\'app non ha l\'antischiacciamento (tranne il finestrino del conducente): sorveglia il finestrino. Si ferma se esci dalla scheda.</string>
+    <string name="win_front_left">Anteriore sinistro</string>
+    <string name="win_front_right">Anteriore destro</string>
+    <string name="win_rear_left">Posteriore sinistro</string>
+    <string name="win_rear_right">Posteriore destro</string>
+    <string name="win_all_close">Chiudi tutti</string>
+    <string name="win_all_open">Apri tutti</string>
+    <string name="win_auto_title">Chiusura automatica</string>
+    <string name="win_auto_label">Chiudi i finestrini scendendo dall\'auto</string>
+    <string name="win_auto_desc">Auto in P, una volta armata secondo le condizioni sotto: quando l\'auto esce dalla modalità READY (porta del conducente aperta o auto spenta), tutti i finestrini si chiudono dopo il ritardo scelto. Tornare in READY prima annulla.</string>
+    <string name="win_auto_warning">Nessun antischiacciamento sui finestrini tranne quello del conducente: nessuno vicino ai finestrini quando si scende.</string>
+    <string name="win_auto_arming_title">Armamento: dopo la guida</string>
+    <string name="win_auto_speed_label">Velocità raggiunta</string>
+    <string name="win_auto_time_label">Auto accesa da</string>
+    <string name="win_auto_combine_any">Una delle due</string>
+    <string name="win_auto_combine_all">Entrambe</string>
+    <string name="win_auto_need_one">Mantieni almeno una condizione di armamento</string>
+    <string name="win_auto_delay_label">Ritardo prima della chiusura</string>
+    <string name="win_auto_beep_label">Bip di avviso</string>
+    <string name="win_auto_beep_desc">Un bip al secondo durante il ritardo, prima della chiusura dei finestrini.</string>
+    <string name="win_auto_beep_volume_label">Volume del bip</string>
+    <string name="win_auto_beep_value" translatable="false">%1$d %%</string>
+    <string name="win_cal_title">Calibrazione finestrini</string>
+    <string name="win_course_title">Tempo di corsa</string>
+    <string name="win_course_label">Corsa completa</string>
+    <string name="win_course_hint">Durata dell\'impulso inviato ai vetri senza sensore, per un\'apertura o una chiusura completa. Il vetro del conducente mantiene la sua corsa automatica. Troppo breve, il vetro resta socchiuso.</string>
+    <string name="win_cal_advanced_title">Avanzate</string>
+    <string name="win_cal_advanced_label">Calibrazione per vetro</string>
+    <string name="win_cal_advanced_desc">Misura la corsa reale di ogni vetro, più precisa del tempo generale. Le misure restano salvate se disattivi l\'opzione.</string>
+    <string name="win_cal_general">Tempo generale</string>
+    <string name="win_automation_title">Alzacristalli elettrici</string>
+    <string name="win_section_command">Comandi</string>
+    <string name="win_cal_limits">L\'app non vede gli interruttori della portiera: una corsa emulata dura sempre il tempo misurato, qualunque sia la posizione di partenza.</string>
+    <string name="shortcuts_action_windows_open">Aprire tutti i finestrini</string>
+    <string name="shortcuts_action_windows_close">Chiudere tutti i finestrini</string>
+    <string name="win_cal_hint">Vetri senza sensore: l\'app cronometra una corsa completa e la usa come tempo di corsa di quel vetro.</string>
+    <string name="win_cal_sensor">Sensore di serie</string>
+    <string name="win_cal_done">Calibrato · discesa %1$s s · salita %2$s s</string>
+    <string name="win_cal_start">Calibra</string>
+    <string name="win_cal_redo_row">Rifai</string>
+    <string name="win_cal_wizard_title">Calibrazione · %1$s</string>
+    <string name="win_cal_step">Passo %1$d / 4</string>
+    <string name="win_cal_close_instruction">Chiusura completa: l\'app invia la chiusura automatica per partire da un finestrino chiuso.</string>
+    <string name="win_cal_close_action">Chiudi il finestrino</string>
+    <string name="win_cal_closed_action">Finestrino chiuso: continua</string>
+    <string name="win_cal_down_instruction">Tieni il dito su «Apri» e rilascia appena il finestrino è tutto giù.</string>
+    <string name="win_cal_down_action">Apri (tenere premuto)</string>
+    <string name="win_cal_up_instruction">Tieni il dito su «Chiudi» e rilascia appena il finestrino è chiuso.</string>
+    <string name="win_cal_up_action">Chiudi (tenere premuto)</string>
+    <string name="win_cal_warning">Auto ferma, nessuno vicino al finestrino.</string>
+    <string name="win_cal_too_short">Troppo breve (%1$s s): si ricomincia dalla chiusura.</string>
+    <string name="win_cal_too_long">Troppo lungo (%1$s s): si ricomincia dalla chiusura.</string>
+    <string name="win_cal_result">Discesa %1$s s · salita %2$s s. Salva, o ricomincia se hai rilasciato troppo tardi.</string>
+    <string name="win_cal_seconds">%1$s s</string>
+    <string name="win_cal_cancel">Annulla</string>
+    <string name="win_cal_redo">Ricomincia</string>
+    <string name="win_cal_save">Salva</string>
+    <string name="win_cal_saved">Calibrazione salvata</string>
+
+    <!-- ══════════ Statistiques : trajets, recharges, coût ══════════ -->
+    <string name="nav_stats">Statistiche</string>
+    <string name="stats_cat_general">Generale</string>
+    <string name="stats_cat_trips">Viaggi</string>
+    <string name="stats_cat_charges">Ricarica</string>
+    <string name="stats_enable_label">Registrare le statistiche</string>
+    <string name="stats_enable_desc">Viaggi e ricariche sono salvati nell\'auto, solo su questa schermata. Nulla viene inviato altrove.</string>
+    <string name="stats_disabled_note">Disattivato: non si registra nulla e le schede Viaggi e Ricarica restano vuote.</string>
+    <string name="stats_summary_title">Riepilogo</string>
+    <string name="stats_price_title">Prezzo dell\'elettricità</string>
+    <string name="stats_price_note">Queste tariffe sono il valore predefinito: il prezzo di una singola ricarica si corregge nella scheda Ricarica. Il costo di un viaggio segue il prezzo medio dell\'energia realmente ricaricata.</string>
+    <string name="stats_retention_title">Conservare i dati</string>
+    <string name="stats_retention_note">Oltre, i viaggi e le ricariche più vecchi vengono cancellati automaticamente.</string>
+    <string name="stats_clear">Cancellare tutto</string>
+    <string name="stats_clear_confirm">Verranno cancellati %1$d viaggi e %2$d ricariche. L\'operazione è definitiva.</string>
+    <string name="stats_history_size">%1$d viaggi · %2$d ricariche · %3$d kB</string>
+    <string name="stats_tile_distance">Distanza</string>
+    <string name="stats_tile_consumption">Consumo medio</string>
+    <string name="stats_tile_speed">Velocità media</string>
+    <string name="stats_tile_energy">Energia consumata</string>
+    <string name="stats_tile_regen">Energia recuperata</string>
+    <string name="stats_tile_charged">Energia ricaricata</string>
+    <string name="stats_tile_cost">Costo stimato</string>
+    <string name="stats_tile_cost_per100">Costo ogni 100 km</string>
+    <string name="stats_tile_trips">Viaggi</string>
+    <string name="stats_tile_longest">Il più lungo</string>
+    <string name="stats_tile_cost_total">Costo totale</string>
+    <string name="stats_tile_avg_price">Prezzo medio</string>
+    <string name="stats_tile_sessions">Sessioni</string>
+    <string name="stats_currency">Valuta</string>
+    <string name="stats_price_ac">Ricarica lenta, a casa</string>
+    <string name="stats_price_dc">Ricarica rapida, in colonnina</string>
+    <string name="stats_capacity">Capacità utile (kWh)</string>
+    <string name="stats_retention_30d">30 giorni</string>
+    <string name="stats_retention_3m">3 mesi</string>
+    <string name="stats_retention_6m">6 mesi</string>
+    <string name="stats_retention_1y">1 anno</string>
+    <string name="stats_period_short">%1$d giorni</string>
+    <string name="stats_period_all">Tutto</string>
+    <string name="stats_no_trip">Nessun viaggio registrato in questo periodo.</string>
+    <string name="stats_no_charge">Nessuna ricarica registrata in questo periodo.</string>
+    <string name="stats_charge_ac">Corrente alternata</string>
+    <string name="stats_charge_dc">Corrente continua</string>
+    <string name="stats_charge_unknown">Tipo sconosciuto</string>
+    <string name="stats_charge_reconstructed">ricostruita</string>
+    <string name="stats_detail_origin">Origine</string>
+    <string name="stats_detail_origin_estimated">stimata dal livello della batteria — l’app non era in esecuzione</string>
+    <string name="stats_tariff_fixed">tariffa corretta</string>
+    <string name="stats_tariff_instead">corretta, invece di %1$s</string>
+    <string name="stats_tariff_default">Tariffa predefinita</string>
+    <string name="stats_detail_motor">Motore</string>
+    <string name="stats_detail_consumption">Consumo medio</string>
+    <string name="stats_detail_consumption_short">viaggio troppo breve per un dato affidabile</string>
+    <string name="stats_detail_climate">Climatizzazione</string>
+    <string name="stats_detail_accessories">Accessori</string>
+    <string name="stats_detail_regen">Frenata rigenerativa</string>
+    <string name="stats_detail_battery">Batteria</string>
+    <string name="stats_detail_temp">Temperatura media</string>
+    <string name="stats_detail_power_measured">Potenza media, misurata</string>
+    <string name="stats_detail_power_computed">Potenza media, dedotta (energia ÷ durata)</string>
+    <string name="stats_detail_tariff">Tariffa applicata</string>
+    <string name="stats_fix_tariff">Correggere la tariffa</string>
+    <string name="stats_fix_tariff_note">Cambia solo questa sessione. Il prezzo medio e i costi dei viaggi seguiranno.</string>
+    <string name="stats_save">Salvare</string>
+    <string name="stats_complete_session">Completa la sessione</string>
+    <string name="stats_complete_note">L’app non ha visto questa ricarica. Indicare entrambi gli orari rende calcolabile la potenza media.</string>
+    <string name="stats_complete_type">Tipo di presa</string>
+    <string name="stats_complete_start">Inizio (hh:mm)</string>
+    <string name="stats_complete_end">Fine (hh:mm)</string>
+    <string name="stats_detail_origin_completed">stimata dal livello della batteria, orari inseriti a mano</string>
+
 </resources>

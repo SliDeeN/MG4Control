@@ -15,6 +15,12 @@ android.permission.WRITE_SETTINGS
 android.permission.BLUETOOTH
 android.permission.BLUETOOTH_CONNECT
 android.car.permission.CAR_ENERGY
+# Lecture seule des informations STATIQUES du véhicule. Utilisée pour une seule propriété :
+# INFO_EV_BATTERY_CAPACITY, la capacité de la batterie, proposée comme valeur par défaut du
+# réglage de l'onglet Statistiques (hardware/EnergyReader.kt). Aucune écriture, aucune commande
+# du véhicule, rien qui varie en roulant. N'ouvre PAS le VIN, qui relève d'une permission
+# distincte (CAR_IDENTIFICATION).
+android.car.permission.CAR_INFO
 android.car.permission.CAR_POWERTRAIN
 android.car.permission.CAR_VENDOR_EXTENSION
 android.car.permission.CONTROL_CAR_CLIMATE

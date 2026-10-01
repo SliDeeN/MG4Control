@@ -10,10 +10,7 @@
     <string name="clean_apk_none">✓ Nothing to clean</string>
 
     <!-- Bottom navigation -->
-    <string name="nav_drive">Drive</string>
-    <string name="nav_climate">Climate</string>
     <string name="nav_profiles">Profiles</string>
-    <string name="nav_adas">ADAS</string>
     <string name="nav_settings">Settings</string>
     <string name="nav_shortcuts">Shortcuts</string>
 
@@ -25,7 +22,6 @@
     <string name="shortcuts_action_one_pedal">1 Pedal</string>
     <string name="shortcuts_press_single">Single</string>
     <string name="shortcuts_press_long">Long</string>
-    <string name="shortcuts_press_double">Double</string>
 
     <!-- Shortcut actions -->
     <string name="shortcuts_action_aeb">Anticollision system</string>
@@ -47,7 +43,6 @@
     <string name="overlay_countdown">Closing in %1$ds</string>
     <string name="shortcuts_profile_prefix">Launch profile</string>
     <string name="shortcuts_pick_profile_title">Choose a profile</string>
-    <string name="shortcuts_profile_not_found">Profile not found</string>
     <string name="shortcuts_no_profiles">No profiles created</string>
     <string name="shortcuts_action_open_app">Open MG4Control</string>
     <string name="shortcuts_action_open_custom_app">Launch an app</string>
@@ -59,12 +54,10 @@
 
     <!-- Shortcut config -->
     <string name="shortcuts_cfg_one_pedal">1 Pedal — Return regen</string>
-    <string name="shortcuts_cfg_aeb">AEB — Cycle</string>
     <string name="shortcuts_cfg_adas">ADAS — Cycle</string>
     <string name="shortcuts_cfg_retour">Return</string>
     <string name="shortcuts_cfg_mode1">Mode 1</string>
     <string name="shortcuts_cfg_mode2">Mode 2</string>
-    <string name="shortcuts_cfg_aeb_brake">Al.+Br.</string>
 
     <!-- Drive modes -->
     <string name="drive_eco">ECO</string>
@@ -77,6 +70,13 @@
     <!-- Drive tab section headers -->
     <string name="drive_section_mode">Drive mode</string>
     <string name="drive_section_regen">Regeneration</string>
+
+    <!-- Mode de conduite Personnalisé -->
+    <string name="drive_section_custom">Custom mode</string>
+    <string name="drive_custom_power">Power</string>
+    <string name="drive_custom_steering">Steering</string>
+    <string name="drive_custom_pedal">Pedal</string>
+    <string name="drive_custom_comfort">Comfort</string>
 
     <!-- Regen levels -->
     <string name="regen_off">Off</string>
@@ -94,13 +94,11 @@
     <string name="climate_seat_right">Right seat</string>
     <string name="climate_off">Off</string>
     <string name="climate_on">On</string>
-    <string name="climate_level">Lvl.</string>
     <string name="climate_level_1">Lvl. 1</string>
     <string name="climate_level_2">Lvl. 2</string>
     <string name="climate_level_3">Lvl. 3</string>
 
     <!-- Profiles -->
-    <string name="profiles_title">Driving profiles</string>
     <string name="profile_add">New profile</string>
     <string name="profile_default_badge">DEFAULT</string>
     <string name="profile_apply_now">Apply now</string>
@@ -114,18 +112,23 @@
     <string name="profile_cancel">Cancel</string>
     <string name="profile_applied">Profile applied: %s</string>
     <string name="profile_max_reached">Maximum %d profiles reached</string>
-    <string name="profile_auto_applied">Default profile applied at startup</string>
     <string name="profile_bt_device_label">Bluetooth device</string>
+
+    <!-- Bloc climatisation du profil (onglet Confort) -->
+    <string name="profile_hvac_title">Air conditioning</string>
+    <string name="profile_hvac_row_clim">A/C</string>
+    <string name="profile_hvac_row_loop">Recirc.</string>
+    <string name="profile_hvac_row_air">Air</string>
+    <string name="profile_hvac_on">On</string>
+    <string name="profile_hvac_unchanged">Unchanged</string>
+    <string name="profile_hvac_temp_value">%1$d °C</string>
     <string name="profile_bt_none">None</string>
-    <string name="profile_bt_applied">BT profile applied: %s</string>
 
     <!-- ADAS -->
     <string name="adas_section_sounds">Sound alerts</string>
     <string name="adas_overspeed_alarm">Overspeed alert</string>
     <string name="adas_speed_limit_tone">Speed limit change tone</string>
-    <string name="adas_section_drive">Driving assistance</string>
     <string name="adas_off">Off</string>
-    <string name="adas_limiteur">Limiter</string>
     <string name="adas_limiteur_short">Lim. Manual</string>
     <string name="adas_auto">Lim. Auto</string>
     <string name="adas_acc">ACC</string>
@@ -179,7 +182,6 @@
     <string name="update_network_error">✕  Network error</string>
     <string name="btn_infos">Info</string>
     <string name="info_title">About</string>
-    <string name="info_app_label">Application</string>
     <string name="info_version_label">Version</string>
     <string name="info_firmware_label">Firmware</string>
     <string name="info_github_link">github.com/SliDeeN/MG4Control</string>
@@ -190,7 +192,6 @@
     <string name="info_close">Close</string>
 
     <!-- Dashboard — card headers -->
-    <string name="card_drive">Drive settings</string>
     <string name="card_climate">Climate settings</string>
     <string name="card_alerts">Alerts</string>
 
@@ -210,8 +211,6 @@
     <string name="update_close">Close</string>
     <string name="update_downloading">Downloading…</string>
     <string name="update_downloading_pct">Downloading… %d%%</string>
-    <string name="update_installing">Installing…</string>
-    <string name="update_installed">✅ Update installed successfully!</string>
     <string name="update_error_download">Download failed. Check your connection.</string>
     <string name="update_error_signature">Update refused: the downloaded APK is not signed by the expected key. File deleted.</string>
     <string name="write_refused_moving">Driving setting refused: %1$s km/h (limit %2$d km/h). Slow down to change it.</string>
@@ -219,18 +218,13 @@
     <string name="settings_speed_gate_desc">Block driving settings above a speed</string>
     <string name="settings_speed_gate_max_label">Maximum speed (km/h)</string>
     <string name="settings_speed_gate_max_hint">0–250</string>
-    <string name="update_error_install">Installation failed.</string>
-    <string name="update_install_error">Install error: %s</string>
     <string name="update_manual_title">Manual installation</string>
     <string name="update_manual_instructions">1. Scan the QR code or open the link\n2. Download the MG4Control.apk file\n3. Copy it to a FAT32 USB drive\n4. Plug the USB drive into your MG4\n5. Open the File Manager\n6. Select the APK file and install it</string>
-    <string name="update_downloaded_title">APK downloaded ✓</string>
     <string name="update_downloaded_instructions">The Downloads folder should have opened automatically.\n\nTap MG4Control-*.apk to install.\n\nIf the folder did not open, go to the File Manager and navigate to Downloads.</string>
     <string name="update_gh_releases_link">github.com/SliDeeN/MG4Control/releases</string>
     <string name="update_skip_btn">Don\'t remind me again</string>
 
     <!-- Console (debug) -->
-    <string name="console_title">⬛  MG4 Console</string>
-    <string name="console_clear">Clear</string>
 
     <!-- Unknown firmware -->
     <string name="fw_unknown_title">⚠ Unknown firmware</string>
@@ -243,8 +237,21 @@
     <string name="settings_default_screen">Default screen</string>
     <string name="settings_default_screen_dashboard">Dashboard</string>
     <string name="settings_auto_apply">Additional settings</string>
-    <string name="settings_auto_apply_desc">The default profile is applied automatically at launch</string>
+    <string name="settings_garage_mode">Garage mode</string>
+    <string name="settings_garage_mode_desc">Puts MG4Control fully to sleep: no shortcuts (buttons regain their original function), no profile applied at startup, no automation. Useful when leaving the car at a workshop without uninstalling the app. Your settings are kept and come back as soon as the mode is turned off.</string>
+    <string name="notif_service_active">Service running</string>
+    <string name="notif_garage_mode">Garage mode — asleep</string>
     <string name="settings_auto_update_desc">Automatically check for updates at launch</string>
+
+    <!-- Popup « mise à jour disponible » par-dessus l'infodivertissement -->
+    <string name="update_overlay_title">A MG4Control update is available</string>
+    <string name="update_overlay_versions">%1$s  \u2192  %2$s</string>
+    <string name="update_overlay_install">Install update</string>
+    <string name="update_overlay_skip">Skip this version</string>
+    <string name="update_overlay_disable">Stop telling me about updates</string>
+    <string name="update_overlay_disabled_toast">Alerts turned off. You can turn them back on in Settings > Updates.</string>
+    <string name="settings_update_overlay">Notify on the vehicle screen</string>
+    <string name="settings_update_overlay_desc">Shows a message over the infotainment when an update is available, when stopped only</string>
     <string name="settings_vehicle_power_desc">Power off the vehicle while keeping the screen on</string>
     <string name="settings_vehicle_power_btn">Power off</string>
     <string name="vehicle_power_dialog_title">Power off vehicle</string>
@@ -256,7 +263,10 @@
     <string name="settings_theme_auto">Auto</string>
     <string name="settings_theme_dark">Dark mode</string>
     <string name="settings_theme_light">Light mode</string>
-    <string name="settings_theme_desc">Switch between dark and light theme</string>
+    <string name="settings_text_size">Text size</string>
+    <string name="settings_text_size_standard">Standard</string>
+    <string name="settings_text_size_large">Large</string>
+    <string name="settings_text_size_xlarge">Extra large</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_fr">Français</string>
     <string name="settings_language_en">English</string>
@@ -264,23 +274,20 @@
     <string name="settings_language_es">Español</string>
     <string name="settings_language_pt">Português</string>
     <string name="settings_language_it">Italiano</string>
+    <string name="settings_language_tr">Türkçe</string>
     <string name="settings_language_pick_title">Choose your language</string>
-    <string name="settings_language_pick_msg">This can be changed later in Settings.</string>
     <string name="settings_firmware_version">Firmware version</string>
     <string name="settings_firmware_loading">Reading…</string>
 
     <!-- [BT-PROFILES] Bluetooth profiles -->
-    <string name="bt_section_title">Bluetooth</string>
-    <string name="bt_no_device">None</string>
-    <string name="bt_pick_device_title">Bluetooth device</string>
-    <string name="bt_profile_applied">Profile applied via Bluetooth: %s</string>
-    <string name="bt_no_paired_devices">No paired devices</string>
     <!-- Audio screen (A9 only) -->
     <string name="nav_audio">Audio</string>
     <string name="door_volume_title">Door-open volume</string>
     <string name="door_volume_desc">Lowers media volume when a front door opens</string>
     <string name="door_volume_level_label">Target level</string>
     <string name="door_volume_restore_title">Restore on close</string>
+    <string name="door_volume_desc_ready">Lowers media volume when the car leaves READY in P (driver door opened or car switched off)</string>
+    <string name="door_volume_restore_ready_title">Restore when back to READY</string>
     <string name="door_volume_doors_label">Trigger doors</string>
     <string name="door_left">Left</string>
     <string name="door_right">Right</string>
@@ -297,7 +304,6 @@
     <string name="automation_profile_label">Profile to apply</string>
     <string name="automation_auto_execute">Apply automatically</string>
     <string name="automation_no_profile">No profile</string>
-    <string name="automation_confirm_title">Temperature automation</string>
     <string name="automation_confirm_msg">The outside temperature is below %1$d°C\n(%2$s°C current temperature)\nApply profile “%3$s”?</string>
     <string name="automation_confirm_yes">YES</string>
     <string name="automation_confirm_no">NO</string>
@@ -334,9 +340,11 @@
     <string name="clim_loop_inner">Inside</string>
     <string name="clim_loop_outside">Outside</string>
     <string name="clim_loop_auto">Auto</string>
-    <string name="clim_section_defrost">Defrost</string>
-    <string name="clim_defrost_front">Front</string>
-    <string name="clim_defrost_rear">Rear</string>
+    <string name="clim_section_airflow">Air direction</string>
+    <string name="clim_air_face">Face</string>
+    <string name="clim_air_feet">Feet</string>
+    <string name="clim_air_windshield_front">Windscreen</string>
+    <string name="clim_air_windshield_rear">Rear screen</string>
     <string name="clim_write_failed">Climate setting refused by the vehicle</string>
 
     <!-- Editeur de profil : categories -->
@@ -344,7 +352,6 @@
     <string name="profile_cat_safety">Safety</string>
     <string name="profile_cat_comfort">Comfort</string>
     <string name="climate_seat_heat">Heated seats</string>
-    <string name="profile_heat_toggle_hint">Heating control: when off, the profile leaves this setting untouched.</string>
 
     <!-- Reglages : categories -->
     <string name="settings_cat_lang">Languages</string>
@@ -354,8 +361,6 @@
     <string name="settings_maintenance">Maintenance</string>
 
     <!-- Raccourcis : categories -->
-    <string name="shortcuts_cat_buttons">Buttons</string>
-    <string name="shortcuts_cat_actions">Actions</string>
 
     <!-- API externe (issue #79) -->
     <string name="settings_external_api">External API (KeyMapper, Tasker…)</string>
@@ -407,17 +412,33 @@
     <string name="adv_sc_status_off">Service inactive</string>
     <string name="adv_sc_record">Record a key</string>
     <string name="adv_sc_recording">Press a steering wheel key…</string>
-    <string name="adv_sc_cancel">Cancel</string>
-    <string name="adv_sc_last_key">Last key detected</string>
     <string name="adv_sc_none">none</string>
     <string name="shortcuts_cat_classic">Shortcuts</string>
     <string name="adv_sc_list_title">Shortcut list</string>
+
+    <!-- Cycle de régénération personnalisable -->
+    <string name="shortcuts_cat_onepedal">1 Pedal</string>
+    <string name="shortcuts_cat_adas">ADAS</string>
+    <string name="shortcuts_cat_regen_cycle">Regen cycle</string>
+    <string name="shortcuts_cfg_regen_cycle">Regeneration cycle</string>
+    <string name="shortcuts_cfg_regen_hint">Tap the modes in the order you want to cycle through them, then save.</string>
+    <string name="shortcuts_cfg_regen_summary">Cycle: %1$s</string>
+    <string name="shortcuts_cfg_regen_clear">Clear all</string>
+    <string name="shortcuts_cfg_regen_save">Save</string>
+    <string name="shortcuts_cfg_regen_saved">Cycle saved</string>
+    <string name="shortcuts_cfg_regen_min">A cycle needs at least two modes.</string>
     <string name="adv_sc_new">New shortcut</string>
     <string name="adv_sc_step_key">1 · Key</string>
     <string name="adv_sc_step_press">2 · Press type</string>
     <string name="adv_sc_step_action">3 · Function</string>
+    <string name="adv_sc_step_profile">4 · Profile</string>
+    <string name="adv_sc_all_profiles">All profiles</string>
+    <string name="adv_sc_profile_missing">Deleted profile</string>
+    <string name="adv_sc_group_title">%1$s · %2$s</string>
+    <string name="adv_sc_no_fallback">No shortcut for the other profiles: the key keeps its original function there.</string>
+    <string name="adv_sc_edit_conflict">That profile already has a shortcut on this key and press type.</string>
     <string name="adv_sc_empty">No advanced shortcut recorded.</string>
-    <string name="adv_sc_claimed_warning">The assigned key can no longer be used for anything other than MG4Control, until the shortcut is deleted from « SHORTCUT LIST ».</string>
+    <string name="adv_sc_claimed_warning">Presses without a shortcut keep the key\'s original function. On a key with a double press, the original single press comes with a slight delay (0.3 s).</string>
     <string name="adv_sc_delete">Delete</string>
     <string name="adv_sc_status_label">Service status</string>
     <string name="adv_sc_saved">Shortcut saved</string>
@@ -437,7 +458,7 @@
     <string name="shortcuts_action_hvac_fan_down">Climate: fan -</string>
 
     <!-- Raccourcis : confort et affichage -->
-    <string name="shortcuts_action_regen_cycle">Regeneration: next level</string>
+    <string name="shortcuts_action_regen_cycle">Custom Regeneration Cycle</string>
     <string name="shortcuts_action_seat_heat_left">Left seat heating: cycle</string>
     <string name="shortcuts_action_seat_heat_right">Right seat heating: cycle</string>
     <string name="shortcuts_action_steering_heat">Heated steering (ON/OFF)</string>
@@ -449,7 +470,7 @@
 
     <!-- Liste des raccourcis avances : modification et remplacement -->
     <string name="adv_sc_edit">Edit</string>
-    <string name="adv_sc_edit_title">Change action</string>
+    <string name="adv_sc_edit_title">Edit shortcut</string>
     <string name="adv_sc_updated">Shortcut updated</string>
     <string name="adv_sc_press_short">Short press</string>
     <string name="adv_sc_press_long_lbl">Long press</string>
@@ -461,7 +482,7 @@
 
     <!-- Avertissement a l'activation des raccourcis avances -->
     <string name="adv_sc_enable_warn_title">Assigned buttons change role</string>
-    <string name="adv_sc_enable_warn_msg">A button assigned to an advanced shortcut loses its original function: MG4Control intercepts the key before the launcher, which no longer sees it at all.\n\nExample: assign the Home button and it no longer returns to the MG launcher. To get that back, give it the Launch an app action and pick the launcher.\n\nThe key is claimed as a whole: assigning only the long press also neutralises the short press and the double press.\n\nEverything returns to normal once the shortcut is deleted from Shortcut list.</string>
+    <string name="adv_sc_enable_warn_msg">MG4Control intercepts assigned buttons before the launcher.\n\nA press that carries a shortcut replaces the button\'s original function. The others keep it: assign a double press to the Home button and a single press still returns to the MG launcher.\n\nThe only trade-off: on a button with a double press, the single press comes with a slight delay (0.3 s), the time needed to make sure no second press follows.\n\nEverything returns to normal once the shortcut is deleted from Shortcut list.</string>
     <string name="adv_sc_enable_warn_ok">Enable</string>
 
     <!-- Raccourcis : pistes audio -->
@@ -472,4 +493,136 @@
     <!-- Raccourcis : volume -->
     <string name="shortcuts_action_volume_up">Volume +</string>
     <string name="shortcuts_action_volume_down">Volume -</string>
+
+    <!-- Onglet Vitres (V0 de test) -->
+    <string name="win_close_warning">Automatic closing by the app has no anti-pinch protection (except the driver window): watch the window. It stops if you leave the tab.</string>
+    <string name="win_front_left">Front left</string>
+    <string name="win_front_right">Front right</string>
+    <string name="win_rear_left">Rear left</string>
+    <string name="win_rear_right">Rear right</string>
+    <string name="win_all_close">Close all</string>
+    <string name="win_all_open">Open all</string>
+    <string name="win_auto_title">Automatic closing</string>
+    <string name="win_auto_label">Close the windows when leaving the car</string>
+    <string name="win_auto_desc">Car in P, once armed by the conditions below: when the car leaves READY (driver door opened or car switched off), all windows close after the chosen delay. Going back to READY before then cancels.</string>
+    <string name="win_auto_warning">No anti-pinch protection on windows other than the driver\'s: nobody near the windows when leaving.</string>
+    <string name="win_auto_arming_title">Arming: after driving</string>
+    <string name="win_auto_speed_label">Speed reached</string>
+    <string name="win_auto_time_label">Car switched on for</string>
+    <string name="win_auto_combine_any">Either one</string>
+    <string name="win_auto_combine_all">Both</string>
+    <string name="win_auto_need_one">Keep at least one arming condition</string>
+    <string name="win_auto_delay_label">Delay before closing</string>
+    <string name="win_auto_beep_label">Warning beep</string>
+    <string name="win_auto_beep_desc">One beep per second during the delay, before the windows close.</string>
+    <string name="win_auto_beep_volume_label">Beep volume</string>
+    <string name="win_auto_beep_value" translatable="false">%1$d %%</string>
+    <string name="win_cal_title">Window calibration</string>
+    <string name="win_course_title">Travel time</string>
+    <string name="win_course_label">Full travel</string>
+    <string name="win_course_hint">How long the app drives the windows without a sensor, for a full open or close. The driver window keeps its own automatic travel. Too short, and the window stays ajar.</string>
+    <string name="win_cal_advanced_title">Advanced</string>
+    <string name="win_cal_advanced_label">Per-window calibration</string>
+    <string name="win_cal_advanced_desc">Measures each window\'s real travel, more accurate than the general time. Measurements are kept if you turn the option off.</string>
+    <string name="win_cal_general">General time</string>
+    <string name="win_automation_title">Power windows</string>
+    <string name="win_section_command">Controls</string>
+    <string name="win_cal_limits">The app cannot see the door switches: an emulated travel always runs for the measured time, whatever position the window started from.</string>
+    <string name="shortcuts_action_windows_open">Open all windows</string>
+    <string name="shortcuts_action_windows_close">Close all windows</string>
+    <string name="win_cal_hint">Windows without a sensor: the app times a full travel and uses it as that window\'s travel time.</string>
+    <string name="win_cal_sensor">Built-in sensor</string>
+    <string name="win_cal_done">Calibrated · down %1$s s · up %2$s s</string>
+    <string name="win_cal_start">Calibrate</string>
+    <string name="win_cal_redo_row">Redo</string>
+    <string name="win_cal_wizard_title">Calibration · %1$s</string>
+    <string name="win_cal_step">Step %1$d / 4</string>
+    <string name="win_cal_close_instruction">Full close: the app sends the automatic close so the window starts fully closed.</string>
+    <string name="win_cal_close_action">Close the window</string>
+    <string name="win_cal_closed_action">Window closed: continue</string>
+    <string name="win_cal_down_instruction">Keep your finger on “Open” and release as soon as the window is fully down.</string>
+    <string name="win_cal_down_action">Open (hold)</string>
+    <string name="win_cal_up_instruction">Keep your finger on “Close” and release as soon as the window is closed.</string>
+    <string name="win_cal_up_action">Close (hold)</string>
+    <string name="win_cal_warning">Car stopped, nobody near the window.</string>
+    <string name="win_cal_too_short">Too short (%1$s s): starting again from the full close.</string>
+    <string name="win_cal_too_long">Too long (%1$s s): starting again from the full close.</string>
+    <string name="win_cal_result">Down %1$s s · up %2$s s. Save, or start again if you released too late.</string>
+    <string name="win_cal_seconds">%1$s s</string>
+    <string name="win_cal_cancel">Cancel</string>
+    <string name="win_cal_redo">Start again</string>
+    <string name="win_cal_save">Save</string>
+    <string name="win_cal_saved">Calibration saved</string>
+
+    <!-- ══════════ Statistiques : trajets, recharges, coût ══════════ -->
+    <string name="nav_stats">Statistics</string>
+    <string name="stats_cat_general">General</string>
+    <string name="stats_cat_trips">Trips</string>
+    <string name="stats_cat_charges">Charging</string>
+    <string name="stats_enable_label">Record statistics</string>
+    <string name="stats_enable_desc">Trips and charges are stored in the car, on this screen only. Nothing is sent anywhere.</string>
+    <string name="stats_disabled_note">Off: nothing is recorded, and the Trips and Charging tabs stay empty.</string>
+    <string name="stats_summary_title">Summary</string>
+    <string name="stats_price_title">Electricity price</string>
+    <string name="stats_price_note">These rates are the defaults: the price of a given session can be corrected in the Charging tab. A trip\'s cost follows the average price of the energy actually charged.</string>
+    <string name="stats_retention_title">Keep data for</string>
+    <string name="stats_retention_note">Beyond that, the oldest trips and charges are deleted automatically.</string>
+    <string name="stats_clear">Delete everything</string>
+    <string name="stats_clear_confirm">%1$d trips and %2$d charges will be deleted. This cannot be undone.</string>
+    <string name="stats_history_size">%1$d trips · %2$d charges · %3$d kB</string>
+    <string name="stats_tile_distance">Distance</string>
+    <string name="stats_tile_consumption">Average consumption</string>
+    <string name="stats_tile_speed">Average speed</string>
+    <string name="stats_tile_energy">Energy used</string>
+    <string name="stats_tile_regen">Energy recovered</string>
+    <string name="stats_tile_charged">Energy charged</string>
+    <string name="stats_tile_cost">Estimated cost</string>
+    <string name="stats_tile_cost_per100">Cost per 100 km</string>
+    <string name="stats_tile_trips">Trips</string>
+    <string name="stats_tile_longest">Longest</string>
+    <string name="stats_tile_cost_total">Total cost</string>
+    <string name="stats_tile_avg_price">Average price</string>
+    <string name="stats_tile_sessions">Sessions</string>
+    <string name="stats_currency">Currency</string>
+    <string name="stats_price_ac">Slow charging, at home</string>
+    <string name="stats_price_dc">Rapid charging, public</string>
+    <string name="stats_capacity">Usable capacity (kWh)</string>
+    <string name="stats_retention_30d">30 days</string>
+    <string name="stats_retention_3m">3 months</string>
+    <string name="stats_retention_6m">6 months</string>
+    <string name="stats_retention_1y">1 year</string>
+    <string name="stats_period_short">%1$d days</string>
+    <string name="stats_period_all">All</string>
+    <string name="stats_no_trip">No trip recorded in this period.</string>
+    <string name="stats_no_charge">No charge recorded in this period.</string>
+    <string name="stats_charge_ac">Alternating current</string>
+    <string name="stats_charge_dc">Direct current</string>
+    <string name="stats_charge_unknown">Unknown type</string>
+    <string name="stats_charge_reconstructed">reconstructed</string>
+    <string name="stats_detail_origin">Source</string>
+    <string name="stats_detail_origin_estimated">estimated from the battery level — the app was not running</string>
+    <string name="stats_tariff_fixed">rate corrected</string>
+    <string name="stats_tariff_instead">corrected, instead of %1$s</string>
+    <string name="stats_tariff_default">Default rate</string>
+    <string name="stats_detail_motor">Motor</string>
+    <string name="stats_detail_consumption">Average consumption</string>
+    <string name="stats_detail_consumption_short">trip too short for a reliable ratio</string>
+    <string name="stats_detail_climate">Climate control</string>
+    <string name="stats_detail_accessories">Accessories</string>
+    <string name="stats_detail_regen">Regenerative braking</string>
+    <string name="stats_detail_battery">Battery</string>
+    <string name="stats_detail_temp">Average temperature</string>
+    <string name="stats_detail_power_measured">Average power, measured</string>
+    <string name="stats_detail_power_computed">Average power, derived (energy ÷ duration)</string>
+    <string name="stats_detail_tariff">Rate applied</string>
+    <string name="stats_fix_tariff">Correct the rate</string>
+    <string name="stats_fix_tariff_note">Changes this session only. The average price and trip costs will follow.</string>
+    <string name="stats_save">Save</string>
+    <string name="stats_complete_session">Complete this session</string>
+    <string name="stats_complete_note">The app did not see this charge. Filling in both times makes the average power computable.</string>
+    <string name="stats_complete_type">Plug type</string>
+    <string name="stats_complete_start">Start (hh:mm)</string>
+    <string name="stats_complete_end">End (hh:mm)</string>
+    <string name="stats_detail_origin_completed">estimated from the battery level, times entered by hand</string>
+
 </resources>

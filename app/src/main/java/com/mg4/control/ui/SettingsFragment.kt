@@ -9,7 +9,6 @@ import android.content.res.ColorStateList
 import androidx.appcompat.app.AppCompatDelegate
 import com.mg4.control.MainActivity
 import com.mg4.control.util.ThemeHelper
-import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -37,18 +36,22 @@ import com.mg4.control.api.ExternalApi
 import com.mg4.control.R
 import com.mg4.control.util.QrCode
 import com.mg4.control.debug.AppLogger
-import com.mg4.control.debug.DataUsageProbe
 import com.mg4.control.util.DataUsage
 import com.mg4.control.debug.CrashLogger
+import com.mg4.control.hardware.EnergyProbe
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.VehicleWriteGate
 import com.mg4.control.update.ApkCleanup
 import com.mg4.control.update.UpdateChecker
+import com.mg4.control.update.UpdateNotifier
 import com.mg4.control.update.UpdateDialogManager
 import java.io.File
 import com.mg4.control.util.FirmwareHelper
 import com.mg4.control.util.FirmwareInfo
+import com.mg4.control.service.MG4ControlService
+import com.mg4.control.util.GarageMode
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.TextSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -58,6 +61,13 @@ class SettingsFragment : Fragment() {
 
     private val githubUrl = "https://github.com/SliDeeN/MG4Control"
     private val gitlabUrl = "https://gitlab.com/SliDeeN/mg4control"
+
+    /** Index, dans le rail, de l'onglet ouvert — sauvegardé pour survivre à un recreate(). */
+    private var selectedCategory = 0
+
+    private companion object {
+        const val STATE_CATEGORY = "settings_category"
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -80,7 +90,8 @@ class SettingsFragment : Fragment() {
             "de" to view.findViewById(R.id.btn_lang_de),
             "es" to view.findViewById(R.id.btn_lang_es),
             "pt" to view.findViewById(R.id.btn_lang_pt),
-            "it" to view.findViewById(R.id.btn_lang_it)
+            "it" to view.findViewById(R.id.btn_lang_it),
+            "tr" to view.findViewById(R.id.btn_lang_tr)
         )
 
         fun updateLangButtons(lang: String) {
@@ -163,6 +174,31 @@ class SettingsFragment : Fragment() {
         btnThemeDark.setOnClickListener  { applyThemeMode("dark")  }
         btnThemeLight.setOnClickListener { applyThemeMode("light") }
 
+        // ── Taille du texte : Standard / Grand / Très grand ─────────────────
+        // Appliquée par LocaleHelper au contexte de l'activité : il faut la recréer pour que les
+        // écrans se regonflent à la nouvelle échelle. Le sous-onglet ouvert est conservé (voir
+        // bindCategoryRail), sinon chaque essai renverrait sur « Langues ».
+        val textSizeBtns = listOf(
+            TextSize.STANDARD to view.findViewById<MaterialButton>(R.id.btn_text_size_standard),
+            TextSize.LARGE    to view.findViewById(R.id.btn_text_size_large),
+            TextSize.XLARGE   to view.findViewById(R.id.btn_text_size_xlarge)
+        )
+        val currentTextSize = TextSize.get(requireContext())
+        textSizeBtns.forEach { (size, btn) ->
+            val active = size == currentTextSize
+            btn.backgroundTintList = ColorStateList.valueOf(if (active) accentDim else inactiveColor)
+            btn.setTextColor(if (active) textActive else textInactive)
+            btn.strokeColor = ColorStateList.valueOf(
+                if (active) accentColor else requireContext().getColor(R.color.dash_border)
+            )
+            btn.setOnClickListener {
+                if (size == TextSize.get(requireContext())) return@setOnClickListener
+                TextSize.set(requireContext(), size)
+                AppLogger.i("MG4_SETTINGS", "Taille du texte → ${size.key} (×${size.scale})")
+                requireActivity().recreate()
+            }
+        }
+
         // ── Canal de mise a jour beta ────────────────────────────────────────
         // Aucun avertissement bloquant : une beta ne donne pas le controle du vehicule a un
         // tiers, contrairement a l'API externe. Le texte sous l'interrupteur suffit, et il
@@ -207,11 +243,19 @@ class SettingsFragment : Fragment() {
             }
         }
 
-        // ── Auto-apply ───────────────────────────────────────────────────────
-        val switchAutoApply = view.findViewById<Switch>(R.id.switch_auto_apply)
-        switchAutoApply.isChecked = prefs.getBoolean("auto_apply_profile", true)
-        switchAutoApply.setOnCheckedChangeListener { _, checked ->
-            prefs.edit().putBoolean("auto_apply_profile", checked).apply()
+        // ── Mode Garage — MG4Control en veille complète ──────────────────────
+        val switchGarage = view.findViewById<Switch>(R.id.switch_garage_mode)
+        switchGarage.isChecked = GarageMode.isOn(requireContext())
+        switchGarage.setOnCheckedChangeListener { _, checked ->
+            GarageMode.setOn(requireContext(), checked)
+            // La notification persistante est le seul repere permanent : elle doit basculer
+            // tout de suite, sans attendre un redemarrage du service.
+            runCatching {
+                requireContext().startForegroundService(
+                    Intent(requireContext(), MG4ControlService::class.java)
+                        .setAction(MG4ControlService.ACTION_GARAGE_CHANGED)
+                )
+            }
         }
 
         // ── Sécurité conduite (verrou d'écriture par vitesse) ────────────────
@@ -248,6 +292,7 @@ class SettingsFragment : Fragment() {
         // Build offline : pas de réseau → on masque toute l'UI de mise à jour.
         if (BuildConfig.OFFLINE) {
             view.findViewById<View>(R.id.row_auto_update).visibility = View.GONE
+            view.findViewById<View>(R.id.row_update_overlay).visibility = View.GONE
             view.findViewById<View>(R.id.row_beta_channel).visibility = View.GONE
             view.findViewById<View>(R.id.row_update_buttons).visibility = View.GONE
         } else {
@@ -255,6 +300,14 @@ class SettingsFragment : Fragment() {
             switchAutoUpdate.isChecked = prefs.getBoolean("auto_check_update", true)
             switchAutoUpdate.setOnCheckedChangeListener { _, checked ->
                 prefs.edit().putBoolean("auto_check_update", checked).apply()
+            }
+
+            // Seul chemin de retour après « Ne plus me prévenir » sur le popup véhicule :
+            // c'est aussi pour ça que le popup dit où le retrouver.
+            val switchOverlay = view.findViewById<Switch>(R.id.switch_update_overlay)
+            switchOverlay.isChecked = UpdateNotifier.isEnabled(requireContext())
+            switchOverlay.setOnCheckedChangeListener { _, checked ->
+                UpdateNotifier.setEnabled(requireContext(), checked)
             }
         }
 
@@ -367,19 +420,6 @@ class SettingsFragment : Fragment() {
             showDiagnosticDialog()
         }
 
-        // [TEST TEMPORAIRE] Appui LONG sur Diagnostic → test d'écriture climatisation.
-        // Délibérément pas sur le clic simple : le Diagnostic s'ouvre souvent et ce test
-        // modifie brièvement la clim de la voiture (puis restaure l'état d'origine).
-        btnDiagnostic.setOnLongClickListener {
-            Toast.makeText(
-                requireContext(),
-                "Test écriture climatisation lancé — voir les logs MG4_CLIM (~4 s)",
-                Toast.LENGTH_LONG
-            ).show()
-            CoroutineScope(Dispatchers.IO).launch { MG4Hardware.runClimateWriteTest() }
-            true
-        }
-
         // ── Bouton Infos ─────────────────────────────────────────────────────
         view.findViewById<MaterialButton>(R.id.btn_infos).setOnClickListener {
             showInfosDialog()
@@ -395,7 +435,12 @@ class SettingsFragment : Fragment() {
         // firmware sans extinction véhicule…), sinon le décompte serait faux.
         setupFirmwareChips(view)
         setupDataUsage(view)
-        bindCategoryRail(view, accentDim, inactiveColor, accentColor, textActive, textInactive)
+        bindCategoryRail(view, savedInstanceState, accentDim, inactiveColor, accentColor, textActive, textInactive)
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putInt(STATE_CATEGORY, selectedCategory)
     }
 
     /**
@@ -403,9 +448,13 @@ class SettingsFragment : Fragment() {
      *
      * Le bouton Diagnostic reste dans l'arbre même sur une page masquée : [MainActivity] peut donc
      * continuer à le révéler en direct après les 5 clics sur le logo, quel que soit l'onglet ouvert.
+     *
+     * L'onglet ouvert survit à un `recreate()` : langue, thème et taille du texte recréent
+     * l'activité, et retomber à chaque fois sur le premier onglet obligeait à y retourner.
      */
     private fun bindCategoryRail(
-        view: View, accentDim: Int, inactive: Int, accent: Int, textOn: Int, textOff: Int
+        view: View, savedInstanceState: Bundle?,
+        accentDim: Int, inactive: Int, accent: Int, textOn: Int, textOff: Int
     ) {
         val tabs = listOf(
             view.findViewById<MaterialButton>(R.id.btn_set_cat_lang)     to view.findViewById<ViewGroup>(R.id.page_set_lang),
@@ -425,6 +474,7 @@ class SettingsFragment : Fragment() {
         if (usable.isEmpty()) return
 
         fun select(target: ViewGroup) {
+            selectedCategory = tabs.indexOfFirst { it.second === target }
             tabs.forEach { (btn, page) ->
                 val on = page === target
                 page.visibility = if (on) View.VISIBLE else View.GONE
@@ -436,7 +486,9 @@ class SettingsFragment : Fragment() {
             scroll?.scrollTo(0, 0)   // changer d'onglet en gardant le scroll précédent désoriente
         }
         usable.forEach { (btn, page) -> btn.setOnClickListener { select(page) } }
-        select(usable.first().second)
+        // Un onglet mémorisé peut ne plus être disponible (page vidée entre-temps) : repli sur le premier.
+        val restored = savedInstanceState?.getInt(STATE_CATEGORY, -1)?.let { tabs.getOrNull(it) }
+        select((restored?.takeIf { it in usable } ?: usable.first()).second)
     }
 
 
@@ -451,8 +503,8 @@ class SettingsFragment : Fragment() {
 
         // Passe le bouton en vert "à jour"
         btn.text = getString(R.string.update_up_to_date)
-        btn.backgroundTintList = android.content.res.ColorStateList.valueOf(ecoDim)
-        btn.strokeColor        = android.content.res.ColorStateList.valueOf(eco)
+        btn.backgroundTintList = ColorStateList.valueOf(ecoDim)
+        btn.strokeColor        = ColorStateList.valueOf(eco)
         btn.setTextColor(eco)
         btn.isEnabled = false
 
@@ -460,8 +512,8 @@ class SettingsFragment : Fragment() {
         btn.postDelayed({
             if (isAdded) {
                 btn.text = originalText
-                btn.backgroundTintList = android.content.res.ColorStateList.valueOf(accentDim)
-                btn.strokeColor        = android.content.res.ColorStateList.valueOf(accent)
+                btn.backgroundTintList = ColorStateList.valueOf(accentDim)
+                btn.strokeColor        = ColorStateList.valueOf(accent)
                 btn.setTextColor(accent)
                 btn.isEnabled = true
             }
@@ -478,16 +530,16 @@ class SettingsFragment : Fragment() {
         val accent    = ctx.getColor(R.color.dash_accent)
 
         btn.text = getString(R.string.update_network_error)
-        btn.backgroundTintList = android.content.res.ColorStateList.valueOf(dangerDim)
-        btn.strokeColor        = android.content.res.ColorStateList.valueOf(danger)
+        btn.backgroundTintList = ColorStateList.valueOf(dangerDim)
+        btn.strokeColor        = ColorStateList.valueOf(danger)
         btn.setTextColor(danger)
         btn.isEnabled = false
 
         btn.postDelayed({
             if (isAdded) {
                 btn.text = originalText
-                btn.backgroundTintList = android.content.res.ColorStateList.valueOf(accentDim)
-                btn.strokeColor        = android.content.res.ColorStateList.valueOf(accent)
+                btn.backgroundTintList = ColorStateList.valueOf(accentDim)
+                btn.strokeColor        = ColorStateList.valueOf(accent)
                 btn.setTextColor(accent)
                 btn.isEnabled = true
             }
@@ -502,25 +554,12 @@ class SettingsFragment : Fragment() {
         // Sonde diagnostic : logge volume + état des portes AVANT de rendre les logs,
         // pour que le rapport les contienne (indépendant du toggle / de l'onglet Audio).
         MG4Hardware.runDoorVolumeDiag()
-        // Sonde température : tente de lire temp extérieure + habitacle et logge le brut.
-        MG4Hardware.runTemperatureDiag()
-        // Sonde vitesse : logge la vitesse brute (validation de l'unité par firmware).
-        MG4Hardware.runSpeedDiag()
-        // Sonde climatisation : lecture seule, repère ce qui répond avant tout pilotage.
-        MG4Hardware.runClimateDiag()
         // Sonde média : qui joue, et surtout quelles sessions média existent — c'est ce qui
         // décide si une touche « piste suivante » peut aboutir quelque part.
         MG4Hardware.runMediaDiag()
-        // Sonde consommation de données : lecture seule, aucune API véhicule impliquée.
-        DataUsageProbe.run(ctx)
         // Sonde somnolence / sensibilité / ESC : lecture seule (elle ne bascule RIEN — un
         // rapport de diagnostic ne doit pas toucher à un organe de sécurité active).
         MG4Hardware.runSafetyDiag()
-        // Chasse à la consigne de température (candidats × zones + voie OEM).
-        MG4Hardware.runClimateSetpointHunt()
-        // Sonde thème : quelle source de day/night répond sur ce firmware. Contexte d'ACTIVITÉ —
-        // c'est sa configuration qui décide des ressources affichées.
-        ThemeHelper.runDiagnostic(ctx)
 
         val appVersion = try {
             ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"
@@ -551,7 +590,7 @@ class SettingsFragment : Fragment() {
             container.addView(tvCrash)
 
             // Séparateur
-            val divider = android.view.View(ctx).apply {
+            val divider = View(ctx).apply {
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     (1 * resources.displayMetrics.density).toInt()
@@ -646,6 +685,11 @@ class SettingsFragment : Fragment() {
 
         // Génération du rapport matériel sur le thread IO
         CoroutineScope(Dispatchers.IO).launch {
+            // Sonde énergie : un relevé par ouverture du diagnostic — c'est ce qui permet à un
+            // testeur d'en prendre plusieurs (avant un trajet, après, pendant une charge) sans
+            // autre manipulation. Sur le fil IO : une trentaine de propriétés, plusieurs voies
+            // chacune, ça ne passe pas sur le fil principal.
+            EnergyProbe.run("diagnostic")
             val report = MG4Hardware.buildDiagnosticReport(appVersion)
             withContext(Dispatchers.Main) {
                 if (isAdded) tvReport.text = report
@@ -683,7 +727,7 @@ class SettingsFragment : Fragment() {
 
         // Version firmware (lecture asynchrone)
         val tvFirmware = dialogView.findViewById<TextView>(R.id.tv_firmware_info)
-        FirmwareHelper.getMpuVersion(requireContext()) { version ->
+        FirmwareHelper.getMpuVersion { version ->
             requireActivity().runOnUiThread {
                 if (isAdded) tvFirmware.text = version ?: "N/A"
             }
@@ -740,7 +784,7 @@ class SettingsFragment : Fragment() {
             R.id.tv_data_week  to DataUsage.startOfWeek(),
             R.id.tv_data_month to DataUsage.startOfMonth(),
             R.id.tv_data_30d   to fin - 30L * 24 * 3600 * 1000
-        ).map { (id, debut) -> view.findViewById<android.widget.TextView>(id) to debut }
+        ).map { (id, debut) -> view.findViewById<TextView>(id) to debut }
 
         CoroutineScope(Dispatchers.IO).launch {
             val lues = periodes.map { (tv, debut) -> tv to DataUsage.ethernet(ctx, debut, fin) }
@@ -874,7 +918,7 @@ class SettingsFragment : Fragment() {
         // l'explication, et le gras reste réservé à la phrase la plus forte.
         text.setSpan(android.text.style.ForegroundColorSpan(danger),
             0, warn.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        text.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD),
+        text.setSpan(android.text.style.StyleSpan(Typeface.BOLD),
             0, warn.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         text.setSpan(android.text.style.ForegroundColorSpan(danger),
             riskStart, text.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)

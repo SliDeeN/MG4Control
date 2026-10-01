@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Une ligne de la liste des raccourcis avancés, en trois informations lisibles d'un coup
-     d'œil : identité du bouton (nom quand il est connu, et TOUJOURS son code), type d'appui,
-     fonction déclenchée. Puis modification et suppression.
+<!-- Une ligne de la liste des raccourcis avancés.
 
-     Une même touche peut apparaître deux fois, une par type d'appui — d'où le type d'appui
-     affiché juste sous le bouton et non en fin de ligne : c'est lui qui distingue les deux. -->
+     Le bouton et le type d'appui sont montés dans l'en-tête de groupe (item_advanced_group) :
+     une même touche et un même appui portent désormais plusieurs lignes, une par profil, et les
+     répéter à chaque ligne noierait la seule information qui les distingue. Reste donc ici le
+     PROFIL, la fonction, et les deux actions. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -15,30 +15,18 @@
     android:padding="14dp"
     android:layout_marginBottom="8dp">
 
-    <LinearLayout
+    <!-- « Tous les profils », ou le nom du profil auquel la ligne est réservée. Les variantes
+         sont préfixées d'un chevron par le code, pour qu'un coup d'œil suffise à voir laquelle
+         sert de repli. -->
+    <TextView
+        android:id="@+id/adv_item_profile"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:orientation="vertical">
-
-        <!-- Le code numérique reste affiché même quand le nom est connu : c'est lui qu'on
-             demande dans les remontées de bug, et lui qui identifie une touche inconnue. -->
-        <TextView
-            android:id="@+id/adv_item_key"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/adv_item_press"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:textColor="@color/dash_text_lo"
-            android:textSize="13sp" />
-
-    </LinearLayout>
+        android:layout_marginEnd="12dp"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        android:textStyle="bold" />
 
     <!-- Poids plus large que la colonne de gauche : les libellés de fonction sont longs
          (« Siège chauffant gauche : cycle »), et une ligne tronquée ne dirait plus laquelle. -->
@@ -51,7 +39,7 @@
         android:textColor="@color/text_secondary"
         android:textSize="16sp" />
 
-    <!-- Modifier : change la seule fonction, sans refaire touche et type d'appui. -->
+    <!-- Modifier : change la fonction et le profil, sans refaire touche et type d'appui. -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/adv_item_edit"
         android:layout_width="84dp"

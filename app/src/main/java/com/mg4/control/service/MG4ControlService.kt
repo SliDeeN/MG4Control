@@ -1,5 +1,6 @@
 package com.mg4.control.service
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.Notification
 import android.app.NotificationChannel
@@ -30,13 +31,22 @@ import com.mg4.control.model.DriveMode
 import com.mg4.control.bluetooth.BluetoothProfileManager
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.hardware.PowerWindows
+import com.mg4.control.hardware.StatsCollector
+import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.hardware.MG4Hardware.AebMode
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.RegenLevel
+import com.mg4.control.model.WindowCommand
+import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.shortcut.RegenCycle
+import com.mg4.control.update.UpdateChecker
+import com.mg4.control.update.UpdateNotifier
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.FirmwareInfo
+import com.mg4.control.util.GarageMode
 import com.mg4.control.util.ThemeHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -59,6 +69,7 @@ class MG4ControlService : Service() {
             ShortcutAction.DROWSINESS_SEN_CYCLE, ShortcutAction.HVAC_TOGGLE,
             ShortcutAction.HVAC_TEMP_UP, ShortcutAction.HVAC_TEMP_DOWN,
             ShortcutAction.HVAC_FAN_UP, ShortcutAction.HVAC_FAN_DOWN,
+            ShortcutAction.ADAS_CYCLE,
             ShortcutAction.REGEN_CYCLE, ShortcutAction.SEAT_HEAT_LEFT_CYCLE,
             ShortcutAction.SEAT_HEAT_RIGHT_CYCLE, ShortcutAction.STEERING_HEAT_TOGGLE,
             ShortcutAction.DEFROST_FRONT_TOGGLE, ShortcutAction.DEFROST_REAR_TOGGLE,
@@ -74,6 +85,14 @@ class MG4ControlService : Service() {
         private const val BRIGHTNESS_STEP = 10
 
         /** Raccourcis avancés (service d'accessibilité) — intent EXPLICITE, jamais exporté. */
+        /**
+         * Envoyée par les Réglages quand le Mode Garage change, pour que la notification
+         * persistante dise la vérité tout de suite. Volontairement traitée avant la routine de
+         * démarrage : un simple changement d'interrupteur ne doit pas relancer l'application
+         * du profil par défaut.
+         */
+        const val ACTION_GARAGE_CHANGED = "com.mg4.control.internal.GARAGE_CHANGED"
+
         const val ACTION_ADV_SHORTCUT = "com.mg4.control.internal.ADV_SHORTCUT"
         const val EXTRA_ADV_ACTION    = "adv_action"
         const val EXTRA_ADV_SLOT      = "adv_slot"
@@ -132,6 +151,9 @@ class MG4ControlService : Service() {
     override fun onCreate() {
         super.onCreate()
         AppLogger.i(TAG, "onCreate")
+        // AVANT startForeground : la notification annonce le Mode Garage, elle doit donc être
+        // construite après que l'ancien réglage a été repris.
+        GarageMode.migrateIfNeeded(applicationContext)
         startForeground(NOTIF_ID, buildNotification())
         MG4Hardware.init(applicationContext)
         // ⚠️ Le helper audio A9 n'était lié que par MainActivity. Résultat : le raccourci
@@ -144,6 +166,75 @@ class MG4ControlService : Service() {
         registerSkinChangeReceiver()   // [THEME-AUTO]
         registerExternalApiReceiver()  // issue #79
         registerIgnitionListener()
+        // Fermeture auto des vitres en quittant la voiture : doit surveiller dès le boot, onglet ouvert ou non.
+        WindowAutoClose.startIfEnabled(applicationContext)
+        // Statistiques : ne relève rien tant que l'utilisateur n'a pas activé l'enregistrement.
+        StatsCollector.startIfEnabled(applicationContext)
+        // Vérification de mise à jour, cinq secondes après le démarrage automatique.
+        //
+        // Pourquoi attendre du tout : à t=0 la liaison données de la voiture n'est pas encore
+        // montée et la requête échouerait à coup sûr, gâchant le premier des trois essais.
+        // Pourquoi si peu : ce sont les DEUX NOUVELLES TENTATIVES d'UpdateChecker, à 10 s
+        // d'intervalle, qui absorbent un réseau lent — pas cette attente. Elle n'a qu'à éviter
+        // l'instant où l'on est certain d'échouer.
+        Handler(Looper.getMainLooper()).postDelayed(
+            { tryUpdateNotice("démarrage service") }, 5_000L)
+    }
+
+    // ── Mise à jour disponible — popup par-dessus l'infodivertissement ───────
+
+    /**
+     * Interroge le dépôt et, s'il y a du neuf, le signale par-dessus l'infodivertissement.
+     *
+     * Tout ce qui décide de le faire ou non vit dans [UpdateNotifier] (interrupteurs, intervalle
+     * de six heures, version déjà proposée) et dans [UpdateOverlay] (verrou de conduite). Ici il
+     * ne reste que le câblage des trois actions.
+     *
+     * Le contexte utilisé est celui de l'APPLICATION : ces appels sont différés de plusieurs
+     * dizaines de secondes, et le popup est une fenêtre système qui n'a pas à dépendre de la
+     * survie du service.
+     */
+    private fun tryUpdateNotice(raison: String) {
+        val ctx = applicationContext
+        if (GarageMode.isOn(ctx)) return
+        UpdateNotifier.check(ctx, raison) { info ->
+            val actuelle = try {
+                ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"
+            } catch (_: Exception) { "?" }
+
+            UpdateOverlay.show(
+                context = ctx,
+                info = info,
+                versionActuelle = actuelle,
+                onInstaller = {
+                    // On EMPORTE la release trouvée : sans elle, MainActivity relancerait sa
+                    // propre requête réseau et l'utilisateur attendrait devant un écran vide
+                    // pour réapprendre ce qu'on vient de lui dire.
+                    val intent = UpdateNotifier.putInto(
+                        Intent(ctx, MainActivity::class.java), info
+                    ).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    }
+                    ctx.startActivity(intent)
+                },
+                onIgnorer = {
+                    // Exactement le même mécanisme que le bouton « Ignorer » du dialogue de
+                    // l'application : la version disparaît aussi de la vérification au
+                    // lancement. « Ignorer 2.6.7 » veut dire la même chose partout.
+                    UpdateChecker.skipVersion(ctx, info.versionName)
+                    AppLogger.i(TAG, "MAJ ${info.versionName} ignorée par l'utilisateur")
+                },
+                onDesactiver = {
+                    UpdateNotifier.setEnabled(ctx, false)
+                    // Dire OÙ le réactiver : l'utilisateur vient d'éteindre une fonction et
+                    // n'a aucune raison de deviner qu'elle a un interrupteur dans les Réglages.
+                    Toast.makeText(ctx, R.string.update_overlay_disabled_toast,
+                        Toast.LENGTH_LONG).show()
+                },
+                onAffiche = { UpdateNotifier.marquerProposee(info.versionName) },
+                onReporte = { UpdateNotifier.marquerReporte(ctx) }
+            )
+        }
     }
 
     /**
@@ -186,10 +277,16 @@ class MG4ControlService : Service() {
         externalApiReceiver = null
     }
 
+    // POST_NOTIFICATIONS n'existe qu'à partir d'Android 13 ; la voiture est en Android 9.
+    @SuppressLint("NotificationPermission")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         AppLogger.i(TAG, "onStartCommand")
         // Relais de l'API externe (issue #79) : traité AVANT la routine de démarrage, sinon un
         // simple appel tiers relancerait l'application du profil par défaut à chaque commande.
+        if (intent?.action == ACTION_GARAGE_CHANGED) {
+            getSystemService(NotificationManager::class.java).notify(NOTIF_ID, buildNotification())
+            return START_STICKY
+        }
         if (handleAdvancedShortcutIntent(intent)) return START_STICKY
         if (handleExternalApiIntent(intent)) return START_STICKY
         tryClimateAutomation("démarrage service")
@@ -208,8 +305,14 @@ class MG4ControlService : Service() {
      */
     private fun handleAdvancedShortcutIntent(intent: Intent?): Boolean {
         if (intent?.action != ACTION_ADV_SHORTCUT) return false
+        // Le service d'accessibilité n'émet déjà plus rien en Mode Garage ; ce second verrou
+        // couvre le cas d'un intent resté en file d'attente au moment de l'activation.
+        if (GarageMode.isOn(this)) {
+            AppLogger.i(TAG, "raccourci avancé ignoré — Mode Garage")
+            return true
+        }
         val nom = intent.getStringExtra(EXTRA_ADV_ACTION).orEmpty()
-        val sc = ShortcutAction.values().firstOrNull { it.name == nom }
+        val sc = ShortcutAction.entries.firstOrNull { it.name == nom }
         if (sc == null || sc == ShortcutAction.NONE) {
             AppLogger.w(TAG, "raccourci avancé : action inconnue '$nom'")
             return true
@@ -229,6 +332,10 @@ class MG4ControlService : Service() {
     private fun handleExternalApiIntent(intent: Intent?): Boolean {
         val action = intent?.action ?: return false
         if (action != ExternalApi.ACTION_EXECUTE && action != ExternalApi.ACTION_SET) return false
+        if (GarageMode.isOn(this)) {
+            AppLogger.i(ExternalApi.LOG_TAG, "REFUS $action — Mode Garage")
+            return true
+        }
         if (!ExternalApi.isEnabled(this)) {
             AppLogger.i(ExternalApi.LOG_TAG, "REFUS $action — API externe désactivée")
             return true
@@ -242,7 +349,7 @@ class MG4ControlService : Service() {
                 AppLogger.w(ExternalApi.LOG_TAG, "REFUS '$name' — commande non exposée à l'API externe")
                 return true
             }
-            val sc = ShortcutAction.values().firstOrNull { it.name.equals(name, ignoreCase = true) }
+            val sc = ShortcutAction.entries.firstOrNull { it.name.equals(name, ignoreCase = true) }
             if (sc == null || sc == ShortcutAction.NONE) {
                 AppLogger.w(ExternalApi.LOG_TAG, "action inconnue : '$name'")
                 return true
@@ -279,10 +386,10 @@ class MG4ControlService : Service() {
             // Toutes ces écritures passent par MG4Hardware, donc par VehicleWriteGate : refusées
             // en roulant sans que l'API ait à s'en préoccuper.
             val ok = when (key) {
-                ExternalApi.SET_DRIVE_MODE -> DriveMode.values()
+                ExternalApi.SET_DRIVE_MODE -> DriveMode.entries
                     .firstOrNull { it.name.equals(v, true) }
                     ?.let { MG4Hardware.setDriveMode(it); true } ?: false
-                ExternalApi.SET_REGEN -> RegenLevel.values()
+                ExternalApi.SET_REGEN -> RegenLevel.entries
                     .firstOrNull { it.name.equals(v, true) }
                     ?.let { MG4Hardware.setRegenLevel(it); true } ?: false
                 ExternalApi.SET_SEAT_HEAT_LEFT ->
@@ -450,6 +557,10 @@ class MG4ControlService : Service() {
     // ── Traitement d'un event hardkey ────────────────────────────────────────
 
     private fun handleHardkeyIntent(intent: Intent) {
+        // Mode Garage : la touche repart au launcher, exactement comme si les raccourcis
+        // n'avaient jamais été configurés.
+        if (GarageMode.isOn(this)) return
+
         val prefs = getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
 
         // Raccourcis désactivés globalement → on laisse le launcher gérer
@@ -505,6 +616,48 @@ class MG4ControlService : Service() {
      * ⚠️ Bloquant (lectures binder, et ~1 s pour l'ESC qui confirme son état avant d'agir) :
      * à n'appeler que depuis un contexte IO.
      */
+    /**
+     * Index ADAS courant — 0=Off, 1=Lim. manuel, 2=Lim. auto, 3=ACC, 4=ICA/TJA — ou `null` si le
+     * véhicule ne répond pas. Mêmes indices et même conversion que l'écran ADAS, sans quoi le
+     * raccourci et l'écran ne parleraient pas de la même chose.
+     */
+    private fun adasIndexCourant(): Int? {
+        if (!FirmwareInfo.isVsmBased()) {
+            // SWI133 : l'index EST la valeur de la propriété VPM.
+            val v = MG4Hardware.getMixedIntelligentDrive()
+            return if (v < 0) null else v
+        }
+        val accTja = MG4Hardware.getAccTjaMode()
+        if (accTja < 0) return null
+        // Le limiteur prime dans l'affichage : il est exclusif du mode ACC/TJA côté véhicule.
+        val sas = MG4Hardware.getSpeedLimiterMode()
+        return when {
+            sas == MG4Hardware.SasMode.MANUEL      -> 1
+            sas == MG4Hardware.SasMode.INTELLIGENT -> 2
+            accTja == Swi68Mode.ACC                -> 3
+            accTja == Swi68Mode.TJA                -> 4
+            else                                   -> 0
+        }
+    }
+
+    /**
+     * Écrit un index ADAS. Sur VSM, mode ACC/TJA et limiteur sont deux réglages EXCLUSIFS : il
+     * faut poser les deux à chaque fois, sinon l'ancien resterait actif à côté du nouveau.
+     */
+    private fun ecrireModeAdas(index: Int) {
+        if (!FirmwareInfo.isVsmBased()) {
+            MG4Hardware.setMixedIntelligentDrive(index)
+            return
+        }
+        when (index) {
+            1 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.MANUEL);      MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
+            2 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.INTELLIGENT); MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
+            3 -> { MG4Hardware.setAccTjaMode(Swi68Mode.ACC); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+            4 -> { MG4Hardware.setAccTjaMode(Swi68Mode.TJA); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+            else -> { MG4Hardware.setAccTjaMode(Swi68Mode.OFF); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
+        }
+    }
+
     private fun executeVehicleAction(action: ShortcutAction) {
         when (action) {
             ShortcutAction.ESC_TOGGLE -> {
@@ -575,11 +728,45 @@ class MG4ControlService : Service() {
                         "imposé par le véhicule")
                     return
                 }
-                // L'ordre du cycle vit à côté de l'enum, où se trouve le piège : l'ordre de
+                // La séquence est celle que l'utilisateur a composée, et à défaut l'ordre
+                // d'origine. Elle est relue À CHAQUE APPUI : le réglage vit dans un autre écran,
+                // et le service n'est pas redémarré quand on le modifie.
+                //
+                // L'ordre par défaut vit à côté de l'enum, où se trouve le piège : l'ordre de
                 // déclaration n'est pas l'ordre d'usage. Il y est couvert par des tests.
-                val suivant = RegenLevel.nextInCycle(actuel)
-                AppLogger.i(TAG, "SHORTCUT régénération : ${actuel.label} → ${suivant.label}")
+                val ordre   = RegenCycle.order(this)
+                val suivant = RegenLevel.nextInCycle(actuel, ordre)
+                AppLogger.i(TAG, "SHORTCUT régénération : ${actuel.label} → ${suivant.label} " +
+                    "(cycle ${ordre.joinToString("/") { it.label }})")
                 MG4Hardware.setRegenLevel(suivant)
+            }
+
+            ShortcutAction.ADAS_CYCLE -> {
+                val prefs = getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
+                // Mêmes valeurs par défaut que l'écran de configuration (Off / ACC). Elles y
+                // étaient inversées : l'écran montrait A=Off et B=ACC, le service faisait
+                // l'inverse tant que l'utilisateur n'avait touché aucun bouton.
+                val modeA = prefs.getInt("shortcut_adas_mode_a", 0)
+                val modeB = prefs.getInt("shortcut_adas_mode_b", 3)
+                if (modeA == modeB) {
+                    AppLogger.w(TAG, "SHORTCUT ADAS — les deux modes sont identiques ($modeA), " +
+                        "rien à alterner")
+                    return
+                }
+                // Lecture RÉELLE du mode courant, comme pour la clim ou les sièges chauffants.
+                // L'état mémorisé qui servait jusqu'ici repartait de zéro à chaque démarrage du
+                // service et ignorait l'écran d'origine : deux appuis de suite pouvaient
+                // réécrire le même mode, ce qui se voit comme un raccourci sans effet.
+                val actuel = adasIndexCourant()
+                if (actuel == null) {
+                    AppLogger.w(TAG, "SHORTCUT ADAS — mode illisible, aucune action")
+                    return
+                }
+                // Sur n'importe quel mode qui n'est ni A ni B (l'utilisateur est passé par
+                // l'écran d'origine), on entre par A plutôt que de ne rien faire.
+                val cible = if (actuel == modeA) modeB else modeA
+                AppLogger.i(TAG, "SHORTCUT ADAS : index $actuel → $cible (A=$modeA, B=$modeB)")
+                ecrireModeAdas(cible)
             }
 
             ShortcutAction.SEAT_HEAT_LEFT_CYCLE, ShortcutAction.SEAT_HEAT_RIGHT_CYCLE -> {
@@ -738,6 +925,23 @@ class MG4ControlService : Service() {
             return
         }
 
+        // Vitres : action directe, aucune bascule — une pression = une course complète.
+        // La FERMETURE emprunte le chemin de la fermeture automatique, le seul qui aille au bout
+        // sans personne devant l'écran : au volant, l'utilisateur ne regarde pas l'application.
+        if (action == ShortcutAction.WINDOWS_OPEN_ALL || action == ShortcutAction.WINDOWS_CLOSE_ALL) {
+            val ouvrir = action == ShortcutAction.WINDOWS_OPEN_ALL
+            AppLogger.i(TAG, "SHORTCUT vitres : tout ${if (ouvrir) "ouvrir" else "fermer"}")
+            PowerWindows.prepare()
+            if (ouvrir) {
+                PowerWindows.autoAll(WindowCommand.Direction.DOWN)
+            } else {
+                PowerWindows.closeAllAutomatically { ok ->
+                    AppLogger.i(TAG, "SHORTCUT vitres : fermeture ${if (ok) "complète" else "incomplète"}")
+                }
+            }
+            return
+        }
+
         // VEHICLE_POWER_OFF : check P → confirmation (overlay) → extinction. Sinon message "en P".
         if (action == ShortcutAction.VEHICLE_POWER_OFF) {
             showVehiclePowerOffConfirm()
@@ -782,26 +986,6 @@ class MG4ControlService : Service() {
                 ShortcutAction.SOUND_WARNING    -> MG4Hardware.setSoundWarning(newState)
                 ShortcutAction.OVERSPEED_ALARM  -> MG4Hardware.setOverspeedAlarm(newState)
                 ShortcutAction.SPEED_LIMIT_TONE -> MG4Hardware.setSpeedLimitTone(newState)
-                ShortcutAction.ADAS_CYCLE -> {
-                    // Tous les firmwares connus stockent des indices 0-4 (Off/Lim.Manuel/Lim.Auto/ACC/ICA|TJA)
-                    val modeA = prefs.getInt("shortcut_adas_mode_a", 3)
-                    val modeB = prefs.getInt("shortcut_adas_mode_b", 0)
-                    val mode  = if (newState) modeA else modeB
-                    if (FirmwareInfo.isVsmBased()) {
-                        // VSM (SWI68/69/131/132/165) : index → mode ACC/TJA (setAccTjaMode)
-                        // + limiteur de vitesse (setSpeedLimiterMode), réglages exclusifs.
-                        when (mode) {
-                            1 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.MANUEL);      MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
-                            2 -> { MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.INTELLIGENT); MG4Hardware.setAccTjaMode(Swi68Mode.OFF) }
-                            3 -> { MG4Hardware.setAccTjaMode(Swi68Mode.ACC); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
-                            4 -> { MG4Hardware.setAccTjaMode(Swi68Mode.TJA); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
-                            else -> { MG4Hardware.setAccTjaMode(Swi68Mode.OFF); MG4Hardware.setSpeedLimiterMode(MG4Hardware.SasMode.OFF) }
-                        }
-                    } else {
-                        // SWI133 : VPM direct (l'index est aussi la valeur mixedIntelligentDrive)
-                        MG4Hardware.setMixedIntelligentDrive(mode)
-                    }
-                }
                 ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.setEnergySavingMode(newState)
                 ShortcutAction.TSR_TOGGLE           -> MG4Hardware.setTsrMode(newState)
                 ShortcutAction.OPEN_APP -> {
@@ -869,9 +1053,8 @@ class MG4ControlService : Service() {
         }
         profileScheduled = true
 
-        val prefs = getSharedPreferences("mg4_settings", MODE_PRIVATE)
-        if (!prefs.getBoolean("auto_apply_profile", true)) {
-            AppLogger.i(TAG, "auto_apply_profile désactivé — skip")
+        if (GarageMode.isOn(this)) {
+            AppLogger.i(TAG, "Mode Garage — aucun profil au démarrage")
             return
         }
 
@@ -1007,6 +1190,9 @@ class MG4ControlService : Service() {
     private fun registerBtAclReceiver() {
         btAclReceiver = object : BroadcastReceiver() {
             override fun onReceive(ctx: Context, intent: Intent) {
+                // Un téléphone qui se connecte applique un profil : c'est typiquement ce
+                // qu'un technicien verrait arriver sans l'avoir demandé.
+                if (GarageMode.isOn(ctx)) return
                 val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE)
                     ?: return
                 val mac = device.address ?: return
@@ -1053,7 +1239,8 @@ class MG4ControlService : Service() {
 
         MG4Hardware.whenKatman1Ready {
             val temp = MG4Hardware.getOutsideTempCelsius()
-            val outcome = AutomationDecision.evaluate(cfg.enabled, temp, cfg.threshold, cfg.direction, profile != null)
+            // enabled = true : désactivée, on est déjà sorti plus haut (cfg est un instantané).
+            val outcome = AutomationDecision.evaluate(true, temp, cfg.threshold, cfg.direction, profile != null)
             AppLogger.i(TAG, "Auto temp: config → dir=${cfg.direction} seuil=${cfg.threshold}°C " +
                 "profil='${profile?.name ?: "AUCUN"}' auto=${cfg.autoExecute} | temp lue=${temp ?: "illisible"} → $outcome")
             if (outcome != AutomationDecision.Outcome.APPLY || profile == null || temp == null) {
@@ -1085,15 +1272,19 @@ class MG4ControlService : Service() {
     /**
      * Automatisation « Déclenchement A/C via la température ».
      *
-     * Indépendante des profils : elle a son propre interrupteur et n'est donc **pas** soumise à
-     * `auto_apply_profile` (ce n'est pas une application de profil). Elle ne remplace ni ne
-     * retarde la chaîne profil — les deux tournent en parallèle.
+     * Indépendante des profils : elle a son propre interrupteur, et ne remplace ni ne retarde la
+     * chaîne profil — les deux tournent en parallèle. Le Mode Garage, lui, les suspend toutes les
+     * deux : c'est bien un comportement autonome, visible de l'extérieur.
      *
      * Anti-rebond [CLIMATE_AUTO_DEBOUNCE_MS] : démarrage service et IGNITION_RUN se suivent de
      * près, et réappliquer écraserait un réglage manuel fait entre les deux.
      */
     private fun tryClimateAutomation(origin: String) {
         val ctx = applicationContext
+        if (GarageMode.isOn(ctx)) {
+            AppLogger.i(TAG, "Auto A/C ($origin) : Mode Garage — rien n'est appliqué")
+            return
+        }
         val cfg = ClimateAutomationSettings.read(ctx)
         // Comme pour l'auto température : on trace toujours, même désactivée — sinon un
         // utilisateur qui dit « ça ne marche pas » ne laisse aucune trace exploitable.
@@ -1103,6 +1294,19 @@ class MG4ControlService : Service() {
         }
         if (!MG4Hardware.hasClimateControl()) {
             AppLogger.i(TAG, "Auto A/C ($origin) : clim non pilotable sur ce firmware")
+            return
+        }
+        // LE PROFIL EST PRIORITAIRE. S'il porte son propre bloc clim, l'automatisation n'a rien
+        // à dire : sans cette règle les deux s'écriraient dessus au contact, dans un ordre que
+        // rien ne garantit, et le résultat dépendrait de qui finit en dernier.
+        //
+        // Le profil actif est renseigné DÈS L'ENTRÉE de ProfileApplier.apply(), avant même les
+        // écritures véhicule : quand cette vérification a lieu, il désigne bien le profil du
+        // cycle en cours.
+        val profilActif = ActiveProfile.id(ctx)?.let { ProfileManager(ctx).getById(it) }
+        if (profilActif?.hvacEnabled == true) {
+            AppLogger.i(TAG, "Auto A/C ($origin) : le profil actif '${profilActif.name}' porte " +
+                "sa propre climatisation — priorité au profil")
             return
         }
         val since = System.currentTimeMillis() - climateAutoLastRunMs
@@ -1142,9 +1346,8 @@ class MG4ControlService : Service() {
      * Priorité : choix manuel récent (popup/app) → profil BT associé → profil par défaut.
      */
     private fun applyDefaultProfileOnIgnition() {
-        val prefs = getSharedPreferences("mg4_settings", MODE_PRIVATE)
-        if (!prefs.getBoolean("auto_apply_profile", true)) {
-            AppLogger.i(TAG, "IGNITION → auto_apply_profile désactivé, skip")
+        if (GarageMode.isOn(this)) {
+            AppLogger.i(TAG, "IGNITION → Mode Garage, aucun profil appliqué")
             return
         }
 
@@ -1271,9 +1474,16 @@ class MG4ControlService : Service() {
                 NotificationChannel(CHANNEL_ID, "MG4 Control", NotificationManager.IMPORTANCE_LOW)
             )
         }
+        // La notification est le seul endroit visible en permanence : sans elle, un Mode
+        // Garage oublié se manifesterait par « plus rien ne marche » sans explication.
+        // Langue choisie dans l'application, pas celle du système : le service n'a pas de
+        // configuration propre, et l'ancien texte était de toute façon en dur.
+        val loc = LocaleHelper.applyLocale(this)
+        val etat = if (GarageMode.isOn(this)) loc.getString(R.string.notif_garage_mode)
+                   else loc.getString(R.string.notif_service_active)
         return Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("MG4 Control")
-            .setContentText("Service actif")
+            .setContentText(etat)
             .setSmallIcon(R.mipmap.ic_launcher)
             .build()
     }

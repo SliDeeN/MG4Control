@@ -59,7 +59,9 @@ jobs:
       - name: Collect APKs
         run: |
           mkdir -p dist
-          find app/build/outputs/apk -name "MG4Control-*-*.apk" -exec cp {} dist/ \;
+          # Deux motifs volontairement larges : le nom de l'offline porte un préfixe qui le
+          # fait trier après l'online dans les assets GitHub (voir app/build.gradle.kts).
+          find app/build/outputs/apk -name "MG4Control-*.apk" -exec cp {} dist/ \;
           ls -la dist/
 
       # /!\ --min-sdk-version 23 is REQUIRED for this report to tell the truth. Without it,
@@ -107,6 +109,6 @@ jobs:
             | Variant | File | Network | Auto-update | Target |
             |---|---|---|---|---|
             | **Online** | `MG4Control-online-*.apk` | yes | yes | standard use |
-            | **Offline** 🔒 | `MG4Control-offline-*.apk` | none (network perms removed) | no | hardened on-vehicle deployment |
+            | **Offline** 🔒 | `MG4Control-secure-*-offline.apk` | none (network perms removed) | no | hardened on-vehicle deployment |
 
             > The offline APK has a distinct applicationId (`com.mg4.control.offline`) and can coexist with the online one.

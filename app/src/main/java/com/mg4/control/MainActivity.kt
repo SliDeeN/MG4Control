@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateDialogManager
+import com.mg4.control.update.UpdateNotifier
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.ThemeHelper
@@ -86,8 +87,26 @@ class MainActivity : AppCompatActivity() {
         setupDiagnosticUnlock()
         checkUnknownFirmware()
         navigateToDefaultScreen(savedInstanceState)
-        checkForUpdates()
+        // Ouverture venue du popup véhicule : la release est déjà connue, on affiche le
+        // dialogue tout de suite plutôt que de refaire l'aller-retour réseau.
+        val depuisPopup = UpdateNotifier.readFrom(intent)
+        if (depuisPopup != null) UpdateDialogManager.show(this, depuisPopup)
+        else checkForUpdates()
         checkProfileRestore()
+    }
+
+    /**
+     * L'application était déjà au premier plan quand le popup véhicule a été touché.
+     *
+     * L'intent est lancé en FLAG_ACTIVITY_SINGLE_TOP : dans ce cas Android ne recrée pas
+     * l'activité et [onCreate] n'est jamais rappelé — sans cette surcharge, « Installer la MAJ »
+     * ramènerait l'application au premier plan sans rien ouvrir du tout.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val info = UpdateNotifier.readFrom(intent) ?: return
+        if (!isFinishing && !isDestroyed) UpdateDialogManager.show(this, info)
     }
 
     // ── Restauration des profils depuis la sauvegarde (après réinstallation) ──────
@@ -150,10 +169,10 @@ class MainActivity : AppCompatActivity() {
 
     // ── Navigation vers l'écran par défaut au démarrage ─────────────────────
 
-    private fun navigateToDefaultScreen(savedInstanceState: android.os.Bundle?) {
+    private fun navigateToDefaultScreen(savedInstanceState: Bundle?) {
         // Ne naviguer que si c'est un vrai démarrage (pas une rotation / recreate)
         if (savedInstanceState != null) return
-        val prefs = getSharedPreferences("mg4_settings", android.content.Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("mg4_settings", MODE_PRIVATE)
         when (prefs.getString("default_screen", "dashboard")) {
             "profiles"  -> navController.navigate(R.id.profileFragment)
             "shortcuts" -> navController.navigate(R.id.shortcutsFragment)
@@ -165,7 +184,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkForUpdates() {
         if (BuildConfig.OFFLINE) return  // build offline : aucune vérif réseau
-        val prefs = getSharedPreferences("mg4_settings", android.content.Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("mg4_settings", MODE_PRIVATE)
         if (!prefs.getBoolean("auto_check_update", true)) return
 
         UpdateChecker.check(
@@ -215,12 +234,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupNavButtons() {
         val btnAutomation = findViewById<MaterialButton>(R.id.btn_nav_automation)
+        val btnStats     = findViewById<MaterialButton>(R.id.btn_nav_stats)
         val btnAudio     = findViewById<MaterialButton>(R.id.btn_nav_audio)
         val btnShortcuts = findViewById<MaterialButton>(R.id.btn_nav_shortcuts)
         val btnProfiles  = findViewById<MaterialButton>(R.id.btn_nav_profiles)
         val btnSettings  = findViewById<MaterialButton>(R.id.btn_nav_settings)
 
-        // Bouton Audio : contrôle vendor caradapter dispo uniquement sur A9 → masqué ailleurs.
+        // Bouton Audio : visible partout où le volume média est pilotable (ancien SDK et A9).
         if (MG4Hardware.hasAudioControl()) {
             btnAudio.setOnClickListener {
                 when (navController.currentDestination?.id) {
@@ -236,6 +256,13 @@ class MainActivity : AppCompatActivity() {
             when (navController.currentDestination?.id) {
                 R.id.automationFragment -> navController.popBackStack(R.id.dashboardFragment, false)
                 else                    -> navController.navigate(R.id.automationFragment)
+            }
+        }
+
+        btnStats.setOnClickListener {
+            when (navController.currentDestination?.id) {
+                R.id.statsFragment -> navController.popBackStack(R.id.dashboardFragment, false)
+                else               -> navController.navigate(R.id.statsFragment)
             }
         }
 
@@ -265,6 +292,9 @@ class MainActivity : AppCompatActivity() {
             val inactive = getColor(R.color.dash_btn)
             btnAutomation.backgroundTintList = android.content.res.ColorStateList.valueOf(
                 if (destination.id == R.id.automationFragment) accent else inactive
+            )
+            btnStats.backgroundTintList = android.content.res.ColorStateList.valueOf(
+                if (destination.id == R.id.statsFragment) accent else inactive
             )
             btnAudio.backgroundTintList = android.content.res.ColorStateList.valueOf(
                 if (destination.id == R.id.audioFragment) accent else inactive
@@ -299,7 +329,8 @@ class MainActivity : AppCompatActivity() {
             R.id.btn_pick_de to "de",
             R.id.btn_pick_es to "es",
             R.id.btn_pick_pt to "pt",
-            R.id.btn_pick_it to "it"
+            R.id.btn_pick_it to "it",
+            R.id.btn_pick_tr to "tr"
         )
         buttons.forEach { (viewId, code) ->
             dialogView.findViewById<MaterialButton>(viewId).setOnClickListener {

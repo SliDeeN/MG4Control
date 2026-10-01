@@ -54,6 +54,52 @@ data class DrivingProfile(
     val escEnabled: Boolean? = null,
     val drowsinessEnabled: Boolean? = null,
     val drowsinessSensitivity: Int? = null,   // 1=Faible, 2=Standard, 3=Élevé
+    // ── Mode de conduite Personnalisé ────────────────────────────────────────
+    //
+    // Index 0/1/2 (Éco ou Confort, Normal, Sport) — jamais les valeurs véhicule, dont l'échelle
+    // varie d'un firmware à l'autre. La conversion vit dans MG4Hardware.
+    //
+    // ⚠️ NULLABLES À DESSEIN, comme les chauffages : Gson n'appelle pas le constructeur Kotlin,
+    // donc un profil enregistré avant cette fonctionnalité rend `null` et n'écrit RIEN. Un
+    // `Int = 1` aurait rendu 0 (défaut de la JVM) et se serait appliqué comme « Éco/Confort »
+    // sur tous les profils Personnalisé existants.
+    //
+    // Ils ne sont appliqués que si [driveMode] vaut CUSTOM : le véhicule les ignore ailleurs.
+    val customPower: Int? = null,
+    val customSteering: Int? = null,
+    val customPedal: Int? = null,
+    // ── Climatisation ────────────────────────────────────────────────────────────
+    /**
+     * Interrupteur du bloc clim. FAUX par défaut, et c'est ce que Gson donne aux profils
+     * enregistrés avant la fonctionnalité (champ absent → défaut de la JVM) : aucun d'eux ne se
+     * met donc à piloter la climatisation.
+     *
+     * ⚠️ C'est aussi ce qui rend les défauts ci-dessous sans conséquence. Un profil ancien les
+     * lit à 0/false, ce qui n'aurait aucun sens appliqué tel quel — mais ils ne sont JAMAIS lus
+     * tant que celui-ci est faux.
+     */
+    val hvacEnabled: Boolean = false,
+    val hvacPower: Boolean = true,
+    val hvacAc: Boolean = true,
+    /** Ventilation automatique. Exclusive de [hvacFan] : voir MG4Hardware.applyProfileClimate. */
+    val hvacAuto: Boolean = false,
+    val hvacTemp: Int = 21,
+    val hvacFan: Int = 4,
+    /**
+     * ANCIENNES lignes « Dég. AV / Dég. AR », retirées de l'éditeur le 2026-09-17 au profit de
+     * [hvacAirFlow]. Conservées pour relire les profils existants : ProfileManager.getAll() les
+     * reprend dans [hvacAirFlow] puis les remet à `null`. Plus rien ne les applique.
+     */
+    val hvacDefrostFront: Boolean? = null,
+    val hvacDefrostRear: Boolean? = null,
+    /** `null` = inchangé, sinon 0=Intérieur, 1=Extérieur, 2=Auto. */
+    val hvacLoopMode: Int? = null,
+    /**
+     * Ligne « Air » : boutons cochés, en bits [AirFlow.FACE] / [AirFlow.FEET] /
+     * [AirFlow.WINDSHIELD] / [AirFlow.REAR_DEFROST]. `null` = inchangé — c'est aussi ce que Gson
+     * rend pour un profil enregistré avant l'ajout du champ.
+     */
+    val hvacAirFlow: Int? = null,
     // [BT-PROFILES] MAC de l'appareil Bluetooth associé à ce profil (null = aucun)
     val btDeviceMac: String? = null
 ) {

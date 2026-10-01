@@ -9,6 +9,7 @@ import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.slider.Slider
 import com.mg4.control.R
 import com.mg4.control.bluetooth.BluetoothProfileManager
 import com.mg4.control.hardware.MG4Hardware
@@ -18,6 +19,7 @@ import com.mg4.control.hardware.MG4Hardware.ElkMode
 import com.mg4.control.hardware.MG4Hardware.ElkSensitivity
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.DriveMode
+import com.mg4.control.model.AirFlow
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.profile.ProfileManager
@@ -37,6 +39,14 @@ import kotlinx.coroutines.withContext
 class ProfileEditFragment : Fragment() {
 
     companion object {
+        /** Bornes des curseurs de climatisation — les VRAIES limites sont lues sur le véhicule
+         *  au moment d'appliquer, et la consigne y est clampée. Celles-ci ne servent qu'à la
+         *  saisie, et doivent couvrir tous les firmwares (A9 accepte 17–33 °C et 1–11). */
+        const val HVAC_TEMP_MIN = 15
+        const val HVAC_TEMP_MAX = 33
+        const val HVAC_FAN_MIN  = 1
+        const val HVAC_FAN_MAX  = 11
+
         /**
          * Passage de données depuis [ProfileFragment]. Un profil complet ne tient pas
          * confortablement dans un Bundle (enums + une vingtaine de champs) et l'écran n'est ouvert
@@ -73,6 +83,9 @@ class ProfileEditFragment : Fragment() {
                 ctx.getColor(if (active) R.color.dash_accent_dim else R.color.dash_btn))
             btn.setTextColor(ctx.getColor(
                 if (active) R.color.dash_accent else R.color.text_secondary))
+            // Sans effet sur un bouton sans icône ; ceux de la ligne « Air » en portent une.
+            btn.iconTint = ColorStateList.valueOf(ctx.getColor(
+                if (active) R.color.dash_accent else R.color.text_secondary))
             btn.strokeColor = ColorStateList.valueOf(
                 ctx.getColor(if (active) R.color.dash_accent else R.color.dash_border))
         }
@@ -105,6 +118,25 @@ class ProfileEditFragment : Fragment() {
         var seatHeatEnabled = data.appliesSeatHeat
         var seatLeft        = data.seatHeatLeft
         var seatRight       = data.seatHeatRight
+        var hvacEnabledSel  = data.hvacEnabled
+        var hvacPowerSel    = data.hvacPower
+        var hvacAcSel       = data.hvacAc
+        var hvacAutoSel     = data.hvacAuto
+        // ⚠️ CLAMPÉS À LA LECTURE, et ce n'est pas de la prudence gratuite : Gson n'appelle pas
+        // le constructeur Kotlin, donc un profil enregistré avant cette fonctionnalité rend 0
+        // pour ces deux champs. Le curseur Material LÈVE une exception si on lui pose une valeur
+        // hors de [valueFrom, valueTo] — l'éditeur planterait à l'ouverture d'un ancien profil.
+        var hvacTempSel     = data.hvacTemp.coerceIn(HVAC_TEMP_MIN, HVAC_TEMP_MAX)
+        var hvacFanSel      = data.hvacFan.coerceIn(HVAC_FAN_MIN, HVAC_FAN_MAX)
+        var hvacLoopSel     = data.hvacLoopMode
+        var hvacAirSel      = data.hvacAirFlow   // bits AirFlow, null = inchangé
+        // Index 0/1/2, ou null quand le profil ne s'est jamais prononcé (créé avant la
+        // fonctionnalité). L'éditeur propose alors Normal, mais rien n'est enregistré tant que
+        // l'utilisateur n'a pas sauvegardé — un ancien profil Personnalisé ne se met donc pas à
+        // écrire ces réglages du seul fait qu'on l'a ouvert.
+        var customPowerSel  = data.customPower
+        var customSteerSel  = data.customSteering
+        var customPedalSel  = data.customPedal
         var adasMode        = data.adasMode
         var swi68Mode       = data.swi68AdasMode
         var swi132SasMode   = data.swi132SasMode                       // 0=Off, 2=Manuel, 3=Intelligent
@@ -159,6 +191,15 @@ class ProfileEditFragment : Fragment() {
             }
         }
 
+        /**
+         * La carte suit le mode CHOISI dans le formulaire, pas l'état du véhicule : c'est un
+         * profil qu'on édite, il peut très bien être composé voiture éteinte.
+         */
+        fun majCustomDrive() {
+            view.findViewById<View>(R.id.section_custom_drive_d)?.visibility =
+                if (selectedDrive == DriveMode.CUSTOM) View.VISIBLE else View.GONE
+        }
+
         bindGroup(drivePairs, selectedDrive) { mode ->
             selectedDrive = mode
             val isSnow = mode == DriveMode.SNOW
@@ -167,8 +208,10 @@ class ProfileEditFragment : Fragment() {
                 btnEnergy.isEnabled = !isSnow
                 btnEnergy.alpha = if (isSnow) 0.35f else 1f
             }
+            majCustomDrive()
         }
         setRegenEnabled(data.driveMode != DriveMode.SNOW && !energySavingSel)
+        majCustomDrive()
 
         // ── Régénération ─────────────────────────────────────────────────────
         val regenPairs = listOf(
@@ -180,6 +223,28 @@ class ProfileEditFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_regen_one_pedal_d) to RegenLevel.ONE_PEDAL
         )
         bindGroup(regenPairs, selectedRegen) { selectedRegen = it }
+
+        // ── Mode Personnalisé : puissance, direction, pédale ─────────────────
+        val cdPower = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_cd_power_eco_d)    to 0,
+            view.findViewById<MaterialButton>(R.id.btn_cd_power_normal_d) to 1,
+            view.findViewById<MaterialButton>(R.id.btn_cd_power_sport_d)  to 2
+        )
+        val cdSteer = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_cd_steer_comfort_d) to 0,
+            view.findViewById<MaterialButton>(R.id.btn_cd_steer_normal_d)  to 1,
+            view.findViewById<MaterialButton>(R.id.btn_cd_steer_sport_d)   to 2
+        )
+        val cdPedal = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_cd_pedal_comfort_d) to 0,
+            view.findViewById<MaterialButton>(R.id.btn_cd_pedal_normal_d)  to 1,
+            view.findViewById<MaterialButton>(R.id.btn_cd_pedal_sport_d)   to 2
+        )
+        // Normal proposé par défaut : la carte n'apparaît que sur Personnalisé, il faut donc
+        // qu'elle montre ce qui sera appliqué plutôt qu'une rangée vide.
+        bindGroup(cdPower, customPowerSel ?: 1) { customPowerSel = it }
+        bindGroup(cdSteer, customSteerSel ?: 1) { customSteerSel = it }
+        bindGroup(cdPedal, customPedalSel ?: 1) { customPedalSel = it }
 
         // ── Volant chauffant + prise en compte ───────────────────────────────
         val steerBtns = listOf(
@@ -219,6 +284,108 @@ class ProfileEditFragment : Fragment() {
             seatHeatEnabled = checked
             setBtnsEnabled(seatLeftBtns + seatRightBtns, checked)
         }
+
+        // ── Climatisation — bloc facultatif du profil ────────────────────────
+        val swHvac    = view.findViewById<Switch>(R.id.sw_hvac_enabled)
+        val btnPower  = view.findViewById<MaterialButton>(R.id.btn_hvac_power)
+        val btnAc     = view.findViewById<MaterialButton>(R.id.btn_hvac_ac)
+        val btnAuto   = view.findViewById<MaterialButton>(R.id.btn_hvac_auto)
+        val sldTemp   = view.findViewById<Slider>(R.id.sld_hvac_temp)
+        val tvTemp    = view.findViewById<TextView>(R.id.tv_hvac_temp)
+        val sldFan    = view.findViewById<Slider>(R.id.sld_hvac_fan)
+        val tvFan     = view.findViewById<TextView>(R.id.tv_hvac_fan)
+        val loopBtns  = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_hvac_loop_in),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_loop_out),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_loop_auto),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_loop_none)
+        )
+        // Ligne « Air » : bouton → bit du profil. Cumulables, contrairement aux groupes ci-dessus.
+        val airBtns = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_hvac_air_face)             to AirFlow.FACE,
+            view.findViewById<MaterialButton>(R.id.btn_hvac_air_feet)             to AirFlow.FEET,
+            view.findViewById<MaterialButton>(R.id.btn_hvac_air_windshield_front) to AirFlow.WINDSHIELD,
+            view.findViewById<MaterialButton>(R.id.btn_hvac_air_windshield_rear)  to AirFlow.REAR_DEFROST
+        )
+        val btnAirNone = view.findViewById<MaterialButton>(R.id.btn_hvac_air_none)
+
+        /**
+         * Trois grisages en cascade, qui reproduisent des règles du véhicule et non des choix
+         * d'interface :
+         *  • interrupteur sur OFF → le profil ne touche pas à la clim, rien n'est modifiable ;
+         *  • clim éteinte → consigne, ventilation et le reste n'ont plus de sens ;
+         *  • mode AUTO → la ventilation manuelle est exclue, régler une vitesse ferait sortir
+         *    du mode auto (voir MG4Hardware.applyProfileClimate).
+         */
+        fun majHvac() {
+            val actif  = hvacEnabledSel
+            val allume = actif && hvacPowerSel
+            setBtnsEnabled(listOf(btnPower), actif)
+            setBtnsEnabled(listOf(btnAc, btnAuto) + loopBtns +
+                airBtns.map { it.first } + btnAirNone, allume)
+            listOf(sldTemp, sldFan).forEach { it.isEnabled = allume }
+            sldFan.isEnabled = allume && !hvacAutoSel
+            sldTemp.alpha = if (allume) 1f else 0.35f
+            sldFan.alpha  = if (allume && !hvacAutoSel) 1f else 0.35f
+            tvTemp.alpha  = sldTemp.alpha
+            tvFan.alpha   = sldFan.alpha
+            activateBtn(btnPower, hvacPowerSel)
+            activateBtn(btnAc,    hvacAcSel)
+            activateBtn(btnAuto,  hvacAutoSel)
+        }
+
+        bindGroup(listOf(
+            loopBtns[0] to 0, loopBtns[1] to 1, loopBtns[2] to 2, loopBtns[3] to null
+        ), hvacLoopSel) { hvacLoopSel = it }
+
+        /**
+         * Ligne « Air » : « Inchangé » allumé ⇔ aucun bouton coché (null). Hors « Inchangé », le
+         * profil applique exactement ce qui est affiché — un dégivrage non coché sera ÉTEINT.
+         * Tout décocher revient à « Inchangé » : un profil ne peut pas « n'envoyer l'air nulle part ».
+         */
+        fun majAir() {
+            airBtns.forEach { (btn, bit) -> activateBtn(btn, (hvacAirSel ?: 0) and bit != 0) }
+            activateBtn(btnAirNone, hvacAirSel == null)
+        }
+        airBtns.forEach { (btn, bit) ->
+            btn.setOnClickListener {
+                hvacAirSel = ((hvacAirSel ?: 0) xor bit).takeIf { it != 0 }
+                majAir()
+            }
+        }
+        btnAirNone.setOnClickListener { hvacAirSel = null; majAir() }
+        majAir()
+
+        // Bascules et non groupes : ce sont les mêmes commandes que sur le Dashboard, où un
+        // bouton unique s'allume quand le réglage est actif.
+        btnPower.setOnClickListener { hvacPowerSel = !hvacPowerSel; majHvac() }
+        btnAc.setOnClickListener    { hvacAcSel    = !hvacAcSel;    majHvac() }
+        btnAuto.setOnClickListener  { hvacAutoSel  = !hvacAutoSel;  majHvac() }
+
+        sldTemp.value = hvacTempSel.toFloat()
+        tvTemp.text = getString(R.string.profile_hvac_temp_value, hvacTempSel)
+        sldTemp.addOnChangeListener { _, v, _ ->
+            hvacTempSel = v.toInt()
+            tvTemp.text = getString(R.string.profile_hvac_temp_value, hvacTempSel)
+        }
+        sldFan.value = hvacFanSel.toFloat()
+        tvFan.text = hvacFanSel.toString()
+        sldFan.addOnChangeListener { _, v, _ ->
+            hvacFanSel = v.toInt()
+            tvFan.text = hvacFanSel.toString()
+        }
+
+        swHvac.isChecked = hvacEnabledSel
+        swHvac.setOnCheckedChangeListener { _, checked ->
+            hvacEnabledSel = checked
+            majHvac()
+        }
+        majHvac()
+
+        // Firmware sans clim pilotable : la section entière disparaît, comme la page Clim du
+        // Dashboard. Proposer des réglages qui n'écriraient rien serait pire que rien.
+        view.findViewById<View>(R.id.section_hvac)?.visibility =
+            if (MG4Hardware.hasClimateControl()) View.VISIBLE else View.GONE
 
         // ── Sections Climat — masquées si pas de chauffage (SWI69/SWI131) ────
         val hasHeat = FirmwareInfo.hasHeatFeatures()
@@ -537,6 +704,20 @@ class ProfileEditFragment : Fragment() {
                 lasVibrationReminder = lasVibrationReminderSel,
                 energySaving   = energySavingSel,
                 tsrEnabled     = tsrEnabledSel,
+                customPower      = if (selectedDrive == DriveMode.CUSTOM) (customPowerSel ?: 1) else customPowerSel,
+                customSteering   = if (selectedDrive == DriveMode.CUSTOM) (customSteerSel ?: 1) else customSteerSel,
+                customPedal      = if (selectedDrive == DriveMode.CUSTOM) (customPedalSel ?: 1) else customPedalSel,
+                hvacEnabled      = hvacEnabledSel,
+                hvacPower        = hvacPowerSel,
+                hvacAc           = hvacAcSel,
+                hvacAuto         = hvacAutoSel,
+                hvacTemp         = hvacTempSel,
+                hvacFan          = hvacFanSel,
+                // Anciennes lignes Dég. AV / AR : reprises dans hvacAirFlow à la lecture.
+                hvacDefrostFront = null,
+                hvacDefrostRear  = null,
+                hvacLoopMode     = hvacLoopSel,
+                hvacAirFlow      = hvacAirSel,
                 btDeviceMac    = selectedBtMac   // [BT-PROFILES]
             )
             manager.save(profile)

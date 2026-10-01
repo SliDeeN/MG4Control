@@ -20,7 +20,7 @@ class ProfileAdapter(
     private val onDelete: (DrivingProfile) -> Unit
 ) : RecyclerView.Adapter<ProfileAdapter.VH>() {
 
-    inner class VH(view: View) : RecyclerView.ViewHolder(view) {
+    class VH(view: View) : RecyclerView.ViewHolder(view) {
         val tvName: TextView    = view.findViewById(R.id.tv_profile_name)
         val tvSummary: TextView = view.findViewById(R.id.tv_profile_summary)
         val tvDefault: TextView = view.findViewById(R.id.tv_default_badge)

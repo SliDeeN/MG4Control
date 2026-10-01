@@ -3,6 +3,7 @@ package com.mg4.control.profile
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
+import com.mg4.control.model.DriveMode
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.util.FirmwareInfo
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +60,11 @@ object ProfileApplier {
     fun apply(profile: DrivingProfile, autoStart: Boolean = false, onComplete: ((Boolean) -> Unit)? = null) {
         AppLogger.i(TAG, "Application du profil : ${profile.name} (autoStart=$autoStart)")
 
+        // Profil ACTIF : toutes sources confondues, celle-ci comprise. C'est ce que lisent les
+        // raccourcis associés à un profil — voir [ActiveProfile], et surtout la distinction avec
+        // [lastManualProfileId] juste en dessous, qui répond à une question différente.
+        ActiveProfile.set(MG4Hardware.appContext(), profile.id)
+
         // Application manuelle (popup volant / app / raccourci) → on mémorise le choix de l'utilisateur
         // pour que le passage en READY le respecte au lieu de ré-appliquer le profil par défaut.
         if (!autoStart) {
@@ -110,6 +116,36 @@ object ProfileApplier {
                 } else {
                     AppLogger.i(TAG, "  SeatHeat non pris en compte par ce profil — inchangé")
                 }
+            }
+
+            // Mode Personnalisé — les trois réglages n'ont d'effet que dans ce mode, les
+            // écrire ailleurs serait au mieux sans effet, au pire refusé par le véhicule.
+            if (profile.driveMode == DriveMode.CUSTOM) {
+                profile.customPower?.let {
+                    AppLogger.i(TAG, "  Puissance personnalisée=$it → ${MG4Hardware.setCustomPower(it)}")
+                }
+                profile.customSteering?.let {
+                    AppLogger.i(TAG, "  Direction personnalisée=$it → ${MG4Hardware.setCustomSteering(it)}")
+                }
+                profile.customPedal?.let {
+                    AppLogger.i(TAG, "  Pédale personnalisée=$it → ${MG4Hardware.setCustomPedal(it)}")
+                }
+            }
+
+            // Climatisation — facultative, décochée par défaut. Enchaîne des bascules qui
+            // prennent plusieurs secondes, mais on est déjà sur le dispatcher IO sous verrou :
+            // rien d'autre n'écrit sur le véhicule pendant ce temps.
+            if (profile.hvacEnabled && MG4Hardware.hasClimateControl()) {
+                val climOk = MG4Hardware.applyProfileClimate(
+                    power        = profile.hvacPower,
+                    ac           = profile.hvacAc,
+                    autoMode     = profile.hvacAuto,
+                    targetTemp   = profile.hvacTemp,
+                    fanLevel     = profile.hvacFan,
+                    loopMode     = profile.hvacLoopMode,
+                    airFlow      = profile.hvacAirFlow
+                )
+                AppLogger.i(TAG, "  Climatisation du profil appliquée → $climOk")
             }
 
             AppLogger.i(TAG, "Profil '${profile.name}' Katman1 terminé — ok=$ok")

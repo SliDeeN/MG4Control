@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="fr" data-lang="fr"
+      data-title-fr="MG4Control : réglages avancés pour la MG4 Electric"
+      data-title-en="MG4Control: advanced settings for the MG4 Electric">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MG4Control : réglages avancés pour la MG4 Electric</title>
+  <meta name="description"
+        content="MG4Control : application Android Automotive pour régler conduite, sécurité, confort, profils, raccourcis sur les boutons physiques et automatisations sur la MG4 Electric."
+        data-fr="MG4Control : application Android Automotive pour régler conduite, sécurité, confort, profils, raccourcis sur les boutons physiques et automatisations sur la MG4 Electric."
+        data-en="MG4Control: an Android Automotive app to control driving, safety, comfort, profiles, physical-button shortcuts and automations on the MG4 Electric.">
+  <meta name="theme-color" content="#0B0B0D">
+  <meta property="og:title" content="MG4Control">
+  <meta property="og:description" content="Android Automotive app for advanced settings on the MG4 Electric, with an interactive tour.">
+  <meta property="og:image" content="assets/img/icon-512.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/icon-32.png">
+  <link rel="apple-touch-icon" href="assets/img/icon-180.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/site.css">
+  <link rel="stylesheet" href="assets/css/sim.css">
+  <link rel="stylesheet" href="assets/css/explorer.css">
+  <script>
+    /* Thème, langue et maquette épinglée appliqués avant l'affichage pour éviter un flash. */
+    (function () {
+      try {
+        var t = localStorage.getItem('mg4site.theme');
+        if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+        var q = new URLSearchParams(location.search).get('lang');
+        var l = (q === 'fr' || q === 'en') ? q : localStorage.getItem('mg4site.lang');
+        if (l !== 'fr' && l !== 'en') l = (navigator.language || 'fr').toLowerCase().indexOf('fr') === 0 ? 'fr' : 'en';
+        document.documentElement.setAttribute('data-lang', l);
+        document.documentElement.setAttribute('lang', l);
+        if (localStorage.getItem('mg4site.pin') === 'off') document.documentElement.setAttribute('data-unpinned', '');
+      } catch (e) {}
+    })();
+  </script>
+</head>
+<body>
+<a class="skip" href="#main"><span data-l="fr">Aller au contenu</span><span data-l="en">Skip to content</span></a>
+
+<!-- ═══════════════════════════════ EN-TÊTE ═══════════════════════════════ -->
+<header class="site-head">
+  <div class="wrap head-in">
+    <a class="brand" href="#top" aria-label="MG4Control">
+      <img class="brand-mark" src="assets/img/icon-180.png" alt="" width="34" height="34">
+      <span class="brand-name">MG<span class="four">4</span><span class="ctl">Control</span></span>
+    </a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#fonctionnalites"><span data-l="fr">Fonctionnalités</span><span data-l="en">Features</span></a>
+      <a href="#fonctionnalites" data-new-link><span data-l="fr">Nouveautés 2.6.7</span><span data-l="en">What's new in 2.6.7</span></a>
+      <a href="#api">API</a>
+      <a href="#compatibilite"><span data-l="fr">Compatibilité</span><span data-l="en">Compatibility</span></a>
+      <a href="#installation">Installation</a>
+    </nav>
+    <div class="head-tools">
+      <a class="head-link" href="https://github.com/SliDeeN/MG4Control/discussions/new/choose" target="_blank" rel="noopener" data-aria-fr="Ouvrir une discussion sur GitHub (nouvel onglet)" data-aria-en="Start a discussion on GitHub (new tab)" aria-label="Ouvrir une discussion sur GitHub (nouvel onglet)" title="Ouvrir une discussion sur GitHub (nouvel onglet)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8.5 8.5 0 0 1-12.4 7.5L3 21l1.5-5.1A8.5 8.5 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14.5h4"/></svg>
+        <span class="head-link-txt"><span data-l="fr">Discuter</span><span data-l="en">Discuss</span></span>
+      </a>
+      <a class="head-link" href="https://github.com/SliDeeN/MG4Control/issues/new/choose" target="_blank" rel="noopener" data-aria-fr="Signaler un bug ou proposer une idée sur GitHub (nouvel onglet)" data-aria-en="Report a bug or suggest an idea on GitHub (new tab)" aria-label="Signaler un bug ou proposer une idée sur GitHub (nouvel onglet)" title="Signaler un bug ou proposer une idée sur GitHub (nouvel onglet)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="6" width="8" height="14" rx="4"/><path d="M12 10v10M8 11H4M8 16H4M16 11h4M16 16h4M9.5 3.5 11 6M14.5 3.5 13 6"/></svg>
+        <span class="head-link-txt"><span data-l="fr">Bug ou suggestion</span><span data-l="en">Bug or idea</span></span>
+      </a>
+      <div class="seg" role="group" aria-label="Langue / Language">
+        <button type="button" data-lang-btn="fr" aria-pressed="true">FR</button>
+        <button type="button" data-lang-btn="en" aria-pressed="false">EN</button>
+      </div>
+      <button type="button" class="icon-btn" data-theme-btn aria-pressed="false" data-aria-fr="Basculer thème clair / sombre" data-aria-en="Toggle light / dark theme" aria-label="Basculer thème clair / sombre">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg>
+      </button>
+      <a class="icon-btn gh-btn" href="https://github.com/SliDeeN/MG4Control" aria-label="GitHub">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5C5.73.5.5 5.73.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56v-2c-3.2.7-3.87-1.37-3.87-1.37-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.77 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.39-5.25 5.67.41.36.78 1.06.78 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5z"/></svg>
+      </a>
+      <button type="button" class="icon-btn menu-btn" aria-expanded="false" data-aria-fr="Menu" data-aria-en="Menu" aria-label="Menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </div>
+  <nav class="mobile-nav" aria-label="Sections">
+    <a class="mn-ext" href="https://github.com/SliDeeN/MG4Control/discussions/new/choose" target="_blank" rel="noopener">💬 <span data-l="fr">Ouvrir une discussion</span><span data-l="en">Start a discussion</span></a>
+    <a class="mn-ext" href="https://github.com/SliDeeN/MG4Control/issues/new/choose" target="_blank" rel="noopener">🐞 <span data-l="fr">Bug ou suggestion</span><span data-l="en">Bug or idea</span></a>
+    <a href="#fonctionnalites"><span data-l="fr">Fonctionnalités</span><span data-l="en">Features</span></a>
+    <a href="#fonctionnalites" data-new-link><span data-l="fr">Nouveautés 2.6.7</span><span data-l="en">What's new in 2.6.7</span></a>
+    <a href="#api"><span data-l="fr">API externe</span><span data-l="en">External API</span></a>
+    <a href="#compatibilite"><span data-l="fr">Compatibilité</span><span data-l="en">Compatibility</span></a>
+    <a href="#installation">Installation</a>
+  </nav>
+</header>
+
+<main id="main">
+
+<!-- ═══════════════════════════════ ACCUEIL ═══════════════════════════════ -->
+<section class="hero" id="top">
+  <div class="wrap">
+    <span class="eyebrow"><span class="pill">v2.6.7</span>
+      <span>Android Automotive · MG4 Electric (SAIC)</span>
+    </span>
+    <h1>MG<span class="four">4</span>Control</h1>
+    <p class="lead" data-l="fr">L'application communautaire qui réunit, sur l'écran de votre MG4, les réglages de conduite, de sécurité et de confort, avec des profils, des raccourcis sur les boutons physiques de la voiture (volant, façade…) et des automatisations.</p>
+    <p class="lead" data-l="en">The community app that brings your MG4's driving, safety and comfort settings together on the head unit, with profiles, shortcuts on the car's physical buttons (steering wheel, front panel…) and automations.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="https://github.com/SliDeeN/MG4Control/releases/latest">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        <span data-l="fr">Télécharger la dernière version</span><span data-l="en">Download the latest release</span>
+      </a>
+      <a class="btn btn-ghost" href="#fonctionnalites"><span data-l="fr">Explorer l'application</span><span data-l="en">Explore the app</span></a>
+      <a class="btn btn-ghost" href="#installation"><span data-l="fr">Installation</span><span data-l="en">Installation</span></a>
+    </div>
+    <div class="hero-meta">
+      <span><span data-l="fr">7 langues</span><span data-l="en">7 languages</span></span>
+      <span><span data-l="fr">6 firmwares : SWI133 · SWI132 · SWI68 · SWI69 · SWI131 · SWI165</span><span data-l="en">6 firmwares: SWI133 · SWI132 · SWI68 · SWI69 · SWI131 · SWI165</span></span>
+      <span><span data-l="fr">Licence GPL v3</span><span data-l="en">GPL v3 licence</span></span>
+    </div>
+
+    <div class="whatsnew">
+      <div class="wn-head">
+        <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span>
+        <b><span data-l="fr">13 nouveautés dans cette version</span><span data-l="en">13 new things in this release</span></b>
+        <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span><span data-l="en">Show only what's new</span></button>
+      </div>
+      <div class="wn-list">
+        <a href="#f-stats" data-feature="f-stats"><span data-l="fr">📊 Statistiques</span><span data-l="en">📊 Statistics</span></a>
+        <a href="#f-windows" data-feature="f-windows"><span data-l="fr">🪟 Vitres électriques</span><span data-l="en">🪟 Power windows</span></a>
+        <a href="#f-garage" data-feature="f-garage"><span data-l="fr">🔧 Mode Garage</span><span data-l="en">🔧 Garage mode</span></a>
+        <a href="#f-custom" data-feature="f-custom"><span data-l="fr">☑️ Mode Personnalisé</span><span data-l="en">☑️ Custom mode</span></a>
+        <a href="#f-airflow" data-feature="f-airflow"><span data-l="fr">💨 Sens de l'air</span><span data-l="en">💨 Air direction</span></a>
+        <a href="#f-phvac" data-feature="f-phvac"><span data-l="fr">❄️ Clim dans les profils</span><span data-l="en">❄️ Climate in profiles</span></a>
+        <a href="#f-scope" data-feature="f-scope"><span data-l="fr">👤 Raccourcis par profil</span><span data-l="en">👤 Profile-scoped shortcuts</span></a>
+        <a href="#f-regen" data-feature="f-regen"><span data-l="fr">🔁 Cycle de régénération</span><span data-l="en">🔁 Regeneration cycle</span></a>
+        <a href="#f-joystick" data-feature="f-joystick"><span data-l="fr">🕹️ Joystick dans le popup</span><span data-l="en">🕹️ Joystick in the popup</span></a>
+        <a href="#f-updalert" data-feature="f-updalert"><span data-l="fr">🔔 Alerte de mise à jour</span><span data-l="en">🔔 Update alert</span></a>
+        <a href="#f-audio" data-feature="f-audio"><span data-l="fr">🔉 Volume en quittant la voiture</span><span data-l="en">🔉 Volume when leaving</span></a>
+        <a href="#f-textsize" data-feature="f-textsize"><span data-l="fr">🔠 Taille du texte · Türkçe</span><span data-l="en">🔠 Text size · Türkçe</span></a>
+        <a href="#f-unassigned" data-feature="f-unassigned"><span data-l="fr">↩️ Touches non attribuées</span><span data-l="en">↩️ Unassigned presses</span></a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ EXPLORATEUR : UNE MAQUETTE, TOUTES LES FONCTIONNALITÉS ═══════════════════════════════ -->
+<section class="x" id="fonctionnalites" data-sim-scope>
+  <div class="wrap x-intro">
+    <h2><span data-l="fr">Explorez l'application</span><span data-l="en">Explore the app</span></h2>
+    <p data-l="fr">Cliquez sur une fonctionnalité : la maquette affiche l'écran correspondant et fait clignoter l'élément concerné. La maquette est elle-même entièrement cliquable, et le <b>véhicule virtuel</b> (bouton en bas à droite) simule la vitesse, la température, le Bluetooth, les portes et les boutons du volant.</p>
+    <p data-l="en">Click a feature: the mockup shows the matching screen and flashes the element in question. The mockup itself is fully clickable, and the <b>virtual vehicle</b> (button at the bottom right) simulates speed, temperature, Bluetooth, doors and the steering-wheel buttons.</p>
+    <p class="x-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+      <span data-l="fr">Cette maquette est une simulation réalisée pour le site. L'application installée sur la voiture peut s'afficher un peu différemment (tailles, polices, espacements, détails selon le firmware), et les valeurs affichées sont des exemples.</span>
+      <span data-l="en">This mockup is a simulation built for the website. The app installed in the car may look slightly different (sizes, fonts, spacing, firmware-specific details), and the values shown are examples.</span>
+    </p>
+  </div>
+
+  <div class="x-stage">
+    <div class="wrap">
+      <div class="x-tools">
+        <span class="x-fulltitle">MG<span class="four">4</span>Control · <span data-l="fr">maquette interactive</span><span data-l="en">interactive mockup</span></span>
+        <nav class="x-chips" aria-label="Fonctionnalités">
+          <button type="button" class="x-chip x-chip-new" data-new-filter aria-pressed="false">★ 2.6.7</button>
+          <a class="x-chip" href="#conduite" data-grp="conduite"><span data-l="fr">Conduite</span><span data-l="en">Driving</span></a>
+          <a class="x-chip" href="#securite" data-grp="securite"><span data-l="fr">Sécurité</span><span data-l="en">Safety</span></a>
+          <a class="x-chip" href="#confort" data-grp="confort"><span data-l="fr">Confort</span><span data-l="en">Comfort</span></a>
+          <a class="x-chip" href="#profils" data-grp="profils"><span data-l="fr">Profils</span><span data-l="en">Profiles</span></a>
+          <a class="x-chip" href="#selecteur" data-grp="selecteur"><span data-l="fr">Sélecteur</span><span data-l="en">Picker</span></a>
+          <a class="x-chip" href="#raccourcis" data-grp="raccourcis"><span data-l="fr">Raccourcis ★</span><span data-l="en">★ Shortcuts</span></a>
+          <a class="x-chip" href="#raccourcis-avances" data-grp="raccourcis-avances"><span data-l="fr">Raccourcis avancés</span><span data-l="en">Advanced shortcuts</span></a>
+          <a class="x-chip" href="#automatisation" data-grp="automatisation"><span data-l="fr">Automatisation</span><span data-l="en">Automation</span></a>
+          <a class="x-chip" href="#vitres" data-grp="vitres"><span data-l="fr">Vitres</span><span data-l="en">Windows</span></a>
+          <a class="x-chip" href="#statistiques" data-grp="statistiques"><span data-l="fr">Statistiques</span><span data-l="en">Statistics</span></a>
+          <a class="x-chip" href="#audio" data-grp="audio">Audio</a>
+          <a class="x-chip" href="#reglages" data-grp="reglages"><span data-l="fr">Réglages</span><span data-l="en">Settings</span></a>
+          <a class="x-chip" href="#garage" data-grp="garage"><span data-l="fr">Mode Garage</span><span data-l="en">Garage mode</span></a>
+          <a class="x-chip" href="#verrou" data-grp="verrou"><span data-l="fr">Verrou de vitesse</span><span data-l="en">Speed lock</span></a>
+          <a class="x-chip" href="#mises-a-jour" data-grp="mises-a-jour"><span data-l="fr">Mises à jour</span><span data-l="en">Updates</span></a>
+          <a class="x-chip" href="#api" data-grp="api">API</a>
+        </nav>
+        <label class="x-fw">
+          <span>Firmware</span>
+          <select data-fw-select aria-label="Firmware">
+            <option>SWI133</option><option>SWI132</option><option>SWI68</option><option>SWI69</option><option>SWI131</option><option>SWI165</option><option>UNKNOWN</option>
+          </select>
+        </label>
+        <button type="button" class="icon-btn x-pin" aria-pressed="true" data-aria-fr="Garder la maquette visible pendant le défilement" data-aria-en="Keep the mockup visible while scrolling" aria-label="Garder la maquette visible pendant le défilement">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 6 4 3v2H6v-2l4-3z"/><path d="M12 15v6"/></svg>
+        </button>
+        <button type="button" class="icon-btn x-full" aria-pressed="false" data-aria-fr="Afficher la maquette en plein écran" data-aria-en="Show the mockup full screen" aria-label="Afficher la maquette en plein écran">
+          <svg class="i-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+          <svg class="i-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>
+        </button>
+      </div>
+      <div id="sim" data-sim data-screen="dashboard" data-tab="0"></div>
+      <div class="x-status">
+        <span class="x-hint"><span data-l="fr">↔ Faites glisser la maquette pour voir tout l'écran.</span><span data-l="en">↔ Swipe the mockup to see the whole screen.</span></span>
+        <span class="x-fullhint"><span data-l="fr">Échap pour quitter le plein écran · véhicule virtuel en bas à droite</span><span data-l="en">Esc to leave full screen · virtual vehicle at the bottom right</span></span>
+        <span class="x-rotate"><span data-l="fr">📱 Tournez le téléphone à l'horizontale pour voir tout l'écran.</span><span data-l="en">📱 Turn your phone sideways to see the whole screen.</span></span>
+        <button type="button" class="x-jump" hidden></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap x-list">
+
+<!-- ─────────────── Conduite ─────────────── -->
+<section class="grp" id="conduite" data-go="dashboard:0">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Tableau de bord</span><span data-l="en">Dashboard</span></div>
+    <h2><span data-l="fr">Conduite</span><span data-l="en">Driving</span></h2>
+    <p data-l="fr">Le mode de conduite et la régénération, à portée de doigt.</p>
+    <p data-l="en">Drive mode and regeneration, one tap away.</p>
+  </div>
+  <div class="points three">
+    <div class="pt" data-hl-key="drive" data-go="dashboard:0">
+      <h3><span data-l="fr">Mode de conduite</span><span data-l="en">Drive mode</span></h3>
+      <p data-l="fr">ECO, NORMAL, SPORT, SNOW ou CUSTOM, avec une couleur par mode.</p>
+      <p data-l="en">ECO, NORMAL, SPORT, SNOW or CUSTOM, with one colour per mode.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Le mode actif s'allume en <b style="color:var(--eco)">vert</b> pour ECO, en <b style="color:var(--warn)">ambre</b> pour SPORT et en bleu pour les autres. L'état est relu sur le véhicule à chaque affichage. Si le véhicule n'est pas encore prêt, l'app réessaie toutes les 3 s.</p>
+        <p data-l="en">The active mode lights up <b style="color:var(--eco)">green</b> for ECO, <b style="color:var(--warn)">amber</b> for SPORT and blue for the others. The state is re-read from the vehicle each time the screen shows. If the vehicle is not ready yet, the app retries every 3 s.</p>
+        <p data-l="fr">Un onglet du rail dont la page n'a aucun contenu sur votre firmware est simplement masqué : choisissez <b>UNKNOWN</b> au-dessus de la maquette pour le voir disparaître.</p>
+        <p data-l="en">A rail tab whose page has no content on your firmware is simply hidden. Pick <b>UNKNOWN</b> above the mockup to watch it disappear.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="regen" data-go="dashboard:0">
+      <h3><span data-l="fr">Régénération</span><span data-l="en">Regeneration</span></h3>
+      <p data-l="fr">Six niveaux, de Off à 1 Pédale, envoyés immédiatement au véhicule.</p>
+      <p data-l="en">Six levels, from Off to One Pedal, sent to the vehicle straight away.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Off, Faible, Moyen, Fort, Adaptatif et 1 Pédale. En SNOW, <b>aucun</b> niveau n'est modifiable (pas même 1 Pédale) et le bouton Éco. énergie est grisé : les deux modes sont exclusifs. L'interface reflète ces règles au lieu de laisser envoyer une commande que la voiture refuserait.</p>
+        <p data-l="en">Off, Low, Medium, High, Adaptive and One Pedal. In SNOW, <b>no</b> level can be changed (not even One Pedal) and the Energy saving button is greyed out: both modes are mutually exclusive. The UI reflects these rules instead of letting you send a command the car would reject.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="energy" data-go="dashboard:0">
+      <h3><span data-l="fr">Économie d'énergie</span><span data-l="en">Energy saving</span></h3>
+      <p data-l="fr">Quand elle est active, seul 1 Pédale reste disponible en régénération.</p>
+      <p data-l="en">While it's on, only One Pedal remains available for regeneration.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Bouton bascule sous CUSTOM. Essayez dans la maquette : activez-le, puis tentez de changer la régénération.</p>
+        <p data-l="en">Toggle button under CUSTOM. Try it in the mockup: turn it on, then try changing the regeneration.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-custom" data-hl-key="custom" data-demo="customMode">
+      <h3><span data-l="fr">Mode Personnalisé</span><span data-l="en">Custom mode</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></h3>
+      <p data-l="fr">En CUSTOM, une carte règle la puissance, la direction et la pédale.</p>
+      <p data-l="en">In CUSTOM, a card sets power, steering and pedal.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">La carte apparaît dès que la voiture est en CUSTOM, même réglé depuis l'écran d'origine : <b>Puissance</b> (Éco / Normal / Sport), <b>Direction</b> et <b>Pédale</b> (Confort / Normal / Sport). Une ligne que le véhicule ne renseigne pas disparaît.</p>
+        <p data-l="en">The card appears as soon as the car is in CUSTOM, even if set from the stock screen: <b>Power</b> (Eco / Normal / Sport), <b>Steering</b> and <b>Pedal</b> (Comfort / Normal / Sport). A row the vehicle doesn't report disappears.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── Sécurité ─────────────── -->
+<section class="grp" id="securite" data-go="dashboard:1">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Tableau de bord</span><span data-l="en">Dashboard</span></div>
+    <h2><span data-l="fr">Sécurité et ADAS</span><span data-l="en">Safety and ADAS</span></h2>
+    <p data-l="fr">Les aides à la conduite, adaptées à chaque firmware. Changez de firmware au-dessus de la maquette pour voir les cartes évoluer.</p>
+    <p data-l="en">Driver aids, adapted to each firmware. Switch firmware above the mockup to watch the cards change.</p>
+  </div>
+  <div class="points three">
+    <div class="pt" data-hl-key="adas" data-go="dashboard:1">
+      <h3><span data-l="fr">Sélecteur ADAS</span><span data-l="en">ADAS selector</span></h3>
+      <p data-l="fr">Off, limiteur manuel ou automatique, ACC, et ICA ou TJA selon le firmware.</p>
+      <p data-l="en">Off, manual or automatic limiter, ACC, and ICA or TJA depending on firmware.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr"><b>ICA</b> sur SWI133 et SWI132, <b>TJA</b> sur SWI68, 69, 131 et 165. Sur les firmwares « VSM », le limiteur et l'ACC/TJA sont deux systèmes indépendants : le sélecteur unique impose l'exclusivité, choisir l'un coupe l'autre.</p>
+        <p data-l="en"><b>ICA</b> on SWI133 and SWI132, <b>TJA</b> on SWI68, 69, 131 and 165. On “VSM” firmwares the limiter and ACC/TJA are two independent systems: the single selector enforces exclusivity, picking one turns the other off.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="alerts" data-go="dashboard:1">
+      <h3><span data-l="fr">Panneaux et alertes sonores</span><span data-l="en">Traffic signs and sound alerts</span></h3>
+      <p data-l="fr">Lecture des panneaux partout, et alertes de vitesse sur SWI133 et SWI132.</p>
+      <p data-l="en">Traffic sign recognition everywhere, plus speed alerts on SWI133 and SWI132.</p>
+      <div class="fw-tags" data-fw="SWI133,SWI132"></div>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Sur SWI133/SWI132 : alerte <b>excès de vitesse</b> et alerte <b>changement de limite</b>, grisées et forcées à OFF quand le TSR est coupé, puis restaurées à sa réactivation. Ailleurs : un seul <b>avertissement sonore</b>.</p>
+        <p data-l="en">On SWI133/SWI132: <b>overspeed</b> alert and <b>speed-limit change</b> alert, greyed out and forced OFF when TSR is off, then restored when it's back on. Elsewhere: a single <b>audible warning</b>.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="aeb" data-go="dashboard:1">
+      <h3><span data-l="fr">Anticollision avant (AEB)</span><span data-l="en">Forward collision (AEB)</span></h3>
+      <p data-l="fr">Activation, alerte seule ou avec freinage automatique, et sensibilité.</p>
+      <p data-l="en">On/off, alert only or with automatic braking, and sensitivity.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Mode <b>Alerte</b> ou <b>Alerte + freinage auto</b>, sensibilité Faible / Standard / Élevé. Les boutons de mode sont grisés tant que le système est coupé.</p>
+        <p data-l="en"><b>Alert</b> or <b>Alert + auto braking</b> mode, Low / Standard / High sensitivity. Mode buttons are greyed out while the system is off.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="elk" data-go="dashboard:1">
+      <h3><span data-l="fr">Sortie de voie</span><span data-l="en">Lane keeping</span></h3>
+      <p data-l="fr">Alerte, aide ou maintien d'urgence, avec une sensibilité réglable.</p>
+      <p data-l="en">Alert, assist or emergency keeping, with adjustable sensitivity.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">En réactivant l'assistant, le dernier mode utilisé revient. Sur SWI132 : pas de maintien d'urgence, mais deux interrupteurs en plus, <b>alerte sonore</b> et <b>vibration</b>.</p>
+        <p data-l="en">Turning the assist back on restores the last mode used. On SWI132: no emergency keeping, but two extra switches, <b>audible warning</b> and <b>vibration</b>.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="esc" data-go="dashboard:1">
+      <h3><span data-l="fr">ESC et somnolence</span><span data-l="en">ESC and drowsiness</span></h3>
+      <p data-l="fr">Boutons ON / OFF confirmés par une relecture de l'état du véhicule.</p>
+      <p data-l="en">ON / OFF buttons confirmed by re-reading the vehicle state.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Les boutons expriment une intention, puis l'app <b>relit</b> l'état 700 ms plus tard et c'est cette relecture qui décide lequel s'allume. État illisible = aucun bouton allumé, plutôt qu'un état deviné. Dans un profil, ESC et somnolence ne sont écrits que si le profil les configure.</p>
+        <p data-l="en">The buttons express an intent, then the app <b>re-reads</b> the state 700 ms later and that reading decides which one lights up. Unreadable state = no button lit, rather than a guessed state. In a profile, ESC and drowsiness are only written if that profile configures them.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="esc-dms" data-go="dashboard:1">
+      <h3><span data-l="fr">Sensibilité de la somnolence</span><span data-l="en">Drowsiness sensitivity</span></h3>
+      <p data-l="fr">Faible, Standard ou Élevé, aussi réglable depuis un raccourci sur un bouton physique.</p>
+      <p data-l="en">Low, Standard or High, also adjustable from a physical-button shortcut.</p>
+    </div>
+  </div>
+  <div class="callout warn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+    <p data-l="fr"><b>Couper l'ESC coupe aussi l'anticollision avant</b> : c'est le véhicule qui l'impose. Les deux reviennent sur ON à chaque démarrage.</p>
+    <p data-l="en"><b>Turning ESC off also turns the forward collision system off</b>: the vehicle enforces it. Both return to ON at every start-up.</p>
+  </div>
+</section>
+
+<!-- ─────────────── Confort ─────────────── -->
+<section class="grp" id="confort" data-go="dashboard:2">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Tableau de bord</span><span data-l="en">Dashboard</span></div>
+    <h2><span data-l="fr">Confort et climatisation</span><span data-l="en">Comfort and climate</span></h2>
+    <p data-l="fr">Sièges, volant et climatisation au même endroit. Ces réglages ne sont jamais bloqués par le verrou de vitesse.</p>
+    <p data-l="en">Seats, wheel and climate in one place. These settings are never blocked by the speed lock.</p>
+  </div>
+  <div class="points three">
+    <div class="pt" data-hl-key="heat" data-go="dashboard:2">
+      <h3><span data-l="fr">Sièges et volant chauffants</span><span data-l="en">Heated seats and wheel</span></h3>
+      <p data-l="fr">Volant On/Off et sièges sur 3 niveaux, sur les finitions équipées.</p>
+      <p data-l="en">Wheel On/Off and seats on 3 levels, on equipped trims.</p>
+      <div class="fw-tags" data-fw="SWI133,SWI68,SWI165"></div>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">La carte n'apparaît que sur les finitions équipées : SWI69 et SWI131 (versions Standard/SE) ainsi que SWI132 ne l'affichent pas.</p>
+        <p data-l="en">The card only shows on equipped trims: SWI69 and SWI131 (Standard/SE versions) as well as SWI132 don't display it.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="clim" data-go="dashboard:2">
+      <h3><span data-l="fr">Consigne et ventilation</span><span data-l="en">Setpoint and fan</span></h3>
+      <p data-l="fr">Deux curseurs dont les bornes sont lues sur le véhicule.</p>
+      <p data-l="en">Two sliders whose bounds are read from the vehicle.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Les bornes varient d'un firmware à l'autre. Pendant un glissement, une seule écriture part à la fin, puis l'app relit l'état 700 ms plus tard. Elle ne déplace jamais un curseur sous votre doigt.</p>
+        <p data-l="en">Bounds vary between firmwares. While dragging, a single write is sent at the end, then the app re-reads the state 700 ms later. It never moves a slider under your finger.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="climmodes" data-go="dashboard:2">
+      <h3><span data-l="fr">Commandes et recirculation</span><span data-l="en">Controls and recirculation</span></h3>
+      <p data-l="fr">Marche, A/C, AUTO et recirculation, synchronisés avec l'écran d'origine.</p>
+      <p data-l="en">Power, A/C, AUTO and recirculation, kept in sync with the stock screen.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Tant que l'écran est affiché, l'app suit toutes les 2 s les changements faits sur l'écran d'origine. Un état illisible grise le bouton plutôt que de mentir.</p>
+        <p data-l="en">While the screen is shown, the app follows changes made on the stock screen every 2 s. An unreadable state greys the button out rather than lying.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-airflow" data-hl-key="airflow" data-go="dashboard:2">
+      <h3><span data-l="fr">Sens de l'air</span><span data-l="en">Air direction</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></h3>
+      <p data-l="fr">Visage, pieds et pare-brise se cumulent, et la lunette arrière a son bouton.</p>
+      <p data-l="en">Face, feet and windshield combine, and the rear window has its own button.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Remplace les boutons de dégivrage. Le dernier bouton allumé ne s'éteint pas : l'air doit bien sortir quelque part. Chaque appui repart de l'état lu sur la voiture.</p>
+        <p data-l="en">Replaces the defrost buttons. The last lit button can't be switched off: the air has to come out somewhere. Each press starts from the state read from the car.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── Profils ─────────────── -->
+<section class="grp" id="profils" data-go="profiles">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Barre du haut</span><span data-l="en">Top bar</span></div>
+    <h2><span data-l="fr">Profils</span><span data-l="en">Profiles</span></h2>
+    <p data-l="fr">Un profil applique un ensemble de réglages en une fois : d'un clic, depuis un bouton de la voiture, ou automatiquement au démarrage selon le téléphone connecté ou la température.</p>
+    <p data-l="en">A profile applies a set of settings all at once: in one tap, from a button in the car, or automatically at start-up depending on the connected phone or the temperature.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="fr">Essayer :</span><span data-l="en">Try:</span></span>
+      <button type="button" data-demo-btn="newProfile"><span data-l="fr">Créer un profil</span><span data-l="en">Create a profile</span></button>
+      <button type="button" data-demo-btn="ignition"><span data-l="fr">⏻ Simuler un démarrage</span><span data-l="en">⏻ Simulate a start-up</span></button>
+    </div>
+  </div>
+  <div class="points three">
+    <div class="pt" data-hl-key="plist" data-go="profiles">
+      <h3><span data-l="fr">Liste des profils</span><span data-l="en">Profile list</span></h3>
+      <p data-l="fr">Jusqu'à 5 profils, avec un résumé, un profil par défaut et l'application immédiate.</p>
+      <p data-l="en">Up to 5 profiles, with a summary, a default profile and instant apply.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Chaque carte affiche le nom, un résumé (mode · régénération · ADAS) et le badge <b>PAR DÉFAUT</b>, avec Appliquer maintenant, Modifier, Définir par défaut et Supprimer (avec confirmation).</p>
+        <p data-l="en">Each card shows the name, a summary (mode · regeneration · ADAS) and the <b>DEFAULT</b> badge, with Apply now, Edit, Set default and Delete (with confirmation).</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="rail" data-go="profileEdit:0">
+      <h3><span data-l="fr">Éditeur plein écran</span><span data-l="en">Full-screen editor</span></h3>
+      <p data-l="fr">Les trois onglets du tableau de bord, dans un éditeur dédié.</p>
+      <p data-l="en">The dashboard's three tabs, in a dedicated editor.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Le nom du profil et « profil par défaut » restent visibles en haut. Annuler / Enregistrer en bas ; un nom est obligatoire.</p>
+        <p data-l="en">The profile name and “default profile” stay visible at the top. Cancel / Save at the bottom; a name is required.</p>
+        <p data-l="fr">Un profil ne force rien d'inattendu : les réglages ajoutés au fil des versions (ESC, somnolence, chauffage…) valent « non configuré » dans les anciens profils et ne sont pas écrits. Un vieux profil ne désactive donc jamais l'ESC par omission.</p>
+        <p data-l="en">A profile never forces the unexpected: settings added over time (ESC, drowsiness, heating…) count as “not configured” in older profiles and are not written. So an old profile never disables ESC by omission.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="p-heat" data-go="profileEdit:2">
+      <h3><span data-l="fr">Prise en compte du chauffage</span><span data-l="en">Heating “apply” switch</span></h3>
+      <p data-l="fr">Décoché, le profil laisse le siège ou le volant tel quel au lieu de l'éteindre.</p>
+      <p data-l="en">Unchecked, the profile leaves the seat or wheel as it is instead of turning it off.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Pratique pour un profil « autoroute » qui ne doit pas couper un siège déjà allumé.</p>
+        <p data-l="en">Handy for a “motorway” profile that shouldn't switch off a seat already on.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="p-bt" data-go="profileEdit:2">
+      <h3><span data-l="fr">Association Bluetooth</span><span data-l="en">Bluetooth pairing</span></h3>
+      <p data-l="fr">Au démarrage, si le téléphone associé est connecté, son profil s'applique.</p>
+      <p data-l="en">At start-up, if the paired phone is connected, its profile applies.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">L'app regarde les téléphones connectés au démarrage de l'infodivertissement et à chaque passage en READY. Connecter un téléphone en cours de route n'applique rien : son profil s'appliquera au prochain passage en READY. Dans le véhicule virtuel, connectez « Pixel 8 » puis simulez un démarrage : le profil « Autoroute » s'applique.</p>
+        <p data-l="en">The app checks the connected phones when the infotainment starts and every time the car switches to READY. Connecting a phone mid-trip applies nothing: its profile will apply at the next switch to READY. In the virtual vehicle, connect “Pixel 8” then simulate a start-up: the “Motorway” profile gets applied.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-phvac" data-hl-key="p-hvac" data-demo="editHvac">
+      <h3><span data-l="fr">Climatisation dans le profil</span><span data-l="en">Climate in the profile</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></h3>
+      <p data-l="fr">Bloc facultatif : marche, A/C, consigne, ventilation, recyclage et sens de l'air.</p>
+      <p data-l="en">Optional block: power, A/C, setpoint, fan, recirculation and air direction.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Dans l'onglet Confort, décoché par défaut (les anciens profils n'y touchent pas). Consigne de 15 à 33 °C, ventilation de 1 à 11, et « Inchangé » pour ne pas toucher un réglage. Clim éteinte : rien d'autre n'est écrit. En AUTO, la vitesse n'est pas appliquée. Au démarrage, si le dernier profil appliqué porte ce bloc, c'est sa climatisation qui compte : l'automatisation A/C par température ne s'applique pas.</p>
+        <p data-l="en">In the Comfort tab, unchecked by default (older profiles leave climate alone). Setpoint from 15 to 33 °C, fan from 1 to 11, and “Unchanged” to leave a setting alone. Climate off: nothing else is written. In AUTO, the fan speed isn't applied. At start-up, if the last applied profile carries this block, its climate settings win: the temperature A/C automation doesn't apply.</p>
+      </details>
+    </div>
+    <div class="pt is-new" data-hl-key="p-custom" data-demo="editCustom">
+      <h3><span data-l="fr">Mode Personnalisé dans le profil</span><span data-l="en">Custom mode in the profile</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></h3>
+      <p data-l="fr">Un profil en CUSTOM mémorise aussi la puissance, la direction et la pédale.</p>
+      <p data-l="en">A profile in CUSTOM also stores power, steering and pedal.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Ils ne sont écrits que si le mode du profil est CUSTOM. Un profil enregistré avant cette fonction n'écrit rien tant qu'il n'a pas été rouvert et enregistré.</p>
+        <p data-l="en">They are only written when the profile's mode is CUSTOM. A profile saved before this feature writes nothing until it is reopened and saved.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="plist" data-go="profiles" data-demo="restore">
+      <h3><span data-l="fr">Sauvegarde dans la voiture</span><span data-l="en">Backup in the car</span></h3>
+      <p data-l="fr">Les profils sont copiés dans la voiture et restaurables après une réinstallation.</p>
+      <p data-l="en">Profiles are copied to the car and can be restored after a reinstall.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Fichier <code>MG4Control/mg4_profiles_backup.json</code> dans la mémoire du véhicule. À la réinstallation, si l'app n'a aucun profil, une popup propose de les restaurer.</p>
+        <p data-l="en">File <code>MG4Control/mg4_profiles_backup.json</code> in the vehicle's storage. On reinstall, if the app has no profile, a popup offers to restore them.</p>
+      </details>
+    </div>
+  </div>
+
+  <div class="widget" data-precedence>
+    <h3><span data-l="fr">Quel profil au démarrage ?</span><span data-l="en">Which profile at start-up?</span></h3>
+    <p class="sub" data-l="fr">Au démarrage de l'infodivertissement et à chaque passage en READY, MG4Control choisit un seul profil selon cette précédence. Cochez les situations pour voir lequel gagne.</p>
+    <p class="sub" data-l="en">When the infotainment starts and every time the car switches to READY, MG4Control picks a single profile following this precedence. Tick the situations to see which one wins.</p>
+    <div class="prec">
+      <div class="prec-ctl">
+        <label class="tog"><input type="checkbox" name="auto" checked><span class="t"></span><span><span data-l="fr">Mode Garage désactivé</span><span data-l="en">Garage mode off</span></span></label>
+        <label class="tog"><input type="checkbox" name="manual"><span class="t"></span><span data-l="fr">Profil choisi à la main récemment</span><span data-l="en">Profile picked manually recently</span></label>
+        <label class="tog"><input type="checkbox" name="temp"><span class="t"></span><span data-l="fr">Automatisation température applicable</span><span data-l="en">Temperature automation applies</span></label>
+        <label class="tog"><input type="checkbox" name="tempconfirm"><span class="t"></span><span data-l="fr">… avec popup de confirmation</span><span data-l="en">… with confirmation popup</span></label>
+        <label class="tog"><input type="checkbox" name="bt" checked><span class="t"></span><span data-l="fr">Téléphone associé à un profil connecté</span><span data-l="en">Phone tied to a profile connected</span></label>
+        <label class="tog"><input type="checkbox" name="def" checked><span class="t"></span><span data-l="fr">Un profil par défaut existe</span><span data-l="en">A default profile exists</span></label>
+      </div>
+      <div>
+        <div class="flow">
+          <div class="flow-step" data-step="manual"><span class="k">1</span><span data-l="fr">Choix manuel récent (popup sélecteur, application, API)</span><span data-l="en">Recent manual choice (picker popup, app, API)</span></div>
+          <div class="flow-step" data-step="temp"><span class="k">2</span><span data-l="fr">Automatisation selon la température extérieure</span><span data-l="en">Outside-temperature automation</span></div>
+          <div class="flow-step" data-step="bt"><span class="k">3</span><span data-l="fr">Profil associé au Bluetooth connecté (plusieurs : sélecteur restreint, le 1ᵉʳ au bout de 8 s)</span><span data-l="en">Profile tied to the connected Bluetooth device (several: restricted picker, the 1st after 8 s)</span></div>
+          <div class="flow-step" data-step="def"><span class="k">4</span><span data-l="fr">Profil par défaut</span><span data-l="en">Default profile</span></div>
+        </div>
+        <p class="flow-out"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── Sélecteur ─────────────── -->
+<section class="grp" id="selecteur" data-demo="picker">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Fenêtre flottante</span><span data-l="en">Floating window</span></div>
+    <h2><span data-l="fr">Sélecteur de profil et luminosité</span><span data-l="en">Profile picker and brightness</span></h2>
+    <p data-l="fr">Assignée à un bouton physique (volant, façade…), cette fenêtre s'affiche par-dessus n'importe quelle application : changez de profil ou de luminosité sans quitter la navigation.</p>
+    <p data-l="en">Assigned to a physical button (steering wheel, front panel…), this window pops up over any app: switch profile or brightness without leaving navigation.</p>
+  </div>
+  <div class="points three">
+    <div class="pt" data-hl-key="pk-bri" data-demo="picker">
+      <h3><span data-l="fr">Luminosité en un geste</span><span data-l="en">Brightness in one move</span></h3>
+      <p data-l="fr">Nuit, Moyen, Jour et un curseur épais, faciles à viser en roulant.</p>
+      <p data-l="en">Night, Medium, Day and a thick slider, easy to hit while driving.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Préréglages 15 %, 50 % et 100 %. Plancher à 5 % : l'écran ne peut jamais être éteint par erreur.</p>
+        <p data-l="en">Presets at 15%, 50% and 100%. 5% floor: the screen can never be switched off by mistake.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="pk-grid" data-demo="picker">
+      <h3><span data-l="fr">Popup sélecteur de profil</span><span data-l="en">Profile picker popup</span></h3>
+      <p data-l="fr">Tous vos profils en grands boutons : un appui applique le profil et ferme le popup.</p>
+      <p data-l="en">All your profiles as big buttons: a tap applies the profile and closes the popup.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Ce choix manuel devient prioritaire au prochain passage du contact. Le sélecteur s'affiche quelle que soit la vitesse (il sert aussi à la luminosité) ; c'est l'écriture qui est filtrée par le verrou de vitesse.</p>
+        <p data-l="en">That manual choice takes priority at the next ignition. The picker shows whatever the speed (it's also used for brightness); it's the write that gets filtered by the speed lock.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="pk-foot" data-demo="picker">
+      <h3><span data-l="fr">Fermeture automatique</span><span data-l="en">Auto close</span></h3>
+      <p data-l="fr">La fenêtre se ferme seule après 8 s, avec Éteindre la voiture et Ouvrir MG4Control en bas.</p>
+      <p data-l="en">The window closes by itself after 8 s, with Power the car off and Open MG4Control at the bottom.</p>
+    </div>
+    <div class="pt" data-hl-key="pk-grid" data-demo="btConflict">
+      <h3><span data-l="fr">Conflit Bluetooth</span><span data-l="en">Bluetooth conflict</span></h3>
+      <p data-l="fr">Plusieurs téléphones associés connectés au démarrage ? Le sélecteur ne montre que leurs profils.</p>
+      <p data-l="en">Several paired phones connected at start-up? The picker only shows their profiles.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Sans choix avant la fin du décompte, le premier est appliqué.</p>
+        <p data-l="en">Without a choice before the countdown ends, the first one is applied.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-joystick" data-hl-key="picker" data-demo="picker">
+      <h3><span data-l="fr">Navigation au joystick</span><span data-l="en">Joystick navigation</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></h3>
+      <p data-l="fr">Le joystick droit du volant se déplace dans la fenêtre, le centre valide.</p>
+      <p data-l="en">The steering wheel's right joystick moves through the window, the centre confirms.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Nécessite le service d'accessibilité. Anneau de focus sans rebouclage aux bords ; gauche/droite sur le curseur règlent la luminosité par crans de 5 %. Le joystick ne change alors ni le volume ni la piste. Essayez avec ▲▼◀▶● du véhicule virtuel.</p>
+        <p data-l="en">Needs the accessibility service. Focus ring with no wrap-around at the edges; left/right on the slider adjust brightness in 5% steps. The joystick then changes neither volume nor track. Try it with ▲▼◀▶● in the virtual vehicle.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── Raccourcis ★ ─────────────── -->
+<section class="grp" id="raccourcis" data-go="shortcuts:classic">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Barre du haut</span><span data-l="en">Top bar</span></div>
+    <h2><span data-l="fr">Raccourcis sur les boutons ★</span><span data-l="en">★ button shortcuts</span></h2>
+    <p data-l="fr">Les deux boutons ★ du volant déclenchent l'action de votre choix, parmi plus de 35.</p>
+    <p data-l="en">The steering wheel's two ★ buttons trigger the action of your choice, out of more than 35.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="fr">Essayer :</span><span data-l="en">Try:</span></span>
+      <button type="button" data-demo-btn="dock"><span data-l="fr">Appuyer sur les boutons du volant</span><span data-l="en">Press the steering-wheel buttons</span></button>
+    </div>
+  </div>
+  <div class="points three">
+    <div class="pt" data-hl-key="sc-btn1" data-go="shortcuts:classic">
+      <h3><span data-l="fr">Raccourcis classiques ★</span><span data-l="en">Classic ★ shortcuts</span></h3>
+      <p data-l="fr">★ gauche et ★ droit, chacun en appui simple et en appui long.</p>
+      <p data-l="en">Left ★ and right ★, each with a single and a long press.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Ils reposent sur le signal émis par le véhicule : si le launcher d'origine utilise déjà le bouton, <b>il reste prioritaire</b> (exemple : caméra 360° en appui simple). Désactivez alors le raccourci côté launcher.</p>
+        <p data-l="en">They rely on the signal broadcast by the vehicle: if the stock launcher already uses that button, <b>it keeps priority</b> (e.g. 360° camera on single press). Disable the shortcut on the launcher side then.</p>
+        <p data-l="fr">Les actions de confort et de sécurité relisent l'état du véhicule à chaque pression : un état illisible vaut abstention, rien n'est écrit à l'aveugle.</p>
+        <p data-l="en">Comfort and safety actions re-read the vehicle state on every press: an unreadable state means doing nothing, nothing is ever written blind.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="sc-onepedal" data-go="shortcuts:onepedal">
+      <h3><span data-l="fr">Réglages à la demande</span><span data-l="en">Settings on demand</span></h3>
+      <p data-l="fr">1 Pédale, ADAS et cycle de régénération ont leur page dès que l'action est attribuée.</p>
+      <p data-l="en">One Pedal, ADAS and regeneration cycle get their page as soon as the action is assigned.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr"><b>Regen de retour du mode 1 Pédale</b> : niveau rétabli au second appui (Fort par défaut). <b>Alternance ADAS</b> : les deux modes entre lesquels le bouton bascule (ACC ↔ Off par défaut).</p>
+        <p data-l="en"><b>One Pedal fallback regen</b>: the level restored on the second press (High by default). <b>ADAS alternation</b>: the two modes the button toggles between (ACC ↔ Off by default).</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-regen" data-hl-key="sc-regen" data-demo="regenCycle">
+      <h3><span data-l="fr">Cycle de régénération</span><span data-l="en">Regeneration cycle</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></h3>
+      <p data-l="fr">Composez l'ordre des niveaux parcourus par un bouton, 1 Pédale comprise.</p>
+      <p data-l="en">Compose the order of levels a button steps through, One Pedal included.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Touchez les modes dans l'ordre voulu, re-touchez pour retirer, puis <b>Sauvegarder</b> (au moins deux modes). Réglage global, pour tous les boutons. Sans réglage : Faible → Moyen → Fort → Adaptatif, comme avant.</p>
+        <p data-l="en">Tap the modes in the wanted order, tap again to remove, then <b>Save</b> (at least two modes). A global setting, for every button. Without it: Low → Medium → High → Adaptive, as before.</p>
+      </details>
+    </div>
+  </div>
+  <details class="fold">
+    <summary><span data-l="fr">Voir toutes les actions disponibles</span><span data-l="en">See every available action</span></summary>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th><span data-l="fr">Catégorie</span><span data-l="en">Category</span></th><th><span data-l="fr">Actions (filtrées selon le firmware)</span><span data-l="en">Actions (filtered by firmware)</span></th></tr></thead>
+        <tbody>
+          <tr><td><span data-l="fr">Conduite</span><span data-l="en">Driving</span></td><td data-l="fr">1 Pédale (bascule avec le niveau de retour) · Cycle Régénération Personnalisé · Éco. énergie</td><td data-l="en">One Pedal (toggles with the fallback level) · Custom Regeneration Cycle · Energy saving</td></tr>
+          <tr><td><span data-l="fr">Vitres</span><span data-l="en">Windows</span> <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></td><td data-l="fr">Ouvrir toutes les vitres · Fermer toutes les vitres</td><td data-l="en">Open all windows · Close all windows</td></tr>
+          <tr><td><span data-l="fr">Sécurité</span><span data-l="en">Safety</span></td><td data-l="fr">ESC · Somnolence · Somnolence : sensibilité · Système anticollision (alternance de mode) · ADAS (alternance) · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son</td><td data-l="en">ESC · Drowsiness · Drowsiness: sensitivity · Collision system (mode alternation) · ADAS (alternation) · Traffic signs (TSR) · Overspeed alert · Speed-limit change alert · Sound</td></tr>
+          <tr><td><span data-l="fr">Confort</span><span data-l="en">Comfort</span></td><td data-l="fr">Siège chauffant gauche / droit (cycle) · Volant chauffant · Clim ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant / arrière · Recirculation (cycle) · Luminosité ± (pas de 10 %)</td><td data-l="en">Left / right heated seat (cycle) · Heated wheel · Climate ON/OFF · Climate: temperature ± · Climate: fan ± · Front / rear defrost · Recirculation (cycle) · Brightness ± (10% steps)</td></tr>
+          <tr><td><span data-l="fr">Média</span><span data-l="en">Media</span></td><td data-l="fr">Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume −</td><td data-l="en">Play / Pause · Next track · Previous track · Volume + · Volume −</td></tr>
+          <tr><td><span data-l="fr">Application et véhicule</span><span data-l="en">App and vehicle</span></td><td data-l="fr">Lancer un profil · Sélecteur de profil (popup) · Ouvrir MG4Control · Lancer une application · Éteindre la voiture</td><td data-l="en">Apply a profile · Profile picker (popup) · Open MG4Control · Launch an app · Power the car off</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+</section>
+
+<!-- ─────────────── Raccourcis avancés ─────────────── -->
+<section class="grp" id="raccourcis-avances" data-go="shortcuts:adv">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Raccourcis</span><span data-l="en">Shortcuts</span></div>
+    <h2><span data-l="fr">Raccourcis avancés : n'importe quelle touche</span><span data-l="en">Advanced shortcuts: any key</span></h2>
+    <p data-l="fr">Quasiment tous les boutons physiques de la voiture, pas seulement ceux du volant : touches du volant, de la façade sous l'écran… en appui court, long ou double. Création en trois étapes : touche, type d'appui, fonction.</p>
+    <p data-l="en">Almost every physical button in the car, not just the steering wheel: steering-wheel keys, front-panel keys below the screen… as a short, long or double press. Created in three steps: key, press type, action.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="fr">Parcours :</span><span data-l="en">Path:</span></span>
+      <button type="button" data-demo-btn="go:shortcuts:adv" data-hl="adv-service">① <span data-l="fr">Activer l'interrupteur puis l'accessibilité</span><span data-l="en">Turn on the switch, then accessibility</span></button>
+      <button type="button" data-demo-btn="dock">② <span data-l="fr">« Enregistrer une touche » puis appuyer sur un bouton du véhicule virtuel</span><span data-l="en">“Record a key” then press a button in the virtual vehicle</span></button>
+      <button type="button" data-demo-btn="go:shortcuts:list" data-hl="adv-list">③ <span data-l="fr">Voir la liste</span><span data-l="en">See the list</span></button>
+    </div>
+  </div>
+  <div class="points three">
+    <div class="pt" data-hl-key="adv-service" data-go="shortcuts:adv">
+      <h3><span data-l="fr">Service d'accessibilité</span><span data-l="en">Accessibility service</span></h3>
+      <p data-l="fr">À activer une fois dans Android. Au repos, il ne consomme aucune touche.</p>
+      <p data-l="en">Enabled once in Android. At rest, it consumes no key.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Grâce à lui, MG4Control voit la touche <b>avant</b> le launcher et peut la consommer. Le bouton « Activer l'accessibilité » ouvre la liste des services d'Android et disparaît une fois l'accès accordé.</p>
+        <p data-l="en">Through it, MG4Control sees the key <b>before</b> the launcher and can consume it. The “Enable accessibility” button opens Android's service list and disappears once access is granted.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="adv-key" data-go="shortcuts:adv">
+      <h3><span data-l="fr">Enregistrer une touche</span><span data-l="en">Record a key</span></h3>
+      <p data-l="fr">Appuyez sur « Enregistrer une touche » puis sur le bouton voulu.</p>
+      <p data-l="en">Tap “Record a key” then the wanted button.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Tout bouton dont l'appui arrive à l'écran peut servir. Son nom et son code s'affichent (★ gauche 17, ★ droite 286, joystick 297 à 301…) ; un bouton sans nom connu s'affiche par son code (« Touche 123 ») et reste utilisable. Un second appui sur le bouton d'enregistrement annule ; l'attente expire seule.</p>
+        <p data-l="en">Any button whose press reaches the screen can be used. Its name and code show up (left ★ 17, right ★ 286, joystick 297 to 301…); a button with no known name shows its code (“Key 123”) and still works. Tapping the record button again cancels; the wait also times out on its own.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="adv-list" data-go="shortcuts:list">
+      <h3><span data-l="fr">Liste des raccourcis</span><span data-l="en">Shortcut list</span></h3>
+      <p data-l="fr">Groupée par bouton et type d'appui, avec confirmation avant de remplacer une action.</p>
+      <p data-l="en">Grouped by button and press type, with a confirmation before replacing an action.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">« Tous les profils » en tête de chaque groupe (l'ordre d'affichage est l'ordre de résolution). <b>Modif.</b> change la fonction et le profil. La confirmation nomme la fonction qui sera remplacée.</p>
+        <p data-l="en">“All profiles” first in each group (display order is resolution order). <b>Edit</b> changes the action and the profile. The confirmation names the action about to be replaced.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-scope" data-hl-key="adv-scope" data-go="shortcuts:adv">
+      <h3><span data-l="fr">Raccourcis par profil</span><span data-l="en">Profile-scoped shortcuts</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></h3>
+      <p data-l="fr">Un même bouton fait une chose différente selon le profil en cours.</p>
+      <p data-l="en">One button does a different thing depending on the current profile.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Exemple : sous <i>Autoroute</i>, ★ droit bascule en 1 Pédale ; sous <i>Hiver</i>, il règle le siège chauffant. Chaque raccourci porte un profil (« Tous les profils » par défaut).</p>
+        <p data-l="en">Example: under <i>Motorway</i>, right ★ toggles One Pedal; under <i>Winter</i>, it sets the heated seat. Each shortcut carries a profile (“All profiles” by default).</p>
+        <p data-l="fr">Le profil qui compte est le <b>dernier profil appliqué</b>, quelle que soit la façon : au démarrage, par Bluetooth, par l'automatisation température ou à la main. MG4Control s'en souvient même après un redémarrage. En revanche, changer un réglage à la main sur le tableau de bord ne change pas ce profil. Le véhicule virtuel affiche le profil en cours.</p>
+        <p data-l="en">The profile that counts is the <b>last applied profile</b>, however it was applied: at start-up, over Bluetooth, by the temperature automation or by hand. MG4Control remembers it even after a restart. Changing a setting by hand on the dashboard, however, doesn't change that profile. The virtual vehicle shows the current profile.</p>
+        <p data-l="fr">À l'appui, le raccourci de ce profil passe en premier, sinon celui de « Tous les profils ». Une touche n'est interceptée que si elle porte une action pour ce profil.</p>
+        <p data-l="en">On press, that profile's shortcut comes first, otherwise the “All profiles” one. A key is only intercepted if it carries an action for that profile.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-unassigned" data-hl-key="adv-list" data-go="shortcuts:list">
+      <h3><span data-l="fr">Appuis sans raccourci conservés</span><span data-l="en">Presses without a shortcut kept</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></h3>
+      <p data-l="fr">Un appui sans raccourci garde la fonction d'origine du bouton.</p>
+      <p data-l="en">A press without a shortcut keeps the button's original function.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">L'appui est rendu au système. Attribuer le double appui du bouton Accueil laisse donc l'appui simple ramener au launcher. Seul coût : 0,3 s de délai sur une touche qui porte un double appui. En Mode Garage, toutes les touches sont rendues.</p>
+        <p data-l="en">The press is returned to the system. Assigning the Home button's double press therefore leaves its single press returning to the launcher. The only cost: a 0.3 s delay on a key carrying a double press. In Garage mode, every key is released.</p>
+      </details>
+    </div>
+  </div>
+  <div class="widget">
+    <h3><span data-l="fr">Labo d'appui : court, long ou double ?</span><span data-l="en">Press lab: short, long or double?</span></h3>
+    <p class="sub" data-l="fr">Maintenez un bouton : l'appui long part dès 500 ms, touche encore enfoncée. Sur une touche qui porte aussi un double appui, l'appui court attend 300 ms de plus. Créez d'abord un raccourci avancé pour voir la différence.</p>
+    <p class="sub" data-l="en">Hold a button: the long press fires at 500 ms, key still held. On a key that also carries a double press, the short press waits another 300 ms. Create an advanced shortcut first to see the difference.</p>
+    <div class="lab" data-presslab></div>
+  </div>
+</section>
+
+<!-- ─────────────── Automatisation ─────────────── -->
+<section class="grp" id="automatisation" data-go="automation">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Barre du haut</span><span data-l="en">Top bar</span></div>
+    <h2><span data-l="fr">Automatisations selon la température</span><span data-l="en">Temperature-based automations</span></h2>
+    <p data-l="fr">Deux automatisations évaluées au démarrage, d'après la température extérieure.</p>
+    <p data-l="en">Two automations evaluated at start-up, based on the outside temperature.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="fr">Essayer :</span><span data-l="en">Try:</span></span>
+      <button type="button" data-demo-btn="confirm"><span data-l="fr">Popup de confirmation</span><span data-l="en">Confirmation popup</span></button>
+      <button type="button" data-demo-btn="dock"><span data-l="fr">Régler la température extérieure</span><span data-l="en">Set the outside temperature</span></button>
+    </div>
+  </div>
+  <div class="points">
+    <div class="pt" data-hl-key="auto-profile" data-go="automation">
+      <h3><span data-l="fr">Profil selon la température</span><span data-l="en">Profile by temperature</span></h3>
+      <p data-l="fr">Au-dessus ou en dessous d'un seuil, un profil s'applique, directement ou après confirmation.</p>
+      <p data-l="en">Above or below a threshold, a profile applies, directly or after confirmation.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Seuil de 0 à 60 °C, borne incluse. Popup OUI / NON pendant 8 s : NON ou délai écoulé, on retombe sur le profil Bluetooth ou par défaut. Température illisible ou profil supprimé : l'automatisation est ignorée.</p>
+        <p data-l="en">Threshold from 0 to 60 °C, inclusive. YES / NO popup for 8 s: NO or timeout falls back to the Bluetooth or default profile. Unreadable temperature or deleted profile: the automation is skipped.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="auto-clim" data-go="automation">
+      <h3><span data-l="fr">Climatisation selon la température</span><span data-l="en">Climate by temperature</span></h3>
+      <p data-l="fr">Deux règles, chaud et froid, allument la clim avec vos réglages au démarrage.</p>
+      <p data-l="en">Two rules, hot and cold, switch the climate on with your settings at start-up.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Par défaut : au-dessus de 28 °C → 20 °C, en dessous de 5 °C → 24 °C. Chaque règle : seuil (−20 à 60 °C), consigne (15 à 33 °C), ventilation (1 à 10), dégivrages, mode auto et recirculation forcée. Si les deux s'appliquent, « chaud » l'emporte. Si le dernier profil appliqué porte sa propre climatisation, c'est elle qui compte.</p>
+        <p data-l="en">By default: above 28 °C → 20 °C, below 5 °C → 24 °C. Each rule: threshold (−20 to 60 °C), setpoint (15 to 33 °C), fan (1 to 10), defrosters, auto mode and forced recirculation. If both match, “hot” wins. If the last applied profile carries its own climate settings, those win.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── Vitres ─────────────── -->
+<section class="grp" id="vitres" data-demo="windows">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Automatisation</span><span data-l="en">Automation</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></div>
+    <h2><span data-l="fr">Vitres électriques</span><span data-l="en">Power windows</span></h2>
+    <p data-l="fr">Toutes les vitres fermées ou ouvertes d'un appui depuis l'écran, et fermées automatiquement quand vous quittez la voiture. Sur les six firmwares.</p>
+    <p data-l="en">Every window closed or opened in one tap from the screen, and closed automatically when you leave the car. On all six firmwares.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="fr">Essayer :</span><span data-l="en">Try:</span></span>
+      <button type="button" data-demo-btn="calibrate"><span data-l="fr">Calibrer une vitre</span><span data-l="en">Calibrate a window</span></button>
+      <button type="button" data-demo-btn="leave"><span data-l="fr">🚪 Quitter la voiture</span><span data-l="en">🚪 Leave the car</span></button>
+    </div>
+  </div>
+  <div class="points">
+    <div class="pt is-new" id="f-windows" data-hl-key="win-command" data-demo="windows">
+      <h3><span data-l="fr">Tout fermer, tout ouvrir</span><span data-l="en">Close all, open all</span></h3>
+      <p data-l="fr">Toutes les vitres d'un appui, depuis l'écran ou un bouton physique.</p>
+      <p data-l="en">Every window in one tap, from the screen or a physical button.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">La vitre conducteur fait sa course automatique d'origine. Les trois autres, sans capteur, reçoivent l'ordre pendant la durée de course. Tout fermer et Tout ouvrir existent aussi en raccourcis sur les boutons physiques et dans l'API externe. Lancée depuis l'écran, la commande s'arrête si vous quittez l'onglet.</p>
+        <p data-l="en">The driver's window runs its native automatic travel. The other three, which have no sensor, get the command for the travel time. Close all and Open all are also available as physical-button shortcuts and in the external API. Started from the screen, movement stops if you leave the tab.</p>
+      </details>
+    </div>
+    <div class="pt is-new" data-hl-key="win-course" data-demo="windows">
+      <h3><span data-l="fr">Durée de course</span><span data-l="en">Travel time</span></h3>
+      <p data-l="fr">Les vitres sans capteur bougent pendant une durée réglable : 5 s par défaut, de 2 à 10 s.</p>
+      <p data-l="en">Windows without a sensor move for an adjustable time: 5 s by default, from 2 to 10 s.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Seule la vitre conducteur signale sa position. Pour les trois autres, l'app ne sait pas quand la vitre arrive en butée : elle envoie l'ordre pendant cette durée. Trop courte, la vitre reste entrouverte, et une vitre arrière fatiguée peut demander un peu plus. Cinq secondes, c'est la valeur qu'utilise winclose sur MG4.</p>
+        <p data-l="en">Only the driver's window reports its position. For the other three, the app can't tell when the window reaches its end stop: it sends the command for this long. Too short and the window stays ajar, and a tired rear window may need a little more. Five seconds is the value winclose uses on the MG4.</p>
+      </details>
+    </div>
+    <div class="pt is-new" data-hl-key="win-auto" data-demo="windows">
+      <h3><span data-l="fr">Fermeture en quittant la voiture</span><span data-l="en">Close when leaving the car</span></h3>
+      <p data-l="fr">Toutes les vitres se ferment quand vous sortez, après un délai réglable.</p>
+      <p data-l="en">Every window closes when you get out, after an adjustable delay.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Voiture en P et fermeture <b>armée</b> (vitesse atteinte, 20 km/h par défaut, et/ou voiture allumée depuis 5 min). À la sortie de READY (porte conducteur ouverte ou extinction), fermeture après 0 à 30 s (5 s par défaut), avec un bip facultatif. Un retour en READY annule. Les vitres sans capteur se ferment pendant la durée de course.</p>
+        <p data-l="en">Car in P and closing <b>armed</b> (speed reached, 20 km/h by default, and/or car on for 5 min). When leaving READY (driver door opened or car switched off), closing after 0 to 30 s (5 s by default), with an optional beep. Going back to READY cancels. Windows without a sensor close for the travel time.</p>
+      </details>
+    </div>
+    <div class="pt is-new" data-hl-key="win-cal" data-demo="windows">
+      <h3><span data-l="fr">Calibrage par vitre (avancé)</span><span data-l="en">Per-window calibration (advanced)</span></h3>
+      <p data-l="fr">En option, un assistant chronomètre chaque vitre pour une durée plus juste que la durée générale.</p>
+      <p data-l="en">Optionally, a wizard times each window for a more accurate travel time than the general one.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">L'assistant en 4 étapes chronomètre une descente et une montée complètes (entre 0,8 et 15 s), puis cette vitre utilise ses propres durées. Désactiver l'option revient à la durée générale sans effacer les mesures. L'app ne voit pas les interrupteurs de porte : une course dure toujours le temps mesuré, quelle que soit la position de départ de la vitre.</p>
+        <p data-l="en">The 4-step wizard times a full descent and ascent (between 0.8 and 15 s), then that window uses its own times. Turning the option off goes back to the general travel time without erasing the measurements. The app can't see the door switches: a travel always lasts the measured time, whatever the window's starting position.</p>
+      </details>
+    </div>
+  </div>
+  <div class="callout danger">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+    <p data-l="fr">Les courses commandées par l'application <b>n'ont pas l'anti-pincement</b> du véhicule, sauf sur la vitre conducteur. Personne près des vitres pendant une fermeture, surtout automatique. Pilotage inspiré de <a href="https://github.com/Skittle6938/winclose">winclose</a> (Skittle6938).</p>
+    <p data-l="en">Travels commanded by the app <b>have no anti-pinch protection</b>, except on the driver's window. Keep everyone clear of the windows during a closing, especially an automatic one. Window control builds on <a href="https://github.com/Skittle6938/winclose">winclose</a> (Skittle6938).</p>
+  </div>
+</section>
+
+<!-- ─────────────── Statistiques ─────────────── -->
+<section class="grp" id="statistiques" data-demo="statsOn">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Barre du haut</span><span data-l="en">Top bar</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></div>
+    <h2><span data-l="fr">Statistiques</span><span data-l="en">Statistics</span></h2>
+    <p data-l="fr">Trajets, recharges et coût. Désactivé par défaut ; tout reste dans la voiture, rien n'est envoyé ailleurs.</p>
+    <p data-l="en">Trips, charging and cost. Off by default; everything stays in the car, nothing is sent anywhere.</p>
+  </div>
+  <div class="points three">
+    <div class="pt is-new" id="f-stats" data-hl-key="st-summary" data-demo="statsOn">
+      <h3><span data-l="fr">Général</span><span data-l="en">General</span></h3>
+      <p data-l="fr">Résumé sur 30 jours ou tout l'historique : distance, consommation, énergie et coût.</p>
+      <p data-l="en">Summary over 30 days or all history: distance, consumption, energy and cost.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Prix du kWh en charge lente et rapide, monnaie, capacité utile (62 kWh par défaut), conservation (30 jours à 1 an) et « Tout supprimer ». La consommation d'une période se calcule sur les totaux, et le coût d'un trajet suit le prix moyen de l'énergie réellement rechargée. Les données de la maquette sont des exemples.</p>
+        <p data-l="en">kWh price for slow and fast charging, currency, usable capacity (62 kWh by default), retention (30 days to 1 year) and “Delete all”. A period's consumption is computed on totals, and a trip's cost follows the average price of energy actually charged. The mockup's data are examples.</p>
+      </details>
+    </div>
+    <div class="pt is-new" data-hl-key="st-trips" data-go="stats:1">
+      <h3><span data-l="fr">Trajets</span><span data-l="en">Trips</span></h3>
+      <p data-l="fr">Chaque trajet avec sa durée, sa distance, sa consommation et le détail de l'énergie.</p>
+      <p data-l="en">Each trip with its duration, distance, consumption and energy breakdown.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Un trajet va d'un contact à l'autre. Le détail sépare moteur, climatisation, accessoires, récupération au freinage, batterie et température. Sur un trajet très court, la consommation passe en « ≈ » : les compteurs ne publient qu'un dixième de kWh.</p>
+        <p data-l="en">A trip runs from one ignition to the next. The breakdown separates motor, climate, accessories, regenerative braking, battery and temperature. On a very short trip, consumption shows as “≈”: the counters only publish tenths of a kWh.</p>
+      </details>
+    </div>
+    <div class="pt is-new" data-hl-key="st-charges" data-go="stats:2">
+      <h3><span data-l="fr">Recharge</span><span data-l="en">Charging</span></h3>
+      <p data-l="fr">Énergie rechargée, coût et sessions AC / DC, même quand le boîtier était éteint.</p>
+      <p data-l="en">Energy charged, cost and AC / DC sessions, even while the head unit was off.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Une charge de nuit est <b>reconstituée</b> au réveil ; on peut la <b>compléter</b> (type de prise, heures) pour obtenir la puissance moyenne, et <b>corriger le tarif</b> d'une session.</p>
+        <p data-l="en">An overnight charge is <b>reconstructed</b> on wake-up; you can <b>complete</b> it (plug type, times) to get the average power, and <b>fix the tariff</b> of a session.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── Audio ─────────────── -->
+<section class="grp" id="audio" data-go="audio">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Barre du haut</span><span data-l="en">Top bar</span></div>
+    <h2><span data-l="fr">Volume en quittant la voiture</span><span data-l="en">Volume when leaving the car</span></h2>
+    <p data-l="fr">Fini la musique à fond en descendant de la voiture.</p>
+    <p data-l="en">No more blasting music as you step out of the car.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="fr">Essayer :</span><span data-l="en">Try:</span></span>
+      <button type="button" data-demo-btn="leave"><span data-l="fr">🚪 Quitter la voiture</span><span data-l="en">🚪 Leave the car</span></button>
+    </div>
+  </div>
+  <div class="points">
+    <div class="pt is-new" id="f-audio" data-hl-key="door" data-go="audio">
+      <h3><span data-l="fr">Baisse du volume</span><span data-l="en">Volume drop</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></h3>
+      <p data-l="fr">Le volume média descend au niveau choisi quand vous sortez, désormais sur les six firmwares.</p>
+      <p data-l="en">Media volume drops to the chosen level when you get out, now on all six firmwares.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Sur SWI133 et SWI132, qui signalent leurs portes, le déclencheur reste l'ouverture d'une porte avant. Ailleurs, c'est la <b>sortie du mode READY</b> en P (porte conducteur ouverte ou extinction). Le curseur est borné au volume maximal réel lu sur la voiture. Firmware sélectionné : <span data-fw-name></span>.</p>
+        <p data-l="en">On SWI133 and SWI132, which report their doors, the trigger stays a front door opening. Elsewhere it's <b>leaving READY</b> in P (driver door opened or car switched off). The slider is capped to the real maximum volume read from the car. Selected firmware: <span data-fw-name></span>.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="door" data-go="audio">
+      <h3><span data-l="fr">Portes et restauration</span><span data-l="en">Doors and restore</span></h3>
+      <p data-l="fr">Choix des portes déclencheuses, et retour du volume d'avant en refermant.</p>
+      <p data-l="en">Pick the trigger doors, and get the previous volume back when closing.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Gauche, droite ou les deux, pratique pour ne réagir qu'à la portière conducteur. Sans porte lisible (hors SWI133/132), ce choix disparaît et la restauration se fait au retour en READY.</p>
+        <p data-l="en">Left, right or both, handy to react to the driver's door only. Without readable doors (other than SWI133/132), this choice disappears and the restore happens when going back to READY.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── Réglages ─────────────── -->
+<section class="grp" id="reglages" data-go="settings:0">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Barre du haut</span><span data-l="en">Top bar</span></div>
+    <h2><span data-l="fr">Réglages de l'application</span><span data-l="en">App settings</span></h2>
+    <p data-l="fr">Quatre onglets, tout s'applique au clic. Changez la langue de l'app dans la maquette : les libellés viennent des vraies traductions.</p>
+    <p data-l="en">Four tabs, everything applies on tap. Change the app language in the mockup: labels come from the real translations.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="fr">Essayer :</span><span data-l="en">Try:</span></span>
+      <button type="button" data-demo-btn="lang"><span data-l="fr">Langue au 1er lancement</span><span data-l="en">First-launch language</span></button>
+      <button type="button" data-demo-btn="about"><span data-l="fr">À propos</span><span data-l="en">About</span></button>
+      <button type="button" data-demo-btn="diag"><span data-l="fr">Diagnostic</span><span data-l="en">Diagnostic</span></button>
+    </div>
+  </div>
+  <div class="points three">
+    <div class="pt" data-hl-key="s-lang" data-go="settings:0">
+      <h3><span data-l="fr">Langues</span><span data-l="en">Languages</span></h3>
+      <p data-l="fr">Sept langues, demandées au tout premier lancement et modifiables ensuite.</p>
+      <p data-l="en">Seven languages, asked on the very first launch and changeable later.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Français, English, Deutsch, Español, Português, Italiano et Türkçe.</p>
+        <p data-l="en">Français, English, Deutsch, Español, Português, Italiano and Türkçe.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-textsize" data-hl-key="s-textsize" data-go="settings:1">
+      <h3><span data-l="fr">Interface et taille du texte</span><span data-l="en">Interface and text size</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></h3>
+      <p data-l="fr">Écran de démarrage, thème Auto / Sombre / Clair et texte Standard, Grand ou Très grand.</p>
+      <p data-l="en">Start screen, Auto / Dark / Light theme and Standard, Large or Extra-large text.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">En Auto, l'app suit le mode jour/nuit du launcher MG. La taille du texte (+12,5 % ou +25 %) s'applique à toute l'app, popups compris, et le turc rejoint les langues. Essayez dans la maquette.</p>
+        <p data-l="en">In Auto, the app follows the MG launcher's day/night mode. Text size (+12.5% or +25%) applies to the whole app, popups included, and Turkish joins the languages. Try it in the mockup.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="s-autoapply" data-go="settings:2">
+      <h3><span data-l="fr">Réglages avancés</span><span data-l="en">Advanced settings</span></h3>
+      <p data-l="fr">Mode Garage, API externe, canal bêta, extinction du véhicule et verrou de vitesse.</p>
+      <p data-l="en">Garage mode, external API, beta channel, vehicle power-off and speed lock.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <ul data-l="fr">
+          <li><a href="#garage">Mode Garage</a>, qui remplace l'ancien interrupteur d'application automatique.</li>
+          <li><a href="#api">API externe</a>, avec confirmation explicite à l'activation.</li>
+          <li>Vérification des mises à jour au lancement, <a href="#mises-a-jour">alerte sur l'écran du véhicule</a> et canal bêta.</li>
+          <li><a href="#verrou">Éteindre le véhicule</a> en gardant l'écran allumé, et <a href="#verrou">verrou de vitesse</a> (0 à 250 km/h).</li>
+        </ul>
+        <ul data-l="en">
+          <li><a href="#garage">Garage mode</a>, replacing the old automatic-application switch.</li>
+          <li><a href="#api">External API</a>, with explicit confirmation when enabling.</li>
+          <li>Update check at launch, <a href="#mises-a-jour">alert on the vehicle screen</a> and beta channel.</li>
+          <li><a href="#verrou">Power the vehicle off</a> while keeping the screen on, and <a href="#verrou">speed lock</a> (0 to 250 km/h).</li>
+        </ul>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="s-maint" data-go="settings:3">
+      <h3><span data-l="fr">Infos</span><span data-l="en">Info</span></h3>
+      <p data-l="fr">Mises à jour, À propos, firmware détecté, données consommées et diagnostic.</p>
+      <p data-l="en">Updates, About, detected firmware, data usage and diagnostics.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <ul data-l="fr">
+          <li>Vérifier les mises à jour, <b>Nettoyer APK</b> (anciens fichiers téléchargés).</li>
+          <li><b>À propos</b> : version, firmware exact, QR codes GitHub / GitLab, remerciements.</li>
+          <li><b>Consommation de données</b> : aujourd'hui, semaine, mois, 30 jours.</li>
+          <li><b>Diagnostic</b>, révélé par 5 appuis sur le logo : rapport à copier ou télécharger pour les remontées de bug.</li>
+        </ul>
+        <ul data-l="en">
+          <li>Check for updates, <b>Clean APK</b> (old downloaded files).</li>
+          <li><b>About</b>: version, exact firmware, GitHub / GitLab QR codes, thanks.</li>
+          <li><b>Data usage</b>: today, this week, this month, last 30 days.</li>
+          <li><b>Diagnostic</b>, revealed by tapping the logo 5 times: a report to copy or download for bug reports.</li>
+        </ul>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="s-fw" data-go="settings:3" data-demo="fwUnknown">
+      <h3><span data-l="fr">Firmware non reconnu</span><span data-l="en">Unrecognised firmware</span></h3>
+      <p data-l="fr">Un avertissement s'affiche, puis vous pouvez forcer un mode de compatibilité.</p>
+      <p data-l="en">A warning shows, then you can force a compatibility mode.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">L'avertissement affiche la version brute détectée et propose Fermer l'app ou Continuer. Les pastilles de Réglages → Infos deviennent alors cliquables ; le choix est mémorisé et survit aux redémarrages.</p>
+        <p data-l="en">The warning shows the raw detected version and offers Close the app or Continue. The chips in Settings → Info then become tappable; the choice is saved and survives restarts.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── Mode Garage ─────────────── -->
+<section class="grp" id="garage" data-go="settings:2">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Réglages avancés</span><span data-l="en">Advanced settings</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></div>
+    <h2><span data-l="fr">Mode Garage</span><span data-l="en">Garage mode</span></h2>
+    <p data-l="fr">Un interrupteur met MG4Control en veille complète, sans rien effacer. Pensé pour laisser la voiture à l'atelier.</p>
+    <p data-l="en">One switch puts MG4Control fully to sleep, without erasing anything. Designed for leaving the car at a workshop.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="fr">Essayer :</span><span data-l="en">Try:</span></span>
+      <button type="button" data-demo-btn="garageOn"><span data-l="fr">Activer le Mode Garage</span><span data-l="en">Turn Garage mode on</span></button>
+      <button type="button" data-demo-btn="ignition"><span data-l="fr">⏻ Puis simuler un démarrage</span><span data-l="en">⏻ Then simulate a start-up</span></button>
+    </div>
+  </div>
+  <div class="points">
+    <div class="pt is-new" id="f-garage" data-hl-key="s-garage" data-go="settings:2">
+      <h3><span data-l="fr">Ce qui est suspendu</span><span data-l="en">What's suspended</span></h3>
+      <p data-l="fr">Raccourcis, profil au démarrage, automatisations, API externe et alertes de mise à jour.</p>
+      <p data-l="en">Shortcuts, start-up profile, automations, external API and update alerts.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <ul data-l="fr">
+          <li>Les boutons physiques retrouvent leur fonction d'origine (raccourcis classiques et avancés).</li>
+          <li>Aucun profil au démarrage (Bluetooth compris), aucune automatisation par température.</li>
+          <li>Rien ne se déclenche en sortant : ni baisse du volume, ni fermeture des vitres.</li>
+          <li>Commandes tierces refusées, aucune alerte de mise à jour sur l'écran.</li>
+        </ul>
+        <ul data-l="en">
+          <li>Physical buttons get their original function back (classic and advanced shortcuts).</li>
+          <li>No profile at start-up (Bluetooth included), no temperature automation.</li>
+          <li>Nothing triggers when leaving: no volume drop, no window closing.</li>
+          <li>Third-party commands refused, no update alert on screen.</li>
+        </ul>
+      </details>
+    </div>
+    <div class="pt is-new" data-hl-key="s-garage" data-go="settings:2">
+      <h3><span data-l="fr">Ce qui reste possible</span><span data-l="en">What still works</span></h3>
+      <p data-l="fr">Ouvrir l'app et appliquer un profil à la main. Repasser sur OFF rend tout à l'identique.</p>
+      <p data-l="en">Opening the app and applying a profile by hand. Switching back off restores everything as it was.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Tant qu'il est actif, la notification persistante signale que MG4Control est en veille, pour qu'un mode oublié ne passe pas pour une panne. Qui avait décoché l'ancien interrupteur « application automatique » est repris en Mode Garage activé.</p>
+        <p data-l="en">While it's on, the persistent notification says MG4Control is asleep, so a forgotten mode doesn't look like a failure. Anyone who had unchecked the old “automatic application” switch is carried over with Garage mode on.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── Verrou de vitesse ─────────────── -->
+<section class="grp" id="verrou" data-go="settings:2">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Garde-fous</span><span data-l="en">Safeguards</span></div>
+    <h2><span data-l="fr">Verrou de vitesse et extinction</span><span data-l="en">Speed lock and power-off</span></h2>
+    <p data-l="fr">Le verrou s'applique à tout ce qui écrit dans le véhicule : l'app, les profils, les raccourcis et l'API externe.</p>
+    <p data-l="en">The lock applies to everything that writes to the vehicle: the app, profiles, shortcuts and the external API.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="fr">Essayer :</span><span data-l="en">Try:</span></span>
+      <button type="button" data-demo-btn="dock"><span data-l="fr">Monter la vitesse du véhicule virtuel</span><span data-l="en">Raise the virtual vehicle's speed</span></button>
+    </div>
+  </div>
+  <div class="points">
+    <div class="pt" data-hl-key="s-gate" data-go="settings:2">
+      <h3><span data-l="fr">Verrou de vitesse</span><span data-l="en">Speed lock</span></h3>
+      <p data-l="fr">Au-delà de la vitesse choisie, les réglages de conduite sont refusés avec un message.</p>
+      <p data-l="en">Above the chosen speed, driving settings are refused with a message.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <ul data-l="fr">
+          <li>Désactivé par défaut : aucune limite ne s'applique tant qu'il ne l'est pas.</li>
+          <li>Autorisé jusqu'à la vitesse choisie, borne incluse.</li>
+          <li>Vitesse illisible = refus (« fail closed »).</li>
+          <li>Le confort (sièges, volant, climatisation) n'est jamais concerné.</li>
+        </ul>
+        <ul data-l="en">
+          <li>Off by default: no limit applies until it's enabled.</li>
+          <li>Allowed up to the chosen speed, inclusive.</li>
+          <li>Unreadable speed = refusal (fail closed).</li>
+          <li>Comfort (seats, wheel, climate) is never affected.</li>
+        </ul>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="s-power" data-go="settings:2" data-demo="powerOff">
+      <h3><span data-l="fr">Éteindre la voiture, écran allumé</span><span data-l="en">Power the car off, screen on</span></h3>
+      <p data-l="fr">Coupe le véhicule en gardant la musique et la navigation, levier en P uniquement.</p>
+      <p data-l="en">Powers the vehicle down while keeping music and navigation, lever in P only.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Reproduit le « Vehicle Power → Off » du launcher MG. Disponible dans Réglages, le sélecteur de profil et les raccourcis. L'app vérifie le levier avant la confirmation, puis encore à l'envoi. Volontairement absent de l'API externe.</p>
+        <p data-l="en">Mirrors the MG launcher's “Vehicle Power → Off”. Available in Settings, the profile picker and shortcuts. The app checks the lever before the confirmation, then again when sending. Deliberately left out of the external API.</p>
+      </details>
+    </div>
+  </div>
+  <div class="widget" data-gate>
+    <h3><span data-l="fr">Simulateur de décision</span><span data-l="en">Decision simulator</span></h3>
+    <p class="sub" data-l="fr">Réplique de <code>VehicleWriteGate.decide()</code> pour un réglage de conduite.</p>
+    <p class="sub" data-l="en">Replica of <code>VehicleWriteGate.decide()</code> for a driving setting.</p>
+    <div class="gate">
+      <div>
+        <label class="tog"><input type="checkbox" name="gon" checked><span class="t"></span><span data-l="fr">Verrou activé</span><span data-l="en">Lock enabled</span></label>
+        <label><span data-l="fr">Vitesse maximale autorisée</span><span data-l="en">Maximum allowed speed</span> : <b data-o="gmax"></b></label>
+        <input type="range" name="gmax" min="0" max="250" step="5" value="30">
+        <label style="margin-top:10px"><span data-l="fr">Vitesse du véhicule</span><span data-l="en">Vehicle speed</span> : <b data-o="gspeed"></b></label>
+        <input type="range" name="gspeed" min="0" max="160" step="5" value="50">
+        <label class="tog"><input type="checkbox" name="gunk"><span class="t"></span><span data-l="fr">Vitesse illisible</span><span data-l="en">Unreadable speed</span></label>
+      </div>
+      <div class="gate-res"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── Mises à jour ─────────────── -->
+<section class="grp" id="mises-a-jour" data-go="settings:3">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Réglages · Infos</span><span data-l="en">Settings · Info</span></div>
+    <h2><span data-l="fr">Mises à jour intégrées</span><span data-l="en">Built-in updates</span></h2>
+    <p data-l="fr">L'app vérifie les nouvelles versions sur GitHub (repli sur GitLab) et installe l'APK après vérification.</p>
+    <p data-l="en">The app checks GitHub for new releases (GitLab as fallback) and installs the APK after checking it.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="fr">Essayer :</span><span data-l="en">Try:</span></span>
+      <button type="button" data-demo-btn="update"><span data-l="fr">Mise à jour disponible (exemple)</span><span data-l="en">Update available (example)</span></button>
+    </div>
+  </div>
+  <div class="points three">
+    <div class="pt is-new" id="f-updalert" data-hl-key="upd-overlay" data-demo="updOverlay">
+      <h3><span data-l="fr">Alerte sur l'écran du véhicule</span><span data-l="en">Alert on the vehicle screen</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></h3>
+      <p data-l="fr">Un message signale la nouvelle version sans ouvrir l'app, jamais en roulant.</p>
+      <p data-l="en">A message announces the new release without opening the app, never while driving.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr"><b>Installer la MAJ</b> ouvre le dialogue habituel, <b>Ignorer cette version</b> ne la propose plus, <b>Ne plus me prévenir</b> coupe l'alerte ; toucher le fond vaut « plus tard ». Vérification 20 s après le contact, 6 h minimum entre deux requêtes, une seule fois par session.</p>
+        <p data-l="en"><b>Install update</b> opens the usual dialog, <b>Skip this version</b> stops offering it, <b>Stop telling me</b> turns the alert off; tapping the background means “later”. Check 20 s after ignition, 6 h minimum between requests, only once per session.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="s-checkupd" data-go="settings:3">
+      <h3><span data-l="fr">Stable ou bêta</span><span data-l="en">Stable or beta</span></h3>
+      <p data-l="fr">Canal stable par défaut, canal bêta pour les pré-versions.</p>
+      <p data-l="en">Stable channel by default, beta channel for pre-releases.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">La version stable remplace ensuite la dernière bêta du même numéro, jamais l'inverse. « Ne plus me rappeler » ignore une version donnée.</p>
+        <p data-l="en">The stable release then replaces the latest beta of the same number, never the other way round. “Don't remind me” skips a given version.</p>
+      </details>
+    </div>
+    <div class="pt" data-hl-key="s-checkupd" data-go="settings:3" data-demo="update">
+      <h3><span data-l="fr">Téléchargement sûr</span><span data-l="en">Safe download</span></h3>
+      <p data-l="fr">L'APK doit venir de GitHub ou GitLab et porter la même signature, sinon il est supprimé.</p>
+      <p data-l="en">The APK must come from GitHub or GitLab and carry the same signature, otherwise it's deleted.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Sans Wi-Fi, un avertissement rappelle qu'environ 10 Mo passeront par les données mobiles de la voiture. Installation manuelle possible : QR code vers les releases, clé USB en FAT32 et gestionnaire de fichiers. La variante <b>offline</b> n'a ni réseau ni mise à jour automatique.</p>
+        <p data-l="en">Without Wi-Fi, a warning reminds you about 10 MB will go through the car's mobile data. Manual install is possible: QR code to the releases, a FAT32 USB stick and the file manager. The <b>offline</b> variant has neither network nor automatic updates.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── API ─────────────── -->
+<section class="grp" id="api" data-go="settings:2">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Pour les utilisateurs avancés</span><span data-l="en">For power users</span></div>
+    <h2><span data-l="fr">API externe : KeyMapper, Tasker, adb</span><span data-l="en">External API: KeyMapper, Tasker, adb</span></h2>
+    <p data-l="fr">Une application tierce peut déclencher les fonctions de MG4Control et lire l'état du véhicule. <b>Désactivée par défaut</b> : tant qu'elle l'est, toute commande est refusée et journalisée.</p>
+    <p data-l="en">A third-party app can trigger MG4Control features and read the vehicle state. <b>Disabled by default</b>: while it is, every command is refused and logged.</p>
+  </div>
+  <div class="widget">
+    <h3><span data-l="fr">Console de test</span><span data-l="en">Test console</span></h3>
+    <p class="sub" data-l="fr">Construisez une commande, copiez-la pour votre voiture, ou envoyez-la au véhicule virtuel pour voir la réponse de l'app. Activez d'abord l'API dans les Réglages de la maquette.</p>
+    <p class="sub" data-l="en">Build a command, copy it for your car, or send it to the virtual vehicle to see how the app answers. Enable the API in the mockup's Settings first.</p>
+    <div data-api-console></div>
+    <div class="demo-bar">
+      <button type="button" data-demo-btn="go:settings:2" data-hl="s-api"><span data-l="fr">Aller à l'interrupteur « API externe »</span><span data-l="en">Go to the “External API” switch</span></button>
+    </div>
+  </div>
+  <details class="fold">
+    <summary><span data-l="fr">Référence de l'API</span><span data-l="en">API reference</span></summary>
+    <div class="cols">
+      <div class="card">
+        <h3><span data-l="fr">Actions directes (KeyMapper)</span><span data-l="en">Direct actions (KeyMapper)</span></h3>
+        <p data-l="fr">Aucun extra requis. Dans KeyMapper (2.3.0+) : action <i>Intent</i> → type <b>Broadcast receiver</b> → coller la chaîne. Chaque envoi inverse l'état.</p>
+        <p data-l="en">No extra needed. In KeyMapper (2.3.0+): <i>Intent</i> action → <b>Broadcast receiver</b> type → paste the string. Each send flips the state.</p>
+        <ul>
+          <li><code>com.mg4.control.action.ONE_PEDAL</code></li>
+          <li><code>com.mg4.control.action.ENERGY_SAVING_TOGGLE</code></li>
+          <li><code>com.mg4.control.action.PROFILE_PICKER</code></li>
+          <li><code>com.mg4.control.action.OPEN_APP</code></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3><code>EXECUTE</code> <span data-l="fr">(toutes les actions de raccourci)</span><span data-l="en">(every shortcut action)</span></h3>
+        <p data-l="fr">Extra texte <code>action</code> = nom d'une action de raccourci (<code>REGEN_CYCLE</code>, <code>SEAT_HEAT_LEFT_CYCLE</code>, <code>WINDOWS_CLOSE_ALL</code>…). <code>APPLY_PROFILE</code> exige un extra <code>profile</code>.</p>
+        <p data-l="en">Text extra <code>action</code> = name of a shortcut action (<code>REGEN_CYCLE</code>, <code>SEAT_HEAT_LEFT_CYCLE</code>, <code>WINDOWS_CLOSE_ALL</code>…). <code>APPLY_PROFILE</code> needs a <code>profile</code> extra.</p>
+        <p data-l="fr"><b>Volontairement hors API</b> : <code>VEHICLE_POWER_OFF</code>, <code>ADAS_CYCLE</code>, <code>AEB_CYCLE</code>, <code>TSR_TOGGLE</code>, <code>OVERSPEED_ALARM</code>, <code>SPEED_LIMIT_TONE</code>, <code>SOUND_WARNING</code>.</p>
+        <p data-l="en"><b>Deliberately outside the API</b>: <code>VEHICLE_POWER_OFF</code>, <code>ADAS_CYCLE</code>, <code>AEB_CYCLE</code>, <code>TSR_TOGGLE</code>, <code>OVERSPEED_ALARM</code>, <code>SPEED_LIMIT_TONE</code>, <code>SOUND_WARNING</code>.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th><code>SET</code> · key</th><th>value</th><th><span data-l="fr">Notes</span><span data-l="en">Notes</span></th></tr></thead>
+        <tbody>
+          <tr><td><code>drive_mode</code></td><td><code>ECO</code> <code>NORMAL</code> <code>SPORT</code> <code>SNOW</code> <code>CUSTOM</code></td><td rowspan="2"><span data-l="fr">Non cyclables.</span><span data-l="en">Not cyclable.</span></td></tr>
+          <tr><td><code>regen</code></td><td><code>OFF</code> <code>LOW</code> <code>MEDIUM</code> <code>HIGH</code> <code>ADAPTIVE</code> <code>ONE_PEDAL</code></td></tr>
+          <tr><td><code>seat_heat_left</code> · <code>seat_heat_right</code></td><td><code>0</code>, <code>1</code>, <code>2</code>, <code>3</code></td><td rowspan="2"><span data-l="fr">Cyclables (<code>NEXT</code> / <code>PREV</code> / <code>TOGGLE</code>).</span><span data-l="en">Cyclable (<code>NEXT</code> / <code>PREV</code> / <code>TOGGLE</code>).</span></td></tr>
+          <tr><td><code>steering_heat</code></td><td><code>0</code>/<code>1</code>, <code>false</code>/<code>true</code></td></tr>
+          <tr><td><code>profile</code></td><td><span data-l="fr">nom du profil</span><span data-l="en">profile name</span></td><td><span data-l="fr">Non cyclable.</span><span data-l="en">Not cyclable.</span></td></tr>
+          <tr><td><code>hvac_power</code> · <code>ac</code> · <code>hvac_auto</code></td><td><code>0</code>/<code>1</code></td><td rowspan="4"><span data-l="fr">Cyclables. Consigne et ventilation ramenées aux bornes lues sur le véhicule.</span><span data-l="en">Cyclable. Setpoint and fan clamped to bounds read from the vehicle.</span></td></tr>
+          <tr><td><code>hvac_temp</code> · <code>hvac_fan</code></td><td>°C · <span data-l="fr">niveau</span><span data-l="en">level</span></td></tr>
+          <tr><td><code>hvac_recirc</code></td><td><code>INNER</code> <code>OUTSIDE</code> <code>AUTO</code></td></tr>
+          <tr><td><code>defrost_front</code> · <code>defrost_rear</code></td><td><code>0</code>/<code>1</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="cols">
+      <div class="card">
+        <h3><span data-l="fr">Lecture de l'état</span><span data-l="en">Reading the state</span></h3>
+        <p data-l="fr"><code>content://com.mg4.control.state/state</code> (<code>com.mg4.control.offline.state</code> pour la variante offline) renvoie une ligne avec le mode, la régénération, le chauffage, la vitesse, la température extérieure, le firmware et les profils. Une valeur illisible vaut <code>null</code>, jamais <code>0</code>.</p>
+        <p data-l="en"><code>content://com.mg4.control.state/state</code> (<code>com.mg4.control.offline.state</code> for the offline variant) returns one row with mode, regeneration, heating, speed, outside temperature, firmware and profiles. An unreadable value is <code>null</code>, never <code>0</code>.</p>
+      </div>
+      <div class="card">
+        <h3><span data-l="fr">Sécurité et diagnostic</span><span data-l="en">Security and diagnostics</span></h3>
+        <p data-l="fr">Une fois activée, <b>n'importe quelle application installée</b> peut envoyer ces intents. Chaque lecture est journalisée et la préférence <code>external_api_allowlist</code> filtre les paquets. Le verrou de vitesse s'applique à l'API.</p>
+        <p data-l="en">Once enabled, <b>any installed app</b> can send these intents. Every read is logged and the <code>external_api_allowlist</code> preference filters packages. The speed lock applies to the API.</p>
+        <pre class="code">adb logcat -s MG4_API</pre>
+      </div>
+    </div>
+  </details>
+</section>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ COMPATIBILITÉ ═══════════════════════════════ -->
+<section class="section" id="compatibilite">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2><span data-l="fr">Compatibilité par firmware</span><span data-l="en">Compatibility by firmware</span></h2>
+      <p data-l="fr">MG4 Electric (SAIC), écran MT2712, Android Automotive 9+, 1280 × 480. La colonne surlignée suit le firmware choisi pour la maquette.</p>
+      <p data-l="en">MG4 Electric (SAIC), MT2712 head unit, Android Automotive 9+, 1280 × 480. The highlighted column follows the firmware picked for the mockup.</p>
+    </div>
+    <div class="table-wrap">
+      <table class="matrix">
+        <thead>
+          <tr><th><span data-l="fr">Fonction</span><span data-l="en">Feature</span></th><th data-col="SWI133">SWI133</th><th data-col="SWI132">SWI132</th><th data-col="SWI68">SWI68</th><th data-col="SWI69">SWI69</th><th data-col="SWI131">SWI131</th><th data-col="SWI165">SWI165</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span data-l="fr">Mode de conduite · régénération · éco. énergie</span><span data-l="en">Drive mode · regeneration · energy saving</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Sélecteur ADAS (5ᵉ mode)</span><span data-l="en">ADAS selector (5th mode)</span></td><td data-col="SWI133" class="p">ICA</td><td data-col="SWI132" class="p">ICA</td><td data-col="SWI68" class="p">TJA</td><td data-col="SWI69" class="p">TJA</td><td data-col="SWI131" class="p">TJA</td><td data-col="SWI165" class="p">TJA</td></tr>
+          <tr><td><span data-l="fr">Reconnaissance des panneaux (TSR)</span><span data-l="en">Traffic sign recognition (TSR)</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Alertes survitesse + changement de limite</span><span data-l="en">Overspeed + speed-limit change alerts</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="n">✕</td><td data-col="SWI69" class="n">✕</td><td data-col="SWI131" class="n">✕</td><td data-col="SWI165" class="n">✕</td></tr>
+          <tr><td><span data-l="fr">Avertissement sonore unique</span><span data-l="en">Single audible warning</span></td><td data-col="SWI133" class="n">✕</td><td data-col="SWI132" class="n">✕</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Anticollision avant (AEB)</span><span data-l="en">Forward collision (AEB)</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Sortie de voie (ELK)</span><span data-l="en">Lane keeping (ELK)</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="p"><span data-l="fr">✓ sans urgence, + son/vibration</span><span data-l="en">✓ no emergency, + sound/vibration</span></td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">ESC · somnolence · sensibilité</span><span data-l="en">ESC · drowsiness · sensitivity</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Sièges et volant chauffants</span><span data-l="en">Heated seats and wheel</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="n">✕</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="n">✕</td><td data-col="SWI131" class="n">✕</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Climatisation (consigne, ventilation, modes)</span><span data-l="en">Climate (setpoint, fan, modes)</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Luminosité de l'écran</span><span data-l="en">Screen brightness</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Baisse du volume en quittant (Audio)</span><span data-l="en">Volume drop when leaving (Audio)</span> <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></td><td data-col="SWI133" class="p"><span data-l="fr">✓ portes</span><span data-l="en">✓ doors</span></td><td data-col="SWI132" class="p"><span data-l="fr">✓ portes</span><span data-l="en">✓ doors</span></td><td data-col="SWI68" class="p">✓ READY</td><td data-col="SWI69" class="p">✓ READY</td><td data-col="SWI131" class="p">✓ READY</td><td data-col="SWI165" class="p">✓ READY</td></tr>
+          <tr><td><span data-l="fr">Mode Personnalisé (puissance, direction, pédale)</span><span data-l="en">Custom mode (power, steering, pedal)</span> <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Sens de l'air</span><span data-l="en">Air direction</span> <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Vitres électriques</span><span data-l="en">Power windows</span> <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Statistiques · Mode Garage · taille du texte</span><span data-l="en">Statistics · Garage mode · text size</span> <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.7</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Éteindre le véhicule (écran actif)</span><span data-l="en">Power the vehicle off (screen on)</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Profils · raccourcis · automatisations · API</span><span data-l="en">Profiles · shortcuts · automations · API</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note" data-l="fr"><b>SWI133, SWI68, SWI165</b> utilisent l'ancien SDK SAIC, <b>SWI69, SWI131, SWI132</b> la famille « A9 ». MG4Control passe par plusieurs voies (API Car d'Android Automotive, binder direct, services ADAS du firmware) et se replie automatiquement si l'une échoue.</p>
+    <p class="note" data-l="en"><b>SWI133, SWI68, SWI165</b> use the older SAIC SDK, <b>SWI69, SWI131, SWI132</b> the “A9” family. MG4Control uses several paths (Android Automotive Car API, direct binder, firmware ADAS services) and falls back automatically if one fails.</p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ INSTALLATION ═══════════════════════════════ -->
+<section class="section alt" id="installation">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2><span data-l="fr">Installation</span><span data-l="en">Installation</span></h2>
+      <p data-l="fr">Chaque release fournit deux variantes : <b>Online</b> (usage standard, mises à jour automatiques) et <b>Offline</b> 🔒 (aucun accès réseau). N'en installez qu'une.</p>
+      <p data-l="en">Every release ships two variants: <b>Online</b> (standard use, automatic updates) and <b>Offline</b> 🔒 (no network access). Install just one.</p>
+    </div>
+    <div class="cols">
+      <div>
+        <ol class="steps" data-l="fr">
+          <li>Téléchargez l'APK depuis les <a href="https://github.com/SliDeeN/MG4Control/releases">releases GitHub</a>. Déjà installé ? Mettez à jour depuis l'app (Réglages → Infos).</li>
+          <li>Copiez-le sur une <b>clé USB formatée en FAT32</b>.</li>
+          <li>Insérez la clé dans la MG4 et ouvrez le <b>gestionnaire de fichiers</b> (accès aux paramètres AAOS).</li>
+          <li>Installez l'APK, ouvrez MG4Control et <b>choisissez votre langue</b>.</li>
+        </ol>
+        <ol class="steps" data-l="en">
+          <li>Download the APK from the <a href="https://github.com/SliDeeN/MG4Control/releases">GitHub releases</a>. Already installed? Update from the app (Settings → Info).</li>
+          <li>Copy it to a <b>FAT32-formatted USB stick</b>.</li>
+          <li>Plug the stick into the MG4 and open the <b>file manager</b> (access to the AAOS settings).</li>
+          <li>Install the APK, open MG4Control and <b>pick your language</b>.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h3><span data-l="fr">Compiler soi-même</span><span data-l="en">Build it yourself</span></h3>
+        <p data-l="fr">Android Studio Hedgehog (2023.1)+, JDK 17+, SDK API 34.</p>
+        <p data-l="en">Android Studio Hedgehog (2023.1)+, JDK 17+, SDK API 34.</p>
+        <pre class="code">./gradlew assembleOnlineDebug
+# app/build/outputs/apk/online/debug/</pre>
+        <p style="margin-top:12px" data-l="fr">L'application tourne avec l'identité système (<code>android.uid.system</code>) : elle doit être signée avec la clé de la ROM.</p>
+        <p style="margin-top:12px" data-l="en">The app runs with the system identity (<code>android.uid.system</code>): it must be signed with the ROM key.</p>
+      </div>
+    </div>
+    <div class="callout danger">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+      <p data-l="fr"><b>MG4Control est un projet communautaire indépendant</b>, non affilié à MG Motor, SAIC Motor ni à leurs filiales, et non approuvé par eux. Vous l'utilisez entièrement à vos risques : des réglages incorrects peuvent modifier le comportement du véhicule. Procédez avec prudence.</p>
+      <p data-l="en"><b>MG4Control is an independent community project</b>, not affiliated with, endorsed or supported by MG Motor, SAIC Motor or any of their subsidiaries. Use it entirely at your own risk: incorrect settings may change the vehicle's behaviour. Proceed with caution.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ═══════════════════════════════ PIED DE PAGE ═══════════════════════════════ -->
+<footer class="site-foot">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <a class="brand" href="#top"><img class="brand-mark" src="assets/img/icon-180.png" alt="" width="34" height="34"><span class="brand-name">MG<span class="four">4</span><span class="ctl">Control</span></span></a>
+        <p style="margin-top:10px" data-l="fr">Fait avec ❤️ par SliDeeN et Claude IA. Basé sur DriveHub Dort par Merth4n &amp; hotboy_ist. Merci à confor1max, FrAsErTaG, sixty4h, hojnikb et depippi.p pour les tests avant chaque release.</p>
+        <p style="margin-top:10px" data-l="en">Made with ❤️ by SliDeeN and Claude AI. Based on DriveHub Dort by Merth4n &amp; hotboy_ist. Thanks to confor1max, FrAsErTaG, sixty4h, hojnikb and depippi.p for testing before every release.</p>
+        <p style="margin-top:6px" data-l="fr">Pilotage des vitres : merci à <a href="https://github.com/Skittle6938/winclose">winclose</a> de Skittle6938.</p>
+        <p style="margin-top:6px" data-l="en">Window control: thanks to <a href="https://github.com/Skittle6938/winclose">winclose</a> by Skittle6938.</p>
+      </div>
+      <div>
+        <h4><span data-l="fr">Projet</span><span data-l="en">Project</span></h4>
+        <ul>
+          <li><a href="https://github.com/SliDeeN/MG4Control">GitHub</a></li>
+          <li><a href="https://github.com/SliDeeN/MG4Control/releases">Releases</a></li>
+          <li><a href="https://github.com/SliDeeN/MG4Control/issues/new/choose" target="_blank" rel="noopener"><span data-l="fr">Signaler un bug / proposer une idée</span><span data-l="en">Report a bug / suggest an idea</span></a></li>
+          <li><a href="https://gitlab.com/SliDeeN/mg4control">GitLab</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4><span data-l="fr">Soutenir le projet</span><span data-l="en">Support the project</span></h4>
+        <ul>
+          <li><a href="https://www.paypal.com/paypalme/pfauquembergue">PayPal</a></li>
+          <li><a href="https://buymeacoffee.com/slideen">Buy Me a Coffee</a></li>
+        </ul>
+        <h4 style="margin-top:14px"><span data-l="fr">Licence</span><span data-l="en">Licence</span></h4>
+        <p data-l="fr">GNU GPL v3 ou ultérieure à partir de la 2.6.6 ; MIT jusqu'à la 2.6.5 incluse.</p>
+        <p data-l="en">GNU GPL v3 or later from 2.6.6; MIT up to and including 2.6.5.</p>
+      </div>
+    </div>
+    <p class="disclaimer" data-l="fr">MG et MG4 sont des marques de leurs propriétaires respectifs, citées uniquement pour indiquer la compatibilité. La maquette de cette page est une simulation : son apparence peut différer de l'application installée sur la voiture, et les valeurs affichées (consommation de données, versions, journaux…) sont des exemples.</p>
+    <p class="disclaimer" data-l="en">MG and MG4 are trademarks of their respective owners, mentioned only to indicate compatibility. The mockup on this page is a simulation: it may look different from the app installed in the car, and displayed values (data usage, versions, logs…) are examples.</p>
+  </div>
+</footer>
+
+<div class="dock" aria-label="Véhicule virtuel"></div>
+
+<script src="assets/js/strings.js"></script>
+<script src="assets/js/sim.js"></script>
+<script src="assets/js/site.js"></script>
+<script src="assets/js/explorer.js"></script>
+</body>
+</html>

@@ -9,7 +9,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ScrollView
 import android.widget.Button
-import android.widget.LinearLayout
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
@@ -17,12 +16,14 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.R
+import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.MG4Hardware.AebMode
 import com.mg4.control.hardware.MG4Hardware.AebSensitivity
 import com.mg4.control.hardware.MG4Hardware.ElkMode
 import com.mg4.control.hardware.MG4Hardware.ElkSensitivity
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
+import com.mg4.control.model.AirFlow
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.util.FirmwareInfo
@@ -40,8 +41,10 @@ import kotlinx.coroutines.withContext
 class DashboardFragment : Fragment() {
 
     // ── ViewPager ────────────────────────────────────────────────────────────
-    /** Onglet courant du rail : 0=Conduite, 1=Securite, 2=Confort. Remplace pager.currentItem. */
+    /** Onglet courant du rail : 0=Conduite, 1=Securite, 2=Confort, 3=Vitres. Remplace pager.currentItem. */
     private var currentTab = 0
+
+    /** Onglet Vitres (V0 de test) : logique tactile et sondes dans sa propre classe. */
 
     // ── Page 0 — Drive mode ─────────────────────────────────────────────────
     private val driveModeButtons = mutableMapOf<DriveMode, Button>()
@@ -85,6 +88,12 @@ class DashboardFragment : Fragment() {
     private var energySavingOn = false
     /** Dernier mode de conduite connu — nécessaire pour arbitrer les exclusions SNOW / Éco énergie. */
     private var currentDriveMode: DriveMode? = null
+
+    // ── Mode Personnalisé — puissance / direction / pédale ───────────────────
+    // Une entrée par ligne : le bouton, et l'index qu'il représente (0/1/2).
+    private val customPowerButtons  = mutableMapOf<Int, Button>()
+    private val customSteerButtons  = mutableMapOf<Int, Button>()
+    private val customPedalButtons  = mutableMapOf<Int, Button>()
 
     // ── AEB : page 0 pour VSM-based, page 1 (SWI133) pour les autres ───────────
     private var switchAeb: Switch? = null
@@ -176,9 +185,10 @@ class DashboardFragment : Fragment() {
     // ═════════════════════════════════════════════════════════════════════════
 
     private companion object {
-        const val TAB_DRIVE = 0
         const val TAB_SAFETY = 1
         const val TAB_COMFORT = 2
+        /** Tag des appuis « Sens de l'air » : le même que le filtre de la sonde MG4_AIR. */
+        const val CLIM_UI_TAG = "MG4_AIR"
     }
 
     /**
@@ -320,6 +330,17 @@ class DashboardFragment : Fragment() {
         switchSoundWarning = view.findViewById(R.id.switch_sound_warning)
         alertsGroupSwi133  = view.findViewById(R.id.alerts_group_swi133)
 
+        // Mode Personnalisé — trois lignes de trois boutons
+        customPowerButtons[0] = view.findViewById(R.id.btn_cd_power_eco)
+        customPowerButtons[1] = view.findViewById(R.id.btn_cd_power_normal)
+        customPowerButtons[2] = view.findViewById(R.id.btn_cd_power_sport)
+        customSteerButtons[0] = view.findViewById(R.id.btn_cd_steer_comfort)
+        customSteerButtons[1] = view.findViewById(R.id.btn_cd_steer_normal)
+        customSteerButtons[2] = view.findViewById(R.id.btn_cd_steer_sport)
+        customPedalButtons[0] = view.findViewById(R.id.btn_cd_pedal_comfort)
+        customPedalButtons[1] = view.findViewById(R.id.btn_cd_pedal_normal)
+        customPedalButtons[2] = view.findViewById(R.id.btn_cd_pedal_sport)
+
         // TSR + Économie d'énergie
         switchTsr       = view.findViewById(R.id.switch_tsr)
         btnEnergySaving = view.findViewById(R.id.btn_energy_saving)
@@ -360,6 +381,22 @@ class DashboardFragment : Fragment() {
             btn.setOnClickListener {
                 applyDriveModeUI(mode)
                 CoroutineScope(Dispatchers.IO).launch { MG4Hardware.setDriveMode(mode) }
+            }
+        }
+
+        // Mode Personnalisé — chaque ligne écrit son réglage et rien d'autre.
+        listOf(
+            Triple(customPowerButtons, MG4Hardware::setCustomPower,    "puissance"),
+            Triple(customSteerButtons, MG4Hardware::setCustomSteering, "direction"),
+            Triple(customPedalButtons, MG4Hardware::setCustomPedal,    "pédale")
+        ).forEach { (boutons, ecrire, nom) ->
+            boutons.forEach { (index, btn) ->
+                btn.setOnClickListener {
+                    highlightCustomRow(boutons, index)
+                    CoroutineScope(Dispatchers.IO).launch {
+                        AppLogger.i("MG4_DASH", "mode personnalisé — $nom = $index → ${ecrire(index)}")
+                    }
+                }
             }
         }
 
@@ -733,6 +770,9 @@ class DashboardFragment : Fragment() {
         CoroutineScope(Dispatchers.IO).launch {
             val mode  = MG4Hardware.getDriveMode()
             val regen = MG4Hardware.getRegenLevel()
+            // Mode illisible = carte du mode Personnalisé invisible quoi qu'il arrive : on relève
+            // les deux voies de lecture (tag MG4_CUSTOM) plutôt que de laisser l'écran muet.
+            if (mode == null) MG4Hardware.probeCustomDrive("mode de conduite illisible")
             withContext(Dispatchers.Main) {
                 if (!isAdded) return@withContext
                 mode?.let  { applyDriveModeUI(it) }
@@ -906,8 +946,72 @@ class DashboardFragment : Fragment() {
         setRegenEnabled(!active && currentDriveMode != DriveMode.SNOW)
     }
 
+    /** Surligne l'option retenue d'une ligne du mode Personnalisé. */
+    private fun highlightCustomRow(boutons: Map<Int, Button>, actif: Int?) {
+        boutons.forEach { (index, btn) ->
+            val on = index == actif
+            btn.backgroundTintList = ColorStateList.valueOf(if (on) colorActive else colorInactive)
+            btn.setTextColor(if (on) colorTextActive else colorTextInactive)
+        }
+    }
+
+    /**
+     * Révèle la carte du mode Personnalisé et y reporte l'état du véhicule.
+     *
+     * Deux niveaux de masquage, et ils ne disent pas la même chose :
+     *  • la CARTE n'apparaît que si la voiture est réellement en mode Personnalisé — ces trois
+     *    réglages n'ont aucun effet ailleurs ;
+     *  • une LIGNE disparaît quand le véhicule ne répond pas du tout. Les six firmwares exposent
+     *    la commande, mais rien ne garantit que la finition porte l'équipement — une direction à
+     *    assistance variable, par exemple. Un bouton qui n'écrirait nulle part vaut moins que
+     *    pas de bouton du tout.
+     *
+     * En revanche une réponse hors barème garde sa ligne, sans rien de surligné : l'équipement
+     * répond, seule sa position manque. C'est ce cas-là qui faisait disparaître la carte entière
+     * sur SWI68 alors que les trois réglages s'écrivaient très bien.
+     */
+    private fun refreshCustomDrive(mode: DriveMode?) {
+        val vue = view ?: return
+        val carte = vue.findViewById<View>(R.id.section_custom_drive) ?: return
+        if (mode != DriveMode.CUSTOM) {
+            carte.visibility = View.GONE
+            return
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            val lignes = listOf(
+                Triple(customPowerButtons, MG4Hardware.getCustomPower(),    R.id.row_cd_power),
+                Triple(customSteerButtons, MG4Hardware.getCustomSteering(), R.id.row_cd_steer),
+                Triple(customPedalButtons, MG4Hardware.getCustomPedal(),    R.id.row_cd_pedal)
+            )
+            // Une position inconnue : on relève les valeurs brutes de toutes les voies (tag
+            // MG4_CUSTOM), seul moyen de vérifier l'échelle sur un firmware qu'on n'a pas sous la main.
+            if (lignes.any { it.second.index == null }) MG4Hardware.probeCustomDrive("mode Personnalisé")
+            withContext(Dispatchers.Main) {
+                if (!isAdded) return@withContext
+                // L'état a pu changer pendant la lecture (l'utilisateur quitte le mode) : on
+                // revérifie avant d'afficher, sinon la carte réapparaîtrait toute seule.
+                if (currentDriveMode != DriveMode.CUSTOM) { carte.visibility = View.GONE; return@withContext }
+                lignes.forEach { (boutons, etat, rowId) ->
+                    vue.findViewById<View>(rowId)?.visibility =
+                        if (etat.answered) View.VISIBLE else View.GONE
+                    highlightCustomRow(boutons, etat.index)
+                }
+                // Aucune réponse des trois : la carte n'aurait qu'un titre à montrer.
+                val lisible = lignes.any { it.second.answered }
+                carte.visibility = if (lisible) View.VISIBLE else View.GONE
+                // Trois lectures nulles d'un coup, c'est plus vraisemblablement une couche
+                // véhicule pas encore prête qu'une voiture dépourvue des trois équipements.
+                // Même repli que refreshDriveRegen, qui réessaie pour la même raison.
+                if (!lisible) view?.postDelayed({
+                    if (isAdded && currentDriveMode == DriveMode.CUSTOM) refreshCustomDrive(currentDriveMode)
+                }, 3_000)
+            }
+        }
+    }
+
     private fun applyDriveModeUI(mode: DriveMode) {
         currentDriveMode = mode
+        refreshCustomDrive(mode)
         driveModeButtons.forEach { (m, btn) ->
             val (bg, text) = when {
                 m != mode            -> colorInactive to colorTextInactive
@@ -1138,9 +1242,11 @@ class DashboardFragment : Fragment() {
     private var climBtnPower: MaterialButton? = null
     private var climBtnAc: MaterialButton? = null
     private var climBtnAuto: MaterialButton? = null
-    private var climBtnDefFront: MaterialButton? = null
-    private var climBtnDefRear: MaterialButton? = null
     private var climLoopButtons: Map<Int, MaterialButton?> = emptyMap()
+    private var climBtnAirFace: MaterialButton? = null
+    private var climBtnAirFeet: MaterialButton? = null
+    private var climBtnAirWindshield: MaterialButton? = null
+    private var climBtnAirRear: MaterialButton? = null
     /** Dernier état connu — sert à savoir vers quoi basculer au clic d'un bouton. */
     private var climLastState: MG4Hardware.ClimateState? = null
 
@@ -1175,13 +1281,15 @@ class DashboardFragment : Fragment() {
         climBtnPower       = view.findViewById(R.id.clim_btn_power)
         climBtnAc          = view.findViewById(R.id.clim_btn_ac)
         climBtnAuto        = view.findViewById(R.id.clim_btn_auto)
-        climBtnDefFront    = view.findViewById(R.id.clim_btn_defrost_front)
-        climBtnDefRear     = view.findViewById(R.id.clim_btn_defrost_rear)
         climLoopButtons = mapOf(
             MG4Hardware.LoopMode.INNER   to view.findViewById<MaterialButton>(R.id.clim_btn_loop_inner),
             MG4Hardware.LoopMode.OUTSIDE to view.findViewById<MaterialButton>(R.id.clim_btn_loop_outside),
             MG4Hardware.LoopMode.AUTO    to view.findViewById<MaterialButton>(R.id.clim_btn_loop_auto)
         )
+        climBtnAirFace       = view.findViewById(R.id.clim_btn_air_face)
+        climBtnAirFeet       = view.findViewById(R.id.clim_btn_air_feet)
+        climBtnAirWindshield = view.findViewById(R.id.clim_btn_air_windshield_front)
+        climBtnAirRear       = view.findViewById(R.id.clim_btn_air_windshield_rear)
         setupClimateListeners()
         refreshClimatePage()
     }
@@ -1247,14 +1355,42 @@ class DashboardFragment : Fragment() {
         climBtnAuto?.setOnClickListener {
             climLastState?.autoOn?.let { cur -> climateWrite { MG4Hardware.setClimateAuto(!cur) } }
         }
-        climBtnDefFront?.setOnClickListener {
-            climLastState?.defrostFront?.let { cur -> climateWrite { MG4Hardware.setClimateDefrostFront(!cur) } }
-        }
-        climBtnDefRear?.setOnClickListener {
-            climLastState?.defrostRear?.let { cur -> climateWrite { MG4Hardware.setClimateDefrostRear(!cur) } }
-        }
         climLoopButtons.forEach { (mode, btn) ->
             btn?.setOnClickListener { climateWrite { MG4Hardware.setClimateLoopMode(mode) } }
+        }
+
+        // ── Sens de l'air : boutons CUMULABLES ──
+        // Chaque appui recompose la combinaison à partir du dernier état LU sur la voiture, pas
+        // d'un état gardé à l'écran : l'écran d'origine peut l'avoir changé entre-temps.
+        fun basculerAir(face: Boolean = false, feet: Boolean = false, windshield: Boolean = false) {
+            val lu = climLastState?.airFlow ?: return
+            val actuel = AirFlow.partsOf(lu) ?: AirFlow.Parts(face = false, feet = false, windshield = false)
+            val cible = AirFlow.directionFor(
+                face       = actuel.face xor face,
+                feet       = actuel.feet xor feet,
+                windshield = actuel.windshield xor windshield
+            )
+            // L'air doit bien sortir quelque part : le dernier bouton allumé ne s'éteint pas.
+            if (cible == null) {
+                AppLogger.i(CLIM_UI_TAG, "Sens de l'air : dernier bouton actif, appui ignoré (valeur lue=$lu)")
+                return
+            }
+            AppLogger.i(CLIM_UI_TAG, "Sens de l'air : appui → $lu ⇒ $cible")
+            // Relue par le rafraîchissement qui suit l'écriture ; d'ici là, un second appui
+            // rapide doit partir de la combinaison DEMANDÉE. Sans ça, il recomposait depuis
+            // l'ancienne valeur et pouvait être ignoré (constaté sur SWI133 le 2026-09-17).
+            climLastState = climLastState?.copy(airFlow = cible)
+            climateWrite { MG4Hardware.setClimateAirFlow(cible) }
+        }
+        climBtnAirFace?.setOnClickListener       { basculerAir(face = true) }
+        climBtnAirFeet?.setOnClickListener       { basculerAir(feet = true) }
+        climBtnAirWindshield?.setOnClickListener { basculerAir(windshield = true) }
+        // Lunette arrière : hors de l'échelle du sens de l'air, c'est le dégivrage arrière.
+        climBtnAirRear?.setOnClickListener {
+            climLastState?.defrostRear?.let { cur ->
+                climLastState = climLastState?.copy(defrostRear = !cur)   // même raison
+                climateWrite { MG4Hardware.setClimateDefrostRear(!cur) }
+            }
         }
     }
 
@@ -1293,8 +1429,14 @@ class DashboardFragment : Fragment() {
                 bindClimToggle(climBtnPower, s.powerOn)
                 bindClimToggle(climBtnAc, s.acOn)
                 bindClimToggle(climBtnAuto, s.autoOn)
-                bindClimToggle(climBtnDefFront, s.defrostFront)
-                bindClimToggle(climBtnDefRear, s.defrostRear)
+
+                // Valeur illisible → boutons grisés. Valeur lue mais hors échelle (7 « aucun »)
+                // → boutons actifs, aucun allumé : l'utilisateur peut choisir un sens.
+                val air = s.airFlow?.let { AirFlow.partsOf(it) }
+                bindClimToggle(climBtnAirFace,       s.airFlow?.let { air?.face == true })
+                bindClimToggle(climBtnAirFeet,       s.airFlow?.let { air?.feet == true })
+                bindClimToggle(climBtnAirWindshield, s.airFlow?.let { air?.windshield == true })
+                bindClimToggle(climBtnAirRear,       s.defrostRear)
 
                 climLoopButtons.forEach { (mode, btn) ->
                     val active = s.loopMode == mode
@@ -1315,6 +1457,8 @@ class DashboardFragment : Fragment() {
         val active = state == true
         btn?.backgroundTintList = ColorStateList.valueOf(if (active) colorActive else colorInactive)
         btn?.setTextColor(if (active) colorTextActive else colorTextInactive)
+        // Sans effet sur un bouton sans icône ; les boutons « Sens de l'air » en portent une.
+        btn?.iconTint = ColorStateList.valueOf(if (active) colorTextActive else colorTextInactive)
         btn?.isEnabled = state != null
         btn?.alpha = if (state != null) 1f else 0.35f
     }

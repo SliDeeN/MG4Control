@@ -1,5 +1,6 @@
 package com.mg4.control.hardware
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -18,9 +19,12 @@ import java.util.concurrent.ConcurrentHashMap
 import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.AirFlow
+import com.mg4.control.model.CustomDriveScale
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.util.FirmwareInfo
+import com.mg4.control.util.GarageMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -156,7 +160,6 @@ object MG4Hardware {
 
     // Katman5 — VehicleConditionManager (IVehicleConditionService via IHubService "vehiclecondition")
     private const val VCM_CLASS          = "com.saicmotor.sdk.vehiclesettings.manager.VehicleConditionManager"
-    private const val VCM_LISTENER_CLASS = "com.saicmotor.sdk.vehiclesettings.IVehicleConditionListener"
 
     // Katman5 SWI69/SWI131 — ICarGeneralService via CarAdapterClient (queryClient(0x1))
     private const val CAR_GENERAL_CLIENT_CLASS = "com.saicmotor.carapi.client.CarGeneralClient"
@@ -241,9 +244,6 @@ object MG4Hardware {
     @Volatile private var sCarBindAttempted = false
     @Volatile var logEnabled = true
 
-    @Volatile private var sDriveModeListener: DriveModeListener? = null
-    @Volatile private var sHvacListener: HvacListener? = null
-
     // ── Katman5 — IGNITION_STATE via CarPropertyManager (standard AAOS) ──────
     @Volatile private var sIgnitionCallbackProxy: Any? = null
     @Volatile private var sIgnitionCallbackRegistered = false
@@ -255,7 +255,6 @@ object MG4Hardware {
     @Volatile private var sVcmCallbackRegistered = false
     @Volatile private var sLastVcmIgnitionState = -1   // filtre les faux RUN répétés
     private val vehicleConditionCallbacks = java.util.concurrent.CopyOnWriteArrayList<(Int) -> Unit>()
-    private val katman5ReadyListeners     = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
 
     /** Listeners notifiés dès que Katman1 (CPM + HVAC) est opérationnel. */
     private val katman1ReadyListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
@@ -284,11 +283,6 @@ object MG4Hardware {
         if (ready) action() else katman4ReadyListeners.add(action)
     }
 
-    /** Exécute [action] dès que Katman5 (IVehicleConditionService) est opérationnel. */
-    fun whenKatman5Ready(action: () -> Unit) {
-        if (sVcmCallbackRegistered) action() else katman5ReadyListeners.add(action)
-    }
-
     /** Enregistre un callback invoqué à chaque changement d'état d'allumage (CarIgnitionItem). */
     fun registerVehicleConditionListener(callback: (Int) -> Unit) {
         vehicleConditionCallbacks.add(callback)
@@ -296,33 +290,6 @@ object MG4Hardware {
 
     fun unregisterVehicleConditionListener(callback: (Int) -> Unit) {
         vehicleConditionCallbacks.remove(callback)
-    }
-
-    /** Enregistre un callback sur IGNITION_STATE via CarPropertyManager (standard AAOS). */
-    fun registerIgnitionCallback(callback: (Int) -> Unit) {
-        ignitionCallbacks.add(callback)
-        if (sCarPropertyManager != null) registerIgnitionPropertyCallback()
-    }
-
-    fun unregisterIgnitionCallback(callback: (Int) -> Unit) {
-        ignitionCallbacks.remove(callback)
-    }
-
-    /** Désenregistre le proxy CarPropertyManager (appeler depuis Service.onDestroy). */
-    fun unregisterIgnitionPropertyCallback() {
-        val cpm = sCarPropertyManager ?: return
-        val proxy = sIgnitionCallbackProxy ?: return
-        try {
-            val m = cpm.javaClass.methods.firstOrNull {
-                it.name == "unregisterCallback" && it.parameterCount == 1
-            } ?: return
-            m.invoke(cpm, proxy)
-            sIgnitionCallbackProxy = null
-            sIgnitionCallbackRegistered = false
-            AppLogger.i(TAG, "  IGNITION_STATE callback unregistered ✓")
-        } catch (e: Exception) {
-            AppLogger.d(TAG, "  IGNITION: unregisterCallback error: ${e.message}")
-        }
     }
 
     /**
@@ -356,11 +323,11 @@ object MG4Hardware {
     /** Contexte applicatif, pour les messages utilisateur du verrou d'écriture. */
     internal fun appContext(): Context? = sAppContext
 
-    interface DriveModeListener { fun onDriveModeChanged(mode: DriveMode) }
-    interface HvacListener {
-        fun onSeatHeatChanged(left: Int, right: Int)
-        fun onSteeringHeatChanged(on: Boolean)
-    }
+    /** CarPropertyManager de la connexion Car principale, null tant qu'elle n'est pas prête (vitres). */
+    internal fun carPropertyManager(): Any? = sCarPropertyManager
+
+    /** Objet `Car` lié, pour obtenir un gestionnaire SAIC par son nom ([EnergyProbe]). */
+    internal fun car(): Any? = sCar
 
     // -------------------------------------------------------------------------
     // Init
@@ -396,7 +363,7 @@ object MG4Hardware {
         // Démarrage auto du watcher porte au boot si la feature est activée (tous firmwares).
         startDoorWatcherIfEnabled()
         // Connexion Car établie même si la feature est OFF → la sonde Diagnostic peut lire les portes.
-        if (hasDoorVolumeFeature()) connectCarProperty()
+        if (hasDoorDetection()) connectCarProperty()
 
         AppLogger.i(TAG, "========================================")
     }
@@ -405,6 +372,7 @@ object MG4Hardware {
     // Katman1 — android.car.Car (async, mirrors original bindCarService exactly)
     // -------------------------------------------------------------------------
 
+    @SuppressLint("PrivateApi")   // android.car.Car : API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
     private fun bindCarService(context: Context) {
         if (sCarBindAttempted) return
         sCarBindAttempted = true
@@ -550,6 +518,7 @@ object MG4Hardware {
 
     private fun getBinderService(serviceName: String): IBinder? {
         return try {
+            @SuppressLint("PrivateApi")   // API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
             val sm = Class.forName("android.os.ServiceManager")
             val method = sm.getMethod("getService", String::class.java)
             (method.invoke(null, serviceName) as? IBinder).also {
@@ -621,7 +590,7 @@ object MG4Hardware {
         tryInvoke("vpm.bindService()") { vpm!!.javaClass.getMethod("bindService").invoke(vpm) }
 
         // 2) init(Context, IVehicleServiceListener) via dynamic proxy — reçoit onServiceConnected
-        initWithServiceListener(vpm!!, context, launcherCtx)
+        initWithServiceListener(vpm!!, context)
 
         // 3) VehicleSettingManager pour SWI133 (ELK) — même singleton que SWI68
         tryInitVsm133(launcherCtx, context)
@@ -650,7 +619,7 @@ object MG4Hardware {
         AppLogger.i(TAG, "  Katman4: VPM prêt — mIVehiclePropertyService=${if (sVpmService != null) "OK ✓" else "null (en attente)"}")
     }
 
-    private fun initWithServiceListener(vpm: Any, context: Context, launcherCtx: Context) {
+    private fun initWithServiceListener(vpm: Any, context: Context) {
         val vpmClass = vpm.javaClass
 
         // Log all methods for diagnostics
@@ -1479,6 +1448,31 @@ object MG4Hardware {
         return if (gear < 0) null else gear == GEAR_PARK_VALUE
     }
 
+    // ── État READY (SENSOR_EPTRDY) : fermeture auto des vitres en quittant la voiture ──────
+    //   • SWI133        : VPM getIntProperty(0x5030048) — SENSOR_TYPE_EPTRDY (VehiclePropertyID vehiclesettings SWI133)
+    //   • SWI68/165     : VehicleConditionManager.getEngineState() — lit SENSOR_EPTRDY 0x2140157c
+    //   • A9 (132/131/69): CarStateClient.getSensorEptrdyState() — voie de winclose (validée SWI69)
+    private const val PROP_EPTRDY_VPM = 0x5030048
+
+    /**
+     * Valeur brute de l'état READY, sans journal (lue chaque seconde) ; null si le canal du firmware
+     * n'est pas prêt. Interprétation : [com.mg4.control.model.WindowAutoCloseTrigger.readyFromRaw].
+     */
+    fun readEptReadyRaw(): Int? {
+        val gen = FirmwareInfo.getGeneration()
+        return when {
+            gen == FirmwareInfo.Gen.SWI133 ->
+                if (sVpm == null) null else getIntPropertyVpm(PROP_EPTRDY_VPM)
+            FirmwareInfo.isNewGenVsm() || gen == FirmwareInfo.Gen.SWI132 ->
+                a9CarState()?.let { cs ->
+                    runCatching { cs.javaClass.getMethod("getSensorEptrdyState").invoke(cs) as? Int }.getOrNull()
+                }
+            gen == FirmwareInfo.Gen.SWI68 || gen == FirmwareInfo.Gen.SWI165 ->
+                sVcm?.let { vcm -> runCatching { vcm.javaClass.getMethod("getEngineState").invoke(vcm) as? Int }.getOrNull() }
+            else -> null
+        }
+    }
+
     // ── Lecture gear SWI68/165 (poll direct) + A9 (CarStateClient) ───────────
     private const val CAR_STATE_CLIENT_CLASS = "com.saicmotor.carapi.client.CarStateClient"
     private const val CAR_STATE_SERVICE_CODE = 0xb
@@ -1496,21 +1490,33 @@ object MG4Hardware {
 
     /** A9 : CarStateClient.getGearState() via CarAdapterClient.queryClient(0xb). */
     private fun readA9GearState(): Int {
-        val cl = sVsm?.javaClass?.classLoader ?: return Int.MIN_VALUE
+        val cs = a9CarState() ?: return Int.MIN_VALUE
         return try {
-            if (sCarState == null) {
-                val adapterClass = cl.loadClass(CAR_ADAPTER_CLIENT_CLASS)
-                val adapter = adapterClass.getMethod("getInstance", Context::class.java).invoke(null, sAppContext)
-                val binder = adapterClass.getMethod("queryClient", Int::class.javaPrimitiveType)
-                    .invoke(adapter, CAR_STATE_SERVICE_CODE) as? android.os.IBinder ?: return Int.MIN_VALUE
-                val stateClass = cl.loadClass(CAR_STATE_CLIENT_CLASS)
-                sCarState = stateClass.getConstructor(android.os.IBinder::class.java).newInstance(binder)
-            }
-            (sCarState!!.javaClass.getMethod("getGearState").invoke(sCarState) as? Int) ?: Int.MIN_VALUE
+            (cs.javaClass.getMethod("getGearState").invoke(cs) as? Int) ?: Int.MIN_VALUE
         } catch (e: Exception) {
             AppLogger.w(TAG, "  A9 getGearState err: ${e.javaClass.simpleName}: ${e.message}"); Int.MIN_VALUE
         }
     }
+
+    /** A9 : CarStateClient (rapport, READY), créé à la première demande ; null si indisponible. */
+    private fun a9CarState(): Any? {
+        sCarState?.let { return it }
+        val cl = sVsm?.javaClass?.classLoader ?: return null
+        return try {
+            val adapterClass = cl.loadClass(CAR_ADAPTER_CLIENT_CLASS)
+            val adapter = adapterClass.getMethod("getInstance", Context::class.java).invoke(null, sAppContext)
+            val binder = adapterClass.getMethod("queryClient", Int::class.javaPrimitiveType)
+                .invoke(adapter, CAR_STATE_SERVICE_CODE) as? android.os.IBinder ?: return null
+            val stateClass = cl.loadClass(CAR_STATE_CLIENT_CLASS)
+            stateClass.getConstructor(android.os.IBinder::class.java).newInstance(binder).also { sCarState = it }
+        } catch (e: Exception) {
+            // READY est lu chaque seconde : une seule trace, pas une par tentative.
+            if (!sCarStateErrLogged) AppLogger.w(TAG, "  A9 CarStateClient err: ${e.javaClass.simpleName}: ${e.message}")
+            sCarStateErrLogged = true
+            null
+        }
+    }
+    @Volatile private var sCarStateErrLogged = false
 
     private fun getMixIntProperty(propId: Int): Int {
         val vpm = sVpm ?: return -1
@@ -1685,6 +1691,227 @@ object MG4Hardware {
         return ok
     }
 
+    // ── Mode de conduite Personnalisé : puissance, direction, pédale ─────────
+    //
+    // Ces trois réglages n'existent que dans le mode Personnalisé du véhicule. Ils sont présents
+    // sur les six firmwares, mais par deux voies différentes.
+
+    /**
+     * Signaux du SDK vehiclesettings (SWI133/68/165).
+     *
+     * ⚠️ Ce ne sont PAS des identifiants de propriété VHAL : l'app d'origine passe par
+     * `VehiclePropertyManager` avec sa propre numérotation. Les équivalents VHAL existent
+     * (0x2140a18c / 0x2140a18d / 0x2140a18e) si cette voie devenait un jour nécessaire.
+     */
+    private const val SIG_CUSTOM_POWER    = 0x2040002
+    private const val SIG_CUSTOM_STEERING = 0x2040004
+    private const val SIG_CUSTOM_PEDAL    = 0x2040005
+
+    /** Index manipulés par l'application — jamais les valeurs véhicule, voir [CustomDriveScale]. */
+    object CustomDrive {
+        const val ECO_COMFORT = 0
+        const val NORMAL      = 1
+        const val SPORT       = 2
+    }
+
+    /** Propriétés écrites par le service véhicule SWI68/165 derrière les méthodes du SDK — sondées. */
+    private const val AAD_CUSTOM_POWER    = 0x2140a18c
+    private const val AAD_CUSTOM_STEERING = 0x2140a18d
+    private const val AAD_CUSTOM_PEDAL    = 0x2140a18e
+
+    /**
+     * Voie d'accès du mode Personnalisé selon le firmware :
+     * - A9 (SWI69/131/132) : méthodes `…Mode` du CarVehicleSettingClient ;
+     * - SWI68/165 : méthodes `…Level` du VehicleSettingManager SAIC (le VehiclePropertyManager
+     *   n'existe pas sur ces firmwares, d'où les trois lignes absentes jusqu'ici) ;
+     * - SWI133 : propriétés VPM.
+     */
+    private fun customFamily(): CustomDriveScale.Family {
+        val gen = FirmwareInfo.getGeneration()
+        return when (gen) {
+            FirmwareInfo.Gen.SWI69, FirmwareInfo.Gen.SWI131, FirmwareInfo.Gen.SWI132 -> CustomDriveScale.Family.A9
+            FirmwareInfo.Gen.SWI68, FirmwareInfo.Gen.SWI165                          -> CustomDriveScale.Family.VSM_68
+            else                                                                      -> CustomDriveScale.Family.VPM_133
+        }
+    }
+
+    /** Méthode du SDK selon la famille (null = voie propriété VPM). */
+    private fun customMethod(setting: CustomDriveScale.Setting, write: Boolean): String? {
+        val prefix = if (write) "set" else "get"
+        return when (customFamily()) {
+            CustomDriveScale.Family.A9 -> prefix + when (setting) {
+                CustomDriveScale.Setting.POWER    -> "DrivingPowerTrainMode"
+                CustomDriveScale.Setting.STEERING -> "SteeringMode"
+                CustomDriveScale.Setting.PEDAL    -> "BrakePedalMode"
+            }
+            CustomDriveScale.Family.VSM_68 -> prefix + when (setting) {
+                CustomDriveScale.Setting.POWER    -> "ElectricPowertrainLevel"
+                CustomDriveScale.Setting.STEERING -> "SteeringLevel"
+                CustomDriveScale.Setting.PEDAL    -> "BrakePedalLevel"
+            }
+            CustomDriveScale.Family.VPM_133 -> null
+        }
+    }
+
+    private fun customVpmProperty(setting: CustomDriveScale.Setting): Int = when (setting) {
+        CustomDriveScale.Setting.POWER    -> SIG_CUSTOM_POWER
+        CustomDriveScale.Setting.STEERING -> SIG_CUSTOM_STEERING
+        CustomDriveScale.Setting.PEDAL    -> SIG_CUSTOM_PEDAL
+    }
+
+    private fun setCustom(setting: CustomDriveScale.Setting, index: Int): Boolean {
+        val value = CustomDriveScale.value(setting, index, customFamily()) ?: return false
+        if (logEnabled) AppLogger.i(CUSTOM_TAG, "$setting ← index=$index valeur=$value (${customFamily()})")
+        val method = customMethod(setting, write = true)
+        return if (method != null) callVsmVoid(method, value)
+               else setIntPropertyVpmRecovery(customVpmProperty(setting), value)
+    }
+
+    /**
+     * État d'un réglage du mode Personnalisé tel que le véhicule le rend.
+     *
+     * [Unavailable] et [Unknown] ne disent pas la même chose : la première est une voie muette
+     * (méthode absente, service pas encore lié, -1 du SDK) ; la seconde est une voiture qui
+     * répond, mais une valeur hors barème — l'équipement est là, sa position pas encore.
+     */
+    sealed class CustomSetting {
+        /** Position lue : 0 = Éco/Confort, 1 = Normal, 2 = Sport. */
+        data class Known(val position: Int) : CustomSetting()
+
+        /** Le véhicule répond, mais [raw] ne correspond à aucune position. */
+        data class Unknown(val raw: Int) : CustomSetting()
+
+        /** Aucune réponse du véhicule. */
+        object Unavailable : CustomSetting() {
+            // Sans ça, R8 renomme la classe et le journal affiche « o1.u@d1c1c66 ».
+            override fun toString() = "Unavailable"
+        }
+
+        /** Position à surligner, ou null tant qu'elle n'est pas connue. */
+        val index: Int? get() = (this as? Known)?.position
+
+        /** Vrai si le véhicule a répondu : la ligne a sa place à l'écran. */
+        val answered: Boolean get() = this !is Unavailable
+    }
+
+    /**
+     * Voie de secours SWI68/165 : l'instantané des réglages tenu par le service.
+     *
+     * C'est celle qu'emploie l'écran d'origine (`DrivingSettingsRepository` lit le bean, jamais
+     * le getter direct). Le getter direct, lui, relit la propriété du calculateur d'aide à la
+     * conduite à chaque appel et peut rester muet ; le bean, lui, garde la dernière valeur reçue.
+     * Les champs du bean portent les mêmes noms que les méthodes du manager.
+     */
+    private fun customFromBean(getter: String?): Int? {
+        if (getter == null) return null
+        val bean = callVsm("getVehicleSettingStatus") ?: return null
+        return try {
+            bean.javaClass.getMethod(getter).invoke(bean) as? Int
+        } catch (e: Exception) {
+            AppLogger.d(CUSTOM_TAG, "  bean.$getter() exc: ${e.message}")
+            null
+        }
+    }
+
+    private fun getCustom(setting: CustomDriveScale.Setting): CustomSetting {
+        val family = customFamily()
+        val method = customMethod(setting, write = false)
+        val direct = if (method != null) (callVsm(method) as? Int)
+                     else getIntPropertyVpm(customVpmProperty(setting))
+        val bean = if (family == CustomDriveScale.Family.VSM_68) customFromBean(method) else null
+        // La première voie qui rend une position connue l'emporte ; -1 est le « je ne sais pas »
+        // commun aux deux (service non lié côté SDK, exception côté VPM).
+        listOf("directe" to direct, "instantané" to bean).forEach { (nom, raw) ->
+            if (raw == null || raw < 0) return@forEach
+            CustomDriveScale.index(setting, raw, family)?.let {
+                logCustomSource(setting, nom, direct, bean)
+                return CustomSetting.Known(it)
+            }
+        }
+        val repondu = listOfNotNull(direct, bean).firstOrNull { it >= 0 }
+        return repondu?.let { CustomSetting.Unknown(it) } ?: CustomSetting.Unavailable
+    }
+
+    /**
+     * Une ligne par réglage et par démarrage : quelle voie a répondu, et ce que rendaient les
+     * autres. C'est le seul moyen de savoir laquelle garder — une fois les six firmwares passés,
+     * les voies inutiles et ce journal partent ensemble.
+     */
+    private val sCustomSourceSeen =
+        java.util.Collections.synchronizedSet(mutableSetOf<CustomDriveScale.Setting>())
+
+    private fun logCustomSource(
+        setting: CustomDriveScale.Setting, retenue: String, direct: Int?, bean: Int?
+    ) {
+        if (!sCustomSourceSeen.add(setting)) return
+        AppLogger.i(CUSTOM_TAG, "SOURCE $setting : voie $retenue retenue — " +
+            "directe=${direct ?: "muette"} · instantané=${bean ?: "n/a"} (${customFamily()})")
+    }
+
+    /** Puissance du mode Personnalisé. [index] : 0=Éco, 1=Normal, 2=Sport. */
+    fun setCustomPower(index: Int): Boolean = setCustom(CustomDriveScale.Setting.POWER, index)
+
+    /** Direction du mode Personnalisé. [index] : 0=Confort, 1=Normal, 2=Sport. */
+    fun setCustomSteering(index: Int): Boolean = setCustom(CustomDriveScale.Setting.STEERING, index)
+
+    /** Force exercée sur la pédale. [index] : 0=Confort, 1=Normal, 2=Sport. */
+    fun setCustomPedal(index: Int): Boolean = setCustom(CustomDriveScale.Setting.PEDAL, index)
+
+    /**
+     * Lectures des trois réglages.
+     *
+     * Le garde-fou n'a pas changé d'esprit — pas de bouton sans effet — mais il se règle sur la
+     * RÉPONSE du véhicule et non sur la valeur : une voiture qui répond hors barème garde sa
+     * ligne, simplement sans rien de surligné. Sur SWI68/165 la position vient du calculateur
+     * d'aide à la conduite et peut manquer à l'ouverture de l'écran ; masquer la ligne pour
+     * autant privait le conducteur d'un réglage qui, lui, s'écrit sans problème.
+     */
+    fun getCustomPower(): CustomSetting = getCustom(CustomDriveScale.Setting.POWER)
+
+    fun getCustomSteering(): CustomSetting = getCustom(CustomDriveScale.Setting.STEERING)
+
+    fun getCustomPedal(): CustomSetting = getCustom(CustomDriveScale.Setting.PEDAL)
+
+    // ── Sonde du mode Personnalisé ────────────────────────────────────────────
+    private const val CUSTOM_TAG = "MG4_CUSTOM"
+    private const val CUSTOM_PROBE_THROTTLE_MS = 30_000L
+    @Volatile private var sCustomProbeMs = 0L
+
+    /**
+     * Relève les valeurs BRUTES des trois réglages par toutes les voies du firmware, pour vérifier
+     * l'échelle retenue ([CustomDriveScale]) — surtout sur SWI68/165 où elle est supposée.
+     * Limitée à une fois toutes les 30 s : l'écran réessaie toutes les 3 s quand rien n'est lisible.
+     */
+    fun probeCustomDrive(origin: String) {
+        val now = SystemClock.elapsedRealtime()
+        if (now - sCustomProbeMs < CUSTOM_PROBE_THROTTLE_MS) return
+        sCustomProbeMs = now
+        val family = customFamily()
+        AppLogger.i(CUSTOM_TAG, "SONDE [$origin] firmware=${FirmwareInfo.getGeneration()} famille=$family " +
+            "vsm=${sVsm != null} vpm=${sVpm != null} cpm=${sCarPropertyManager != null}")
+        // Le mode de conduite commande l'affichage de toute la carte : illisible, rien ne s'ouvre.
+        AppLogger.i(CUSTOM_TAG, "SONDE [$origin] mode de conduite : " +
+            "CPM 0x${PROP_DRIVE_MODE.toString(16)}=${getIntPropertyCPM(PROP_DRIVE_MODE, AREA_GLOBAL)} · " +
+            "${driveModeGetter()}=${callVsm(driveModeGetter()) ?: "muet"} " +
+            "→ ${getDriveMode()?.label ?: "illisible"}")
+        CustomDriveScale.Setting.entries.forEach { setting ->
+            val voies = mutableListOf<String>()
+            val getter = customMethod(setting, write = false)
+            getter?.let { m -> voies += "$m=${callVsm(m) ?: "null"}" }
+            if (family == CustomDriveScale.Family.VSM_68)
+                voies += "bean.$getter=${customFromBean(getter) ?: "null"}"
+            if (sVpm != null) voies += "VPM 0x${customVpmProperty(setting).toString(16)}=${getIntPropertyVpm(customVpmProperty(setting))}"
+            val aad = when (setting) {
+                CustomDriveScale.Setting.POWER    -> AAD_CUSTOM_POWER
+                CustomDriveScale.Setting.STEERING -> AAD_CUSTOM_STEERING
+                CustomDriveScale.Setting.PEDAL    -> AAD_CUSTOM_PEDAL
+            }
+            voies += "CPM 0x${aad.toString(16)}@global=${getIntPropertyCPM(aad, AREA_GLOBAL)} @0=${getIntPropertyCPM(aad, 0)}"
+            AppLogger.i(CUSTOM_TAG, "SONDE [$origin] $setting : ${voies.joinToString(" · ")} " +
+                "→ état retenu=${getCustom(setting)}")
+        }
+    }
+
     fun setRegenLevel(level: RegenLevel): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setRegenLevel → ${level.label} (${level.value})")
         return if (level == RegenLevel.ONE_PEDAL) {
@@ -1733,15 +1960,42 @@ object MG4Hardware {
     fun getSteeringHeatOrNull(): Boolean? =
         getIntPropertyHvac(PROP_STEERING_HEAT, AREA_HVAC).takeIf { it >= 0 }?.let { it > 0 }
 
+    /**
+     * Mode de conduite courant, `null` s'il reste illisible.
+     *
+     * Deux voies dans cet ordre : la propriété véhicule (la seule disponible sur SWI133), puis
+     * la méthode du SDK — celle qu'emploie l'écran d'origine sur les firmwares à
+     * VehicleSettingManager (SWI68/165) et CarVehicleSettingClient (A9). Une valeur hors barème
+     * n'est plus repliée sur « Normal » : ce repli silencieux faisait croire que la voiture
+     * n'était jamais en mode Personnalisé, et la carte des trois réglages restait masquée.
+     */
     fun getDriveMode(): DriveMode? {
-        val cpm = sCarPropertyManager ?: return null
-        return try {
-            val raw = (cpm.javaClass
-                .getMethod("getIntProperty", Int::class.java, Int::class.java)
-                .invoke(cpm, PROP_DRIVE_MODE, AREA_GLOBAL) as? Int) ?: return null
-            DriveMode.fromValue(raw)
-        } catch (_: Exception) { null }
+        val rawCpm = getIntPropertyCPM(PROP_DRIVE_MODE, AREA_GLOBAL)
+        DriveMode.fromValueOrNull(rawCpm)?.let {
+            logDriveModeSource("propriété", rawCpm, null)
+            return it
+        }
+        val rawSdk = (callVsm(driveModeGetter()) as? Int)
+        val mode = rawSdk?.let { DriveMode.fromValueOrNull(it) }
+        if (mode != null) logDriveModeSource("SDK ${driveModeGetter()}", rawCpm, rawSdk)
+        else if (logEnabled)
+            AppLogger.d(TAG, "  mode de conduite illisible : CPM=$rawCpm " +
+                "${driveModeGetter()}=${rawSdk ?: "muet"}")
+        return mode
     }
+
+    /** Idem pour le mode de conduite : une ligne au premier succès, puis silence. */
+    private val sDriveModeSourceLogged = java.util.concurrent.atomic.AtomicBoolean(false)
+
+    private fun logDriveModeSource(retenue: String, rawCpm: Int, rawSdk: Int?) {
+        if (sDriveModeSourceLogged.getAndSet(true)) return
+        AppLogger.i(CUSTOM_TAG, "SOURCE mode de conduite : voie $retenue retenue — " +
+            "CPM 0x${PROP_DRIVE_MODE.toString(16)}=$rawCpm · ${driveModeGetter()}=${rawSdk ?: "non interrogé"}")
+    }
+
+    /** Méthode du SDK qui rend le mode de conduite (l'A9 la nomme autrement). */
+    private fun driveModeGetter(): String =
+        if (customFamily() == CustomDriveScale.Family.A9) "getDrivingMode" else "getDriveMode"
 
     fun getRegenLevel(): RegenLevel? {
         val cpm = sCarPropertyManager ?: return null
@@ -2482,12 +2736,6 @@ object MG4Hardware {
         }
     }
 
-    /** Retourne true si l'ELK est activé (mode ≠ OFF). */
-    fun isElkEnabled(): Boolean {
-        val mode = getElkMode()
-        return mode > 0 && mode != ElkMode.OFF
-    }
-
     /**
      * SWI132 — Alerte sonore (LAS Warning Sound) : 0=OFF, 1=ON.
      * Retourne -1 si erreur ou firmware non SWI132.
@@ -2776,8 +3024,6 @@ object MG4Hardware {
         if (FirmwareInfo.isVsmBased()) sVsm != null && sVsmService != null
         else                           sVpm != null && sVpmService != null
     fun isKatman4VpmCreated(): Boolean      = sVpm != null || sVsm != null
-    fun isCarPropertyManagerReady(): Boolean = sCarPropertyManager != null
-    fun isCarHvacManagerReady(): Boolean     = sCarHvacManager != null
 
     // -------------------------------------------------------------------------
     // IGNITION_STATE — CarPropertyManager callback (standard AAOS, tous firmwares)
@@ -3000,10 +3246,6 @@ object MG4Hardware {
                 sVcmCallbackRegistered = true
                 AppLogger.i(TAG, "  Katman5 SWI69: ICarGeneralCallback enregistré ✓")
 
-                val toNotify = katman5ReadyListeners.toList()
-                katman5ReadyListeners.clear()
-                Handler(Looper.getMainLooper()).post { toNotify.forEach { it() } }
-
                 Handler(Looper.getMainLooper()).postDelayed({
                     try {
                         val ignition = generalClientClass.getMethod("getIgnitionState").invoke(client) as? Int
@@ -3069,7 +3311,7 @@ object MG4Hardware {
         if (existing != null) {
             AppLogger.i(TAG, "  Katman5: singleton VCM déjà existant ✓")
             sVcm = existing
-            setupVcmCallback(existing, launcherCtx)
+            setupVcmCallback(existing)
             return
         }
 
@@ -3098,7 +3340,7 @@ object MG4Hardware {
                                 } catch (_: Exception) { null }
                                 if (instance != null) {
                                     sVcm = instance
-                                    setupVcmCallback(instance, launcherCtx)
+                                    setupVcmCallback(instance)
                                 }
                             }
                             "onServiceDisconnected" -> {
@@ -3138,16 +3380,16 @@ object MG4Hardware {
                     if (mgr != null && sVcm == null) {
                         AppLogger.i(TAG, "  Katman5: singleton récupéré @${delay}ms")
                         sVcm = mgr
-                        setupVcmCallback(mgr, launcherCtx)
+                        setupVcmCallback(mgr)
                     } else if (sVcm != null && !sVcmCallbackRegistered) {
-                        setupVcmCallback(sVcm!!, launcherCtx)
+                        setupVcmCallback(sVcm!!)
                     }
                 }
             }, delay)
         }
     }
 
-    private fun setupVcmCallback(vcm: Any, launcherCtx: Context) {
+    private fun setupVcmCallback(vcm: Any) {
         if (sVcmCallbackRegistered) return
 
         val registerMethod = vcm.javaClass.methods.firstOrNull { m ->
@@ -3195,10 +3437,6 @@ object MG4Hardware {
             sVcmCallbackRegistered = true
             AppLogger.i(TAG, "  Katman5: callback enregistré ✓")
 
-            val toNotify = katman5ReadyListeners.toList()
-            katman5ReadyListeners.clear()
-            Handler(Looper.getMainLooper()).post { toNotify.forEach { it() } }
-
             // Lecture immédiate (le callback ne se déclenche que sur CHANGEMENT)
             Handler(Looper.getMainLooper()).postDelayed({
                 val ignition = try {
@@ -3235,18 +3473,8 @@ object MG4Hardware {
     }
 
     // -------------------------------------------------------------------------
-    // Listener management
-    // -------------------------------------------------------------------------
-
-    fun setDriveModeListener(listener: DriveModeListener?) { sDriveModeListener = listener }
-    fun setHvacListener(listener: HvacListener?) { sHvacListener = listener }
-
-    // -------------------------------------------------------------------------
     // Diagnostic
     // -------------------------------------------------------------------------
-
-    /** Retourne true si le binder IVehicleSettingService est disponible. */
-    fun isVehicleBinderAvailable(): Boolean = sVehicleBinder != null
 
     /**
      * Génère un rapport de diagnostic complet :
@@ -3276,6 +3504,13 @@ object MG4Hardware {
         sb.appendLine("Katman5 prêt : ${if (sVcmCallbackRegistered) "✓ ($katman5Path)" else "✗ ($katman5Path)"}")
         sb.appendLine("Katman5 ign  : ${carIgnitionName(sLastVcmIgnitionState)} ($sLastVcmIgnitionState)")
         sb.appendLine()
+
+        // Sonde énergie : TOUS les relevés gardés, pas seulement le dernier — c'est leur
+        // comparaison (avant et après un trajet, pendant et après une charge) qui répond.
+        EnergyProbe.reports.forEach {
+            sb.appendLine(it)
+            sb.appendLine()
+        }
 
         if (gen == FirmwareInfo.Gen.SWI132) {
 
@@ -3346,7 +3581,6 @@ object MG4Hardware {
             fun vsmGet(method: String): Int = try {
                 (callVsm(method) as? Int) ?: -1
             } catch (_: Exception) { -1 }
-            fun fmtVsm(v: Int, ok: String) = if (v >= 0) "$v → $ok" else "-1 ← ERREUR (méthode absente ou sVsm null)"
 
             // ACC/TJA
             val accTjaRaw = getAccTjaMode()
@@ -3475,33 +3709,17 @@ object MG4Hardware {
         return gen == FirmwareInfo.Gen.SWI133 || gen == FirmwareInfo.Gen.SWI68 || gen == FirmwareInfo.Gen.SWI165
     }
 
-    /** Onglet Audio (baisse volume à l'ouverture de porte) : uniquement là où c'est fonctionnel. */
+    /** Onglet Audio (baisse de volume en quittant la voiture) : partout où le volume est pilotable. */
     fun hasAudioControl(): Boolean = hasDoorVolumeFeature()
 
     private const val DESCRIPTOR_CARADAPTER = "com.saicmotor.carapi.ICarAdapterService"
     private const val TX_QUERY_AUDIO_CLIENT = 1
     private const val HELPER_AUDIO_CODE     = 10
 
-    private const val AUDIO_SET_FADER_FRONT   = 12
-    private const val AUDIO_SET_BALANCE_RIGHT = 13
-    private const val AUDIO_SET_SPEED_VOL     = 17
-    private const val AUDIO_GET_SPEED_VOL     = 18
-    private const val AUDIO_SET_3D_EFFECT     = 26
-    private const val AUDIO_GET_3D_EFFECT     = 27
-    private const val AUDIO_SET_SOUND_FIELD   = 30
-    private const val AUDIO_GET_BALANCE       = 31
-    private const val AUDIO_GET_FADER         = 32
-    private const val AUDIO_SET_BOSE_SOUND    = 36
-    private const val AUDIO_GET_BOSE_SOUND    = 37
-    private const val AUDIO_SET_TONE          = 40
-    private const val AUDIO_GET_TONE          = 41
-
     @Volatile private var sCarAdapterBinder: IBinder? = null
     @Volatile private var sAudioHelper: IBinder? = null
     @Volatile private var sAudioDescriptor: String = ""
     @Volatile private var sAudioServiceConn: ServiceConnection? = null
-
-    val isAudioAvailable: Boolean get() = sAudioHelper?.isBinderAlive == true
 
     fun initAudio(context: Context) {
         // Le bind caradapter ne concerne que l'A9. Sur old-SDK, le loudness passe par
@@ -3551,38 +3769,6 @@ object MG4Hardware {
         } finally { data.recycle(); reply.recycle() }
     }
 
-    private fun audioGet(txCode: Int): Int {
-        val h = sAudioHelper ?: return -1
-        if (!h.isBinderAlive) { sAudioHelper = null; return -1 }
-        val data = Parcel.obtain(); val reply = Parcel.obtain()
-        return try {
-            data.writeInterfaceToken(sAudioDescriptor)
-            if (h.transact(txCode, data, reply, 0)) { reply.readException(); reply.readInt() } else -1
-        } catch (_: Exception) { -1 } finally { data.recycle(); reply.recycle() }
-    }
-
-    private fun audioSet(txCode: Int, value: Int): Boolean {
-        val h = sAudioHelper ?: return false
-        if (!h.isBinderAlive) { sAudioHelper = null; return false }
-        val data = Parcel.obtain(); val reply = Parcel.obtain()
-        return try {
-            data.writeInterfaceToken(sAudioDescriptor)
-            data.writeInt(value)
-            h.transact(txCode, data, reply, 0).also { if (it) reply.readException() }
-        } catch (_: Exception) { false } finally { data.recycle(); reply.recycle() }
-    }
-
-    private const val AUDIO_TYPE_MIN  = 0
-    private const val AUDIO_TYPE_MAX  = 3
-    private const val AUDIO_LEVEL_MIN = -9
-    private const val AUDIO_LEVEL_MAX =  9
-
-    fun getBoseSoundType(): Int              = audioGet(AUDIO_GET_BOSE_SOUND)
-    fun setBoseSoundType(t: Int): Boolean    = audioSet(AUDIO_SET_BOSE_SOUND, t.coerceIn(AUDIO_TYPE_MIN, AUDIO_TYPE_MAX))
-    fun getAudioBalance(): Int               = audioGet(AUDIO_GET_BALANCE)
-    fun setAudioBalance(v: Int): Boolean     = audioSet(AUDIO_SET_BALANCE_RIGHT, v.coerceIn(AUDIO_LEVEL_MIN, AUDIO_LEVEL_MAX))
-    fun getAudioFader(): Int                 = audioGet(AUDIO_GET_FADER)
-    fun setAudioFader(v: Int): Boolean       = audioSet(AUDIO_SET_FADER_FRONT, v.coerceIn(AUDIO_LEVEL_MIN, AUDIO_LEVEL_MAX))
     // ── Volume média — VOL_TYPE_MEDIA=0 ────────────────────────────────────────
     // Routage par firmware : old-SDK (133/68/165) → SmartSoundManager (reflection) ;
     // A9 (69/131/132) → ICarAudioService via binder caradapter (tx getMax=0x5 / getVol=0x6 / setVol=0x7).
@@ -3601,7 +3787,6 @@ object MG4Hardware {
             else            -> -1
         }
         AppLogger.i(VOL_TAG, "getMediaVolumeMax = $v  [oldSdk=${isOldSdkSound()} a9=${isA9Sound()} smartSound=${sSmartSound != null} audioHelper=${sAudioHelper != null}]")
-        logMediaVolumeDiag()   // A9 : compare type-0 vs group-id (no-op ailleurs)
         return v
     }
 
@@ -3659,20 +3844,6 @@ object MG4Hardware {
             data.writeInterfaceToken(sAudioDescriptor); data.writeInt(a); data.writeInt(b); data.writeInt(c)
             h.transact(txCode, data, reply, 0).also { if (it) reply.readException() }
         } catch (_: Exception) { false } finally { data.recycle(); reply.recycle() }
-    }
-
-    // Diagnostic A9 : le param de getVolume/getMaxVolume est-il un "type" (0=media) ou un
-    // "group id" (AAOS) ? On logge les deux pour comparer au max réel de la voiture.
-    private const val AUDIO_GET_GROUP_FOR_USAGE = 0xe   // getVolumeGroupIdForUsage(usage)
-    private const val USAGE_MEDIA_AAOS = 1              // AudioAttributes.USAGE_MEDIA
-    fun logMediaVolumeDiag() {
-        if (!isA9Sound()) return
-        val maxT = audioGetArg(AUDIO_GET_MAX_VOL, VOL_TYPE_MEDIA)
-        val volT = audioGetArg(AUDIO_GET_VOLUME,  VOL_TYPE_MEDIA)
-        val grp  = audioGetArg(AUDIO_GET_GROUP_FOR_USAGE, USAGE_MEDIA_AAOS)
-        val maxG = if (grp in 0..64) audioGetArg(AUDIO_GET_MAX_VOL, grp) else -1
-        val volG = if (grp in 0..64) audioGetArg(AUDIO_GET_VOLUME,  grp) else -1
-        AppLogger.i(VOL_TAG, "A9 diag: parType0[max=$maxT vol=$volT]  groupForUsage(MEDIA)=$grp  parGroup[max=$maxG vol=$volG]")
     }
 
     // ── Baisse du volume à l'ouverture d'une porte avant (v1 : SWI133) ──────────
@@ -4226,6 +4397,47 @@ object MG4Hardware {
      * 4. **La touche média Android**, dernier recours : c'est la seule voie sur les firmwares A9,
      *    où ce service SAIC n'existe pas, et la seule qui atteigne une session Bluetooth.
      */
+    /** `getCurrentAudioType` de `ICarAudioService` (A9). */
+    private const val AUDIO_GET_CURRENT_TYPE = 0x2c
+
+    /**
+     * SONDE — source audio déclarée par le véhicule sur A9, ou `null` si indisponible.
+     *
+     * Elle ne sert encore À RIEN dans les décisions : elle est là pour être relevée dans les
+     * rapports, parce qu'il nous manque une information et une seule.
+     *
+     * Le problème mesuré sur SWI132 : quand un téléphone est connecté, la session Bluetooth et
+     * celle de la radio se déclarent **toutes deux en lecture**. Relevé sur un essai radio :
+     * 18 fois la radio retenue, 16 fois le Bluetooth — un tirage au sort. Départager par
+     * l'ordre de la liste ne peut pas marcher.
+     *
+     * `getCurrentAudioType` est la seule source qui sache dire quelle source est réellement
+     * audible. Il reste à apprendre son espace de valeurs : d'où cette lecture, journalisée
+     * dans les cas ambigus et dans le rapport de diagnostic. Deux rapports — un sur radio, un
+     * sur Bluetooth — suffiront à établir la table, et l'aiguillage deviendra déterministe.
+     *
+     * ⚠️ Absent du launcher SWI131 (interface plus ancienne, 0x2c hors plage) : la transaction
+     * y est rejetée sans effet de bord. Vérifié dans le smali avant d'oser l'appel.
+     */
+    private fun typeAudioCourant(): Int? {
+        if (!isA9Sound()) return null
+        val h = sAudioHelper ?: return null
+        if (!h.isBinderAlive) return null
+        val data = Parcel.obtain()
+        val reply = Parcel.obtain()
+        return try {
+            data.writeInterfaceToken(sAudioDescriptor)
+            if (!h.transact(AUDIO_GET_CURRENT_TYPE, data, reply, 0)) return null
+            reply.readException()
+            reply.readInt()
+        } catch (e: Exception) {
+            null
+        } finally {
+            data.recycle()
+            reply.recycle()
+        }
+    }
+
     /**
      * Une session est-elle en lecture ? `null` si on ne peut pas les consulter.
      *
@@ -4275,7 +4487,16 @@ object MG4Hardware {
             return false
         }
 
-        val joue = sessions.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+        // SONDE : plusieurs sessions qui se déclarent en lecture EN MÊME TEMPS, c'est le cas
+        // qu'on ne sait pas trancher. On le journalise avec le type audio du véhicule — le
+        // choix ci-dessous, lui, est inchangé.
+        val enLecture = sessions.filter { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+        if (enLecture.size > 1) {
+            AppLogger.w(MEDIA_TAG, "AMBIGU : ${enLecture.size} sessions se déclarent en lecture " +
+                "(${enLecture.joinToString { it.packageName ?: "?" }}) — type audio véhicule = " +
+                "${typeAudioCourant() ?: "non exposé"} — retenue : ${enLecture[0].packageName}")
+        }
+        val joue = enLecture.firstOrNull()
         val cible = joue
             ?: if (cmd == CmdMedia.LECTURE_PAUSE)
                    // ⚠️ Pour REPRENDRE, on ne demande pas un état précis mais une CAPACITÉ.
@@ -4587,6 +4808,9 @@ object MG4Hardware {
         val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         AppLogger.i(MEDIA_TAG, "── DIAG média ────────────────────────────────")
         AppLogger.i(MEDIA_TAG, "lecture en cours (isMusicActive) = ${am?.isMusicActive}")
+        // Type audio déclaré par le véhicule (A9). À relever une fois par source pour établir
+        // la table — voir [typeAudioCourant].
+        AppLogger.i(MEDIA_TAG, "type audio véhicule (A9) = ${typeAudioCourant() ?: "non exposé"}")
 
         // Sessions média : c'est ce qui a montré que les touches média ne pouvaient pas aboutir.
         try {
@@ -4661,15 +4885,27 @@ object MG4Hardware {
         }
     }
 
-    /** Baisse du volume à l'ouverture de porte : détection DLOCK_DOOR_OPEN_STS via CarPropertyManager.
-     *  Lisible/fonctionnel uniquement sur SWI132 et SWI133 ; ailleurs le prop n'est pas exposé à l'app. */
-    fun hasDoorVolumeFeature(): Boolean {
+    /** Détection réelle de l'ouverture des portes (DLOCK_DOOR_OPEN_STS via CarPropertyManager) :
+     *  lisible uniquement sur SWI132 et SWI133 ; ailleurs le prop n'est pas exposé à l'app. */
+    fun hasDoorDetection(): Boolean {
         val gen = FirmwareInfo.getGeneration()
         return gen == FirmwareInfo.Gen.SWI132 || gen == FirmwareInfo.Gen.SWI133
     }
 
-    private fun doorVolumeEnabled(): Boolean =
-        sAppContext?.getSharedPreferences("mg4_settings", 0)?.getBoolean("door_volume_enabled", false) ?: false
+    /**
+     * Baisse du volume en quittant la voiture : partout où le volume média est pilotable (ancien SDK
+     * et A9). Déclencheur : la porte là où elle est lisible ([hasDoorDetection]), sinon la sortie du
+     * mode READY en P ([ReadyWatcher]), qui correspond sur MG4 à l'ouverture de la porte conducteur.
+     */
+    fun hasDoorVolumeFeature(): Boolean = isOldSdkSound() || isA9Sound()
+
+    private fun doorVolumeEnabled(): Boolean {
+        // Mode Garage : une portière qui fait chuter le volume est exactement le genre de
+        // comportement inexpliqué qu'on ne veut pas laisser observer.
+        if (GarageMode.isOn(sAppContext)) return false
+        return sAppContext?.getSharedPreferences("mg4_settings", 0)
+            ?.getBoolean("door_volume_enabled", false) ?: false
+    }
 
     private fun doorVolumeLevel(): Int =
         sAppContext?.getSharedPreferences("mg4_settings", 0)?.getInt("door_volume_level", 0) ?: 0
@@ -4694,12 +4930,67 @@ object MG4Hardware {
     fun startDoorVolumeWatcher() {
         if (!hasDoorVolumeFeature()) return
         sDoorWatcherOn = true
-        connectCarProperty()
+        if (hasDoorDetection()) connectCarProperty() else ReadyWatcher.add(readyVolumeListener)   // add idempotent
     }
 
     fun stopDoorVolumeWatcher() {
         sDoorWatcherOn = false           // poll conservé ; on ne déclenche plus la baisse
+        if (!hasDoorDetection()) ReadyWatcher.remove(readyVolumeListener)
         AppLogger.i(TAG, "  DoorVolumeWatcher: déclenchement désactivé")
+    }
+
+    /**
+     * Firmwares sans porte lisible : sortie de READY en P = départ du conducteur → baisse ; retour en
+     * READY → restauration si l'utilisateur l'a choisie. La sortie à l'extinction voiture occupée baisse
+     * aussi le volume (accepté). Rapport illisible : on baisse quand même (aucun risque, au contraire
+     * des vitres). Le premier état connu n'est pas une transition, sauf pour une restauration en
+     * attente (écran redémarré entre la baisse et le retour en READY).
+     */
+    private val readyVolumeListener = ReadyWatcher.Listener { ready, firstRead ->
+        if (!sDoorWatcherOn) return@Listener
+        if (ready) {
+            restoreMediaVolumeAfterDrop(if (firstRead) "READY à l'activation" else "retour en READY")
+            return@Listener
+        }
+        if (firstRead) return@Listener
+        if (!doorVolumeEnabled()) return@Listener   // inclut le Mode Garage
+        val inPark = isVehicleInPark()
+        if (inPark == false) {
+            AppLogger.i(DOORWATCH_TAG, "sortie de READY hors P → volume inchangé")
+            return@Listener
+        }
+        dropMediaVolumeForExit("sortie de READY (P=${inPark ?: "illisible"})")
+    }
+
+    /** Volume avant la baisse, gardé en préférences : la restauration survit à un redémarrage de l'écran. */
+    private const val KEY_VOLUME_BEFORE_DROP = "door_volume_before_drop"
+
+    private fun dropMediaVolumeForExit(origin: String) {
+        val level = doorVolumeLevel()
+        CoroutineScope(Dispatchers.IO).launch {
+            val before = getMediaVolume()
+            sVolumeBeforeDrop = before
+            if (before >= 0) sAppContext?.getSharedPreferences("mg4_settings", 0)?.edit()
+                ?.putInt(KEY_VOLUME_BEFORE_DROP, before)?.apply()
+            val ok = setMediaVolume(level)
+            AppLogger.i(DOORWATCH_TAG, "$origin → vol $before→$level = $ok")
+        }
+    }
+
+    private fun restoreMediaVolumeAfterDrop(origin: String) {
+        val prefs = sAppContext?.getSharedPreferences("mg4_settings", 0)
+        val restore = sVolumeBeforeDrop.takeIf { it >= 0 } ?: prefs?.getInt(KEY_VOLUME_BEFORE_DROP, -1) ?: -1
+        sVolumeBeforeDrop = -1
+        prefs?.edit()?.remove(KEY_VOLUME_BEFORE_DROP)?.apply()
+        if (restore < 0) return
+        if (!doorRestoreEnabled()) {
+            AppLogger.i(DOORWATCH_TAG, "$origin → restauration désactivée (volume laissé tel quel)")
+            return
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            val ok = setMediaVolume(restore)
+            AppLogger.i(DOORWATCH_TAG, "$origin → restauration vol $restore = $ok")
+        }
     }
 
     /** Sonde du bouton Diagnostic : logge le volume + l'état des portes à l'instant du clic. */
@@ -4707,6 +4998,11 @@ object MG4Hardware {
         AppLogger.i(VOL_TAG, "── DIAG (bouton Diagnostic) ──")
         getMediaVolumeMax()
         getMediaVolume()
+        if (!hasDoorDetection()) {
+            AppLogger.i(DOORWATCH_TAG, "DIAG pas de porte lisible sur ${FirmwareInfo.getGeneration()} → READY brut = " +
+                "${readEptReadyRaw() ?: "illisible"} (surveillance ${if (ReadyWatcher.ready != null) "active" else "inactive"})")
+            return
+        }
         connectCarProperty()   // idempotent ; normalement déjà connecté depuis l'init
         registerDoorCallback() // re-tente la souscription si pas encore posée
         probeDoorSnapshot()
@@ -4734,17 +5030,7 @@ object MG4Hardware {
     @Volatile private var sAirCondition: Any? = null
 
     // Voie CPM (secondaire). ⚠ SAIC a INVERSÉ current/set (0x…502/503) par rapport à l'AAOS.
-    private const val PROP_ENV_OUTSIDE_TEMP  = 0x11600703  // ENV_OUTSIDE_TEMPERATURE (AAOS std — renvoie 0 ici)
     private const val PROP_HVAC_TEMP_OUTCAR  = 0x15602511  // HVAC_TEMPERATURE_OUTCAR (vendor SAIC = temp extérieure)
-    private const val PROP_HVAC_AMBIENT_TEMP = 0x1560252a  // HVAC_AMBIENT_TEMPERATURE (vendor SAIC)
-    private const val PROP_HVAC_TEMP_CURRENT = 0x15600502  // HVAC_TEMPERATURE_CURRENT (SAIC — inversé vs AAOS)
-    private val TEMP_HVAC_AREAS = intArrayOf(0x1, 0x2, 0x4, AREA_HVAC, AREA_GLOBAL, 0)
-
-    private fun fmtTemp(v: Float?): String = when {
-        v == null || v.isNaN() -> "illisible"
-        v <= -1000f            -> "n/c(${"%.0f".format(v)})"   // sentinelle SAIC -10000 = service non connecté
-        else                   -> "%.1f".format(v)
-    }
 
     /** Lit un getter float sans argument sur le manager clim SAIC (réflexion). */
     private fun acFloat(name: String): Float? {
@@ -4810,34 +5096,6 @@ object MG4Hardware {
     }
 
     /**
-     * Sonde du bouton Diagnostic (lecture seule). Voie principale = service clim SAIC
-     * (`getOutCarTemp`, ce que fait l'OEM). Voie CPM = secondaire, teste les IDs vendor.
-     */
-    fun runTemperatureDiag() {
-        AppLogger.i(TEMP_TAG, "── DIAG température ──")
-        sAppContext?.let { initAirCondition(it) }   // au cas où l'init au démarrage n'a pas abouti
-
-        // Voie OEM (la bonne).
-        if (sAirCondition == null) {
-            AppLogger.i(TEMP_TAG, "AirConditionManager indisponible (SDK non chargé) — voir voie CPM")
-        } else {
-            AppLogger.i(TEMP_TAG, "OEM getOutCarTemp=${fmtTemp(acFloat("getOutCarTemp"))} " +
-                "drvSet=${acInt("getDrvTemp") ?: "?"} psgSet=${acInt("getPsgTemp") ?: "?"}")
-        }
-
-        // Voie CPM secondaire : IDs vendor SAIC (au cas où certains soient lisibles en direct).
-        AppLogger.i(TEMP_TAG, "CPM EXTstd(0x11600703)=${fmtTemp(getFloatPropertyCPM(PROP_ENV_OUTSIDE_TEMP, AREA_GLOBAL))} " +
-            "OUTCAR(0x15602511)=${fmtTemp(getFloatPropertyCPM(PROP_HVAC_TEMP_OUTCAR, AREA_GLOBAL))} " +
-            "AMBIENT(0x1560252a)=${fmtTemp(getFloatPropertyCPM(PROP_HVAC_AMBIENT_TEMP, AREA_GLOBAL))}")
-        for (area in TEMP_HVAC_AREAS) {
-            val a = "0x${Integer.toHexString(area)}"
-            AppLogger.i(TEMP_TAG, "CPM area=$a OUTCAR=${fmtTemp(getFloatPropertyCPM(PROP_HVAC_TEMP_OUTCAR, area))} " +
-                "AMBIENT=${fmtTemp(getFloatPropertyCPM(PROP_HVAC_AMBIENT_TEMP, area))} " +
-                "CURRENT=${fmtTemp(getFloatPropertyCPM(PROP_HVAC_TEMP_CURRENT, area))}")
-        }
-    }
-
-    /**
      * Température extérieure en °C, ou null si illisible. Voie OEM (`getOutCarTemp`) puis
      * repli CPM (`HVAC_TEMPERATURE_OUTCAR` @ zone 0x75, validé sur SWI133). Sentinelle SAIC
      * (-10000) et NaN => null. Lecture seule.
@@ -4848,176 +5106,8 @@ object MG4Hardware {
         return null
     }
 
-    // ── Sonde vitesse (bouton Diagnostic) ─────────────────────────────────────
-    private const val SPEED_TAG = "MG4_SPEED"
-
-    private fun fmtSpeed(v: Float?): String =
-        if (v == null || v.isNaN()) "illisible" else "%.1f".format(v)
-
-    /** Lit un getter float sans argument sur VehicleConditionManager (Katman5, old-SDK). */
-    private fun vcmFloat(name: String): Float? {
-        val vcm = sVcm ?: return null
-        return try { vcm.javaClass.getMethod(name).invoke(vcm) as? Float } catch (_: Exception) { null }
-    }
-
-    /**
-     * Sonde du bouton Diagnostic : logge la vitesse BRUTE telle que rendue par le véhicule,
-     * pour valider l'unité firmware par firmware. Lecture seule.
-     *
-     * Mode d'emploi : rouler à une vitesse connue (ex. 50 au compteur) et cliquer Diagnostic.
-     *  - valeur brute ≈ compteur  → km/h (ce que l'app suppose désormais) ✓
-     *  - valeur brute ≈ compteur/3,6 → m/s (il faudrait reconvertir sur ce firmware)
-     */
-    fun runSpeedDiag() {
-        AppLogger.i(SPEED_TAG, "── DIAG vitesse ──")
-        val rawGlobal = getFloatPropertyCPM(PROP_VEHICLE_SPEED, AREA_GLOBAL)
-        val rawZero   = getFloatPropertyCPM(PROP_VEHICLE_SPEED, 0)
-        val oem       = vcmFloat("getCarSpeed")   // sentinelle OEM -1.0f = indisponible
-        AppLogger.i(SPEED_TAG, "CPM brut(0x11600207) area=GLOBAL: ${fmtSpeed(rawGlobal)} | area=0: ${fmtSpeed(rawZero)}")
-        AppLogger.i(SPEED_TAG, "OEM getCarSpeed (VCM): ${fmtSpeed(oem)} (-1,0 = service indispo)")
-        AppLogger.i(SPEED_TAG, "→ vitesse retenue par l'app: ${fmtSpeed(getVehicleSpeedKmh())} km/h")
-        AppLogger.i(SPEED_TAG, "Comparer au compteur : identique = km/h OK ; ~3,6x plus petit = m/s")
-    }
-
-    // ── Sonde climatisation (bouton Diagnostic) ───────────────────────────────
+    // ── Climatisation ─────────────────────────────────────────────────────────
     private const val CLIM_TAG = "MG4_CLIM"
-
-    /**
-     * Propriétés HVAC vendor SAIC (table YFVehicleProperty), zone SEAT — mêmes famille et
-     * zone (0x75) que les sièges chauffants et la temp extérieure, qui fonctionnent déjà.
-     * Le type se lit dans l'ID : 0x..6..=FLOAT, 0x..2..=BOOLEAN, sinon INT32.
-     */
-    private val CLIMATE_PROPS: List<Pair<String, Int>> = listOf(
-        "POWER_ON"        to 0x15400510,
-        "POWER_STATUS"    to 0x1540250f,
-        "AC_ON"           to 0x15402500,
-        "AUTO_ON"         to 0x15402502,
-        "FAN_SPEED"       to 0x15400500,
-        "BLOWER_SPEED"    to 0x1540250d,
-        "FAN_DIRECTION"   to 0x15400501,
-        "DRVTEMP_SET"     to 0x1560250b,
-        "PSGTEMP_SET"     to 0x1560250c,
-        "TEMPERATURE_SET" to 0x15600503,
-        "RECIRC_ON"       to 0x15200508,
-        "AC_LOOP_MODE"    to 0x15402507,
-        "ECON_ON"         to 0x15402504,
-        "DUAL_ON"         to 0x15402501,
-        "DEFROST_FRONT"   to 0x15402515,   // orthographe SAIC : FORNT
-        "DEFROST_REAR"    to 0x15402516,
-        "SEAT_VENT_DRV"   to 0x15402525,
-        "SEAT_VENT_PSG"   to 0x15402526,
-        "PM25_CONCENTR"   to 0x15402509,
-        "ANION_STATUS"    to 0x15402510
-    )
-
-    /** Lecture typée via CarHvacManager. Renvoie la valeur ou la raison de l'échec. LECTURE SEULE. */
-    private fun climRead(propId: Int, area: Int): String {
-        val hvac = sCarHvacManager ?: return "HVAC absent"
-        return try {
-            val getter = when (propId and 0x00FF0000) {
-                0x00600000 -> "getFloatProperty"
-                0x00200000 -> "getBooleanProperty"
-                else       -> "getIntProperty"
-            }
-            val v = hvac.javaClass.getMethod(getter, Int::class.java, Int::class.java)
-                .invoke(hvac, propId, area)
-            v?.toString() ?: "null"
-        } catch (e: Exception) {
-            "illisible(${(e.cause ?: e).javaClass.simpleName})"
-        }
-    }
-
-    /**
-     * Sonde du bouton Diagnostic : tente de LIRE les propriétés de climatisation à la zone
-     * HVAC (0x75). **Aucune écriture** — on ne fait que constater ce qui répond, firmware par
-     * firmware, avant d'envisager un pilotage.
-     *
-     * Les deux dernières lignes sont des TÉMOINS : des propriétés déjà connues pour marcher
-     * (siège chauffant, temp extérieure). Si elles répondent et que les autres non, l'écart
-     * est significatif ; si elles échouent aussi, c'est le manager qui n'est pas prêt.
-     */
-    fun runClimateDiag() {
-        AppLogger.i(CLIM_TAG, "── DIAG climatisation (lecture seule) ──")
-        AppLogger.i(CLIM_TAG, "HVAC manager=${sCarHvacManager != null} zone=0x${Integer.toHexString(AREA_HVAC)}")
-        for ((label, propId) in CLIMATE_PROPS) {
-            AppLogger.i(CLIM_TAG, "  ${label.padEnd(16)} 0x${Integer.toHexString(propId)} = ${climRead(propId, AREA_HVAC)}")
-        }
-        AppLogger.i(CLIM_TAG, "TÉMOIN siègeChauffG(0x15402513) = ${climRead(PROP_SEAT_HEAT_L, AREA_HVAC)}")
-        AppLogger.i(CLIM_TAG, "TÉMOIN tempExt(0x15602511)      = ${climRead(PROP_HVAC_TEMP_OUTCAR, AREA_HVAC)}")
-
-        // Voie OEM en parallèle des propriétés : le dégivrage arrière est piloté par un bouton
-        // PHYSIQUE sur le véhicule — on veut savoir si le service en reflète l'état malgré tout.
-        // (une propriété à 0 ne prouve rien ; si l'OEM renvoie autre chose, l'état est lisible)
-        if (sAirCondition != null) {
-            AppLogger.i(CLIM_TAG, "OEM dégivrage AV=${acInt("getFrontWindowDefroster") ?: "n/a"} " +
-                "AR=${acInt("getBackWindowDefroster") ?: "n/a"}  (−1 = non exposé)")
-            AppLogger.i(CLIM_TAG, "OEM power=${acInt("getHvacPowerStatus") ?: "n/a"} ac=${acInt("getAcSwitch") ?: "n/a"} " +
-                "auto=${acInt("getAutoStatus") ?: "n/a"} loop=${acInt("getLoopMode") ?: "n/a"}")
-        }
-
-        // Voie A9 : lit le CarHvacClient (queryClient 0x7). Sert à mesurer les deux inconnues —
-        // l'encodage de la recirculation et les bornes réelles température/ventilation.
-        if (isClimateA9()) {
-            if (hvacA9() == null) {
-                AppLogger.w(CLIM_TAG, "A9: CarHvacClient indisponible (queryClient(0x7) muet)")
-            } else {
-                AppLogger.i(CLIM_TAG, "A9 power=${a9Get("getHvacPowerStatus")} ac=${a9Get("getACStatus")} " +
-                    "auto=${a9Get("getAutoStatus")}")
-                AppLogger.i(CLIM_TAG, "A9 drvTemp=${a9Get("getDriverTemperature")} psgTemp=${a9Get("getPassengerTemperature")} " +
-                    "fan=${a9Get("getFanSpeed")} fanDir=${a9Get("getFanDirection")}")
-                AppLogger.i(CLIM_TAG, "A9 recirc=${a9Get("getAirCirculationStatus")} " +
-                    "(à comparer au mode affiché : 0/1/2 = intérieur/extérieur/auto ?)")
-                AppLogger.i(CLIM_TAG, "A9 dégivrageAV=${a9Get("getFrontDefrostStatus")} " +
-                    "dégivrageAR=${a9Get("getRearDefrostStatus")} tempExt=${a9Get("getOutSideTemperature")}")
-            }
-        }
-    }
-
-    /**
-     * Candidats pour la CONSIGNE de température. Les variantes FLOAT (…SET) ont échoué à la
-     * zone 0x75 ; la table SAIC propose aussi des variantes ENTIÈRES suffixées "SWA", et la
-     * consigne est une propriété par siège → la bonne zone n'est peut-être pas le masque 0x75.
-     */
-    private val TEMP_SETPOINT_CANDIDATES: List<Pair<String, Int>> = listOf(
-        "DRVTEMP_SET"         to 0x1560250b,   // FLOAT
-        "PSGTEMP_SET"         to 0x1560250c,   // FLOAT
-        "TEMPERATURE_SET"     to 0x15600503,   // FLOAT
-        "AC_DRVRTEMSWA"       to 0x1540252e,   // INT  ← variante entière
-        "AC_PSNGTEMSWA"       to 0x15402544,   // INT  ← variante entière
-        "REAR_TEMPERATURE"    to 0x15602536,
-        "SEAT_TEMPERATURE"    to 0x1540050b,
-        "TEMPERATURE_CURRENT" to 0x15600502
-    )
-
-    private val TEMP_SETPOINT_AREAS = intArrayOf(AREA_HVAC, 0x1, 0x2, 0x4, AREA_GLOBAL, 0)
-
-    /**
-     * Chasse à la consigne de température : balaye candidats × zones et ne journalise que les
-     * lectures QUI RÉUSSISSENT (sinon le log serait noyé). Lecture seule.
-     *
-     * Mode d'emploi : noter la consigne réelle affichée par la voiture, puis chercher cette
-     * valeur dans les résultats (attention à un éventuel encodage ×10 : 25 °C → 250).
-     */
-    fun runClimateSetpointHunt() {
-        AppLogger.i(CLIM_TAG, "── CHASSE consigne température (lecture seule) ──")
-        var hits = 0
-        var fails = 0
-        for ((label, propId) in TEMP_SETPOINT_CANDIDATES) {
-            for (area in TEMP_SETPOINT_AREAS) {
-                val r = climRead(propId, area)
-                if (r.startsWith("illisible") || r == "null" || r == "HVAC absent") { fails++; continue }
-                hits++
-                AppLogger.i(CLIM_TAG, "  ✔ ${label.padEnd(20)} 0x${Integer.toHexString(propId)} " +
-                    "@0x${Integer.toHexString(area)} = $r")
-            }
-        }
-        AppLogger.i(CLIM_TAG, "  → $hits lecture(s) réussie(s), $fails échec(s)")
-        // Voie OEM (AirConditionManager) — déjà bindée par la feature température, old-SDK.
-        AppLogger.i(CLIM_TAG, "OEM drvTemp=${acInt("getDrvTemp") ?: "n/a"} psgTemp=${acInt("getPsgTemp") ?: "n/a"} " +
-            "min=${acInt("getMinTemp") ?: "n/a"} max=${acInt("getMaxTemp") ?: "n/a"} " +
-            "airVol=${acInt("getAirVolumeLevel") ?: "n/a"} acSwitch=${acInt("getAcSwitch") ?: "n/a"}")
-        AppLogger.i(CLIM_TAG, "→ repérer la consigne affichée par la voiture (ex. 25, ou 250 si ×10)")
-    }
 
     // ── Voie A9 (SWI69/131/132) : carapi CarHvacClient via queryClient(0x7) ──────
     // Le SDK vehiclesettings est ABSENT sur A9 ; la clim passe par l'adaptateur carapi,
@@ -5103,62 +5193,6 @@ object MG4Hardware {
         }
     }
 
-    /**
-     * Un cycle de test sur une grandeur : lit, écrit une valeur voisine, relit pour vérifier,
-     * puis RESTAURE la valeur d'origine et revérifie. Bloquant (attentes) → appeler hors du
-     * thread principal.
-     */
-    private fun climWriteProbe(label: String, getter: String, setter: String, minGetter: String, maxGetter: String) {
-        val before = acInt(getter)
-        if (before == null || before < 0) {
-            AppLogger.w(CLIM_TAG, "$label : lecture initiale impossible ($getter=${before ?: "null"}) → test ignoré")
-            return
-        }
-        val lo = acInt(minGetter)?.takeIf { it >= 0 } ?: 0
-        val hi = acInt(maxGetter)?.takeIf { it > lo } ?: (before + 1)
-        // Valeur voisine, en restant dans la plage : un écart de 1 suffit à prouver l'écriture.
-        val target = if (before < hi) before + 1 else before - 1
-        if (target < lo || target > hi) {
-            AppLogger.w(CLIM_TAG, "$label : pas de valeur voisine dans la plage $lo..$hi → test ignoré")
-            return
-        }
-
-        AppLogger.i(CLIM_TAG, "$label : actuel=$before plage=$lo..$hi → tentative $target")
-        val written = acSet(setter, target)
-        Thread.sleep(800)
-        val after = acInt(getter)
-        AppLogger.i(CLIM_TAG, "  écriture=$written relecture=$after " +
-            if (after == target) "✅ PRISE EN COMPTE" else "❌ non prise")
-
-        // Restauration systématique, même si l'écriture a échoué.
-        val restoredOk = acSet(setter, before)
-        Thread.sleep(800)
-        val restored = acInt(getter)
-        AppLogger.i(CLIM_TAG, "  restauration=$restoredOk → $restored " +
-            if (restored == before) "✅ état d'origine rétabli" else "⚠️ VÉRIFIER MANUELLEMENT (attendu $before)")
-    }
-
-    /**
-     * Test d'ÉCRITURE de la climatisation — **réversible**. Modifie brièvement la consigne de
-     * température puis la ventilation, vérifie que la voiture prend la valeur, et remet
-     * systématiquement l'état d'origine.
-     *
-     * Confort uniquement : ne touche à aucun réglage de conduite, donc hors périmètre du
-     * verrou de vitesse (VehicleWriteGate), conformément à la politique T-904.
-     *
-     * ⚠️ Bloquant (~3,5 s) → appeler depuis un thread IO, jamais depuis le thread principal.
-     */
-    fun runClimateWriteTest() {
-        AppLogger.i(CLIM_TAG, "── TEST ÉCRITURE climatisation (réversible) ──")
-        if (sAirCondition == null) {
-            AppLogger.w(CLIM_TAG, "AirConditionManager indisponible → test impossible sur ce firmware")
-            return
-        }
-        climWriteProbe("Consigne conducteur", "getDrvTemp", "setDrvTemp", "getMinTemp", "getMaxTemp")
-        climWriteProbe("Ventilation", "getAirVolumeLevel", "setAirVolumeLevel", "getMinAirVolume", "getMaxAirVolume")
-        AppLogger.i(CLIM_TAG, "── fin du test — l'état d'origine doit être rétabli ──")
-    }
-
     // ═════════════════════════════════════════════════════════════════════════
     //  Pilotage climatisation (page Dashboard) — voie OEM AirConditionManager
     //  Les propriétés CarHvacManager ne portent PAS la consigne (0.0 partout) :
@@ -5179,6 +5213,13 @@ object MG4Hardware {
 
     /** Mode de recirculation — seule source fiable (l'OEM getLoopMode n'est pas vérifié). */
     private const val PROP_HVAC_LOOP_MODE = 0x15402507
+    /**
+     * Sens de l'air — `HVAC_BLOWER_DIRECTION`, échelle 0–7 décodée des firmwares (voir [AirFlow]).
+     * Les deux familles écrivent ICI, valeur brute : ce n'est pas une bascule.
+     */
+    private const val PROP_HVAC_BLOWER_DIRECTION = 0x1540250e
+    /** Propriété AOSP homonyme (masque de bits, autre échelle) — lue par la sonde seulement. */
+    private const val PROP_AOSP_FAN_DIRECTION = 0x15400501
     /** État A/C — encodage mesuré sur véhicule : 1 = allumé, 0 = éteint. */
     private const val PROP_HVAC_AC_ON = 0x15402500
 
@@ -5230,7 +5271,9 @@ object MG4Hardware {
         val autoOn: Boolean?,
         val loopMode: Int?,
         val defrostFront: Boolean?,
-        val defrostRear: Boolean?
+        val defrostRear: Boolean?,
+        /** Sens de l'air, valeur brute 0–7 ([AirFlow]) ; null si illisible. */
+        val airFlow: Int?
     )
 
     /**
@@ -5259,8 +5302,11 @@ object MG4Hardware {
      * n'aboutir qu'après la création de la page (bind asynchrone), auquel cas le prochain
      * rafraîchissement périodique remplit l'écran tout seul.
      */
-    fun getClimateState(): ClimateState? {
-        if (isClimateA9()) return getClimateStateA9()
+    fun getClimateState(): ClimateState? =
+        (if (isClimateA9()) getClimateStateA9() else getClimateStateOldSdk())
+            ?.also { traceAirFlowChange(it) }
+
+    private fun getClimateStateOldSdk(): ClimateState? {
         if (sAirCondition == null) sAppContext?.let { initAirCondition(it) }
         if (sAirCondition == null) return null
         // Bornes lues sur la voiture (jamais codées en dur) ; repli sur des valeurs sûres.
@@ -5281,7 +5327,11 @@ object MG4Hardware {
             // Lu via la PROPRIÉTÉ (0/1/2 mesurés sur véhicule), pas via l'OEM getLoopMode.
             loopMode     = getIntPropertyHvac(PROP_HVAC_LOOP_MODE, AREA_HVAC).takeIf { it >= 0 },
             defrostFront = acInt("getFrontWindowDefroster")?.takeIf { it >= 0 }?.let { it == 1 },
-            defrostRear  = acInt("getBackWindowDefroster")?.takeIf { it >= 0 }?.let { it == 1 }
+            defrostRear  = acInt("getBackWindowDefroster")?.takeIf { it >= 0 }?.let { it == 1 },
+            // Propriété d'abord (même voie que le recyclage) ; le getter OEM lit la même chose,
+            // en repli si le CarHvacManager n'est pas encore lié.
+            airFlow      = getIntPropertyHvac(PROP_HVAC_BLOWER_DIRECTION, AREA_HVAC).takeIf { it in 0..7 }
+                ?: acInt("getBlowerDirectionMode")?.takeIf { it in 0..7 }
         )
     }
 
@@ -5324,7 +5374,8 @@ object MG4Hardware {
             autoOn       = a9Get("getAutoStatus") as? Boolean,
             loopMode     = (a9Get("getAirCirculationStatus") as? Int)?.takeIf { it >= 0 },
             defrostFront = a9Get("getFrontDefrostStatus") as? Boolean,
-            defrostRear  = a9Get("getRearDefrostStatus") as? Boolean
+            defrostRear  = a9Get("getRearDefrostStatus") as? Boolean,
+            airFlow      = (a9Get("getFanDirection") as? Int)?.takeIf { it in 0..7 }
         )
     }
 
@@ -5410,18 +5461,97 @@ object MG4Hardware {
     }
 
     fun setClimateDefrostFront(on: Boolean): Boolean =
-        if (isClimateA9())
+        (if (isClimateA9())
             a9CycleTo("defrostFront", "getFrontDefrostStatus", if (on) 1 else 0, 2, "switchFrontDefrostStatus")
         else
             acCall(if (on) "openFrontWindowDefroster" else "closeFrontWindowDefroster")
-                .also { climLog("defrostFront=$on", it) }
+                .also { climLog("defrostFront=$on", it) })
+            .also { scheduleAirFlowProbe("après dégivrage AV=$on") }
 
     fun setClimateDefrostRear(on: Boolean): Boolean =
-        if (isClimateA9())
+        (if (isClimateA9())
             a9CycleTo("defrostRear", "getRearDefrostStatus", if (on) 1 else 0, 2, "switchRearDefrostStatus")
         else
             acCall(if (on) "openBackWindowDefroster" else "closeBackWindowDefroster")
-                .also { climLog("defrostRear=$on", it) }
+                .also { climLog("defrostRear=$on", it) })
+            .also { scheduleAirFlowProbe("après dégivrage AR=$on") }
+
+    /**
+     * Sens de l'air — écriture DIRECTE de la valeur (0–6, voir [AirFlow]), pas une bascule.
+     *
+     * Vérifié dans le code des services d'origine : l'ancien SDK (`setBlowerDirectionMode`) et A9
+     * (`setFanDirection`) écrivent tous deux la valeur brute dans `HVAC_BLOWER_DIRECTION`. Le
+     * service ancien SDK refuse hors de 0–7 ; celui d'A9 ignore une 2e écriture dans les 300 ms
+     * (anti-rebond du `HvacDataStore`) — sans conséquence pour des appuis au doigt.
+     *
+     * ⚠️ Pas encore validé sur véhicule : ce que 3, 5 et 6 font du dégivrage avant, et si 5/6
+     * sont appliqués. Les sondes MG4_AIR encadrent chaque écriture pour le mesurer.
+     */
+    fun setClimateAirFlow(direction: Int): Boolean {
+        if (direction !in 0..6) return false
+        probeAirFlow("avant écriture $direction")
+        val ok = if (isClimateA9())
+            a9Set("setFanDirection", direction).also { climLog("A9 airFlow=$direction", it) }
+        else
+            acSet("setBlowerDirectionMode", direction).also { climLog("airFlow=$direction", it) }
+        scheduleAirFlowProbe("après écriture $direction")
+        return ok
+    }
+
+    // ── SONDE TEMPORAIRE sens de l'air ────────────────────────────────────────
+    // À retirer une fois validés sur véhicule : le lien dégivrage AV ⇔ valeur 4, l'effet de
+    // 3/5/6 sur le dégivrage, et l'application réelle de 5 et 6. Tag dédié pour filtrer.
+    private const val AIR_TAG = "MG4_AIR"
+
+    /** Dernier instantané tracé : on ne journalise qu'un CHANGEMENT, pas chaque rafraîchissement. */
+    @Volatile private var sLastAirTrace: String? = null
+
+    /**
+     * Relevé complet des sources liées au sens de l'air. Lit les DEUX voies (propriété et getter
+     * du SDK) et la propriété AOSP homonyme : c'est leur comparaison qui dira laquelle est fiable.
+     */
+    fun probeAirFlow(origin: String) {
+        try {
+            val prop = getIntPropertyHvac(PROP_HVAC_BLOWER_DIRECTION, AREA_HVAC)
+            val aosp = getIntPropertyHvac(PROP_AOSP_FAN_DIRECTION, AREA_HVAC)
+            val msg = if (isClimateA9()) {
+                "A9 getFanDirection=${a9Get("getFanDirection")} prop0x1540250e=$prop aosp0x15400501=$aosp " +
+                    "dégAV=${a9Get("getFrontDefrostStatus")} dégAR=${a9Get("getRearDefrostStatus")} " +
+                    "clim=${a9Get("getHvacPowerStatus")} ventil=${a9Get("getFanSpeed")}"
+            } else {
+                "prop0x1540250e=$prop getBlowerDirectionMode=${acInt("getBlowerDirectionMode")} aosp0x15400501=$aosp " +
+                    "dégAV=${acInt("getFrontWindowDefroster")} dégAR=${acInt("getBackWindowDefroster")} " +
+                    "clim=${acInt("getHvacPowerStatus")} ventil=${acInt("getAirVolumeLevel")} A/C=${acInt("getAcSwitch")}"
+            }
+            AppLogger.i(AIR_TAG, "SONDE [$origin] $msg")
+        } catch (e: Exception) {
+            AppLogger.w(AIR_TAG, "SONDE [$origin] échec : ${e.message}")
+        }
+    }
+
+    /** Deux relevés différés : le véhicule met un instant à propager, et le dégivrage peut suivre. */
+    private fun scheduleAirFlowProbe(origin: String) {
+        kotlin.concurrent.thread(name = "mg4-air-probe", isDaemon = true) {
+            try {
+                Thread.sleep(1_500)
+                probeAirFlow("$origin +1,5 s")
+                Thread.sleep(3_000)
+                probeAirFlow("$origin +4,5 s")
+            } catch (_: InterruptedException) {}
+        }
+    }
+
+    /**
+     * Trace tout changement du sens de l'air ou des dégivrages vu par les rafraîchissements du
+     * Dashboard — y compris ceux faits depuis l'écran d'ORIGINE, qui ne passent pas par nous.
+     */
+    private fun traceAirFlowChange(s: ClimateState) {
+        val snap = "air=${s.airFlow} dégAV=${s.defrostFront} dégAR=${s.defrostRear} clim=${s.powerOn}"
+        if (snap == sLastAirTrace) return
+        val avant = sLastAirTrace
+        sLastAirTrace = snap
+        AppLogger.i(AIR_TAG, "changement : ${avant ?: "(premier relevé)"} → $snap")
+    }
 
     /**
      * Applique un préréglage complet de climatisation (automatisation température).
@@ -5436,6 +5566,77 @@ object MG4Hardware {
      *
      * ⚠️ Bloquant (plusieurs secondes avec les bascules) → appeler depuis un thread IO.
      */
+    /**
+     * Applique le bloc clim d'un profil — exactement ce qu'il porte, et rien d'autre.
+     *
+     * Distinct d'[applyClimatePreset], qui force marche et A/C à ON : un préréglage
+     * d'automatisation sert toujours à FAIRE fonctionner la clim, alors qu'un profil doit aussi
+     * pouvoir l'éteindre. D'où deux entrées plutôt qu'un paramètre de plus, les deux appelants
+     * n'ayant pas la même intention.
+     *
+     * Les `null` valent « ne pas y toucher », comme dans l'automatisation : un profil qui ne se
+     * prononce pas sur le recyclage ou le sens de l'air ne doit pas les modifier au passage.
+     */
+    fun applyProfileClimate(
+        power: Boolean,
+        ac: Boolean,
+        autoMode: Boolean,
+        targetTemp: Int,
+        fanLevel: Int,
+        loopMode: Int?,
+        airFlow: Int?
+    ): Boolean {
+        val state = getClimateState() ?: run {
+            AppLogger.w(CLIM_TAG, "Profil : état clim illisible → abandon")
+            return false
+        }
+        // Clim éteinte : tout le reste n'aurait aucun sens, et écrire une consigne sur une clim
+        // à l'arrêt la rallume sur certains firmwares.
+        if (!power) {
+            val ok = setClimatePower(false)
+            AppLogger.i(CLIM_TAG, "Profil : climatisation ÉTEINTE → ok=$ok")
+            return ok
+        }
+        var ok = setClimatePower(true)
+        ok = setClimateAc(ac) && ok
+        ok = setClimateTemp(targetTemp.coerceIn(state.tempMin, state.tempMax)) && ok
+
+        // ⚠️ Mode auto et ventilation manuelle s'excluent : régler une vitesse fait sortir du
+        // mode auto, et activer le mode auto reprend la main sur la vitesse. Appliquer les deux
+        // donnerait un état final décidé par le seul ordre des appels, pas par l'utilisateur.
+        if (autoMode) {
+            ok = setClimateAuto(true) && ok
+        } else {
+            ok = setClimateFan(fanLevel.coerceIn(state.fanMin, state.fanMax)) && ok
+        }
+
+        if (loopMode != null) {
+            val mode = when (loopMode) {
+                0    -> LoopMode.INNER
+                1    -> LoopMode.OUTSIDE
+                else -> LoopMode.AUTO
+            }
+            ok = setClimateLoopMode(mode) && ok
+        }
+
+        // Ligne « Air » (boutons cumulables) — elle remplace les anciennes lignes Dég. AV / AR
+        // depuis leur validation sur SWI133. « Pare-brise AV » passe par la VALEUR du sens de
+        // l'air, la lunette arrière par le dégivrage arrière. Hors « Inchangé », le profil applique
+        // ce qui est affiché : lunette arrière non cochée = dégivrage arrière ÉTEINT.
+        if (airFlow != null) {
+            AirFlow.directionForMask(airFlow)?.let { ok = setClimateAirFlow(it) && ok }
+            if (state.defrostRear != null) {
+                ok = setClimateDefrostRear(airFlow and AirFlow.REAR_DEFROST != 0) && ok
+            }
+        }
+
+        AppLogger.i(CLIM_TAG, "Profil : clim=ON A/C=$ac consigne=$targetTemp " +
+            (if (autoMode) "ventilation=AUTO" else "vent=$fanLevel") +
+            " recyclage=${loopMode ?: "inchangé"} " +
+            "air=${airFlow?.let { "boutons=$it valeur=${AirFlow.directionForMask(it)}" } ?: "inchangé"} → ok=$ok")
+        return ok
+    }
+
     fun applyClimatePreset(
         targetTemp: Int,
         fanLevel: Int,
@@ -5489,6 +5690,7 @@ object MG4Hardware {
         val ctx = sAppContext ?: return
         sDoorConnecting = true
         try {
+            @SuppressLint("PrivateApi")   // API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
             val carCls = ctx.classLoader.loadClass("android.car.Car")
             val conn = object : ServiceConnection {
                 override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -5571,21 +5773,9 @@ object MG4Hardware {
         val triggerAreas = doorTriggerAreas()
         val anyOpen = triggerAreas.any { sDoorReadLast[it] == 1 }
         if (anyOpen && !sAnyFrontOpenPrev) {
-            val level = doorVolumeLevel()
-            CoroutineScope(Dispatchers.IO).launch {
-                sVolumeBeforeDrop = getMediaVolume()
-                val ok = setMediaVolume(level)
-                AppLogger.i(DOORWATCH_TAG, "porte ouverte → vol $sVolumeBeforeDrop→$level = $ok")
-            }
+            dropMediaVolumeForExit("porte ouverte")
         } else if (!anyOpen && sAnyFrontOpenPrev) {
-            val restore = sVolumeBeforeDrop
-            sVolumeBeforeDrop = -1
-            if (doorRestoreEnabled() && restore >= 0) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    val ok = setMediaVolume(restore)
-                    AppLogger.i(DOORWATCH_TAG, "porte fermée → restauration vol $restore = $ok")
-                }
-            }
+            restoreMediaVolumeAfterDrop("porte fermée")
         }
         sAnyFrontOpenPrev = anyOpen
     }
@@ -5637,6 +5827,7 @@ object MG4Hardware {
         // rate=5f (et non 0f) : si le VHAL déclare la prop CONTINUOUS, un rate 0 = aucune mise à jour.
         if (!sDoorSubProperty) sCarPropMgr?.let { m ->
             try {
+                @SuppressLint("PrivateApi")   // API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
                 val iface = cl.loadClass("android.car.hardware.property.CarPropertyManager\$CarPropertyEventListener")
                 val proxy = Proxy.newProxyInstance(cl, arrayOf(iface), doorEventHandler("property"))
                 val ok = m.javaClass.getMethod("registerListener", iface,
@@ -5653,6 +5844,7 @@ object MG4Hardware {
         // Voie B — CarDoorLockManager.registerCallback(CarDoorLockEventCallback) — voie de l'OEM
         if (!sDoorSubDoorlock) sCarDoorMgr?.let { m ->
             try {
+                @SuppressLint("PrivateApi")   // API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
                 val iface = cl.loadClass("android.car.hardware.doorlock.CarDoorLockManager\$CarDoorLockEventCallback")
                 val proxy = Proxy.newProxyInstance(cl, arrayOf(iface), doorEventHandler("doorlock"))
                 m.javaClass.getMethod("registerCallback", iface).invoke(m, proxy)
@@ -5664,13 +5856,4 @@ object MG4Hardware {
             }
         }
     }
-
-    fun getSpeedVolumeLevel(): Int           = audioGet(AUDIO_GET_SPEED_VOL)
-    fun setSpeedVolumeLevel(l: Int): Boolean = audioSet(AUDIO_SET_SPEED_VOL, l.coerceIn(AUDIO_TYPE_MIN, AUDIO_TYPE_MAX))
-    fun getSoundFieldType(): Int             = -1
-    fun setSoundFieldType(t: Int): Boolean   = audioSet(AUDIO_SET_SOUND_FIELD, t)
-    fun get3dEffectType(): Int               = audioGet(AUDIO_GET_3D_EFFECT)
-    fun set3dEffectType(t: Int): Boolean     = audioSet(AUDIO_SET_3D_EFFECT, t.coerceIn(AUDIO_TYPE_MIN, AUDIO_TYPE_MAX))
-    fun getToneControl(): Int                = audioGet(AUDIO_GET_TONE)
-    fun setToneControl(v: Int): Boolean      = audioSet(AUDIO_SET_TONE, v.coerceIn(AUDIO_LEVEL_MIN, AUDIO_LEVEL_MAX))
 }

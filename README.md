@@ -2,6 +2,7 @@
 
 [![Security](https://github.com/SliDeeN/MG4Control/actions/workflows/security.yml/badge.svg)](https://github.com/SliDeeN/MG4Control/actions/workflows/security.yml)
 [![Release](https://github.com/SliDeeN/MG4Control/actions/workflows/release.yml/badge.svg)](https://github.com/SliDeeN/MG4Control/actions/workflows/release.yml)
+[![Demo](https://img.shields.io/badge/Demo-Essayer%20%C2%B7%20Try%20it-1f6feb?logo=github)](https://slideen.github.io/MG4Control/)
 
 > Application Android Automotive pour le contrôle avancé des paramètres de conduite du MG4 électrique.
 > Android Automotive app for advanced driving settings control on the MG4 electric vehicle.
@@ -51,6 +52,31 @@ L'application communique avec le véhicule via le SDK propriétaire SAIC, en acc
 - **Mode de conduite** : ECO / NORMAL / SPORT / SNOW / CUSTOM
 - **Régénération** : Off / Faible / Moyen / Fort / Adaptatif / 1 Pédale
 
+#### Mode de conduite Personnalisé
+Trois réglages que le véhicule n'expose que dans ce mode : **puissance** (Éco / Normal / Sport),
+**direction** et **force sur la pédale** (Confort / Normal / Sport). Disponibles sur les six
+firmwares, par trois voies distinctes — signaux `VehiclePropertyManager` en SWI133, méthodes
+`VehicleSettingManager` en SWI68/165, méthodes `CarVehicleSettingClient` sur A9.
+
+Présents à deux endroits, avec une règle d'apparition différente :
+
+| Écran | La carte apparaît quand |
+|---|---|
+| Dashboard, onglet Conduite | la **voiture** est en mode Personnalisé, y compris si le mode a été mis depuis l'écran d'origine |
+| Éditeur de profil, onglet Conduite | le **profil** en cours d'édition a Personnalisé pour mode |
+
+Sur le Dashboard, une ligne dont le véhicule ne rend pas l'état disparaît : la commande existe sur
+tous les firmwares, mais rien ne garantit que la finition porte l'équipement.
+
+> [!WARNING]
+> Les trois réglages n'ont pas la même échelle côté véhicule, et la pédale est un piège :
+> **Normal y vaut 0**, pas la valeur du milieu. La puissance vaut 1/2/3 en SWI133/68/165 mais
+> 2/3/4 sur A9, où la voiture réutilise l'échelle des modes de conduite. L'application ne
+> manipule donc jamais ces nombres — elle passe un index 0/1/2 et la conversion vit dans
+> `MG4Hardware`.
+
+Dans un profil, ils ne sont écrits que si son mode de conduite est Personnalisé, et un profil
+enregistré avant cette fonctionnalité n'écrit rien tant qu'il n'a pas été rouvert et sauvegardé.
 ### Sécurité
 - **ESC** : ON / OFF
 - **Avertissement de somnolence** : ON / OFF, avec sensibilité Faible / Standard / Élevé
@@ -69,8 +95,11 @@ L'application communique avec le véhicule via le SDK propriétaire SAIC, en acc
 - **Climatisation** : consigne de température, ventilation, marche/arrêt, A/C, AUTO,
   recirculation (intérieur / extérieur / auto), dégivrage avant et arrière
 - **Luminosité de l'écran**
-- **Volume à l'ouverture de porte** : baisse le volume média quand une porte avant s'ouvre, avec
-  choix des portes déclencheuses et restauration à la fermeture
+- **Baisse du volume en quittant la voiture** : le volume média descend au moment du départ, sur
+  les six firmwares. Là où la voiture signale ses portes (SWI133, SWI132), le déclencheur reste
+  l'ouverture d'une porte avant, avec choix des portes et restauration à la fermeture ; ailleurs,
+  faute de capteur atteignable, c'est la **sortie du mode READY** qui sert de signal et la
+  restauration, si elle est demandée, se fait au retour en READY
 - **Audio** (firmwares A9) : type de son Bose, balance, fader, volume selon la vitesse
 
 ### ADAS (Assistance à la conduite)
@@ -107,9 +136,10 @@ Actions disponibles — celles qui dépendent du firmware n'apparaissent pas sur
 
 | Catégorie | Actions |
 |---|---|
-| Conduite | 1 Pédale · Régénération : niveau suivant · Éco. énergie |
+| Conduite | 1 Pédale · Cycle Régénération Personnalisé · Éco. énergie |
 | Sécurité | ESC · Somnolence · Somnolence : sensibilité · Système Anticollision · ADAS · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son |
 | Confort | Siège chauffant gauche · Siège chauffant droit · Volant chauffant · Clim ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant · Dégivrage arrière · Recirculation · Luminosité ± |
+| Vitres | Ouvrir toutes les vitres · Fermer toutes les vitres |
 | Média | Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume - |
 | Application et véhicule | Lancer un profil · Sélecteur de profil · Ouvrir MG4Control · Lancer une application · Éteindre la voiture |
 
@@ -121,8 +151,45 @@ La liste des raccourcis avancés affiche pour chaque ligne le **bouton** (nom et
 d'appui**, la **fonction**, puis *Modifier* et *Supprimer*. Réattribuer un bouton déjà utilisé sur
 le même type d'appui demande confirmation et nomme la fonction qui va être remplacée.
 
-Les réglages associés à une action ne s'affichent que si cette action est réellement attribuée
-(niveau de repli du mode 1 Pédale, crans du cycle ADAS).
+#### Raccourcis associés à un profil
+Un raccourci avancé porte une touche, un type d'appui, une fonction — et un **profil**, « Tous les
+profils » par défaut. La même touche et le même appui peuvent donc porter plusieurs raccourcis, un
+par profil : sous *Sport* le bouton fait une chose, sous *Hiver* une autre.
+
+La résolution à l'appui se fait en deux crans, dans cet ordre :
+1. un raccourci réservé au **profil actif** ;
+2. sinon celui marqué **Tous les profils** ;
+3. sinon rien.
+
+Le cas 3 mérite d'être connu : la touche reste **consommée**, comme n'importe quel type d'appui
+laissé libre sur une touche réclamée — elle ne retombe pas sur le launcher. La liste le signale
+sur les groupes qui n'ont aucune ligne « Tous les profils ».
+
+Le **profil actif** est le dernier appliqué, quelle qu'en soit la source : démarrage, contact,
+Bluetooth, automatisation température ou choix manuel. Il est enregistré, donc il survit à un
+redémarrage du service.
+
+> [!NOTE]
+> C'est le dernier profil **appliqué**, pas l'état réel du véhicule : un réglage changé à la main
+> depuis le Dashboard ne l'invalide pas. L'alternative — comparer l'état du véhicule à chaque
+> profil — coûterait une dizaine de lectures véhicule à chaque appui, pour un résultat ambigu dès
+> que deux profils se ressemblent.
+
+La liste des raccourcis est **groupée par touche + type d'appui**, « Tous les profils » en tête de
+chaque groupe : l'ordre d'affichage est celui de la résolution.
+
+Les trois réglages d'action — **repli du mode 1 Pédale**, **crans du cycle ADAS** et **cycle de
+régénération** — ont chacun leur page, révélée dans le rail de gauche dès que la fonction est
+attribuée à un bouton. Peu importe par quelle voie : emplacement classique, raccourci avancé, ou
+fonction simplement sélectionnée dans le formulaire avancé, avant même la création du raccourci.
+
+Le cycle de régénération se compose sur sa page : toucher un mode l'ajoute **en fin de cycle**,
+le toucher à nouveau le retire, et l'ordre des appuis est celui du cycle. Les cinq modes proposés
+sont Faible, Moyen, Fort, Adaptatif et 1 Pédale. On peut tout effacer pour recomposer de zéro ;
+rien n'est enregistré avant *Sauvegarder*, qui reste grisé sous deux modes — en dessous, le
+raccourci n'aurait plus rien à parcourir après le premier appui. Le réglage est **global** — la
+même séquence pour tous les boutons qui déclenchent la fonction — et sans réglage, le comportement
+d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
 
 ### Automatisation
 - **Application d'un profil selon la température extérieure** : seuil, sens
@@ -131,6 +198,30 @@ Les réglages associés à une action ne s'affichent que si cette action est ré
   inférieure), chacune avec son seuil, sa consigne, sa ventilation, ses dégivrages, le mode
   automatique et la recirculation
 - Chaque automatisation est dépliable indépendamment de son interrupteur d'activation
+
+#### Vitres électriques
+Troisième carte de l'onglet, repliée par défaut, en trois sections.
+
+- **Commande** — les quatre vitres. Appui court : course complète (un nouvel appui l'arrête).
+  Appui long : la vitre bouge tant que le doigt reste posé. Plus *Tout ouvrir* et *Tout fermer*.
+- **Calibration** — seule la vitre conducteur remonte sa position. Pour les trois autres,
+  l'application chronomètre une course complète, puis estime le pourcentage à partir de la durée
+  de chaque commande.
+- **Fermeture automatique en quittant la voiture** — voiture en P et fermeture armée : quand la
+  voiture sort du mode READY (porte conducteur ouverte ou extinction), toutes les vitres se
+  ferment après le délai choisi ; un retour en READY avant la fin annule. L'armement se règle
+  (vitesse atteinte et/ou durée d'allumage, l'une ou l'autre ou les deux), le délai va de 0 à
+  30 s, et un bip d'avertissement facultatif, au volume réglable, peut accompagner le décompte.
+
+Deux limites tiennent à l'absence de capteur : l'estimation **ne voit pas les interrupteurs de
+portière** (le véhicule ne les signale pas), et toutes les vitres sont supposées fermées à chaque
+démarrage de l'application. La fermeture automatique reste donc **verrouillée tant que les trois
+vitres sans capteur ne sont pas calibrées** — elle ferme au temps mesuré, pas à la position lue.
+
+> [!WARNING]
+> Les courses commandées par l'application n'ont pas l'anti-pincement du véhicule, sauf sur la
+> vitre conducteur. Personne près des vitres pendant une fermeture, et en particulier pendant une
+> fermeture automatique, qui part alors que vous êtes déjà dehors.
 
 ### Gestion de profils
 - Sauvegarde jusqu'à **5 profils** personnalisés
@@ -145,13 +236,71 @@ Les réglages associés à une action ne s'affichent que si cette action est ré
 Écran organisé en **quatre onglets** :
 - **Langues** : français, anglais, allemand, espagnol, italien, portugais
 - **Interface** : écran affiché au démarrage, apparence (auto / sombre / clair)
-- **Réglages avancés** : application automatique du profil, vérification des mises à jour au
-  lancement, **canal bêta**, extinction du véhicule écran allumé, blocage des réglages de conduite
-  au-delà d'une vitesse donnée, **API externe** (cf. section dédiée)
+- **Réglages avancés** : **Mode Garage** (cf. ci-dessous), vérification des mises à jour au
+  lancement, **alerte de mise à jour sur l'écran du véhicule**, **canal bêta**, extinction du
+  véhicule écran allumé, blocage des réglages de conduite au-delà d'une vitesse donnée,
+  **API externe** (cf. section dédiée)
 - **Infos** : vérification des mises à jour, nettoyage des APK, **consommation de données**
   (aujourd'hui, semaine en cours, mois courant, 30 derniers jours), dialog « À propos » (version de
   l'app, firmware, QR codes), indicateur de firmware, et bouton Diagnostic révélé par 5 clics sur
   le logo
+
+### Mode Garage
+Un seul interrupteur met MG4Control **en veille complète**, sans rien désinstaller ni
+reconfigurer. Il répond à un cas concret : laisser la voiture à l'atelier sans qu'un technicien
+voie des réglages changer seuls au contact, ni un bouton du volant faire autre chose que prévu.
+
+Ce que le mode suspend, ce sont les comportements **autonomes** — ceux que personne n'a demandés
+sur le moment :
+
+| Suspendu | Détail |
+|---|---|
+| Raccourcis classiques | La touche repart au launcher |
+| Raccourcis avancés | Les touches réclamées sont **rendues** : le service d'accessibilité ne consomme plus rien |
+| Profil au démarrage et au contact | Y compris la résolution Bluetooth |
+| Automatisations par température | Profil comme climatisation |
+| Baisse de volume en quittant la voiture | |
+| API externe | Les commandes tierces sont refusées |
+| Alerte de mise à jour sur l'écran du véhicule | |
+
+Ce qu'il ne touche pas : l'application elle-même. Ouvrir MG4Control et appliquer un profil à la
+main reste possible — c'est une action de l'utilisateur, pas un comportement observable par
+quelqu'un qui ne fait que rouler.
+
+**Rien n'est effacé.** Repasser l'interrupteur sur OFF rend l'ensemble à l'identique, profils,
+raccourcis et automatisations compris.
+
+La notification persistante affiche « Mode Garage — en veille » tant qu'il est actif : sans ce
+repère, un mode oublié se manifesterait par « plus rien ne marche » sans la moindre explication.
+
+> [!NOTE]
+> Le Mode Garage **remplace** l'ancien interrupteur « le profil par défaut s'applique
+> automatiquement au lancement », dont il est la version complète. Qui l'avait décoché est repris
+> en Mode Garage activé à la première ouverture : couper l'application était bien l'intention.
+
+### Alerte de mise à jour sur l'écran du véhicule
+Une mise à jour ne se découvre plus seulement en ouvrant MG4Control : un message apparaît
+**par-dessus l'infodivertissement**, comme le popup de confirmation de profil, et annonce la
+version installée face à la nouvelle. Trois choix :
+
+| Bouton | Effet |
+|---|---|
+| **Installer la MAJ** | Ouvre MG4Control sur le dialogue de mise à jour habituel, sans refaire la requête réseau |
+| **Ignorer cette version** | Cette version n'est plus proposée, ni ici ni au lancement de l'application |
+| **Ne plus me prévenir** | Coupe ce popup. Le dialogue au lancement de MG4Control, lui, reste |
+
+Toucher le fond assombri vaut « plus tard » : rien n'est retenu, l'annonce reviendra.
+
+Quatre garde-fous, parce que ce chemin n'est déclenché par personne :
+- la vérification a lieu **20 s après le coup de contact** — au moment même, la liaison données de
+  la voiture n'est pas encore montée ;
+- **six heures minimum** entre deux interrogations réseau, la voiture étant sur un forfait données ;
+- **rien ne s'affiche en roulant** (même verrou que le popup multiprofils) ;
+- une version déjà proposée ne l'est plus dans la même session — et le marquage n'a lieu que si le
+  popup est **réellement apparu**.
+
+L'interrupteur historique « vérifier les mises à jour au lancement » coupe aussi ce popup : c'est
+un réglage que l'utilisateur croit global, et il l'est.
 
 ### Profils
 - Liste des profils avec application, définition par défaut, modification, suppression
@@ -159,6 +308,31 @@ Les réglages associés à une action ne s'affichent que si cette action est ré
 - Le nom du profil et le réglage « profil par défaut » restent visibles sur les trois onglets
 - Volant et sièges chauffants disposent d'un interrupteur de **prise en compte** : décoché, le
   profil ne touche pas au réglage au lieu de l'éteindre
+- **Climatisation** : bloc facultatif de l'onglet Confort, décoché par défaut, reprenant les
+  commandes du Dashboard — marche/arrêt, A/C, ventilation automatique, consigne, vitesse,
+  recyclage et dégivrages
+
+#### Bloc climatisation du profil
+Décoché, le profil ne touche pas à la climatisation : c'est le comportement de toujours, et celui
+de tous les profils déjà enregistrés. Coché, il applique ce qu'il porte au démarrage, au contact
+et à chaque application manuelle.
+
+Trois règles s'y appliquent, qui viennent du véhicule et non de l'interface :
+
+| Règle | Conséquence |
+|---|---|
+| Clim éteinte | Rien d'autre n'est écrit — une consigne posée sur une clim à l'arrêt la rallume sur certains firmwares |
+| Mode AUTO | La vitesse de ventilation n'est pas appliquée : la régler ferait sortir du mode auto |
+| « Inchangé » | Recyclage et dégivrages ne sont pas touchés — sans cette valeur, un profil qui ne s'en préoccupe pas les éteindrait |
+
+Les curseurs sont bornés à la saisie (15–33 °C, 1–11), mais les **vraies** limites sont lues sur le
+véhicule au moment d'appliquer et la consigne y est clampée : elles diffèrent entre A9 et les
+autres firmwares.
+
+> [!NOTE]
+> **Le profil est prioritaire sur l'automatisation A/C.** Si le profil actif porte un bloc
+> climatisation, l'automatisation par température ne fait rien et le journalise. Sans cette règle
+> les deux s'écriraient dessus au contact, dans un ordre que rien ne garantit.
 
 ### Compatibilité firmware inconnue (UNKNOWN)
 - Dialog d'avertissement au démarrage si le firmware n'est pas reconnu
@@ -254,10 +428,11 @@ MG4Control/
 │   │   ├── model/
 │   │   │   ├── DrivingProfile.kt      # Modèle de données d'un profil
 │   │   │   ├── DriveMode.kt           # Enum modes de conduite (ECO/NORMAL/SPORT/SNOW/CUSTOM)
-│   │   │   ├── RegenLevel.kt          # Enum niveaux de régénération + ordre d'usage du cycle
+│   │   │   ├── RegenLevel.kt          # Enum niveaux de régénération + ordre du cycle par défaut
 │   │   │   └── ProfileBackup.kt       # Format de la sauvegarde véhicule
 │   │   │
 │   │   ├── profile/
+│   │   │   ├── ActiveProfile.kt       # Dernier profil appliqué (raccourcis par profil)
 │   │   │   ├── ProfileManager.kt      # CRUD profils (SharedPreferences + Gson)
 │   │   │   ├── ProfileApplier.kt      # Application des réglages au véhicule (async)
 │   │   │   └── ProfileBackupManager.kt# Sauvegarde / restauration en mémoire véhicule
@@ -271,6 +446,7 @@ MG4Control/
 │   │   │   └── AdvancedShortcuts.kt   # Stockage (touche, type d'appui) → action
 │   │   │
 │   │   ├── shortcut/
+│   │   │   ├── RegenCycle.kt          # Séquence du cycle de régénération choisie par l'utilisateur
 │   │   │   └── ShortcutAction.kt      # Catalogue des actions, partagé par les deux systèmes
 │   │   │
 │   │   ├── bluetooth/
@@ -304,13 +480,15 @@ MG4Control/
 │   │   ├── service/
 │   │   │   ├── MG4ControlService.kt   # Service de premier plan (boot, raccourcis, API externe)
 │   │   │   ├── ProfilePickerOverlay.kt# Sélecteur de profil en fenêtre flottante
-│   │   │   └── ProfileConfirmOverlay.kt # Confirmation OUI/NON des automatisations
+│   │   │   ├── ProfileConfirmOverlay.kt # Confirmation OUI/NON des automatisations
+│   │   │   └── UpdateOverlay.kt      # Popup « MAJ disponible » sur l'écran du véhicule
 │   │   │
 │   │   ├── receiver/
 │   │   │   └── BootReceiver.kt        # Récepteur de démarrage système
 │   │   │
 │   │   ├── util/
 │   │   │   ├── FirmwareInfo.kt        # Détection firmware + mode forcé
+│   │   │   ├── GarageMode.kt          # Mode Garage — met tous les automatismes en veille
 │   │   │   ├── FirmwareHelper.kt      # Lecture version firmware complète (async)
 │   │   │   ├── LocaleHelper.kt        # Gestion de la langue (6 langues)
 │   │   │   ├── ThemeHelper.kt         # Thème auto / sombre / clair
@@ -319,6 +497,7 @@ MG4Control/
 │   │   ├── update/
 │   │   │   ├── UpdateChecker.kt       # Vérification des releases GitHub (stable et bêta)
 │   │   │   ├── UpdateDialogManager.kt # Dialog MAJ + DownloadManager
+│   │   │   ├── UpdateNotifier.kt     # Quand signaler une MAJ sur l'écran du véhicule
 │   │   │   ├── UpdateInfo.kt          # Description d'une version disponible
 │   │   │   ├── ApkSecurity.kt         # Contrôle de signature de l'APK téléchargé
 │   │   │   ├── ApkInstaller.kt        # Installation
@@ -774,6 +953,30 @@ The app communicates with the vehicle through the proprietary SAIC SDK, accessin
 - **Drive mode**: ECO / NORMAL / SPORT / SNOW / CUSTOM
 - **Regenerative braking**: Off / Low / Medium / High / Adaptive / One Pedal
 
+#### Custom drive mode
+Three settings the vehicle only exposes in that mode: **power** (Eco / Normal / Sport),
+**steering** and **pedal force** (Comfort / Normal / Sport). Available on all six firmwares
+through three distinct routes — `VehiclePropertyManager` signals on SWI133,
+`VehicleSettingManager` methods on SWI68/165, and `CarVehicleSettingClient` methods on A9.
+
+Present in two places, with a different reveal rule:
+
+| Screen | The card appears when |
+|---|---|
+| Dashboard, Driving tab | the **car** is in Custom mode, including when it was set from the stock screen |
+| Profile editor, Driving tab | the **profile** being edited has Custom as its mode |
+
+On the Dashboard, a row whose state the vehicle does not report disappears: the command exists on
+every firmware, but nothing guarantees the trim carries the hardware.
+
+> [!WARNING]
+> The three settings do not share one scale, and the pedal is a trap: **Normal is 0 there**, not
+> the middle value. Power is 1/2/3 on SWI133/68/165 but 2/3/4 on A9, where the car reuses the
+> drive-mode scale. The app therefore never handles those numbers — it passes a 0/1/2 index and
+> the conversion lives in `MG4Hardware`.
+
+In a profile they are only written when its drive mode is Custom, and a profile saved before this
+feature writes nothing until it has been reopened and saved.
 ### Safety
 - **ESC**: ON / OFF
 - **Drowsiness warning**: ON / OFF, with Low / Standard / High sensitivity
@@ -792,8 +995,11 @@ The app communicates with the vehicle through the proprietary SAIC SDK, accessin
 - **Climate control**: temperature setpoint, fan speed, power, A/C, AUTO, recirculation
   (inner / outside / auto), front and rear defrost
 - **Screen brightness**
-- **Door-opening volume**: lowers media volume when a front door opens, with selectable trigger
-  doors and restore on close
+- **Volume drop when leaving the car**: media volume goes down as you leave, on all six
+  firmwares. Where the car reports its doors (SWI133, SWI132) the trigger stays a front door
+  opening, with selectable doors and restore on close; elsewhere, no door sensor being reachable,
+  **leaving READY state** is used instead and the restore, when asked for, happens on the way back
+  to READY
 - **Audio** (A9 firmwares): Bose sound type, balance, fader, speed-dependent volume
 
 ### ADAS (Advanced Driver Assistance)
@@ -828,9 +1034,10 @@ Available actions — those depending on the firmware do not show up on the othe
 
 | Category | Actions |
 |---|---|
-| Driving | One Pedal · Regeneration: next level · Energy saving |
+| Driving | One Pedal · Custom Regeneration Cycle · Energy saving |
 | Safety | ESC · Drowsiness · Drowsiness: sensitivity · Forward collision · ADAS · Traffic signs (TSR) · Overspeed alert · Speed limit change alert · Sound |
 | Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Brightness ± |
+| Windows | Open all windows · Close all windows |
 | Media | Play / Pause · Next track · Previous track · Volume + · Volume - |
 | App and vehicle | Apply a profile · Profile picker · Open MG4Control · Launch an app · Power the car off |
 
@@ -842,8 +1049,44 @@ Each row of the advanced list shows the **button** (name and code), the **press 
 **action**, then *Edit* and *Delete*. Reassigning a button already used with the same press type
 asks for confirmation and names the action about to be replaced.
 
-Settings attached to an action appear only when that action is actually assigned (One Pedal
-fallback level, ADAS cycle notches).
+#### Profile-scoped shortcuts
+An advanced shortcut carries a key, a press type, an action — and a **profile**, "All profiles" by
+default. The same key and press type can therefore carry several shortcuts, one per profile: under
+*Sport* the button does one thing, under *Winter* another.
+
+Resolution on press happens in two steps, in this order:
+1. a shortcut reserved for the **active profile**;
+2. otherwise the one marked **All profiles**;
+3. otherwise nothing.
+
+Case 3 is worth knowing: the key is still **consumed**, like any press type left unassigned on a
+claimed key — it does not fall back to the launcher. The list flags this on groups that have no
+"All profiles" row.
+
+The **active profile** is the last one applied, whatever the source: startup, ignition, Bluetooth,
+temperature automation or a manual choice. It is stored, so it survives a service restart.
+
+> [!NOTE]
+> It is the last profile **applied**, not the actual state of the vehicle: a setting changed by
+> hand from the Dashboard does not invalidate it. The alternative — comparing the vehicle state
+> against every profile — would cost a dozen vehicle reads on every key press, for an ambiguous
+> result as soon as two profiles look alike.
+
+The shortcut list is **grouped by key + press type**, "All profiles" first in each group: the
+display order is the resolution order.
+
+The three action settings — **One Pedal fallback**, **ADAS cycle notches** and the **regeneration
+cycle** — each get their own page, revealed in the left rail as soon as the action is assigned to a
+button. However it was assigned: a classic slot, an advanced shortcut, or an action merely selected
+in the advanced form, before the shortcut even exists.
+
+The regeneration cycle is composed on its page: tapping a mode appends it **at the end of the
+cycle**, tapping it again removes it, and the order of your taps is the order of the cycle. The five
+modes on offer are Low, Medium, High, Adaptive and One Pedal. You can clear everything and start
+over; nothing is stored until *Save*, which stays greyed out below two modes — under that, the
+shortcut would have nothing left to walk through after the first press. The setting is **global** —
+the same sequence for every button triggering the action — and with no setting at all, the original
+behaviour stands unchanged (Low → Medium → High → Adaptive).
 
 ### Automation
 - **Apply a profile from the outside temperature**: threshold, direction (below/above), profile to
@@ -851,6 +1094,29 @@ fallback level, ADAS cycle notches).
 - **Temperature-triggered A/C**: two independent rules (above / below), each with its threshold,
   setpoint, fan level, defrosters, automatic mode and recirculation
 - Each automation folds open independently of its enable switch
+
+#### Power windows
+Third card of the tab, folded by default, in three sections.
+
+- **Controls** — the four windows. Short press: full travel (another press stops it). Long press:
+  the window moves as long as the finger stays down. Plus *Open all* and *Close all*.
+- **Calibration** — only the driver's window reports its position. For the other three, the app
+  times a full travel, then estimates the percentage from the duration of each command.
+- **Close on leaving the car** — car in P and closing armed: when the car leaves READY state
+  (driver door opened, or car switched off), every window closes after the chosen delay; going
+  back to READY before the end cancels it. Arming is configurable (speed reached and/or time
+  switched on, either or both), the delay ranges from 0 to 30 s, and an optional warning beep,
+  with adjustable volume, can accompany the countdown.
+
+Two limits come from the missing sensor: the estimate **cannot see the door switches** (the
+vehicle does not report them), and every window is assumed closed each time the app starts. Hence
+automatic closing stays **locked until the three sensorless windows have been calibrated** — it
+closes on the measured time, not on a read position.
+
+> [!WARNING]
+> Travels commanded by the app have no anti-pinch protection, except on the driver's window.
+> Keep clear of the windows during a closing sequence, especially an automatic one, which starts
+> once you are already outside.
 
 ### Profile Management
 - Save up to **5 custom profiles**
@@ -865,12 +1131,67 @@ fallback level, ADAS cycle notches).
 Screen organised into **four tabs**:
 - **Languages**: French, English, German, Spanish, Italian, Portuguese
 - **Interface**: screen shown at startup, appearance (auto / dark / light)
-- **Advanced**: automatic profile application, update check at launch, **beta channel**, power the
-  car off while keeping the screen on, block driving settings above a given speed, **external API**
-  (see the dedicated section)
+- **Advanced**: **Garage mode** (see below), update check at launch, **update alert on the
+  vehicle screen**, **beta channel**, power the car off while keeping the screen on, block driving
+  settings above a given speed, **external API** (see the dedicated section)
 - **Info**: update check, APK cleanup, **data usage** (today, current week, current month, last 30
   days), "About" dialog (app version, firmware, QR codes), firmware indicator, and a Diagnostic
   button revealed by 5 taps on the logo
+
+### Garage mode
+A single switch puts MG4Control **fully to sleep**, without uninstalling or reconfiguring
+anything. It answers a concrete case: leaving the car at a workshop without a technician seeing
+settings change on their own at ignition, or a steering-wheel button doing something unexpected.
+
+What the mode suspends are the **autonomous** behaviours — the ones nobody asked for at that
+moment:
+
+| Suspended | Detail |
+|---|---|
+| Classic shortcuts | The key goes back to the launcher |
+| Advanced shortcuts | Claimed keys are **released**: the accessibility service consumes nothing |
+| Profile at startup and at ignition | Bluetooth resolution included |
+| Temperature automations | Profile and climate alike |
+| Volume drop when leaving the car | |
+| External API | Third-party commands are refused |
+| Update alert on the vehicle screen | |
+
+What it does not touch: the app itself. Opening MG4Control and applying a profile by hand still
+works — that is a user action, not a behaviour observable by someone who is only driving.
+
+**Nothing is erased.** Switching it back off restores everything as it was: profiles, shortcuts
+and automations.
+
+The persistent notification reads "Garage mode — asleep" while it is on: without that marker, a
+forgotten mode would show up as "nothing works any more" with no explanation whatsoever.
+
+> [!NOTE]
+> Garage mode **replaces** the old "the default profile is applied automatically at launch"
+> switch, of which it is the complete version. Anyone who had unchecked it is carried over into
+> Garage mode on first launch: stopping the app from acting was the intent.
+
+### Update alert on the vehicle screen
+An update is no longer found only by opening MG4Control: a message appears **over the
+infotainment**, like the profile confirmation popup, showing the installed version against the new
+one. Three choices:
+
+| Button | Effect |
+|---|---|
+| **Install update** | Opens MG4Control on the usual update dialog, without repeating the network request |
+| **Skip this version** | That version is no longer offered, here or at app launch |
+| **Stop telling me** | Turns this popup off. The dialog at MG4Control launch stays |
+
+Tapping the dimmed background means "later": nothing is remembered, the alert will come back.
+
+Four safeguards, because nobody triggers this path:
+- the check runs **20 s after ignition** — at the moment itself the car's data link is not up yet;
+- **six hours minimum** between network requests, the car being on a data plan;
+- **nothing shows while driving** (same lock as the multi-profile popup);
+- a version already offered is not offered again in the same session — and it is only marked as
+  offered if the popup **actually appeared**.
+
+The long-standing "check for updates at launch" switch also turns this popup off: it is a setting
+users read as global, and it is.
 
 ### Profiles
 - Profile list with apply, set as default, edit and delete
@@ -878,6 +1199,30 @@ Screen organised into **four tabs**:
 - The profile name and the "default profile" setting stay visible across the three tabs
 - Heated steering wheel and seats have an **apply** switch: unchecked, the profile leaves the
   setting alone instead of turning it off
+- **Air conditioning**: an optional block in the Comfort tab, unchecked by default, carrying the
+  Dashboard's own controls — on/off, A/C, auto fan, setpoint, fan speed, recirculation, defrosters
+
+#### The profile's climate block
+Unchecked, the profile does not touch the climate: that is the long-standing behaviour, and the
+one every stored profile keeps. Checked, it applies what it carries at startup, at ignition, and
+on every manual application.
+
+Three rules apply, and they come from the vehicle rather than the interface:
+
+| Rule | Consequence |
+|---|---|
+| Climate off | Nothing else is written — a setpoint sent to a stopped climate turns it back on with some firmwares |
+| AUTO mode | The fan speed is not applied: setting it would leave auto mode |
+| "Unchanged" | Recirculation and defrosters are left alone — without that value, a profile that says nothing about them would turn them off |
+
+The sliders are bounded for input (15–33 °C, 1–11), but the **real** limits are read from the
+vehicle when applying and the setpoint is clamped to them: they differ between A9 and the other
+firmwares.
+
+> [!NOTE]
+> **The profile wins over the A/C automation.** If the active profile carries a climate block, the
+> temperature automation does nothing and logs it. Without that rule the two would write over each
+> other at ignition, in an order nothing guarantees.
 
 ### Unknown firmware (UNKNOWN)
 - Warning dialog at startup when the firmware is not recognised
@@ -971,10 +1316,11 @@ MG4Control/
 │   │   ├── model/
 │   │   │   ├── DrivingProfile.kt      # Profile data model
 │   │   │   ├── DriveMode.kt           # Drive mode enum (ECO/NORMAL/SPORT/SNOW/CUSTOM)
-│   │   │   ├── RegenLevel.kt          # Regen level enum + shortcut cycle order
+│   │   │   ├── RegenLevel.kt          # Regen level enum + default shortcut cycle order
 │   │   │   └── ProfileBackup.kt       # Vehicle backup format
 │   │   │
 │   │   ├── profile/
+│   │   │   ├── ActiveProfile.kt       # Last applied profile (profile-scoped shortcuts)
 │   │   │   ├── ProfileManager.kt      # Profile CRUD (SharedPreferences + Gson)
 │   │   │   ├── ProfileApplier.kt      # Applies settings to the vehicle (async)
 │   │   │   └── ProfileBackupManager.kt# Backup / restore in vehicle storage
@@ -988,6 +1334,7 @@ MG4Control/
 │   │   │   └── AdvancedShortcuts.kt   # Storage for (key, press type) → action
 │   │   │
 │   │   ├── shortcut/
+│   │   │   ├── RegenCycle.kt          # User-composed regeneration cycle sequence
 │   │   │   └── ShortcutAction.kt      # Action catalogue, shared by both systems
 │   │   │
 │   │   ├── bluetooth/
@@ -1021,13 +1368,15 @@ MG4Control/
 │   │   ├── service/
 │   │   │   ├── MG4ControlService.kt   # Foreground service (boot, shortcuts, external API)
 │   │   │   ├── ProfilePickerOverlay.kt# Floating profile picker
-│   │   │   └── ProfileConfirmOverlay.kt # YES/NO confirmation for automations
+│   │   │   ├── ProfileConfirmOverlay.kt # YES/NO confirmation for automations
+│   │   │   └── UpdateOverlay.kt      # "Update available" popup on the vehicle screen
 │   │   │
 │   │   ├── receiver/
 │   │   │   └── BootReceiver.kt        # System boot receiver
 │   │   │
 │   │   ├── util/
 │   │   │   ├── FirmwareInfo.kt        # Firmware detection + forced mode
+│   │   │   ├── GarageMode.kt          # Garage mode — puts every automatism to sleep
 │   │   │   ├── FirmwareHelper.kt      # Full firmware version string reader (async)
 │   │   │   ├── LocaleHelper.kt        # Language management (6 languages)
 │   │   │   ├── ThemeHelper.kt         # Auto / dark / light theme
@@ -1036,6 +1385,7 @@ MG4Control/
 │   │   ├── update/
 │   │   │   ├── UpdateChecker.kt       # GitHub release check (stable and beta)
 │   │   │   ├── UpdateDialogManager.kt # Update dialog + DownloadManager
+│   │   │   ├── UpdateNotifier.kt     # When to announce an update on the vehicle screen
 │   │   │   ├── UpdateInfo.kt          # Description of an available version
 │   │   │   ├── ApkSecurity.kt         # Signature check of the downloaded APK
 │   │   │   ├── ApkInstaller.kt        # Installation
@@ -1448,6 +1798,10 @@ Made with ❤ by **SliDeeN** and **Claude IA**
 Basé sur l'application **DriveHub Dort** développée par **Merth4n** & **hotboy_ist**
 
 Merci à **confor1max**, **FrAsErTaG**, **sixty4h**, **hojnikb** et **depippi.p** pour les tests avant chaque release 🙏
+
+Le pilotage des vitres doit beaucoup à **[winclose](https://github.com/Skittle6938/winclose)** de
+**Skittle6938** : identifiants et valeurs de commande des vitres, et principe de la fermeture
+automatique en quittant la voiture, repris puis étendus aux six firmwares. Merci 🙏
 
 [![GitHub](https://img.shields.io/badge/GitHub-SliDeeN%2FMG4Control-181717?logo=github)](https://github.com/SliDeeN/MG4Control)
 

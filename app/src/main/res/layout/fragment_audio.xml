@@ -45,6 +45,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:id="@+id/door_volume_desc_text"
                     android:text="@string/door_volume_desc"
                     android:textColor="@color/dash_text_lo"
                     android:textSize="15sp"
@@ -89,6 +90,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:id="@+id/door_volume_restore_label"
                 android:text="@string/door_volume_restore_title"
                 android:textColor="@color/text_primary"
                 android:textSize="15sp" />
@@ -100,8 +102,9 @@
 
         </LinearLayout>
 
-        <!-- Choix des portes déclencheuses -->
+        <!-- Choix des portes déclencheuses (masqué sans détection de porte : déclenchement par READY) -->
         <TextView
+            android:id="@+id/door_volume_doors_label"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/door_volume_doors_label"
@@ -110,6 +113,7 @@
             android:layout_marginTop="12dp" />
 
         <LinearLayout
+            android:id="@+id/door_volume_doors_row"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"

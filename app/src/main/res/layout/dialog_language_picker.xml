@@ -125,4 +125,32 @@
 
     </LinearLayout>
 
+    <!-- Ligne 3 : TR -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="8dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_pick_tr"
+            android:layout_width="0dp"
+            android:layout_height="52dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="5dp"
+            android:text="@string/settings_language_tr"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            app:backgroundTint="@color/dash_btn"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/dash_border"
+            app:cornerRadius="10dp" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="2" />
+
+    </LinearLayout>
+
 </LinearLayout>

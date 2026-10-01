@@ -1,11 +1,10 @@
 package com.mg4.control.update
 
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
-import android.graphics.Bitmap
-import android.graphics.Color
 import android.graphics.Paint
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -224,7 +223,7 @@ object UpdateDialogManager {
                 when (status) {
                     DownloadManager.STATUS_SUCCESSFUL -> {
                         progressBar.progress = 100
-                        // [RÉACTIVÉ 2026-08-18] Contrôle de signature (T-901) — voir ApkInstaller.
+                        // [RÉACTIVÉ 2026-08-18] Contrôle de signature (T-901) — voir ApkSecurity.
                         // L'APK est dans un dossier public : on vérifie qu'il est signé par NOTRE
                         // clé avant d'inviter l'utilisateur à l'installer.
                         val downloaded = File(
@@ -285,6 +284,9 @@ object UpdateDialogManager {
 
     private fun isOnWifi(context: Context): Boolean {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        // ACCESS_NETWORK_STATE n'est déclarée que dans la variante online, la seule qui arrive ici ;
+        // et l'uid système la détient de toute façon.
+        @SuppressLint("MissingPermission")
         val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
         return caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
     }

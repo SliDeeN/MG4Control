@@ -1,9 +1,9 @@
 package com.mg4.control.util
 
+import android.annotation.SuppressLint
 import android.app.usage.NetworkStats
 import android.app.usage.NetworkStatsManager
 import android.content.Context
-import android.net.TrafficStats
 import com.mg4.control.debug.AppLogger
 import java.util.Calendar
 
@@ -96,13 +96,7 @@ object DataUsage {
         }
     }
 
-    /** Repli universel : toutes interfaces, mais uniquement depuis le dernier démarrage. */
-    fun sinceBoot(): Usage = Usage(
-        TrafficStats.getTotalRxBytes().coerceAtLeast(0),
-        TrafficStats.getTotalTxBytes().coerceAtLeast(0),
-        "TrafficStats/depuis le démarrage"
-    )
-
+    @SuppressLint("PrivateApi")   // NetworkTemplate : API cachée d'Android, lue par réflexion : l'app tourne en uid système (voulu).
     private fun ethernetTemplate(): Any? = try {
         Class.forName("android.net.NetworkTemplate")
             .getMethod("buildTemplateEthernet").invoke(null)

@@ -5,23 +5,15 @@
     <color name="bg_dark">#FF111111</color>
     <color name="bg_card">#FF1E1E1E</color>
     <color name="bg_button">#FF2A2A2A</color>
-    <color name="bg_button_active">#FF0D47A1</color>
 
     <color name="accent_eco">#FF2E7D32</color>
     <color name="accent_normal">#FF1565C0</color>
-    <color name="accent_sport">#FFB71C1C</color>
-    <color name="accent_snow">#FF0288D1</color>
-    <color name="accent_custom">#FF6A1B9A</color>
 
-    <color name="accent_regen">#FF00838F</color>
-    <color name="accent_default">#FF2A2A2A</color>
 
     <color name="text_primary">#FFFFFFFF</color>
     <color name="text_secondary">#FFB0B0B0</color>
     <color name="text_active">#FFFFFFFF</color>
 
-    <color name="accent_warn">#FFE65100</color>
-    <color name="divider">#FF333333</color>
 
     <!-- ── Palette dashboard sombre ── -->
     <color name="dash_bg">#FF0C0C0E</color>

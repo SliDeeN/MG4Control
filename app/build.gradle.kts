@@ -11,11 +11,11 @@ android {
         applicationId = "com.mg4.control"
         minSdk = 28
         targetSdk = 34
-        versionCode = 18
+        versionCode = 19
         // Suffixe injecte par la CI beta : -Pmg4.versionSuffix=-beta42 produit "2.6.6-beta42".
         // L'APK installe annonce alors EXACTEMENT ce que dit le tag de la release, sans quoi
         // l'OTA reproposerait la meme mise a jour indefiniment.
-        versionName = "2.6.6" + (project.findProperty("mg4.versionSuffix") as String? ?: "")
+        versionName = "2.6.7" + (project.findProperty("mg4.versionSuffix") as String? ?: "")
     }
 
     // Signature avec la clé plateforme de la ROM (requise par sharedUserId=android.uid.system).
@@ -97,7 +97,22 @@ android {
         outputs.all {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
             if (variant.buildType.name == "release") {
-                output.outputFileName = "MG4Control-${variant.flavorName}-${variant.versionName}.apk"
+                // ⚠️ LE NOM DE L'APK OFFLINE EST FONCTIONNEL, PAS COSMÉTIQUE.
+                //
+                // L'API GitHub renvoie les assets d'une release triés PAR NOM, et les clients
+                // antérieurs à la 2.6.3 téléchargent le PREMIER .apk qu'ils y trouvent, sans
+                // regarder lequel. « offline » précédant « online » alphabétiquement, ces
+                // versions installaient l'APK offline — qui porte un applicationId distinct
+                // (com.mg4.control.offline) et apparaît donc comme une SECONDE application à
+                // côté de la leur. Cas réellement constaté d'une 2.6.0 passée à la 2.6.6.
+                //
+                // Le préfixe « secure » place l'offline après l'online dans ce tri. Ne pas le
+                // retirer, et ne jamais donner à l'offline un nom contenant « online » : c'est
+                // sur cette sous-chaîne que selectApk distingue les deux depuis la 2.6.3.
+                output.outputFileName = when (variant.flavorName) {
+                    "offline" -> "MG4Control-secure-${variant.versionName}.apk"
+                    else      -> "MG4Control-${variant.flavorName}-${variant.versionName}.apk"
+                }
             }
         }
     }
