@@ -327,11 +327,23 @@
     <string name="autobri_level_lights_on">Licht an (Nacht, Garage, Tunnel)</string>
     <string name="autobri_source_lights_off">Licht aus</string>
     <string name="autobri_status_lights">Letzte Einstellung: %1$s · %2$s → %3$d %%</string>
-    <string name="autobri_note_offline">Funktioniert mit dem Lichtschalter auf AUTO: Das automatische Licht erkennt die Dunkelheit. Ohne das Kästchen oben erfolgt die Einstellung beim Start und dann einmal bei der Ausfahrt aus der Garage. Jede Änderung wird über eine Sekunde eingeblendet.</string>
+    <string name="autobri_note_offline">Funktioniert mit dem Lichtschalter auf AUTO: Das automatische Licht erkennt die Dunkelheit. Ohne das Kästchen „Helligkeit während der Fahrt anpassen“ erfolgt die Einstellung beim Start und dann einmal bei der Ausfahrt aus der Garage. Jede Änderung wird über eine Sekunde eingeblendet.</string>
     <string name="autobri_follow">Helligkeit während der Fahrt anpassen (nicht nur beim Start)</string>
     <string name="autobri_follow_desc">Das Licht wird jede Minute neu berechnet; der Bildschirm wird nur angepasst, wenn die Abweichung 10 Punkte erreicht. Eine Änderung von Hand pausiert die Automatik bis zum nächsten Start.</string>
     <string name="autobri_lights">Ein- und Ausschalten des Lichts nutzen (Helligkeit in Garage und Tunnel gesenkt, auch am helllichten Tag)</string>
-    <string name="autobri_lights_desc">Standlicht an: Nachteinstellung; sobald es ausgeht, lichtabhängige Einstellung – beim Start oder jederzeit mit der Option oben. Abwählen, wenn Sie tagsüber mit Licht fahren.</string>
+    <string name="autobri_lights_desc">Standlicht an: Nachtpunkt der Kurve; sobald es ausgeht, wetterabhängige Einstellung. Abwählen, wenn Sie tagsüber mit Licht fahren.</string>
+    <string name="autobri_sources"><b>Grundlage</b> (mindestens eine Quelle)</string>
+    <string name="autobri_lights_desc_only">Licht aus: Stufe „Tag“; Licht an: Stufe „Nacht“, beide unten einstellbar.</string>
+    <string name="autobri_lights_desc_off">Abgewählt: Der Bildschirm kann in Garage oder Tunnel hell bleiben.</string>
+    <string name="autobri_forecast">Open-Meteo-Wetter nutzen</string>
+    <string name="autobri_forecast_warning">(verbraucht etwas mobile Daten)</string>
+    <string name="autobri_forecast_desc">Licht geschätzt aus dem Sonnenstand und der Sonnenscheinvorhersage rund um das Fahrzeug: etwa 5 KB pro Download, höchstens alle 8 Std. oder beim Verlassen des Gebiets (~60 km).</string>
+    <string name="autobri_mode_lights">Nur Licht: keine mobilen Daten, kein GPS</string>
+    <string name="autobri_mode_both">Wetter + Licht: ~5 KB pro Download</string>
+    <string name="autobri_mode_forecast">Nur Wetter: ~5 KB pro Download, ohne Garagen-/Tunnelschutz</string>
+    <string name="autobri_follow_desc_lights">Das Licht wird jede Minute neu berechnet; der Bildschirm wird nur angepasst, wenn die Abweichung 10 Punkte erreicht, sowie bei jedem Ein- oder Ausschalten des Lichts. Eine Änderung von Hand pausiert die Automatik bis zum nächsten Start.</string>
+    <string name="autobri_night_lights">Nacht oder Licht an · 10 lx</string>
+    <string name="autobri_status_failed_lights">Nicht möglich: Lichtzustand nicht lesbar.</string>
     <string name="autobri_status_paused">Pausiert bis zum nächsten Start: Helligkeit von Hand geändert.</string>
     <string name="autobri_curve_label">Bildschirmhelligkeit nach Außenlicht</string>
     <string name="autobri_night">Nacht · 10 lx</string>
@@ -345,7 +357,7 @@
     <string name="autobri_source_lights">Licht an</string>
     <string name="autobri_source_forecast">Wettervorhersage</string>
     <string name="autobri_source_sun">Sonnenstand</string>
-    <string name="autobri_note">Das Außenlicht wird aus dem Sonnenstand und der Sonnenscheinvorhersage von Open-Meteo (CC BY 4.0) geschätzt, für 3 Tage geladen und höchstens alle 8 Std. aktualisiert, mit einer auf ~10 km gerundeten Position. Ohne Vorhersage wird klarer Himmel angenommen. Jede Änderung wird über eine Sekunde eingeblendet.</string>
+    <string name="autobri_note">Das Außenlicht wird aus dem Sonnenstand und der Sonnenscheinvorhersage von Open-Meteo (CC BY 4.0) für ein Gebiet von etwa 60 × 60 km um das Fahrzeug geschätzt, für 3 Tage geladen und höchstens alle 8 Std. oder beim Verlassen des Gebiets aktualisiert, mit einer auf ~10 km gerundeten Position. Ohne Vorhersage wird klarer Himmel angenommen. Jede Änderung wird über eine Sekunde eingeblendet.</string>
 
     <!-- Klima-Automatisierung -->
     <string name="ac_auto_title">Klimaanlage über die Temperatur auslösen</string>

@@ -329,11 +329,23 @@
     <string name="autobri_level_lights_on">Feux allumés (nuit, garage, tunnel)</string>
     <string name="autobri_source_lights_off">feux éteints</string>
     <string name="autobri_status_lights">Dernier réglage : %1$s · %2$s → %3$d %%</string>
-    <string name="autobri_note_offline">Fonctionne avec le commodo des feux sur AUTO : ce sont les feux automatiques qui détectent l\'obscurité. Sans la case ci-dessus, le réglage se fait au démarrage, puis une fois à la sortie du garage. Chaque changement se fait en fondu d\'une seconde.</string>
+    <string name="autobri_note_offline">Fonctionne avec le commodo des feux sur AUTO : ce sont les feux automatiques qui détectent l\'obscurité. Sans la case « Ajuster la luminosité pendant la conduite », le réglage se fait au démarrage, puis une fois à la sortie du garage. Chaque changement se fait en fondu d\'une seconde.</string>
     <string name="autobri_follow">Ajuster la luminosité pendant la conduite (pas seulement au démarrage)</string>
     <string name="autobri_follow_desc">La lumière est recalculée chaque minute ; l\'écran n\'est réajusté que si l\'écart atteint 10 points. Un réglage à la main suspend l\'automatisme jusqu\'au prochain démarrage.</string>
     <string name="autobri_lights">Utiliser l\'allumage et l\'extinction des feux (luminosité baissée au garage, en tunnel, même en pleine journée)</string>
-    <string name="autobri_lights_desc">Feux de position allumés : réglage Nuit ; dès qu\'ils s\'éteignent, réglage selon la lumière — au démarrage, ou à tout moment avec l\'option ci-dessus. À décocher si vous roulez feux allumés en journée.</string>
+    <string name="autobri_lights_desc">Feux de position allumés : point Nuit de la courbe ; dès qu\'ils s\'éteignent, réglage selon la météo. À décocher si vous roulez feux allumés en journée.</string>
+    <string name="autobri_sources"><b>Se baser sur</b> (au moins une source)</string>
+    <string name="autobri_lights_desc_only">Feux éteints : niveau « jour » ; feux allumés : niveau « nuit », réglables plus bas.</string>
+    <string name="autobri_lights_desc_off">Décochée : l\'écran peut rester lumineux au garage ou en tunnel.</string>
+    <string name="autobri_forecast">Utiliser la météo Open-Meteo</string>
+    <string name="autobri_forecast_warning">(consomme un peu de données mobiles)</string>
+    <string name="autobri_forecast_desc">Lumière estimée d\'après la hauteur du soleil et la prévision d\'ensoleillement autour de la voiture : environ 5 Ko par téléchargement, toutes les 8 h au plus ou en sortant de la zone (~60 km).</string>
+    <string name="autobri_mode_lights">Feux seuls : aucune donnée mobile, pas de GPS</string>
+    <string name="autobri_mode_both">Météo + feux : ~5 Ko par téléchargement</string>
+    <string name="autobri_mode_forecast">Météo seule : ~5 Ko par téléchargement, sans garde-fou garage/tunnel</string>
+    <string name="autobri_follow_desc_lights">La lumière est recalculée chaque minute ; l\'écran n\'est réajusté que si l\'écart atteint 10 points, et à chaque allumage ou extinction des feux. Un réglage à la main suspend l\'automatisme jusqu\'au prochain démarrage.</string>
+    <string name="autobri_night_lights">Nuit ou feux allumés · 10 lx</string>
+    <string name="autobri_status_failed_lights">Réglage impossible : état des feux illisible.</string>
     <string name="autobri_status_paused">En pause jusqu\'au prochain démarrage : luminosité réglée à la main.</string>
     <string name="autobri_curve_label">Luminosité de l\'écran selon la lumière extérieure</string>
     <string name="autobri_night">Nuit · 10 lx</string>
@@ -347,7 +359,7 @@
     <string name="autobri_source_lights">feux allumés</string>
     <string name="autobri_source_forecast">prévision météo</string>
     <string name="autobri_source_sun">position du soleil</string>
-    <string name="autobri_note">La lumière extérieure est estimée d\'après la hauteur du soleil et la prévision d\'ensoleillement Open-Meteo (CC BY 4.0), téléchargée pour 3 jours et actualisée toutes les 8 h au plus, avec une position arrondie à ~10 km. Sans prévision, ciel dégagé supposé. Chaque changement se fait en fondu d\'une seconde.</string>
+    <string name="autobri_note">La lumière extérieure est estimée d\'après la hauteur du soleil et la prévision d\'ensoleillement Open-Meteo (CC BY 4.0) sur une zone d\'environ 60 × 60 km autour de la voiture, téléchargée pour 3 jours et actualisée toutes les 8 h au plus ou en sortant de la zone, avec une position arrondie à ~10 km. Sans prévision, ciel dégagé supposé. Chaque changement se fait en fondu d\'une seconde.</string>
     <string name="autobri_percent" translatable="false">%1$d %%</string>
     <string name="battery_auto_threshold_value" translatable="false">%1$d %%</string>
 

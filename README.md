@@ -198,19 +198,22 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
 - **Application d'un profil selon la batterie** : quand le niveau passe sous un seuil réglable au
   curseur (5–60 %), au démarrage comme en roulant ; une fois par épisode, réarmée à chaque
   démarrage ou après une recharge ; exécution directe ou popup de confirmation
-- **Luminosité automatique au démarrage** : au passage en READY, l'écran prend la luminosité
-  qu'une courbe à quatre points réglables (nuit, crépuscule, temps couvert, plein soleil) associe à
-  la lumière extérieure. La voiture ne mesurant pas la lumière, elle est estimée d'après la hauteur
-  du soleil (position GPS + heure, calcul sans réseau) et la prévision d'ensoleillement
-  [Open-Meteo](https://open-meteo.com) mise en cache pour 3 jours et actualisée toutes les 8 h au
-  plus (~2 Ko par requête), position arrondie à ~10 km.
-  Feux de position allumés (garage, tunnel, nuit) : réglage Nuit, refait d'après la lumière dès
-  qu'ils s'éteignent (option décochable si l'on roule feux allumés de jour). Option « Ajuster la
-  luminosité pendant la conduite » : réajuste aussi à chaque bascule des feux (tunnel) et dès que la lumière
-  estimée s'écarte de 10 points ; un réglage à la main suspend tout jusqu'au prochain démarrage.
-  Changements en fondu d'une seconde. Bouton « Tester maintenant ». **Version hors ligne** (sans
-  Internet, par choix) : variante réduite aux feux, deux luminosités réglables — feux éteints (80 %
-  par défaut) et feux allumés (20 %) — appliquées au READY puis à chaque bascule des feux
+- **Luminosité automatique au démarrage** : au passage en READY, l'écran prend une luminosité
+  choisie d'après les feux et/ou la météo — au moins une source, les feux seuls par défaut.
+  **Feux seuls** (ni données mobiles, ni GPS ; seul mode de la version hors ligne) : deux
+  luminosités réglables, feux éteints (80 % par défaut) et feux allumés (20 %).
+  **Météo** (case à cocher, elle consomme un peu de données) : une courbe à quatre points réglables
+  (nuit, crépuscule, temps couvert, plein soleil) associe la luminosité à la lumière extérieure.
+  La voiture ne mesurant pas la lumière, elle est estimée d'après la hauteur du soleil (position
+  GPS + heure, calcul sans réseau) et la prévision d'ensoleillement
+  [Open-Meteo](https://open-meteo.com) sur une grille de 25 points autour de la voiture (zone
+  d'environ 60 × 60 km : en roulant, la météo de l'endroit où l'on est), mise en cache pour 3 jours
+  et actualisée toutes les 8 h au plus ou en sortant de la zone (~5 Ko par requête), position
+  arrondie à ~10 km. Avec les feux en plus, feux de position allumés (garage, tunnel, nuit) :
+  point Nuit de la courbe. Option « Ajuster la luminosité pendant la conduite » : réajuste aussi à
+  chaque bascule des feux (tunnel) et, avec la météo, dès que la lumière estimée s'écarte de
+  10 points ; un réglage à la main suspend tout jusqu'au prochain démarrage. Changements en fondu
+  d'une seconde. Bouton « Tester maintenant »
 - **Déclenchement A/C via la température** : deux règles indépendantes (température supérieure /
   inférieure), chacune avec son seuil, sa consigne, sa ventilation, ses dégivrages, le mode
   automatique et la recirculation
@@ -1119,17 +1122,20 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
 - **Apply a profile from the battery level**: when the charge drops below a threshold set with a
   slider (5–60 %), at start-up or while driving; once per episode, re-armed at every start or after
   charging; direct execution or confirmation popup
-- **Automatic brightness at start-up**: when the car goes READY, the screen takes the brightness
-  that a four-point adjustable curve (night, dusk, overcast, full sun) assigns to the outdoor light.
-  The car does not measure light, so it is estimated from the sun height (GPS position + time,
-  computed offline) and the [Open-Meteo](https://open-meteo.com) sunshine forecast, cached for
-  3 days and refreshed every 8 h at most (~2 KB per request), position rounded to ~10 km. Side lights on (garage, tunnel, night): Night setting, redone
-  from the light once they switch off (can be unticked if you drive with lights on by day). "Adjust
-  brightness while driving" option: also readjusts at every lights change (tunnel) and as soon as the
-  estimated light drifts 10 points; adjusting by hand pauses it until the next start. Changes fade
-  over one second. "Test now" button. **Offline version** (no Internet, by design): a lights-only
-  variant with two adjustable levels — lights off (80 % by default) and lights on (20 %) — applied at
-  READY and at every lights change
+- **Automatic brightness at start-up**: when the car goes READY, the screen takes a brightness
+  chosen from the lights and/or the weather — at least one source, lights only by default.
+  **Lights only** (no mobile data, no GPS; the only mode of the offline version): two adjustable
+  levels, lights off (80 % by default) and lights on (20 %).
+  **Weather** (tick box, as it uses a little data): a four-point adjustable curve (night, dusk,
+  overcast, full sun) maps the outdoor light to a brightness. The car does not measure light, so
+  it is estimated from the sun height (GPS position + time, computed offline) and the
+  [Open-Meteo](https://open-meteo.com) sunshine forecast on a 25-point grid around the car (an
+  area of about 60 × 60 km: while driving, the weather where you are), cached for 3 days and
+  refreshed every 8 h at most or when leaving the area (~5 KB per request), position rounded to
+  ~10 km. With the lights as well, side lights on (garage, tunnel, night): Night point of the
+  curve. "Adjust brightness while driving" option: also readjusts at every lights change (tunnel)
+  and, with the weather, as soon as the estimated light drifts 10 points; adjusting by hand pauses
+  it until the next start. Changes fade over one second. "Test now" button
 - **Temperature-triggered A/C**: two independent rules (above / below), each with its threshold,
   setpoint, fan level, defrosters, automatic mode and recirculation
 - Each automation folds open independently of its enable switch

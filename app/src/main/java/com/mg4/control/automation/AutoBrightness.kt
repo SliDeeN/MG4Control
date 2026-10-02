@@ -12,7 +12,6 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
 import android.os.SystemClock
-import com.google.gson.Gson
 import com.mg4.control.BuildConfig
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
@@ -30,30 +29,30 @@ import kotlin.math.abs
 import kotlin.math.min
 
 /**
- * Luminosité automatique : l'écran prend la luminosité que la courbe de l'utilisateur associe à
- * la lumière extérieure estimée.
+ * Luminosité automatique : l'écran prend la luminosité qui correspond à l'état des feux ou à la
+ * lumière extérieure estimée, selon les sources choisies.
  *
  * **Quand :**
  *  - au passage en READY, une fois (4 s après ; démarrage à froid : 15 s) ;
  *  - option « Ajuster la luminosité pendant la conduite » : à chaque bascule confirmée des feux
- *    (tunnel, garage, tombée de la nuit), et dès que la lumière estimée — recalculée chaque minute,
- *    sans réseau — s'écarte de [SEUIL_POINTS] points du dernier réglage ;
+ *    (tunnel, garage, tombée de la nuit), et, avec la météo, dès que la lumière estimée —
+ *    recalculée chaque minute, sans réseau — s'écarte de [SEUIL_POINTS] points du dernier réglage ;
  *  - sans ce suivi mais avec les feux : une fois à la sortie du garage, si le READY s'est fait
  *    feux allumés (dans les [SURVEILLANCE_GARAGE_MS] qui suivent) ;
  *  - bouton « Tester maintenant ».
  * Un réglage à la main suspend tout jusqu'au prochain READY.
  *
- * **Comment :** la voiture ne mesure pas la lumière (sonde du 2026-10-01 : `OUTSIDE_AMBIENT_LIGHT`
- * vaut 0 au garage comme au soleil). On l'ESTIME : hauteur du soleil (position GPS + heure), et
- * rayonnement prévu par Open-Meteo, mis en cache trois jours — sans prévision, ciel dégagé. Option
- * « feux » : feux de position allumés = point Nuit, seul signal du véhicule qui suive la lumière.
- * Chaque changement se fait en fondu d'environ une seconde.
- *
- * **Version hors ligne** (sans Internet, par choix) : ni position, ni prévision, ni courbe — rien
- * que les feux. Feux éteints = réglage « éteints », feux allumés = réglage « allumés », aux mêmes
- * moments (READY, bascules en roulant si la case est cochée, sortie de garage sinon), avec le même
- * fondu et la même pause sur réglage manuel. Les branches en ligne sont inchangées : le drapeau
- * [BuildConfig.OFFLINE] est une constante, chaque variante ne compile que la sienne.
+ * **Sources** (au moins une) :
+ *  - **Feux seuls** — la version hors ligne, et la version en ligne par défaut : ni position, ni
+ *    réseau, ni courbe. Feux éteints = niveau « éteints », feux allumés = niveau « allumés ».
+ *  - **Météo** — version en ligne, case à cocher, car elle consomme un peu de données : la voiture
+ *    ne mesure pas la lumière (sonde du 2026-10-01 : `OUTSIDE_AMBIENT_LIGHT` vaut 0 au garage comme
+ *    au soleil), on l'ESTIME : hauteur du soleil (position GPS + heure), et rayonnement prévu par
+ *    Open-Meteo sur une grille de 25 points autour de la voiture (≈ 60 × 60 km), mis en cache trois
+ *    jours — en roulant, chaque calcul prend la météo de l'endroit où l'on est ; sans prévision,
+ *    ciel dégagé. Avec les feux en plus : feux de position allumés = point Nuit de la courbe.
+ * Les feux de position sont le seul signal du véhicule qui suive la lumière. Chaque changement se
+ * fait en fondu d'environ une seconde.
  *
  * Journal : [TAG], sans coordonnées, une ligne par changement d'écran.
  */
@@ -71,7 +70,7 @@ object AutoBrightness {
     private const val ATTENTE_POSITION_MS = 5_000L
     /**
      * Âge au-delà duquel la prévision est rafraîchie, après le réglage : trois requêtes par jour
-     * au plus (~2 Ko chacune). Elle couvre trois jours, rien ne presse.
+     * au plus sans grand trajet (~5 Ko chacune). Elle couvre trois jours, rien ne presse.
      */
     private const val RAFRAICHIR_APRES_MS = 8 * 3_600_000L
     /**
@@ -101,7 +100,7 @@ object AutoBrightness {
     private const val FONDU_MS = 1_000L
     private const val FONDU_PAS_MAX = 10
 
-    /** [LIGHTS_OFF] : version hors ligne seulement, feux éteints. */
+    /** [LIGHTS_OFF] : mode feux seuls, feux éteints. */
     enum class Source { LIGHTS, FORECAST, SUN, LIGHTS_OFF }
 
     data class Result(val source: Source, val lux: Double, val percent: Int)
@@ -148,7 +147,7 @@ object AutoBrightness {
             if (firstRead) DELAI_DEMARRAGE_FROID_MS else DELAI_APRES_READY_MS)
     }
 
-    /** Les deux variantes : la version hors ligne n'utilise que les feux (voir l'en-tête). */
+    /** Les deux variantes : la version hors ligne n'a que les feux (voir l'en-tête). */
     fun start(context: Context) {
         appContext = context.applicationContext
         ReadyWatcher.add(readyListener)
@@ -183,7 +182,7 @@ object AutoBrightness {
         ctx.getSharedPreferences(AutoBrightnessSettings.PREFS, Context.MODE_PRIVATE).edit()
             .putBoolean(AutoBrightnessSettings.KEY_PAUSED, false).apply()
 
-        val calcul = (if (BuildConfig.OFFLINE) horsLigne(cfg, MG4Hardware.isSideLightOn())
+        val calcul = (if (!cfg.useForecast) feuxSeuls(cfg, MG4Hardware.isSideLightOn())
                       else calculer(ctx, cfg.curve, ignorerFeux = !cfg.useLights, attendreReseau = test))
             ?: return null
         regler(ctx, calcul, origine)
@@ -230,7 +229,7 @@ object AutoBrightness {
                     }
                     if (garageSeul) return   // la sortie du garage était la seule chose attendue
                 }
-                !BuildConfig.OFFLINE && cfg.follow && maintenant >= prochaineEstimation &&
+                cfg.useForecast && cfg.follow && maintenant >= prochaineEstimation &&
                     !(cfg.useLights && feuxConfirmes == true) -> {
                     prochaineEstimation = maintenant + ESTIMATION_MS
                     calculer(ctx, cfg.curve, ignorerFeux = true, attendreReseau = false)?.let { c ->
@@ -276,20 +275,20 @@ object AutoBrightness {
 
     // ── Calcul et application ────────────────────────────────────────────────
 
-    /** Cible quand les feux s'allument : point Nuit en ligne, réglage « allumés » hors ligne. */
+    /** Cible quand les feux s'allument : point Nuit avec la météo, niveau « allumés » en feux seuls. */
     private fun cibleFeuxAllumes(cfg: AutoBrightnessSettings.Config): Calcul =
-        if (BuildConfig.OFFLINE) horsLigne(cfg, allumes = true)!! else nuit(cfg.curve)
+        if (!cfg.useForecast) feuxSeuls(cfg, allumes = true)!! else nuit(cfg.curve)
 
-    /** Cible quand les feux s'éteignent : lumière estimée en ligne, réglage « éteints » hors ligne. */
+    /** Cible quand les feux s'éteignent : lumière estimée avec la météo, niveau « éteints » en feux seuls. */
     private fun cibleFeuxEteints(ctx: Context, cfg: AutoBrightnessSettings.Config): Calcul? =
-        if (BuildConfig.OFFLINE) horsLigne(cfg, allumes = false)
+        if (!cfg.useForecast) feuxSeuls(cfg, allumes = false)
         else calculer(ctx, cfg.curve, ignorerFeux = true, attendreReseau = false)
 
     /**
-     * Version hors ligne : la valeur choisie pour l'état des feux. Feux illisibles → aucun réglage ;
+     * Mode feux seuls : le niveau choisi pour l'état des feux. Feux illisibles → aucun réglage ;
      * si le suivi tourne, la première lecture confirmée rattrapera.
      */
-    private fun horsLigne(cfg: AutoBrightnessSettings.Config, allumes: Boolean?): Calcul? {
+    private fun feuxSeuls(cfg: AutoBrightnessSettings.Config, allumes: Boolean?): Calcul? {
         if (allumes == null) {
             AppLogger.w(TAG, "feux illisibles — aucun réglage")
             return null
@@ -314,9 +313,9 @@ object AutoBrightness {
         val feux = if (ignorerFeux) null else MG4Hardware.isSideLightOn()
         val cache = lireCache(ctx)
         val loc = position(ctx)
-        // Sans position, celle de la dernière prévision : la voiture n'a pas bougé depuis l'arrêt.
-        val lat = loc?.latitude ?: cache?.latitude
-        val lon = loc?.longitude ?: cache?.longitude
+        // Sans position, le centre de la dernière grille : la voiture n'a pas bougé depuis l'arrêt.
+        val lat = loc?.latitude ?: cache?.grid?.latitude
+        val lon = loc?.longitude ?: cache?.grid?.longitude
         val maintenant = heure(loc)
 
         if (feux == true) {
@@ -342,7 +341,7 @@ object AutoBrightness {
         if (prevision == null && attendreReseau && reseauDisponible(ctx)) {
             prevision = telecharger(ctx, lat, lon, maintenant)?.also { telechargee = true }
         }
-        val ghi = prevision?.ghiAt(maintenant)
+        val ghi = prevision?.ghiAt(lat, lon, maintenant)
         val lux = OutdoorLight.estimateLux(hauteur, ghi)
         val meteo = if (ghi == null) "sans prévision (ciel dégagé supposé)"
                     else String.format(Locale.ROOT, "prévision %.0f W/m²", ghi)
@@ -449,54 +448,64 @@ object AutoBrightness {
     }
 
     /**
-     * Rafraîchit la prévision APRÈS le réglage, pour la fois suivante : quand elle a plus de
-     * [RAFRAICHIR_APRES_MS], qu'elle ne couvre plus demain, ou qu'elle vaut pour un autre endroit
-     * — et jamais moins de [REESSAI_APRES_MS] après la requête précédente.
+     * Rafraîchit la prévision APRÈS le réglage, pour la fois suivante : quand la voiture sort de
+     * la zone (plus de [SolarForecast.MAX_DISTANCE_KM] du centre de la grille), que la prévision a
+     * plus de [RAFRAICHIR_APRES_MS] ou ne couvre plus demain — et jamais moins de
+     * [REESSAI_APRES_MS] après la requête précédente. La nouvelle grille est centrée sur la voiture.
      */
     private fun entretenirCache(ctx: Context, calcul: Calcul) {
-        if (BuildConfig.OFFLINE || calcul.telechargee) return
+        // Sans la case météo, aucune requête : c'est la promesse « aucune donnée mobile ».
+        if (calcul.telechargee || !AutoBrightnessSettings.read(ctx).useForecast) return
         val lat = calcul.lat ?: return
         val lon = calcul.lon ?: return
         val maintenant = calcul.maintenant ?: return
         val cache = lireCache(ctx)
-        val aJour = cache != null &&
-            cache.distanceKm(lat, lon) <= SolarForecast.MAX_DISTANCE_KM &&
-            maintenant - cache.fetchedAtMs < RAFRAICHIR_APRES_MS &&
-            cache.ghiAt(maintenant + JOUR_MS) != null
-        if (aJour) return
+        val raison = when {
+            cache == null -> "aucune prévision"
+            cache.distanceKm(lat, lon) > SolarForecast.MAX_DISTANCE_KM -> String.format(Locale.ROOT,
+                "sortie de la zone, %.0f km du centre", cache.distanceKm(lat, lon))
+            maintenant - cache.fetchedAtMs >= RAFRAICHIR_APRES_MS ->
+                "plus de ${RAFRAICHIR_APRES_MS / 3_600_000L} h"
+            cache.ghiAt(lat, lon, maintenant + JOUR_MS) == null -> "ne couvre plus demain"
+            else -> return
+        }
         val dernierEssai = ctx.getSharedPreferences(AutoBrightnessSettings.PREFS, Context.MODE_PRIVATE)
             .getLong(AutoBrightnessSettings.KEY_LAST_FETCH_ATTEMPT, 0L)
         // Écart négatif = horloge revenue en arrière depuis : on ne s'interdit rien.
         if (maintenant - dernierEssai in 0 until REESSAI_APRES_MS) return
         if (!reseauDisponible(ctx)) return
-        telecharger(ctx, lat, lon, maintenant)?.let {
-            AppLogger.i(TAG, "prévision rafraîchie pour les prochains réglages")
-        }
+        AppLogger.i(TAG, "prévision à rafraîchir pour les prochains réglages ($raison)")
+        telecharger(ctx, lat, lon, maintenant)
     }
 
-    /** Une requête Open-Meteo, notée réussie ou non pour espacer la suivante. */
+    /**
+     * Une requête Open-Meteo, notée réussie ou non pour espacer la suivante. Le journal donne
+     * l'écart de rayonnement entre les points de la zone à cet instant : ce que la grille apporte
+     * sur un point unique (rien sous un ciel uniforme).
+     */
     private fun telecharger(ctx: Context, lat: Double, lon: Double, maintenant: Long): SolarForecast? {
         ctx.getSharedPreferences(AutoBrightnessSettings.PREFS, Context.MODE_PRIVATE).edit()
             .putLong(AutoBrightnessSettings.KEY_LAST_FETCH_ATTEMPT, maintenant)
             .apply()
-        return OpenMeteoClient.fetch(lat, lon, maintenant)?.also { ecrireCache(ctx, it) }
+        val prevision = OpenMeteoClient.fetch(lat, lon, maintenant) ?: return null
+        ecrireCache(ctx, prevision)
+        val valeurs = prevision.ghiOfPointsAt(maintenant).filterNotNull()
+        AppLogger.i(TAG, if (valeurs.isEmpty()) "prévision téléchargée" else String.format(Locale.ROOT,
+            "prévision téléchargée : de %.0f à %.0f W/m² selon les %d points de la zone",
+            valeurs.min(), valeurs.max(), valeurs.size))
+        return prevision
     }
 
+    /** Illisible, incomplète ou de l'ancien format à un seul point : comme absente, la prochaine requête la remplace. */
     private fun lireCache(ctx: Context): SolarForecast? {
         val json = ctx.getSharedPreferences(AutoBrightnessSettings.PREFS, Context.MODE_PRIVATE)
             .getString(AutoBrightnessSettings.KEY_FORECAST, null) ?: return null
-        val prevision = runCatching { Gson().fromJson(json, SolarForecast::class.java) }.getOrNull()
-            ?: return null
-        // Gson n'appelle pas le constructeur : une entrée abîmée laisserait des listes nulles
-        // malgré le typage non nul.
-        @Suppress("SENSELESS_COMPARISON")
-        val complete = prevision.hoursS != null && prevision.ghi != null
-        return prevision.takeIf { complete }
+        return SolarForecast.fromJson(json)
     }
 
     private fun ecrireCache(ctx: Context, prevision: SolarForecast) {
         ctx.getSharedPreferences(AutoBrightnessSettings.PREFS, Context.MODE_PRIVATE).edit()
-            .putString(AutoBrightnessSettings.KEY_FORECAST, Gson().toJson(prevision))
+            .putString(AutoBrightnessSettings.KEY_FORECAST, prevision.toJson())
             .apply()
     }
 }

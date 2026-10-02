@@ -444,6 +444,80 @@
                     android:layout_marginTop="12dp"
                     android:layout_marginBottom="12dp" />
 
+                <!-- Sources : les feux et/ou la météo, au moins une (la dernière cochée est
+                     verrouillée). Masquées en hors ligne : rien que les feux. -->
+                <LinearLayout
+                    android:id="@+id/section_autobri_sources"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/autobri_sources"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp" />
+
+                    <CheckBox
+                        android:id="@+id/check_autobri_lights"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/autobri_lights"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="32dp"
+                        android:id="@+id/autobri_lights_desc"
+                        android:text="@string/autobri_lights_desc_only"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:lineSpacingExtra="2dp" />
+
+                    <CheckBox
+                        android:id="@+id/check_autobri_forecast"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/autobri_forecast"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="32dp"
+                        android:id="@+id/autobri_forecast_desc"
+                        android:text="@string/autobri_forecast_desc"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        android:lineSpacingExtra="2dp" />
+
+                    <!-- Conséquence du choix : données, GPS, garde-fou -->
+                    <TextView
+                        android:id="@+id/autobri_mode"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="32dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@drawable/bg_chip_active"
+                        android:paddingHorizontal="10dp"
+                        android:paddingVertical="4dp"
+                        android:textSize="13sp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/dash_border"
+                        android:layout_marginTop="12dp"
+                        android:layout_marginBottom="12dp" />
+
+                </LinearLayout>
+
                 <!-- Déclencheurs en route : feux et écart de la lumière estimée -->
                 <CheckBox
                     android:id="@+id/check_autobri_follow"
@@ -458,26 +532,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="32dp"
                     android:id="@+id/autobri_follow_desc"
-                    android:text="@string/autobri_follow_desc"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
-                    android:lineSpacingExtra="2dp" />
-
-                <CheckBox
-                    android:id="@+id/check_autobri_lights"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="@string/autobri_lights"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="16sp" />
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="32dp"
-                    android:id="@+id/autobri_lights_desc"
-                    android:text="@string/autobri_lights_desc"
+                    android:text="@string/autobri_follow_desc_offline"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
                     android:lineSpacingExtra="2dp" />
@@ -489,12 +544,13 @@
                     android:layout_marginTop="12dp"
                     android:layout_marginBottom="12dp" />
 
-                <!-- Version en ligne : la courbe, masquée en hors ligne -->
+                <!-- Avec la météo : la courbe -->
                 <LinearLayout
                     android:id="@+id/section_autobri_curve"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:visibility="gone">
 
                 <!-- La courbe : quatre points, du plus sombre au plus clair -->
                 <TextView
@@ -513,6 +569,7 @@
                     android:gravity="center_vertical">
 
                     <TextView
+                        android:id="@+id/autobri_night_label"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -675,13 +732,12 @@
 
                 </LinearLayout>
 
-                <!-- Version hors ligne : deux niveaux, feux éteints / feux allumés (pas de courbe) -->
+                <!-- Feux seuls (hors ligne, ou météo décochée) : deux niveaux, feux éteints / allumés -->
                 <LinearLayout
                     android:id="@+id/section_autobri_levels"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone">
+                    android:orientation="vertical">
 
                     <LinearLayout
                         android:layout_width="match_parent"

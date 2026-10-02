@@ -327,11 +327,23 @@
     <string name="autobri_level_lights_on">Luzes acesas (noite, garagem, túnel)</string>
     <string name="autobri_source_lights_off">luzes apagadas</string>
     <string name="autobri_status_lights">Último ajuste: %1$s · %2$s → %3$d %%</string>
-    <string name="autobri_note_offline">Funciona com o comando das luzes em AUTO: são as luzes automáticas que detetam a escuridão. Sem a caixa acima, o ajuste faz-se no arranque e depois uma vez à saída da garagem. Cada mudança faz-se com uma transição de um segundo.</string>
+    <string name="autobri_note_offline">Funciona com o comando das luzes em AUTO: são as luzes automáticas que detetam a escuridão. Sem a caixa «Ajustar o brilho durante a condução», o ajuste faz-se no arranque e depois uma vez à saída da garagem. Cada mudança faz-se com uma transição de um segundo.</string>
     <string name="autobri_follow">Ajustar o brilho durante a condução (não só no arranque)</string>
     <string name="autobri_follow_desc">A luz é recalculada a cada minuto; o ecrã só é reajustado se a diferença atingir 10 pontos. Um ajuste manual suspende a automatização até ao próximo arranque.</string>
     <string name="autobri_lights">Usar o acender e apagar das luzes (brilho reduzido na garagem e em túneis, mesmo em pleno dia)</string>
-    <string name="autobri_lights_desc">Luzes de presença acesas: ajuste Noite; assim que se apagam, ajuste conforme a luz — no arranque, ou a qualquer momento com a opção acima. Desmarque se circula com as luzes acesas de dia.</string>
+    <string name="autobri_lights_desc">Luzes de presença acesas: ponto Noite da curva; assim que se apagam, ajuste conforme a meteorologia. Desmarque se circula com as luzes acesas de dia.</string>
+    <string name="autobri_sources"><b>Basear-se em</b> (pelo menos uma fonte)</string>
+    <string name="autobri_lights_desc_only">Luzes apagadas: nível «dia»; luzes acesas: nível «noite», ajustáveis mais abaixo.</string>
+    <string name="autobri_lights_desc_off">Desmarcada: o ecrã pode ficar luminoso na garagem ou num túnel.</string>
+    <string name="autobri_forecast">Usar a meteorologia Open-Meteo</string>
+    <string name="autobri_forecast_warning">(consome alguns dados móveis)</string>
+    <string name="autobri_forecast_desc">Luz estimada a partir da altura do sol e da previsão de insolação à volta do carro: cerca de 5 KB por descarga, no máximo a cada 8 h ou ao sair da zona (~60 km).</string>
+    <string name="autobri_mode_lights">Só luzes: sem dados móveis, sem GPS</string>
+    <string name="autobri_mode_both">Meteorologia + luzes: ~5 KB por descarga</string>
+    <string name="autobri_mode_forecast">Só meteorologia: ~5 KB por descarga, sem proteção garagem/túnel</string>
+    <string name="autobri_follow_desc_lights">A luz é recalculada a cada minuto; o ecrã só é reajustado se a diferença atingir 10 pontos, e sempre que as luzes se acendem ou apagam. Um ajuste manual suspende a automatização até ao próximo arranque.</string>
+    <string name="autobri_night_lights">Noite ou luzes acesas · 10 lx</string>
+    <string name="autobri_status_failed_lights">Ajuste impossível: estado das luzes ilegível.</string>
     <string name="autobri_status_paused">Em pausa até ao próximo arranque: brilho ajustado à mão.</string>
     <string name="autobri_curve_label">Brilho do ecrã conforme a luz exterior</string>
     <string name="autobri_night">Noite · 10 lx</string>
@@ -345,7 +357,7 @@
     <string name="autobri_source_lights">luzes acesas</string>
     <string name="autobri_source_forecast">previsão meteorológica</string>
     <string name="autobri_source_sun">posição do sol</string>
-    <string name="autobri_note">A luz exterior é estimada a partir da altura do sol e da previsão de insolação da Open-Meteo (CC BY 4.0), descarregada para 3 dias e atualizada no máximo a cada 8 h, com uma posição arredondada a ~10 km. Sem previsão, assume-se céu limpo. Cada mudança faz-se com uma transição de um segundo.</string>
+    <string name="autobri_note">A luz exterior é estimada a partir da altura do sol e da previsão de insolação da Open-Meteo (CC BY 4.0) numa zona de cerca de 60 × 60 km à volta do carro, descarregada para 3 dias e atualizada no máximo a cada 8 h ou ao sair da zona, com uma posição arredondada a ~10 km. Sem previsão, assume-se céu limpo. Cada mudança faz-se com uma transição de um segundo.</string>
 
     <!-- Automação do A/C -->
     <string name="ac_auto_title">Ativação do A/C consoante a temperatura</string>

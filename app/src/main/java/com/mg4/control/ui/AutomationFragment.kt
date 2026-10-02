@@ -3,6 +3,10 @@ package com.mg4.control.ui
 import android.content.Context
 import android.content.res.ColorStateList
 import android.os.Bundle
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.ImageSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +14,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.CheckBox
+import android.widget.CompoundButton
 import android.widget.EditText
 import android.widget.Spinner
 import android.widget.Switch
@@ -181,33 +186,77 @@ class AutomationFragment : Fragment() {
                 prefs.edit().putBoolean(AutoBrightnessSettings.KEY_FOLLOW, c).apply()
             }
         }
-        view.findViewById<CheckBox>(R.id.check_autobri_lights).apply {
-            isChecked = cfg.useLights
-            setOnCheckedChangeListener { _, c ->
-                prefs.edit().putBoolean(AutoBrightnessSettings.KEY_USE_LIGHTS, c).apply()
+
+        // Sources : les feux et/ou la météo, au moins une. Version hors ligne (sans Internet, par
+        // choix) : rien que les feux, le choix n'est pas proposé.
+        view.findViewById<View>(R.id.section_autobri_sources).visibility =
+            if (BuildConfig.OFFLINE) View.GONE else View.VISIBLE
+        val feux  = view.findViewById<CheckBox>(R.id.check_autobri_lights)
+        val meteo = view.findViewById<CheckBox>(R.id.check_autobri_forecast)
+        val libelleFeux = getText(R.string.autobri_lights)
+        // L'avertissement « données mobiles » en orange, à la suite du libellé.
+        val libelleMeteo = SpannableStringBuilder(getString(R.string.autobri_forecast)).append(' ')
+            .append(getString(R.string.autobri_forecast_warning),
+                ForegroundColorSpan(requireContext().getColor(R.color.dash_warn)),
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        feux.isChecked  = cfg.useLights
+        meteo.isChecked = cfg.useForecast
+
+        fun appliquerSources() {
+            val f = feux.isChecked
+            val m = meteo.isChecked
+            // La dernière source cochée ne se décoche pas.
+            verrouiller(feux, libelleFeux, f && !m)
+            verrouiller(meteo, libelleMeteo, m && !f)
+            val (mode, couleur, fond) = when {
+                !m   -> Triple(R.string.autobri_mode_lights, R.color.dash_eco, R.color.dash_eco_dim)
+                f    -> Triple(R.string.autobri_mode_both, R.color.dash_warn, R.color.dash_warn_dim)
+                else -> Triple(R.string.autobri_mode_forecast, R.color.dash_warn, R.color.dash_warn_dim)
             }
+            view.findViewById<TextView>(R.id.autobri_mode).apply {
+                setText(mode)
+                setTextColor(requireContext().getColor(couleur))
+                backgroundTintList = ColorStateList.valueOf(requireContext().getColor(fond))
+            }
+            view.findViewById<TextView>(R.id.autobri_desc).setText(
+                if (m) R.string.autobri_desc else R.string.autobri_desc_offline)
+            view.findViewById<TextView>(R.id.autobri_lights_desc).setText(when {
+                !f   -> R.string.autobri_lights_desc_off
+                m    -> R.string.autobri_lights_desc
+                else -> R.string.autobri_lights_desc_only
+            })
+            view.findViewById<TextView>(R.id.autobri_follow_desc).setText(when {
+                !m   -> R.string.autobri_follow_desc_offline
+                f    -> R.string.autobri_follow_desc_lights
+                else -> R.string.autobri_follow_desc
+            })
+            // Avec la météo, la courbe ; en feux seuls, les deux niveaux. Chacun garde ses valeurs.
+            view.findViewById<View>(R.id.section_autobri_curve).visibility =
+                if (m) View.VISIBLE else View.GONE
+            view.findViewById<View>(R.id.section_autobri_levels).visibility =
+                if (m) View.GONE else View.VISIBLE
+            view.findViewById<TextView>(R.id.autobri_night_label).setText(
+                if (f && m) R.string.autobri_night_lights else R.string.autobri_night)
+            view.findViewById<TextView>(R.id.autobri_note).setText(
+                if (m) R.string.autobri_note else R.string.autobri_note_offline)
         }
-
-        // Version hors ligne (sans Internet, par choix) : rien que les feux. Pas de courbe, pas de
-        // case « feux » — ils sont toute la fonctionnalité —, deux niveaux à la place.
-        val horsLigne = BuildConfig.OFFLINE
-        view.findViewById<TextView>(R.id.autobri_desc).setText(
-            if (horsLigne) R.string.autobri_desc_offline else R.string.autobri_desc)
-        view.findViewById<TextView>(R.id.autobri_follow_desc).setText(
-            if (horsLigne) R.string.autobri_follow_desc_offline else R.string.autobri_follow_desc)
-        val enLigne = if (horsLigne) View.GONE else View.VISIBLE
-        view.findViewById<View>(R.id.check_autobri_lights).visibility = enLigne
-        view.findViewById<View>(R.id.autobri_lights_desc).visibility = enLigne
-        view.findViewById<View>(R.id.section_autobri_curve).visibility = enLigne
-        view.findViewById<View>(R.id.section_autobri_levels).visibility =
-            if (horsLigne) View.VISIBLE else View.GONE
-        if (horsLigne) {
-            bindPercentSlider(view, R.id.slider_autobri_lights_off, R.id.autobri_lights_off_value,
-                AutoBrightnessSettings.KEY_LIGHTS_OFF_PERCENT, cfg.lightsOffPercent, prefs)
-            bindPercentSlider(view, R.id.slider_autobri_lights_on, R.id.autobri_lights_on_value,
-                AutoBrightnessSettings.KEY_LIGHTS_ON_PERCENT, cfg.lightsOnPercent, prefs)
+        // Les deux cases enregistrées ensemble : l'état affiché est l'état EFFECTIF (feux forcés
+        // sans la météo), à ne pas laisser diverger d'un ancien réglage « feux décochés ».
+        val enregistrer = CompoundButton.OnCheckedChangeListener { _, _ ->
+            prefs.edit()
+                .putBoolean(AutoBrightnessSettings.KEY_USE_LIGHTS, feux.isChecked)
+                .putBoolean(AutoBrightnessSettings.KEY_USE_FORECAST, meteo.isChecked)
+                .apply()
+            appliquerSources()
         }
+        feux.setOnCheckedChangeListener(enregistrer)
+        meteo.setOnCheckedChangeListener(enregistrer)
+        appliquerSources()
 
+        bindPercentSlider(view, R.id.slider_autobri_lights_off, R.id.autobri_lights_off_value,
+            AutoBrightnessSettings.KEY_LIGHTS_OFF_PERCENT, cfg.lightsOffPercent, prefs)
+        bindPercentSlider(view, R.id.slider_autobri_lights_on, R.id.autobri_lights_on_value,
+            AutoBrightnessSettings.KEY_LIGHTS_ON_PERCENT, cfg.lightsOnPercent, prefs)
         bindPercentSlider(view, R.id.slider_autobri_night, R.id.autobri_night_value,
             AutoBrightnessSettings.KEY_NIGHT, cfg.curve.night, prefs)
         bindPercentSlider(view, R.id.slider_autobri_twilight, R.id.autobri_twilight_value,
@@ -217,8 +266,6 @@ class AutomationFragment : Fragment() {
         bindPercentSlider(view, R.id.slider_autobri_sunny, R.id.autobri_sunny_value,
             AutoBrightnessSettings.KEY_SUNNY, cfg.curve.sunny, prefs)
 
-        view.findViewById<TextView>(R.id.autobri_note).setText(
-            if (horsLigne) R.string.autobri_note_offline else R.string.autobri_note)
         val etat = view.findViewById<TextView>(R.id.autobri_status)
         afficherEtatLuminosite(etat, prefs)
         view.findViewById<MaterialButton>(R.id.btn_autobri_test).setOnClickListener { btn ->
@@ -226,9 +273,31 @@ class AutomationFragment : Fragment() {
             AutoBrightness.testNow(requireContext()) { r ->
                 btn.isEnabled = true
                 if (!isAdded) return@testNow
-                if (r == null) etat.setText(R.string.autobri_status_failed)
+                if (r == null) etat.setText(
+                    if (meteo.isChecked) R.string.autobri_status_failed else R.string.autobri_status_failed_lights)
                 else afficherEtatLuminosite(etat, prefs)
             }
+        }
+    }
+
+    /**
+     * Case qu'on ne peut plus décocher (dernière source cochée) : grisée, son libellé précédé d'un
+     * cadenas pour qu'on comprenne pourquoi elle ne répond plus.
+     */
+    private fun verrouiller(box: CheckBox, libelle: CharSequence, verrouillee: Boolean) {
+        box.isEnabled = !verrouillee
+        if (!verrouillee) {
+            box.text = libelle
+            return
+        }
+        val taille = box.textSize.toInt()
+        val cadenas = requireContext().getDrawable(R.drawable.ic_lock)?.mutate()?.apply {
+            setTint(requireContext().getColor(R.color.text_secondary))
+            setBounds(0, 0, taille, taille)
+        }
+        box.text = if (cadenas == null) libelle else SpannableStringBuilder(" ").apply {
+            setSpan(ImageSpan(cadenas, ImageSpan.ALIGN_BASELINE), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            append(' ').append(libelle)
         }
     }
 
@@ -260,7 +329,8 @@ class AutomationFragment : Fragment() {
             tv.setText(R.string.autobri_status_none)
             return
         }
-        val source = when (prefs.getString(AutoBrightnessSettings.KEY_LAST_SOURCE, null)) {
+        val derniere = prefs.getString(AutoBrightnessSettings.KEY_LAST_SOURCE, null)
+        val source = when (derniere) {
             AutoBrightness.Source.LIGHTS.name     -> getString(R.string.autobri_source_lights)
             AutoBrightness.Source.LIGHTS_OFF.name -> getString(R.string.autobri_source_lights_off)
             AutoBrightness.Source.FORECAST.name   -> getString(R.string.autobri_source_forecast)
@@ -268,8 +338,11 @@ class AutomationFragment : Fragment() {
         }
         val heure = android.text.format.DateFormat.getTimeFormat(requireContext()).format(Date(quand))
         val pourcent = prefs.getInt(AutoBrightnessSettings.KEY_LAST_PERCENT, 0)
-        // Hors ligne, aucune lumière n'est estimée : pas de lux à afficher.
-        val etat = if (BuildConfig.OFFLINE) {
+        // Des lux seulement pour une lumière ESTIMÉE (météo, soleil) : un réglage d'après les feux
+        // n'en a pas — au mieux la valeur conventionnelle du point Nuit.
+        val feux = derniere == AutoBrightness.Source.LIGHTS.name ||
+            derniere == AutoBrightness.Source.LIGHTS_OFF.name
+        val etat = if (feux) {
             getString(R.string.autobri_status_lights, heure, source, pourcent)
         } else {
             val lux = String.format(Locale.getDefault(), "%,d",

@@ -327,11 +327,23 @@
     <string name="autobri_level_lights_on">Luces encendidas (noche, garaje, túnel)</string>
     <string name="autobri_source_lights_off">luces apagadas</string>
     <string name="autobri_status_lights">Último ajuste: %1$s · %2$s → %3$d %%</string>
-    <string name="autobri_note_offline">Funciona con el mando de luces en AUTO: son las luces automáticas las que detectan la oscuridad. Sin la casilla de arriba, el ajuste se hace al arrancar y luego una vez al salir del garaje. Cada cambio se hace con un fundido de un segundo.</string>
+    <string name="autobri_note_offline">Funciona con el mando de luces en AUTO: son las luces automáticas las que detectan la oscuridad. Sin la casilla «Ajustar el brillo durante la conducción», el ajuste se hace al arrancar y luego una vez al salir del garaje. Cada cambio se hace con un fundido de un segundo.</string>
     <string name="autobri_follow">Ajustar el brillo durante la conducción (no solo al arrancar)</string>
     <string name="autobri_follow_desc">La luz se recalcula cada minuto; la pantalla solo se reajusta si la diferencia alcanza 10 puntos. Un ajuste manual suspende la automatización hasta el próximo arranque.</string>
     <string name="autobri_lights">Usar el encendido y apagado de las luces (brillo reducido en garaje y túnel, incluso a pleno día)</string>
-    <string name="autobri_lights_desc">Luces de posición encendidas: ajuste Noche; en cuanto se apagan, ajuste según la luz — al arrancar, o en todo momento con la opción de arriba. Desmarque si circula con las luces encendidas de día.</string>
+    <string name="autobri_lights_desc">Luces de posición encendidas: punto Noche de la curva; en cuanto se apagan, ajuste según el tiempo. Desmarque si circula con las luces encendidas de día.</string>
+    <string name="autobri_sources"><b>Basarse en</b> (al menos una fuente)</string>
+    <string name="autobri_lights_desc_only">Luces apagadas: nivel «día»; luces encendidas: nivel «noche», ajustables más abajo.</string>
+    <string name="autobri_lights_desc_off">Desmarcada: la pantalla puede seguir brillante en el garaje o en un túnel.</string>
+    <string name="autobri_forecast">Usar el tiempo de Open-Meteo</string>
+    <string name="autobri_forecast_warning">(consume algunos datos móviles)</string>
+    <string name="autobri_forecast_desc">Luz estimada a partir de la altura del sol y de la previsión de sol alrededor del coche: unos 5 KB por descarga, como máximo cada 8 h o al salir de la zona (~60 km).</string>
+    <string name="autobri_mode_lights">Solo luces: sin datos móviles, sin GPS</string>
+    <string name="autobri_mode_both">Tiempo + luces: ~5 KB por descarga</string>
+    <string name="autobri_mode_forecast">Solo tiempo: ~5 KB por descarga, sin protección en garaje/túnel</string>
+    <string name="autobri_follow_desc_lights">La luz se recalcula cada minuto; la pantalla solo se reajusta si la diferencia alcanza 10 puntos, y cada vez que las luces se encienden o se apagan. Un ajuste manual suspende la automatización hasta el próximo arranque.</string>
+    <string name="autobri_night_lights">Noche o luces encendidas · 10 lx</string>
+    <string name="autobri_status_failed_lights">Ajuste imposible: estado de las luces ilegible.</string>
     <string name="autobri_status_paused">En pausa hasta el próximo arranque: brillo ajustado a mano.</string>
     <string name="autobri_curve_label">Brillo de la pantalla según la luz exterior</string>
     <string name="autobri_night">Noche · 10 lx</string>
@@ -345,7 +357,7 @@
     <string name="autobri_source_lights">luces encendidas</string>
     <string name="autobri_source_forecast">previsión meteorológica</string>
     <string name="autobri_source_sun">posición del sol</string>
-    <string name="autobri_note">La luz exterior se estima a partir de la altura del sol y de la previsión de sol de Open-Meteo (CC BY 4.0), descargada para 3 días y actualizada como máximo cada 8 h, con una posición redondeada a ~10 km. Sin previsión, se supone cielo despejado. Cada cambio se hace con un fundido de un segundo.</string>
+    <string name="autobri_note">La luz exterior se estima a partir de la altura del sol y de la previsión de sol de Open-Meteo (CC BY 4.0) en una zona de unos 60 × 60 km alrededor del coche, descargada para 3 días y actualizada como máximo cada 8 h o al salir de la zona, con una posición redondeada a ~10 km. Sin previsión, se supone cielo despejado. Cada cambio se hace con un fundido de un segundo.</string>
 
     <!-- Automatización del A/A -->
     <string name="ac_auto_title">Activación del A/A según la temperatura</string>
