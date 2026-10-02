@@ -9,7 +9,8 @@ import org.junit.Test
 
 /**
  * Chauffage intelligent de la batterie : lecture d'origine de chaque plateforme, et décompte de la
- * coupure automatique (au démarrage, à l'activation en route, annulation, grâce après coupure).
+ * coupure automatique — dès l'activation (en roulant ou à l'arrêt), au démarrage si déjà activé,
+ * annulé en fin de trajet, grâce après coupure.
  */
 class BatteryHeatingTest {
 
@@ -41,6 +42,7 @@ class BatteryHeatingTest {
     @Test
     fun `deja actif au demarrage le decompte part du demarrage`() {
         val d = BatteryHeatingCountdown()
+        d.startTrip()
         assertEquals(Decision.DEBUT, d.tick(0L, actif = true, dureeMs = trente))
         assertEquals(trente, d.echeanceMs(trente))
         assertEquals(Decision.RIEN, d.tick(trente - 1, actif = true, dureeMs = trente))
@@ -51,6 +53,7 @@ class BatteryHeatingTest {
     @Test
     fun `active en route le decompte part de l activation`() {
         val d = BatteryHeatingCountdown()
+        d.startTrip()
         assertEquals(Decision.RIEN, d.tick(0L, actif = false, dureeMs = trente))
         assertEquals(Decision.RIEN, d.tick(10 * minute, actif = false, dureeMs = trente))
         assertEquals(Decision.DEBUT, d.tick(12 * minute, actif = true, dureeMs = trente))
@@ -59,8 +62,31 @@ class BatteryHeatingTest {
     }
 
     @Test
+    fun `active a l arret le decompte part aussitot et continue au demarrage`() {
+        val d = BatteryHeatingCountdown()
+        assertEquals(Decision.RIEN, d.tick(0L, actif = false, dureeMs = trente))
+        assertEquals(Decision.DEBUT, d.tick(minute, actif = true, dureeMs = trente))
+        // READY deux minutes plus tard : le décompte en cours n'est pas relancé.
+        d.startTrip()
+        assertEquals(Decision.RIEN, d.tick(3 * minute, actif = true, dureeMs = trente))
+        assertEquals(minute + trente, d.echeanceMs(trente))
+        assertEquals(Decision.COUPER, d.tick(minute + trente, actif = true, dureeMs = trente))
+    }
+
+    @Test
+    fun `laisse active a l arret le decompte attend le demarrage`() {
+        val d = BatteryHeatingCountdown()
+        // Vu activé sans l'avoir vu passer : laissé d'un trajet précédent.
+        assertEquals(Decision.RIEN, d.tick(0L, actif = true, dureeMs = trente))
+        assertEquals(Decision.RIEN, d.tick(10 * minute, actif = true, dureeMs = trente))
+        d.startTrip()
+        assertEquals(Decision.DEBUT, d.tick(12 * minute, actif = true, dureeMs = trente))
+    }
+
+    @Test
     fun `coupe avant l echeance puis reactive repart de zero`() {
         val d = BatteryHeatingCountdown()
+        d.startTrip()
         d.tick(0L, actif = true, dureeMs = trente)
         assertEquals(Decision.ANNULE, d.tick(20 * minute, actif = false, dureeMs = trente))
         assertEquals(Decision.DEBUT, d.tick(25 * minute, actif = true, dureeMs = trente))
@@ -71,6 +97,7 @@ class BatteryHeatingTest {
     @Test
     fun `etat illisible ne change rien`() {
         val d = BatteryHeatingCountdown()
+        d.startTrip()
         d.tick(0L, actif = true, dureeMs = trente)
         assertEquals(Decision.RIEN, d.tick(10 * minute, actif = null, dureeMs = trente))
         assertEquals(trente, d.echeanceMs(trente))
@@ -78,31 +105,67 @@ class BatteryHeatingTest {
     }
 
     @Test
-    fun `nouveau trajet le decompte ne survit pas`() {
+    fun `fin de trajet le decompte ne survit pas`() {
         val d = BatteryHeatingCountdown()
+        d.startTrip()
         d.tick(0L, actif = true, dureeMs = trente)
-        assertTrue(d.reset())
-        assertFalse(d.reset())
-        // Toujours activé au démarrage suivant : nouveau décompte complet.
+        assertTrue(d.endTrip())
+        assertFalse(d.endTrip())
+        // Garé, toujours activé : pas de nouveau décompte avant le démarrage suivant…
+        assertEquals(Decision.RIEN, d.tick(minute, actif = true, dureeMs = trente))
+        // … qui en lance un complet.
+        d.startTrip()
         assertEquals(Decision.DEBUT, d.tick(3 * 60 * minute, actif = true, dureeMs = trente))
         assertEquals(3 * 60 * minute + trente, d.echeanceMs(trente))
     }
 
     @Test
+    fun `gare une vraie activation relance un decompte`() {
+        val d = BatteryHeatingCountdown()
+        d.startTrip()
+        d.tick(0L, actif = true, dureeMs = trente)
+        d.endTrip()
+        assertEquals(Decision.RIEN, d.tick(minute, actif = false, dureeMs = trente))
+        assertEquals(Decision.DEBUT, d.tick(2 * minute, actif = true, dureeMs = trente))
+    }
+
+    @Test
+    fun `automatisme reactive avec chauffage active le decompte repart aussitot`() {
+        val d = BatteryHeatingCountdown()
+        d.startTrip()
+        d.tick(0L, actif = true, dureeMs = trente)
+        assertTrue(d.reset())
+        assertEquals(Decision.DEBUT, d.tick(5 * minute, actif = true, dureeMs = trente))
+        assertEquals(5 * minute + trente, d.echeanceMs(trente))
+    }
+
+    @Test
     fun `apres une coupure l etat relu active pendant la grace n est pas une reactivation`() {
         val d = BatteryHeatingCountdown()
+        d.startTrip()
         d.tick(0L, actif = true, dureeMs = trente)
         assertEquals(Decision.COUPER, d.tick(trente, actif = true, dureeMs = trente))
         val t = trente + BatteryHeatingCountdown.GRACE_MS - 1
         assertEquals(Decision.RIEN, d.tick(t, actif = true, dureeMs = trente))
         assertNull(d.echeanceMs(trente))
-        // Toujours activé après la grâce : réactivé par l'utilisateur, ou coupure refusée.
+        // Toujours activé après la grâce : coupure refusée — nouveau décompte.
         assertEquals(Decision.DEBUT, d.tick(t + 1, actif = true, dureeMs = trente))
+    }
+
+    @Test
+    fun `apres une coupure refletee une reactivation relance un decompte`() {
+        val d = BatteryHeatingCountdown()
+        d.startTrip()
+        d.tick(0L, actif = true, dureeMs = trente)
+        d.tick(trente, actif = true, dureeMs = trente)
+        assertEquals(Decision.RIEN, d.tick(trente + 5_000, actif = false, dureeMs = trente))
+        assertEquals(Decision.DEBUT, d.tick(trente + 60_000, actif = true, dureeMs = trente))
     }
 
     @Test
     fun `duree changee en route deplace l echeance`() {
         val d = BatteryHeatingCountdown()
+        d.startTrip()
         d.tick(0L, actif = true, dureeMs = trente)
         assertEquals(Decision.RIEN, d.tick(10 * minute, actif = true, dureeMs = trente))
         // Ramenée à 10 min alors que 10 min sont déjà écoulées : coupure au passage suivant.

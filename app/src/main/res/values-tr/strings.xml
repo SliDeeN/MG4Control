@@ -506,12 +506,12 @@
     <string name="batheat_status_off">Kapalı</string>
     <string name="batheat_status_stays_on">Siz kapatana kadar açık kalır</string>
     <string name="batheat_status_countdown">%1$d dk sonra otomatik kapanacak</string>
-    <string name="batheat_status_planned">%1$d dk sürüşten sonra otomatik kapanır</string>
+    <string name="batheat_status_planned">Açılıştan %1$d dk sonra otomatik kapanır</string>
     <string name="batheat_auto_title">Batarya ısıtmayı kapatma</string>
     <string name="batheat_auto_desc">Akıllı batarya ısıtmayı bir sürüş süresinden sonra kapat</string>
     <string name="batheat_auto_minutes_label">Kapatma süresi</string>
     <string name="batheat_auto_minutes_value">%1$d dk</string>
-    <string name="batheat_auto_note">Isıtma açılışta zaten açıksa geri sayım açılışta, sürüş sırasında açılırsa açıldığı anda başlar (orijinal ekran, «düşük sıcaklık» penceresi, MG4Control veya kısayol). Yalnızca mevcut sürüş için geçerlidir: sürüş sonunda, READY\'den çıkınca iptal edilir. Kapatıldığında bir mesaj gösterilir.</string>
+    <string name="batheat_auto_note">Geri sayım, ısıtma açıldığı anda başlar; sürüşte veya park halinde (orijinal ekran, «düşük sıcaklık» penceresi, MG4Control veya kısayol), ya da zaten açıksa açılışta. Yalnızca mevcut sürüş için geçerlidir: sürüş sonunda, READY\'den çıkınca iptal edilir. Kapatıldığında bir mesaj gösterilir.</string>
     <string name="batheat_auto_toast">Batarya ısıtma %1$d dk sonra kapatıldı</string>
     <string name="shortcuts_action_hvac_temp_up">Klima: sıcaklık +</string>
     <string name="shortcuts_action_hvac_temp_down">Klima: sıcaklık -</string>

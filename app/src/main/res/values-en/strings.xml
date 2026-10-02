@@ -506,12 +506,12 @@
     <string name="batheat_status_off">Off</string>
     <string name="batheat_status_stays_on">Stays on until you switch it off</string>
     <string name="batheat_status_countdown">Automatic switch-off in %1$d min</string>
-    <string name="batheat_status_planned">Automatic switch-off after %1$d min of driving</string>
+    <string name="batheat_status_planned">Automatic switch-off %1$d min after start-up</string>
     <string name="batheat_auto_title">Battery heating switch-off</string>
     <string name="batheat_auto_desc">Switch off intelligent battery heating after a driving time</string>
     <string name="batheat_auto_minutes_label">Switch off after</string>
     <string name="batheat_auto_minutes_value">%1$d min</string>
-    <string name="batheat_auto_note">The countdown starts at start-up if heating is already on, or when it is switched on during the trip (original screen, “low temperature” window, MG4Control or shortcut). It only applies to the current trip: it is cancelled at the end of the trip, when the car leaves READY. A message is shown when heating is switched off.</string>
+    <string name="batheat_auto_note">The countdown starts when heating is switched on, driving or parked (original screen, “low temperature” window, MG4Control or shortcut), or at start-up if it was already on. It only applies to the current trip: it is cancelled at the end of the trip, when the car leaves READY. A message is shown when heating is switched off.</string>
     <string name="batheat_auto_toast">Battery heating switched off after %1$d min</string>
     <string name="shortcuts_action_hvac_temp_up">Climate: temperature +</string>
     <string name="shortcuts_action_hvac_temp_down">Climate: temperature -</string>

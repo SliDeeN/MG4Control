@@ -826,7 +826,10 @@ class MG4ControlService : Service() {
                     return
                 }
                 AppLogger.i(TAG, "SHORTCUT chauffage batterie : $actuel → ${!actuel}")
-                MG4Hardware.setBatteryHeating(!actuel)
+                if (MG4Hardware.setBatteryHeating(!actuel)) {
+                    // Le décompte de la coupure automatique part de l'activation même.
+                    com.mg4.control.automation.BatteryHeatingAutomation.onCommand()
+                }
             }
 
             ShortcutAction.BRIGHTNESS_UP, ShortcutAction.BRIGHTNESS_DOWN -> {

@@ -506,12 +506,12 @@
     <string name="batheat_status_off">Aus</string>
     <string name="batheat_status_stays_on">Bleibt eingeschaltet, bis Sie sie ausschalten</string>
     <string name="batheat_status_countdown">Automatische Abschaltung in %1$d Min.</string>
-    <string name="batheat_status_planned">Automatische Abschaltung nach %1$d Min. Fahrt</string>
+    <string name="batheat_status_planned">Automatische Abschaltung %1$d Min. nach dem Start</string>
     <string name="batheat_auto_title">Abschaltung der Batterieheizung</string>
     <string name="batheat_auto_desc">Intelligente Batterieheizung nach einer Fahrzeit ausschalten</string>
     <string name="batheat_auto_minutes_label">Ausschalten nach</string>
     <string name="batheat_auto_minutes_value">%1$d Min.</string>
-    <string name="batheat_auto_note">Der Countdown startet beim Start, wenn die Heizung bereits eingeschaltet ist, oder sobald sie während der Fahrt eingeschaltet wird (Originalbildschirm, Fenster „niedrige Temperatur“, MG4Control oder Kurzbefehl). Er gilt nur für die aktuelle Fahrt: Am Fahrtende, beim Verlassen von READY, wird er abgebrochen. Beim Ausschalten erscheint eine Meldung.</string>
+    <string name="batheat_auto_note">Der Countdown startet, sobald die Heizung eingeschaltet wird, während der Fahrt oder im Stand (Originalbildschirm, Fenster „niedrige Temperatur“, MG4Control oder Kurzbefehl), oder beim Start, wenn sie bereits eingeschaltet war. Er gilt nur für die aktuelle Fahrt: Am Fahrtende, beim Verlassen von READY, wird er abgebrochen. Beim Ausschalten erscheint eine Meldung.</string>
     <string name="batheat_auto_toast">Batterieheizung nach %1$d Min. ausgeschaltet</string>
     <string name="shortcuts_action_hvac_temp_up">Klima: Temperatur +</string>
     <string name="shortcuts_action_hvac_temp_down">Klima: Temperatur -</string>

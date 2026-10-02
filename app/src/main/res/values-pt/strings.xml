@@ -506,12 +506,12 @@
     <string name="batheat_status_off">Desativado</string>
     <string name="batheat_status_stays_on">Fica ativo até o desligar</string>
     <string name="batheat_status_countdown">Desligamento automático dentro de %1$d min</string>
-    <string name="batheat_status_planned">Desligamento automático após %1$d min de viagem</string>
+    <string name="batheat_status_planned">Desligamento automático %1$d min após o arranque</string>
     <string name="batheat_auto_title">Desligamento do aquecimento da bateria</string>
     <string name="batheat_auto_desc">Desligar o aquecimento inteligente da bateria após um tempo de condução</string>
     <string name="batheat_auto_minutes_label">Desligar após</string>
     <string name="batheat_auto_minutes_value">%1$d min</string>
-    <string name="batheat_auto_note">A contagem começa no arranque se o aquecimento já estiver ativo, ou no momento em que é ativado durante a viagem (ecrã original, janela «temperatura baixa», MG4Control ou atalho). Só vale para a viagem em curso: é cancelada no fim da viagem, ao sair de READY. É apresentada uma mensagem ao desligar.</string>
+    <string name="batheat_auto_note">A contagem começa no momento em que o aquecimento é ativado, em andamento ou parado (ecrã original, janela «temperatura baixa», MG4Control ou atalho), ou no arranque se já estava ativo. Só vale para a viagem em curso: é cancelada no fim da viagem, ao sair de READY. É apresentada uma mensagem ao desligar.</string>
     <string name="batheat_auto_toast">Aquecimento da bateria desligado após %1$d min</string>
     <string name="shortcuts_action_hvac_temp_up">Clima: temperatura +</string>
     <string name="shortcuts_action_hvac_temp_down">Clima: temperatura -</string>

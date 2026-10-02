@@ -506,12 +506,12 @@
     <string name="batheat_status_off">Desactivada</string>
     <string name="batheat_status_stays_on">Sigue activada hasta que la desactive</string>
     <string name="batheat_status_countdown">Apagado automático en %1$d min</string>
-    <string name="batheat_status_planned">Apagado automático tras %1$d min de trayecto</string>
+    <string name="batheat_status_planned">Apagado automático %1$d min después del arranque</string>
     <string name="batheat_auto_title">Apagado de la calefacción de la batería</string>
     <string name="batheat_auto_desc">Apagar la calefacción inteligente de la batería tras un tiempo de conducción</string>
     <string name="batheat_auto_minutes_label">Apagar tras</string>
     <string name="batheat_auto_minutes_value">%1$d min</string>
-    <string name="batheat_auto_note">La cuenta atrás empieza al arrancar si la calefacción ya está activada, o en el momento en que se activa durante el trayecto (pantalla original, ventana «temperatura baja», MG4Control o atajo). Solo vale para el trayecto en curso: se cancela al final del trayecto, al salir de READY. Se muestra un mensaje al apagarla.</string>
+    <string name="batheat_auto_note">La cuenta atrás empieza en el momento en que se activa la calefacción, en marcha o parado (pantalla original, ventana «temperatura baja», MG4Control o atajo), o al arrancar si ya estaba activada. Solo vale para el trayecto en curso: se cancela al final del trayecto, al salir de READY. Se muestra un mensaje al apagarla.</string>
     <string name="batheat_auto_toast">Calefacción de la batería apagada tras %1$d min</string>
     <string name="shortcuts_action_hvac_temp_up">Clima: temperatura +</string>
     <string name="shortcuts_action_hvac_temp_down">Clima: temperatura -</string>

@@ -28,8 +28,12 @@ object BatteryHeating {
 /**
  * Décompte de la coupure automatique du chauffage de la batterie, sans Android : l'état relu à
  * chaque passage décide de tout. Le moteur
- * ([com.mg4.control.automation.BatteryHeatingAutomation]) l'appelle toutes les quelques secondes
- * pendant READY, et le remet à zéro à chaque trajet.
+ * ([com.mg4.control.automation.BatteryHeatingAutomation]) l'appelle toutes les quelques secondes,
+ * en READY ou non, et lui signale début et fin de trajet.
+ *
+ * Le décompte part de l'**activation** — passage vu de « désactivé » à « activé », en roulant ou à
+ * l'arrêt (décision du 2026-10-02 : « dès l'activation du chauffage, pas au début du trajet ») —,
+ * ou du **démarrage** si le chauffage l'était déjà. Il ne survit pas à la fin du trajet.
  */
 class BatteryHeatingCountdown {
 
@@ -39,37 +43,70 @@ class BatteryHeatingCountdown {
     private var debutMs: Long? = null
     /** Juste après une coupure, l'état relu peut rester « activé » le temps que le véhicule l'applique. */
     private var graceJusquaMs = Long.MIN_VALUE
+    /** Dernier état relu ; null = rien de lu depuis la fin du trajet. */
+    private var dernierEtat: Boolean? = null
+    /**
+     * Un chauffage vu activé lancera le décompte même sans activation observée : début de trajet,
+     * automatisme (ré)activé, ou coupure toujours pas reflétée à l'issue de la grâce.
+     */
+    private var demarrerSiActif = false
 
-    /** Nouveau trajet, ou automatisme désactivé : rien ne survit. Vrai si un décompte tournait. */
+    /** Début de trajet (READY) : un chauffage déjà activé lance son décompte ; un décompte en cours (activé juste avant) continue. */
+    fun startTrip() {
+        demarrerSiActif = true
+    }
+
+    /**
+     * Fin de trajet : le décompte ne survit pas, et à l'arrêt seule une vraie activation en relance
+     * un — un chauffage laissé activé attend le démarrage suivant. Vrai si un décompte tournait.
+     */
+    fun endTrip(): Boolean {
+        val tournait = debutMs != null
+        debutMs = null
+        graceJusquaMs = Long.MIN_VALUE
+        dernierEtat = null
+        demarrerSiActif = false
+        return tournait
+    }
+
+    /** Automatisme désactivé : plus de décompte ; réactivé, un chauffage activé en relance un aussitôt. Vrai si un décompte tournait. */
     fun reset(): Boolean {
         val tournait = debutMs != null
         debutMs = null
         graceJusquaMs = Long.MIN_VALUE
+        demarrerSiActif = true
         return tournait
     }
 
     /**
-     * Un passage, [actif] étant l'état relu (null = illisible : rien ne change). Le décompte part
-     * du premier passage où le chauffage est vu activé — au démarrage s'il l'était déjà, sinon au
-     * moment où il l'a été — et rend [Decision.COUPER] une fois [dureeMs] écoulée. La durée est
-     * relue à chaque passage : la changer en route déplace l'échéance.
+     * Un passage, [actif] étant l'état relu (null = illisible : rien ne change). Rend
+     * [Decision.COUPER] une fois [dureeMs] écoulée depuis le début du décompte. La durée est relue
+     * à chaque passage : la changer en route déplace l'échéance.
      */
     fun tick(nowMs: Long, actif: Boolean?, dureeMs: Long): Decision {
         if (actif == null) return Decision.RIEN
+        val avant = dernierEtat
+        dernierEtat = actif
         if (!actif) {
             graceJusquaMs = Long.MIN_VALUE
+            demarrerSiActif = false   // la prochaine activation sera vue comme telle
             if (debutMs == null) return Decision.RIEN
             debutMs = null
             return Decision.ANNULE
         }
         if (nowMs < graceJusquaMs) return Decision.RIEN
-        val debut = debutMs ?: run {
+        val debut = debutMs
+        if (debut == null) {
+            if (avant != false && !demarrerSiActif) return Decision.RIEN
+            demarrerSiActif = false
             debutMs = nowMs
             return Decision.DEBUT
         }
         if (nowMs - debut < dureeMs) return Decision.RIEN
         debutMs = null
         graceJusquaMs = nowMs + GRACE_MS
+        // Toujours activé après la grâce : coupure refusée (ou réactivée aussitôt) — nouveau décompte.
+        demarrerSiActif = true
         return Decision.COUPER
     }
 

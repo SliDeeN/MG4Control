@@ -506,12 +506,12 @@
     <string name="batheat_status_off">Disattivato</string>
     <string name="batheat_status_stays_on">Resta attivo finché non lo spegni</string>
     <string name="batheat_status_countdown">Spegnimento automatico tra %1$d min</string>
-    <string name="batheat_status_planned">Spegnimento automatico dopo %1$d min di viaggio</string>
+    <string name="batheat_status_planned">Spegnimento automatico %1$d min dopo l\'avvio</string>
     <string name="batheat_auto_title">Spegnimento del riscaldamento della batteria</string>
     <string name="batheat_auto_desc">Spegnere il riscaldamento intelligente della batteria dopo un tempo di guida</string>
     <string name="batheat_auto_minutes_label">Spegni dopo</string>
     <string name="batheat_auto_minutes_value">%1$d min</string>
-    <string name="batheat_auto_note">Il conto alla rovescia parte all\'avvio se il riscaldamento è già attivo, o dal momento in cui viene attivato durante il viaggio (schermata originale, finestra «temperatura bassa», MG4Control o scorciatoia). Vale solo per il viaggio in corso: viene annullato a fine viaggio, all\'uscita da READY. Allo spegnimento compare un messaggio.</string>
+    <string name="batheat_auto_note">Il conto alla rovescia parte nel momento in cui il riscaldamento viene attivato, in marcia o da fermi (schermata originale, finestra «temperatura bassa», MG4Control o scorciatoia), oppure all\'avvio se era già attivo. Vale solo per il viaggio in corso: viene annullato a fine viaggio, all\'uscita da READY. Allo spegnimento compare un messaggio.</string>
     <string name="batheat_auto_toast">Riscaldamento della batteria spento dopo %1$d min</string>
     <string name="shortcuts_action_hvac_temp_up">Clima: temperatura +</string>
     <string name="shortcuts_action_hvac_temp_down">Clima: temperatura -</string>

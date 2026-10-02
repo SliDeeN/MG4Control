@@ -2736,11 +2736,41 @@ object MG4Hardware {
         if (FirmwareInfo.isVsmBased()) getIntPropertyCPM(PROP_DRVNG_PTC_HEAT, AREA_GLOBAL)
         else getIntPropertyVpm(VPM_DRVNG_PTC_HEAT)
 
-    /** Chauffage intelligent de la batterie : true = activé, false = désactivé, null = illisible. */
+    /**
+     * Dernière consigne envoyée, en attente d'être reflétée par le véhicule. Le calculateur
+     * batterie met plusieurs secondes à renvoyer son nouvel état : relu 700 ms après la consigne,
+     * le Dashboard trouvait encore l'ancien et y revenait, jusqu'au relevé suivant (relevé du
+     * 2026-10-02). Tant que l'état lu ne l'a pas rejointe, et au plus [BATHEAT_CONFIRM_MS], c'est
+     * la consigne qui est rendue : écran, raccourci et automatisme voient la même chose, comme
+     * l'UI d'origine qui peint l'état demandé en attendant le changement.
+     */
+    @Volatile private var batHeatConsigne: Boolean? = null
+    @Volatile private var batHeatConsigneMs = 0L
+    private const val BATHEAT_CONFIRM_MS = 15_000L
+
+    /**
+     * Chauffage intelligent de la batterie : true = activé, false = désactivé, null = illisible.
+     * Juste après une consigne, l'état demandé tant que le véhicule ne l'a pas reflété (voir
+     * [batHeatConsigne]).
+     */
     fun isBatteryHeatingOn(): Boolean? {
         if (!hasBatteryHeating()) return null
-        return BatteryHeating.stateFromRaw(readBatteryHeatingRaw(), isA9Vsm())
+        val lu = BatteryHeating.stateFromRaw(readBatteryHeatingRaw(), isA9Vsm())
+        val consigne = batHeatConsigne ?: return lu
+        val ecoule = SystemClock.elapsedRealtime() - batHeatConsigneMs
+        if (lu != consigne && ecoule < BATHEAT_CONFIRM_MS) return consigne
+        batHeatConsigne = null
+        if (lu == consigne) {
+            AppLogger.i(BATHEAT_TAG, "consigne ${if (consigne) "ON" else "OFF"} reflétée par le véhicule après $ecoule ms")
+        } else {
+            AppLogger.w(BATHEAT_TAG, "consigne ${if (consigne) "ON" else "OFF"} toujours pas reflétée après " +
+                "${ecoule / 1000} s (lu : $lu) : état lu rendu")
+        }
+        return lu
     }
+
+    /** Vrai tant qu'une consigne attend d'être reflétée par le véhicule. */
+    fun isBatteryHeatingPending(): Boolean = batHeatConsigne != null
 
     fun setBatteryHeating(on: Boolean): Boolean {
         if (!hasBatteryHeating()) return false
@@ -2748,6 +2778,10 @@ object MG4Hardware {
         val ok = if (FirmwareInfo.isVsmBased()) setIntPropertyCPM(PROP_DRVNG_PTC_HEAT, AREA_GLOBAL, v)
                  else setIntPropertyVpmRecovery(VPM_DRVNG_PTC_HEAT, v)
         AppLogger.i(BATHEAT_TAG, "setBatteryHeating(${if (on) "ON" else "OFF"}) écrit $v → $ok")
+        if (ok) {
+            batHeatConsigneMs = SystemClock.elapsedRealtime()
+            batHeatConsigne = on
+        }
         return ok
     }
 

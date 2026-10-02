@@ -216,6 +216,8 @@ class DashboardFragment : Fragment() {
         const val CLIM_UI_TAG = "MG4_AIR"
         /** Relecture du chauffage de la batterie et de son décompte, écran visible. */
         const val BATTERY_HEAT_POLL_MS = 15_000L
+        /** Relectures (une par seconde) au plus après une consigne : au-delà de la fenêtre de 15 s. */
+        const val BATTERY_HEAT_CONFIRM_TRIES = 16
     }
 
     /**
@@ -1233,8 +1235,9 @@ class DashboardFragment : Fragment() {
     // ═════════════════════════════════════════════════════════════════════════
 
     /**
-     * Même motif que les feux de route : consigne au clic, état affiché RELU. Sous les boutons,
-     * le temps restant avant la coupure automatique quand elle est en cours.
+     * Consigne au clic, état affiché RELU — la consigne tenant lieu d'état tant que le véhicule ne
+     * l'a pas reflétée (voir [writeBatteryHeating]). Sous les boutons, le temps restant avant la
+     * coupure automatique quand elle est en cours.
      */
     private fun bindBatteryHeating(root: View) {
         if (!MG4Hardware.hasBatteryHeating()) return
@@ -1242,13 +1245,32 @@ class DashboardFragment : Fragment() {
         btnBatteryHeatOn  = root.findViewById(R.id.btn_battery_heat_on)
         btnBatteryHeatOff = root.findViewById(R.id.btn_battery_heat_off)
         batteryHeatStatus = root.findViewById(R.id.battery_heat_status)
-        btnBatteryHeatOn?.setOnClickListener {
-            applyPairUI(btnBatteryHeatOn, btnBatteryHeatOff, true)
-            writeSafety({ refreshBatteryHeating() }) { MG4Hardware.setBatteryHeating(true) }
-        }
-        btnBatteryHeatOff?.setOnClickListener {
-            applyPairUI(btnBatteryHeatOn, btnBatteryHeatOff, false)
-            writeSafety({ refreshBatteryHeating() }) { MG4Hardware.setBatteryHeating(false) }
+        btnBatteryHeatOn?.setOnClickListener { writeBatteryHeating(true) }
+        btnBatteryHeatOff?.setOnClickListener { writeBatteryHeating(false) }
+    }
+
+    /**
+     * Pas [writeSafety] ici : sa relecture à 700 ms tombait avant que le calculateur batterie ait
+     * reflété la consigne, et l'affichage revenait à l'ancien état. [MG4Hardware.isBatteryHeatingOn]
+     * rend désormais la consigne en attendant ; on relit chaque seconde jusqu'à ce que le véhicule
+     * la confirme (ou qu'elle soit abandonnée), et le délai réel s'inscrit dans le journal MG4_BATHEAT.
+     */
+    private fun writeBatteryHeating(on: Boolean) {
+        applyPairUI(btnBatteryHeatOn, btnBatteryHeatOff, on)
+        CoroutineScope(Dispatchers.IO).launch {
+            if (MG4Hardware.setBatteryHeating(on)) {
+                // Le décompte de la coupure automatique part de l'activation : l'automatisme relit
+                // tout de suite, et la ligne d'état l'affiche sans attendre la confirmation.
+                BatteryHeatingAutomation.onCommand()
+                delay(300)
+                withContext(Dispatchers.Main) { if (isAdded) refreshBatteryHeating() }
+                var essais = 0
+                while (MG4Hardware.isBatteryHeatingPending() && essais++ < BATTERY_HEAT_CONFIRM_TRIES) {
+                    delay(1_000)
+                    MG4Hardware.isBatteryHeatingOn()
+                }
+            }
+            withContext(Dispatchers.Main) { if (isAdded) refreshBatteryHeating() }
         }
     }
 

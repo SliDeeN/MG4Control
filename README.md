@@ -228,10 +228,10 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
   10 points ; un réglage à la main suspend tout jusqu'au prochain démarrage. Changements en fondu
   d'une seconde. Bouton « Tester maintenant »
 - **Coupure du chauffage de la batterie** : coupe le chauffage intelligent de la batterie après un
-  temps réglable au curseur (5 à 120 min, 30 par défaut). Le décompte part du démarrage si l'option
-  est déjà activée, ou de son activation en route — écran d'origine, fenêtre « température basse »
-  de SystemUI, MG4Control ou raccourci — et ne vaut que pour le trajet en cours. Un message
-  s'affiche à la coupure
+  temps réglable au curseur (5 à 120 min, 30 par défaut). Le décompte part de l'activation, en
+  roulant ou à l'arrêt — écran d'origine, fenêtre « température basse » de SystemUI, MG4Control
+  ou raccourci —, ou du démarrage si l'option était déjà activée, et ne vaut que pour le trajet en
+  cours. Un message s'affiche à la coupure
 - **Déclenchement A/C via la température** : deux règles indépendantes (température supérieure /
   inférieure), chacune avec son seuil, sa consigne, sa ventilation, ses dégivrages, le mode
   automatique et la recirculation
@@ -1168,10 +1168,10 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
   and, with the weather, as soon as the estimated light drifts 10 points; adjusting by hand pauses
   it until the next start. Changes fade over one second. "Test now" button
 - **Battery heating switch-off**: switches intelligent battery heating off after a time set with a
-  slider (5 to 120 min, 30 by default). The countdown starts at start-up if the option is already
-  on, or when it is switched on during the trip — stock screen, SystemUI "low temperature" window,
-  MG4Control or shortcut — and only applies to the current trip. A message is shown when it
-  switches off
+  slider (5 to 120 min, 30 by default). The countdown starts when the option is switched on,
+  driving or parked — stock screen, SystemUI "low temperature" window, MG4Control or shortcut —,
+  or at start-up if it was already on, and only applies to the current trip. A message is shown
+  when it switches off
 - **Temperature-triggered A/C**: two independent rules (above / below), each with its threshold,
   setpoint, fan level, defrosters, automatic mode and recirculation
 - Each automation opens unfolded when it is on, unfolds when switched on and folds when switched

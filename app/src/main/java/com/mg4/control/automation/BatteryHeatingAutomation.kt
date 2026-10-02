@@ -18,11 +18,12 @@ import com.mg4.control.util.LocaleHelper
  * Coupure automatique du chauffage intelligent de la batterie : une fois activé, il ne se coupe
  * jamais de lui-même et coûte de l'autonomie à chaque trajet.
  *
- * Pendant READY, l'état est relu toutes les [TICK_MS], d'où qu'ait été activé le chauffage (écran
- * d'origine, fenêtre « température basse » de SystemUI, MG4Control, raccourci). Le décompte part
- * du démarrage s'il l'était déjà, sinon du moment où il l'est ; au bout du temps choisi, il est
- * coupé et un message le dit. Le décompte ne vaut que pour le trajet en cours : READY perdu, il
- * est annulé, et un nouveau commence au démarrage suivant si le chauffage est toujours activé.
+ * L'état est relu toutes les [TICK_MS], en READY ou non, d'où qu'ait été activé le chauffage
+ * (écran d'origine, fenêtre « température basse » de SystemUI, MG4Control, raccourci). Le décompte
+ * part de l'activation, en roulant ou à l'arrêt, ou du démarrage si le chauffage l'était déjà ; au
+ * bout du temps choisi, il est coupé et un message le dit. Le décompte ne vaut que pour le trajet
+ * en cours : READY perdu, il est annulé — un chauffage laissé activé attend le démarrage suivant.
+ * Règles : [BatteryHeatingCountdown].
  *
  * Pas de verrou « Sécurité conduite » : couper ce chauffage ne change pas le comportement routier,
  * comme pour les sièges chauffants. Journal : [TAG].
@@ -31,9 +32,9 @@ object BatteryHeatingAutomation {
 
     const val TAG = "MG4_BATHEAT"
 
-    /** Rythme de relecture de l'état pendant READY. */
+    /** Rythme de relecture de l'état. */
     private const val TICK_MS = 5_000L
-    /** Laisse les services véhicule se lier après le passage en READY. */
+    /** Laisse les services véhicule se lier au démarrage du service. */
     private const val PREMIER_TICK_MS = 4_000L
 
     @Volatile private var appContext: Context? = null
@@ -49,17 +50,28 @@ object BatteryHeatingAutomation {
 
     private val readyListener = ReadyWatcher.Listener { ready, _ ->
         handler.post {
-            // READY perdu ou nouveau READY : le trajet précédent est terminé, son décompte aussi.
-            handler.removeCallbacksAndMessages(TICK)
-            if (decompte.reset()) AppLogger.i(TAG, "fin du trajet : décompte annulé")
-            echeanceMs = null
-            if (ready) handler.postDelayed(tick, TICK, PREMIER_TICK_MS)
+            if (ready) {
+                decompte.startTrip()
+            } else {
+                if (decompte.endTrip()) AppLogger.i(TAG, "fin du trajet : décompte annulé")
+                echeanceMs = null
+            }
         }
     }
 
     fun start(context: Context) {
         appContext = context.applicationContext
         ReadyWatcher.add(readyListener)
+        handler.removeCallbacksAndMessages(TICK)
+        handler.postDelayed(tick, TICK, PREMIER_TICK_MS)
+    }
+
+    /**
+     * Une consigne vient de partir (tableau de bord, raccourci) : relecture tout de suite plutôt
+     * qu'au prochain passage, pour que le décompte parte de l'activation même.
+     */
+    fun onCommand() {
+        handler.post { verifier() }
     }
 
     /** Minutes restantes avant la coupure (arrondies au-dessus), ou null sans décompte en cours. */
@@ -71,24 +83,29 @@ object BatteryHeatingAutomation {
 
     private val tick = object : Runnable {
         override fun run() {
-            val ctx = appContext ?: return
-            val cfg = BatteryHeatingSettings.read(ctx)
-            if (!cfg.enabled || !MG4Hardware.hasBatteryHeating()) {
-                // Option coupée en route : on ne coupe rien. Réactivée, elle repart de l'état relu.
-                if (decompte.reset()) AppLogger.i(TAG, "automatisme désactivé : décompte annulé")
-                echeanceMs = null
-            } else {
-                val dureeMs = cfg.minutes * 60_000L
-                when (decompte.tick(SystemClock.elapsedRealtime(), MG4Hardware.isBatteryHeatingOn(), dureeMs)) {
-                    Decision.DEBUT  -> AppLogger.i(TAG, "chauffage activé : coupure dans ${cfg.minutes} min")
-                    Decision.ANNULE -> AppLogger.i(TAG, "chauffage coupé avant l'échéance : décompte annulé")
-                    Decision.COUPER -> couper(ctx, cfg.minutes)
-                    Decision.RIEN   -> Unit
-                }
-                echeanceMs = decompte.echeanceMs(dureeMs)
-            }
+            verifier()
             handler.postDelayed(this, TICK, TICK_MS)
         }
+    }
+
+    /** Un passage, sur le fil de l'automatisme. */
+    private fun verifier() {
+        val ctx = appContext ?: return
+        val cfg = BatteryHeatingSettings.read(ctx)
+        if (!cfg.enabled || !MG4Hardware.hasBatteryHeating()) {
+            // Option coupée : on ne coupe rien. Réactivée, un chauffage activé repart de zéro.
+            if (decompte.reset()) AppLogger.i(TAG, "automatisme désactivé : décompte annulé")
+            echeanceMs = null
+            return
+        }
+        val dureeMs = cfg.minutes * 60_000L
+        when (decompte.tick(SystemClock.elapsedRealtime(), MG4Hardware.isBatteryHeatingOn(), dureeMs)) {
+            Decision.DEBUT  -> AppLogger.i(TAG, "chauffage activé : coupure dans ${cfg.minutes} min")
+            Decision.ANNULE -> AppLogger.i(TAG, "chauffage coupé avant l'échéance : décompte annulé")
+            Decision.COUPER -> couper(ctx, cfg.minutes)
+            Decision.RIEN   -> Unit
+        }
+        echeanceMs = decompte.echeanceMs(dureeMs)
     }
 
     /**

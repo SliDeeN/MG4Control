@@ -510,12 +510,12 @@
     <string name="batheat_status_off">Désactivé</string>
     <string name="batheat_status_stays_on">Reste activé jusqu\'à ce que vous le coupiez</string>
     <string name="batheat_status_countdown">Coupure automatique dans %1$d min</string>
-    <string name="batheat_status_planned">Coupure automatique après %1$d min de trajet</string>
+    <string name="batheat_status_planned">Coupure automatique %1$d min après le démarrage</string>
     <string name="batheat_auto_title">Coupure du chauffage de la batterie</string>
     <string name="batheat_auto_desc">Couper le chauffage intelligent de la batterie après un temps de conduite</string>
     <string name="batheat_auto_minutes_label">Couper après</string>
     <string name="batheat_auto_minutes_value">%1$d min</string>
-    <string name="batheat_auto_note">Le décompte part du démarrage si le chauffage est déjà activé, ou du moment où il est activé pendant le trajet (écran d\'origine, fenêtre « température basse », MG4Control ou raccourci). Il ne vaut que pour le trajet en cours : il est annulé en fin de trajet, à la sortie de READY. Un message s\'affiche à la coupure.</string>
+    <string name="batheat_auto_note">Le décompte part du moment où le chauffage est activé, en roulant ou à l\'arrêt (écran d\'origine, fenêtre « température basse », MG4Control ou raccourci), ou du démarrage s\'il l\'était déjà. Il ne vaut que pour le trajet en cours : il est annulé en fin de trajet, à la sortie de READY. Un message s\'affiche à la coupure.</string>
     <string name="batheat_auto_toast">Chauffage de la batterie coupé après %1$d min</string>
     <string name="shortcuts_action_hvac_temp_up">Clim : température +</string>
     <string name="shortcuts_action_hvac_temp_down">Clim : température -</string>
