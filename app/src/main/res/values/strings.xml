@@ -339,10 +339,10 @@
     <string name="autobri_lights_desc_off">Décochée : l\'écran peut rester lumineux au garage ou en tunnel.</string>
     <string name="autobri_forecast">Utiliser la météo Open-Meteo</string>
     <string name="autobri_forecast_warning">(consomme un peu de données mobiles)</string>
-    <string name="autobri_forecast_desc">Lumière estimée d\'après la hauteur du soleil et la prévision d\'ensoleillement autour de la voiture : environ 5 Ko par téléchargement, toutes les 8 h au plus ou en sortant de la zone (~60 km).</string>
+    <string name="autobri_forecast_desc">Lumière estimée d\'après la hauteur du soleil et la prévision d\'ensoleillement autour de la voiture : environ 10 Ko par téléchargement, toutes les 8 h au plus ou en sortant de la zone (~60 km).</string>
     <string name="autobri_mode_lights">Feux seuls : aucune donnée mobile, pas de GPS</string>
-    <string name="autobri_mode_both">Météo + feux : ~5 Ko par téléchargement</string>
-    <string name="autobri_mode_forecast">Météo seule : ~5 Ko par téléchargement, sans garde-fou garage/tunnel</string>
+    <string name="autobri_mode_both">Météo + feux : ~10 Ko par téléchargement</string>
+    <string name="autobri_mode_forecast">Météo seule : ~10 Ko par téléchargement, sans garde-fou garage/tunnel</string>
     <string name="autobri_follow_desc_lights">La lumière est recalculée chaque minute ; l\'écran n\'est réajusté que si l\'écart atteint 10 points, et à chaque allumage ou extinction des feux. Un réglage à la main suspend l\'automatisme jusqu\'au prochain démarrage.</string>
     <string name="autobri_night_lights">Nuit ou feux allumés · 10 lx</string>
     <string name="autobri_status_failed_lights">Réglage impossible : état des feux illisible.</string>
@@ -504,6 +504,19 @@
     <string name="shortcuts_action_hvac_toggle">Clim (ON/OFF)</string>
     <string name="shortcuts_action_hvac_ac_toggle">Clim : A/C (ON/OFF)</string>
     <string name="shortcuts_action_auto_high_beam">Feux de route automatiques (ON/OFF)</string>
+    <string name="shortcuts_action_battery_heat">Chauffage de la batterie (ON/OFF)</string>
+    <string name="batheat_section">Chauffage intelligent de la batterie</string>
+    <string name="batheat_hint">Améliore la recharge rapide, mais réduit l\'autonomie.</string>
+    <string name="batheat_status_off">Désactivé</string>
+    <string name="batheat_status_stays_on">Reste activé jusqu\'à ce que vous le coupiez</string>
+    <string name="batheat_status_countdown">Coupure automatique dans %1$d min</string>
+    <string name="batheat_status_planned">Coupure automatique après %1$d min de trajet</string>
+    <string name="batheat_auto_title">Coupure du chauffage de la batterie</string>
+    <string name="batheat_auto_desc">Couper le chauffage intelligent de la batterie après un temps de conduite</string>
+    <string name="batheat_auto_minutes_label">Couper après</string>
+    <string name="batheat_auto_minutes_value">%1$d min</string>
+    <string name="batheat_auto_note">Le décompte part du démarrage si le chauffage est déjà activé, ou du moment où il est activé pendant le trajet (écran d\'origine, fenêtre « température basse », MG4Control ou raccourci). Il ne vaut que pour le trajet en cours : il est annulé en fin de trajet, à la sortie de READY. Un message s\'affiche à la coupure.</string>
+    <string name="batheat_auto_toast">Chauffage de la batterie coupé après %1$d min</string>
     <string name="shortcuts_action_hvac_temp_up">Clim : température +</string>
     <string name="shortcuts_action_hvac_temp_down">Clim : température -</string>
     <string name="shortcuts_action_hvac_fan_up">Clim : ventilation +</string>
@@ -547,14 +560,10 @@
     <string name="shortcuts_action_volume_down">Volume -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="win_close_warning">Fermeture automatique par l\'app sans anti-pincement (sauf vitre conducteur) : surveillez la vitre. Elle s\'arrête si vous quittez l\'onglet.</string>
     <string name="win_front_left">Avant gauche</string>
     <string name="win_front_right">Avant droite</string>
     <string name="win_rear_left">Arrière gauche</string>
     <string name="win_rear_right">Arrière droite</string>
-    <string name="win_all_close">Tout fermer</string>
-    <string name="win_all_open">Tout ouvrir</string>
-    <string name="win_auto_title">Fermeture automatique</string>
     <string name="win_auto_label">Fermer les vitres en quittant la voiture</string>
     <string name="win_auto_desc">Voiture en P, une fois armée selon les conditions ci-dessous : quand la voiture sort du mode READY (ouverture de la porte conducteur ou extinction), toutes les vitres se ferment après le délai choisi. Un retour en READY avant annule.</string>
     <string name="win_auto_warning">Sans anti-pincement sur les vitres autres que conducteur : personne près des vitres en partant.</string>
@@ -580,8 +589,7 @@
     <string name="win_cal_advanced_label">Calibrage par vitre</string>
     <string name="win_cal_advanced_desc">Mesure la course réelle de chaque vitre, plus juste que la durée générale. Les mesures restent enregistrées si vous désactivez l\'option.</string>
     <string name="win_cal_general">Durée générale</string>
-    <string name="win_automation_title">Vitres électriques</string>
-    <string name="win_section_command">Commande</string>
+    <string name="win_automation_title">Fermeture automatique des vitres électriques</string>
     <string name="win_cal_limits">L\'application ne voit pas les interrupteurs de porte : une course émulée dure toujours le temps mesuré, quelle que soit la position de départ de la vitre.</string>
     <string name="shortcuts_action_windows_open">Ouvrir toutes les vitres</string>
     <string name="shortcuts_action_windows_close">Fermer toutes les vitres</string>

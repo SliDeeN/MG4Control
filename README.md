@@ -77,6 +77,19 @@ tous les firmwares, mais rien ne garantit que la finition porte l'équipement.
 
 Dans un profil, ils ne sont écrits que si son mode de conduite est Personnalisé, et un profil
 enregistré avant cette fonctionnalité n'écrit rien tant qu'il n'a pas été rouvert et sauvegardé.
+
+#### Chauffage intelligent de la batterie
+L'option d'origine cachée dans le widget batterie (onglet « Consommation d'énergie ») chauffe la
+batterie en roulant : la recharge rapide est meilleure, mais l'autonomie baisse, et une fois
+activée elle ne se coupe jamais d'elle-même. MG4Control la met en ON/OFF sur le Dashboard (onglet
+Conduite, avec le temps restant avant la coupure automatique), en raccourci, et propose de la
+couper automatiquement (voir Automatisation). Une seule propriété véhicule, `DRVNG_PTC_HEAT`, sur
+les six firmwares : par le `VehiclePropertyManager` en SWI133, comme SystemUI, directement ailleurs.
+
+> [!NOTE]
+> Les écrans d'origine ne lisent pas l'état de la même façon : 0 = activé sur l'ancienne
+> plateforme (SWI133/68/165), 1 = activé sur A9. L'application suit chacun ; la sonde du
+> Diagnostic (`MG4_BATHEAT`) relève la valeur brute pour le vérifier sur véhicule.
 ### Sécurité
 - **ESC** : ON / OFF
 - **Avertissement de somnolence** : ON / OFF, avec sensibilité Faible / Standard / Élevé
@@ -137,7 +150,7 @@ Actions disponibles — celles qui dépendent du firmware n'apparaissent pas sur
 
 | Catégorie | Actions |
 |---|---|
-| Conduite | 1 Pédale · Cycle Régénération Personnalisé · Éco. énergie |
+| Conduite | 1 Pédale · Cycle Régénération Personnalisé · Éco. énergie · Chauffage de la batterie ON/OFF |
 | Sécurité | ESC · Somnolence · Somnolence : sensibilité · Système Anticollision · ADAS · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son |
 | Confort | Siège chauffant gauche · Siège chauffant droit · Volant chauffant · Clim ON/OFF · Clim : A/C ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant · Dégivrage arrière · Recirculation · Feux de route automatiques ON/OFF · Luminosité ± |
 | Vitres | Ouvrir toutes les vitres · Fermer toutes les vitres |
@@ -208,35 +221,40 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
   GPS + heure, calcul sans réseau) et la prévision d'ensoleillement
   [Open-Meteo](https://open-meteo.com) sur une grille de 25 points autour de la voiture (zone
   d'environ 60 × 60 km : en roulant, la météo de l'endroit où l'on est), mise en cache pour 3 jours
-  et actualisée toutes les 8 h au plus ou en sortant de la zone (~5 Ko par requête), position
+  et actualisée toutes les 8 h au plus ou en sortant de la zone (~10 Ko par requête), position
   arrondie à ~10 km. Avec les feux en plus, feux de position allumés (garage, tunnel, nuit) :
   point Nuit de la courbe. Option « Ajuster la luminosité pendant la conduite » : réajuste aussi à
   chaque bascule des feux (tunnel) et, avec la météo, dès que la lumière estimée s'écarte de
   10 points ; un réglage à la main suspend tout jusqu'au prochain démarrage. Changements en fondu
   d'une seconde. Bouton « Tester maintenant »
+- **Coupure du chauffage de la batterie** : coupe le chauffage intelligent de la batterie après un
+  temps réglable au curseur (5 à 120 min, 30 par défaut). Le décompte part du démarrage si l'option
+  est déjà activée, ou de son activation en route — écran d'origine, fenêtre « température basse »
+  de SystemUI, MG4Control ou raccourci — et ne vaut que pour le trajet en cours. Un message
+  s'affiche à la coupure
 - **Déclenchement A/C via la température** : deux règles indépendantes (température supérieure /
   inférieure), chacune avec son seuil, sa consigne, sa ventilation, ses dégivrages, le mode
   automatique et la recirculation
-- Chaque automatisation est dépliable indépendamment de son interrupteur d'activation
+- Chaque automatisation s'ouvre dépliée si elle est active, se déplie quand on l'active et se
+  replie quand on la coupe ; entre-temps, son chevron déplie ou replie librement le paramétrage
 
-#### Vitres électriques
-Troisième carte de l'onglet, repliée par défaut, en trois sections.
+#### Fermeture automatique des vitres électriques
+Carte construite comme les autres automatisations : interrupteur d'activation à côté de la
+description, réglages dépliés au chevron (carte ouverte d'office quand l'option est activée).
 
-- **Commande** — les quatre vitres. Appui court : course complète (un nouvel appui l'arrête).
-  Appui long : la vitre bouge tant que le doigt reste posé. Plus *Tout ouvrir* et *Tout fermer*.
-- **Calibration** — seule la vitre conducteur remonte sa position. Pour les trois autres,
-  l'application chronomètre une course complète, puis estime le pourcentage à partir de la durée
-  de chaque commande.
-- **Fermeture automatique en quittant la voiture** — voiture en P et fermeture armée : quand la
-  voiture sort du mode READY (porte conducteur ouverte ou extinction), toutes les vitres se
-  ferment après le délai choisi ; un retour en READY avant la fin annule. L'armement se règle
-  (vitesse atteinte et/ou durée d'allumage, l'une ou l'autre ou les deux), le délai va de 0 à
-  30 s, et un bip d'avertissement facultatif, au volume réglable, peut accompagner le décompte.
+- **Fermeture en quittant la voiture** — voiture en P et fermeture armée : quand la voiture sort
+  du mode READY (porte conducteur ouverte ou extinction), toutes les vitres se ferment après le
+  délai choisi ; un retour en READY avant la fin annule. L'armement se règle (vitesse atteinte
+  et/ou durée d'allumage, l'une ou l'autre ou les deux), le délai va de 0 à 30 s, et un bip
+  d'avertissement facultatif, au volume réglable, peut accompagner le décompte. Option coupée,
+  ces réglages restent lisibles mais grisés.
+- **Durée de course** — seule la vitre conducteur a un capteur et sa course automatique
+  d'origine ; les trois autres reçoivent une impulsion de durée réglable (5 s par défaut).
+- **Avancé : calibrage par vitre** — mesure la course réelle de chaque vitre, plus juste que la
+  durée générale ; les mesures restent enregistrées si l'option est désactivée.
 
-Deux limites tiennent à l'absence de capteur : l'estimation **ne voit pas les interrupteurs de
-portière** (le véhicule ne les signale pas), et toutes les vitres sont supposées fermées à chaque
-démarrage de l'application. La fermeture automatique reste donc **verrouillée tant que les trois
-vitres sans capteur ne sont pas calibrées** — elle ferme au temps mesuré, pas à la position lue.
+Durée de course et calibrage restent réglables option coupée : ils servent aussi aux raccourcis
+« ouvrir / fermer toutes les vitres ».
 
 > [!WARNING]
 > Les courses commandées par l'application n'ont pas l'anti-pincement du véhicule, sauf sur la
@@ -1004,6 +1022,19 @@ every firmware, but nothing guarantees the trim carries the hardware.
 
 In a profile they are only written when its drive mode is Custom, and a profile saved before this
 feature writes nothing until it has been reopened and saved.
+
+#### Intelligent battery heating
+The stock option hidden in the battery widget ("Energy consumption" tab) heats the battery while
+driving: fast charging gets better but range drops, and once switched on it never switches itself
+off. MG4Control puts it ON/OFF on the Dashboard (Driving tab, with the time left before the
+automatic switch-off), as a shortcut, and offers to switch it off automatically (see Automation).
+One vehicle property, `DRVNG_PTC_HEAT`, on all six firmwares: through the `VehiclePropertyManager`
+on SWI133, like SystemUI, directly elsewhere.
+
+> [!NOTE]
+> The stock screens do not read the state the same way: 0 = on for the older platform
+> (SWI133/68/165), 1 = on for A9. The app follows each one; the Diagnostic probe (`MG4_BATHEAT`)
+> logs the raw value so it can be checked on a car.
 ### Safety
 - **ESC**: ON / OFF
 - **Drowsiness warning**: ON / OFF, with Low / Standard / High sensitivity
@@ -1062,7 +1093,7 @@ Available actions — those depending on the firmware do not show up on the othe
 
 | Category | Actions |
 |---|---|
-| Driving | One Pedal · Custom Regeneration Cycle · Energy saving |
+| Driving | One Pedal · Custom Regeneration Cycle · Energy saving · Battery heating ON/OFF |
 | Safety | ESC · Drowsiness · Drowsiness: sensitivity · Forward collision · ADAS · Traffic signs (TSR) · Overspeed alert · Speed limit change alert · Sound |
 | Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: A/C ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Automatic high beam ON/OFF · Brightness ± |
 | Windows | Open all windows · Close all windows |
@@ -1131,32 +1162,38 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
   it is estimated from the sun height (GPS position + time, computed offline) and the
   [Open-Meteo](https://open-meteo.com) sunshine forecast on a 25-point grid around the car (an
   area of about 60 × 60 km: while driving, the weather where you are), cached for 3 days and
-  refreshed every 8 h at most or when leaving the area (~5 KB per request), position rounded to
+  refreshed every 8 h at most or when leaving the area (~10 KB per request), position rounded to
   ~10 km. With the lights as well, side lights on (garage, tunnel, night): Night point of the
   curve. "Adjust brightness while driving" option: also readjusts at every lights change (tunnel)
   and, with the weather, as soon as the estimated light drifts 10 points; adjusting by hand pauses
   it until the next start. Changes fade over one second. "Test now" button
+- **Battery heating switch-off**: switches intelligent battery heating off after a time set with a
+  slider (5 to 120 min, 30 by default). The countdown starts at start-up if the option is already
+  on, or when it is switched on during the trip — stock screen, SystemUI "low temperature" window,
+  MG4Control or shortcut — and only applies to the current trip. A message is shown when it
+  switches off
 - **Temperature-triggered A/C**: two independent rules (above / below), each with its threshold,
   setpoint, fan level, defrosters, automatic mode and recirculation
-- Each automation folds open independently of its enable switch
+- Each automation opens unfolded when it is on, unfolds when switched on and folds when switched
+  off; in between, its chevron folds or unfolds the settings freely
 
-#### Power windows
-Third card of the tab, folded by default, in three sections.
+#### Automatic power window closing
+Card built like the other automations: enable switch next to the description, settings unfolded
+with the chevron (the card opens unfolded when the option is on).
 
-- **Controls** — the four windows. Short press: full travel (another press stops it). Long press:
-  the window moves as long as the finger stays down. Plus *Open all* and *Close all*.
-- **Calibration** — only the driver's window reports its position. For the other three, the app
-  times a full travel, then estimates the percentage from the duration of each command.
 - **Close on leaving the car** — car in P and closing armed: when the car leaves READY state
   (driver door opened, or car switched off), every window closes after the chosen delay; going
   back to READY before the end cancels it. Arming is configurable (speed reached and/or time
   switched on, either or both), the delay ranges from 0 to 30 s, and an optional warning beep,
-  with adjustable volume, can accompany the countdown.
+  with adjustable volume, can accompany the countdown. With the option off, these settings stay
+  readable but greyed out.
+- **Travel time** — only the driver's window has a sensor and its stock automatic travel; the
+  other three get a pulse of adjustable length (5 s by default).
+- **Advanced: per-window calibration** — measures each window's real travel, more accurate than
+  the general time; measurements are kept if the option is switched off.
 
-Two limits come from the missing sensor: the estimate **cannot see the door switches** (the
-vehicle does not report them), and every window is assumed closed each time the app starts. Hence
-automatic closing stays **locked until the three sensorless windows have been calibrated** — it
-closes on the measured time, not on a read position.
+Travel time and calibration stay adjustable with the option off: the "open / close all windows"
+shortcuts use them too.
 
 > [!WARNING]
 > Travels commanded by the app have no anti-pinch protection, except on the driver's window.

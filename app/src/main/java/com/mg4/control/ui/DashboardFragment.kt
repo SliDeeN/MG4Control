@@ -16,6 +16,8 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.R
+import com.mg4.control.automation.BatteryHeatingAutomation
+import com.mg4.control.automation.BatteryHeatingSettings
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.MG4Hardware.AebMode
@@ -111,6 +113,17 @@ class DashboardFragment : Fragment() {
     // Feux de route automatiques (page Confort, les 6 firmwares).
     private var btnHighBeamOn: Button? = null
     private var btnHighBeamOff: Button? = null
+    // Chauffage intelligent de la batterie (page Conduite, les 6 firmwares).
+    private var btnBatteryHeatOn: Button? = null
+    private var btnBatteryHeatOff: Button? = null
+    private var batteryHeatStatus: TextView? = null
+    /** Relecture périodique écran visible : l'option s'active aussi depuis l'écran d'origine. */
+    private val batteryHeatPoll = object : Runnable {
+        override fun run() {
+            refreshBatteryHeating()
+            view?.postDelayed(this, BATTERY_HEAT_POLL_MS)
+        }
+    }
 
     private var btnAebSenLow: Button? = null
     private var btnAebSenStandard: Button? = null
@@ -177,11 +190,19 @@ class DashboardFragment : Fragment() {
         refreshElk()  // SWI133 — sVsm133 indépendant de Katman4
         MG4Hardware.whenKatman4Ready { if (isAdded) refreshSafetyDmsEsc() }
         MG4Hardware.whenKatman4Ready { if (isAdded) refreshHighBeam() }
+        if (MG4Hardware.hasBatteryHeating()) {
+            view?.removeCallbacks(batteryHeatPoll)
+            // Voie VPM liée de façon asynchrone sur SWI133 : premier relevé une fois prête.
+            MG4Hardware.whenKatman4Ready {
+                if (isAdded) view?.run { removeCallbacks(batteryHeatPoll); post(batteryHeatPoll) }
+            }
+        }
     }
 
     override fun onPause() {
         super.onPause()
         stopClimatePolling()   // pas de sondage binder quand l'écran n'est plus visible
+        view?.removeCallbacks(batteryHeatPoll)
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -193,6 +214,8 @@ class DashboardFragment : Fragment() {
         const val TAB_COMFORT = 2
         /** Tag des appuis « Sens de l'air » : le même que le filtre de la sonde MG4_AIR. */
         const val CLIM_UI_TAG = "MG4_AIR"
+        /** Relecture du chauffage de la batterie et de son décompte, écran visible. */
+        const val BATTERY_HEAT_POLL_MS = 15_000L
     }
 
     /**
@@ -215,6 +238,7 @@ class DashboardFragment : Fragment() {
             if (hasClim) View.VISIBLE else View.GONE
         if (hasClim) bindClimatePage(root)
         bindLighting(root)
+        bindBatteryHeating(root)
 
         bindCategoryRail(root)
     }
@@ -1201,6 +1225,60 @@ class DashboardFragment : Fragment() {
             withContext(Dispatchers.Main) {
                 if (isAdded) applyPairUI(btnHighBeamOn, btnHighBeamOff, on)
             }
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Chauffage intelligent de la batterie (page Conduite)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Même motif que les feux de route : consigne au clic, état affiché RELU. Sous les boutons,
+     * le temps restant avant la coupure automatique quand elle est en cours.
+     */
+    private fun bindBatteryHeating(root: View) {
+        if (!MG4Hardware.hasBatteryHeating()) return
+        root.findViewById<View>(R.id.section_battery_heat).visibility = View.VISIBLE
+        btnBatteryHeatOn  = root.findViewById(R.id.btn_battery_heat_on)
+        btnBatteryHeatOff = root.findViewById(R.id.btn_battery_heat_off)
+        batteryHeatStatus = root.findViewById(R.id.battery_heat_status)
+        btnBatteryHeatOn?.setOnClickListener {
+            applyPairUI(btnBatteryHeatOn, btnBatteryHeatOff, true)
+            writeSafety({ refreshBatteryHeating() }) { MG4Hardware.setBatteryHeating(true) }
+        }
+        btnBatteryHeatOff?.setOnClickListener {
+            applyPairUI(btnBatteryHeatOn, btnBatteryHeatOff, false)
+            writeSafety({ refreshBatteryHeating() }) { MG4Hardware.setBatteryHeating(false) }
+        }
+    }
+
+    private fun refreshBatteryHeating() {
+        if (!MG4Hardware.hasBatteryHeating()) return
+        CoroutineScope(Dispatchers.IO).launch {
+            val on = MG4Hardware.isBatteryHeatingOn()
+            withContext(Dispatchers.Main) {
+                if (!isAdded) return@withContext
+                applyPairUI(btnBatteryHeatOn, btnBatteryHeatOff, on)
+                val texte = batteryHeatingStatusText(on)
+                batteryHeatStatus?.text = texte
+                batteryHeatStatus?.visibility = if (texte == null) View.GONE else View.VISIBLE
+            }
+        }
+    }
+
+    /**
+     * Activé : temps restant si un décompte tourne ; sinon, sans l'automatisme, il reste activé ;
+     * avec l'automatisme mais hors trajet, la durée réglée. Illisible : rien.
+     */
+    private fun batteryHeatingStatusText(on: Boolean?): String? {
+        if (on == null) return null
+        if (!on) return getString(R.string.batheat_status_off)
+        val cfg = BatteryHeatingSettings.read(requireContext())
+        val reste = BatteryHeatingAutomation.remainingMinutes()
+        return when {
+            !cfg.enabled  -> getString(R.string.batheat_status_stays_on)
+            reste != null -> getString(R.string.batheat_status_countdown, reste)
+            else          -> getString(R.string.batheat_status_planned, cfg.minutes)
         }
     }
 

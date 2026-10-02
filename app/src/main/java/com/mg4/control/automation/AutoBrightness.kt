@@ -70,7 +70,7 @@ object AutoBrightness {
     private const val ATTENTE_POSITION_MS = 5_000L
     /**
      * Âge au-delà duquel la prévision est rafraîchie, après le réglage : trois requêtes par jour
-     * au plus sans grand trajet (~5 Ko chacune). Elle couvre trois jours, rien ne presse.
+     * au plus sans grand trajet (~10 Ko chacune). Elle couvre trois jours, rien ne presse.
      */
     private const val RAFRAICHIR_APRES_MS = 8 * 3_600_000L
     /**
@@ -452,6 +452,11 @@ object AutoBrightness {
      * la zone (plus de [SolarForecast.MAX_DISTANCE_KM] du centre de la grille), que la prévision a
      * plus de [RAFRAICHIR_APRES_MS] ou ne couvre plus demain — et jamais moins de
      * [REESSAI_APRES_MS] après la requête précédente. La nouvelle grille est centrée sur la voiture.
+     *
+     * Jamais de nuit : ni feux allumés (point Nuit), ni soleil couché (seul le crépuscule compte),
+     * la prévision ne servirait pas. La requête attend l'extinction des feux ou le lever du soleil.
+     * Simulation Lille → Marseille du 2026-10-02 : une requête inutile au redémarrage de 21 h 45
+     * après une recharge, et une toutes les 30 km de nuit sans la case feux.
      */
     private fun entretenirCache(ctx: Context, calcul: Calcul) {
         // Sans la case météo, aucune requête : c'est la promesse « aucune donnée mobile ».
@@ -459,6 +464,7 @@ object AutoBrightness {
         val lat = calcul.lat ?: return
         val lon = calcul.lon ?: return
         val maintenant = calcul.maintenant ?: return
+        if (calcul.result.source == Source.LIGHTS || SunPosition.elevationDeg(lat, lon, maintenant) <= 0.0) return
         val cache = lireCache(ctx)
         val raison = when {
             cache == null -> "aucune prévision"

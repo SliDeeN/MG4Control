@@ -15,9 +15,12 @@ import java.net.URL
  *
  * On ne demande que le rayonnement global horaire sur trois jours, en temps Unix (aucun fuseau
  * à interpréter), pour les 25 points d'une [ForecastGrid] centrée sur la position arrondie au
- * dixième de degré (~10 km) : assez pour la météo, pas plus. Une seule requête, ~3,5 Ko
- * compressés (HttpURLConnection demande gzip de lui-même) ; Open-Meteo pondère son quota par
- * points × jours / 14 × variables / 10, soit environ un appel.
+ * dixième de degré (~10 km) : assez pour la météo, pas plus. Une seule requête, ~3,5 Ko de
+ * réponse compressée (HttpURLConnection demande gzip de lui-même), mais ~10 Ko en tout : la
+ * connexion sécurisée est refaite à chaque fois, les requêtes étant espacées d'au moins 15 min
+ * (mesuré le 2026-10-02 en TLS 1.2 comme sous Android 9 : 4,5 Ko de poignée de main, certificats
+ * compris, plus les en-têtes TCP/IP). Open-Meteo pondère son quota par points × jours / 14 ×
+ * variables / 10, soit environ un appel.
  */
 object OpenMeteoClient {
 

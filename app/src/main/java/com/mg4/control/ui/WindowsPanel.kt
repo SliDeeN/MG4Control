@@ -3,22 +3,22 @@ package com.mg4.control.ui
 import android.view.View
 import android.widget.Switch
 import android.widget.TextView
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.R
 import com.mg4.control.hardware.PowerWindows
 import com.mg4.control.model.PowerWindow
 import com.mg4.control.model.WindowCommand
-import com.mg4.control.model.WindowCommand.Direction
 import java.util.Locale
 
 /**
- * Carte « Vitres » de l'onglet Automatisation. Le fragment appelle [bind] une fois, puis
- * [onShown] / [onHidden] selon que la carte est dépliée et l'écran au premier plan.
+ * Carte « Fermeture automatique des vitres électriques » de l'onglet Automatisation. Le fragment
+ * appelle [bind] une fois, puis [onShown] / [onHidden] selon que la carte est dépliée et l'écran
+ * au premier plan.
  *
- * Deux boutons seulement : toutes les vitres à la fois. La commande vitre par vitre et la position
- * estimée ont été retirées le 2026-09-30 — l'estimation devenait fausse dès qu'on touchait un
- * interrupteur physique, et plus rien n'affiche de position à côté de laquelle se tromper.
+ * Plus aucune commande manuelle : la commande vitre par vitre et la position estimée ont été
+ * retirées le 2026-09-30 (l'estimation devenait fausse dès qu'on touchait un interrupteur
+ * physique), les boutons « Tout fermer / Tout ouvrir » le 2026-10-02 — utiles pendant la mise au
+ * point, plus maintenant. Les raccourcis vitres restent.
  *
  * Les vitres sans capteur bougent pendant une **durée de course** réglable ici, cinq secondes par
  * défaut. Le calibrage vitre par vitre, plus précis, est devenu une option avancée dont
@@ -42,15 +42,13 @@ class WindowsPanel {
         }
     }
 
-    fun bind(view: View) {
+    /** [onAutoCloseToggled] : l'utilisateur vient d'activer ou de couper la fermeture automatique. */
+    fun bind(view: View, onAutoCloseToggled: (Boolean) -> Unit = {}) {
         root = view
-        view.findViewById<MaterialButton>(R.id.btn_win_all_close).setOnClickListener { PowerWindows.autoAll(Direction.UP) }
-        view.findViewById<MaterialButton>(R.id.btn_win_all_open).setOnClickListener { PowerWindows.autoAll(Direction.DOWN) }
-
         bindCourse(view)
         bindAdvanced(view)
 
-        autoClose.bind(view)
+        autoClose.bind(view, onAutoCloseToggled)
         calibration.bind(view)
     }
 

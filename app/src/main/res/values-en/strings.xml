@@ -337,10 +337,10 @@
     <string name="autobri_lights_desc_off">Unticked: the screen may stay bright in garages or tunnels.</string>
     <string name="autobri_forecast">Use the Open-Meteo weather</string>
     <string name="autobri_forecast_warning">(uses a little mobile data)</string>
-    <string name="autobri_forecast_desc">Light estimated from the sun height and the sunshine forecast around the car: about 5 KB per download, every 8 h at most or when leaving the area (~60 km).</string>
+    <string name="autobri_forecast_desc">Light estimated from the sun height and the sunshine forecast around the car: about 10 KB per download, every 8 h at most or when leaving the area (~60 km).</string>
     <string name="autobri_mode_lights">Lights only: no mobile data, no GPS</string>
-    <string name="autobri_mode_both">Weather + lights: ~5 KB per download</string>
-    <string name="autobri_mode_forecast">Weather only: ~5 KB per download, no garage/tunnel safeguard</string>
+    <string name="autobri_mode_both">Weather + lights: ~10 KB per download</string>
+    <string name="autobri_mode_forecast">Weather only: ~10 KB per download, no garage/tunnel safeguard</string>
     <string name="autobri_follow_desc_lights">The light is recalculated every minute; the screen is only readjusted when the gap reaches 10 points, and every time the lights switch on or off. Adjusting brightness by hand pauses the automation until the next start.</string>
     <string name="autobri_night_lights">Night or lights on · 10 lx</string>
     <string name="autobri_status_failed_lights">Could not set: lights state unreadable.</string>
@@ -500,6 +500,19 @@
     <string name="shortcuts_action_hvac_toggle">Climate (ON/OFF)</string>
     <string name="shortcuts_action_hvac_ac_toggle">Climate: A/C (ON/OFF)</string>
     <string name="shortcuts_action_auto_high_beam">Automatic high beam (ON/OFF)</string>
+    <string name="shortcuts_action_battery_heat">Battery heating (ON/OFF)</string>
+    <string name="batheat_section">Intelligent battery heating</string>
+    <string name="batheat_hint">Improves fast charging, but reduces range.</string>
+    <string name="batheat_status_off">Off</string>
+    <string name="batheat_status_stays_on">Stays on until you switch it off</string>
+    <string name="batheat_status_countdown">Automatic switch-off in %1$d min</string>
+    <string name="batheat_status_planned">Automatic switch-off after %1$d min of driving</string>
+    <string name="batheat_auto_title">Battery heating switch-off</string>
+    <string name="batheat_auto_desc">Switch off intelligent battery heating after a driving time</string>
+    <string name="batheat_auto_minutes_label">Switch off after</string>
+    <string name="batheat_auto_minutes_value">%1$d min</string>
+    <string name="batheat_auto_note">The countdown starts at start-up if heating is already on, or when it is switched on during the trip (original screen, “low temperature” window, MG4Control or shortcut). It only applies to the current trip: it is cancelled at the end of the trip, when the car leaves READY. A message is shown when heating is switched off.</string>
+    <string name="batheat_auto_toast">Battery heating switched off after %1$d min</string>
     <string name="shortcuts_action_hvac_temp_up">Climate: temperature +</string>
     <string name="shortcuts_action_hvac_temp_down">Climate: temperature -</string>
     <string name="shortcuts_action_hvac_fan_up">Climate: fan +</string>
@@ -543,14 +556,10 @@
     <string name="shortcuts_action_volume_down">Volume -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="win_close_warning">Automatic closing by the app has no anti-pinch protection (except the driver window): watch the window. It stops if you leave the tab.</string>
     <string name="win_front_left">Front left</string>
     <string name="win_front_right">Front right</string>
     <string name="win_rear_left">Rear left</string>
     <string name="win_rear_right">Rear right</string>
-    <string name="win_all_close">Close all</string>
-    <string name="win_all_open">Open all</string>
-    <string name="win_auto_title">Automatic closing</string>
     <string name="win_auto_label">Close the windows when leaving the car</string>
     <string name="win_auto_desc">Car in P, once armed by the conditions below: when the car leaves READY (driver door opened or car switched off), all windows close after the chosen delay. Going back to READY before then cancels.</string>
     <string name="win_auto_warning">No anti-pinch protection on windows other than the driver\'s: nobody near the windows when leaving.</string>
@@ -573,8 +582,7 @@
     <string name="win_cal_advanced_label">Per-window calibration</string>
     <string name="win_cal_advanced_desc">Measures each window\'s real travel, more accurate than the general time. Measurements are kept if you turn the option off.</string>
     <string name="win_cal_general">General time</string>
-    <string name="win_automation_title">Power windows</string>
-    <string name="win_section_command">Controls</string>
+    <string name="win_automation_title">Automatic power window closing</string>
     <string name="win_cal_limits">The app cannot see the door switches: an emulated travel always runs for the measured time, whatever position the window started from.</string>
     <string name="shortcuts_action_windows_open">Open all windows</string>
     <string name="shortcuts_action_windows_close">Close all windows</string>

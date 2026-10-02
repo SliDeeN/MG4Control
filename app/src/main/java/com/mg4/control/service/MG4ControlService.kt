@@ -76,7 +76,7 @@ class MG4ControlService : Service() {
             ShortcutAction.DEFROST_FRONT_TOGGLE, ShortcutAction.DEFROST_REAR_TOGGLE,
             ShortcutAction.HVAC_RECIRC_CYCLE,
             ShortcutAction.BRIGHTNESS_UP, ShortcutAction.BRIGHTNESS_DOWN,
-            ShortcutAction.AUTO_HIGH_BEAM_TOGGLE,
+            ShortcutAction.AUTO_HIGH_BEAM_TOGGLE, ShortcutAction.BATTERY_HEAT_TOGGLE,
             ShortcutAction.MEDIA_NEXT, ShortcutAction.MEDIA_PREVIOUS,
             ShortcutAction.MEDIA_PLAY_PAUSE,
             ShortcutAction.VOLUME_UP, ShortcutAction.VOLUME_DOWN
@@ -179,6 +179,8 @@ class MG4ControlService : Service() {
         com.mg4.control.hardware.LightProbe.start(applicationContext)
         // Luminosité automatique au démarrage : relit son interrupteur à chaque READY.
         com.mg4.control.automation.AutoBrightness.start(applicationContext)
+        // Coupure auto du chauffage de la batterie : relit son interrupteur à chaque passage.
+        com.mg4.control.automation.BatteryHeatingAutomation.start(applicationContext)
         // Vérification de mise à jour, cinq secondes après le démarrage automatique.
         //
         // Pourquoi attendre du tout : à t=0 la liaison données de la voiture n'est pas encore
@@ -815,6 +817,16 @@ class MG4ControlService : Service() {
                 }
                 AppLogger.i(TAG, "SHORTCUT feux de route auto : $actuel → ${!actuel}")
                 MG4Hardware.setAutoHighBeam(!actuel)
+            }
+
+            ShortcutAction.BATTERY_HEAT_TOGGLE -> {
+                val actuel = MG4Hardware.isBatteryHeatingOn()
+                if (actuel == null) {
+                    AppLogger.w(TAG, "SHORTCUT chauffage batterie — état illisible, aucune action")
+                    return
+                }
+                AppLogger.i(TAG, "SHORTCUT chauffage batterie : $actuel → ${!actuel}")
+                MG4Hardware.setBatteryHeating(!actuel)
             }
 
             ShortcutAction.BRIGHTNESS_UP, ShortcutAction.BRIGHTNESS_DOWN -> {

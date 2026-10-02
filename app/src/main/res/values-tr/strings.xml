@@ -337,10 +337,10 @@
     <string name="autobri_lights_desc_off">İşaretsiz: ekran garajda veya tünelde parlak kalabilir.</string>
     <string name="autobri_forecast">Open-Meteo hava durumunu kullan</string>
     <string name="autobri_forecast_warning">(biraz mobil veri kullanır)</string>
-    <string name="autobri_forecast_desc">Işık, güneşin yüksekliğinden ve aracın çevresindeki güneşlenme tahmininden hesaplanır: indirme başına yaklaşık 5 KB, en fazla 8 saatte bir veya bölgeden çıkıldığında (~60 km).</string>
+    <string name="autobri_forecast_desc">Işık, güneşin yüksekliğinden ve aracın çevresindeki güneşlenme tahmininden hesaplanır: indirme başına yaklaşık 10 KB, en fazla 8 saatte bir veya bölgeden çıkıldığında (~60 km).</string>
     <string name="autobri_mode_lights">Yalnızca farlar: mobil veri yok, GPS yok</string>
-    <string name="autobri_mode_both">Hava durumu + farlar: indirme başına ~5 KB</string>
-    <string name="autobri_mode_forecast">Yalnızca hava durumu: indirme başına ~5 KB, garaj/tünel koruması yok</string>
+    <string name="autobri_mode_both">Hava durumu + farlar: indirme başına ~10 KB</string>
+    <string name="autobri_mode_forecast">Yalnızca hava durumu: indirme başına ~10 KB, garaj/tünel koruması yok</string>
     <string name="autobri_follow_desc_lights">Işık her dakika yeniden hesaplanır; ekran yalnızca fark 10 puana ulaşırsa ve farlar her yandığında veya söndüğünde yeniden ayarlanır. Elle yapılan bir ayar, otomasyonu bir sonraki açılışa kadar durdurur.</string>
     <string name="autobri_night_lights">Gece veya farlar açık · 10 lx</string>
     <string name="autobri_status_failed_lights">Ayar yapılamadı: farların durumu okunamıyor.</string>
@@ -500,6 +500,19 @@
     <string name="shortcuts_action_hvac_toggle">Klima (AÇ/KAPA)</string>
     <string name="shortcuts_action_hvac_ac_toggle">Klima: A/C (ON/OFF)</string>
     <string name="shortcuts_action_auto_high_beam">Otomatik uzun far (AÇ/KAPA)</string>
+    <string name="shortcuts_action_battery_heat">Batarya ısıtma (AÇ/KAPA)</string>
+    <string name="batheat_section">Akıllı batarya ısıtma</string>
+    <string name="batheat_hint">Hızlı şarjı iyileştirir ancak menzili azaltır.</string>
+    <string name="batheat_status_off">Kapalı</string>
+    <string name="batheat_status_stays_on">Siz kapatana kadar açık kalır</string>
+    <string name="batheat_status_countdown">%1$d dk sonra otomatik kapanacak</string>
+    <string name="batheat_status_planned">%1$d dk sürüşten sonra otomatik kapanır</string>
+    <string name="batheat_auto_title">Batarya ısıtmayı kapatma</string>
+    <string name="batheat_auto_desc">Akıllı batarya ısıtmayı bir sürüş süresinden sonra kapat</string>
+    <string name="batheat_auto_minutes_label">Kapatma süresi</string>
+    <string name="batheat_auto_minutes_value">%1$d dk</string>
+    <string name="batheat_auto_note">Isıtma açılışta zaten açıksa geri sayım açılışta, sürüş sırasında açılırsa açıldığı anda başlar (orijinal ekran, «düşük sıcaklık» penceresi, MG4Control veya kısayol). Yalnızca mevcut sürüş için geçerlidir: sürüş sonunda, READY\'den çıkınca iptal edilir. Kapatıldığında bir mesaj gösterilir.</string>
+    <string name="batheat_auto_toast">Batarya ısıtma %1$d dk sonra kapatıldı</string>
     <string name="shortcuts_action_hvac_temp_up">Klima: sıcaklık +</string>
     <string name="shortcuts_action_hvac_temp_down">Klima: sıcaklık -</string>
     <string name="shortcuts_action_hvac_fan_up">Klima: fan +</string>
@@ -543,14 +556,10 @@
     <string name="shortcuts_action_volume_down">Ses -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="win_close_warning">Uygulamanın kendiliğinden kapatmasında sıkışma koruması yoktur (sürücü camı dışında): cama dikkat edin. Sekmeden çıkarsanız durur.</string>
     <string name="win_front_left">Ön sol</string>
     <string name="win_front_right">Ön sağ</string>
     <string name="win_rear_left">Arka sol</string>
     <string name="win_rear_right">Arka sağ</string>
-    <string name="win_all_close">Tümünü kapat</string>
-    <string name="win_all_open">Tümünü aç</string>
-    <string name="win_auto_title">Kendiliğinden kapatma</string>
     <string name="win_auto_label">Araçtan inerken camları kapat</string>
     <string name="win_auto_desc">Araç P konumundayken ve aşağıdaki koşullarla devreye alınmışsa: araç READY durumundan çıkınca (sürücü kapısı açıldığında ya da araç kapatıldığında) tüm camlar seçilen gecikmenin ardından kapanır. O süre dolmadan READY durumuna dönülürse iptal olur.</string>
     <string name="win_auto_warning">Sürücü camı dışındaki camlarda sıkışma koruması yoktur: inerken camların yakınında kimse olmasın.</string>
@@ -573,8 +582,7 @@
     <string name="win_cal_advanced_label">Cam başına kalibrasyon</string>
     <string name="win_cal_advanced_desc">Her camın gerçek hareketini ölçer; genel süreden daha isabetlidir. Seçeneği kapatırsanız ölçümler saklı kalır.</string>
     <string name="win_cal_general">Genel süre</string>
-    <string name="win_automation_title">Elektrikli camlar</string>
-    <string name="win_section_command">Kumandalar</string>
+    <string name="win_automation_title">Elektrikli camların kendiliğinden kapanması</string>
     <string name="win_cal_limits">Uygulama kapı düğmelerini göremez: taklit edilen bir hareket, cam hangi konumda başlarsa başlasın, hep ölçülen süre kadar sürer.</string>
     <string name="shortcuts_action_windows_open">Tüm camları aç</string>
     <string name="shortcuts_action_windows_close">Tüm camları kapat</string>

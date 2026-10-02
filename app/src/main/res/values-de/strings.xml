@@ -337,10 +337,10 @@
     <string name="autobri_lights_desc_off">Abgewählt: Der Bildschirm kann in Garage oder Tunnel hell bleiben.</string>
     <string name="autobri_forecast">Open-Meteo-Wetter nutzen</string>
     <string name="autobri_forecast_warning">(verbraucht etwas mobile Daten)</string>
-    <string name="autobri_forecast_desc">Licht geschätzt aus dem Sonnenstand und der Sonnenscheinvorhersage rund um das Fahrzeug: etwa 5 KB pro Download, höchstens alle 8 Std. oder beim Verlassen des Gebiets (~60 km).</string>
+    <string name="autobri_forecast_desc">Licht geschätzt aus dem Sonnenstand und der Sonnenscheinvorhersage rund um das Fahrzeug: etwa 10 KB pro Download, höchstens alle 8 Std. oder beim Verlassen des Gebiets (~60 km).</string>
     <string name="autobri_mode_lights">Nur Licht: keine mobilen Daten, kein GPS</string>
-    <string name="autobri_mode_both">Wetter + Licht: ~5 KB pro Download</string>
-    <string name="autobri_mode_forecast">Nur Wetter: ~5 KB pro Download, ohne Garagen-/Tunnelschutz</string>
+    <string name="autobri_mode_both">Wetter + Licht: ~10 KB pro Download</string>
+    <string name="autobri_mode_forecast">Nur Wetter: ~10 KB pro Download, ohne Garagen-/Tunnelschutz</string>
     <string name="autobri_follow_desc_lights">Das Licht wird jede Minute neu berechnet; der Bildschirm wird nur angepasst, wenn die Abweichung 10 Punkte erreicht, sowie bei jedem Ein- oder Ausschalten des Lichts. Eine Änderung von Hand pausiert die Automatik bis zum nächsten Start.</string>
     <string name="autobri_night_lights">Nacht oder Licht an · 10 lx</string>
     <string name="autobri_status_failed_lights">Nicht möglich: Lichtzustand nicht lesbar.</string>
@@ -500,6 +500,19 @@
     <string name="shortcuts_action_hvac_toggle">Klima (ON/OFF)</string>
     <string name="shortcuts_action_hvac_ac_toggle">Klima: A/C (ON/OFF)</string>
     <string name="shortcuts_action_auto_high_beam">Fernlichtassistent (ON/OFF)</string>
+    <string name="shortcuts_action_battery_heat">Batterieheizung (ON/OFF)</string>
+    <string name="batheat_section">Intelligente Batterieheizung</string>
+    <string name="batheat_hint">Verbessert das Schnellladen, verringert aber die Reichweite.</string>
+    <string name="batheat_status_off">Aus</string>
+    <string name="batheat_status_stays_on">Bleibt eingeschaltet, bis Sie sie ausschalten</string>
+    <string name="batheat_status_countdown">Automatische Abschaltung in %1$d Min.</string>
+    <string name="batheat_status_planned">Automatische Abschaltung nach %1$d Min. Fahrt</string>
+    <string name="batheat_auto_title">Abschaltung der Batterieheizung</string>
+    <string name="batheat_auto_desc">Intelligente Batterieheizung nach einer Fahrzeit ausschalten</string>
+    <string name="batheat_auto_minutes_label">Ausschalten nach</string>
+    <string name="batheat_auto_minutes_value">%1$d Min.</string>
+    <string name="batheat_auto_note">Der Countdown startet beim Start, wenn die Heizung bereits eingeschaltet ist, oder sobald sie während der Fahrt eingeschaltet wird (Originalbildschirm, Fenster „niedrige Temperatur“, MG4Control oder Kurzbefehl). Er gilt nur für die aktuelle Fahrt: Am Fahrtende, beim Verlassen von READY, wird er abgebrochen. Beim Ausschalten erscheint eine Meldung.</string>
+    <string name="batheat_auto_toast">Batterieheizung nach %1$d Min. ausgeschaltet</string>
     <string name="shortcuts_action_hvac_temp_up">Klima: Temperatur +</string>
     <string name="shortcuts_action_hvac_temp_down">Klima: Temperatur -</string>
     <string name="shortcuts_action_hvac_fan_up">Klima: Gebläse +</string>
@@ -543,14 +556,10 @@
     <string name="shortcuts_action_volume_down">Lautstärke -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="win_close_warning">Automatisches Schließen durch die App ohne Einklemmschutz (außer Fahrerfenster): Fenster beobachten. Es stoppt, wenn Sie den Tab verlassen.</string>
     <string name="win_front_left">Vorne links</string>
     <string name="win_front_right">Vorne rechts</string>
     <string name="win_rear_left">Hinten links</string>
     <string name="win_rear_right">Hinten rechts</string>
-    <string name="win_all_close">Alle schließen</string>
-    <string name="win_all_open">Alle öffnen</string>
-    <string name="win_auto_title">Automatisches Schließen</string>
     <string name="win_auto_label">Fenster beim Verlassen des Autos schließen</string>
     <string name="win_auto_desc">Auto in P, sobald nach den Bedingungen unten scharf: Verlässt das Auto den READY-Modus (Fahrertür geöffnet oder Auto ausgeschaltet), schließen alle Fenster nach der gewählten Verzögerung. Eine Rückkehr in READY davor bricht ab.</string>
     <string name="win_auto_warning">Kein Einklemmschutz an den Fenstern außer dem Fahrerfenster: beim Aussteigen niemand in der Nähe der Fenster.</string>
@@ -573,8 +582,7 @@
     <string name="win_cal_advanced_label">Kalibrierung je Fenster</string>
     <string name="win_cal_advanced_desc">Misst die tatsächliche Fahrt jedes Fensters, genauer als die allgemeine Zeit. Die Messungen bleiben erhalten, wenn Sie die Option ausschalten.</string>
     <string name="win_cal_general">Allgemeine Zeit</string>
-    <string name="win_automation_title">Elektrische Fensterheber</string>
-    <string name="win_section_command">Bedienung</string>
+    <string name="win_automation_title">Automatisches Schließen der elektrischen Fensterheber</string>
     <string name="win_cal_limits">Die App sieht die Türschalter nicht: Eine emulierte Fahrt dauert immer die gemessene Zeit, egal in welcher Position das Fenster startet.</string>
     <string name="shortcuts_action_windows_open">Alle Fenster öffnen</string>
     <string name="shortcuts_action_windows_close">Alle Fenster schließen</string>

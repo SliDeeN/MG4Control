@@ -155,6 +155,10 @@ class ShortcutsFragment : Fragment() {
             if (MG4Hardware.hasAutoHighBeam()) {
                 add(ActionItem(getString(R.string.shortcuts_action_auto_high_beam),  ShortcutAction.AUTO_HIGH_BEAM_TOGGLE))
             }
+            // Chauffage de la batterie : même condition que sa carte du Dashboard.
+            if (MG4Hardware.hasBatteryHeating()) {
+                add(ActionItem(getString(R.string.shortcuts_action_battery_heat),    ShortcutAction.BATTERY_HEAT_TOGGLE))
+            }
             if (MG4Hardware.hasBrightnessControl()) {
                 add(ActionItem(getString(R.string.shortcuts_action_brightness_up),   ShortcutAction.BRIGHTNESS_UP))
                 add(ActionItem(getString(R.string.shortcuts_action_brightness_down), ShortcutAction.BRIGHTNESS_DOWN))

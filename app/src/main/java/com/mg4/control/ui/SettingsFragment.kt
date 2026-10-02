@@ -562,6 +562,7 @@ class SettingsFragment : Fragment() {
         MG4Hardware.runSafetyDiag()
         // Sonde feux de route automatiques : lecture seule, toutes les voies du firmware.
         MG4Hardware.runHighBeamDiag()
+        MG4Hardware.runBatteryHeatingDiag()
 
         val appVersion = try {
             ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"

@@ -337,10 +337,10 @@
     <string name="autobri_lights_desc_off">Desmarcada: la pantalla puede seguir brillante en el garaje o en un túnel.</string>
     <string name="autobri_forecast">Usar el tiempo de Open-Meteo</string>
     <string name="autobri_forecast_warning">(consume algunos datos móviles)</string>
-    <string name="autobri_forecast_desc">Luz estimada a partir de la altura del sol y de la previsión de sol alrededor del coche: unos 5 KB por descarga, como máximo cada 8 h o al salir de la zona (~60 km).</string>
+    <string name="autobri_forecast_desc">Luz estimada a partir de la altura del sol y de la previsión de sol alrededor del coche: unos 10 KB por descarga, como máximo cada 8 h o al salir de la zona (~60 km).</string>
     <string name="autobri_mode_lights">Solo luces: sin datos móviles, sin GPS</string>
-    <string name="autobri_mode_both">Tiempo + luces: ~5 KB por descarga</string>
-    <string name="autobri_mode_forecast">Solo tiempo: ~5 KB por descarga, sin protección en garaje/túnel</string>
+    <string name="autobri_mode_both">Tiempo + luces: ~10 KB por descarga</string>
+    <string name="autobri_mode_forecast">Solo tiempo: ~10 KB por descarga, sin protección en garaje/túnel</string>
     <string name="autobri_follow_desc_lights">La luz se recalcula cada minuto; la pantalla solo se reajusta si la diferencia alcanza 10 puntos, y cada vez que las luces se encienden o se apagan. Un ajuste manual suspende la automatización hasta el próximo arranque.</string>
     <string name="autobri_night_lights">Noche o luces encendidas · 10 lx</string>
     <string name="autobri_status_failed_lights">Ajuste imposible: estado de las luces ilegible.</string>
@@ -500,6 +500,19 @@
     <string name="shortcuts_action_hvac_toggle">Clima (ON/OFF)</string>
     <string name="shortcuts_action_hvac_ac_toggle">Clima: A/C (ON/OFF)</string>
     <string name="shortcuts_action_auto_high_beam">Luces de carretera automáticas (ON/OFF)</string>
+    <string name="shortcuts_action_battery_heat">Calefacción de la batería (ON/OFF)</string>
+    <string name="batheat_section">Calefacción inteligente de la batería</string>
+    <string name="batheat_hint">Mejora la carga rápida, pero reduce la autonomía.</string>
+    <string name="batheat_status_off">Desactivada</string>
+    <string name="batheat_status_stays_on">Sigue activada hasta que la desactive</string>
+    <string name="batheat_status_countdown">Apagado automático en %1$d min</string>
+    <string name="batheat_status_planned">Apagado automático tras %1$d min de trayecto</string>
+    <string name="batheat_auto_title">Apagado de la calefacción de la batería</string>
+    <string name="batheat_auto_desc">Apagar la calefacción inteligente de la batería tras un tiempo de conducción</string>
+    <string name="batheat_auto_minutes_label">Apagar tras</string>
+    <string name="batheat_auto_minutes_value">%1$d min</string>
+    <string name="batheat_auto_note">La cuenta atrás empieza al arrancar si la calefacción ya está activada, o en el momento en que se activa durante el trayecto (pantalla original, ventana «temperatura baja», MG4Control o atajo). Solo vale para el trayecto en curso: se cancela al final del trayecto, al salir de READY. Se muestra un mensaje al apagarla.</string>
+    <string name="batheat_auto_toast">Calefacción de la batería apagada tras %1$d min</string>
     <string name="shortcuts_action_hvac_temp_up">Clima: temperatura +</string>
     <string name="shortcuts_action_hvac_temp_down">Clima: temperatura -</string>
     <string name="shortcuts_action_hvac_fan_up">Clima: ventilación +</string>
@@ -543,14 +556,10 @@
     <string name="shortcuts_action_volume_down">Volumen -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="win_close_warning">El cierre automático desde la app no tiene antipinzamiento (salvo la ventanilla del conductor): vigila la ventanilla. Se detiene si sales de la pestaña.</string>
     <string name="win_front_left">Delantera izquierda</string>
     <string name="win_front_right">Delantera derecha</string>
     <string name="win_rear_left">Trasera izquierda</string>
     <string name="win_rear_right">Trasera derecha</string>
-    <string name="win_all_close">Cerrar todas</string>
-    <string name="win_all_open">Abrir todas</string>
-    <string name="win_auto_title">Cierre automático</string>
     <string name="win_auto_label">Cerrar las ventanillas al salir del coche</string>
     <string name="win_auto_desc">Coche en P, una vez armado según las condiciones de abajo: cuando el coche sale del modo READY (puerta del conductor abierta o coche apagado), todas las ventanillas se cierran tras el retardo elegido. Volver a READY antes cancela.</string>
     <string name="win_auto_warning">Sin antipinzamiento en las ventanillas salvo la del conductor: nadie cerca de las ventanillas al salir.</string>
@@ -573,8 +582,7 @@
     <string name="win_cal_advanced_label">Calibración por ventanilla</string>
     <string name="win_cal_advanced_desc">Mide el recorrido real de cada ventanilla, más exacto que el tiempo general. Las medidas se conservan si desactivas la opción.</string>
     <string name="win_cal_general">Tiempo general</string>
-    <string name="win_automation_title">Elevalunas eléctricos</string>
-    <string name="win_section_command">Mando</string>
+    <string name="win_automation_title">Cierre automático de los elevalunas eléctricos</string>
     <string name="win_cal_limits">La aplicación no ve los interruptores de puerta: un recorrido emulado dura siempre el tiempo medido, sea cual sea la posición inicial.</string>
     <string name="shortcuts_action_windows_open">Abrir todas las ventanillas</string>
     <string name="shortcuts_action_windows_close">Cerrar todas las ventanillas</string>

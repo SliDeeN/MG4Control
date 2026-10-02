@@ -59,7 +59,11 @@ enum class ShortcutAction(val id: Int) {
     HVAC_AC_TOGGLE(38),
 
     // Éclairage : famille « lue puis écrite », le réglage se change aussi depuis l'écran d'origine.
-    AUTO_HIGH_BEAM_TOGGLE(39);
+    AUTO_HIGH_BEAM_TOGGLE(39),
+
+    // Batterie : « lue puis écrite » aussi — l'écran d'origine et la fenêtre « température basse »
+    // de SystemUI l'activent sans nous.
+    BATTERY_HEAT_TOGGLE(40);
 
     companion object {
         fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: NONE

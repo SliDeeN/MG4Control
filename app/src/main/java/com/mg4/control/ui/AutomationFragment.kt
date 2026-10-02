@@ -28,8 +28,10 @@ import com.mg4.control.automation.AutoBrightness
 import com.mg4.control.automation.AutoBrightnessSettings
 import com.mg4.control.automation.AutomationSettings
 import com.mg4.control.automation.BatteryAutomationSettings
+import com.mg4.control.automation.BatteryHeatingSettings
 import com.mg4.control.automation.ClimateAutomationSettings
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.profile.ProfileManager
 import java.util.Date
@@ -62,12 +64,13 @@ class AutomationFragment : Fragment() {
         inputTemp.setText(prefs.getInt(AutomationSettings.KEY_THRESHOLD, AutomationSettings.DEFAULT_THRESHOLD).toString())
         checkAuto.isChecked = prefs.getBoolean(AutomationSettings.KEY_AUTO_EXECUTE, false)
 
-        // L'interrupteur ne commande QUE l'activation : le parametrage reste consultable
-        // automatisation eteinte, c'est le chevron qui le replie.
+        // L'interrupteur active et, au passage, deplie ou replie le parametrage ; le chevron reste
+        // libre (voir bindExpander).
+        val deplier = bindExpander(view.findViewById(R.id.btn_automation_expand), rowConfig, expanded = enabled)
         switchAuto.setOnCheckedChangeListener { _, checked ->
             prefs.edit().putBoolean(AutomationSettings.KEY_ENABLED, checked).apply()
+            deplier(checked)
         }
-        bindExpander(view.findViewById(R.id.btn_automation_expand), rowConfig, expanded = enabled)
         bindWindowsCard(view)
 
         fun commitTemp() {
@@ -110,7 +113,48 @@ class AutomationFragment : Fragment() {
         setupSpinner(spinner, prefs, AutomationSettings.KEY_PROFILE_ID)
         bindBatteryAutomation(view, prefs)
         bindAutoBrightness(view, prefs)
+        bindBatteryHeatingAutomation(view, prefs)
         bindClimateAutomation(view, prefs)
+    }
+
+    // ══════════ Coupure automatique du chauffage de la batterie ══════════
+
+    /**
+     * Interrupteur + durée au curseur, relus par le moteur à chaque passage : un changement vaut
+     * tout de suite, trajet en cours compris (une durée raccourcie rapproche l'échéance).
+     */
+    private fun bindBatteryHeatingAutomation(view: View, prefs: android.content.SharedPreferences) {
+        val card = view.findViewById<View>(R.id.card_batheat_auto)
+        if (!MG4Hardware.hasBatteryHeating()) {
+            card.visibility = View.GONE
+            return
+        }
+        val cfg = BatteryHeatingSettings.read(requireContext())
+        val sw = view.findViewById<Switch>(R.id.switch_batheat_auto)
+        sw.isChecked = cfg.enabled
+        val deplier = bindExpander(view.findViewById(R.id.btn_batheat_auto_expand),
+            view.findViewById(R.id.row_batheat_auto_config), expanded = cfg.enabled)
+        sw.setOnCheckedChangeListener { _, on ->
+            prefs.edit().putBoolean(BatteryHeatingSettings.KEY_ENABLED, on).apply()
+            deplier(on)
+        }
+
+        val slider = view.findViewById<Slider>(R.id.slider_batheat_auto_minutes)
+        val valeur = view.findViewById<TextView>(R.id.batheat_auto_minutes_value)
+        val pas = BatteryHeatingSettings.STEP_MINUTES
+        slider.valueFrom = BatteryHeatingSettings.MIN_MINUTES.toFloat()
+        slider.valueTo   = BatteryHeatingSettings.MAX_MINUTES.toFloat()
+        slider.stepSize  = pas.toFloat()
+        // Le Slider refuse une valeur hors pas : on aligne une valeur enregistrée qui ne le serait pas.
+        val aligne = (Math.round(cfg.minutes / pas.toFloat()) * pas).let(BatteryHeatingSettings::clamp)
+        slider.value = aligne.toFloat()
+        valeur.text = getString(R.string.batheat_auto_minutes_value, aligne)
+        slider.addOnChangeListener { _, v, fromUser ->
+            valeur.text = getString(R.string.batheat_auto_minutes_value, v.toInt())
+            if (fromUser) prefs.edit()
+                .putInt(BatteryHeatingSettings.KEY_MINUTES, BatteryHeatingSettings.clamp(v.toInt()))
+                .apply()
+        }
     }
 
     // ══════════ Automatisation « profil selon la batterie » (issue #112) ══════════
@@ -128,10 +172,11 @@ class AutomationFragment : Fragment() {
         val check   = view.findViewById<CheckBox>(R.id.check_battery_auto_execute)
 
         sw.isChecked = cfg.enabled
+        val deplier = bindExpander(view.findViewById(R.id.btn_battery_auto_expand), content, expanded = cfg.enabled)
         sw.setOnCheckedChangeListener { _, on ->
             prefs.edit().putBoolean(BatteryAutomationSettings.KEY_ENABLED, on).apply()
+            deplier(on)
         }
-        bindExpander(view.findViewById(R.id.btn_battery_auto_expand), content, expanded = cfg.enabled)
 
         slider.valueFrom = BatteryAutomationSettings.MIN_THRESHOLD.toFloat()
         slider.valueTo   = BatteryAutomationSettings.MAX_THRESHOLD.toFloat()
@@ -173,11 +218,12 @@ class AutomationFragment : Fragment() {
         val cfg = AutoBrightnessSettings.read(requireContext())
         val sw  = view.findViewById<Switch>(R.id.switch_autobri)
         sw.isChecked = cfg.enabled
+        val deplier = bindExpander(view.findViewById(R.id.btn_autobri_expand),
+            view.findViewById(R.id.row_autobri_config), expanded = cfg.enabled)
         sw.setOnCheckedChangeListener { _, on ->
             prefs.edit().putBoolean(AutoBrightnessSettings.KEY_ENABLED, on).apply()
+            deplier(on)
         }
-        bindExpander(view.findViewById(R.id.btn_autobri_expand), view.findViewById(R.id.row_autobri_config),
-            expanded = cfg.enabled)
 
         // Pris en compte au tick suivant, en route compris : le suivi relit ses options chaque seconde.
         view.findViewById<CheckBox>(R.id.check_autobri_follow).apply {
@@ -376,10 +422,11 @@ class AutomationFragment : Fragment() {
 
         val enabled = prefs.getBoolean(ClimateAutomationSettings.KEY_ENABLED, false)
         switchAc.isChecked = enabled
+        val deplier = bindExpander(view.findViewById(R.id.btn_ac_auto_expand), rowConfig, expanded = enabled)
         switchAc.setOnCheckedChangeListener { _, checked ->
             prefs.edit().putBoolean(ClimateAutomationSettings.KEY_ENABLED, checked).apply()
+            deplier(checked)
         }
-        bindExpander(view.findViewById(R.id.btn_ac_auto_expand), rowConfig, expanded = enabled)
 
         bindClimateRule(
             view, prefs, hot = true,
@@ -581,16 +628,16 @@ class AutomationFragment : Fragment() {
     }
 
     /**
-     * Chevron de depliage d'une carte d'automatisation.
+     * Chevron de depliage d'une carte d'automatisation, et son lien avec l'interrupteur
+     * d'activation : la carte s'ouvre depliee si l'automatisation est active, l'activer la deplie,
+     * la desactiver la replie. Entre-temps le chevron reste libre — on peut consulter le
+     * parametrage d'une automatisation eteinte, ou replier une automatisation active.
      *
-     * Volontairement decorrele de l'interrupteur d'activation : on doit pouvoir consulter et
-     * modifier le parametrage sans activer l'automatisation, et inversement la laisser active
-     * en repliant la carte. L'etat initial suit quand meme l'activation — une automatisation
-     * eteinte s'ouvre repliee, ce qui reproduit le comportement precedent.
+     * Rend la fonction que l'interrupteur appelle avec son nouvel etat.
      */
     private fun bindExpander(
         btn: MaterialButton, content: View, expanded: Boolean, onToggle: ((Boolean) -> Unit)? = null
-    ) {
+    ): (Boolean) -> Unit {
         var open = expanded
         fun apply() {
             content.visibility = if (open) View.VISIBLE else View.GONE
@@ -599,21 +646,26 @@ class AutomationFragment : Fragment() {
         }
         apply()
         btn.setOnClickListener { open = !open; apply() }
+        // Pour l'interrupteur d'activation : activer déplie, désactiver replie (décision du 2026-10-02).
+        return { voulu -> if (voulu != open) { open = voulu; apply() } }
     }
 
     /**
-     * Carte des vitres, repliée par défaut : la commande manuelle et la calibration ne sont pas
-     * des automatismes, on ne les ouvre que quand on les cherche.
+     * Carte « Fermeture automatique des vitres électriques » : dépliée à l'ouverture quand
+     * l'option est activée, comme les autres automatisations.
      *
      * Le sondage des positions (et donc l'abonnement véhicule) ne tourne que carte ouverte ET
      * écran au premier plan — ailleurs il consommerait pour une valeur que personne ne regarde.
+     * Dépliée d'office, la carte n'est pas encore au premier plan : [onResume] prend le relais.
      */
     private fun bindWindowsCard(view: View) {
-        windowsPanel.bind(view)
         val content = view.findViewById<View>(R.id.row_windows_config)
-        bindExpander(view.findViewById(R.id.btn_windows_expand), content, expanded = false) { open ->
+        val ouverte = WindowAutoClose.isEnabled(requireContext())
+        val deplier = bindExpander(view.findViewById(R.id.btn_windows_expand), content, expanded = ouverte) { open ->
             if (open && isResumed) windowsPanel.onShown() else windowsPanel.onHidden()
         }
+        // L'interrupteur vit dans le panneau : il nous rend son nouvel état.
+        windowsPanel.bind(view, onAutoCloseToggled = deplier)
     }
 
     /** Écran quitté : plus de sondage, et aucune vitre ne reste en mouvement sans surveillance. */

@@ -337,10 +337,10 @@
     <string name="autobri_lights_desc_off">Desmarcada: o ecrã pode ficar luminoso na garagem ou num túnel.</string>
     <string name="autobri_forecast">Usar a meteorologia Open-Meteo</string>
     <string name="autobri_forecast_warning">(consome alguns dados móveis)</string>
-    <string name="autobri_forecast_desc">Luz estimada a partir da altura do sol e da previsão de insolação à volta do carro: cerca de 5 KB por descarga, no máximo a cada 8 h ou ao sair da zona (~60 km).</string>
+    <string name="autobri_forecast_desc">Luz estimada a partir da altura do sol e da previsão de insolação à volta do carro: cerca de 10 KB por descarga, no máximo a cada 8 h ou ao sair da zona (~60 km).</string>
     <string name="autobri_mode_lights">Só luzes: sem dados móveis, sem GPS</string>
-    <string name="autobri_mode_both">Meteorologia + luzes: ~5 KB por descarga</string>
-    <string name="autobri_mode_forecast">Só meteorologia: ~5 KB por descarga, sem proteção garagem/túnel</string>
+    <string name="autobri_mode_both">Meteorologia + luzes: ~10 KB por descarga</string>
+    <string name="autobri_mode_forecast">Só meteorologia: ~10 KB por descarga, sem proteção garagem/túnel</string>
     <string name="autobri_follow_desc_lights">A luz é recalculada a cada minuto; o ecrã só é reajustado se a diferença atingir 10 pontos, e sempre que as luzes se acendem ou apagam. Um ajuste manual suspende a automatização até ao próximo arranque.</string>
     <string name="autobri_night_lights">Noite ou luzes acesas · 10 lx</string>
     <string name="autobri_status_failed_lights">Ajuste impossível: estado das luzes ilegível.</string>
@@ -500,6 +500,19 @@
     <string name="shortcuts_action_hvac_toggle">Clima (ON/OFF)</string>
     <string name="shortcuts_action_hvac_ac_toggle">Clima: A/C (ON/OFF)</string>
     <string name="shortcuts_action_auto_high_beam">Máximos automáticos (ON/OFF)</string>
+    <string name="shortcuts_action_battery_heat">Aquecimento da bateria (ON/OFF)</string>
+    <string name="batheat_section">Aquecimento inteligente da bateria</string>
+    <string name="batheat_hint">Melhora o carregamento rápido, mas reduz a autonomia.</string>
+    <string name="batheat_status_off">Desativado</string>
+    <string name="batheat_status_stays_on">Fica ativo até o desligar</string>
+    <string name="batheat_status_countdown">Desligamento automático dentro de %1$d min</string>
+    <string name="batheat_status_planned">Desligamento automático após %1$d min de viagem</string>
+    <string name="batheat_auto_title">Desligamento do aquecimento da bateria</string>
+    <string name="batheat_auto_desc">Desligar o aquecimento inteligente da bateria após um tempo de condução</string>
+    <string name="batheat_auto_minutes_label">Desligar após</string>
+    <string name="batheat_auto_minutes_value">%1$d min</string>
+    <string name="batheat_auto_note">A contagem começa no arranque se o aquecimento já estiver ativo, ou no momento em que é ativado durante a viagem (ecrã original, janela «temperatura baixa», MG4Control ou atalho). Só vale para a viagem em curso: é cancelada no fim da viagem, ao sair de READY. É apresentada uma mensagem ao desligar.</string>
+    <string name="batheat_auto_toast">Aquecimento da bateria desligado após %1$d min</string>
     <string name="shortcuts_action_hvac_temp_up">Clima: temperatura +</string>
     <string name="shortcuts_action_hvac_temp_down">Clima: temperatura -</string>
     <string name="shortcuts_action_hvac_fan_up">Clima: ventilação +</string>
@@ -543,14 +556,10 @@
     <string name="shortcuts_action_volume_down">Volume -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="win_close_warning">O fecho automático pela app não tem antientalamento (exceto o vidro do condutor): vigie o vidro. Para se sair do separador.</string>
     <string name="win_front_left">Dianteiro esquerdo</string>
     <string name="win_front_right">Dianteiro direito</string>
     <string name="win_rear_left">Traseiro esquerdo</string>
     <string name="win_rear_right">Traseiro direito</string>
-    <string name="win_all_close">Fechar todos</string>
-    <string name="win_all_open">Abrir todos</string>
-    <string name="win_auto_title">Fecho automático</string>
     <string name="win_auto_label">Fechar os vidros ao sair do carro</string>
     <string name="win_auto_desc">Carro em P, depois de armado pelas condições abaixo: quando o carro sai do modo READY (porta do condutor aberta ou carro desligado), todos os vidros fecham após o atraso escolhido. Voltar a READY antes cancela.</string>
     <string name="win_auto_warning">Sem antientalamento nos vidros exceto o do condutor: ninguém perto dos vidros ao sair.</string>
@@ -573,8 +582,7 @@
     <string name="win_cal_advanced_label">Calibração por vidro</string>
     <string name="win_cal_advanced_desc">Mede o curso real de cada vidro, mais exato do que o tempo geral. As medições são mantidas se desativar a opção.</string>
     <string name="win_cal_general">Tempo geral</string>
-    <string name="win_automation_title">Vidros elétricos</string>
-    <string name="win_section_command">Comando</string>
+    <string name="win_automation_title">Fecho automático dos vidros elétricos</string>
     <string name="win_cal_limits">A aplicação não vê os interruptores da porta: um curso emulado dura sempre o tempo medido, seja qual for a posição inicial.</string>
     <string name="shortcuts_action_windows_open">Abrir todos os vidros</string>
     <string name="shortcuts_action_windows_close">Fechar todos os vidros</string>

@@ -20,6 +20,7 @@ import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.AirFlow
+import com.mg4.control.model.BatteryHeating
 import com.mg4.control.model.CustomDriveScale
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RegenLevel
@@ -2707,6 +2708,67 @@ object MG4Hardware {
             "@0=${getIntPropertyCPM(PROP_AUTO_MAIN_BEAM, 0)}"
         AppLogger.i(BEAM_TAG, voies.joinToString(" · ") + " (1=ON, 0=OFF, 3=absent) → ${isAutoHighBeamOn()}")
         AppLogger.i(BEAM_TAG, "── fin DIAG ──")
+    }
+
+    // -------------------------------------------------------------------------
+    // Chauffage intelligent de la batterie (« Intelligent battery heating »)
+    //
+    // Une seule propriété véhicule : DRVNG_PTC_HEAT 0x2140f429, le chauffage PTC de la batterie
+    // en roulant, permission CAR_VENDOR_EXTENSION en lecture comme en écriture. Voies d'origine :
+    //   • SWI133    : VPM ID_DRVNG_PTC_HEAT 0x502001b, setIntPropertyRecovery (SystemUI,
+    //                 BatteryHeatController). Le VPM mémorise le réglage et le réapplique : même
+    //                 voie, pour que notre coupure soit mémorisée elle aussi ;
+    //   • SWI68/165 : VehicleChargingManager.setDrivingBatteryHeat → le service n'écrit que la
+    //                 propriété (CarBMSManager.setGlobalProperty) — on l'écrit donc directement ;
+    //   • A9        : CarEvClient.setDrivingBatteryHeatStatus → CarAdapter, idem, sans traduction.
+    // Consigne identique partout, voir [BatteryHeating] ; la LECTURE, elle, diffère selon la
+    // plateforme — la sonde [runBatteryHeatingDiag] doit le confirmer sur véhicule.
+    // -------------------------------------------------------------------------
+
+    private const val VPM_DRVNG_PTC_HEAT  = 0x502001b
+    private const val PROP_DRVNG_PTC_HEAT = 0x2140f429
+    private const val BATHEAT_TAG = "MG4_BATHEAT"
+
+    fun hasBatteryHeating(): Boolean = FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
+
+    /** Valeur brute, quelle que soit la voie. -1 si illisible. */
+    private fun readBatteryHeatingRaw(): Int =
+        if (FirmwareInfo.isVsmBased()) getIntPropertyCPM(PROP_DRVNG_PTC_HEAT, AREA_GLOBAL)
+        else getIntPropertyVpm(VPM_DRVNG_PTC_HEAT)
+
+    /** Chauffage intelligent de la batterie : true = activé, false = désactivé, null = illisible. */
+    fun isBatteryHeatingOn(): Boolean? {
+        if (!hasBatteryHeating()) return null
+        return BatteryHeating.stateFromRaw(readBatteryHeatingRaw(), isA9Vsm())
+    }
+
+    fun setBatteryHeating(on: Boolean): Boolean {
+        if (!hasBatteryHeating()) return false
+        val v = if (on) BatteryHeating.SET_ON else BatteryHeating.SET_OFF
+        val ok = if (FirmwareInfo.isVsmBased()) setIntPropertyCPM(PROP_DRVNG_PTC_HEAT, AREA_GLOBAL, v)
+                 else setIntPropertyVpmRecovery(VPM_DRVNG_PTC_HEAT, v)
+        AppLogger.i(BATHEAT_TAG, "setBatteryHeating(${if (on) "ON" else "OFF"}) écrit $v → $ok")
+        return ok
+    }
+
+    /**
+     * Sonde du chauffage de la batterie — **lecture seule**. Relève toutes les voies joignables,
+     * et la valeur lue selon les DEUX lectures d'origine : basculer l'option dans l'écran d'origine
+     * puis relancer le Diagnostic dit laquelle est la bonne sur ce véhicule.
+     */
+    fun runBatteryHeatingDiag() {
+        AppLogger.i(BATHEAT_TAG, "── DIAG chauffage intelligent de la batterie ──")
+        AppLogger.i(BATHEAT_TAG, "firmware=${FirmwareInfo.getGeneration()} géré=${hasBatteryHeating()} " +
+            "vpm=${sVpm != null} cpm=${sCarPropertyManager != null} lectureA9=${isA9Vsm()}")
+        val voies = mutableListOf<String>()
+        if (sVpm != null) voies += "VPM 0x502001b=${getIntPropertyVpm(VPM_DRVNG_PTC_HEAT)}"
+        voies += "CPM 0x2140f429@global=${getIntPropertyCPM(PROP_DRVNG_PTC_HEAT, AREA_GLOBAL)} " +
+            "@0=${getIntPropertyCPM(PROP_DRVNG_PTC_HEAT, 0)}"
+        val brut = readBatteryHeatingRaw()
+        AppLogger.i(BATHEAT_TAG, voies.joinToString(" · ") + " → brut retenu $brut : " +
+            "ancienne plateforme (0=ON) ${BatteryHeating.stateFromRaw(brut, false)}, " +
+            "A9 (1=ON) ${BatteryHeating.stateFromRaw(brut, true)}, affiché ${isBatteryHeatingOn()}")
+        AppLogger.i(BATHEAT_TAG, "── fin DIAG ──")
     }
 
     // -------------------------------------------------------------------------
