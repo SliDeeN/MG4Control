@@ -2474,7 +2474,7 @@
     el.innerHTML =
       '<button class="dock-pill" type="button" aria-expanded="false"><span class="dock-car" aria-hidden="true">🚗</span><span class="dock-sum"></span><span class="dock-chev" aria-hidden="true">▴</span></button>' +
       '<div class="dock-panel" hidden>' +
-      '<div class="dock-head"><strong data-l10n="dock-title"></strong><button type="button" class="dock-x" aria-label="Fermer">✕</button></div>' +
+      '<div class="dock-head"><strong data-l10n="dock-title"></strong><button type="button" class="dock-x" aria-label="' + L('Fermer', 'Close') + '">✕</button></div>' +
       '<div class="dock-grid">' +
       '<label class="dock-f"><span data-l10n="dock-fw"></span><select data-d="fw">' + FIRMWARES.map((f) => '<option value="' + f + '">' + f + '</option>').join('') + '</select></label>' +
       '<label class="dock-f"><span><span data-l10n="dock-speed"></span> <b data-o="speed"></b></span><input type="range" min="0" max="130" step="5" data-d="speed"></label>' +

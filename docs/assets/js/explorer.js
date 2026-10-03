@@ -61,8 +61,6 @@
     let savedY = 0;
     function syncFullLabel() {
       const t = isFull() ? L('Quitter le plein écran (Échap)', 'Leave full screen (Esc)') : L('Afficher la maquette en plein écran', 'Show the mockup full screen');
-      full.setAttribute('data-aria-fr', isFull() ? 'Quitter le plein écran (Échap)' : 'Afficher la maquette en plein écran');
-      full.setAttribute('data-aria-en', isFull() ? 'Leave full screen (Esc)' : 'Show the mockup full screen');
       full.setAttribute('aria-label', t); full.title = t;
       full.setAttribute('aria-pressed', isFull() ? 'true' : 'false');
       pin.title = pin.getAttribute('aria-label');
@@ -98,7 +96,6 @@
     document.addEventListener('fullscreenchange', onFsChange);
     document.addEventListener('webkitfullscreenchange', onFsChange);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isFull() && !fsEl()) setFull(false); });
-    document.querySelectorAll('[data-lang-btn]').forEach((b) => b.addEventListener('click', () => requestAnimationFrame(syncFullLabel)));
     syncFullLabel();
 
     // ── Firmware ───────────────────────────────────────────────────────────
@@ -219,9 +216,8 @@
       // Rien à proposer tant que la lecture n'a pas atteint la liste (introduction, maquette seule).
       if (!jumpTarget || !pinned() || !current) { jump.hidden = true; return; }
       const chip = bar.querySelector('[data-grp="' + jumpTarget.id + '"]');
-      // Libellé lu dans la langue affichée (innerText mêlerait les deux quand la barre est masquée).
       const lang = root.getAttribute('data-lang') === 'en' ? 'en' : 'fr';
-      const name = chip ? (chip.querySelector('[data-l="' + lang + '"]') || chip).textContent.trim() : '';
+      const name = chip ? chip.textContent.trim() : '';
       jump.textContent = '↓ ' + (lang === 'en' ? 'About this screen: ' : 'Explications de cet écran : ') + name;
       jump.hidden = false;
     }
@@ -230,7 +226,6 @@
       if (onlyNew() && !jumpTarget.classList.contains('has-new')) setOnlyNew(false);
       scrollToEl(jumpTarget);
     });
-    document.querySelectorAll('[data-lang-btn]').forEach((b) => b.addEventListener('click', () => requestAnimationFrame(updateJump)));
 
     // Après chaque rendu de la maquette : bouton de retour aux explications, et sur
     // mobile (maquette plus large que l'écran) on fait glisser vers l'élément surligné.
