@@ -50,10 +50,6 @@
   color-scheme: dark;
 }
 
-/* Langue : chaque bloc existe en FR et en EN, un seul est visible. */
-html[data-lang="fr"] [data-l="en"],
-html[data-lang="en"] [data-l="fr"] { display: none !important; }
-
 *, *::before, *::after { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 84px; -webkit-text-size-adjust: 100%; }
 body {
@@ -118,8 +114,24 @@ p { margin: 0 0 .9em; }
 @media (min-width: 980px) { .nav { display: flex; } }
 .head-tools { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 9px; overflow: hidden; background: var(--surface); }
-.seg button { border: 0; background: transparent; color: var(--ink-2); font: 600 0.8125rem var(--font); padding: 6px 10px; cursor: pointer; }
-.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+/* Langue : deux liens, un par page (index.html et en/index.html) ; aria-current marque la page affichée. */
+.seg a { color: var(--ink-2); font: 600 0.8125rem var(--font); padding: 6px 10px; text-decoration: none; }
+.seg a:hover { color: var(--ink); }
+.seg a[aria-current="true"], .seg a[aria-current="true"]:hover { background: var(--ink); color: var(--bg); }
+/* Bandeau créé par site.js quand la langue du navigateur n'est pas celle de la page. */
+.lang-hint { background: var(--accent-soft); border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); color: var(--ink); font-size: 0.875rem; }
+.lang-hint-in { display: flex; align-items: center; gap: 10px; min-height: 46px; padding-top: 6px; padding-bottom: 6px; }
+.lang-hint-txt { flex: 1 1 auto; min-width: 0; line-height: 1.35; }
+.lang-hint-go {
+  background: var(--ink); color: var(--bg); border-radius: 8px; padding: 5px 12px;
+  font-weight: 600; text-decoration: none; white-space: nowrap; flex: 0 0 auto;
+}
+.lang-hint-go:hover { color: var(--bg); background: color-mix(in srgb, var(--ink) 86%, var(--accent)); }
+.lang-hint-x {
+  border: 0; background: transparent; color: var(--ink-2); width: 32px; height: 32px; border-radius: 8px;
+  font: 400 1.375rem/1 var(--font); cursor: pointer; flex: 0 0 auto;
+}
+.lang-hint-x:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 8%, transparent); }
 .icon-btn {
   display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 9px;
   border: 1px solid var(--line-2); background: var(--surface); color: var(--ink-2); cursor: pointer; text-decoration: none;
@@ -174,8 +186,10 @@ p { margin: 0 0 .9em; }
   color: var(--ink-2); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px 12px 4px 6px;
 }
 .eyebrow .pill { background: var(--accent-soft); color: var(--accent-ink); border-radius: 999px; padding: 1px 8px; font-weight: 700; }
-.hero h1 { font-size: clamp(2.125rem, 6vw, 3.75rem); margin: 18px 0 14px; font-weight: 800; letter-spacing: -.035em; max-width: 16ch; }
+.hero h1 { font-size: clamp(2.125rem, 6vw, 3.75rem); margin: 18px 0 14px; font-weight: 800; letter-spacing: -.035em; }
 .hero h1 .four { color: var(--red); }
+/* Le titre dit aussi ce qu'est l'application : un moteur de recherche lit d'abord le h1. */
+.hero h1 .h1-sub { display: block; margin-top: 8px; font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: 700; letter-spacing: -.02em; line-height: 1.25; }
 .lead { font-size: clamp(1.0625rem, 2.1vw, 1.25rem); color: var(--ink-2); max-width: 62ch; }
 .cta { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 10px; }
 .hero-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--ink-3); font-size: 0.875rem; margin-top: 8px; }

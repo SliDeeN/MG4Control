@@ -1,5 +1,5 @@
 /* ==========================================================================
-   MG4Control : comportements du site (langue, thème, navigation, widgets)
+   MG4Control : comportements du site (lien de langue, thème, navigation, widgets)
    ========================================================================== */
 (function () {
   'use strict';
@@ -14,27 +14,42 @@
   const FW6 = ['SWI133', 'SWI132', 'SWI68', 'SWI69', 'SWI131', 'SWI165'];
 
   // ── Langue ────────────────────────────────────────────────────────────────
-  function initialLang() {
-    const q = new URLSearchParams(location.search).get('lang');
-    if (q === 'fr' || q === 'en') return q;
-    const saved = store.get('mg4site.lang');
-    if (saved === 'fr' || saved === 'en') return saved;
-    return (navigator.language || 'fr').toLowerCase().startsWith('fr') ? 'fr' : 'en';
+  // Une page par langue (générées par site-src/build.ps1) : la langue de la page est fixée par son
+  // attribut data-lang, et le bouton FR / EN est un lien vers l'autre page. Le choix est mémorisé
+  // (le script d'en-tête y renvoie ensuite d'office) et l'ancre conservée, pour retomber sur la
+  // même section.
+  function goLang(e, l, href) {
+    store.set('mg4site.lang', l);
+    if (e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;   // nouvel onglet : le lien fait son travail
+    e.preventDefault();
+    if (l !== lang()) location.href = href + location.hash;
+    else { const hint = document.querySelector('.lang-hint'); if (hint) hint.remove(); }
   }
-  function setLang(l, persist) {
-    root.setAttribute('data-lang', l);
-    root.setAttribute('lang', l);
-    if (persist) store.set('mg4site.lang', l);
-    document.title = root.getAttribute('data-title-' + l) || document.title;
-    const md = document.querySelector('meta[name="description"]');
-    if (md && md.getAttribute('data-' + l)) md.setAttribute('content', md.getAttribute('data-' + l));
-    document.querySelectorAll('[data-lang-btn]').forEach((b) => b.setAttribute('aria-pressed', b.getAttribute('data-lang-btn') === l ? 'true' : 'false'));
-    document.querySelectorAll('[data-aria-fr]').forEach((n) => {
-      n.setAttribute('aria-label', n.getAttribute('data-aria-' + l));
-      if (n.hasAttribute('title')) n.title = n.getAttribute('data-aria-' + l);   // infobulle dans la même langue
-    });
-    if (window.MG4Sim) window.MG4Sim.refresh();
-    refreshWidgets();
+  // Jamais de redirection d'office d'après la langue du navigateur : elle emporterait aussi les
+  // robots d'indexation (qui s'annoncent en anglais) et la page française ne serait plus lue. À la
+  // place, tant qu'aucun choix n'est mémorisé, un bandeau propose l'autre page dans la langue du
+  // visiteur. Sans langue reconnue, on propose l'anglais.
+  function suggestLang() {
+    if (store.get('mg4site.lang') || new URLSearchParams(location.search).get('lang') === lang()) return;
+    const prefs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language || ''];
+    let wanted = 'en';
+    for (const p of prefs) { const c = String(p).slice(0, 2).toLowerCase(); if (c === 'fr' || c === 'en') { wanted = c; break; } }
+    const link = document.querySelector('a[data-lang-btn="' + wanted + '"]');
+    const main = document.querySelector('main');
+    if (wanted === lang() || !link || !main) return;
+    const t = wanted === 'en'
+      ? { msg: 'This page is available in English.', go: 'View in English', stay: 'Stay on the French page' }
+      : { msg: 'Cette page existe en français.', go: 'Voir en français', stay: 'Rester sur la page en anglais' };
+    const bar = document.createElement('div');
+    bar.className = 'lang-hint';
+    bar.lang = wanted;
+    bar.setAttribute('data-nosnippet', '');   // ce texte ne doit pas servir d'extrait dans les résultats de recherche
+    bar.innerHTML = '<div class="wrap lang-hint-in"><span class="lang-hint-txt">' + t.msg + '</span>' +
+      '<a class="lang-hint-go" href="' + link.getAttribute('href') + '" hreflang="' + wanted + '">' + t.go + '</a>' +
+      '<button type="button" class="lang-hint-x" aria-label="' + t.stay + '" title="' + t.stay + '">×</button></div>';
+    bar.querySelector('a').addEventListener('click', (e) => goLang(e, wanted, link.href));
+    bar.querySelector('button').addEventListener('click', () => { store.set('mg4site.lang', lang()); bar.remove(); });
+    main.insertBefore(bar, main.firstChild);
   }
 
   // ── Thème ─────────────────────────────────────────────────────────────────
@@ -131,11 +146,11 @@
 
   // ── Initialisation ────────────────────────────────────────────────────────
   function init() {
-    setLang(initialLang(), false);
     const savedTheme = store.get('mg4site.theme');
     setTheme(savedTheme === 'dark' || savedTheme === 'light' ? savedTheme : null, false);
 
-    document.querySelectorAll('[data-lang-btn]').forEach((b) => b.addEventListener('click', () => setLang(b.getAttribute('data-lang-btn'), true)));
+    document.querySelectorAll('a[data-lang-btn]').forEach((a) => a.addEventListener('click', (e) => goLang(e, a.getAttribute('data-lang-btn'), a.href)));
+    suggestLang();
     document.querySelectorAll('[data-theme-btn]').forEach((b) => b.addEventListener('click', () => setTheme(effectiveTheme() === 'dark' ? 'light' : 'dark', true)));
 
     // Menu mobile
