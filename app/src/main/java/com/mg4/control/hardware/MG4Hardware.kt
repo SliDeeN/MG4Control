@@ -3891,7 +3891,7 @@ object MG4Hardware {
     //
     // Le service vendor `com.saicmotor.caradapter` (descripteur ICarAudioService)
     // n'existe QUE sur la famille A9 (SWI69/131/132). Sur old-SDK (SWI133/68/165)
-    // il est absent → on ne tente même pas le bind (cf. hasAudioControl / initAudio).
+    // il est absent → on ne tente même pas le bind (cf. initAudio).
     // Codes de transaction vérifiés identiques sur les 3 A9 (ICarAudioService$Stub).
 
     /** A9 (SWI69/131/132) : loudness via le service vendor caradapter (ICarAudioService). */
@@ -3903,9 +3903,6 @@ object MG4Hardware {
         val gen = FirmwareInfo.getGeneration()
         return gen == FirmwareInfo.Gen.SWI133 || gen == FirmwareInfo.Gen.SWI68 || gen == FirmwareInfo.Gen.SWI165
     }
-
-    /** Onglet Audio (baisse de volume en quittant la voiture) : partout où le volume est pilotable. */
-    fun hasAudioControl(): Boolean = hasDoorVolumeFeature()
 
     private const val DESCRIPTOR_CARADAPTER = "com.saicmotor.carapi.ICarAdapterService"
     private const val TX_QUERY_AUDIO_CLIENT = 1
@@ -5090,7 +5087,8 @@ object MG4Hardware {
     /**
      * Baisse du volume en quittant la voiture : partout où le volume média est pilotable (ancien SDK
      * et A9). Déclencheur : la porte là où elle est lisible ([hasDoorDetection]), sinon la sortie du
-     * mode READY en P ([ReadyWatcher]), qui correspond sur MG4 à l'ouverture de la porte conducteur.
+     * mode READY en P ([ReadyWatcher]), qui correspond sur MG4 à l'ouverture de la porte conducteur
+     * ceinture détachée.
      */
     fun hasDoorVolumeFeature(): Boolean = isOldSdkSound() || isA9Sound()
 

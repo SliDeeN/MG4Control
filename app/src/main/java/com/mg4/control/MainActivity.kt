@@ -235,22 +235,9 @@ class MainActivity : AppCompatActivity() {
     private fun setupNavButtons() {
         val btnAutomation = findViewById<MaterialButton>(R.id.btn_nav_automation)
         val btnStats     = findViewById<MaterialButton>(R.id.btn_nav_stats)
-        val btnAudio     = findViewById<MaterialButton>(R.id.btn_nav_audio)
         val btnShortcuts = findViewById<MaterialButton>(R.id.btn_nav_shortcuts)
         val btnProfiles  = findViewById<MaterialButton>(R.id.btn_nav_profiles)
         val btnSettings  = findViewById<MaterialButton>(R.id.btn_nav_settings)
-
-        // Bouton Audio : visible partout où le volume média est pilotable (ancien SDK et A9).
-        if (MG4Hardware.hasAudioControl()) {
-            btnAudio.setOnClickListener {
-                when (navController.currentDestination?.id) {
-                    R.id.audioFragment -> navController.popBackStack(R.id.dashboardFragment, false)
-                    else               -> navController.navigate(R.id.audioFragment)
-                }
-            }
-        } else {
-            btnAudio.visibility = View.GONE
-        }
 
         btnAutomation.setOnClickListener {
             when (navController.currentDestination?.id) {
@@ -295,9 +282,6 @@ class MainActivity : AppCompatActivity() {
             )
             btnStats.backgroundTintList = android.content.res.ColorStateList.valueOf(
                 if (destination.id == R.id.statsFragment) accent else inactive
-            )
-            btnAudio.backgroundTintList = android.content.res.ColorStateList.valueOf(
-                if (destination.id == R.id.audioFragment) accent else inactive
             )
             btnShortcuts.backgroundTintList = android.content.res.ColorStateList.valueOf(
                 if (destination.id == R.id.shortcutsFragment) accent else inactive

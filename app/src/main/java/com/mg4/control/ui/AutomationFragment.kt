@@ -20,6 +20,7 @@ import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.BuildConfig
@@ -37,6 +38,9 @@ import com.mg4.control.profile.ProfileManager
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToLong
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class AutomationFragment : Fragment() {
 
@@ -115,6 +119,100 @@ class AutomationFragment : Fragment() {
         bindAutoBrightness(view, prefs)
         bindBatteryHeatingAutomation(view, prefs)
         bindClimateAutomation(view, prefs)
+        bindDoorVolume(view, prefs)
+    }
+
+    // ══════════ Baisse du volume en quittant la voiture ══════════
+
+    /**
+     * Venue de l'ancien onglet Audio, dont c'était le seul contenu. Le déclencheur dépend du
+     * firmware : une porte avant là où la voiture la signale, la sortie de READY ailleurs — alors
+     * sans choix de porte, et la restauration se fait au retour en READY.
+     *
+     * Option coupée, les réglages restent lisibles au chevron mais grisés, comme sur la carte des
+     * vitres : ils n'ont d'effet qu'une fois l'option activée.
+     */
+    private fun bindDoorVolume(view: View, prefs: android.content.SharedPreferences) {
+        val card = view.findViewById<View>(R.id.card_door_volume)
+        if (!MG4Hardware.hasDoorVolumeFeature()) {
+            card.visibility = View.GONE
+            return
+        }
+
+        val toggle  = view.findViewById<Switch>(R.id.switch_door_volume)
+        val content = view.findViewById<View>(R.id.row_door_volume_config)
+        val slider  = view.findViewById<Slider>(R.id.slider_door_volume)
+        val valeur  = view.findViewById<TextView>(R.id.door_volume_level_value)
+        val restore = view.findViewById<Switch>(R.id.switch_door_restore)
+        val cbLeft  = view.findViewById<CheckBox>(R.id.cb_door_left)
+        val cbRight = view.findViewById<CheckBox>(R.id.cb_door_right)
+
+        if (!MG4Hardware.hasDoorDetection()) {
+            view.findViewById<TextView>(R.id.door_volume_desc_text).setText(R.string.door_volume_desc_ready)
+            view.findViewById<TextView>(R.id.door_volume_restore_label).setText(R.string.door_volume_restore_ready_title)
+            view.findViewById<View>(R.id.door_volume_doors_label).visibility = View.GONE
+            view.findViewById<View>(R.id.door_volume_doors_row).visibility = View.GONE
+        }
+
+        val enabled = prefs.getBoolean("door_volume_enabled", false)
+        toggle.isChecked  = enabled
+        restore.isChecked = prefs.getBoolean("door_volume_restore", false)
+        cbLeft.isChecked  = prefs.getBoolean("door_volume_left", true)
+        cbRight.isChecked = prefs.getBoolean("door_volume_right", true)
+
+        fun griser(actif: Boolean) {
+            content.alpha = if (actif) 1f else 0.4f
+            slider.isEnabled = actif; restore.isEnabled = actif
+            cbLeft.isEnabled = actif; cbRight.isEnabled = actif
+        }
+        griser(enabled)
+
+        fun afficher(niveau: Int) {
+            valeur.text = getString(R.string.door_volume_level_value, niveau, slider.valueTo.toInt())
+        }
+
+        // Si déjà activé, (re)démarre le watcher à l'ouverture de l'onglet (idempotent).
+        if (enabled) {
+            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) { MG4Hardware.startDoorVolumeWatcher() }
+        }
+
+        // Borne le curseur sur le maximum réel de la voiture (sinon la valeur par défaut du layout).
+        afficher(slider.value.toInt())
+        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            val max = MG4Hardware.getMediaVolumeMax()
+            withContext(Dispatchers.Main) {
+                if (!isAdded) return@withContext
+                if (max > 0) slider.valueTo = max.toFloat()
+                val level = prefs.getInt("door_volume_level", 0)
+                slider.value = level.coerceIn(0, slider.valueTo.toInt()).toFloat()
+                afficher(slider.value.toInt())
+            }
+        }
+
+        val deplier = bindExpander(view.findViewById(R.id.btn_door_volume_expand), content, expanded = enabled)
+        toggle.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean("door_volume_enabled", checked).apply()
+            griser(checked)
+            deplier(checked)
+            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                if (checked) MG4Hardware.startDoorVolumeWatcher()
+                else MG4Hardware.stopDoorVolumeWatcher()
+            }
+        }
+
+        slider.addOnChangeListener { _, value, fromUser ->
+            afficher(value.toInt())
+            if (fromUser) prefs.edit().putInt("door_volume_level", value.toInt()).apply()
+        }
+        restore.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean("door_volume_restore", checked).apply()
+        }
+        cbLeft.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean("door_volume_left", checked).apply()
+        }
+        cbRight.setOnCheckedChangeListener { _, checked ->
+            prefs.edit().putBoolean("door_volume_right", checked).apply()
+        }
     }
 
     // ══════════ Coupure automatique du chauffage de la batterie ══════════

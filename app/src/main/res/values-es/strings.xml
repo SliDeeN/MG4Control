@@ -283,12 +283,11 @@
 
     <!-- [BT-PROFILES] Perfiles Bluetooth -->
     <!-- Pantalla de audio (solo A9) -->
-    <string name="nav_audio">Audio</string>
-    <string name="door_volume_title">Volumen al abrir la puerta</string>
+    <string name="door_volume_title">Bajar el volumen al salir del coche</string>
     <string name="door_volume_desc">Reduce el volumen multimedia al abrir una puerta delantera</string>
     <string name="door_volume_level_label">Nivel objetivo</string>
     <string name="door_volume_restore_title">Restaurar al cerrar</string>
-    <string name="door_volume_desc_ready">Baja el volumen multimedia cuando el coche sale del modo READY en P (puerta del conductor abierta o coche apagado)</string>
+    <string name="door_volume_desc_ready">Baja el volumen multimedia cuando el coche sale del modo READY en P (cinturón desabrochado y puerta del conductor abierta, o coche apagado)</string>
     <string name="door_volume_restore_ready_title">Restaurar al volver a READY</string>
     <string name="door_volume_doors_label">Puertas que activan</string>
     <string name="door_left">Izquierda</string>
@@ -561,7 +560,7 @@
     <string name="win_rear_left">Trasera izquierda</string>
     <string name="win_rear_right">Trasera derecha</string>
     <string name="win_auto_label">Cerrar las ventanillas al salir del coche</string>
-    <string name="win_auto_desc">Coche en P, una vez armado según las condiciones de abajo: cuando el coche sale del modo READY (puerta del conductor abierta o coche apagado), todas las ventanillas se cierran tras el retardo elegido. Volver a READY antes cancela.</string>
+    <string name="win_auto_desc">Coche en P, una vez armado según las condiciones de abajo: cuando el coche sale del modo READY (cinturón desabrochado y puerta del conductor abierta, o coche apagado), todas las ventanillas se cierran tras el retardo elegido. Volver a READY antes cancela.</string>
     <string name="win_auto_warning">Sin antipinzamiento en las ventanillas salvo la del conductor: nadie cerca de las ventanillas al salir.</string>
     <string name="win_auto_arming_title">Armado: tras circular</string>
     <string name="win_auto_speed_label">Velocidad alcanzada</string>

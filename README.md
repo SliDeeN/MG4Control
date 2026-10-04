@@ -109,12 +109,6 @@ les six firmwares : par le `VehiclePropertyManager` en SWI133, comme SystemUI, d
   recirculation (intérieur / extérieur / auto), dégivrage avant et arrière
 - **Gestion automatique des feux de route** : On / Off
 - **Luminosité de l'écran**
-- **Baisse du volume en quittant la voiture** : le volume média descend au moment du départ, sur
-  les six firmwares. Là où la voiture signale ses portes (SWI133, SWI132), le déclencheur reste
-  l'ouverture d'une porte avant, avec choix des portes et restauration à la fermeture ; ailleurs,
-  faute de capteur atteignable, c'est la **sortie du mode READY** qui sert de signal et la
-  restauration, si elle est demandée, se fait au retour en READY
-- **Audio** (firmwares A9) : type de son Bose, balance, fader, volume selon la vitesse
 
 ### ADAS (Assistance à la conduite)
 - **SWI133** : Off / Limiteur / Auto / ACC / ICA + alertes excès de vitesse / changement de limite
@@ -235,6 +229,12 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
 - **Déclenchement A/C via la température** : deux règles indépendantes (température supérieure /
   inférieure), chacune avec son seuil, sa consigne, sa ventilation, ses dégivrages, le mode
   automatique et la recirculation
+- **Baisse du volume en quittant la voiture** : le volume média descend au niveau choisi au
+  curseur au moment du départ, sur les six firmwares. Là où la voiture signale ses portes (SWI133,
+  SWI132), le déclencheur est l'ouverture d'une porte avant, avec choix des portes et restauration
+  à la fermeture ; ailleurs, faute de capteur atteignable, c'est la **sortie du mode READY** qui
+  sert de signal et la restauration, si elle est demandée, se fait au retour en READY. Option
+  coupée, ces réglages restent lisibles mais grisés
 - Chaque automatisation s'ouvre dépliée si elle est active, se déplie quand on l'active et se
   replie quand on la coupe ; entre-temps, son chevron déplie ou replie librement le paramétrage
 
@@ -243,8 +243,8 @@ Carte construite comme les autres automatisations : interrupteur d'activation à
 description, réglages dépliés au chevron (carte ouverte d'office quand l'option est activée).
 
 - **Fermeture en quittant la voiture** — voiture en P et fermeture armée : quand la voiture sort
-  du mode READY (porte conducteur ouverte ou extinction), toutes les vitres se ferment après le
-  délai choisi ; un retour en READY avant la fin annule. L'armement se règle (vitesse atteinte
+  du mode READY (ceinture détachée et porte conducteur ouverte, ou extinction), toutes les vitres
+  se ferment après le délai choisi ; un retour en READY avant la fin annule. L'armement se règle (vitesse atteinte
   et/ou durée d'allumage, l'une ou l'autre ou les deux), le délai va de 0 à 30 s, et un bip
   d'avertissement facultatif, au volume réglable, peut accompagner le décompte. Option coupée,
   ces réglages restent lisibles mais grisés.
@@ -510,7 +510,6 @@ MG4Control/
 │   │   │   ├── SettingsFragment.kt    # Réglages (rail 4 onglets)
 │   │   │   ├── ShortcutsFragment.kt   # Raccourcis classiques + avancés + liste
 │   │   │   ├── AutomationFragment.kt  # Automatisations
-│   │   │   ├── AudioFragment.kt       # Audio (A9 uniquement)
 │   │   │   ├── ProfileAdapter.kt      # Adaptateur RecyclerView profils
 │   │   │   ├── ConsoleFragment.kt     # Journal de debug en temps réel
 │   │   │   ├── DriveRegenFragment.kt  # Héritage (non utilisé en v2)
@@ -686,13 +685,14 @@ L'application utilise un **NavController** avec **7 destinations** :
 ```
 DashboardFragment (départ)
     ├──► ProfileFragment ──► ProfileEditFragment  (création / édition, plein écran)
-    ├──► SettingsFragment
+    ├──► AutomationFragment
     ├──► ShortcutsFragment
-    ├──► AudioFragment        (A9 uniquement)
-    └──► AutomationFragment
+    ├──► StatsFragment
+    └──► SettingsFragment
 ```
 
-Les boutons de la barre du haut fonctionnent en bascule : un second appui revient au dashboard.
+La barre du haut présente les onglets dans cet ordre : Profils, Automatisation, Raccourcis,
+Statistiques, Réglages. Ses boutons fonctionnent en bascule : un second appui revient au dashboard.
 
 ### Rail de catégories
 Quatre écrans partagent le même motif : un **rail vertical à gauche** sélectionne une catégorie,
@@ -1054,12 +1054,6 @@ on SWI133, like SystemUI, directly elsewhere.
   (inner / outside / auto), front and rear defrost
 - **Automatic high beam**: On / Off
 - **Screen brightness**
-- **Volume drop when leaving the car**: media volume goes down as you leave, on all six
-  firmwares. Where the car reports its doors (SWI133, SWI132) the trigger stays a front door
-  opening, with selectable doors and restore on close; elsewhere, no door sensor being reachable,
-  **leaving READY state** is used instead and the restore, when asked for, happens on the way back
-  to READY
-- **Audio** (A9 firmwares): Bose sound type, balance, fader, speed-dependent volume
 
 ### ADAS (Advanced Driver Assistance)
 - **SWI133**: Off / Speed Limiter / Auto / ACC / ICA + overspeed alert / speed limit change alert
@@ -1174,6 +1168,12 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
   when it switches off
 - **Temperature-triggered A/C**: two independent rules (above / below), each with its threshold,
   setpoint, fan level, defrosters, automatic mode and recirculation
+- **Volume drop when leaving the car**: media volume goes down to the level set with a slider as
+  you leave, on all six firmwares. Where the car reports its doors (SWI133, SWI132) the trigger is
+  a front door opening, with selectable doors and restore on close; elsewhere, no door sensor
+  being reachable, **leaving READY state** is used instead and the restore, when asked for,
+  happens on the way back to READY. With the option off, these settings stay readable but greyed
+  out
 - Each automation opens unfolded when it is on, unfolds when switched on and folds when switched
   off; in between, its chevron folds or unfolds the settings freely
 
@@ -1182,8 +1182,8 @@ Card built like the other automations: enable switch next to the description, se
 with the chevron (the card opens unfolded when the option is on).
 
 - **Close on leaving the car** — car in P and closing armed: when the car leaves READY state
-  (driver door opened, or car switched off), every window closes after the chosen delay; going
-  back to READY before the end cancels it. Arming is configurable (speed reached and/or time
+  (seat belt unfastened and driver door opened, or car switched off), every window closes after
+  the chosen delay; going back to READY before the end cancels it. Arming is configurable (speed reached and/or time
   switched on, either or both), the delay ranges from 0 to 30 s, and an optional warning beep,
   with adjustable volume, can accompany the countdown. With the option off, these settings stay
   readable but greyed out.
@@ -1441,7 +1441,6 @@ MG4Control/
 │   │   │   ├── SettingsFragment.kt    # Settings (4-tab rail)
 │   │   │   ├── ShortcutsFragment.kt   # Classic + advanced shortcuts + list
 │   │   │   ├── AutomationFragment.kt  # Automations
-│   │   │   ├── AudioFragment.kt       # Audio (A9 only)
 │   │   │   ├── ProfileAdapter.kt      # Profile RecyclerView adapter
 │   │   │   ├── ConsoleFragment.kt     # Real-time debug log viewer
 │   │   │   ├── DriveRegenFragment.kt  # Legacy (unused in v2)
@@ -1610,13 +1609,14 @@ The app uses a **NavController** with **7 destinations**:
 ```
 DashboardFragment (start)
     ├──► ProfileFragment ──► ProfileEditFragment  (create / edit, full screen)
-    ├──► SettingsFragment
+    ├──► AutomationFragment
     ├──► ShortcutsFragment
-    ├──► AudioFragment        (A9 only)
-    └──► AutomationFragment
+    ├──► StatsFragment
+    └──► SettingsFragment
 ```
 
-Top-bar buttons act as toggles: a second press returns to the dashboard.
+The top bar shows the tabs in this order: Profiles, Automation, Shortcuts, Statistics, Settings.
+Its buttons act as toggles: a second press returns to the dashboard.
 
 ### Category rail
 Four screens share the same pattern: a **vertical rail on the left** selects a category, the

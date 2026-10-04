@@ -285,12 +285,12 @@
 
     <!-- [BT-PROFILES] Profils Bluetooth -->
     <!-- Écran Audio (A9 uniquement) -->
-    <string name="nav_audio">Audio</string>
-    <string name="door_volume_title">Volume à l\'ouverture de porte</string>
+    <string name="door_volume_title">Baisse du volume en quittant la voiture</string>
     <string name="door_volume_desc">Baisse le volume média à l\'ouverture d\'une porte avant</string>
     <string name="door_volume_level_label">Niveau cible</string>
+    <string name="door_volume_level_value" translatable="false">%1$d / %2$d</string>
     <string name="door_volume_restore_title">Restaurer à la fermeture</string>
-    <string name="door_volume_desc_ready">Baisse le volume média quand la voiture sort du mode READY en P (ouverture de la porte conducteur ou extinction)</string>
+    <string name="door_volume_desc_ready">Baisse le volume média quand la voiture sort du mode READY en P (ceinture détachée et porte conducteur ouverte, ou extinction)</string>
     <string name="door_volume_restore_ready_title">Restaurer au retour en READY</string>
     <string name="door_volume_doors_label">Portes déclencheuses</string>
     <string name="door_left">Gauche</string>
@@ -565,7 +565,7 @@
     <string name="win_rear_left">Arrière gauche</string>
     <string name="win_rear_right">Arrière droite</string>
     <string name="win_auto_label">Fermer les vitres en quittant la voiture</string>
-    <string name="win_auto_desc">Voiture en P, une fois armée selon les conditions ci-dessous : quand la voiture sort du mode READY (ouverture de la porte conducteur ou extinction), toutes les vitres se ferment après le délai choisi. Un retour en READY avant annule.</string>
+    <string name="win_auto_desc">Voiture en P, une fois armée selon les conditions ci-dessous : quand la voiture sort du mode READY (ceinture détachée et porte conducteur ouverte, ou extinction), toutes les vitres se ferment après le délai choisi. Un retour en READY avant annule.</string>
     <string name="win_auto_warning">Sans anti-pincement sur les vitres autres que conducteur : personne près des vitres en partant.</string>
     <string name="win_auto_arming_title">Armement : après avoir roulé</string>
     <string name="win_auto_speed_label">Vitesse atteinte</string>

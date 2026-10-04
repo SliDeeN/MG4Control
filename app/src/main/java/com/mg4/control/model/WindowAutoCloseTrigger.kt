@@ -68,7 +68,7 @@ class WindowAutoCloseTrigger(
         return Outcome(Action.CANCEL, "voiture repassée en READY")
     }
 
-    /** Sortie de READY (sur MG4 : porte conducteur ouverte en P, ou extinction). */
+    /** Sortie de READY (sur MG4 : en P, ceinture détachée et porte conducteur ouverte, ou extinction). */
     fun onReadyLost(nowMs: Long, inPark: Boolean?): Outcome {
         readySinceMs = null
         if (pendingSinceMs != null) return Outcome(Action.NONE, "fermeture déjà en attente")

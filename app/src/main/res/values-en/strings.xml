@@ -283,12 +283,11 @@
 
     <!-- [BT-PROFILES] Bluetooth profiles -->
     <!-- Audio screen (A9 only) -->
-    <string name="nav_audio">Audio</string>
-    <string name="door_volume_title">Door-open volume</string>
+    <string name="door_volume_title">Volume drop when leaving the car</string>
     <string name="door_volume_desc">Lowers media volume when a front door opens</string>
     <string name="door_volume_level_label">Target level</string>
     <string name="door_volume_restore_title">Restore on close</string>
-    <string name="door_volume_desc_ready">Lowers media volume when the car leaves READY in P (driver door opened or car switched off)</string>
+    <string name="door_volume_desc_ready">Lowers media volume when the car leaves READY in P (seat belt unfastened and driver door opened, or car switched off)</string>
     <string name="door_volume_restore_ready_title">Restore when back to READY</string>
     <string name="door_volume_doors_label">Trigger doors</string>
     <string name="door_left">Left</string>
@@ -561,7 +560,7 @@
     <string name="win_rear_left">Rear left</string>
     <string name="win_rear_right">Rear right</string>
     <string name="win_auto_label">Close the windows when leaving the car</string>
-    <string name="win_auto_desc">Car in P, once armed by the conditions below: when the car leaves READY (driver door opened or car switched off), all windows close after the chosen delay. Going back to READY before then cancels.</string>
+    <string name="win_auto_desc">Car in P, once armed by the conditions below: when the car leaves READY (seat belt unfastened and driver door opened, or car switched off), all windows close after the chosen delay. Going back to READY before then cancels.</string>
     <string name="win_auto_warning">No anti-pinch protection on windows other than the driver\'s: nobody near the windows when leaving.</string>
     <string name="win_auto_arming_title">Arming: after driving</string>
     <string name="win_auto_speed_label">Speed reached</string>

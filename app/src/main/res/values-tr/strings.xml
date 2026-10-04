@@ -283,12 +283,11 @@
 
     <!-- [BT-PROFILES] Bluetooth profiles -->
     <!-- Audio screen (A9 only) -->
-    <string name="nav_audio">Ses</string>
-    <string name="door_volume_title">Kapı açılınca ses düzeyi</string>
+    <string name="door_volume_title">Araçtan inerken sesi kıs</string>
     <string name="door_volume_desc">Ön kapılardan biri açılınca medya sesini kısar</string>
     <string name="door_volume_level_label">Hedef düzey</string>
     <string name="door_volume_restore_title">Kapanınca geri yükle</string>
-    <string name="door_volume_desc_ready">Araç P konumundayken READY durumundan çıkınca (sürücü kapısı açıldığında ya da araç kapatıldığında) medya sesini kısar</string>
+    <string name="door_volume_desc_ready">Araç P konumundayken READY durumundan çıkınca (emniyet kemeri çözülüp sürücü kapısı açıldığında ya da araç kapatıldığında) medya sesini kısar</string>
     <string name="door_volume_restore_ready_title">READY durumuna dönünce geri yükle</string>
     <string name="door_volume_doors_label">Tetikleyen kapılar</string>
     <string name="door_left">Sol</string>
@@ -561,7 +560,7 @@
     <string name="win_rear_left">Arka sol</string>
     <string name="win_rear_right">Arka sağ</string>
     <string name="win_auto_label">Araçtan inerken camları kapat</string>
-    <string name="win_auto_desc">Araç P konumundayken ve aşağıdaki koşullarla devreye alınmışsa: araç READY durumundan çıkınca (sürücü kapısı açıldığında ya da araç kapatıldığında) tüm camlar seçilen gecikmenin ardından kapanır. O süre dolmadan READY durumuna dönülürse iptal olur.</string>
+    <string name="win_auto_desc">Araç P konumundayken ve aşağıdaki koşullarla devreye alınmışsa: araç READY durumundan çıkınca (emniyet kemeri çözülüp sürücü kapısı açıldığında ya da araç kapatıldığında) tüm camlar seçilen gecikmenin ardından kapanır. O süre dolmadan READY durumuna dönülürse iptal olur.</string>
     <string name="win_auto_warning">Sürücü camı dışındaki camlarda sıkışma koruması yoktur: inerken camların yakınında kimse olmasın.</string>
     <string name="win_auto_arming_title">Devreye alma: sürüşten sonra</string>
     <string name="win_auto_speed_label">Ulaşılan hız</string>

@@ -8,9 +8,9 @@ import com.mg4.control.util.FirmwareInfo
 
 /**
  * Observateur partagé de l'état READY (`SENSOR_EPTRDY`), lisible sur les 6 firmwares
- * ([MG4Hardware.readEptReadyRaw]). Sur MG4, la voiture sort de READY quand la porte conducteur
- * s'ouvre en P (et à l'extinction) : c'est le signal de « départ du conducteur » là où la porte
- * elle-même n'est pas lisible.
+ * ([MG4Hardware.readEptReadyRaw]). Sur MG4, la voiture sort de READY quand, en P et ceinture
+ * détachée, la porte conducteur s'ouvre (et à l'extinction) : c'est le signal de « départ du
+ * conducteur » là où la porte elle-même n'est pas lisible.
  *
  * Une seule lecture par seconde, quel que soit le nombre d'abonnés (fermeture auto des vitres,
  * baisse de volume) ; la lecture s'arrête sans abonné. Tout se passe sur le fil principal.
