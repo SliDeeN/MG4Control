@@ -15,6 +15,7 @@ import android.content.IntentFilter
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import android.view.ContextThemeWrapper
 import android.view.WindowManager
@@ -45,12 +46,16 @@ import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateNotifier
 import com.mg4.control.shortcut.ShortcutAction
+import com.mg4.control.shortcut.ToggleTracker
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.GarageMode
 import com.mg4.control.util.ThemeHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class MG4ControlService : Service() {
 
@@ -82,6 +87,15 @@ class MG4ControlService : Service() {
             ShortcutAction.VOLUME_UP, ShortcutAction.VOLUME_DOWN
         )
 
+        /**
+         * Bascules dont l'état est relu sur le véhicule à chaque appui, avec repli sur la dernière
+         * consigne là où cette lecture ne fait pas foi (voir [ToggleTracker], issue #114).
+         */
+        private val READ_TOGGLES = setOf(
+            ShortcutAction.ONE_PEDAL, ShortcutAction.ENERGY_SAVING_TOGGLE,
+            ShortcutAction.TSR_TOGGLE, ShortcutAction.SOUND_WARNING,
+            ShortcutAction.OVERSPEED_ALARM, ShortcutAction.SPEED_LIMIT_TONE
+        )
 
         /** Pas de luminosité par pression, en % — 10 crans du plancher au maximum. */
         private const val BRIGHTNESS_STEP = 10
@@ -148,7 +162,13 @@ class MG4ControlService : Service() {
     // États des toggles en mémoire — réinitialisés à chaque démarrage du service (= redémarrage voiture)
     // Évite le bug du 1er appui : si on utilise SharedPrefs, l'état persisté peut ne pas correspondre
     // à l'état réel de la voiture après un redémarrage, causant un toggle dans le mauvais sens.
+    // Ne sert plus qu'au cycle anti-collision A/B : les autres bascules relisent le véhicule.
     private val toggleStates = mutableMapOf<String, Boolean>()
+
+    // Bascules relues sur le véhicule (READ_TOGGLES) : un suivi par action. Appuis et relectures
+    // arrivent de coroutines différentes, d'où le verrou.
+    private val toggleTrackers = mutableMapOf<ShortcutAction, ToggleTracker>()
+    private val toggleMutex = Mutex()
 
     override fun onCreate() {
         super.onCreate()
@@ -1004,7 +1024,13 @@ class MG4ControlService : Service() {
             return
         }
 
-        // Pour tous les autres toggles : état en mémoire (réinitialisé au démarrage du service)
+        // Bascules ON/OFF : l'état à inverser est relu sur le véhicule (issue #114).
+        if (action in READ_TOGGLES) {
+            CoroutineScope(Dispatchers.IO).launch { executeReadToggle(action) }
+            return
+        }
+
+        // Reste le cycle anti-collision A/B : état en mémoire (réinitialisé au démarrage du service).
         // Évite le bug du 1er appui causé par un état SharedPrefs désynchronisé après redémarrage.
         val newState = !(toggleStates[action.name] ?: false)
         toggleStates[action.name] = newState
@@ -1013,16 +1039,6 @@ class MG4ControlService : Service() {
 
         CoroutineScope(Dispatchers.IO).launch {
             when (action) {
-                ShortcutAction.ONE_PEDAL -> {
-                    if (newState) {
-                        MG4Hardware.setRegenLevel(RegenLevel.ONE_PEDAL)
-                    } else {
-                        val fallback = RegenLevel.fromValue(
-                            prefs.getInt("shortcut_one_pedal_fallback", RegenLevel.HIGH.value)
-                        )
-                        MG4Hardware.setRegenLevel(fallback)
-                    }
-                }
                 ShortcutAction.AEB_CYCLE -> {
                     val mode = if (newState)
                         prefs.getInt("shortcut_aeb_mode_a", AebMode.ALARM)
@@ -1030,11 +1046,6 @@ class MG4ControlService : Service() {
                         prefs.getInt("shortcut_aeb_mode_b", AebMode.ALARM_BRAKE)
                     MG4Hardware.setAebMode(mode)
                 }
-                ShortcutAction.SOUND_WARNING    -> MG4Hardware.setSoundWarning(newState)
-                ShortcutAction.OVERSPEED_ALARM  -> MG4Hardware.setOverspeedAlarm(newState)
-                ShortcutAction.SPEED_LIMIT_TONE -> MG4Hardware.setSpeedLimitTone(newState)
-                ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.setEnergySavingMode(newState)
-                ShortcutAction.TSR_TOGGLE           -> MG4Hardware.setTsrMode(newState)
                 ShortcutAction.OPEN_APP -> {
                     val intent = Intent(this@MG4ControlService, MainActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -1053,6 +1064,61 @@ class MG4ControlService : Service() {
                 }
                 else -> {}
             }
+        }
+    }
+
+    /**
+     * Bascule ON/OFF dont l'état est relu sur le véhicule. Sans cette lecture, le premier appui
+     * réactivait un One Pedal que le profil venait d'activer au démarrage, et seul le second le
+     * coupait (issue #114).
+     *
+     * [ToggleTracker] décide de l'état à inverser : la lecture quand elle fait foi, la dernière
+     * consigne sinon — ce qui redonne l'ancienne alternance sur un firmware où l'état ne se lit
+     * pas. La relecture, [ToggleTracker.SETTLE_MS] plus tard, lui apprend si la lecture suit.
+     */
+    private suspend fun executeReadToggle(action: ShortcutAction) {
+        val jeton = toggleMutex.withLock {
+            val suivi = toggleTrackers.getOrPut(action) { ToggleTracker() }
+            val lu = readToggle(action)
+            val maintenant = SystemClock.elapsedRealtime()
+            val cible = !suivi.current(lu, maintenant)
+            AppLogger.i(TAG, "SHORTCUT ${action.name} : lu=${lu ?: "illisible"} → ${if (cible) "ON" else "OFF"}")
+            writeToggle(action, cible)
+            suivi.onCommand(cible, maintenant)
+        }
+        delay(ToggleTracker.SETTLE_MS)
+        toggleMutex.withLock { toggleTrackers[action]?.onReadBack(jeton, readToggle(action)) }
+    }
+
+    /** État lu sur le véhicule, `null` s'il est illisible (ou si la lecture échoue). */
+    private fun readToggle(action: ShortcutAction): Boolean? = runCatching {
+        when (action) {
+            ShortcutAction.ONE_PEDAL -> MG4Hardware.getRegenLevel()?.let { it == RegenLevel.ONE_PEDAL }
+            ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.isEnergySavingOn()
+            ShortcutAction.TSR_TOGGLE           -> MG4Hardware.isTsrOn()
+            ShortcutAction.SOUND_WARNING        -> MG4Hardware.isSoundWarningOn()
+            ShortcutAction.OVERSPEED_ALARM      -> MG4Hardware.isOverspeedAlarmOn()
+            ShortcutAction.SPEED_LIMIT_TONE     -> MG4Hardware.isSpeedLimitToneOn()
+            else                                -> null
+        }
+    }.getOrNull()
+
+    private fun writeToggle(action: ShortcutAction, on: Boolean) {
+        when (action) {
+            ShortcutAction.ONE_PEDAL -> {
+                // One Pedal coupé : retour au niveau de régénération choisi dans les Raccourcis.
+                val niveau = if (on) RegenLevel.ONE_PEDAL else RegenLevel.fromValue(
+                    getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
+                        .getInt("shortcut_one_pedal_fallback", RegenLevel.HIGH.value)
+                )
+                MG4Hardware.setRegenLevel(niveau)
+            }
+            ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.setEnergySavingMode(on)
+            ShortcutAction.TSR_TOGGLE           -> MG4Hardware.setTsrMode(on)
+            ShortcutAction.SOUND_WARNING        -> MG4Hardware.setSoundWarning(on)
+            ShortcutAction.OVERSPEED_ALARM      -> MG4Hardware.setOverspeedAlarm(on)
+            ShortcutAction.SPEED_LIMIT_TONE     -> MG4Hardware.setSpeedLimitTone(on)
+            else -> {}
         }
     }
 

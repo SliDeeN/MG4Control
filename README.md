@@ -155,6 +155,12 @@ Les actions de confort et de sécurité **relisent l'état sur le véhicule à c
 de mémoriser le leur : l'utilisateur agit aussi depuis l'écran d'origine, un état gardé en mémoire
 dériverait dès le premier usage. Un état illisible vaut abstention — rien n'est écrit à l'aveugle.
 
+Les bascules **1 Pédale**, **Éco. énergie**, **Panneaux (TSR)**, **Alerte survitesse**, **Alerte
+changement de limite** et **Son** relisent elles aussi l'état réel : un mode 1 Pédale activé par
+le profil au démarrage est coupé dès le premier appui. Là où cet état ne se lit pas de façon sûre,
+elles retombent sur leur dernière consigne et alternent comme avant ; seul le cycle anticollision
+A/B suit encore un état mémorisé.
+
 La liste des raccourcis avancés affiche pour chaque ligne le **bouton** (nom et code), le **type
 d'appui**, la **fonction**, puis *Modifier* et *Supprimer*. Réattribuer un bouton déjà utilisé sur
 le même type d'appui demande confirmation et nomme la fonction qui va être remplacée.
@@ -1097,6 +1103,12 @@ Available actions — those depending on the firmware do not show up on the othe
 Comfort and safety actions **re-read the state from the vehicle on every press** instead of
 remembering their own: the user also acts from the stock screen, so a remembered state would drift
 immediately. An unreadable state means doing nothing — nothing is ever written blind.
+
+The **One Pedal**, **Energy saving**, **Traffic signs (TSR)**, **Overspeed alert**, **Speed limit
+change alert** and **Sound** toggles also re-read the real state: a One Pedal switched on by the
+start-up profile is switched off on the very first press. Where that state cannot be read
+reliably, they fall back on their last command and alternate as before; only the forward
+collision A/B cycle still follows a remembered state.
 
 Each row of the advanced list shows the **button** (name and code), the **press type**, the
 **action**, then *Edit* and *Delete*. Reassigning a button already used with the same press type
