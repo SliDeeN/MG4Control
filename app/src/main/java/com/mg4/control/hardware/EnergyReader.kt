@@ -3,6 +3,7 @@ package com.mg4.control.hardware
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.EnergySnapshot
+import com.mg4.control.model.PowerIntegrator
 import com.mg4.control.model.StatsSettings
 
 /**
@@ -99,12 +100,10 @@ object EnergyReader {
      * Puissance qui sort de la batterie, en kW : positive en décharge, négative quand elle se
      * remplit (récupération). Le signe est l'inverse de [EnergySnapshot.powerKw], pensé pour la
      * charge. Deux lectures seulement, pour pouvoir être appelée chaque seconde en roulant.
+     * Une tension ou un courant hors de sa plage donne `null` : voir [PowerIntegrator.batteryPowerKw].
      */
-    fun dischargeKw(): Float? {
-        val volts = float(PROP_PACK_VOLTAGE) ?: return null
-        val amperes = float(PROP_PACK_CURRENT) ?: return null
-        return volts * amperes / 1000f
-    }
+    fun dischargeKw(): Float? =
+        PowerIntegrator.batteryPowerKw(float(PROP_PACK_VOLTAGE), float(PROP_PACK_CURRENT))
 
     /**
      * Capacité de la batterie annoncée par le véhicule, en kWh — `null` si la propriété ne répond

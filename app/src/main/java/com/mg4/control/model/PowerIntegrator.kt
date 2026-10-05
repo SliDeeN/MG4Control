@@ -109,5 +109,26 @@ class PowerIntegrator {
         const val MAX_GAP_MS = 5_000L
 
         private const val MS_PER_HOUR = 3_600_000.0
+
+        /**
+         * Tension plausible d'une batterie de MG4. Le plafond est celui du service d'origine
+         * (`max_bms_pack_vol`) ; le plancher écarte un zéro ou une lecture ratée, qu'aucune de nos
+         * batteries 400 V n'atteint même vide.
+         */
+        private val VOLTS = 200f..500f
+
+        /** Bornes du courant d'après le service d'origine (`isInvalidActualCurrent`), négatif = charge. */
+        private val AMPERES = -1000f..2276.75f
+
+        /**
+         * Puissance batterie en kW, positive en décharge — ou `null` si la tension ou le courant
+         * manque ou sort de sa plage : une lecture absurde fausserait tout le trajet, mieux vaut
+         * un relevé de moins.
+         */
+        fun batteryPowerKw(volts: Float?, amperes: Float?): Float? {
+            if (volts == null || amperes == null) return null
+            if (volts !in VOLTS || amperes !in AMPERES) return null   // NaN et infinis compris
+            return volts * amperes / 1000f
+        }
     }
 }

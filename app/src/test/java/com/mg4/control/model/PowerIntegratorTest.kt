@@ -1,6 +1,7 @@
 package com.mg4.control.model
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 /**
@@ -110,5 +111,40 @@ class PowerIntegratorTest {
         // Le dernier point d'avant la remise à zéro ne sert pas de départ au trajet suivant.
         i.add(61_000, 10f)
         assertEquals(0f, i.result().consumedKwh, 0f)
+    }
+
+    @Test
+    fun `puissance tension fois courant positive en decharge`() {
+        assertEquals(41.775f, PowerIntegrator.batteryPowerKw(417.75f, 100f)!!, 0.001f)
+        assertEquals(-5.226f, PowerIntegrator.batteryPowerKw(408.25f, -12.8f)!!, 0.001f)
+    }
+
+    @Test
+    fun `tension hors de la plage d une batterie 400 V ecartee`() {
+        assertNull(PowerIntegrator.batteryPowerKw(199.9f, 10f))
+        assertNull(PowerIntegrator.batteryPowerKw(500.1f, 10f))
+        assertNull(PowerIntegrator.batteryPowerKw(0f, 10f))
+    }
+
+    @Test
+    fun `tension aux bornes acceptee`() {
+        assertEquals(2f, PowerIntegrator.batteryPowerKw(200f, 10f)!!, 0.001f)
+        assertEquals(5f, PowerIntegrator.batteryPowerKw(500f, 10f)!!, 0.001f)
+    }
+
+    @Test
+    fun `courant hors des bornes du vehicule ecarte`() {
+        assertNull(PowerIntegrator.batteryPowerKw(400f, -1000.5f))
+        assertNull(PowerIntegrator.batteryPowerKw(400f, 2277f))
+        assertEquals(-400f, PowerIntegrator.batteryPowerKw(400f, -1000f)!!, 0.001f)
+        assertEquals(910.7f, PowerIntegrator.batteryPowerKw(400f, 2276.75f)!!, 0.001f)
+    }
+
+    @Test
+    fun `lecture absente ou non finie ecartee`() {
+        assertNull(PowerIntegrator.batteryPowerKw(null, 10f))
+        assertNull(PowerIntegrator.batteryPowerKw(400f, null))
+        assertNull(PowerIntegrator.batteryPowerKw(Float.NaN, 10f))
+        assertNull(PowerIntegrator.batteryPowerKw(400f, Float.POSITIVE_INFINITY))
     }
 }
