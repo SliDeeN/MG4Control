@@ -100,6 +100,22 @@ object EnergyProbe {
         Signal("Climatisation depuis le départ", 0x2160a1c2, AAD_SERVICE),
         Signal("Consommation moyenne", 0x2160f421, BMS_SERVICE),
 
+        // ── Énergie : l'autre famille de compteurs, celle de l'écran d'origine ──
+        // Issue #117 : sur SWI68 les compteurs ci-dessus restent à 0,0 et les trajets s'enregistrent
+        // sans énergie. Le service d'origine de ce firmware (VehicleChargingBinder) ne lit que
+        // ceux-ci, que son écran « Consommation d'énergie » affiche en kWh arrondis à l'entier et
+        // borne à 0..255. Deux choses à apprendre du relevé avant de s'y fier : leur finesse (au
+        // dixième, ou au kWh entier ?) et s'ils déduisent la régénération. Pas de poste
+        // climatisation séparé : il est compris dans les accessoires (« AC and others »).
+        Signal("Origine : énergie totale depuis la charge", 0x2160a199, AAD_SERVICE),
+        Signal("Origine : énergie totale depuis le départ", 0x2160a19a, AAD_SERVICE),
+        Signal("Origine : accessoires depuis la charge", 0x2160a197, AAD_SERVICE),
+        Signal("Origine : accessoires depuis le départ", 0x2160a198, AAD_SERVICE),
+        Signal("Origine : régénération depuis la charge", 0x2160a1a2, AAD_SERVICE),
+        Signal("Origine : régénération depuis le départ", 0x2160a1a1, AAD_SERVICE),
+        Signal("Origine : autonomie récupérée depuis la charge (km)", 0x2160a1a4, AAD_SERVICE),
+        Signal("Origine : autonomie récupérée depuis le départ (km)", 0x2160a1a3, AAD_SERVICE),
+
         // ── Distance ────────────────────────────────────────────────────────
         Signal("Odomètre AOSP", 0x11600204, null),
         Signal("Kilométrage total SAIC", 0x21401566, null),
