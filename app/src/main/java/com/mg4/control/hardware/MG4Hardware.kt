@@ -3701,6 +3701,17 @@ object MG4Hardware {
             sb.appendLine()
         }
 
+        // Énergie intégrée (tension × courant) contre compteurs, trajet par trajet (issue #117) :
+        // tout l'historique gardé, pour qu'un seul rapport couvre une semaine de trajets.
+        sAppContext?.let { ctx ->
+            val comparaisons = com.mg4.control.stats.StatsStore(ctx).energyChecks()
+            if (comparaisons.isNotEmpty()) {
+                sb.appendLine("── Énergie des trajets : intégrée contre compteurs ──")
+                comparaisons.forEach { sb.appendLine(it) }
+                sb.appendLine()
+            }
+        }
+
         // Sonde lumière/position : relevés des derniers READY et des ouvertures du Diagnostic.
         LightProbe.reports.forEach {
             sb.appendLine(it)

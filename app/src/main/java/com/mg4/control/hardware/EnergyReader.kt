@@ -96,6 +96,17 @@ object EnergyReader {
     fun soc(): Float? = float(PROP_SOC)?.takeIf { it in 0f..100f }
 
     /**
+     * Puissance qui sort de la batterie, en kW : positive en décharge, négative quand elle se
+     * remplit (récupération). Le signe est l'inverse de [EnergySnapshot.powerKw], pensé pour la
+     * charge. Deux lectures seulement, pour pouvoir être appelée chaque seconde en roulant.
+     */
+    fun dischargeKw(): Float? {
+        val volts = float(PROP_PACK_VOLTAGE) ?: return null
+        val amperes = float(PROP_PACK_CURRENT) ?: return null
+        return volts * amperes / 1000f
+    }
+
+    /**
      * Capacité de la batterie annoncée par le véhicule, en kWh — `null` si la propriété ne répond
      * pas ou rend une valeur invraisemblable.
      *

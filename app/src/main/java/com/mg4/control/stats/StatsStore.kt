@@ -43,6 +43,8 @@ class StatsStore(private val context: Context) {
         private const val KEY_LAST_SOC = "last_reading_soc"
         private const val KEY_PENDING = "pending_state"
         private const val KEY_CAPACITY_USER = "capacity_user_set"
+        private const val KEY_ENERGY_CHECKS = "energy_checks"
+        private const val MAX_ENERGY_CHECKS = 40
 
         /** Verrou de processus : le service écrit pendant que l'écran lit. */
         private val LOCK = Any()
@@ -202,7 +204,25 @@ class StatsStore(private val context: Context) {
 
     fun clear() = synchronized(LOCK) {
         runCatching { file.delete() }
+        // Le journal de comparaison date et mesure des trajets, lui aussi : il part avec le reste.
+        prefs.edit().remove(KEY_ENERGY_CHECKS).apply()
         AppLogger.i(TAG, "historique supprimé")
+    }
+
+    // ── Énergie intégrée contre compteurs (issue #117) ──────────────────────
+
+    /**
+     * Les dernières comparaisons, une ligne par trajet, pour le rapport de diagnostic.
+     *
+     * Gardées ici et non dans le journal de l'application, qui ne retient que ses dernières lignes :
+     * une semaine de trajets domicile-travail doit tenir dans UN rapport, pris quand on veut.
+     */
+    fun energyChecks(): List<String> =
+        prefs.getString(KEY_ENERGY_CHECKS, null)?.split('\n')?.filter { it.isNotBlank() } ?: emptyList()
+
+    fun addEnergyCheck(line: String) {
+        val lignes = (energyChecks() + line.replace('\n', ' ')).takeLast(MAX_ENERGY_CHECKS)
+        prefs.edit().putString(KEY_ENERGY_CHECKS, lignes.joinToString("\n")).apply()
     }
 
     fun sizeBytes(): Long = runCatching { if (file.exists()) file.length() else 0L }.getOrDefault(0L)
