@@ -165,4 +165,30 @@ class TripTest {
         )
         assertEquals(16f, t.consumptionPer100!!, 0.01f)
     }
+
+    @Test
+    fun `une energie brute nulle sur un vrai trajet est une energie inconnue`() {
+        // Issue #117 : compteurs muets — 12 km à 0,0 kWh, ce n'est pas une mesure.
+        val t = trip(km = 12, kwh = 0f, integre = 12.3f)
+        assertFalse(t.energyKnown)
+        assertNull("pas de « ≈ 0 kWh/100 km »", t.consumptionPer100)
+        assertFalse(t.consumptionApproximate)
+    }
+
+    @Test
+    fun `sans distance integree non plus un zero ne vaut pas mesure`() {
+        assertFalse(trip(km = 12, kwh = 0f).energyKnown)
+    }
+
+    @Test
+    fun `quelques centaines de metres a zero restent une mesure`() {
+        // Sous le pas de 0,1 kWh du compteur, zéro est la bonne lecture.
+        assertTrue(trip(km = 0, kwh = 0f, integre = 0.4f).energyKnown)
+    }
+
+    @Test
+    fun `une energie relevee est connue quelle que soit la distance`() {
+        assertTrue(trip(km = 12, kwh = 1.8f, integre = 12.3f).energyKnown)
+        assertTrue(trip(km = 0, kwh = 0.1f, integre = 0.4f).energyKnown)
+    }
 }

@@ -36,6 +36,11 @@ object EnergyReader {
     private const val PROP_CLIMATE_SINCE_START = 0x2160a1c2
     private const val PROP_ACCESSORIES_SINCE_START = 0x2160a1be
     private const val PROP_REGEN_SINCE_START = 0x2160a1c0
+    /**
+     * Compteur de l'écran d'origine, « AC and others » depuis le contact. Seul poste disponible là
+     * où les compteurs ci-dessus restent à zéro (issue #117) — et au **kWh entier** seulement.
+     */
+    private const val PROP_STOCK_AUX_SINCE_START = 0x2160a198
     private const val PROP_CHARGE_STATUS = 0x2140f409
     private const val PROP_PLUG_AC = 0x2140f43e
     private const val PROP_PLUG_DC = 0x2140f43f
@@ -78,6 +83,7 @@ object EnergyReader {
             climateSinceStartKwh = energy(PROP_CLIMATE_SINCE_START),
             accessoriesSinceStartKwh = energy(PROP_ACCESSORIES_SINCE_START),
             regenSinceStartKwh = energy(PROP_REGEN_SINCE_START),
+            auxSinceStartKwh = energy(PROP_STOCK_AUX_SINCE_START),
             charging = charging,
             chargeType = chargeType(),
             // Pas de propriété de puissance : c'est le produit, le courant étant négatif en charge.

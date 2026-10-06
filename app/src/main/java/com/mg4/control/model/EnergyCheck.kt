@@ -21,8 +21,14 @@ class EnergyCheck(
     /** Net des compteurs, sans l'arrondi ni le plancher de [Trip.netEnergyKwh] : on compare des mesures. */
     val counterNetKwh: Float get() = trip.energyKwh - (trip.regenKwh ?: 0f)
 
-    /** Net intégré moins net des compteurs ; `null` si rien n'a pu être intégré. */
-    val deltaKwh: Float? get() = if (integrated.samples == 0) null else integrated.netKwh - counterNetKwh
+    /**
+     * Net intégré moins net des compteurs ; `null` si rien n'a pu être intégré — ou si les
+     * compteurs sont muets : l'énergie du trajet est alors l'énergie intégrée elle-même, et la
+     * comparer à elle-même donnerait un écart nul qui ne prouverait rien.
+     */
+    val deltaKwh: Float?
+        get() = if (integrated.samples == 0 || trip.energyIntegrated) null
+        else integrated.netKwh - counterNetKwh
 
     /** Énergie déduite de la baisse du pourcentage de batterie — grossière sur un trajet court. */
     val socKwh: Float?
@@ -45,13 +51,24 @@ class EnergyCheck(
             "intégré : brut ${n(integrated.consumedKwh)} − récup ${n(integrated.regenKwh)} = " +
                 "net ${n(integrated.netKwh)} kWh (${integrated.samples} relevés, $coveragePercent % du trajet, " +
                 "${integrated.gaps} trou(s), ${integrated.missed} illisible(s))"
-        val compteurs = "compteurs : brut ${n(trip.energyKwh)} − récup ${trip.regenKwh?.let(::n) ?: "?"} = " +
+        // Compteurs muets : restent le pourcentage de batterie et le compteur d'origine, au kWh
+        // entier, pour juger la mesure intégrée.
+        val compteurs = if (trip.energyIntegrated)
+            "compteurs : muets | climatisation et autres : " +
+                (trip.auxiliaryKwh?.let { "${it.roundToInt()} kWh (compteur d'origine, au kWh entier)" } ?: "?")
+        else "compteurs : brut ${n(trip.energyKwh)} − récup ${trip.regenKwh?.let(::n) ?: "?"} = " +
             "net ${n(counterNetKwh)} kWh"
-        val ecart = deltaKwh?.let { "écart ${n(it)} kWh" } ?: "écart ?"
-        val batterie = socKwh?.let { "batterie ${trip.socStart} → ${trip.socEnd} % ≈ ${n(it)} kWh" } ?: "batterie ?"
+        val ecart = if (trip.energyIntegrated) "écart sans objet"
+            else deltaKwh?.let { "écart ${n(it)} kWh" } ?: "écart ?"
+        val batterie = socKwh?.let {
+            "batterie ${pourcent(trip.socStart)} → ${pourcent(trip.socEnd)} % ≈ ${n(it)} kWh"
+        } ?: "batterie ?"
         return "$quand · ${trip.distance} km · $minutes min | $mesure | $compteurs | $ecart | $batterie"
     }
 
     // Locale.US : un point décimal quelle que soit la langue du boîtier, la ligne est relue par des outils.
     private fun n(v: Float) = String.format(Locale.US, "%.2f", v)
+
+    /** Au dixième, la finesse du véhicule : un flottant écrit tel quel donnait « 78.200005 ». */
+    private fun pourcent(v: Float?) = v?.let { String.format(Locale.US, "%.1f", it) } ?: "?"
 }

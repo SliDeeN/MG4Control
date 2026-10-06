@@ -57,6 +57,26 @@ class EnergyCheckTest {
     }
 
     @Test
+    fun `le pourcentage de batterie s ecrit au dixieme`() {
+        // Tel que la voiture le rend : écrit sans mise en forme, il donnait « 78.200005 ».
+        val ligne = EnergyCheck(trajet(debut = 78.200005f, fin = 76.200005f), integre(), 62f).line()
+        assertTrue(ligne, ligne.contains("batterie 78.2 → 76.2 %"))
+    }
+
+    @Test
+    fun `compteurs muets la ligne le dit et ne calcule pas d ecart`() {
+        // Sur ces voitures l'énergie du trajet EST l'énergie intégrée : la comparer à elle-même
+        // donnerait un écart nul qui ne prouverait rien.
+        val muet = trajet(brut = 1.3f, recup = 0.4f).copy(energyIntegrated = true, auxiliaryKwh = 0f)
+        val c = EnergyCheck(muet, integre(), 62f)
+        assertNull(c.deltaKwh)
+        val ligne = c.line()
+        assertTrue(ligne, ligne.contains("compteurs : muets"))
+        assertTrue(ligne, ligne.contains("net 0.89 kWh"))
+        assertTrue(ligne, ligne.contains("climatisation et autres : 0 kWh"))
+    }
+
+    @Test
     fun `la ligne dit quand rien n a ete integre`() {
         val ligne = EnergyCheck(trajet(), integre(0f, 0f, releves = 0), 62f).line()
         assertTrue(ligne, ligne.contains("aucune mesure"))

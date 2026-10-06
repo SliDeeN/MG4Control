@@ -24,6 +24,15 @@ object Resolution {
 
     /** Incertitude relative au-delà de laquelle une consommation est annoncée comme approchée. */
     const val APPROXIMATE_ABOVE = 0.10f
+
+    /**
+     * Incertitude relative retenue pour une énergie intégrée (tension × courant, un relevé par
+     * seconde). Elle n'a pas le pas d'un dixième de kWh des compteurs ; son erreur est
+     * proportionnelle. Valeur prudente, tirée du premier trajet de validation (2026-10-06 : 1,27
+     * kWh intégrés pour 1,20 aux compteurs et 1,24 d'après la batterie) — à resserrer ou relâcher
+     * quand d'autres trajets auront parlé.
+     */
+    const val INTEGRATED_ENERGY_RELATIVE = 0.07f
 }
 
 /**
@@ -62,8 +71,28 @@ data class Trip(
      * enregistrés avant cette mesure, et null si la vitesse n'a jamais pu être relevée.
      */
     val integratedKm: Float? = null,
+    /**
+     * Vrai quand [energyKwh] et [regenKwh] viennent de l'intégration de la puissance batterie et
+     * non des compteurs du véhicule — le cas des firmwares qui ne les alimentent pas (issue #117).
+     * Les postes [climateKwh] et [accessoriesKwh] sont alors inconnus.
+     */
+    val energyIntegrated: Boolean = false,
+    /**
+     * « Climatisation et autres » d'après le compteur de l'écran d'origine, au **kWh entier** :
+     * à présenter comme un ordre de grandeur. Renseigné seulement quand [energyIntegrated].
+     */
+    val auxiliaryKwh: Float? = null,
 ) {
     val durationMs: Long get() = max(0L, endMs - startMs)
+
+    /**
+     * Faux quand l'énergie du trajet n'a pas été mesurée : un brut resté à zéro sur un kilomètre
+     * et plus. C'est la signature des compteurs muets (issue #117), dont les trajets enregistrés
+     * avant que l'intégration prenne le relais restent dans l'historique. Sous le kilomètre, zéro
+     * est au contraire la bonne lecture d'un compteur au dixième de kWh.
+     */
+    val energyKnown: Boolean
+        get() = energyKwh > 0f || distance < MIN_DISTANCE_PRECISE_KM
 
     /**
      * Distance retenue pour l'affichage et les ratios.
@@ -94,7 +123,8 @@ data class Trip(
         get() = (energyKwh - (regenKwh ?: 0f)).coerceAtLeast(0f).roundTenth()
 
     /**
-     * Consommation moyenne en kWh/100 km, **null sous la distance plancher**.
+     * Consommation moyenne en kWh/100 km, **null sous la distance plancher** — et null quand
+     * l'énergie est inconnue ([energyKnown]) : « 0 kWh/100 km » n'a jamais été une mesure.
      *
      * Le plancher dépend de la source. Au kilomètre entier, 2 km sont connus à ±50 % près et le
      * ratio n'aurait aucun sens ; au dixième, un seul kilomètre donne déjà un chiffre honnête.
@@ -102,7 +132,7 @@ data class Trip(
      * justes et restent affichées.
      */
     val consumptionPer100: Float?
-        get() = if (distance >= ratioFloor) netEnergyKwh * 100f / distance else null
+        get() = if (energyKnown && distance >= ratioFloor) netEnergyKwh * 100f / distance else null
 
     /**
      * Incertitude relative de [consumptionPer100], due à la seule résolution des compteurs.
@@ -122,7 +152,9 @@ data class Trip(
             val kilometres =
                 if (distancePrecise) Resolution.DISTANCE_PRECISE_KM
                 else Resolution.DISTANCE_ODOMETER_KM
-            return energie / netEnergyKwh + kilometres / distance
+            val partEnergie =
+                if (energyIntegrated) Resolution.INTEGRATED_ENERGY_RELATIVE else energie / netEnergyKwh
+            return partEnergie + kilometres / distance
         }
 
     /** Vrai quand la consommation doit être annoncée comme approchée. */

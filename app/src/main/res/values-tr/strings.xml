@@ -656,14 +656,17 @@
     <string name="stats_charge_reconstructed">yeniden oluşturuldu</string>
     <string name="stats_detail_origin">Kaynak</string>
     <string name="stats_detail_origin_estimated">batarya düzeyinden tahmin edildi — uygulama çalışmıyordu</string>
+    <string name="stats_detail_origin_integrated">batarya gerilimi ve akımından hesaplandı</string>
     <string name="stats_tariff_fixed">tarife düzeltildi</string>
     <string name="stats_tariff_instead">düzeltildi, %1$s yerine</string>
     <string name="stats_tariff_default">Varsayılan tarife</string>
     <string name="stats_detail_motor">Motor</string>
     <string name="stats_detail_consumption">Ortalama tüketim</string>
     <string name="stats_detail_consumption_short">güvenilir bir oran için yolculuk çok kısa</string>
+    <string name="stats_detail_energy_unknown">bu yolculukta enerji ölçülmedi</string>
     <string name="stats_detail_climate">Klima</string>
     <string name="stats_detail_accessories">Aksesuarlar</string>
+    <string name="stats_detail_auxiliary">Klima ve diğerleri</string>
     <string name="stats_detail_regen">Rejeneratif frenleme</string>
     <string name="stats_detail_battery">Batarya</string>
     <string name="stats_detail_temp">Ortalama sıcaklık</string>

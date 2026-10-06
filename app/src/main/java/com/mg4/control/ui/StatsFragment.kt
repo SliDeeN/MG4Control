@@ -160,8 +160,11 @@ class StatsFragment : Fragment() {
                 (conso(sum.consumptionPer100, sum.consumptionApproximate) ?: "—"),
             getString(R.string.stats_tile_speed) to
                 (sum.averageSpeedKmh?.let { "${it.toInt()} km/h" } ?: "—"),
-            getString(R.string.stats_tile_energy) to kwh(sum.energyKwh),
-            getString(R.string.stats_tile_regen) to kwh(sum.regenKwh),
+            // Aucun trajet mesuré sur la période : un tiret, pas un zéro (issue #117).
+            getString(R.string.stats_tile_energy) to
+                (if (sum.energyUnknown) "—" else kwh(sum.energyKwh)),
+            getString(R.string.stats_tile_regen) to
+                (if (sum.energyUnknown) "—" else kwh(sum.regenKwh)),
             getString(R.string.stats_tile_charged) to kwh(sum.chargedKwh),
             getString(R.string.stats_tile_cost) to money(sum.drivingCost, s),
             getString(R.string.stats_tile_cost_per100) to money(sum.costPer100, s),
@@ -212,8 +215,8 @@ class StatsFragment : Fragment() {
      * l'écran. Sans aucune charge enregistrée, on retombe sur le tarif alternatif, qui est une
      * estimation et non un relevé.
      */
-    private fun tripCost(trip: Trip, sum: StatsSummary, s: StatsSettings): Float =
-        trip.netEnergyKwh * (sum.averagePricePerKwh ?: s.priceAc)
+    private fun tripCost(trip: Trip, sum: StatsSummary, s: StatsSettings): Float? =
+        if (trip.energyKnown) trip.netEnergyKwh * (sum.averagePricePerKwh ?: s.priceAc) else null
 
     private fun renderTrips(v: View, s: StatsSettings, sum: StatsSummary, trips: List<Trip>) {
         val ctx = v.context
@@ -245,7 +248,7 @@ class StatsFragment : Fragment() {
                 value1 = conso(trip.consumptionPer100, trip.consumptionApproximate) ?: "—",
                 value2 = listOfNotNull(
                     trip.averageSpeedKmh?.let { "${it.toInt()} km/h" },
-                    kwh(trip.netEnergyKwh),
+                    kwh(trip.netEnergyKwh).takeIf { trip.energyKnown },
                 ).joinToString(" · "),
                 onClick = { expanded = if (expanded == trip.startMs) null else trip.startMs; render() }))
             if (expanded == trip.startMs) list.addView(tripDetail(ctx, trip))
@@ -305,11 +308,24 @@ class StatsFragment : Fragment() {
     //  Détails
     // ═════════════════════════════════════════════════════════════════════════
 
-    private fun tripDetail(ctx: Context, trip: Trip): View = detailBox(ctx, listOfNotNull(
+    private fun tripDetail(ctx: Context, trip: Trip): View = detailBox(ctx, tripEnergyLines(trip) + listOfNotNull(
+        soc(trip.socStart, trip.socEnd)?.let { getString(R.string.stats_detail_battery) to it },
+        trip.outsideTempC?.let { getString(R.string.stats_detail_temp) to "${fmt(it)} °C" },
+    ))
+
+    private fun tripEnergyLines(trip: Trip): List<Pair<String, String>> = if (!trip.energyKnown) listOf(
+        // Ni total ni poste à détailler : des lignes à 0,0 kWh passeraient pour des mesures.
+        getString(R.string.stats_detail_consumption) to getString(R.string.stats_detail_energy_unknown),
+    ) else listOfNotNull(
+        // Compteurs du véhicule muets (issue #117) : l'énergie est calculée, et l'écran le dit.
+        if (trip.energyIntegrated)
+            getString(R.string.stats_detail_origin) to getString(R.string.stats_detail_origin_integrated)
+        else null,
         // L'énergie du moteur n'est pas publiée : c'est le total moins les postes annexes.
         trip.motorKwh?.let { getString(R.string.stats_detail_motor) to kwh(it) },
         trip.climateKwh?.let { getString(R.string.stats_detail_climate) to kwh(it) },
         trip.accessoriesKwh?.let { getString(R.string.stats_detail_accessories) to kwh(it) },
+        trip.auxiliaryKwh?.let { getString(R.string.stats_detail_auxiliary) to kwhEntier(it) },
         // Signe négatif : dans un détail de consommation, la régénération RETRANCHE. Moteur +
         // climatisation + accessoires − récupération donne bien le total affiché sur la ligne.
         trip.regenKwh?.let { getString(R.string.stats_detail_regen) to "− ${kwh(it)}" },
@@ -317,9 +333,7 @@ class StatsFragment : Fragment() {
         getString(R.string.stats_detail_consumption) to
             (conso(trip.consumptionPer100, trip.consumptionApproximate)
                 ?: getString(R.string.stats_detail_consumption_short)),
-        soc(trip.socStart, trip.socEnd)?.let { getString(R.string.stats_detail_battery) to it },
-        trip.outsideTempC?.let { getString(R.string.stats_detail_temp) to "${fmt(it)} °C" },
-    ))
+    )
 
     private fun chargeDetail(ctx: Context, session: ChargeSession, s: StatsSettings): View {
         val box = detailBox(ctx, listOfNotNull(
@@ -722,6 +736,14 @@ class StatsFragment : Fragment() {
         if (value < 100f && value % 1f != 0f) "${fmt(value)} km" else "${value.roundToInt()} km"
 
     private fun kwh(value: Float): String = "${fmt(value)} kWh"
+
+    /**
+     * Valeur d'un compteur qui n'avance que par kWh entier (celui de l'écran d'origine) : un ordre
+     * de grandeur, annoncé comme tel — et « moins d'un » plutôt qu'un zéro qui passerait pour une
+     * mesure.
+     */
+    private fun kwhEntier(value: Float): String =
+        if (value < 1f) "< 1 kWh" else "≈ ${value.roundToInt()} kWh"
 
     private fun money(value: Float?, s: StatsSettings): String =
         value?.let { "${fmt(it)} ${s.currency}" } ?: "—"

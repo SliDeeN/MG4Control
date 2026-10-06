@@ -34,7 +34,14 @@ package com.mg4.control.model
  * session porte alors la mention [ChargeSession.reconstructed]. C'est le cas **normal** d'une
  * recharge à domicile ; sans ce rattrapage, l'onglet ne saurait voir que l'exception.
  */
-class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACITY_KWH) {
+class StatsTracker(
+    private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACITY_KWH,
+    /**
+     * Vrai sur les firmwares dont les compteurs d'énergie sont alimentés (SWI132, SWI133). Ne
+     * décide pas seul : voir [finishTrip].
+     */
+    private val countersExpected: Boolean = true,
+) {
 
     sealed class Event {
         data class TripEnded(val trip: Trip) : Event()
@@ -125,6 +132,10 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
                 accessoriesLast = snapshot.accessoriesSinceStartKwh,
                 regenLast = snapshot.regenSinceStartKwh,
                 lastSpeedKmh = snapshot.speedKmh,
+                integratedEnergyKwh = snapshot.tripConsumedKwh,
+                integratedRegenKwh = snapshot.tripRegenKwh,
+                auxStart = snapshot.auxSinceStartKwh,
+                auxLast = snapshot.auxSinceStartKwh,
             ) else enCours.copy(
                 lastMs = snapshot.timestampMs,
                 odometerLast = snapshot.odometerKm ?: enCours.odometerLast,
@@ -141,6 +152,11 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
                 // Une vitesse manquée ne réinitialise pas le trapèze : le prochain intervalle
                 // repart de la dernière vitesse connue, ce qui sous-estime sans jamais inventer.
                 lastSpeedKmh = snapshot.speedKmh ?: enCours.lastSpeedKmh,
+                integratedEnergyKwh = snapshot.tripConsumedKwh ?: enCours.integratedEnergyKwh,
+                integratedRegenKwh = snapshot.tripRegenKwh ?: enCours.integratedRegenKwh,
+                // Le départ peut avoir été illisible : le premier relevé lisible en tient lieu.
+                auxStart = enCours.auxStart ?: snapshot.auxSinceStartKwh,
+                auxLast = snapshot.auxSinceStartKwh ?: enCours.auxLast,
             )
         } else if (ready == false && enCours != null) {
             // Entre le dernier relevé sous contact et celui qui le coupe, la voiture roulait
@@ -148,11 +164,21 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
             // et l'heure de fin sont reprises — les compteurs d'énergie restent ceux du dernier
             // relevé sous contact, dont on sait qu'ils étaient valides.
             val fin = integrationStep(enCours, snapshot)
-            if (fin != null) trip = enCours.copy(
+            var clos = enCours
+            if (fin != null) clos = clos.copy(
                 lastMs = snapshot.timestampMs,
                 integratedKm = enCours.integratedKm + fin,
                 integrated = true,
             )
+            // L'énergie intégrée, elle, est reprise : c'est notre propre mesure, arrêtée par le
+            // collecteur juste avant ce relevé, et non un compteur du véhicule qui a pu retomber.
+            snapshot.tripConsumedKwh?.let {
+                clos = clos.copy(
+                    integratedEnergyKwh = it,
+                    integratedRegenKwh = snapshot.tripRegenKwh ?: clos.integratedRegenKwh,
+                )
+            }
+            trip = clos
             finishTrip()?.let { events += Event.TripEnded(it) }
         }
 
@@ -282,7 +308,15 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
         val p = trip ?: return null
         trip = null
         val distance = diffKm(p.odometerStart, p.odometerLast)
-        val energy = counterDelta(p.energyStart, p.energyLast) ?: 0f
+        val compteur = counterDelta(p.energyStart, p.energyLast) ?: 0f
+        // D'où vient l'énergie (issue #117). Des compteurs qui ont avancé font toujours foi. Restés
+        // à zéro, l'intégration prend le relais : d'office là où le véhicule ne les alimente pas,
+        // et seulement au-delà de [MUTE_COUNTER_KWH] ailleurs — un saut de puce à 0,0 kWh sur une
+        // voiture dont les compteurs marchent n'est pas une panne de compteur.
+        val mesure = p.integratedEnergyKwh
+        val parIntegration = compteur <= 0f && mesure != null && mesure > 0f &&
+            (!countersExpected || mesure >= MUTE_COUNTER_KWH)
+        val energy = if (parIntegration) mesure else compteur
         // La distance intégrée compte dans ce test : un trajet de six cents mètres est un vrai
         // trajet, même si l'odomètre n'a pas changé de kilomètre.
         val integre = if (p.integrated) p.integratedKm.roundTenth() else null
@@ -294,13 +328,19 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
             energyKwh = energy.roundTenth(),
             // Différence, comme le total : un compteur qui n'a pas été remis à zéro depuis le
             // trajet précédent lui ferait sinon porter la récupération du voisin.
-            climateKwh = counterDelta(p.climateStart, p.climateLast)?.roundTenth(),
-            accessoriesKwh = counterDelta(p.accessoriesStart, p.accessoriesLast)?.roundTenth(),
-            regenKwh = counterDelta(p.regenStart, p.regenLast)?.roundTenth(),
+            // Compteurs muets : leurs zéros ne sont pas des mesures, les postes restent inconnus.
+            climateKwh = if (parIntegration) null
+                else counterDelta(p.climateStart, p.climateLast)?.roundTenth(),
+            accessoriesKwh = if (parIntegration) null
+                else counterDelta(p.accessoriesStart, p.accessoriesLast)?.roundTenth(),
+            regenKwh = if (parIntegration) p.integratedRegenKwh?.roundTenth()
+                else counterDelta(p.regenStart, p.regenLast)?.roundTenth(),
             socStart = p.socStart,
             socEnd = p.socLast,
             outsideTempC = p.averageTempC,
             integratedKm = integre,
+            energyIntegrated = parIntegration,
+            auxiliaryKwh = if (parIntegration) counterDelta(p.auxStart, p.auxLast) else null,
         )
     }
 
@@ -342,6 +382,13 @@ class StatsTracker(private val capacityKwh: Float = StatsSettings.DEFAULT_CAPACI
          * au-delà d'un simple retard de l'ordonnanceur, mais sans couvrir une mise en veille.
          */
         const val MAX_SAMPLE_GAP_MS = 60_000L
+
+        /**
+         * Énergie intégrée à partir de laquelle des compteurs restés à zéro sont tenus pour
+         * muets, sur un firmware censé les alimenter. Ils sortent au dixième de kWh : à trois
+         * dixièmes, un compteur vivant aurait forcément bougé.
+         */
+        const val MUTE_COUNTER_KWH = 0.3f
 
         /**
          * Remontée minimale du pourcentage pour conclure à une charge non observée. En dessous,

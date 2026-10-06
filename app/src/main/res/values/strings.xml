@@ -672,14 +672,17 @@
     <string name="stats_charge_reconstructed">reconstituée</string>
     <string name="stats_detail_origin">Origine</string>
     <string name="stats_detail_origin_estimated">estimée d’après le niveau de batterie — l’application ne tournait pas</string>
+    <string name="stats_detail_origin_integrated">calculée d’après la tension et le courant de la batterie</string>
     <string name="stats_tariff_fixed">tarif corrigé</string>
     <string name="stats_tariff_instead">corrigé, au lieu de %1$s</string>
     <string name="stats_tariff_default">Tarif par défaut</string>
     <string name="stats_detail_motor">Moteur</string>
     <string name="stats_detail_consumption">Consommation moyenne</string>
     <string name="stats_detail_consumption_short">trajet trop court pour un ratio fiable</string>
+    <string name="stats_detail_energy_unknown">énergie non mesurée sur ce trajet</string>
     <string name="stats_detail_climate">Climatisation</string>
     <string name="stats_detail_accessories">Accessoires</string>
+    <string name="stats_detail_auxiliary">Climatisation et autres</string>
     <string name="stats_detail_regen">Récupération au freinage</string>
     <string name="stats_detail_battery">Batterie</string>
     <string name="stats_detail_temp">Température moyenne</string>

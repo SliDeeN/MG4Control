@@ -656,14 +656,17 @@
     <string name="stats_charge_reconstructed">rekonstruiert</string>
     <string name="stats_detail_origin">Herkunft</string>
     <string name="stats_detail_origin_estimated">aus dem Batteriestand geschätzt — die App lief nicht</string>
+    <string name="stats_detail_origin_integrated">aus Batteriespannung und -strom berechnet</string>
     <string name="stats_tariff_fixed">Tarif korrigiert</string>
     <string name="stats_tariff_instead">korrigiert, statt %1$s</string>
     <string name="stats_tariff_default">Standardtarif</string>
     <string name="stats_detail_motor">Motor</string>
     <string name="stats_detail_consumption">Durchschnittsverbrauch</string>
     <string name="stats_detail_consumption_short">Fahrt zu kurz für einen belastbaren Wert</string>
+    <string name="stats_detail_energy_unknown">Energie auf dieser Fahrt nicht gemessen</string>
     <string name="stats_detail_climate">Klimaanlage</string>
     <string name="stats_detail_accessories">Nebenverbraucher</string>
+    <string name="stats_detail_auxiliary">Klimaanlage und Sonstiges</string>
     <string name="stats_detail_regen">Rekuperation</string>
     <string name="stats_detail_battery">Batterie</string>
     <string name="stats_detail_temp">Durchschnittstemperatur</string>
