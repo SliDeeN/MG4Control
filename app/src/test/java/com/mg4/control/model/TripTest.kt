@@ -191,4 +191,23 @@ class TripTest {
         assertTrue(trip(km = 12, kwh = 1.8f, integre = 12.3f).energyKnown)
         assertTrue(trip(km = 0, kwh = 0.1f, integre = 0.4f).energyKnown)
     }
+
+    @Test
+    fun `trajet calcule, le moteur est le total moins climatisation et autres`() {
+        // Le camembert de l'écran d'origine : « Driving power » = total − « AC and others ».
+        // Le compteur d'origine tronque au kWh : le vrai poste vaut 2 à 3, le moteur 15,6 à 16,6.
+        val t = trip(km = 120, kwh = 18.6f).copy(energyIntegrated = true, auxiliaryKwh = 2f)
+        assertEquals("au kWh entier, par défaut", 16f, t.motorKwh!!, 0.001f)
+    }
+
+    @Test
+    fun `petit trajet calcule, le moteur reste sous le kWh`() {
+        val t = trip(km = 3, kwh = 0.6f).copy(energyIntegrated = true, auxiliaryKwh = 0f)
+        assertEquals(0f, t.motorKwh!!, 0.001f)
+    }
+
+    @Test
+    fun `trajet calcule sans compteur d'origine, pas de moteur`() {
+        assertNull(trip(km = 120, kwh = 18.6f).copy(energyIntegrated = true).motorKwh)
+    }
 }

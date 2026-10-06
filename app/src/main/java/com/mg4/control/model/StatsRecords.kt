@@ -1,6 +1,7 @@
 package com.mg4.control.model
 
 import kotlin.math.abs
+import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -174,9 +175,19 @@ data class Trip(
      * Nommée « moteur » et non « traction » : la MG4 est une propulsion, et la XPower une quatre
      * roues motrices. Null tant qu'aucun poste n'est connu, sinon on présenterait le total comme
      * une mesure séparée qui n'existe pas.
+     *
+     * Sur un trajet à l'énergie intégrée, le seul poste connu est [auxiliaryKwh] et le calcul est
+     * celui du camembert de l'écran d'origine : « Driving power » = total − « AC and others ». Ce
+     * compteur tronque au kWh, le vrai poste vaut donc jusqu'à 1 kWh de plus : le reste est rendu
+     * au kWh entier **par défaut**, seule valeur ronde qui tombe toujours dans l'intervalle
+     * possible. À présenter comme un ordre de grandeur, au même titre que [auxiliaryKwh].
      */
     val motorKwh: Float?
         get() {
+            if (energyIntegrated) {
+                val autres = auxiliaryKwh ?: return null
+                return floor(energyKwh - autres).coerceAtLeast(0f)
+            }
             if (climateKwh == null && accessoriesKwh == null) return null
             // Sur le BRUT : moteur + climatisation + accessoires − régénération = énergie nette.
             val reste = energyKwh - (climateKwh ?: 0f) - (accessoriesKwh ?: 0f)

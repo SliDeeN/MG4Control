@@ -321,8 +321,11 @@ class StatsFragment : Fragment() {
         if (trip.energyIntegrated)
             getString(R.string.stats_detail_origin) to getString(R.string.stats_detail_origin_integrated)
         else null,
-        // L'énergie du moteur n'est pas publiée : c'est le total moins les postes annexes.
-        trip.motorKwh?.let { getString(R.string.stats_detail_motor) to kwh(it) },
+        // L'énergie du moteur n'est pas publiée : c'est le total moins les postes annexes. Sur un
+        // trajet calculé, le poste annexe est au kWh entier : le moteur ne peut pas être plus fin.
+        trip.motorKwh?.let {
+            getString(R.string.stats_detail_motor) to (if (trip.energyIntegrated) kwhEntier(it) else kwh(it))
+        },
         trip.climateKwh?.let { getString(R.string.stats_detail_climate) to kwh(it) },
         trip.accessoriesKwh?.let { getString(R.string.stats_detail_accessories) to kwh(it) },
         trip.auxiliaryKwh?.let { getString(R.string.stats_detail_auxiliary) to kwhEntier(it) },
@@ -738,9 +741,9 @@ class StatsFragment : Fragment() {
     private fun kwh(value: Float): String = "${fmt(value)} kWh"
 
     /**
-     * Valeur d'un compteur qui n'avance que par kWh entier (celui de l'écran d'origine) : un ordre
-     * de grandeur, annoncé comme tel — et « moins d'un » plutôt qu'un zéro qui passerait pour une
-     * mesure.
+     * Valeur connue au kWh entier seulement — le compteur de l'écran d'origine, et le moteur qui
+     * s'en déduit : un ordre de grandeur, annoncé comme tel — et « moins d'un » plutôt qu'un zéro
+     * qui passerait pour une mesure.
      */
     private fun kwhEntier(value: Float): String =
         if (value < 1f) "< 1 kWh" else "≈ ${value.roundToInt()} kWh"
