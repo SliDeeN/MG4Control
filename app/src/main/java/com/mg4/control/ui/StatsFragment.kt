@@ -22,6 +22,7 @@ import com.mg4.control.hardware.StatsCollector
 import com.mg4.control.model.ChargeSession
 import com.mg4.control.model.ChargeTimes
 import com.mg4.control.model.ChargeType
+import com.mg4.control.model.MoneyFormat
 import com.mg4.control.model.StatsHistory
 import com.mg4.control.model.StatsSettings
 import com.mg4.control.model.StatsSummary
@@ -718,7 +719,8 @@ class StatsFragment : Fragment() {
 
     private fun fmt(value: Float): String = String.format(Locale.getDefault(), "%.1f", value)
 
-    private fun fmt3(value: Float): String = String.format(Locale.getDefault(), "%.3f", value)
+    /** Prix d'un kWh, sans séparateur de milliers : il sert aussi à préremplir les champs. */
+    private fun fmt3(value: Float): String = MoneyFormat.price(value, Locale.getDefault())
 
     /**
      * Distance. Le dixième n'est montré que sous cent kilomètres et seulement s'il a été mesuré :
@@ -749,7 +751,7 @@ class StatsFragment : Fragment() {
         if (value < 1f) "< 1 kWh" else "≈ ${value.roundToInt()} kWh"
 
     private fun money(value: Float?, s: StatsSettings): String =
-        value?.let { "${fmt(it)} ${s.currency}" } ?: "—"
+        value?.let { "${MoneyFormat.amount(it, Locale.getDefault())} ${s.currency}" } ?: "—"
 
     /**
      * Le véhicule publie le pourcentage au dixième (69,4 et non 69) : l'arrondir à l'entier jetait

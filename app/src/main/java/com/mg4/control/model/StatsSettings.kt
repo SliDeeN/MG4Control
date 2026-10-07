@@ -40,7 +40,11 @@ data class StatsSettings(
         const val DEFAULT_CAPACITY_KWH = 62f
         const val MIN_CAPACITY_KWH = 20f
         const val MAX_CAPACITY_KWH = 120f
-        const val MAX_PRICE = 5f
+        /**
+         * Garde-fou contre une faute de frappe, pas une limite d'usage : selon la monnaie un kWh
+         * vaut quelques centimes ou plusieurs milliers d'unités (roupie indonésienne, dong).
+         */
+        const val MAX_PRICE = 100_000f
 
         fun clampPrice(value: Float): Float = value.coerceIn(0f, MAX_PRICE)
         fun clampCapacity(value: Float): Float = value.coerceIn(MIN_CAPACITY_KWH, MAX_CAPACITY_KWH)
