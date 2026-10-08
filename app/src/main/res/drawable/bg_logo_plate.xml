@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Plaque du logo en thème clair.
+    Les lettres "MG" du logo sont blanches : sans fond sombre elles disparaissent sur la barre
+    blanche. Plaque unie aux coins des onglets voisins — elle remplace l'ancien dégradé, qui ne
+    tenait que parce que le logo occupait toute la largeur libre de la barre.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="8dp" />
+    <solid android:color="#FF1C1C1E" />
+</shape>

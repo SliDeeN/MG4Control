@@ -2,9 +2,10 @@
 <!--
     Layout principal de l'activité.
     Remplace la BottomNavigationView par une top-bar fixe avec :
-      • Logo "MG4Control"
-      • Indicateur firmware read-only (chip SWI133 / chip SWI68)
+      • Logo "MG4Control", sur sa plaque
       • Onglets, dans l'ordre : PROFILS, AUTOMATISATION, RACCOURCIS, STATISTIQUES, RÉGLAGES
+    Les cinq onglets se partagent à parts égales toute la largeur laissée par le logo : ce sont
+    les cibles tactiles les plus sollicitées de l'application, autant qu'elles soient grandes.
     La zone de contenu en dessous est gérée par le NavController.
 -->
 <LinearLayout
@@ -21,31 +22,53 @@
         android:layout_height="52dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingStart="20dp"
+        android:paddingStart="12dp"
         android:paddingEnd="12dp"
         android:background="@color/dash_card"
         android:elevation="4dp">
 
-        <!-- Logo image -->
+        <!--
+            Logo image. Les lettres "MG" sont blanches : en thème clair la plaque sombre les fait
+            ressortir sur la barre blanche, en thème sombre elle est transparente. Même hauteur
+            que les onglets ; la marge verticale garde l'image à ses 36dp.
+        -->
         <ImageView
             android:id="@+id/topbar_logo"
-            android:layout_width="0dp"
-            android:layout_height="36dp"
-            android:layout_weight="1"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_marginEnd="8dp"
+            android:paddingTop="4dp"
+            android:paddingBottom="4dp"
             android:src="@drawable/logo_topbar"
-            android:background="@drawable/gradient_logo_bg"
+            android:background="@drawable/bg_logo_plate"
             android:scaleType="fitStart"
             android:adjustViewBounds="true"
             android:contentDescription="@string/app_name" />
 
+        <!--
+            Onglets : même police qu'avant, à 16sp comme le reste de l'application. Les marges
+            internes par défaut du bouton (6dp en haut et en bas) sont retirées pour que la plaque
+            fasse réellement 44dp dans la barre de 52dp. Un libellé trop long pour sa part de
+            largeur (langue, taille de texte) rétrécit au lieu d'être coupé.
+        -->
 
         <!-- Bouton PROFILS -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_nav_profiles"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:maxLines="1"
             android:text="@string/nav_profiles"
-            android:textSize="11sp"
+            android:textSize="16sp"
+            app:autoSizeTextType="uniform"
+            app:autoSizeMinTextSize="11sp"
+            app:autoSizeMaxTextSize="16sp"
+            app:autoSizeStepGranularity="1sp"
             android:letterSpacing="0.06"
             android:textAllCaps="true"
             android:textColor="@color/text_secondary"
@@ -58,10 +81,20 @@
         <!-- Bouton AUTOMATISATION -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_nav_automation"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:maxLines="1"
             android:text="@string/nav_automation"
-            android:textSize="11sp"
+            android:textSize="16sp"
+            app:autoSizeTextType="uniform"
+            app:autoSizeMinTextSize="11sp"
+            app:autoSizeMaxTextSize="16sp"
+            app:autoSizeStepGranularity="1sp"
             android:letterSpacing="0.06"
             android:textAllCaps="true"
             android:textColor="@color/text_secondary"
@@ -74,10 +107,20 @@
         <!-- Bouton RACCOURCIS -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_nav_shortcuts"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:maxLines="1"
             android:text="@string/nav_shortcuts"
-            android:textSize="11sp"
+            android:textSize="16sp"
+            app:autoSizeTextType="uniform"
+            app:autoSizeMinTextSize="11sp"
+            app:autoSizeMaxTextSize="16sp"
+            app:autoSizeStepGranularity="1sp"
             android:letterSpacing="0.06"
             android:textAllCaps="true"
             android:textColor="@color/text_secondary"
@@ -90,10 +133,20 @@
         <!-- Bouton STATISTIQUES -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_nav_stats"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:maxLines="1"
             android:text="@string/nav_stats"
-            android:textSize="11sp"
+            android:textSize="16sp"
+            app:autoSizeTextType="uniform"
+            app:autoSizeMinTextSize="11sp"
+            app:autoSizeMaxTextSize="16sp"
+            app:autoSizeStepGranularity="1sp"
             android:letterSpacing="0.06"
             android:textAllCaps="true"
             android:textColor="@color/text_secondary"
@@ -106,10 +159,20 @@
         <!-- Bouton RÉGLAGES -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_nav_settings"
-            android:layout_width="wrap_content"
-            android:layout_height="36dp"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:maxLines="1"
             android:text="@string/nav_settings"
-            android:textSize="11sp"
+            android:textSize="16sp"
+            app:autoSizeTextType="uniform"
+            app:autoSizeMinTextSize="11sp"
+            app:autoSizeMaxTextSize="16sp"
+            app:autoSizeStepGranularity="1sp"
             android:letterSpacing="0.06"
             android:textAllCaps="true"
             android:textColor="@color/text_secondary"
