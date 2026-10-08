@@ -69,6 +69,9 @@
   const AIR = { FACE: 1, FEET: 2, WS: 4, REAR: 8 };
 
   /** Historique d'exemple de l'écran Statistiques (valeurs plausibles, pas des mesures). */
+  /** Les trois batteries de la MG4 : capacité nominale → capacité utile, en kWh. */
+  const BATTERIES = { 51: 50.8, 64: 61.7, 77: 74.4 };
+  const chargeKwh = (c, nominal) => Math.round((c.soc[1] - c.soc[0]) * BATTERIES[nominal] / 10) / 10;
   function sampleStats() {
     const day = 86400000, now = Date.now();
     const at = (d, h, m) => { const t = new Date(now - d * day); t.setHours(h, m, 0, 0); return t.getTime(); };
@@ -93,6 +96,7 @@
       { start: at(4, 21, 5), end: at(3, 3, 40), type: 'AC', kwh: 18.0, soc: [67, 96], temp: 10, reconstructed: true, timesKnown: true, powerComputed: 2.7 },
       { start: at(8, 20, 40), end: at(7, 2, 20), type: 'AC', kwh: 16.1, soc: [62, 88], temp: 6, powerMeasured: 2.9, fixedPrice: 0.152 }
     ];
+    charges.forEach((c) => { c.kwh = chargeKwh(c, 64); });
     return { trips, charges };
   }
 
@@ -120,6 +124,7 @@
         clim: { power: true, ac: true, auto: true, temp: 21, fan: 3, loop: LOOP.AUTO, defF: false, defR: false, tMin: 16, tMax: 32, fMin: 1, fMax: 10,
                 air: { face: true, feet: false, ws: false } },
         brightness: 70, volume: 14, volMax: 30, prevVolume: null,
+        soc: 64, lights: false, batHeat: false, highBeam: true,
         doors: { L: false, R: false },
         media: { playing: false, track: 3 }
       },
@@ -143,17 +148,21 @@
       winCalAdv: false,            // option « Calibrage par vitre » (PowerWindows.advancedCalibration)
       winCourse: 5000,             // durée de course générale, 2 à 10 s par pas de 0,5 s
       winAuto: { on: false, speedOn: true, speed: 20, timeOn: true, time: 5, both: false, delay: 5, beep: true, beepVol: 60 },
-      stats: { enabled: false, period: 30, currency: '€', priceAc: 0.187, priceDc: 0.45, capacity: 62, retention: 90,
+      stats: { enabled: false, period: 30, currency: '€', priceAc: 0.187, priceDc: 0.45, battery: 64, batteryConfirmed: false, skipShort: false, minTrip: 1, retention: 90,
                trips: sample.trips, charges: sample.charges },
       auto: {
-        p: { on: false, open: true, dir: 'BELOW', thr: 5, profileId: winter.id, autoExec: false },
+        // Une carte n'est dépliée que si son automatisation est active (activer déplie, couper replie).
+        p: { on: false, open: false, dir: 'BELOW', thr: 5, profileId: winter.id, autoExec: false },
+        b: { on: false, open: false, thr: 20, profileId: road.id, autoExec: false, fired: false },
+        bri: { on: false, open: false, lights: true, forecast: false, follow: true, day: 80, night: 20, last: '' },
+        bh: { on: false, open: false, minutes: 30 },
         c: {
-          on: false, open: false,
+          on: false, open: false, once: false, fired: false,
           hot: { on: true, thr: 28, target: 20, fan: 4, defF: false, defR: false, auto: false, recircForce: true, recirc: LOOP.INNER },
           cold: { on: true, thr: 5, target: 24, fan: 4, defF: true, defR: true, auto: false, recircForce: false, recirc: LOOP.AUTO }
         }
       },
-      door: { on: false, level: 6, restore: true, L: true, R: true },
+      door: { on: false, open: false, level: 6, restore: true, L: true, R: true },
       bt: { devices: [{ mac: 'A4:C1:38:5E:22:10', name: 'Pixel 8' }, { mac: '5C:F9:38:07:AB:41', name: 'iPhone 15' }], connected: [] },
       diagUnlocked: false
     };
@@ -173,7 +182,9 @@
       twoAlerts: !vsm || s132,                         // survitesse + changement de limite
       heat: ['SWI133', 'SWI68', 'SWI165'].includes(g), // sièges + volant chauffants
       clim: known, esc: known, bri: known, power: known,
-      door: known,                                     // onglet Audio : partout où le volume est pilotable
+      door: known,                                     // carte « Baisse du volume » : partout où le volume est pilotable
+      beam: known, batHeat: known,                     // feux de route automatiques, chauffage de la batterie
+      counters: g === 'SWI132' || g === 'SWI133',      // compteurs d'énergie du véhicule ; sinon l'énergie est calculée
       doorSensor: g === 'SWI132' || g === 'SWI133',    // portes lisibles ; sinon sortie de READY
       fifth: (!vsm || s132) ? 'adas_ica' : 'adas_tja'
     };
@@ -332,6 +343,40 @@
     if (def) { trace.push(L('Profil par défaut : « ', 'Default profile: “') + def.name + L(' »', '”')); applyProfile(def, { via: L('profil par défaut', 'default profile') }); return; }
     trace.push(L('Aucun profil à appliquer', 'No profile to apply'));
   }
+  const nowHM = () => new Intl.DateTimeFormat(appLang() === 'en' ? 'en-GB' : appLang(), { hour: '2-digit', minute: '2-digit' }).format(Date.now());
+  /** Changer de batterie recalcule l'énergie des recharges enregistrées, comme dans l'app. */
+  function setBattery(nominal) {
+    const st = state.stats;
+    if (!BATTERIES[nominal]) return;
+    st.battery = nominal; st.batteryConfirmed = true;
+    st.charges.forEach((c) => { c.kwh = chargeKwh(c, nominal); });
+  }
+  /** Luminosité automatique, version « feux seuls » : niveau jour ou nuit selon l'état des feux. */
+  function autoBrightness() {
+    const c = car(), b = state.auto.bri;
+    const v = c.lights ? b.night : b.day;
+    c.brightness = v;
+    b.last = S('autobri_status_lights', nowHM(), S(c.lights ? 'autobri_source_lights' : 'autobri_source_lights_off'), v);
+    hud(S('autobri_title') + ' → ' + v + ' %');
+  }
+  /** Profil selon la batterie : une fois par épisode, au démarrage ou au franchissement du seuil. */
+  function batteryAutomation(trace) {
+    const c = car(), ab = state.auto.b;
+    if (!ab.on || garage()) return;
+    if (c.soc >= ab.thr) { ab.fired = false; return; }
+    if (ab.fired) return;
+    const p = state.profiles.find((x) => x.id === ab.profileId);
+    if (!p) return;
+    ab.fired = true;
+    if (ab.autoExec) {
+      applyProfile(p, { via: L('batterie', 'battery') });
+      if (trace) trace.push(L('Batterie sous le seuil → « ', 'Battery below threshold → “') + p.name + L(' » (exécution directe)', '” (direct)'));
+    } else {
+      const sim = activeSim();
+      if (sim) sim.showConfirm(p, () => {}, { thr: ab.thr, soc: c.soc });
+      if (trace) trace.push(L('Batterie sous le seuil → popup de confirmation', 'Battery below threshold → confirmation popup'));
+    }
+  }
   function ignition() {
     const c = car();
     const wasReady = c.ready;
@@ -359,12 +404,16 @@
     const ap = activeProfile();
     if (cc.on && caps().clim && ap && ap.hvac && ap.hvac.enabled) {
       trace.push(L('Automatisation A/C ignorée : le profil « ', 'A/C automation skipped: profile “') + ap.name + L(' » porte sa propre climatisation', '” carries its own climate'));
+    } else if (cc.on && caps().clim && cc.once && cc.fired) {
+      trace.push(L('Automatisation A/C non relancée : déjà déclenchée depuis le démarrage de l’application (option « une seule fois »)',
+        'A/C automation not re-run: already triggered since the app started (“only once” option)'));
     } else if (cc.on && caps().clim) {
       let rule = null;
       if (cc.hot.on && c.outside >= cc.hot.thr) rule = 'hot';
       else if (cc.cold.on && c.outside <= cc.cold.thr) rule = 'cold';
       if (rule) {
         const r = cc[rule];
+        cc.fired = true;
         Object.assign(c.clim, {
           power: true, ac: true,
           temp: clamp(r.target, c.clim.tMin, c.clim.tMax), fan: clamp(r.fan, c.clim.fMin, c.clim.fMax),
@@ -376,6 +425,10 @@
           : L('Automatisation A/C : règle « température inférieure » appliquée', 'A/C automation: “below” rule applied')), 2700);
       }
     }
+    // Profil selon la batterie : réarmé à chaque démarrage, évalué après la chaîne des profils.
+    state.auto.b.fired = false;
+    batteryAutomation(trace);
+    if (state.auto.bri.on && caps().bri) autoBrightness();
     commit();
     emit('ignition', { trace });
     return trace;
@@ -478,10 +531,11 @@
     TSR_TOGGLE: 'shortcuts_action_tsr', ESC_TOGGLE: 'shortcuts_action_esc', DROWSINESS_TOGGLE: 'shortcuts_action_drowsiness',
     DROWSINESS_SEN_CYCLE: 'shortcuts_action_drowsiness_sen', SEAT_HEAT_LEFT_CYCLE: 'shortcuts_action_seat_heat_left',
     SEAT_HEAT_RIGHT_CYCLE: 'shortcuts_action_seat_heat_right', STEERING_HEAT_TOGGLE: 'shortcuts_action_steering_heat',
-    HVAC_TOGGLE: 'shortcuts_action_hvac_toggle', HVAC_TEMP_UP: 'shortcuts_action_hvac_temp_up', HVAC_TEMP_DOWN: 'shortcuts_action_hvac_temp_down',
+    HVAC_TOGGLE: 'shortcuts_action_hvac_toggle', HVAC_AC_TOGGLE: 'shortcuts_action_hvac_ac_toggle', HVAC_TEMP_UP: 'shortcuts_action_hvac_temp_up', HVAC_TEMP_DOWN: 'shortcuts_action_hvac_temp_down',
     HVAC_FAN_UP: 'shortcuts_action_hvac_fan_up', HVAC_FAN_DOWN: 'shortcuts_action_hvac_fan_down', DEFROST_FRONT_TOGGLE: 'shortcuts_action_defrost_front',
     DEFROST_REAR_TOGGLE: 'shortcuts_action_defrost_rear', HVAC_RECIRC_CYCLE: 'shortcuts_action_hvac_recirc',
     BRIGHTNESS_UP: 'shortcuts_action_brightness_up', BRIGHTNESS_DOWN: 'shortcuts_action_brightness_down',
+    AUTO_HIGH_BEAM_TOGGLE: 'shortcuts_action_auto_high_beam', BATTERY_HEAT_TOGGLE: 'shortcuts_action_battery_heat',
     MEDIA_NEXT: 'shortcuts_action_media_next', MEDIA_PREVIOUS: 'shortcuts_action_media_prev', MEDIA_PLAY_PAUSE: 'shortcuts_action_media_play_pause',
     VOLUME_UP: 'shortcuts_action_volume_up', VOLUME_DOWN: 'shortcuts_action_volume_down',
     APPLY_PROFILE: 'shortcuts_action_apply_profile', PROFILE_PICKER: 'shortcuts_action_profile_picker',
@@ -500,8 +554,10 @@
     if (k.known) a.push('ADAS_CYCLE', 'ENERGY_SAVING_TOGGLE', 'TSR_TOGGLE');
     if (k.esc) a.push('ESC_TOGGLE', 'DROWSINESS_TOGGLE', 'DROWSINESS_SEN_CYCLE');
     a.push('SEAT_HEAT_LEFT_CYCLE', 'SEAT_HEAT_RIGHT_CYCLE', 'STEERING_HEAT_TOGGLE');
-    if (k.clim) a.push('HVAC_TOGGLE', 'HVAC_TEMP_UP', 'HVAC_TEMP_DOWN', 'HVAC_FAN_UP', 'HVAC_FAN_DOWN', 'DEFROST_FRONT_TOGGLE', 'DEFROST_REAR_TOGGLE', 'HVAC_RECIRC_CYCLE');
+    if (k.clim) a.push('HVAC_TOGGLE', 'HVAC_AC_TOGGLE', 'HVAC_TEMP_UP', 'HVAC_TEMP_DOWN', 'HVAC_FAN_UP', 'HVAC_FAN_DOWN', 'DEFROST_FRONT_TOGGLE', 'DEFROST_REAR_TOGGLE', 'HVAC_RECIRC_CYCLE');
     if (k.bri) a.push('BRIGHTNESS_UP', 'BRIGHTNESS_DOWN');
+    if (k.beam) a.push('AUTO_HIGH_BEAM_TOGGLE');
+    if (k.batHeat) a.push('BATTERY_HEAT_TOGGLE');
     a.push('MEDIA_NEXT', 'MEDIA_PREVIOUS', 'MEDIA_PLAY_PAUSE', 'VOLUME_UP', 'VOLUME_DOWN',
       'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_PICKER', 'OPEN_APP', 'OPEN_CUSTOM_APP');
     if (k.power) a.push('VEHICLE_POWER_OFF');
@@ -526,7 +582,7 @@
     switch (action) {
       case 'NONE': return '';
       case 'ONE_PEDAL': {
-        const v = flip();
+        const v = c.regen !== 'ONE_PEDAL';   // état lu sur le véhicule
         const lvl = v ? 'ONE_PEDAL' : sc.fallback;
         if (!gateOk()) return '';
         if (c.driveMode === 'SNOW') { msg = L('Régénération indisponible en mode SNOW', 'Regeneration unavailable in SNOW mode'); break; }
@@ -543,12 +599,12 @@
       case 'WINDOWS_OPEN_ALL': allWindows(1); msg = S('shortcuts_action_windows_open'); break;
       case 'WINDOWS_CLOSE_ALL': allWindows(-1); msg = S('shortcuts_action_windows_close'); break;
       case 'AEB_CYCLE': { const v = flip(); const m = v ? sc.aebA : sc.aebB; if (W.aebMode(m)) msg = S('aeb_card_title') + ' → ' + (m === 1 ? S('adas_aeb_alarm') : S('adas_aeb_alarm_brake')); break; }
-      case 'SOUND_WARNING': { const v = flip(); if (W.bool('sound', v)) msg = S('adas_sound_warning') + ' → ' + onOff(v); break; }
-      case 'OVERSPEED_ALARM': { const v = flip(); if (W.bool('overspeed', v)) msg = S('adas_overspeed_alarm') + ' → ' + onOff(v); break; }
-      case 'SPEED_LIMIT_TONE': { const v = flip(); if (W.bool('speedTone', v)) msg = S('adas_speed_limit_tone') + ' → ' + onOff(v); break; }
+      case 'SOUND_WARNING': { const v = !c.sound; if (W.bool('sound', v)) msg = S('adas_sound_warning') + ' → ' + onOff(v); break; }
+      case 'OVERSPEED_ALARM': { const v = !c.overspeed; if (W.bool('overspeed', v)) msg = S('adas_overspeed_alarm') + ' → ' + onOff(v); break; }
+      case 'SPEED_LIMIT_TONE': { const v = !c.speedTone; if (W.bool('speedTone', v)) msg = S('adas_speed_limit_tone') + ' → ' + onOff(v); break; }
       case 'ADAS_CYCLE': { const v = flip(); const m = v ? sc.adasA : sc.adasB; if (W.adas(m)) msg = 'ADAS → ' + adasLabel(m); break; }
-      case 'ENERGY_SAVING_TOGGLE': { const v = flip(); if (c.driveMode === 'SNOW') { msg = L('Indisponible en mode SNOW', 'Unavailable in SNOW mode'); break; } if (W.energy(v)) msg = S('drive_energy_saving') + ' → ' + onOff(v); break; }
-      case 'TSR_TOGGLE': { const v = flip(); if (W.tsr(v)) msg = S('adas_tsr') + ' → ' + onOff(v); break; }
+      case 'ENERGY_SAVING_TOGGLE': { const v = !c.energy; if (c.driveMode === 'SNOW') { msg = L('Indisponible en mode SNOW', 'Unavailable in SNOW mode'); break; } if (W.energy(v)) msg = S('drive_energy_saving') + ' → ' + onOff(v); break; }
+      case 'TSR_TOGGLE': { const v = !c.tsr; if (W.tsr(v)) msg = S('adas_tsr') + ' → ' + onOff(v); break; }
       case 'ESC_TOGGLE': { const v = !c.esc; if (W.esc(v)) msg = 'ESC → ' + onOff(v) + (v ? '' : L(' (anticollision avant coupée aussi)', ' (forward collision also off)')); break; }
       case 'DROWSINESS_TOGGLE': { const v = !c.dms; if (W.bool('dms', v)) msg = S('safety_drowsiness') + ' → ' + onOff(v); break; }
       case 'DROWSINESS_SEN_CYCLE': { const v = c.dmsSen % 3 + 1; if (W.dmsSen(v)) msg = S('safety_drowsiness_sensitivity') + ' → ' + sensName(v); break; }
@@ -559,6 +615,9 @@
       case 'STEERING_HEAT_TOGGLE': if (!k.heat) { msg = L('Sans effet : pas de volant chauffant sur ce firmware', 'No effect: no heated steering wheel on this firmware'); break; }
         c.steering = !c.steering; msg = S('climate_steering_heat') + ' → ' + onOff(c.steering); break;
       case 'HVAC_TOGGLE': c.clim.power = !c.clim.power; msg = S('clim_card_title') + ' → ' + onOff(c.clim.power); break;
+      case 'HVAC_AC_TOGGLE': c.clim.ac = !c.clim.ac; msg = S('clim_ac') + ' → ' + onOff(c.clim.ac); break;
+      case 'AUTO_HIGH_BEAM_TOGGLE': c.highBeam = !c.highBeam; msg = S('lighting_auto_high_beam') + ' → ' + onOff(c.highBeam); break;
+      case 'BATTERY_HEAT_TOGGLE': c.batHeat = !c.batHeat; msg = S('batheat_section') + ' → ' + onOff(c.batHeat); break;
       case 'HVAC_TEMP_UP': case 'HVAC_TEMP_DOWN':
         c.clim.temp = clamp(c.clim.temp + (action === 'HVAC_TEMP_UP' ? 1 : -1), c.clim.tMin, c.clim.tMax); msg = S('clim_temperature') + ' → ' + c.clim.temp + ' °C'; break;
       case 'HVAC_FAN_UP': case 'HVAC_FAN_DOWN':
@@ -844,6 +903,7 @@
 
     // ── Navigation ─────────────────────────────────────────────────────────
     go(screen, tab) {
+      if (screen === 'audio') { screen = 'automation'; state.door.open = true; }
       this.ui.screen = screen;
       if (tab != null) {
         const key = { dashboard: 'dash', settings: 'set', shortcuts: 'sc', profileEdit: 'edit', stats: 'st' }[screen];
@@ -918,12 +978,13 @@
     }
 
     topbar() {
-      const s = this.ui.screen, k = caps();
-      const nav = (id, key, show) => show === false ? '' :
+      const s = this.ui.screen;
+      const nav = (id, key) =>
         '<button class="a-nav' + (s === id ? ' on' : '') + '" data-a="nav" data-v="' + id + '" data-hl="nav nav-' + id + '">' + esc(S(key)) + '</button>';
+      // Ordre de activity_main.xml : les cinq onglets se partagent la largeur laissée par le logo.
       return '<div class="a-top" data-hl="topbar"><div class="a-logo" data-a="logo" data-hl="logo"><span class="lg"><span class="mg">MG</span><span class="four">4</span><span class="ctl">Control</span></span></div>' +
-        nav('automation', 'nav_automation') + nav('stats', 'nav_stats') + nav('audio', 'nav_audio', k.door) + nav('shortcuts', 'nav_shortcuts') +
-        nav('profiles', 'nav_profiles') + nav('settings', 'nav_settings') + '</div>';
+        nav('profiles', 'nav_profiles') + nav('automation', 'nav_automation') + nav('shortcuts', 'nav_shortcuts') +
+        nav('stats', 'nav_stats') + nav('settings', 'nav_settings') + '</div>';
     }
 
     screenHtml() {
@@ -934,7 +995,7 @@
         case 'shortcuts': return this.shortcutsHtml();
         case 'automation': return this.automationHtml();
         case 'stats': return this.statsHtml();
-        case 'audio': return caps().door ? this.audioHtml() : this.dashHtml();
+        case 'audio': return this.automationHtml();   // ancien onglet Audio : sa carte vit dans Automatisation
         default: return this.dashHtml();
       }
     }
@@ -980,7 +1041,16 @@
         '<div class="a-grid" style="margin-top:5px">' + dm('CUSTOM') + '</div>' + energy + '</div>' + custom +
         '<div class="a-sec" data-hl="regen"><div class="a-h">' + esc(S('drive_section_regen')) + '</div><div class="a-grid g2">' +
         rg('OFF', 'regen_off') + rg('LOW', 'regen_low') + rg('MEDIUM', 'regen_medium') + rg('HIGH', 'regen_high') + rg('ADAPTIVE', 'regen_adaptive_short') + rg('ONE_PEDAL', 'regen_one_pedal_short') +
-        '</div></div>';
+        '</div></div>' + this.batHeatSection();
+    }
+    /** Chauffage intelligent de la batterie : ON / OFF, état, rappel de la coupure automatique. */
+    batHeatSection() {
+      const c = car(), bh = state.auto.bh;
+      if (!caps().batHeat) return '';
+      const b = (on, key) => '<button class="b' + (c.batHeat === on ? ' on' : '') + '" data-a="batHeat" data-v="' + (on ? 1 : 0) + '">' + esc(S(key)) + '</button>';
+      const status = !c.batHeat ? S('batheat_status_off') : bh.on ? S('batheat_status_countdown', bh.minutes) : S('batheat_status_stays_on');
+      return '<div class="a-sec" data-hl="batheat"><div class="a-h">' + esc(S('batheat_section')) + '</div><div class="a-grid g2">' + b(true, 'common_on') + b(false, 'common_off') + '</div>' +
+        '<div class="a-desc" style="margin-top:6px">' + esc(status) + '</div><div class="a-desc">' + esc(S('batheat_hint')) + '</div></div>';
     }
     /** Carte « Mode personnalisé » : puissance, direction, pédale (index 0/1/2). */
     customCard(vals, act, hl) {
@@ -1079,6 +1149,11 @@
         h += '<div class="a-card" data-hl="airflow"><div class="a-h">' + esc(S('clim_section_airflow')) + '</div><div class="a-grid g4">' +
           ab('airFace', cl.air.face, 'clim_air_face', 'face') + ab('airFeet', cl.air.feet, 'clim_air_feet', 'feet') +
           ab('airWs', cl.air.ws, 'clim_air_windshield_front', 'ws') + ab('climDefR', cl.defR, 'clim_air_windshield_rear', 'rear') + '</div></div>';
+      }
+      if (k.beam) {
+        const hb = (on, key) => '<button class="b' + (c.highBeam === on ? ' on' : '') + '" data-a="highBeam" data-v="' + (on ? 1 : 0) + '">' + esc(S(key)) + '</button>';
+        h += '<div class="a-card" data-hl="highbeam"><div class="a-h">' + esc(S('card_lighting')) + '</div><div class="a-row"><span class="lbl">' + esc(S('lighting_auto_high_beam')) + '</span>' +
+          '<div class="a-grid g2" style="flex:0 0 260px">' + hb(true, 'common_on') + hb(false, 'common_off') + '</div></div></div>';
       }
       return h;
     }
@@ -1391,64 +1466,82 @@
     // ── Automatisation ─────────────────────────────────────────────────────
     automationHtml() {
       const a = state.auto, k = caps();
-      const profOpts = '<option value="">' + esc(S('automation_no_profile')) + '</option>' + state.profiles.map((p) => '<option value="' + p.id + '"' + (a.p.profileId === p.id ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('');
+      // Patron commun : titre + chevron, puis description et interrupteur toujours visibles ;
+      // les réglages n'apparaissent que carte dépliée (activer déplie, couper replie).
+      const card = (hl, titleKey, desc, on, swAct, open, foldAct, body) =>
+        '<div class="a-card" data-hl="' + hl + '"><div class="fold-head" data-a="' + foldAct + '"><span class="a-title">' + esc(S(titleKey)) + '</span><span class="chev' + (open ? ' open' : '') + '">' + ICON_CHEV + '</span></div>' +
+        '<div class="a-row" style="margin-top:6px"><span class="lbl">' + desc + '</span>' + sw(on, swAct) + '</div>' + (open ? body : '') + '</div>';
+      const profSel = (cur, dataC) => '<select class="a-select" style="width:100%" data-c="' + dataC + '"><option value="">' + esc(S('automation_no_profile')) + '</option>' +
+        state.profiles.map((p) => '<option value="' + p.id + '"' + (cur === p.id ? ' selected' : '') + '>' + esc(p.name) + '</option>').join('') + '</select>';
+      const check = (dataC, on, label, attrs) => '<label class="a-check"><input type="checkbox" data-c="' + dataC + '"' + (on ? ' checked' : '') + (attrs || '') + '> ' + label + '</label>';
+      const note = (key) => '<div class="a-desc" style="margin-top:8px">ℹ ' + esc(S(key)) + '</div>';
+      const slider = (id, label, min, max, val, out, step) => '<div class="a-row"><span class="lbl" style="flex:0 0 250px">' + esc(label) + '</span><div style="flex:1">' + range(id, min, max, val, false, '', step) + '</div><span class="a-val" data-out="' + id + '">' + esc(out) + '</span></div>';
+      const plain = (s) => String(s).replace(/<[^>]+>/g, '');
+
+      // 1. Profil selon la température
       const dir = (v, key) => '<button class="b' + (a.p.dir === v ? ' on' : '') + '" data-a="autoDir" data-v="' + v + '">' + esc(S(key)) + '</button>';
-      let card1 = '<div class="a-card" data-hl="auto-profile"><div class="fold-head" data-a="foldP"><span class="a-title">' + esc(S('automation_profile_title')) + '</span><span class="chev' + (a.p.open ? ' open' : '') + '">' + ICON_CHEV + '</span></div>';
-      if (a.p.open) {
-        card1 += '<div class="a-row" style="margin-top:6px"><span class="lbl">' + esc(S('automation_desc')) + '</span>' + sw(a.p.on, 'autoP') + '</div>';
-        if (a.p.on) {
-          card1 += '<div class="a-sub" style="margin-top:6px">' + esc(S('automation_direction_label')) + '</div><div class="a-grid g2">' + dir('BELOW', 'automation_dir_below') + dir('ABOVE', 'automation_dir_above') + '</div>' +
-            '<div class="fields"><div class="field"><label>' + esc(S('automation_threshold_label')) + '</label><input class="a-input" type="number" min="0" max="60" data-c="autoThr" data-fid="autoThr" value="' + a.p.thr + '" placeholder="' + esc(S('automation_threshold_hint')) + '"></div>' +
-            '<div class="field" style="grid-column:span 2"><label>' + esc(S('automation_profile_label')) + '</label><select class="a-select" style="width:100%" data-c="autoProfile">' + profOpts + '</select></div></div>' +
-            '<div class="a-row"><label class="a-check"><input type="checkbox" data-c="autoExec"' + (a.p.autoExec ? ' checked' : '') + '> ' + esc(S('automation_auto_execute')) + '</label></div>';
-        }
-      }
-      card1 += '</div>';
-      let card2 = '<div class="a-card" data-hl="auto-clim"><div class="fold-head" data-a="foldC"><span class="a-title">' + esc(S('ac_auto_title')) + '</span><span class="chev' + (a.c.open ? ' open' : '') + '">' + ICON_CHEV + '</span></div>';
-      if (a.c.open) {
-        card2 += '<div class="a-row" style="margin-top:6px"><span class="lbl">' + esc(S('ac_auto_desc')) + (k.clim ? '' : '<small>' + esc(L('Climatisation non exposée par ce firmware.', 'Climate not exposed by this firmware.')) + '</small>') + '</span>' + sw(a.c.on, 'autoC') + '</div>';
-        if (a.c.on) {
-          const rule = (id, icon, titleKey) => {
-            const r = a.c[id];
-            const rc = (v, key) => '<button class="b sm' + (r.recirc === v ? ' on' : '') + (r.recircForce ? '' : ' dis') + '" data-a="ruleRecirc" data-v="' + id + ':' + v + '"' + (r.recircForce ? '' : ' disabled') + '>' + esc(S(key)) + '</button>';
-            return '<div class="rule" data-hl="rule-' + id + '"><div class="rule-h"><span class="ico">' + icon + '</span><span style="flex:1">' + esc(S(titleKey)) + '</span>' + sw(r.on, 'ruleOn', false, id) + '</div>' +
-              '<div class="fields"><div class="field"><label>' + esc(S('ac_auto_threshold_hot_label')) + '</label><input class="a-input" type="number" min="-20" max="60" data-c="ruleThr" data-rule="' + id + '" data-fid="thr' + id + '" value="' + r.thr + '"></div>' +
-              '<div class="field"><label>' + esc(S('ac_auto_target_label')) + '</label><input class="a-input" type="number" min="15" max="33" data-c="ruleTarget" data-rule="' + id + '" data-fid="tg' + id + '" value="' + r.target + '"></div>' +
-              '<div class="field"><label>' + esc(S('ac_auto_fan_label')) + '</label><input class="a-input" type="number" min="1" max="10" data-c="ruleFan" data-rule="' + id + '" data-fid="fan' + id + '" value="' + r.fan + '"></div></div>' +
-              '<div class="a-row" style="gap:18px"><label class="a-check"><input type="checkbox" data-c="ruleDefF" data-rule="' + id + '"' + (r.defF ? ' checked' : '') + '> ' + esc(S('ac_auto_def_front')) + '</label>' +
-              '<label class="a-check"><input type="checkbox" data-c="ruleDefR" data-rule="' + id + '"' + (r.defR ? ' checked' : '') + '> ' + esc(S('ac_auto_def_rear')) + '</label><span style="flex:1"></span>' +
-              '<span class="lbl" style="flex:0 0 auto">' + esc(S('ac_auto_auto_mode')) + '</span>' + sw(r.auto, 'ruleAuto', false, id) + '</div>' +
-              '<div class="a-row"><span class="lbl" style="flex:0 0 auto">' + esc(S('ac_auto_recirc_force')) + '</span>' + sw(r.recircForce, 'ruleRecircF', false, id) + '<div class="a-grid g3" style="flex:1">' + rc(0, 'recirc_inner') + rc(1, 'recirc_outside') + rc(2, 'recirc_auto') + '</div></div></div>';
-          };
-          card2 += '<div style="margin-top:8px">' + rule('hot', '🔥', 'ac_auto_hot') + rule('cold', '❄', 'ac_auto_cold') + '</div><div class="a-desc" style="margin-top:8px">ℹ ' + esc(S('ac_auto_note')) + '</div>';
-        }
-      }
-      card2 += '</div>';
-      const card3 = this.windowsCard();
-      return '<div class="a-page"><div class="a-scroll"><div class="a-stack">' + card1 + card2 + card3 + '</div></div><button class="b close" data-a="close">' + esc(S('nav_close')) + '</button></div>';
+      const body1 = '<div class="a-sub" style="margin-top:6px">' + esc(S('automation_direction_label')) + '</div><div class="a-grid g2">' + dir('BELOW', 'automation_dir_below') + dir('ABOVE', 'automation_dir_above') + '</div>' +
+        '<div class="fields"><div class="field"><label>' + esc(S('automation_threshold_label')) + '</label><input class="a-input" type="number" min="0" max="60" data-c="autoThr" data-fid="autoThr" value="' + a.p.thr + '" placeholder="' + esc(S('automation_threshold_hint')) + '"></div>' +
+        '<div class="field" style="grid-column:span 2"><label>' + esc(S('automation_profile_label')) + '</label>' + profSel(a.p.profileId, 'autoProfile') + '</div></div>' +
+        '<div class="a-row">' + check('autoExec', a.p.autoExec, esc(S('automation_auto_execute'))) + '</div>';
+      const card1 = card('auto-profile', 'automation_profile_title', esc(S('automation_desc')), a.p.on, 'autoP', a.p.open, 'foldP', body1);
+
+      // 2. Profil selon la batterie
+      const body2 = slider('batThr', S('battery_auto_threshold_label'), 5, 60, a.b.thr, a.b.thr + ' %') +
+        '<div class="fields"><div class="field" style="grid-column:span 3"><label>' + esc(S('automation_profile_label')) + '</label>' + profSel(a.b.profileId, 'batProfile') + '</div></div>' +
+        '<div class="a-row">' + check('batExec', a.b.autoExec, esc(S('automation_auto_execute'))) + '</div>' + note('battery_auto_note');
+      const card2 = card('auto-battery', 'battery_auto_title', esc(S('battery_auto_desc')), a.b.on, 'autoB', a.b.open, 'foldB', body2);
+
+      // 3. Luminosité automatique (au moins une source : la dernière cochée est verrouillée)
+      const b = a.bri;
+      const body3 = '<div class="a-sub" style="margin-top:8px">' + esc(plain(S('autobri_sources'))) + '</div>' +
+        '<div class="a-row">' + check('briLights', b.lights, esc(S('autobri_lights')), b.lights && !b.forecast ? ' disabled' : '') + '</div>' +
+        '<div class="a-row">' + check('briForecast', b.forecast, esc(S('autobri_forecast')) + ' <small>' + esc(S('autobri_forecast_warning')) + '</small>', b.forecast && !b.lights ? ' disabled' : '') + '</div>' +
+        '<div class="a-row">' + check('briFollow', b.follow, esc(S('autobri_follow'))) + '</div>' +
+        slider('briDay', S('autobri_level_lights_off'), 5, 100, b.day, b.day + ' %', 5) + slider('briNight', S('autobri_level_lights_on'), 5, 100, b.night, b.night + ' %', 5) +
+        '<div class="a-row"><span class="lbl" style="color:var(--text-secondary)">' + esc(b.last || S('autobri_status_none')) + '</span><button class="b sm" style="padding:0 16px" data-a="briTest">' + esc(S('autobri_test')) + '</button></div>';
+      const card3 = k.bri ? card('auto-bri', 'autobri_title', esc(S('autobri_desc')), b.on, 'autoBri', b.open, 'foldBri', body3) : '';
+
+      // 4. Coupure du chauffage de la batterie
+      const bh = a.bh;
+      const body4 = slider('bhMin', S('batheat_auto_minutes_label'), 5, 120, bh.minutes, S('batheat_auto_minutes_value', bh.minutes), 5) + note('batheat_auto_note');
+      const card4 = k.batHeat ? card('auto-batheat', 'batheat_auto_title', esc(S('batheat_auto_desc')), bh.on, 'autoBh', bh.open, 'foldBh', body4) : '';
+
+      // 5. Climatisation selon la température
+      const rule = (id, icon, titleKey) => {
+        const r = a.c[id];
+        const rc = (v, key) => '<button class="b sm' + (r.recirc === v ? ' on' : '') + (r.recircForce ? '' : ' dis') + '" data-a="ruleRecirc" data-v="' + id + ':' + v + '"' + (r.recircForce ? '' : ' disabled') + '>' + esc(S(key)) + '</button>';
+        return '<div class="rule" data-hl="rule-' + id + '"><div class="rule-h"><span class="ico">' + icon + '</span><span style="flex:1">' + esc(S(titleKey)) + '</span>' + sw(r.on, 'ruleOn', false, id) + '</div>' +
+          '<div class="fields"><div class="field"><label>' + esc(S('ac_auto_threshold_hot_label')) + '</label><input class="a-input" type="number" min="-20" max="60" data-c="ruleThr" data-rule="' + id + '" data-fid="thr' + id + '" value="' + r.thr + '"></div>' +
+          '<div class="field"><label>' + esc(S('ac_auto_target_label')) + '</label><input class="a-input" type="number" min="15" max="33" data-c="ruleTarget" data-rule="' + id + '" data-fid="tg' + id + '" value="' + r.target + '"></div>' +
+          '<div class="field"><label>' + esc(S('ac_auto_fan_label')) + '</label><input class="a-input" type="number" min="1" max="10" data-c="ruleFan" data-rule="' + id + '" data-fid="fan' + id + '" value="' + r.fan + '"></div></div>' +
+          '<div class="a-row" style="gap:18px"><label class="a-check"><input type="checkbox" data-c="ruleDefF" data-rule="' + id + '"' + (r.defF ? ' checked' : '') + '> ' + esc(S('ac_auto_def_front')) + '</label>' +
+          '<label class="a-check"><input type="checkbox" data-c="ruleDefR" data-rule="' + id + '"' + (r.defR ? ' checked' : '') + '> ' + esc(S('ac_auto_def_rear')) + '</label><span style="flex:1"></span>' +
+          '<span class="lbl" style="flex:0 0 auto">' + esc(S('ac_auto_auto_mode')) + '</span>' + sw(r.auto, 'ruleAuto', false, id) + '</div>' +
+          '<div class="a-row"><span class="lbl" style="flex:0 0 auto">' + esc(S('ac_auto_recirc_force')) + '</span>' + sw(r.recircForce, 'ruleRecircF', false, id) + '<div class="a-grid g3" style="flex:1">' + rc(0, 'recirc_inner') + rc(1, 'recirc_outside') + rc(2, 'recirc_auto') + '</div></div></div>';
+      };
+      const body5 = '<div style="margin-top:8px">' + rule('hot', '🔥', 'ac_auto_hot') + rule('cold', '❄', 'ac_auto_cold') + '</div>' +
+        '<div data-hl="ac-once"><div class="a-row" style="margin-top:8px">' + check('acOnce', a.c.once, esc(S('ac_auto_once'))) + '</div>' +
+        '<div class="a-desc" style="margin-left:30px">' + esc(S('ac_auto_once_hint')) + '</div></div>' + note('ac_auto_note');
+      const desc5 = esc(S('ac_auto_desc')) + (k.clim ? '' : '<small>' + esc(L('Climatisation non exposée par ce firmware.', 'Climate not exposed by this firmware.')) + '</small>');
+      const card5 = card('auto-clim', 'ac_auto_title', desc5, a.c.on, 'autoC', a.c.open, 'foldC', body5);
+
+      return '<div class="a-page"><div class="a-scroll"><div class="a-stack">' + card1 + card2 + card3 + card4 + card5 + this.windowsCard() + this.doorCard() +
+        '</div></div><button class="b close" data-a="close">' + esc(S('nav_close')) + '</button></div>';
     }
 
     /**
-     * Carte « Vitres électriques », repliée par défaut. Même ordre que automation_card_windows.xml :
-     * commande (toutes les vitres), durée de course, fermeture automatique, puis l'option avancée
-     * « Calibrage par vitre ». Ni commande vitre par vitre ni position affichée, comme dans l'app.
+     * Carte « Fermeture automatique des vitres électriques ». Même ordre que
+     * automation_card_windows.xml : interrupteur au niveau de la carte, conditions d'armement,
+     * durée de course, puis l'option avancée « Calibrage par vitre ». Les boutons Tout fermer /
+     * Tout ouvrir ont quitté l'écran : ils restent disponibles en raccourcis et dans l'API.
      */
     windowsCard() {
       const u = this.ui, a = state.winAuto;
-      let h = '<div class="a-card" data-hl="windows"><div class="fold-head" data-a="foldW"><span class="a-title">' + esc(S('win_automation_title')) + '</span><span class="chev' + (u.winOpen ? ' open' : '') + '">' + ICON_CHEV + '</span></div>';
+      let h = '<div class="a-card" data-hl="windows"><div class="fold-head" data-a="foldW"><span class="a-title">' + esc(S('win_automation_title')) + '</span><span class="chev' + (u.winOpen ? ' open' : '') + '">' + ICON_CHEV + '</span></div>' +
+        '<div class="a-row" style="margin-top:6px" data-hl="win-auto"><span class="lbl">' + esc(S('win_auto_label')) + '</span>' + sw(a.on, 'winAutoOn') + '</div>';
       if (!u.winOpen) return h + '</div>';
-      // Commande
-      h += '<div data-hl="win-command"><div class="a-sub" style="margin-top:10px">' + esc(S('win_section_command')) + '</div>' +
-        '<div class="a-desc" style="color:var(--dash-warn)">⚠ ' + esc(S('win_close_warning')) + '</div>' +
-        '<div class="a-grid g2" style="margin-top:8px"><button class="b win-all" data-a="winAll" data-v="-1">' + winSvg('allUp') + esc(S('win_all_close')) + '</button><button class="b win-all" data-a="winAll" data-v="1">' + winSvg('allDown') + esc(S('win_all_open')) + '</button></div></div>';
-      // Durée de course (secondes côté curseur, millisecondes dans l'état)
-      h += '<div class="a-sec" style="margin-top:10px" data-hl="win-course"><div class="a-h">' + esc(S('win_course_title')) + '</div>' +
-        '<div class="a-row"><span class="lbl" style="flex:0 0 190px">' + esc(S('win_course_label')) + '</span><div style="flex:1">' + range('winCourse', 2, 10, state.winCourse / 1000, false, '', 0.5) + '</div><span class="a-val" data-out="winCourse">' + esc(S('win_cal_seconds', fmtS(state.winCourse))) + '</span></div>' +
-        '<div class="a-desc">' + esc(S('win_course_hint')) + '</div></div>';
-      // Fermeture automatique (plus de verrou de calibration : la durée de course suffit)
-      h += '<div class="a-sec" style="margin-top:10px" data-hl="win-auto"><div class="a-h">' + esc(S('win_auto_title')) + '</div>' +
-        '<div class="a-row"><span class="lbl">' + esc(S('win_auto_label')) + '<small>' + esc(S('win_auto_desc')) + '</small></span>' + sw(a.on, 'winAutoOn') + '</div>' +
-        '<div class="a-desc" style="color:var(--dash-danger)">⚠ ' + esc(S('win_auto_warning')) + '</div>';
+      h += '<div class="a-desc">' + esc(S('win_auto_desc')) + '</div><div class="a-desc" style="color:var(--dash-danger)">⚠ ' + esc(S('win_auto_warning')) + '</div>';
       if (a.on) {
         h += '<div class="a-sub" style="margin-top:8px">' + esc(S('win_auto_arming_title')) + '</div>' +
           '<div class="a-row">' + sw(a.speedOn, 'waSpeedOn') + '<span class="lbl" style="flex:0 0 190px">' + esc(S('win_auto_speed_label')) + '</span><div style="flex:1">' + range('waSpeed', 5, 50, a.speed, !a.speedOn, '', 5) + '</div><span class="a-val" data-out="waSpeed">' + a.speed + ' km/h</span></div>' +
@@ -1458,7 +1551,10 @@
           '<div class="a-row"><span class="lbl">' + esc(S('win_auto_beep_label')) + '<small>' + esc(S('win_auto_beep_desc')) + '</small></span>' + sw(a.beep, 'waBeep') + '</div>' +
           (a.beep ? '<div class="a-row"><span class="lbl" style="flex:0 0 236px">' + esc(S('win_auto_beep_volume_label')) + '</span><div style="flex:1">' + range('waBeepVol', 0, 100, a.beepVol) + '</div><span class="a-val" data-out="waBeepVol">' + a.beepVol + ' %</span></div>' : '');
       }
-      h += '</div>';
+      // Durée de course (secondes côté curseur, millisecondes dans l'état)
+      h += '<div class="a-sec" style="margin-top:10px" data-hl="win-course"><div class="a-h">' + esc(S('win_course_title')) + '</div>' +
+        '<div class="a-row"><span class="lbl" style="flex:0 0 190px">' + esc(S('win_course_label')) + '</span><div style="flex:1">' + range('winCourse', 2, 10, state.winCourse / 1000, false, '', 0.5) + '</div><span class="a-val" data-out="winCourse">' + esc(S('win_cal_seconds', fmtS(state.winCourse))) + '</span></div>' +
+        '<div class="a-desc">' + esc(S('win_course_hint')) + '</div></div>';
       // Avancé : calibrage par vitre. Éteint, les mesures restent enregistrées mais ne servent plus.
       const calRow = (w) => {
         const cal = state.winCal[w];
@@ -1473,20 +1569,22 @@
       return h + '</div>';
     }
 
-    // ── Audio ──────────────────────────────────────────────────────────────
-    audioHtml() {
-      const d = state.door, dis = !d.on;
+    /** Carte « Baisse du volume en quittant la voiture » : l'ancien onglet Audio, dernière carte. */
+    doorCard() {
+      const d = state.door, dis = !d.on, k = caps();
+      if (!k.door) return '';
       // Sans porte lisible (hors SWI132/133), le signal est la sortie de READY.
-      const ready = !caps().doorSensor;
-      return '<div class="a-page"><div class="a-scroll"><div class="a-card" data-hl="door">' +
-        '<div class="a-row"><span class="lbl"><b style="font-size:18px">' + esc(S('door_volume_title')) + '</b><small>' + esc(S(ready ? 'door_volume_desc_ready' : 'door_volume_desc')) + '</small></span>' + sw(d.on, 'doorOn') + '</div>' +
-        '<div class="' + (dis ? 'dim' : '') + '"><div class="a-row"><span class="a-sub" style="margin:0;flex:1">' + esc(S('door_volume_level_label')) + '</span><span class="a-val" data-out="doorLevel">' + d.level + '</span></div>' +
+      const ready = !k.doorSensor;
+      let h = '<div class="a-card" data-hl="door"><div class="fold-head" data-a="foldD"><span class="a-title">' + esc(S('door_volume_title')) + '</span><span class="chev' + (d.open ? ' open' : '') + '">' + ICON_CHEV + '</span></div>' +
+        '<div class="a-row" style="margin-top:6px"><span class="lbl">' + esc(S(ready ? 'door_volume_desc_ready' : 'door_volume_desc')) + '</span>' + sw(d.on, 'doorOn') + '</div>';
+      if (!d.open) return h + '</div>';
+      h += '<div class="' + (dis ? 'dim' : '') + '"><div class="a-row"><span class="a-sub" style="margin:0;flex:1">' + esc(S('door_volume_level_label')) + '</span><span class="a-val" data-out="doorLevel">' + d.level + '</span></div>' +
         range('doorLevel', 0, state.car.volMax, d.level, dis) +
         '<div class="a-row"><span class="lbl">' + esc(S(ready ? 'door_volume_restore_ready_title' : 'door_volume_restore_title')) + '</span>' + sw(d.restore, 'doorRestore', dis) + '</div>' +
         (ready ? '' : '<div class="a-sub" style="margin-top:6px">' + esc(S('door_volume_doors_label')) + '</div><div class="a-row" style="gap:24px">' +
         '<label class="a-check"><input type="checkbox" data-c="doorL"' + (d.L ? ' checked' : '') + (dis ? ' disabled' : '') + '> ' + esc(S('door_left')) + '</label>' +
-        '<label class="a-check"><input type="checkbox" data-c="doorR"' + (d.R ? ' checked' : '') + (dis ? ' disabled' : '') + '> ' + esc(S('door_right')) + '</label></div>') + '</div>' +
-        '</div></div><button class="b close" data-a="close">' + esc(S('nav_close')) + '</button></div>';
+        '<label class="a-check"><input type="checkbox" data-c="doorR"' + (d.R ? ' checked' : '') + (dis ? ' disabled' : '') + '> ' + esc(S('door_right')) + '</label></div>') + '</div>';
+      return h + '</div>';
     }
 
     // ── Statistiques ───────────────────────────────────────────────
@@ -1544,10 +1642,19 @@
         [S('stats_tile_energy'), kwh(s.kwh)], [S('stats_tile_regen'), kwh(s.regen)], [S('stats_tile_charged'), kwh(s.charged)],
         [S('stats_tile_cost'), this.money(s.driving)], [S('stats_tile_cost_per100'), this.money(s.per100)]
       ]) + '</div>';
+      // Batterie : menu des trois MG4. En changer recalcule les recharges enregistrées.
+      h += '<div class="a-sec" data-hl="st-battery"><div class="a-h">' + esc(S('stats_battery_title')) + '</div><div class="a-row"><span class="lbl">' + esc(S('stats_battery_label')) + '</span>' +
+        '<select class="a-select" style="width:340px" data-c="stBattery">' + Object.keys(BATTERIES).map((n) =>
+          '<option value="' + n + '"' + (+n === st.battery ? ' selected' : '') + '>' + esc(S('stats_battery_option', +n, this.num(BATTERIES[n], 1), +n === 51 ? 'LFP' : 'NMC')) + '</option>').join('') + '</select></div>' +
+        '<div class="a-desc">' + esc(S('stats_battery_note')) + '</div></div>';
       const field = (label, id, v, type) => '<div class="a-row"><span class="lbl">' + esc(label) + '</span><input class="a-input num" style="width:120px" ' + (type === 'text' ? 'type="text" maxlength="3"' : 'type="number" step="0.001" min="0"') + ' data-c="' + id + '" data-fid="' + id + '" value="' + esc(v) + '"></div>';
       h += '<div class="a-sec" data-hl="st-price"><div class="a-h">' + esc(S('stats_price_title')) + '</div>' +
-        field(S('stats_currency'), 'stCurrency', st.currency, 'text') + field(S('stats_price_ac'), 'stPriceAc', st.priceAc) + field(S('stats_price_dc'), 'stPriceDc', st.priceDc) + field(S('stats_capacity'), 'stCapacity', st.capacity) +
+        field(S('stats_currency'), 'stCurrency', st.currency, 'text') + field(S('stats_price_ac'), 'stPriceAc', st.priceAc) + field(S('stats_price_dc'), 'stPriceDc', st.priceDc) +
         '<div class="a-desc">' + esc(S('stats_price_note')) + '</div></div>';
+      // Petits trajets : la distance minimale est grisée tant que le filtre est coupé.
+      h += '<div class="a-sec" data-hl="st-skip"><div class="a-h">' + esc(S('stats_cat_trips')) + '</div><div class="a-row"><span class="lbl">' + esc(S('stats_skip_short_label')) + '</span>' + sw(st.skipShort, 'stSkipShort') + '</div>' +
+        '<div class="a-row' + (st.skipShort ? '' : ' dim') + '"><span class="lbl">' + esc(S('stats_min_trip_label')) + '</span><input class="a-input num" style="width:120px" type="number" step="0.1" min="0.1" max="50" data-c="stMinTrip" data-fid="stMinTrip" value="' + st.minTrip + '"' + (st.skipShort ? '' : ' disabled') + '></div>' +
+        '<div class="a-desc">' + esc(S('stats_skip_short_note')) + '</div></div>';
       const ret = [[30, 'stats_retention_30d'], [90, 'stats_retention_3m'], [182, 'stats_retention_6m'], [365, 'stats_retention_1y']];
       h += '<div class="a-sec" data-hl="st-retention"><div class="a-h">' + esc(S('stats_retention_title')) + '</div><div class="a-grid g4">' +
         ret.map(([d, k]) => '<button class="b sm' + (st.retention === d ? ' on' : '') + '" data-a="stRetention" data-v="' + d + '">' + esc(S(k)) + '</button>').join('') + '</div>' +
@@ -1577,19 +1684,29 @@
         h += '<div class="st-row" data-a="stOpen" data-v="t' + i + '" data-hl="st-trip-row"><div><b>' + esc(this.dateLine(t.start, t.end)) + '</b><small>' + esc(this.dur(t.end - t.start) + ' · ' + this.num(t.km, 1) + ' km') + '</small></div>' +
           '<div class="st-r"><b>' + esc(cons) + '</b><small>' + esc(t.speed + ' km/h · ' + this.num(t.kwh, 1) + ' kWh') + '</small></div></div>';
         if (open) {
-          h += this.detailBox([
-            [S('stats_detail_motor'), this.num(t.motor, 1) + ' kWh'], [S('stats_detail_climate'), this.num(t.climate, 1) + ' kWh'],
-            [S('stats_detail_accessories'), this.num(t.acc, 1) + ' kWh'], [S('stats_detail_regen'), '− ' + this.num(t.regen, 1) + ' kWh'],
+          // Sans compteurs d'énergie (hors SWI132/133), l'énergie est calculée d'après la tension et
+          // le courant de la batterie, et la répartition vient du compteur d'origine, au kWh entier.
+          const whole = (x) => (x < 1 ? '< 1 kWh' : '≈ ' + Math.round(x) + ' kWh');
+          const aux = Math.floor(t.climate + t.acc);
+          const energy = caps().counters
+            ? [[S('stats_detail_motor'), this.num(t.motor, 1) + ' kWh'], [S('stats_detail_climate'), this.num(t.climate, 1) + ' kWh'], [S('stats_detail_accessories'), this.num(t.acc, 1) + ' kWh']]
+            : [[S('stats_detail_origin'), S('stats_detail_origin_integrated')], [S('stats_detail_motor'), whole(Math.floor(t.kwh - aux))], [S('stats_detail_auxiliary'), whole(aux)]];
+          h += this.detailBox(energy.concat([
+            [S('stats_detail_regen'), '− ' + this.num(t.regen, 1) + ' kWh'],
             [S('stats_detail_consumption'), t.short ? S('stats_detail_consumption_short') : cons],
             [S('stats_detail_battery'), t.soc[0] + ' % → ' + t.soc[1] + ' %'], [S('stats_detail_temp'), this.num(t.temp, 1) + ' °C']
-          ]);
+          ]));
         }
       });
       return h;
     }
     statsCharges() {
       const s = this.statsSummary(), u = this.ui, st = state.stats;
-      let h = '<div class="a-sec" data-hl="st-charges"><div class="a-h">' + esc(S('stats_cat_charges')) + '</div>' + this.periodRow() + this.tiles([
+      // Tant que la batterie n'a été ni choisie ni confirmée, l'onglet rappelle de la vérifier.
+      const banner = st.batteryConfirmed ? '' : '<div class="st-banner" data-hl="st-banner"><div class="a-row"><span class="lbl">' + esc(S('stats_battery_banner', st.battery + ' kWh')) + '</span>' +
+        '<button class="b sm" style="padding:0 14px" data-a="stBatOk">' + esc(S('stats_battery_banner_ok')) + '</button>' +
+        '<button class="b sm on warn" style="padding:0 14px" data-a="stBatChange">' + esc(S('stats_battery_banner_change')) + '</button></div></div>';
+      let h = banner + '<div class="a-sec" data-hl="st-charges"><div class="a-h">' + esc(S('stats_cat_charges')) + '</div>' + this.periodRow() + this.tiles([
         [S('stats_tile_charged'), this.num(s.charged, 1) + ' kWh'], [S('stats_tile_cost_total'), this.money(s.chargeCost)],
         [S('stats_tile_avg_price'), s.avgPrice != null ? this.num(s.avgPrice, 3) + ' ' + st.currency : '—'],
         [S('stats_tile_sessions'), s.charges.length + ' · ' + s.ac + ' AC / ' + s.dc + ' DC']
@@ -1672,10 +1789,10 @@
       this.ui.overlay = { type: 'update' };
       this.render();
     }
-    showConfirm(p, onNo) {
+    showConfirm(p, onNo, battery) {
       this.closeOverlay();
       const a = state.auto.p;
-      this.ui.overlay = { type: 'confirm', profileId: p.id, left: 8, onNo, dir: a.dir, thr: a.thr, temp: state.car.outside };
+      this.ui.overlay = { type: 'confirm', profileId: p.id, left: 8, onNo, dir: a.dir, thr: a.thr, temp: state.car.outside, battery: battery || null };
       this.startCountdown(() => { const o = this.ui.overlay; this.closeOverlay(); if (o && o.onNo) o.onNo(); });
       this.render();
     }
@@ -1717,13 +1834,14 @@
           '<div style="justify-content:flex-end"><button class="b primary' + kf('open') + '" data-a="pkOpen"' + fc('open') + '>' + esc(S('overlay_open_app')) + '</button></div></div></div></div>';
       }
       if (o.type === 'update') {
-        return '<div class="a-scrim" data-a="upBg"><div class="confirm" data-hl="upd-overlay"><div class="msg"><b>' + esc(S('update_overlay_title')) + '</b>\n<span style="font-size:26px;font-weight:700;color:var(--dash-accent)">' + esc(S('update_overlay_versions', 'v2.6.7', 'v2.x.x')) + '</span></div>' +
+        return '<div class="a-scrim" data-a="upBg"><div class="confirm" data-hl="upd-overlay"><div class="msg"><b>' + esc(S('update_overlay_title')) + '</b>\n<span style="font-size:26px;font-weight:700;color:var(--dash-accent)">' + esc(S('update_overlay_versions', 'v2.6.8', 'v2.x.x')) + '</span></div>' +
           '<div class="yn"><button class="b primary" data-a="upInstall">' + esc(S('update_overlay_install')) + '</button><button class="b" data-a="upSkip">' + esc(S('update_overlay_skip')) + '</button></div>' +
           '<button class="b ghost full" style="margin-top:10px;border:0;opacity:.7;text-transform:none" data-a="upDisable">' + esc(S('update_overlay_disable')) + '</button></div></div>';
       }
       if (o.type === 'confirm') {
         const p = state.profiles.find((x) => x.id === o.profileId);
-        const msg = S(o.dir === 'ABOVE' ? 'automation_confirm_msg_above' : 'automation_confirm_msg', o.thr, String(o.temp), p ? p.name : '?');
+        const msg = o.battery ? S('battery_auto_confirm_msg', o.battery.thr, String(o.battery.soc), p ? p.name : '?')
+          : S(o.dir === 'ABOVE' ? 'automation_confirm_msg_above' : 'automation_confirm_msg', o.thr, String(o.temp), p ? p.name : '?');
         return '<div class="a-scrim"><div class="confirm" data-hl="confirm"><div class="msg">' + esc(msg) + '</div><div class="yn">' +
           '<button class="b green" data-a="cfYes">' + esc(S('automation_confirm_yes')) + '</button><button class="b danger" data-a="cfNo">' + esc(S('automation_confirm_no')) + '</button></div>' +
           '<div class="cd" data-cd>' + esc(S('overlay_countdown', o.left)) + '</div></div></div>';
@@ -1754,7 +1872,7 @@
           if (d.step === 'manual') return wrap('<h3>' + esc(S('update_manual_title')) + '</h3><div class="a-cols"><p style="flex:2">' + esc(S('update_manual_instructions')) + '</p><div style="flex:1;text-align:center">' + qrBox() + '<div class="a-desc" style="font-size:12px;margin-top:6px">' + esc(S('update_gh_releases_link')) + '</div></div></div><div class="actions">' + btn(S('update_close'), 'dlgClose', 'primary') + '</div>', 'wide');
           if (d.step === 'data') return wrap('<h3>' + esc(S('update_data_warn_title')) + '</h3><p>' + esc(S('update_data_warn_message')) + '</p><div class="actions">' + btn(S('update_cancel'), 'dlgClose') + btn(S('update_continue'), 'updDownload', 'primary') + '</div>');
           return wrap('<h3>' + esc(S('update_available_title')) + '</h3>' +
-            '<div class="a-row" style="gap:20px;justify-content:center;font-size:18px"><span><small class="a-desc">' + esc(S('update_current_label')) + '</small><br><b>v2.6.7</b></span><span style="font-size:24px">→</span><span><small class="a-desc">' + esc(S('update_new_label')) + '</small><br><b style="color:var(--dash-eco)">v2.x.x</b></span></div>' +
+            '<div class="a-row" style="gap:20px;justify-content:center;font-size:18px"><span><small class="a-desc">' + esc(S('update_current_label')) + '</small><br><b>v2.6.8</b></span><span style="font-size:24px">→</span><span><small class="a-desc">' + esc(S('update_new_label')) + '</small><br><b style="color:var(--dash-eco)">v2.x.x</b></span></div>' +
             '<div class="a-sub" style="margin-top:8px">' + esc(S('update_release_notes_label')) + '</div><p style="background:var(--dash-section);border-radius:8px;padding:8px">' + esc(L('(exemple : le texte des notes de version de GitHub s\'affiche ici)', '(example: the GitHub release notes are shown here)')) + '</p>' +
             '<p style="color:var(--dash-warn)">' + esc(S('update_data_warning')) + '</p>' +
             '<div class="actions">' + btn(S('update_skip_btn'), 'dlgClose', 'ghost') + '<span class="spacer"></span>' + btn(S('update_later_btn'), 'dlgClose') + btn(S('update_manual_btn'), 'updManual') + btn(S('update_auto_btn'), 'updAuto', 'primary') + '</div>', 'wide');
@@ -1829,7 +1947,7 @@
         case 'about':
           return wrap('<div class="a-row" style="border-bottom:1px solid var(--dash-border);margin-bottom:10px"><h3 style="margin:0">' + esc(S('info_title')) + '</h3></div><div class="a-cols sep"><div>' +
             '<div style="font-size:24px;font-weight:700">' + esc(S('app_name')) + '</div><div class="a-desc">' + esc(S('info_based_on')) + '</div>' +
-            '<div class="a-row"><span class="a-sub" style="margin:0">' + esc(S('info_version_label')) + '</span><b>2.6.7</b></div>' +
+            '<div class="a-row"><span class="a-sub" style="margin:0">' + esc(S('info_version_label')) + '</span><b>2.6.8</b></div>' +
             '<div class="a-sub">' + esc(S('info_firmware_label')) + '</div><div class="a-desc" style="font-family:ui-monospace,monospace">' + esc(gen() === 'UNKNOWN' ? 'SWI???-00000' : gen() + '-xxxxx') + '</div></div>' +
             '<div><div class="a-cols"><div style="text-align:center">' + qrBox() + '<div class="a-desc" style="font-size:12px">' + esc(S('info_github_link')) + '</div></div><div style="text-align:center">' + qrBox() + '<div class="a-desc" style="font-size:12px">' + esc(S('info_gitlab_link')) + '</div></div></div>' +
             '<p style="margin-top:8px;text-align:center">' + esc(S('info_made_with_love')) + '</p><p style="font-size:12px;text-align:center">' + esc(S('info_special_thanks')) + '</p></div></div>' +
@@ -2037,9 +2155,23 @@
         // Automatisation
         case 'foldP': state.auto.p.open = !state.auto.p.open; return r();
         case 'foldC': state.auto.c.open = !state.auto.c.open; return r();
-        case 'autoP': state.auto.p.on = !state.auto.p.on; return r();
+        case 'foldB': state.auto.b.open = !state.auto.b.open; return r();
+        case 'foldBri': state.auto.bri.open = !state.auto.bri.open; return r();
+        case 'foldBh': state.auto.bh.open = !state.auto.bh.open; return r();
+        case 'foldD': state.door.open = !state.door.open; return r();
+        // Activer une automatisation déplie sa carte, la couper la replie.
+        case 'autoB': state.auto.b.on = !state.auto.b.on; state.auto.b.open = state.auto.b.on; state.auto.b.fired = false; return r();
+        case 'autoBri': state.auto.bri.on = !state.auto.bri.on; state.auto.bri.open = state.auto.bri.on; return r();
+        case 'autoBh': state.auto.bh.on = !state.auto.bh.on; state.auto.bh.open = state.auto.bh.on; return r();
+        case 'briTest': autoBrightness(); return r();
+        case 'batHeat': c.batHeat = v === '1'; return r();
+        case 'highBeam': c.highBeam = v === '1'; return r();
+        case 'stSkipShort': state.stats.skipShort = !state.stats.skipShort; return r();
+        case 'stBatOk': state.stats.batteryConfirmed = true; return r();
+        case 'stBatChange': u.screen = 'stats'; u.tabs.st = 0; commit(); this.highlight('st-battery'); return;
+        case 'autoP': state.auto.p.on = !state.auto.p.on; state.auto.p.open = state.auto.p.on; return r();
         case 'autoDir': state.auto.p.dir = v; return r();
-        case 'autoC': state.auto.c.on = !state.auto.c.on; return r();
+        case 'autoC': state.auto.c.on = !state.auto.c.on; state.auto.c.open = state.auto.c.on; return r();
         case 'ruleOn': case 'ruleAuto': case 'ruleRecircF': {
           const rule = state.auto.c[el.getAttribute('data-x')];
           const f = { ruleOn: 'on', ruleAuto: 'auto', ruleRecircF: 'recircForce' }[a];
@@ -2047,7 +2179,7 @@
         }
         case 'ruleRecirc': { const [id, val] = v.split(':'); state.auto.c[id].recirc = +val; return r(); }
         // Audio
-        case 'doorOn': state.door.on = !state.door.on; return r();
+        case 'doorOn': state.door.on = !state.door.on; state.door.open = state.door.on; return r();
         case 'doorRestore': state.door.restore = !state.door.restore; return r();
         // Overlays
         case 'pkBg': case 'pkClose': return this.closeOverlay();
@@ -2116,7 +2248,7 @@
         }
         case 'foldW': u.winOpen = !u.winOpen; return this.render();
         case 'winAll': allWindows(+v); hud(winAllNote(+v)); return;
-        case 'winAutoOn': state.winAuto.on = !state.winAuto.on; return r();
+        case 'winAutoOn': state.winAuto.on = !state.winAuto.on; u.winOpen = state.winAuto.on; return r();
         case 'winCalAdv': state.winCalAdv = !state.winCalAdv; return r();
         case 'waSpeedOn': case 'waTimeOn': {
           const wa = state.winAuto, f = a === 'waSpeedOn' ? 'speedOn' : 'timeOn';
@@ -2198,10 +2330,21 @@
         case 'stCurrency': state.stats.currency = (t.value || '').slice(0, 3) || '€'; return commit();
         case 'stPriceAc': case 'stPriceDc': {
           const x = parseFloat(t.value);
-          if (!isNaN(x)) state.stats[id === 'stPriceAc' ? 'priceAc' : 'priceDc'] = clamp(x, 0, 5);
+          if (!isNaN(x)) state.stats[id === 'stPriceAc' ? 'priceAc' : 'priceDc'] = clamp(x, 0, 100000);
           return commit();
         }
-        case 'stCapacity': { const x = parseFloat(t.value); if (!isNaN(x)) state.stats.capacity = clamp(x, 20, 120); return commit(); }
+        case 'stBattery': setBattery(+t.value); return commit();
+        case 'stMinTrip': { const x = parseFloat(String(t.value).replace(',', '.')); if (!isNaN(x)) state.stats.minTrip = clamp(x, 0.1, 50); return commit(); }
+        case 'batThr': state.auto.b.thr = +t.value; return commit();
+        case 'batProfile': state.auto.b.profileId = t.value; return commit();
+        case 'batExec': state.auto.b.autoExec = t.checked; return commit();
+        case 'briLights': state.auto.bri.lights = t.checked; return commit();
+        case 'briForecast': state.auto.bri.forecast = t.checked; return commit();
+        case 'briFollow': state.auto.bri.follow = t.checked; return commit();
+        case 'briDay': state.auto.bri.day = +t.value; return commit();
+        case 'briNight': state.auto.bri.night = +t.value; return commit();
+        case 'bhMin': state.auto.bh.minutes = +t.value; return commit();
+        case 'acOnce': state.auto.c.once = t.checked; return commit();
         case 'stStart': if (u.dialog) u.dialog.startT = t.value; return;
         case 'stEnd': if (u.dialog) u.dialog.endT = t.value; return;
         case 'autoThr': state.auto.p.thr = num(0, 60, 25); return commit();
@@ -2285,6 +2428,13 @@
         }
         case 'customMode': if (W.drive('CUSTOM')) { u.screen = 'dashboard'; u.tabs.dash = 0; commit(); } return;
         case 'windows': u.screen = 'automation'; u.winOpen = true; return this.render();
+        case 'doorVolume': state.door.open = true; u.screen = 'automation'; return commit();
+        case 'autoBattery': state.auto.b.open = true; u.screen = 'automation'; return commit();
+        case 'autoBri': state.auto.bri.open = true; u.screen = 'automation'; return commit();
+        case 'autoBatHeat': state.auto.bh.open = true; u.screen = 'automation'; return commit();
+        case 'acOnce': state.auto.c.open = true; u.screen = 'automation'; return commit();
+        case 'statsBattery': state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 0; return commit();
+        case 'statsCharges': state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 2; return commit();
         case 'regenCycle':
           // Révèle la page « Cycle regen » : la fonction doit être attribuée quelque part.
           if (!this.assigned('REGEN_CYCLE')) { state.sc.map.btn2_single = 'REGEN_CYCLE'; delete state.sc.extra.btn2_single; }
@@ -2315,7 +2465,8 @@
       case 'waSpeed': return v + ' km/h';
       case 'waTime': return v + ' min';
       case 'waDelay': return v + ' s';
-      case 'waBeepVol': return v + ' %';
+      case 'waBeepVol': case 'batThr': case 'briDay': case 'briNight': return v + ' %';
+      case 'bhMin': return S('batheat_auto_minutes_value', v);
       case 'winCourse': return S('win_cal_seconds', fmtS(+v * 1000));
       default: return String(v);
     }
@@ -2353,7 +2504,7 @@
     const g = gen();
     return [
       '── ' + L('Rapport de diagnostic (exemple)', 'Diagnostic report (example)') + ' ──',
-      'app=2.6.7  firmware=' + g + (state.forced ? ' (forcé)' : ''),
+      'app=2.6.8  firmware=' + g + (state.forced ? ' (forcé)' : ''),
       'MG4_GATE   sécurité=' + (state.settings.gate ? 'ON max=' + state.settings.gateMax + ' km/h' : 'OFF') + '  vitesse=' + state.car.speed + ' km/h',
       'MG4_API    API externe=' + (state.settings.api ? 'activée' : 'désactivée'),
       'MG4_VOL    volume média=' + state.car.volume + '/' + state.car.volMax,
@@ -2479,6 +2630,8 @@
       '<label class="dock-f"><span data-l10n="dock-fw"></span><select data-d="fw">' + FIRMWARES.map((f) => '<option value="' + f + '">' + f + '</option>').join('') + '</select></label>' +
       '<label class="dock-f"><span><span data-l10n="dock-speed"></span> <b data-o="speed"></b></span><input type="range" min="0" max="130" step="5" data-d="speed"></label>' +
       '<label class="dock-f"><span><span data-l10n="dock-temp"></span> <b data-o="temp"></b></span><input type="range" min="-15" max="45" step="1" data-d="temp"></label>' +
+      '<label class="dock-f"><span><span data-l10n="dock-soc"></span> <b data-o="soc"></b></span><input type="range" min="5" max="100" step="1" data-d="soc"></label>' +
+      '<div class="dock-f"><span data-l10n="dock-lights"></span><div class="dock-row"><button type="button" class="dock-btn" data-d="lights"></button></div></div>' +
       '<div class="dock-f"><span data-l10n="dock-bt"></span><div class="dock-row" data-o="bt"></div></div>' +
       '<div class="dock-f"><span data-l10n="dock-doors"></span><div class="dock-row"><button type="button" class="dock-btn" data-door="L"></button><button type="button" class="dock-btn" data-door="R"></button></div></div>' +
       '<div class="dock-f"><span data-l10n="dock-media"></span><div class="dock-row dock-media"><b data-o="vol"></b></div></div>' +
@@ -2496,6 +2649,14 @@
     q('[data-d=fw]').addEventListener('change', (e) => setFirmware(e.target.value));
     q('[data-d=speed]').addEventListener('input', (e) => { const c = car(); c.speed = +e.target.value; c.maxSpeed = Math.max(c.maxSpeed || 0, c.speed); commit(); });
     q('[data-d=temp]').addEventListener('input', (e) => { car().outside = +e.target.value; commit(); });
+    // Batterie : franchir le seuil en roulant déclenche le profil, une fois par épisode.
+    q('[data-d=soc]').addEventListener('input', (e) => { car().soc = +e.target.value; batteryAutomation(null); commit(); });
+    q('[data-d=lights]').addEventListener('click', () => {
+      const c = car(), b = state.auto.bri;
+      c.lights = !c.lights;
+      if (b.on && b.lights && b.follow && c.ready) autoBrightness();
+      commit();
+    });
     q('[data-o=bt]').addEventListener('click', (e) => { const b = e.target.closest('[data-mac]'); if (b) toggleBt(b.getAttribute('data-mac')); });
     el.querySelectorAll('[data-door]').forEach((b) => b.addEventListener('click', () => { const s = b.getAttribute('data-door'); setDoor(s, !car().doors[s]); }));
     q('[data-d=ignition]').addEventListener('click', () => {
@@ -2517,18 +2678,21 @@
         'dock-title': L('Véhicule virtuel', 'Virtual vehicle'), 'dock-fw': 'Firmware', 'dock-speed': L('Vitesse', 'Speed'),
         'dock-temp': L('Temp. extérieure', 'Outside temp.'), 'dock-bt': L('Bluetooth connecté', 'Bluetooth connected'),
         'dock-doors': L('Portes avant', 'Front doors'), 'dock-media': L('Volume média', 'Media volume'), 'dock-wheel': L('Volant', 'Steering wheel'),
-        'dock-active': L('Profil en cours (dernier appliqué)', 'Current profile (last applied)')
+        'dock-active': L('Profil en cours (dernier appliqué)', 'Current profile (last applied)'),
+        'dock-soc': L('Batterie', 'Battery'), 'dock-lights': L('Feux', 'Lights')
       };
       el.querySelectorAll('[data-l10n]').forEach((n) => { n.textContent = L10N[n.getAttribute('data-l10n')] || ''; });
       q('.dock-sum').textContent = L('Véhicule virtuel', 'Virtual vehicle') + ' · ' + (state.fw === 'UNKNOWN' && state.forced ? 'UNKNOWN→' + state.forced : state.fw) + ' · ' + c.speed + ' km/h · ' + c.outside + ' °C';
       q('[data-d=fw]').value = state.fw;
       q('[data-d=speed]').value = c.speed; q('[data-o=speed]').textContent = c.speed + ' km/h';
       q('[data-d=temp]').value = c.outside; q('[data-o=temp]').textContent = c.outside + ' °C';
+      q('[data-d=soc]').value = c.soc; q('[data-o=soc]').textContent = c.soc + ' %';
+      q('[data-d=lights]').textContent = c.lights ? L('Allumés', 'On') : L('Éteints', 'Off'); q('[data-d=lights]').classList.toggle('on', c.lights);
       q('[data-o=bt]').innerHTML = state.bt.devices.map((d) => '<button type="button" class="dock-btn' + (state.bt.connected.includes(d.mac) ? ' on bt' : '') + '" data-mac="' + d.mac + '">' + (state.bt.connected.includes(d.mac) ? '● ' : '○ ') + esc(d.name) + '</button>').join('');
       const ap = activeProfile();
       q('[data-o=active]').textContent = ap ? ap.name : L('aucun', 'none');
       q('[data-d=leave]').textContent = '🚪 ' + L('Quitter la voiture', 'Leave the car');
-      q('[data-d=leave]').title = L('Sortie du mode READY : porte conducteur ouverte ou extinction, voiture en P', 'Leaving READY: driver door opened or car switched off, in P');
+      q('[data-d=leave]').title = L('Sortie du mode READY : ceinture détachée et porte conducteur ouverte, ou extinction, voiture en P', 'Leaving READY: seat belt unfastened and driver door opened, or car switched off, in P');
       el.querySelectorAll('[data-door]').forEach((b) => {
         const s = b.getAttribute('data-door');
         b.textContent = (s === 'L' ? L('Gauche', 'Left') : L('Droite', 'Right')) + ' : ' + (c.doors[s] ? L('ouverte', 'open') : L('fermée', 'closed'));

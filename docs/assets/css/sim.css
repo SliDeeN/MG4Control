@@ -60,7 +60,7 @@
   --text-primary: #1C1C1E;
   --text-secondary: #6C6C70;
   --accent-normal: #1565C0;
-  --logo-bg: linear-gradient(90deg, rgba(28,28,30,.8), rgba(255,255,255,0) 60%);
+  --logo-bg: #1C1C1E;
   --overlay-scrim: rgba(0,0,0,.45);
 
   position: absolute;
@@ -108,15 +108,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px 0 20px;
+  padding: 0 12px;
   background: var(--dash-card);
   box-shadow: 0 2px 4px rgba(0,0,0,.12);
   position: relative;
   z-index: 2;
 }
 .a-logo {
-  flex: 1;
-  height: 36px;
+  flex: 0 0 auto;
+  height: 44px;
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -124,26 +124,30 @@
 .a-logo span.lg {
   display: inline-flex;
   align-items: baseline;
-  height: 36px;
-  padding: 0 14px 0 6px;
+  height: 44px;
+  padding: 0 16px 0 10px;
   background: var(--logo-bg);
-  border-radius: 4px;
+  border-radius: 8px;
   font-family: "Roboto", Arial, sans-serif;
   font-size: calc(27px * var(--ts, 1));
-  line-height: 36px;
+  line-height: 44px;
   letter-spacing: -.5px;
 }
 .a-logo .mg { color: #fff; font-weight: 700; }
 .a-logo .four { color: #E53935; font-weight: 700; }
 .a-logo .ctl { color: #A8A8A8; font-weight: 400; }
 .a-nav {
-  height: 36px;
-  padding: 0 14px;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 44px;
+  padding: 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
   border-radius: 8px;
   border: 1px solid var(--dash-border);
   background: var(--dash-btn);
   color: var(--text-secondary);
-  font-size: calc(11px * var(--ts, 1));
+  font-size: calc(16px * var(--ts, 1));
   font-weight: 500;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -688,3 +692,7 @@
 /* Focus du joystick dans le popup de profils */
 .kfocus { outline: 4px solid var(--dash-accent) !important; outline-offset: 3px; border-radius: 12px; }
 .pk-slider.kfocus { outline-offset: 6px; }
+
+/* ── Statistiques : rappel de la batterie réglée, en haut de l'onglet Recharge ── */
+.st-banner { background: var(--dash-warn-dim); border: 1px solid var(--dash-warn); border-radius: 10px; padding: 6px 12px; }
+.st-banner .a-row { gap: 8px; }

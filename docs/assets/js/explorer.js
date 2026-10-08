@@ -104,7 +104,7 @@
     const syncFw = () => { if (fwSel.value !== Sim.firmware()) fwSel.value = Sim.firmware(); };
     Sim.onChange(syncFw); syncFw();
 
-    // ── Filtre « Nouveautés 2.6.7 » ────────────────────────────────────────
+    // ── Filtre « Nouveautés de la version » ────────────────────────────────────────
     list.querySelectorAll('.pt').forEach((pt) => { if (pt.classList.contains('is-new') || pt.querySelector('.badge-new')) pt.classList.add('has-new'); });
     groups.forEach((g) => {
       if (g.querySelector('.pt.has-new')) {
