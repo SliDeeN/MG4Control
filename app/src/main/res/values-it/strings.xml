@@ -641,7 +641,16 @@
     <string name="stats_currency">Valuta</string>
     <string name="stats_price_ac">Ricarica lenta, a casa</string>
     <string name="stats_price_dc">Ricarica rapida, in colonnina</string>
-    <string name="stats_capacity">Capacità utile (kWh)</string>
+    <string name="stats_battery_title">Batteria</string>
+    <string name="stats_battery_label">Batteria dell’auto</string>
+    <string name="stats_battery_option">%1$d kWh · %2$s kWh utili (%3$s)</string>
+    <string name="stats_battery_note">Serve a calcolare l’energia delle ricariche a partire dalla percentuale di batteria. Cambiare batteria ricalcola le ricariche già registrate.</string>
+    <string name="stats_battery_banner">L’energia delle ricariche dipende dalla batteria impostata: %1$s. Verifica che sia quella della tua auto.</string>
+    <string name="stats_battery_banner_ok">È corretta</string>
+    <string name="stats_battery_banner_change">Cambia</string>
+    <string name="stats_skip_short_label">Ignora i viaggi brevi</string>
+    <string name="stats_min_trip_label">Distanza minima (km)</string>
+    <string name="stats_skip_short_note">Un viaggio più breve non viene registrato: i suoi chilometri e la sua energia non contano più nei totali. I viaggi già registrati vengono conservati.</string>
     <string name="stats_retention_30d">30 giorni</string>
     <string name="stats_retention_3m">3 mesi</string>
     <string name="stats_retention_6m">6 mesi</string>

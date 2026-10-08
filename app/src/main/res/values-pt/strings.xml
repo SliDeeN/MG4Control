@@ -641,7 +641,16 @@
     <string name="stats_currency">Moeda</string>
     <string name="stats_price_ac">Carregamento lento, em casa</string>
     <string name="stats_price_dc">Carregamento rápido, em poste</string>
-    <string name="stats_capacity">Capacidade útil (kWh)</string>
+    <string name="stats_battery_title">Bateria</string>
+    <string name="stats_battery_label">Bateria do carro</string>
+    <string name="stats_battery_option">%1$d kWh · %2$s kWh úteis (%3$s)</string>
+    <string name="stats_battery_note">Serve para calcular a energia dos carregamentos a partir da percentagem de bateria. Mudar de bateria recalcula os carregamentos já registados.</string>
+    <string name="stats_battery_banner">A energia dos carregamentos depende da bateria selecionada: %1$s. Verifique se é a do seu carro.</string>
+    <string name="stats_battery_banner_ok">Está correta</string>
+    <string name="stats_battery_banner_change">Alterar</string>
+    <string name="stats_skip_short_label">Ignorar viagens curtas</string>
+    <string name="stats_min_trip_label">Distância mínima (km)</string>
+    <string name="stats_skip_short_note">Uma viagem mais curta não é registada: os seus quilómetros e a sua energia deixam de contar nos totais. As viagens já registadas são mantidas.</string>
     <string name="stats_retention_30d">30 dias</string>
     <string name="stats_retention_3m">3 meses</string>
     <string name="stats_retention_6m">6 meses</string>

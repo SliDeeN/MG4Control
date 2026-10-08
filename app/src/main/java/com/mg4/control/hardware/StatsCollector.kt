@@ -222,10 +222,18 @@ object StatsCollector {
 
     private fun enregistrer(s: StatsStore, event: StatsTracker.Event) = when (event) {
         is StatsTracker.Event.TripEnded   -> {
-            s.addTrip(event.trip)
+            // Les réglages sont relus à chaque fin de trajet : le filtre a pu changer en route.
+            val reglages = s.settings()
+            if (reglages.records(event.trip)) s.addTrip(event.trip)
+            else AppLogger.i(TAG, "trajet ignoré : ${event.trip.distance} km, " +
+                "sous le minimum de ${reglages.minTripKm} km")
+            // La comparaison reste consignée : c'est un outil de diagnostic, pas de l'historique.
             comparer(s, event.trip)
         }
-        is StatsTracker.Event.ChargeEnded -> s.addCharge(event.session)
+        // Le suivi garde la capacité de son démarrage : celle du moment fait foi, au cas où la
+        // batterie aurait été corrigée pendant la charge.
+        is StatsTracker.Event.ChargeEnded ->
+            s.addCharge(event.session.withCapacity(s.settings().capacityKwh))
     }
 
     /**

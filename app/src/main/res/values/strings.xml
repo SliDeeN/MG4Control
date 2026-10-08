@@ -657,7 +657,16 @@
     <string name="stats_currency">Monnaie</string>
     <string name="stats_price_ac">Charge lente, à domicile</string>
     <string name="stats_price_dc">Charge rapide, en borne</string>
-    <string name="stats_capacity">Capacité utile (kWh)</string>
+    <string name="stats_battery_title">Batterie</string>
+    <string name="stats_battery_label">Batterie de la voiture</string>
+    <string name="stats_battery_option">%1$d kWh · %2$s kWh utiles (%3$s)</string>
+    <string name="stats_battery_note">Sert à calculer l’énergie des recharges à partir du pourcentage de batterie. Changer de batterie recalcule les recharges déjà enregistrées.</string>
+    <string name="stats_battery_banner">L’énergie des recharges dépend de la batterie réglée : %1$s. Vérifiez que c’est bien la vôtre.</string>
+    <string name="stats_battery_banner_ok">C’est la bonne</string>
+    <string name="stats_battery_banner_change">Changer</string>
+    <string name="stats_skip_short_label">Ignorer les petits trajets</string>
+    <string name="stats_min_trip_label">Distance minimale (km)</string>
+    <string name="stats_skip_short_note">Un trajet plus court n’est pas enregistré : ses kilomètres et son énergie ne comptent plus dans les totaux. Les trajets déjà enregistrés sont conservés.</string>
     <string name="stats_retention_30d">30 jours</string>
     <string name="stats_retention_3m">3 mois</string>
     <string name="stats_retention_6m">6 mois</string>

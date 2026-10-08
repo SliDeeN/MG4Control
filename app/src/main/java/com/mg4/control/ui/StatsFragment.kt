@@ -3,6 +3,7 @@ package com.mg4.control.ui
 import android.app.AlertDialog
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.InputType
@@ -11,8 +12,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -90,6 +95,23 @@ class StatsFragment : Fragment() {
         }
         view.findViewById<MaterialButton>(R.id.btn_stats_clear).setOnClickListener { confirmClear() }
 
+        view.findViewById<Switch>(R.id.switch_stats_skip_short).apply {
+            isChecked = store.settings().skipShortTrips
+            setOnCheckedChangeListener { _, on ->
+                store.saveSettings(store.settings().copy(skipShortTrips = on))
+                render()
+            }
+        }
+        bindBattery(view)
+        // Un menu ne permet pas de « choisir » la valeur déjà sélectionnée : le bandeau offre donc
+        // les deux gestes, confirmer la batterie affichée ou aller la changer.
+        view.findViewById<MaterialButton>(R.id.btn_stats_battery_ok).setOnClickListener {
+            store.markCapacityUserSet()
+            render()
+        }
+        view.findViewById<MaterialButton>(R.id.btn_stats_battery_change)
+            .setOnClickListener { showBatterySetting() }
+
         render()
     }
 
@@ -129,6 +151,12 @@ class StatsFragment : Fragment() {
             if (settings.enabled) View.VISIBLE else View.GONE
         v.findViewById<TextView>(R.id.stats_disabled_note).visibility =
             if (settings.enabled) View.GONE else View.VISIBLE
+        // L'énergie d'une recharge se déduit du pourcentage et de la batterie : tant que celle-ci
+        // n'a été ni choisie ni confirmée, l'onglet Recharge le rappelle.
+        v.findViewById<View>(R.id.stats_battery_banner).visibility =
+            if (settings.enabled && !store.capacityIsUserSet()) View.VISIBLE else View.GONE
+        v.findViewById<TextView>(R.id.stats_battery_banner_text).text =
+            getString(R.string.stats_battery_banner, "${settings.battery.nominalKwh} kWh")
 
         val trips = filtered(history.trips.sortedByDescending { it.endMs }) { it.endMs }
         val charges = filtered(history.charges.sortedByDescending { it.endMs }) { it.endMs }
@@ -137,6 +165,51 @@ class StatsFragment : Fragment() {
         renderGeneral(v, settings, summary, history)
         renderTrips(v, settings, summary, trips)
         renderCharges(v, settings, summary, charges)
+    }
+
+    /** Menu des trois batteries. En choisir une recalcule aussitôt les recharges enregistrées. */
+    private fun bindBattery(view: View) {
+        val batteries = StatsSettings.Battery.entries
+        val menu = view.findViewById<Spinner>(R.id.spinner_stats_battery)
+        menu.adapter = ArrayAdapter(
+            view.context, android.R.layout.simple_spinner_item,
+            batteries.map { getString(R.string.stats_battery_option, it.nominalKwh, fmt(it.usableKwh), it.chemistry) }
+        ).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        menu.setSelection(store.settings().battery.ordinal)
+        menu.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, item: View?, position: Int, id: Long) {
+                val choisie = batteries[position]
+                // Android appelle aussi cet écouteur à la mise en place du menu : seul un vrai
+                // changement compte.
+                if (choisie == store.settings().battery) return
+                store.saveSettings(store.settings().copy(capacityKwh = choisie.usableKwh))
+                store.markCapacityUserSet()
+                store.recalculateCharges(choisie.usableKwh)
+                render()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+    }
+
+    /** Depuis le bandeau de l'onglet Recharge : mène au réglage, là où il se trouve. */
+    private fun showBatterySetting() {
+        page = PAGE_GENERAL
+        render()
+        val v = view ?: return
+        val scroll = v.findViewById<ScrollView>(R.id.scroll_stats)
+        val carte = v.findViewById<View>(R.id.card_stats_battery)
+        scroll.post {
+            val zone = Rect()
+            carte.getDrawingRect(zone)
+            scroll.offsetDescendantRectToMyCoords(carte, zone)
+            scroll.smoothScrollTo(0, zone.top)
+        }
+    }
+
+    private fun setEnabledDeep(view: View, enabled: Boolean) {
+        view.isEnabled = enabled
+        if (view is ViewGroup) for (i in 0 until view.childCount) setEnabledDeep(view.getChildAt(i), enabled)
     }
 
     private fun <T> filtered(items: List<T>, stamp: (T) -> Long): List<T> {
@@ -186,14 +259,26 @@ class StatsFragment : Fragment() {
                 { fmt3(store.settings().priceDc) }) { value ->
                 store.saveSettings(store.settings().copy(priceDc = StatsSettings.clampPrice(value)))
             })
-            prices.addView(numberRow(ctx, getString(R.string.stats_capacity),
-                { fmt(store.settings().capacityKwh) }) { value ->
-                store.saveSettings(store.settings().copy(capacityKwh = StatsSettings.clampCapacity(value)))
-                store.markCapacityUserSet()
+            v.findViewById<LinearLayout>(R.id.stats_min_trip_row).addView(numberRow(ctx,
+                getString(R.string.stats_min_trip_label), { fmt(store.settings().minTripKm) }) { value ->
+                store.saveSettings(store.settings().copy(minTripKm = StatsSettings.clampMinTrip(value)))
             })
         } else {
             // Un champ en cours de saisie garde ce que l'utilisateur est en train d'écrire.
             priceFields.forEach { (champ, valeur) -> if (!champ.hasFocus()) champ.setText(valeur()) }
+        }
+
+        // Sans le filtre, la distance minimale ne sert à rien : grisée, comme les réglages d'une
+        // automatisation coupée.
+        v.findViewById<Switch>(R.id.switch_stats_skip_short).let { sw ->
+            if (sw.isChecked != s.skipShortTrips) sw.isChecked = s.skipShortTrips
+        }
+        v.findViewById<LinearLayout>(R.id.stats_min_trip_row).let { ligne ->
+            ligne.alpha = if (s.skipShortTrips) 1f else 0.4f
+            setEnabledDeep(ligne, s.skipShortTrips)
+        }
+        v.findViewById<Spinner>(R.id.spinner_stats_battery).let { menu ->
+            if (menu.selectedItemPosition != s.battery.ordinal) menu.setSelection(s.battery.ordinal)
         }
 
         val retention = v.findViewById<LinearLayout>(R.id.stats_retention_row)

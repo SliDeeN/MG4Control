@@ -641,7 +641,16 @@
     <string name="stats_currency">Para birimi</string>
     <string name="stats_price_ac">Yavaş şarj, evde</string>
     <string name="stats_price_dc">Hızlı şarj, halka açık</string>
-    <string name="stats_capacity">Kullanılabilir kapasite (kWh)</string>
+    <string name="stats_battery_title">Batarya</string>
+    <string name="stats_battery_label">Araç bataryası</string>
+    <string name="stats_battery_option">%1$d kWh · %2$s kWh kullanılabilir (%3$s)</string>
+    <string name="stats_battery_note">Şarj enerjisini batarya yüzdesinden hesaplamak için kullanılır. Bataryayı değiştirmek, kayıtlı şarjları yeniden hesaplar.</string>
+    <string name="stats_battery_banner">Şarj enerjisi seçili bataryaya bağlıdır: %1$s. Aracınızınkiyle aynı olduğunu kontrol edin.</string>
+    <string name="stats_battery_banner_ok">Doğru</string>
+    <string name="stats_battery_banner_change">Değiştir</string>
+    <string name="stats_skip_short_label">Kısa yolculukları yok say</string>
+    <string name="stats_min_trip_label">En az mesafe (km)</string>
+    <string name="stats_skip_short_note">Daha kısa bir yolculuk kaydedilmez: kilometresi ve enerjisi toplamlara dahil edilmez. Daha önce kaydedilen yolculuklar korunur.</string>
     <string name="stats_retention_30d">30 gün</string>
     <string name="stats_retention_3m">3 ay</string>
     <string name="stats_retention_6m">6 ay</string>

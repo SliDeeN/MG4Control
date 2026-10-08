@@ -641,7 +641,16 @@
     <string name="stats_currency">Währung</string>
     <string name="stats_price_ac">Langsam laden, zu Hause</string>
     <string name="stats_price_dc">Schnellladen, an der Säule</string>
-    <string name="stats_capacity">Nutzbare Kapazität (kWh)</string>
+    <string name="stats_battery_title">Batterie</string>
+    <string name="stats_battery_label">Fahrzeugbatterie</string>
+    <string name="stats_battery_option">%1$d kWh · %2$s kWh nutzbar (%3$s)</string>
+    <string name="stats_battery_note">Dient dazu, die Energie der Ladungen aus dem Batteriestand in Prozent zu berechnen. Ein Wechsel der Batterie berechnet die bereits aufgezeichneten Ladungen neu.</string>
+    <string name="stats_battery_banner">Die Ladeenergie hängt von der eingestellten Batterie ab: %1$s. Prüfen Sie, ob sie zu Ihrem Fahrzeug passt.</string>
+    <string name="stats_battery_banner_ok">Stimmt</string>
+    <string name="stats_battery_banner_change">Ändern</string>
+    <string name="stats_skip_short_label">Kurze Fahrten ignorieren</string>
+    <string name="stats_min_trip_label">Mindeststrecke (km)</string>
+    <string name="stats_skip_short_note">Eine kürzere Fahrt wird nicht aufgezeichnet: Ihre Kilometer und ihre Energie zählen nicht mehr in den Summen. Bereits aufgezeichnete Fahrten bleiben erhalten.</string>
     <string name="stats_retention_30d">30 Tage</string>
     <string name="stats_retention_3m">3 Monate</string>
     <string name="stats_retention_6m">6 Monate</string>

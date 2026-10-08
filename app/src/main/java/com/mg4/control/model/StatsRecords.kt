@@ -287,6 +287,19 @@ data class ChargeSession(
             }
         }
 
+    /**
+     * La même session, son énergie recalculée pour une autre batterie. Sert quand l'utilisateur
+     * corrige sa batterie : sans cela l'historique garderait l'erreur — 20 % de trop pour une
+     * 51 kWh laissée sur le réglage de la 64. Le calcul est exact, les deux pourcentages étant
+     * gardés ; sans eux, l'énergie enregistrée reste la seule information et n'est pas touchée.
+     */
+    fun withCapacity(capacityKwh: Float): ChargeSession {
+        val debut = socStart ?: return this
+        val fin = socEnd ?: return this
+        val monte = fin - debut
+        return if (monte <= 0f) this else copy(energyKwh = (monte / 100f * capacityKwh).roundTenth())
+    }
+
     /** Prix payé pour cette session, selon le tarif corrigé ou celui de son type de prise. */
     fun cost(settings: StatsSettings): Float? {
         val kwh = energyKwh ?: return null

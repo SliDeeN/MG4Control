@@ -68,4 +68,23 @@ class ChargeSessionTest {
         assertEquals(nuit.startMs, complete.startMs)
         assertEquals(nuit.startMs + 3_600_000L, complete.displayStartMs)
     }
+
+    @Test
+    fun `changer de batterie recalcule l'energie de la charge`() {
+        // 40 % d'une 51 kWh (50,8 utiles) ne font pas 24 kWh mais 20,3.
+        assertEquals(20.3f, nuit.withCapacity(50.8f).energyKwh!!, 0.001f)
+        assertEquals(29.8f, nuit.withCapacity(74.4f).energyKwh!!, 0.001f)
+    }
+
+    @Test
+    fun `le recalcul ne touche a rien d'autre`() {
+        val corrigee = nuit.copy(tariffOverride = 0.3f, userStartMs = nuit.startMs)
+        assertEquals(corrigee.copy(energyKwh = 20.3f), corrigee.withCapacity(50.8f))
+    }
+
+    @Test
+    fun `sans pourcentages l'energie enregistree est gardee`() {
+        assertEquals(24f, nuit.copy(socStart = null).withCapacity(50.8f).energyKwh!!, 0.001f)
+        assertEquals(24f, nuit.copy(socEnd = 40f).withCapacity(50.8f).energyKwh!!, 0.001f)
+    }
 }

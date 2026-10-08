@@ -641,7 +641,16 @@
     <string name="stats_currency">Currency</string>
     <string name="stats_price_ac">Slow charging, at home</string>
     <string name="stats_price_dc">Rapid charging, public</string>
-    <string name="stats_capacity">Usable capacity (kWh)</string>
+    <string name="stats_battery_title">Battery</string>
+    <string name="stats_battery_label">Car battery</string>
+    <string name="stats_battery_option">%1$d kWh · %2$s kWh usable (%3$s)</string>
+    <string name="stats_battery_note">Used to work out the energy of each charge from the battery percentage. Changing the battery recalculates the charges already recorded.</string>
+    <string name="stats_battery_banner">Charge energy depends on the selected battery: %1$s. Check that it matches your car.</string>
+    <string name="stats_battery_banner_ok">It’s correct</string>
+    <string name="stats_battery_banner_change">Change</string>
+    <string name="stats_skip_short_label">Ignore short trips</string>
+    <string name="stats_min_trip_label">Minimum distance (km)</string>
+    <string name="stats_skip_short_note">A shorter trip is not recorded: its distance and energy no longer count in the totals. Trips already recorded are kept.</string>
     <string name="stats_retention_30d">30 days</string>
     <string name="stats_retention_3m">3 months</string>
     <string name="stats_retention_6m">6 months</string>

@@ -43,6 +43,8 @@ class StatsStore(private val context: Context) {
         private const val KEY_LAST_SOC = "last_reading_soc"
         private const val KEY_PENDING = "pending_state"
         private const val KEY_CAPACITY_USER = "capacity_user_set"
+        private const val KEY_SKIP_SHORT = "skip_short_trips"
+        private const val KEY_MIN_TRIP = "min_trip_km"
         private const val KEY_ENERGY_CHECKS = "energy_checks"
         private const val MAX_ENERGY_CHECKS = 40
 
@@ -82,7 +84,13 @@ class StatsStore(private val context: Context) {
         priceAc = prefs.getFloat(KEY_PRICE_AC, 0.187f),
         priceDc = prefs.getFloat(KEY_PRICE_DC, 0.45f),
         currency = prefs.getString(KEY_CURRENCY, "€") ?: "€",
-        capacityKwh = prefs.getFloat(KEY_CAPACITY, StatsSettings.DEFAULT_CAPACITY_KWH),
+        // Le réglage a longtemps été un nombre libre (62 par défaut) : la valeur enregistrée
+        // rejoint ici la batterie la plus proche, sans migration à écrire.
+        capacityKwh = StatsSettings.Battery.nearest(
+            prefs.getFloat(KEY_CAPACITY, StatsSettings.DEFAULT_CAPACITY_KWH)
+        ).usableKwh,
+        skipShortTrips = prefs.getBoolean(KEY_SKIP_SHORT, false),
+        minTripKm = prefs.getFloat(KEY_MIN_TRIP, StatsSettings.DEFAULT_MIN_TRIP_KM),
     )
 
     fun saveSettings(s: StatsSettings) {
@@ -93,26 +101,32 @@ class StatsStore(private val context: Context) {
             putFloat(KEY_PRICE_DC, s.priceDc)
             putString(KEY_CURRENCY, s.currency)
             putFloat(KEY_CAPACITY, s.capacityKwh)
+            putBoolean(KEY_SKIP_SHORT, s.skipShortTrips)
+            putFloat(KEY_MIN_TRIP, s.minTripKm)
         }
     }
 
     fun isEnabled(): Boolean = prefs.getBoolean(KEY_ENABLED, false)
 
     /**
-     * Capacité fixée à la main par l'utilisateur : la valeur lue sur le véhicule ne l'écrase alors
-     * plus. Sans ce drapeau, une correction faite à l'écran serait effacée au démarrage suivant.
+     * Batterie choisie ou confirmée par l'utilisateur : la valeur lue sur le véhicule ne l'écrase
+     * alors plus, et l'onglet Recharge cesse de lui demander de la vérifier.
      */
     fun capacityIsUserSet(): Boolean = prefs.getBoolean(KEY_CAPACITY_USER, false)
 
     fun markCapacityUserSet() = prefs.edit { putBoolean(KEY_CAPACITY_USER, true) }
 
-    /** Adopte la capacité annoncée par le véhicule, sauf si l'utilisateur en a choisi une. */
+    /**
+     * Adopte la batterie que désigne la capacité annoncée par le véhicule, sauf si l'utilisateur
+     * en a choisi une. L'historique suit, comme pour un choix fait à l'écran.
+     */
     fun adoptVehicleCapacity(kwh: Float): Boolean {
         if (capacityIsUserSet()) return false
-        val actuelle = settings().capacityKwh
-        if (kotlin.math.abs(actuelle - kwh) < 0.05f) return false
-        saveSettings(settings().copy(capacityKwh = kwh))
-        AppLogger.i(TAG, "capacité batterie lue sur le véhicule : $kwh kWh")
+        val batterie = StatsSettings.Battery.nearest(kwh)
+        if (batterie == settings().battery) return false
+        saveSettings(settings().copy(capacityKwh = batterie.usableKwh))
+        AppLogger.i(TAG, "capacité lue sur le véhicule : $kwh kWh → batterie ${batterie.nominalKwh} kWh")
+        recalculateCharges(batterie.usableKwh)
         return true
     }
 
@@ -176,6 +190,17 @@ class StatsStore(private val context: Context) {
         AppLogger.i(TAG, "charge enregistrée : ${session.energyKwh ?: "?"} kWh · " +
             "${session.socStart ?: "?"} % → ${session.socEnd ?: "?"} %" +
             if (session.reconstructed) " · reconstituée" else "")
+    }
+
+    /**
+     * Recalcule l'énergie de toutes les charges enregistrées pour une autre batterie : corriger le
+     * réglage doit corriger l'historique avec lui. Voir [ChargeSession.withCapacity].
+     */
+    fun recalculateCharges(capacityKwh: Float) = synchronized(LOCK) {
+        val h = read()
+        val charges = h.charges.map { it.withCapacity(capacityKwh) }
+        if (charges != h.charges) write(h.copy(charges = charges))
+        AppLogger.i(TAG, "batterie de $capacityKwh kWh : ${charges.size} charge(s) recalculée(s)")
     }
 
     /** Corrige le prix d'une session précise, ou rétablit le tarif par défaut avec `null`. */
