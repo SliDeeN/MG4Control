@@ -373,6 +373,8 @@
     <string name="ac_auto_def_front">Sbrinamento anteriore</string>
     <string name="ac_auto_def_rear">Sbrinamento posteriore</string>
     <string name="ac_auto_note">Applicato all\'avvio del veicolo: il climatizzatore e l\'A/C vengono accesi, poi vengono inviate le impostazioni sopra.</string>
+    <string name="ac_auto_once">Una sola volta per avvio dell’auto</string>
+    <string name="ac_auto_once_hint">Senza questa opzione, le impostazioni vengono inviate di nuovo a ogni accensione del quadro. Con essa, non vengono più inviate dopo una breve sosta: le tue modifiche manuali vengono mantenute.</string>
     <string name="clim_card_title">Climatizzazione</string>
     <string name="clim_temperature">Temperatura</string>
     <string name="clim_fan">Ventilazione</string>

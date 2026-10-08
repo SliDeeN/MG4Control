@@ -17,6 +17,8 @@ object ClimateAutomationSettings {
     const val PREFS = "mg4_settings"
 
     const val KEY_ENABLED = "ac_auto_enabled"
+    /** Option « une seule fois par démarrage de la voiture ». Décochée : comportement d'origine. */
+    const val KEY_ONCE = "ac_auto_once"
 
     // Une règle = un préfixe ; les clés sont dérivées pour éviter douze constantes quasi jumelles.
     private const val HOT  = "ac_auto_hot_"
@@ -65,7 +67,13 @@ object ClimateAutomationSettings {
     data class Config(
         val enabled: Boolean,
         val hot: Rule,
-        val cold: Rule
+        val cold: Rule,
+        /**
+         * Vrai pour ne déclencher qu'une fois tant que l'application tourne : après un arrêt
+         * court, la remise du contact ne renvoie plus les réglages par-dessus ceux que le
+         * conducteur a pu faire à la main. Voir [ClimateAutomationDecision.allowed].
+         */
+        val oncePerStart: Boolean = false
     )
 
     fun read(context: Context): Config {
@@ -85,7 +93,8 @@ object ClimateAutomationSettings {
         return Config(
             enabled = p.getBoolean(KEY_ENABLED, false),
             hot     = rule(HOT,  DEFAULT_HOT_THRESHOLD,  DEFAULT_HOT_TARGET),
-            cold    = rule(COLD, DEFAULT_COLD_THRESHOLD, DEFAULT_COLD_TARGET)
+            cold    = rule(COLD, DEFAULT_COLD_THRESHOLD, DEFAULT_COLD_TARGET),
+            oncePerStart = p.getBoolean(KEY_ONCE, false)
         )
     }
 

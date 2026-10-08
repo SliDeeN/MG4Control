@@ -1447,6 +1447,30 @@
 
                 </LinearLayout>
 
+                <!-- ───────── Une seule fois par démarrage ───────── -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="10dp" />
+
+                <CheckBox
+                    android:id="@+id/check_ac_once"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/ac_auto_once"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="32dp"
+                    android:text="@string/ac_auto_once_hint"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

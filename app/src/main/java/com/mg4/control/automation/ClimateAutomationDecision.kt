@@ -20,4 +20,14 @@ object ClimateAutomationDecision {
         config.cold.active && temp <= config.cold.threshold.toFloat() -> Outcome.COLD
         else                         -> Outcome.NONE
     }
+
+    /**
+     * Faux quand l'option « une seule fois par démarrage de la voiture » retient l'automatisation.
+     *
+     * [alreadyTriggered] dit si une règle a déjà été **appliquée** depuis que l'application
+     * tourne — pas seulement évaluée : un premier contact entre les deux seuils n'applique rien
+     * et laisse l'essai disponible pour le contact suivant.
+     */
+    fun allowed(config: ClimateAutomationSettings.Config, alreadyTriggered: Boolean): Boolean =
+        !(config.oncePerStart && alreadyTriggered)
 }

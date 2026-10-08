@@ -136,6 +136,13 @@ class MG4ControlService : Service() {
          *  IGNITION_RUN arrivent souvent à quelques secondes d'écart : sans ça, on écraserait
          *  un réglage que l'utilisateur vient de faire à la main entre les deux). */
         @Volatile private var climateAutoLastRunMs = 0L
+        /**
+         * Vrai dès que l'automatisation A/C a appliqué une règle. Gardé en mémoire seulement, et
+         * au niveau du processus : il survit à une recréation du service mais retombe au
+         * redémarrage de l'application — donc au démarrage de la voiture, pas à une simple remise
+         * du contact. C'est l'option « une seule fois par démarrage » qui le consulte.
+         */
+        @Volatile private var climateAutoTriggered = false
         private const val CLIMATE_AUTO_DEBOUNCE_MS = 60_000L
 
     }
@@ -1391,6 +1398,9 @@ class MG4ControlService : Service() {
      *
      * Anti-rebond [CLIMATE_AUTO_DEBOUNCE_MS] : démarrage service et IGNITION_RUN se suivent de
      * près, et réappliquer écraserait un réglage manuel fait entre les deux.
+     *
+     * Option « une seule fois par démarrage de la voiture » : le même souci, étendu à tout le
+     * temps où l'application tourne. Sans elle, chaque remise du contact renvoie les réglages.
      */
     private fun tryClimateAutomation(origin: String) {
         val ctx = applicationContext
@@ -1422,6 +1432,11 @@ class MG4ControlService : Service() {
                 "sa propre climatisation — priorité au profil")
             return
         }
+        if (!ClimateAutomationDecision.allowed(cfg, climateAutoTriggered)) {
+            AppLogger.i(TAG, "Auto A/C ($origin) : déjà déclenchée depuis le démarrage de " +
+                "l'application, option « une seule fois » cochée — rien n'est appliqué")
+            return
+        }
         val since = System.currentTimeMillis() - climateAutoLastRunMs
         if (climateAutoLastRunMs != 0L && since < CLIMATE_AUTO_DEBOUNCE_MS) {
             AppLogger.i(TAG, "Auto A/C ($origin) : déjà appliquée il y a ${since / 1000}s — skip")
@@ -1439,6 +1454,8 @@ class MG4ControlService : Service() {
                 ClimateAutomationDecision.Outcome.NONE -> return@whenKatman1Ready
             }
             climateAutoLastRunMs = System.currentTimeMillis()
+            // Levé même si l'option est décochée : la cocher ensuite prend effet tout de suite.
+            climateAutoTriggered = true
             // applyClimatePreset enchaîne des bascules (plusieurs secondes) → jamais sur le main thread.
             CoroutineScope(Dispatchers.IO).launch {
                 val ok = MG4Hardware.applyClimatePreset(

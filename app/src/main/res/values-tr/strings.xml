@@ -373,6 +373,8 @@
     <string name="ac_auto_def_front">Ön cam buz çözme</string>
     <string name="ac_auto_def_rear">Arka cam buz çözme</string>
     <string name="ac_auto_note">Araç çalıştığında uygulanır: klima ve A/C açılır, ardından yukarıdaki ayarlar gönderilir.</string>
+    <string name="ac_auto_once">Araç her çalıştığında yalnızca bir kez</string>
+    <string name="ac_auto_once_hint">Bu seçenek olmadan ayarlar kontak her açıldığında yeniden gönderilir. Seçenek açıkken kısa bir duraklamadan sonra gönderilmez: elle yaptığınız değişiklikler korunur.</string>
     <string name="clim_card_title">Klima</string>
     <string name="clim_temperature">Sıcaklık</string>
     <string name="clim_fan">Fan</string>

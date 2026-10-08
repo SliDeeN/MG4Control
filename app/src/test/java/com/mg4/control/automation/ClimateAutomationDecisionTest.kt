@@ -2,6 +2,8 @@ package com.mg4.control.automation
 
 import com.mg4.control.automation.ClimateAutomationDecision.Outcome
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ClimateAutomationDecisionTest {
@@ -17,8 +19,11 @@ class ClimateAutomationDecisionTest {
     private fun cfg(
         enabled: Boolean = true,
         hotOn: Boolean = true, hotT: Int = 28,
-        coldOn: Boolean = true, coldT: Int = 5
-    ) = ClimateAutomationSettings.Config(enabled, rule(hotOn, hotT), rule(coldOn, coldT))
+        coldOn: Boolean = true, coldT: Int = 5,
+        once: Boolean = false
+    ) = ClimateAutomationSettings.Config(
+        enabled, rule(hotOn, hotT), rule(coldOn, coldT), oncePerStart = once
+    )
 
     @Test fun `desactive - aucune regle`() {
         assertEquals(Outcome.NONE, ClimateAutomationDecision.evaluate(cfg(enabled = false), 35f))
@@ -60,5 +65,21 @@ class ClimateAutomationDecisionTest {
     @Test fun `seuils qui se chevauchent - chaud gagne de facon deterministe`() {
         // Configuration incohérente (chaud>=10 ET froid<=30) : 20 satisfait les deux.
         assertEquals(Outcome.HOT, ClimateAutomationDecision.evaluate(cfg(hotT = 10, coldT = 30), 20f))
+    }
+
+    // ── Option « une seule fois par démarrage de la voiture » ──────────────
+
+    @Test fun `sans l option - autorisee meme apres un declenchement`() {
+        // Comportement d origine : les reglages repartent a chaque mise du contact.
+        assertTrue(ClimateAutomationDecision.allowed(cfg(once = false), alreadyTriggered = true))
+    }
+
+    @Test fun `une seule fois - autorisee tant que rien n a ete applique`() {
+        // Un premier contact entre les deux seuils n applique rien : l essai reste disponible.
+        assertTrue(ClimateAutomationDecision.allowed(cfg(once = true), alreadyTriggered = false))
+    }
+
+    @Test fun `une seule fois - retenue apres un premier declenchement`() {
+        assertFalse(ClimateAutomationDecision.allowed(cfg(once = true), alreadyTriggered = true))
     }
 }

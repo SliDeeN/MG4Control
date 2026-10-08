@@ -525,6 +525,12 @@ class AutomationFragment : Fragment() {
             prefs.edit().putBoolean(ClimateAutomationSettings.KEY_ENABLED, checked).apply()
             deplier(checked)
         }
+        view.findViewById<CheckBox>(R.id.check_ac_once).apply {
+            isChecked = prefs.getBoolean(ClimateAutomationSettings.KEY_ONCE, false)
+            setOnCheckedChangeListener { _, checked ->
+                prefs.edit().putBoolean(ClimateAutomationSettings.KEY_ONCE, checked).apply()
+            }
+        }
 
         bindClimateRule(
             view, prefs, hot = true,

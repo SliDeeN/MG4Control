@@ -373,6 +373,8 @@
     <string name="ac_auto_def_front">Desembaciamento dianteiro</string>
     <string name="ac_auto_def_rear">Desembaciamento traseiro</string>
     <string name="ac_auto_note">Aplicado ao arrancar o veículo: a climatização e o A/C são ligados e depois as definições acima são enviadas.</string>
+    <string name="ac_auto_once">Apenas uma vez por arranque do carro</string>
+    <string name="ac_auto_once_hint">Sem esta opção, as definições são enviadas de novo sempre que se liga a ignição. Com ela, deixam de ser enviadas após uma paragem curta: as suas alterações manuais são mantidas.</string>
     <string name="clim_card_title">Climatização</string>
     <string name="clim_temperature">Temperatura</string>
     <string name="clim_fan">Ventilação</string>

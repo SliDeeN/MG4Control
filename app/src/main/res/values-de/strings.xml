@@ -373,6 +373,8 @@
     <string name="ac_auto_def_front">Frontscheibenheizung</string>
     <string name="ac_auto_def_rear">Heckscheibenheizung</string>
     <string name="ac_auto_note">Wird beim Start des Fahrzeugs angewendet: Klimaanlage und A/C werden eingeschaltet, dann werden die obigen Einstellungen gesendet.</string>
+    <string name="ac_auto_once">Nur einmal pro Fahrzeugstart</string>
+    <string name="ac_auto_once_hint">Ohne diese Option werden die Einstellungen bei jedem Einschalten der Zündung erneut gesendet. Mit ihr geschieht das nach einem kurzen Halt nicht mehr: Ihre manuellen Änderungen bleiben erhalten.</string>
     <string name="clim_card_title">Klimaanlage</string>
     <string name="clim_temperature">Temperatur</string>
     <string name="clim_fan">Gebläse</string>

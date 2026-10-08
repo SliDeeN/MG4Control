@@ -373,6 +373,8 @@
     <string name="ac_auto_def_front">Desempañador delantero</string>
     <string name="ac_auto_def_rear">Desempañador trasero</string>
     <string name="ac_auto_note">Se aplica al arrancar el vehículo: se encienden la climatización y el A/A, y luego se envían los ajustes anteriores.</string>
+    <string name="ac_auto_once">Solo una vez por arranque del coche</string>
+    <string name="ac_auto_once_hint">Sin esta opción, los ajustes se envían de nuevo cada vez que se da el contacto. Con ella, ya no se envían tras una parada corta: tus cambios manuales se conservan.</string>
     <string name="clim_card_title">Climatización</string>
     <string name="clim_temperature">Temperatura</string>
     <string name="clim_fan">Ventilación</string>
