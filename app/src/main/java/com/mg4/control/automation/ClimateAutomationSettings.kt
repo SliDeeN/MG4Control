@@ -17,8 +17,13 @@ object ClimateAutomationSettings {
     const val PREFS = "mg4_settings"
 
     const val KEY_ENABLED = "ac_auto_enabled"
-    /** Option « une seule fois par démarrage de la voiture ». Décochée : comportement d'origine. */
-    const val KEY_ONCE = "ac_auto_once"
+    /** Mode de déclenchement : le nom d'un [Trigger]. */
+    const val KEY_TRIGGER = "ac_auto_trigger"
+    /**
+     * Ancienne case « une seule fois par démarrage », d'avant le choix à trois positions. Plus
+     * jamais écrite ; lue seulement pour reprendre le réglage de qui l'avait touchée.
+     */
+    private const val KEY_ONCE_LEGACY = "ac_auto_once"
 
     // Une règle = un préfixe ; les clés sont dérivées pour éviter douze constantes quasi jumelles.
     private const val HOT  = "ac_auto_hot_"
@@ -64,16 +69,48 @@ object ClimateAutomationSettings {
         val loopMode: Int?
     )
 
+    /**
+     * Quand l'automatisation a le droit de se déclencher. « Démarrage » s'entend ici comme le
+     * démarrage de l'application, donc de l'écran de bord — pas un simple retour en READY.
+     *
+     * Le besoin vient de l'issue #121 : couper le compresseur avant d'arriver pour sécher
+     * l'évaporateur, descendre ouvrir un portail, et ne pas le voir se rallumer en remontant.
+     */
+    enum class Trigger {
+        /**
+         * Une seule décision, à la première évaluation où la température est lisible : que le
+         * seuil soit atteint ou non, plus rien ensuite. Le défaut.
+         */
+        START_ONLY,
+        /**
+         * Reste armée tant qu'aucune règle n'a été appliquée : un seuil atteint plus tard, après
+         * un arrêt en cours de trajet, déclenche encore — une fois.
+         */
+        ONCE_PER_START,
+        /** À chaque passage en READY, comme à l'origine. */
+        EVERY_READY;
+
+        companion object {
+            /**
+             * Mode à retenir d'après ce qui est enregistré. Le choix à trois positions l'emporte ;
+             * à défaut, l'ancienne case si elle a été touchée (cochée = une fois par démarrage,
+             * décochée exprès = à chaque READY) ; sinon le défaut.
+             */
+            fun resolve(stored: String?, legacyOnce: Boolean?): Trigger =
+                entries.firstOrNull { it.name == stored }
+                    ?: when (legacyOnce) {
+                        true -> ONCE_PER_START
+                        false -> EVERY_READY
+                        null -> START_ONLY
+                    }
+        }
+    }
+
     data class Config(
         val enabled: Boolean,
         val hot: Rule,
         val cold: Rule,
-        /**
-         * Vrai pour ne déclencher qu'une fois tant que l'application tourne : après un arrêt
-         * court, la remise du contact ne renvoie plus les réglages par-dessus ceux que le
-         * conducteur a pu faire à la main. Voir [ClimateAutomationDecision.allowed].
-         */
-        val oncePerStart: Boolean = false
+        val trigger: Trigger = Trigger.START_ONLY
     )
 
     fun read(context: Context): Config {
@@ -94,7 +131,10 @@ object ClimateAutomationSettings {
             enabled = p.getBoolean(KEY_ENABLED, false),
             hot     = rule(HOT,  DEFAULT_HOT_THRESHOLD,  DEFAULT_HOT_TARGET),
             cold    = rule(COLD, DEFAULT_COLD_THRESHOLD, DEFAULT_COLD_TARGET),
-            oncePerStart = p.getBoolean(KEY_ONCE, false)
+            trigger = Trigger.resolve(
+                stored = p.getString(KEY_TRIGGER, null),
+                legacyOnce = if (p.contains(KEY_ONCE_LEGACY)) p.getBoolean(KEY_ONCE_LEGACY, false) else null
+            )
         )
     }
 

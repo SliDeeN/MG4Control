@@ -22,12 +22,22 @@ object ClimateAutomationDecision {
     }
 
     /**
-     * Faux quand l'option « une seule fois par démarrage de la voiture » retient l'automatisation.
+     * Faux quand le mode de déclenchement retient l'automatisation.
      *
-     * [alreadyTriggered] dit si une règle a déjà été **appliquée** depuis que l'application
-     * tourne — pas seulement évaluée : un premier contact entre les deux seuils n'applique rien
-     * et laisse l'essai disponible pour le contact suivant.
+     * Deux faits sont suivis depuis le démarrage de l'application : [evaluated], une température
+     * lisible a déjà été évaluée ; [triggered], une règle a déjà été appliquée. Le premier ferme
+     * la porte en mode « au démarrage seulement », le second en mode « une fois par démarrage ».
      */
-    fun allowed(config: ClimateAutomationSettings.Config, alreadyTriggered: Boolean): Boolean =
-        !(config.oncePerStart && alreadyTriggered)
+    fun allowed(config: ClimateAutomationSettings.Config, evaluated: Boolean, triggered: Boolean): Boolean =
+        when (config.trigger) {
+            ClimateAutomationSettings.Trigger.START_ONLY -> !evaluated
+            ClimateAutomationSettings.Trigger.ONCE_PER_START -> !triggered
+            ClimateAutomationSettings.Trigger.EVERY_READY -> true
+        }
+
+    /**
+     * Vrai quand une évaluation vaut décision : la température a pu être lue. Illisible, elle ne
+     * dit ni « chaud » ni « pas chaud » — l'occasion du démarrage n'est pas consommée.
+     */
+    fun decides(temp: Float?): Boolean = temp != null && !temp.isNaN()
 }

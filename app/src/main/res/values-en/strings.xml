@@ -373,8 +373,13 @@
     <string name="ac_auto_def_front">Front defrost</string>
     <string name="ac_auto_def_rear">Rear defrost</string>
     <string name="ac_auto_note">Applied when the vehicle starts: climate control and A/C are turned on, then the settings above are sent.</string>
-    <string name="ac_auto_once">Only once per car start</string>
-    <string name="ac_auto_once_hint">Without this option, the settings are sent again each time the ignition is switched on. With it, they are not sent again after a short stop, so your manual changes are kept.</string>
+    <string name="ac_auto_trigger_label">Trigger</string>
+    <string name="ac_auto_trigger_start">At start-up only</string>
+    <string name="ac_auto_trigger_start_hint">A single decision, when the car starts: if the threshold is not met at that moment, nothing triggers until the next start.</string>
+    <string name="ac_auto_trigger_once">Once per start</string>
+    <string name="ac_auto_trigger_once_hint">Triggers the first time the threshold is met, even after a stop during the trip, then not again until the next start.</string>
+    <string name="ac_auto_trigger_ready">Each time the car enters READY</string>
+    <string name="ac_auto_trigger_ready_hint">The settings are sent every time, including after a short stop: they replace the ones made by hand.</string>
     <string name="clim_card_title">Climate</string>
     <string name="clim_temperature">Temperature</string>
     <string name="clim_fan">Fan</string>

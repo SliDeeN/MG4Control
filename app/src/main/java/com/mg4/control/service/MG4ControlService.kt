@@ -137,12 +137,14 @@ class MG4ControlService : Service() {
          *  un réglage que l'utilisateur vient de faire à la main entre les deux). */
         @Volatile private var climateAutoLastRunMs = 0L
         /**
-         * Vrai dès que l'automatisation A/C a appliqué une règle. Gardé en mémoire seulement, et
-         * au niveau du processus : il survit à une recréation du service mais retombe au
-         * redémarrage de l'application — donc au démarrage de la voiture, pas à une simple remise
-         * du contact. C'est l'option « une seule fois par démarrage » qui le consulte.
+         * Ce que l'automatisation A/C a déjà fait depuis le démarrage de l'application : appliqué
+         * une règle, ou simplement pris une décision (température lisible, ou profil prioritaire).
+         * Gardés en mémoire seulement, et au niveau du processus : ils survivent à une recréation
+         * du service mais retombent au redémarrage de l'application — donc au démarrage de la
+         * voiture, pas à un simple retour en READY. Le mode de déclenchement les consulte.
          */
         @Volatile private var climateAutoTriggered = false
+        @Volatile private var climateAutoEvaluated = false
         private const val CLIMATE_AUTO_DEBOUNCE_MS = 60_000L
 
     }
@@ -1399,8 +1401,8 @@ class MG4ControlService : Service() {
      * Anti-rebond [CLIMATE_AUTO_DEBOUNCE_MS] : démarrage service et IGNITION_RUN se suivent de
      * près, et réappliquer écraserait un réglage manuel fait entre les deux.
      *
-     * Option « une seule fois par démarrage de la voiture » : le même souci, étendu à tout le
-     * temps où l'application tourne. Sans elle, chaque remise du contact renvoie les réglages.
+     * Mode de déclenchement ([ClimateAutomationSettings.Trigger]) : le même souci, étendu à tout
+     * le temps où l'application tourne. Par défaut, une seule décision par démarrage de la voiture.
      */
     private fun tryClimateAutomation(origin: String) {
         val ctx = applicationContext
@@ -1419,6 +1421,15 @@ class MG4ControlService : Service() {
             AppLogger.i(TAG, "Auto A/C ($origin) : clim non pilotable sur ce firmware")
             return
         }
+        // Mode de déclenchement : une décision déjà prise depuis le démarrage de l'application
+        // ferme la porte, selon le mode choisi. Avant tout le reste : une fois la porte fermée,
+        // ni le profil ni la température n'ont plus à être consultés.
+        if (!ClimateAutomationDecision.allowed(cfg, climateAutoEvaluated, climateAutoTriggered)) {
+            AppLogger.i(TAG, "Auto A/C ($origin) : mode ${cfg.trigger}, décision déjà prise depuis le " +
+                "démarrage de l'application (évaluée=$climateAutoEvaluated, appliquée=" +
+                "$climateAutoTriggered) — rien n'est appliqué")
+            return
+        }
         // LE PROFIL EST PRIORITAIRE. S'il porte son propre bloc clim, l'automatisation n'a rien
         // à dire : sans cette règle les deux s'écriraient dessus au contact, dans un ordre que
         // rien ne garantit, et le résultat dépendrait de qui finit en dernier.
@@ -1430,11 +1441,8 @@ class MG4ControlService : Service() {
         if (profilActif?.hvacEnabled == true) {
             AppLogger.i(TAG, "Auto A/C ($origin) : le profil actif '${profilActif.name}' porte " +
                 "sa propre climatisation — priorité au profil")
-            return
-        }
-        if (!ClimateAutomationDecision.allowed(cfg, climateAutoTriggered)) {
-            AppLogger.i(TAG, "Auto A/C ($origin) : déjà déclenchée depuis le démarrage de " +
-                "l'application, option « une seule fois » cochée — rien n'est appliqué")
+            // Le profil a décidé de la climatisation pour ce démarrage : c'est une décision.
+            climateAutoEvaluated = true
             return
         }
         val since = System.currentTimeMillis() - climateAutoLastRunMs
@@ -1446,6 +1454,8 @@ class MG4ControlService : Service() {
         MG4Hardware.whenKatman1Ready {
             val temp = MG4Hardware.getOutsideTempCelsius()
             val outcome = ClimateAutomationDecision.evaluate(cfg, temp)
+            // Levé quel que soit le mode : en changer ensuite prend effet tout de suite.
+            if (ClimateAutomationDecision.decides(temp)) climateAutoEvaluated = true
             AppLogger.i(TAG, "Auto A/C ($origin) : chaud=${cfg.hot.active}/≥${cfg.hot.threshold}°C " +
                 "froid=${cfg.cold.active}/≤${cfg.cold.threshold}°C | temp lue=${temp ?: "illisible"} → $outcome")
             val rule = when (outcome) {
@@ -1454,7 +1464,6 @@ class MG4ControlService : Service() {
                 ClimateAutomationDecision.Outcome.NONE -> return@whenKatman1Ready
             }
             climateAutoLastRunMs = System.currentTimeMillis()
-            // Levé même si l'option est décochée : la cocher ensuite prend effet tout de suite.
             climateAutoTriggered = true
             // applyClimatePreset enchaîne des bascules (plusieurs secondes) → jamais sur le main thread.
             CoroutineScope(Dispatchers.IO).launch {

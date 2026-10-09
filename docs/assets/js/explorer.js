@@ -153,6 +153,27 @@
       showGroup(g);
     }));
 
+    // ── Liens ordinaires vers un thème ou une carte masqués par le filtre ──
+    // Le filtre des nouveautés retire de la page les thèmes qui n'en ont pas : un lien « #api »
+    // (en-tête, menu mobile, renvois dans le texte) n'avait alors plus de cible et la page ne
+    // bougeait pas. Les puces et les cartes levaient déjà le filtre ; les liens aussi désormais.
+    const hiddenTarget = (hash) => {
+      if (!onlyNew() || !hash || hash.length < 2) return null;
+      let el = null;
+      try { el = byId(decodeURIComponent(hash.slice(1))); } catch (e) { /* ancre mal formée */ }
+      return el && list.contains(el) && el.offsetParent === null ? el : null;
+    };
+    document.addEventListener('click', (e) => {
+      const a = e.target.closest ? e.target.closest('a[href^="#"]') : null;
+      // Le filtre est levé avant l'action par défaut : le navigateur trouve la cible et y défile.
+      if (a && hiddenTarget(a.getAttribute('href'))) setOnlyNew(false);
+    });
+    // Retour arrière, ou ancre saisie dans la barre d'adresse.
+    window.addEventListener('hashchange', () => {
+      const el = hiddenTarget(location.hash);
+      if (el) { setOnlyNew(false); scrollToEl(el); }
+    });
+
     // Groupe en cours de lecture = dernier dont le titre est passé sous la scène.
     let current = null;
     function spy() {

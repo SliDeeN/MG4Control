@@ -16,6 +16,7 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.CompoundButton
 import android.widget.EditText
+import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
@@ -525,10 +526,18 @@ class AutomationFragment : Fragment() {
             prefs.edit().putBoolean(ClimateAutomationSettings.KEY_ENABLED, checked).apply()
             deplier(checked)
         }
-        view.findViewById<CheckBox>(R.id.check_ac_once).apply {
-            isChecked = prefs.getBoolean(ClimateAutomationSettings.KEY_ONCE, false)
-            setOnCheckedChangeListener { _, checked ->
-                prefs.edit().putBoolean(ClimateAutomationSettings.KEY_ONCE, checked).apply()
+        // Mode de déclenchement : l'état vient de la lecture des réglages, qui reprend aussi
+        // l'ancienne case à cocher ; seul le nouveau réglage est écrit.
+        val modes = mapOf(
+            R.id.radio_ac_trigger_start to ClimateAutomationSettings.Trigger.START_ONLY,
+            R.id.radio_ac_trigger_once to ClimateAutomationSettings.Trigger.ONCE_PER_START,
+            R.id.radio_ac_trigger_ready to ClimateAutomationSettings.Trigger.EVERY_READY,
+        )
+        view.findViewById<RadioGroup>(R.id.radio_ac_trigger).apply {
+            val actuel = ClimateAutomationSettings.read(view.context).trigger
+            check(modes.entries.first { it.value == actuel }.key)
+            setOnCheckedChangeListener { _, id ->
+                modes[id]?.let { prefs.edit().putString(ClimateAutomationSettings.KEY_TRIGGER, it.name).apply() }
             }
         }
 

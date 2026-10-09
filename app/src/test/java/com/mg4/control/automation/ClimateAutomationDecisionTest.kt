@@ -1,6 +1,7 @@
 package com.mg4.control.automation
 
 import com.mg4.control.automation.ClimateAutomationDecision.Outcome
+import com.mg4.control.automation.ClimateAutomationSettings.Trigger
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -20,9 +21,9 @@ class ClimateAutomationDecisionTest {
         enabled: Boolean = true,
         hotOn: Boolean = true, hotT: Int = 28,
         coldOn: Boolean = true, coldT: Int = 5,
-        once: Boolean = false
+        trigger: Trigger = Trigger.EVERY_READY
     ) = ClimateAutomationSettings.Config(
-        enabled, rule(hotOn, hotT), rule(coldOn, coldT), oncePerStart = once
+        enabled, rule(hotOn, hotT), rule(coldOn, coldT), trigger = trigger
     )
 
     @Test fun `desactive - aucune regle`() {
@@ -67,19 +68,47 @@ class ClimateAutomationDecisionTest {
         assertEquals(Outcome.HOT, ClimateAutomationDecision.evaluate(cfg(hotT = 10, coldT = 30), 20f))
     }
 
-    // ── Option « une seule fois par démarrage de la voiture » ──────────────
+    // ── Mode de déclenchement (issue #121) ─────────────────────────────────
+    // Deux faits sont suivis depuis le démarrage de l application : « une température lisible a
+    // déjà été évaluée » et « une règle a déjà été appliquée ».
 
-    @Test fun `sans l option - autorisee meme apres un declenchement`() {
-        // Comportement d origine : les reglages repartent a chaque mise du contact.
-        assertTrue(ClimateAutomationDecision.allowed(cfg(once = false), alreadyTriggered = true))
+    @Test fun `a chaque READY - toujours autorisee`() {
+        val c = cfg(trigger = Trigger.EVERY_READY)
+        assertTrue(ClimateAutomationDecision.allowed(c, evaluated = true, triggered = true))
     }
 
-    @Test fun `une seule fois - autorisee tant que rien n a ete applique`() {
-        // Un premier contact entre les deux seuils n applique rien : l essai reste disponible.
-        assertTrue(ClimateAutomationDecision.allowed(cfg(once = true), alreadyTriggered = false))
+    @Test fun `une fois par demarrage - autorisee tant que rien n a ete applique`() {
+        // Seuil non atteint au démarrage : l occasion reste ouverte pour un contact ultérieur.
+        val c = cfg(trigger = Trigger.ONCE_PER_START)
+        assertTrue(ClimateAutomationDecision.allowed(c, evaluated = true, triggered = false))
+        assertFalse(ClimateAutomationDecision.allowed(c, evaluated = true, triggered = true))
     }
 
-    @Test fun `une seule fois - retenue apres un premier declenchement`() {
-        assertFalse(ClimateAutomationDecision.allowed(cfg(once = true), alreadyTriggered = true))
+    @Test fun `au demarrage seulement - une seule decision meme sans declenchement`() {
+        // Le cas de l issue : rien au démarrage, puis le seuil est atteint après un arrêt.
+        val c = cfg(trigger = Trigger.START_ONLY)
+        assertTrue(ClimateAutomationDecision.allowed(c, evaluated = false, triggered = false))
+        assertFalse(ClimateAutomationDecision.allowed(c, evaluated = true, triggered = false))
+    }
+
+    @Test fun `seule une temperature lisible vaut decision`() {
+        assertTrue(ClimateAutomationDecision.decides(12.5f))
+        assertFalse(ClimateAutomationDecision.decides(null))
+        assertFalse(ClimateAutomationDecision.decides(Float.NaN))
+    }
+
+    @Test fun `mode par defaut - au demarrage seulement`() {
+        assertEquals(Trigger.START_ONLY, Trigger.resolve(stored = null, legacyOnce = null))
+    }
+
+    @Test fun `ancienne case reprise telle quelle`() {
+        // Cochée : une fois par démarrage. Décochée exprès : à chaque READY, comme avant.
+        assertEquals(Trigger.ONCE_PER_START, Trigger.resolve(stored = null, legacyOnce = true))
+        assertEquals(Trigger.EVERY_READY, Trigger.resolve(stored = null, legacyOnce = false))
+    }
+
+    @Test fun `le choix enregistre l emporte sur l ancienne case`() {
+        assertEquals(Trigger.EVERY_READY, Trigger.resolve(stored = "EVERY_READY", legacyOnce = true))
+        assertEquals(Trigger.START_ONLY, Trigger.resolve(stored = "illisible", legacyOnce = null))
     }
 }

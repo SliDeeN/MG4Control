@@ -140,7 +140,7 @@
         <a href="#f-autobattery" data-feature="f-autobattery"><span data-l="fr">🪫 Profil selon la batterie</span><span data-l="en">🪫 Profile by battery level</span></a>
         <a href="#f-batheat" data-feature="f-batheat"><span data-l="fr">🔥 Chauffage de la batterie</span><span data-l="en">🔥 Battery heating</span></a>
         <a href="#f-highbeam" data-feature="f-highbeam"><span data-l="fr">💡 Feux de route automatiques</span><span data-l="en">💡 Automatic high beam</span></a>
-        <a href="#f-aconce" data-feature="f-aconce"><span data-l="fr">❄️ A/C : une seule fois par démarrage</span><span data-l="en">❄️ A/C: only once per start</span></a>
+        <a href="#f-aconce" data-feature="f-aconce"><span data-l="fr">❄️ A/C : au démarrage seulement</span><span data-l="en">❄️ A/C: at start-up only</span></a>
         <a href="#f-stats-battery" data-feature="f-stats-battery"><span data-l="fr">📊 Batterie et petits trajets</span><span data-l="en">📊 Battery and short trips</span></a>
         <a href="#f-topbar" data-feature="f-topbar"><span data-l="fr">🧭 Onglets agrandis</span><span data-l="en">🧭 Larger tabs</span></a>
         <a href="#f-audio" data-feature="f-audio"><span data-l="fr">🔉 Volume en quittant : dans Automatisation</span><span data-l="en">🔉 Volume when leaving: in Automation</span></a>
@@ -733,12 +733,12 @@
       </details>
     </div>
     <div class="pt is-new" id="f-aconce" data-hl-key="ac-once" data-demo="acOnce">
-      <h3><span data-l="fr">A/C : une seule fois par démarrage</span><span data-l="en">A/C: only once per start</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.8</span></h3>
-      <p data-l="fr">En option, la climatisation automatique ne se déclenche plus à chaque remise du contact.</p>
-      <p data-l="en">Optionally, the automatic climate no longer triggers each time the ignition is switched back on.</p>
+      <h3><span data-l="fr">A/C : quand se déclencher</span><span data-l="en">A/C: when to trigger</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.8</span></h3>
+      <p data-l="fr">Trois modes : au démarrage seulement, une fois par démarrage, ou à chaque passage en READY.</p>
+      <p data-l="en">Three modes: at start-up only, once per start, or each time the car enters READY.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Sans l'option, les réglages repartent à chaque mise du contact. Avec elle, ils ne sont appliqués qu'une fois tant que l'application tourne : après un arrêt court, vos changements manuels sont conservés. Le compteur repart quand l'écran de bord redémarre.</p>
-        <p data-l="en">Without the option, the settings are sent again each time the ignition is switched on. With it, they are applied only once while the app is running: after a short stop, your manual changes are kept. The counter resets when the head unit restarts.</p>
+        <p data-l="fr">Par défaut, la décision est prise une seule fois, au démarrage de la voiture : si le seuil n'est pas atteint à ce moment-là, rien ne se déclenche avant le prochain démarrage. « Une fois par démarrage » reste armée tant qu'aucune règle n'a été appliquée. « À chaque passage en READY » renvoie les réglages à chaque fois, y compris après un arrêt court. Dans la maquette, « Quitter la voiture » puis « Revenir en READY » rejouent un arrêt en cours de trajet.</p>
+        <p data-l="en">By default, the decision is taken only once, when the car starts: if the threshold is not met at that moment, nothing triggers until the next start. “Once per start” stays armed until a rule has been applied. “Each time the car enters READY” sends the settings every time, including after a short stop. In the mockup, “Leave the car” then “Back to READY” replay a stop during a trip.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-autobattery" data-hl-key="auto-battery" data-demo="autoBattery">

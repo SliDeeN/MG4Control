@@ -378,8 +378,13 @@
     <string name="ac_auto_def_front">Dégivrage avant</string>
     <string name="ac_auto_def_rear">Dégivrage arrière</string>
     <string name="ac_auto_note">Appliqué au démarrage du véhicule : la climatisation et l\'A/C sont allumés, puis les réglages ci-dessus sont envoyés.</string>
-    <string name="ac_auto_once">Une seule fois par démarrage de la voiture</string>
-    <string name="ac_auto_once_hint">Sans cette option, les réglages sont renvoyés à chaque mise du contact. Avec elle, ils ne le sont plus après un arrêt court : vos changements manuels sont conservés.</string>
+    <string name="ac_auto_trigger_label">Déclenchement</string>
+    <string name="ac_auto_trigger_start">Au démarrage seulement</string>
+    <string name="ac_auto_trigger_start_hint">Une seule décision, au démarrage de la voiture : si le seuil n’est pas atteint à ce moment-là, rien ne se déclenche avant le prochain démarrage.</string>
+    <string name="ac_auto_trigger_once">Une fois par démarrage</string>
+    <string name="ac_auto_trigger_once_hint">Se déclenche la première fois que le seuil est atteint, même après un arrêt en cours de trajet, puis plus avant le prochain démarrage.</string>
+    <string name="ac_auto_trigger_ready">À chaque passage en READY</string>
+    <string name="ac_auto_trigger_ready_hint">Les réglages repartent à chaque fois, y compris après un arrêt court : ils remplacent ceux faits à la main.</string>
     <string name="clim_card_title">Climatisation</string>
     <string name="clim_temperature">Température</string>
     <string name="clim_fan">Ventilation</string>

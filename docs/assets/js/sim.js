@@ -157,7 +157,8 @@
         bri: { on: false, open: false, lights: true, forecast: false, follow: true, day: 80, night: 20, last: '' },
         bh: { on: false, open: false, minutes: 30 },
         c: {
-          on: false, open: false, once: false, fired: false,
+          // Mode de déclenchement : 'start' (au démarrage seulement, défaut), 'once' ou 'ready'.
+          on: false, open: false, trigger: 'start', evaluated: false, fired: false,
           hot: { on: true, thr: 28, target: 20, fan: 4, defF: false, defR: false, auto: false, recircForce: true, recirc: LOOP.INNER },
           cold: { on: true, thr: 5, target: 24, fan: 4, defF: true, defR: true, auto: false, recircForce: false, recirc: LOOP.AUTO }
         }
@@ -383,6 +384,7 @@
     c.on = true; c.ready = true; c.maxSpeed = c.speed; c.readyAt = Date.now();
     c.esc = true; c.aebOn = true; // la voiture les rétablit à chaque démarrage
     state.lastManual = null;       // nouveau démarrage du service
+    if (wasReady) { state.auto.c.evaluated = false; state.auto.c.fired = false; }
     cancelLeaving(!wasReady);
     const trace = [];
     if (garage()) {
@@ -404,10 +406,12 @@
     const ap = activeProfile();
     if (cc.on && caps().clim && ap && ap.hvac && ap.hvac.enabled) {
       trace.push(L('Automatisation A/C ignorée : le profil « ', 'A/C automation skipped: profile “') + ap.name + L(' » porte sa propre climatisation', '” carries its own climate'));
-    } else if (cc.on && caps().clim && cc.once && cc.fired) {
-      trace.push(L('Automatisation A/C non relancée : déjà déclenchée depuis le démarrage de l’application (option « une seule fois »)',
-        'A/C automation not re-run: already triggered since the app started (“only once” option)'));
+      cc.evaluated = true;         // le profil a décidé de la climatisation pour ce démarrage
+    } else if (cc.on && caps().clim && (cc.trigger === 'start' ? cc.evaluated : cc.trigger === 'once' && cc.fired)) {
+      trace.push(L('Automatisation A/C non relancée : décision déjà prise depuis le démarrage (mode « ', 'A/C automation not re-run: decision already taken since start-up (mode “') +
+        S('ac_auto_trigger_' + cc.trigger) + L(' »)', '”)'));
     } else if (cc.on && caps().clim) {
+      cc.evaluated = true;         // la température du véhicule virtuel est toujours lisible
       let rule = null;
       if (cc.hot.on && c.outside >= cc.hot.thr) rule = 'hot';
       else if (cc.cold.on && c.outside <= cc.cold.thr) rule = 'cold';
@@ -1521,8 +1525,9 @@
           '<div class="a-row"><span class="lbl" style="flex:0 0 auto">' + esc(S('ac_auto_recirc_force')) + '</span>' + sw(r.recircForce, 'ruleRecircF', false, id) + '<div class="a-grid g3" style="flex:1">' + rc(0, 'recirc_inner') + rc(1, 'recirc_outside') + rc(2, 'recirc_auto') + '</div></div></div>';
       };
       const body5 = '<div style="margin-top:8px">' + rule('hot', '🔥', 'ac_auto_hot') + rule('cold', '❄', 'ac_auto_cold') + '</div>' +
-        '<div data-hl="ac-once"><div class="a-row" style="margin-top:8px">' + check('acOnce', a.c.once, esc(S('ac_auto_once'))) + '</div>' +
-        '<div class="a-desc" style="margin-left:30px">' + esc(S('ac_auto_once_hint')) + '</div></div>' + note('ac_auto_note');
+        '<div data-hl="ac-once"><div class="a-sub" style="margin-top:10px">' + esc(S('ac_auto_trigger_label')) + '</div>' +
+        ['start', 'once', 'ready'].map((v) => '<div class="a-row" style="min-height:34px"><label class="a-check"><input type="radio" name="acTrigger" data-c="acTrigger" value="' + v + '"' + (a.c.trigger === v ? ' checked' : '') + '> ' + esc(S('ac_auto_trigger_' + v)) + '</label></div>' +
+          '<div class="a-desc" style="margin:0 0 4px 30px">' + esc(S('ac_auto_trigger_' + v + '_hint')) + '</div>').join('') + '</div>' + note('ac_auto_note');
       const desc5 = esc(S('ac_auto_desc')) + (k.clim ? '' : '<small>' + esc(L('Climatisation non exposée par ce firmware.', 'Climate not exposed by this firmware.')) + '</small>');
       const card5 = card('auto-clim', 'ac_auto_title', desc5, a.c.on, 'autoC', a.c.open, 'foldC', body5);
 
@@ -2344,7 +2349,7 @@
         case 'briDay': state.auto.bri.day = +t.value; return commit();
         case 'briNight': state.auto.bri.night = +t.value; return commit();
         case 'bhMin': state.auto.bh.minutes = +t.value; return commit();
-        case 'acOnce': state.auto.c.once = t.checked; return commit();
+        case 'acTrigger': state.auto.c.trigger = t.value; return commit();
         case 'stStart': if (u.dialog) u.dialog.startT = t.value; return;
         case 'stEnd': if (u.dialog) u.dialog.endT = t.value; return;
         case 'autoThr': state.auto.p.thr = num(0, 60, 25); return commit();
@@ -2699,7 +2704,7 @@
         b.classList.toggle('on', c.doors[s]);
       });
       q('[data-o=vol]').textContent = c.volume + ' / ' + c.volMax + (c.media.playing ? '  ▶ ' : '  ⏸ ') + L('piste ', 'track ') + c.media.track;
-      q('[data-d=ignition]').textContent = '⏻ ' + (c.on ? L('Simuler un démarrage', 'Simulate a start-up') : L('Démarrer le véhicule', 'Start the vehicle'));
+      q('[data-d=ignition]').textContent = '⏻ ' + (!c.on ? L('Démarrer le véhicule', 'Start the vehicle') : c.ready ? L('Simuler un démarrage', 'Simulate a start-up') : L('Revenir en READY', 'Back to READY'));
       q('[data-d=reset]').textContent = L('Réinitialiser', 'Reset');
       el.classList.toggle('moving', c.speed > 0);
       void k;

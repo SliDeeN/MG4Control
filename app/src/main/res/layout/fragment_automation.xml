@@ -1447,7 +1447,7 @@
 
                 </LinearLayout>
 
-                <!-- ───────── Une seule fois par démarrage ───────── -->
+                <!-- ───────── Mode de déclenchement ───────── -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
@@ -1455,21 +1455,73 @@
                     android:layout_marginTop="12dp"
                     android:layout_marginBottom="10dp" />
 
-                <CheckBox
-                    android:id="@+id/check_ac_once"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/ac_auto_once"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp" />
-
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="32dp"
-                    android:text="@string/ac_auto_once_hint"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp" />
+                    android:text="@string/ac_auto_trigger_label"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <RadioGroup
+                    android:id="@+id/radio_ac_trigger"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:orientation="vertical">
+
+                    <RadioButton
+                        android:id="@+id/radio_ac_trigger_start"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ac_auto_trigger_start"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="32dp"
+                        android:layout_marginBottom="6dp"
+                        android:text="@string/ac_auto_trigger_start_hint"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+
+                    <RadioButton
+                        android:id="@+id/radio_ac_trigger_once"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ac_auto_trigger_once"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="32dp"
+                        android:layout_marginBottom="6dp"
+                        android:text="@string/ac_auto_trigger_once_hint"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+
+                    <RadioButton
+                        android:id="@+id/radio_ac_trigger_ready"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/ac_auto_trigger_ready"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="32dp"
+                        android:layout_marginBottom="6dp"
+                        android:text="@string/ac_auto_trigger_ready_hint"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+
+                </RadioGroup>
 
                 <TextView
                     android:layout_width="match_parent"
