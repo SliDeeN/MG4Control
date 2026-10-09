@@ -380,7 +380,7 @@
     <string name="ac_auto_note">Appliqué au démarrage du véhicule : la climatisation et l\'A/C sont allumés, puis les réglages ci-dessus sont envoyés.</string>
     <string name="ac_auto_trigger_label">Déclenchement</string>
     <string name="ac_auto_trigger_start">Au démarrage seulement</string>
-    <string name="ac_auto_trigger_start_hint">Une seule vérification, au démarrage de la voiture (READY) : si le seuil n’est pas atteint à ce moment-là, rien ne se déclenche avant le prochain démarrage.</string>
+    <string name="ac_auto_trigger_start_hint">Une seule vérification, au démarrage de la voiture (READY) : si le seuil n’est pas atteint à ce moment-là, rien ne se déclenche avant le prochain démarrage complet de la voiture.</string>
     <string name="ac_auto_trigger_once">Une fois par démarrage</string>
     <string name="ac_auto_trigger_once_hint">Si le seuil n’est pas atteint au démarrage de la voiture (READY), la vérification est refaite à chaque passage en READY suivant. Dès qu’il est atteint, les réglages sont appliqués une fois, puis plus rien jusqu’au prochain démarrage complet de la voiture.</string>
     <string name="ac_auto_trigger_ready">À chaque passage en READY</string>

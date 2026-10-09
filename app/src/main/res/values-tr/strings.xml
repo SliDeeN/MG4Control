@@ -375,7 +375,7 @@
     <string name="ac_auto_note">Araç çalıştığında uygulanır: klima ve A/C açılır, ardından yukarıdaki ayarlar gönderilir.</string>
     <string name="ac_auto_trigger_label">Tetikleme</string>
     <string name="ac_auto_trigger_start">Yalnızca çalıştırmada</string>
-    <string name="ac_auto_trigger_start_hint">Araç çalıştığında (READY) tek bir kontrol yapılır: eşik o anda aşılmamışsa bir sonraki çalıştırmaya kadar hiçbir şey tetiklenmez.</string>
+    <string name="ac_auto_trigger_start_hint">Araç çalıştığında (READY) tek bir kontrol yapılır: eşik o anda aşılmamışsa aracın bir sonraki tam çalıştırılmasına kadar hiçbir şey tetiklenmez.</string>
     <string name="ac_auto_trigger_once">Her çalıştırmada bir kez</string>
     <string name="ac_auto_trigger_once_hint">Araç çalıştığında (READY) eşik aşılmamışsa kontrol, araç her yeniden READY konumuna geçtiğinde tekrarlanır. Eşik aşıldığında ayarlar bir kez uygulanır; ardından aracın bir sonraki tam çalıştırılmasına kadar başka bir şey olmaz.</string>
     <string name="ac_auto_trigger_ready">Araç her READY konumuna geçtiğinde</string>

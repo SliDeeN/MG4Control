@@ -375,7 +375,7 @@
     <string name="ac_auto_note">Applied when the vehicle starts: climate control and A/C are turned on, then the settings above are sent.</string>
     <string name="ac_auto_trigger_label">Trigger</string>
     <string name="ac_auto_trigger_start">At start-up only</string>
-    <string name="ac_auto_trigger_start_hint">A single check, when the car starts (READY): if the threshold is not met at that moment, nothing triggers until the next start.</string>
+    <string name="ac_auto_trigger_start_hint">A single check, when the car starts (READY): if the threshold is not met at that moment, nothing triggers until the next full start of the car.</string>
     <string name="ac_auto_trigger_once">Once per start</string>
     <string name="ac_auto_trigger_once_hint">If the threshold is not met when the car starts (READY), the check is repeated each time the car enters READY again. As soon as it is met, the settings are applied once, then nothing more until the next full start of the car.</string>
     <string name="ac_auto_trigger_ready">Each time the car enters READY</string>

@@ -375,7 +375,7 @@
     <string name="ac_auto_note">Se aplica al arrancar el vehículo: se encienden la climatización y el A/A, y luego se envían los ajustes anteriores.</string>
     <string name="ac_auto_trigger_label">Activación</string>
     <string name="ac_auto_trigger_start">Solo al arrancar</string>
-    <string name="ac_auto_trigger_start_hint">Una sola comprobación, al arrancar el coche (READY): si el umbral no se alcanza en ese momento, no se activa nada hasta el próximo arranque.</string>
+    <string name="ac_auto_trigger_start_hint">Una sola comprobación, al arrancar el coche (READY): si el umbral no se alcanza en ese momento, no se activa nada hasta el próximo arranque completo del coche.</string>
     <string name="ac_auto_trigger_once">Una vez por arranque</string>
     <string name="ac_auto_trigger_once_hint">Si el umbral no se alcanza al arrancar el coche (READY), la comprobación se repite cada vez que el coche vuelve a pasar a READY. En cuanto se alcanza, los ajustes se aplican una vez, y nada más hasta el próximo arranque completo del coche.</string>
     <string name="ac_auto_trigger_ready">Cada vez que el coche pasa a READY</string>

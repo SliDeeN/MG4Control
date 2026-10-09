@@ -375,7 +375,7 @@
     <string name="ac_auto_note">Applicato all\'avvio del veicolo: il climatizzatore e l\'A/C vengono accesi, poi vengono inviate le impostazioni sopra.</string>
     <string name="ac_auto_trigger_label">Attivazione</string>
     <string name="ac_auto_trigger_start">Solo all’avvio</string>
-    <string name="ac_auto_trigger_start_hint">Una sola verifica, all’avvio dell’auto (READY): se la soglia non è raggiunta in quel momento, non si attiva nulla fino al prossimo avvio.</string>
+    <string name="ac_auto_trigger_start_hint">Una sola verifica, all’avvio dell’auto (READY): se la soglia non è raggiunta in quel momento, non si attiva nulla fino al prossimo avvio completo dell’auto.</string>
     <string name="ac_auto_trigger_once">Una volta per avvio</string>
     <string name="ac_auto_trigger_once_hint">Se la soglia non è raggiunta all’avvio dell’auto (READY), la verifica viene ripetuta a ogni successivo passaggio in READY. Non appena è raggiunta, le impostazioni vengono applicate una volta, poi più nulla fino al prossimo avvio completo dell’auto.</string>
     <string name="ac_auto_trigger_ready">A ogni passaggio in READY</string>

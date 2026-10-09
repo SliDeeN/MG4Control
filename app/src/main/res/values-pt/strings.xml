@@ -375,7 +375,7 @@
     <string name="ac_auto_note">Aplicado ao arrancar o veículo: a climatização e o A/C são ligados e depois as definições acima são enviadas.</string>
     <string name="ac_auto_trigger_label">Acionamento</string>
     <string name="ac_auto_trigger_start">Apenas ao arrancar</string>
-    <string name="ac_auto_trigger_start_hint">Uma única verificação, ao arrancar o carro (READY): se o limite não for atingido nesse momento, nada é acionado até ao próximo arranque.</string>
+    <string name="ac_auto_trigger_start_hint">Uma única verificação, ao arrancar o carro (READY): se o limite não for atingido nesse momento, nada é acionado até ao próximo arranque completo do carro.</string>
     <string name="ac_auto_trigger_once">Uma vez por arranque</string>
     <string name="ac_auto_trigger_once_hint">Se o limite não for atingido ao arrancar o carro (READY), a verificação é repetida sempre que o carro voltar a passar a READY. Assim que for atingido, as definições são aplicadas uma vez, e nada mais até ao próximo arranque completo do carro.</string>
     <string name="ac_auto_trigger_ready">Sempre que o carro passa a READY</string>
