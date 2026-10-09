@@ -4,7 +4,7 @@
      Le clic central bascule la ventilation AUTO ; tout le reste (A/C, recirculation, sens de
      l'air, fermeture) est tactile.
 
-     Les tailles ci-dessous sont des tailles DE BASE (carte de 780 × 390 dp) : HvacPopupOverlay
+     Les tailles ci-dessous sont des tailles DE BASE (carte de 900 × 390 dp) : HvacPopupOverlay
      gonfle cette mise en page avec une densité corrigée pour qu'elle prenne la même part de
      l'écran sur tous les firmwares (HvacPopup.echelle). Changer la largeur ou la hauteur de la
      carte demande d'y reporter les constantes. -->
@@ -18,7 +18,7 @@
     android:focusable="true">
 
     <LinearLayout
-        android:layout_width="780dp"
+        android:layout_width="900dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:orientation="vertical"
@@ -45,6 +45,45 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical">
+
+                    <!-- Repère : la croix se pilote au joystick droit du volant. Sans service
+                         d'accessibilité, HvacPopupOverlay y met l'avertissement à la place. -->
+                    <LinearLayout
+                        android:layout_width="110dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="12dp"
+                        android:orientation="vertical"
+                        android:gravity="center_horizontal">
+
+                        <ImageView
+                            android:id="@+id/hvac_joy_icon"
+                            android:layout_width="72dp"
+                            android:layout_height="64dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_hvac_joystick" />
+
+                        <TextView
+                            android:id="@+id/hvac_joy_title"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:gravity="center_horizontal"
+                            android:text="@string/hvac_popup_joystick_title"
+                            android:textColor="@color/text_primary"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:id="@+id/hvac_joy_text"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:gravity="center_horizontal"
+                            android:text="@string/hvac_popup_joystick_text"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp" />
+
+                    </LinearLayout>
 
                     <!-- Croix : une direction du joystick = une action, sans focus à déplacer -->
                     <LinearLayout
@@ -569,16 +608,6 @@
 
         </LinearLayout>
 
-        <!-- Affiché seulement sans service d'accessibilité -->
-        <TextView
-            android:id="@+id/hvac_popup_hint"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="@string/hvac_popup_no_joystick"
-            android:textColor="@color/dash_warn"
-            android:textSize="13sp"
-            android:visibility="gone" />
 
     </LinearLayout>
 

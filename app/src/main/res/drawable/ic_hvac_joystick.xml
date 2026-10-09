@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Repère du pop-up HVAC : le haut du volant et le pavé du joystick DROIT, mis en avant.
+     Dessin maison, inspiré du motif de la fenêtre clim d'origine. Les couleurs sont celles du
+     thème : pas de teinte posée par la vue. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="72dp"
+    android:height="64dp"
+    android:viewportWidth="72"
+    android:viewportHeight="64">
+  <!-- Jante et branche du volant -->
+  <path
+      android:pathData="M5,26A46,46 0 0 1 67,26"
+      android:strokeColor="@color/dash_text_lo"
+      android:strokeWidth="6"
+      android:strokeLineCap="round"/>
+  <path
+      android:fillColor="@color/dash_border"
+      android:pathData="M11.5,31h49a5.5,5.5 0 0 1 0,11h-49a5.5,5.5 0 0 1 0,-11z"/>
+  <!-- Pavé du joystick, ses quatre directions et son clic central -->
+  <path
+      android:fillColor="@color/dash_accent_dim"
+      android:strokeColor="@color/dash_accent"
+      android:strokeWidth="2"
+      android:pathData="M41,21h16a8,8 0 0 1 8,8v16a8,8 0 0 1 -8,8h-16a8,8 0 0 1 -8,-8v-16a8,8 0 0 1 8,-8z"/>
+  <path
+      android:fillColor="@color/dash_accent"
+      android:pathData="M49,26l4.5,5.5h-9zM49,48l4.5,-5.5h-9zM38,37l5.5,-4.5v9zM60,37l-5.5,-4.5v9z"/>
+  <path
+      android:fillColor="@color/text_primary"
+      android:pathData="M47,33.5h4a1.5,1.5 0 0 1 1.5,1.5v4a1.5,1.5 0 0 1 -1.5,1.5h-4a1.5,1.5 0 0 1 -1.5,-1.5v-4a1.5,1.5 0 0 1 1.5,-1.5z"/>
+</vector>

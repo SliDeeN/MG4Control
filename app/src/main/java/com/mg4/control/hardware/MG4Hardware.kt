@@ -23,6 +23,7 @@ import com.mg4.control.model.AirFlow
 import com.mg4.control.model.BatteryHeating
 import com.mg4.control.model.CustomDriveScale
 import com.mg4.control.model.DriveMode
+import com.mg4.control.model.HvacPopup
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.GarageMode
@@ -5477,8 +5478,17 @@ object MG4Hardware {
         val defrostFront: Boolean?,
         val defrostRear: Boolean?,
         /** Sens de l'air, valeur brute 0–7 ([AirFlow]) ; null si illisible. */
-        val airFlow: Int?
-    )
+        val airFlow: Int?,
+        /** Dernier niveau de ventilation réglé à la main ([lastManualFan]) ; null si jamais vu. */
+        val lastManualFan: Int? = null
+    ) {
+        /**
+         * Température et ventilation vues par la logique commune au pop-up HVAC, à la page Clim
+         * et aux raccourcis — c'est elle qui sait qu'en AUTO le niveau annoncé (15) n'en est pas un.
+         */
+        fun reglages() = HvacPopup.Reglages(
+            tempC, tempMin, tempMax, fanLevel, fanMin, fanMax, autoOn, lastManualFan)
+    }
 
     /**
      * Vrai si le firmware expose le SDK clim SAIC (old-SDK : SWI133/68/165 ; absent sur A9).
@@ -5508,7 +5518,35 @@ object MG4Hardware {
      */
     fun getClimateState(): ClimateState? =
         (if (isClimateA9()) getClimateStateA9() else getClimateStateOldSdk())
+            ?.let { it.copy(lastManualFan = rememberManualFan(it)) }
             ?.also { traceAirFlowChange(it) }
+
+    // ── Dernier niveau de ventilation réglé à la main ─────────────────────────
+    // En AUTO la voiture n'annonce plus de cran : elle rend 15, que les écrans d'origine affichent
+    // « AUTO ». Pour en sortir, ces écrans écrivent le dernier niveau qu'ils ont vu, ± 1 ; ils le
+    // gardent en mémoire ET en préférences (`mLastVolume` / « air_volume » dans AcCardView du
+    // launcher SWI133 et HvacView de SystemUI SWI165). On fait de même.
+    private const val PREF_LAST_MANUAL_FAN = "clim_last_manual_fan"
+    @Volatile private var sLastManualFan: Int? = null
+
+    /** Retient le niveau lu s'il en est un vrai, et rend le dernier connu. */
+    private fun rememberManualFan(state: ClimateState): Int? {
+        state.reglages().ventilationReelle
+            ?.takeIf { it in state.fanMin..state.fanMax }
+            ?.let { noteManualFan(it) }
+        return lastManualFan()
+    }
+
+    private fun noteManualFan(level: Int) {
+        if (sLastManualFan == level) return
+        sLastManualFan = level
+        sAppContext?.getSharedPreferences("mg4_settings", 0)?.edit()
+            ?.putInt(PREF_LAST_MANUAL_FAN, level)?.apply()
+    }
+
+    private fun lastManualFan(): Int? = sLastManualFan
+        ?: sAppContext?.getSharedPreferences("mg4_settings", 0)
+            ?.getInt(PREF_LAST_MANUAL_FAN, -1)?.takeIf { it >= 0 }?.also { sLastManualFan = it }
 
     private fun getClimateStateOldSdk(): ClimateState? {
         if (sAirCondition == null) sAppContext?.let { initAirCondition(it) }
@@ -5611,11 +5649,13 @@ object MG4Hardware {
         else
             acSet("setDrvTemp", celsius).also { climLog("temp=$celsius", it) }
 
+    /** Écrire un niveau fait aussi SORTIR du mode AUTO (voir [setClimateAuto]). */
     fun setClimateFan(level: Int): Boolean =
-        if (isClimateA9())
+        (if (isClimateA9())
             a9Set("setFanSpeed", level).also { climLog("A9 fan=$level", it) }
         else
-            acSet("setAirVolumeLevel", level).also { climLog("fan=$level", it) }
+            acSet("setAirVolumeLevel", level).also { climLog("fan=$level", it) })
+            .also { if (it) noteManualFan(level) }
 
     /**
      * A/C — bascule, comme la recirculation. L'encodage de lecture (1=ON, 0=OFF) a été mesuré
@@ -5630,11 +5670,37 @@ object MG4Hardware {
                 acSet("setAcStatus", 1)
             }
 
-    fun setClimateAuto(on: Boolean): Boolean =
-        if (isClimateA9())
-            a9CycleTo("auto", "getAutoStatus", if (on) 1 else 0, 2, "switchAutoStatus")
-        else
-            acSet("setAutoStatus", if (on) 1 else 0).also { climLog("auto=$on", it) }
+    /**
+     * Mode AUTO : la voiture règle elle-même la ventilation et le sens de l'air.
+     *
+     * ⚠️ Sur l'ancien SDK ce n'est PAS une affectation mais un APPUI, comme l'A/C : l'écran clim
+     * d'origine (HvacView, SystemUI SWI165) envoie `setAutoStatus(1)` à chaque clic, jamais 0.
+     * Un 0 reste sans effet — c'est pourquoi AUTO ne se coupait pas (constaté sur SWI133 le
+     * 2026-10-09). Et ces écrans ne « coupent » jamais AUTO : ils en SORTENT en écrivant un
+     * niveau de ventilation, le dernier réglé à la main. On fait pareil.
+     *
+     * On n'appuie pas si AUTO est déjà actif : rien ne dit qu'un second appui ne le couperait pas.
+     */
+    fun setClimateAuto(on: Boolean): Boolean {
+        if (isClimateA9()) {
+            // Bascule relue, validée sur SWI131 ; si elle ne suffit pas à couper, même repli.
+            if (a9CycleTo("auto", "getAutoStatus", if (on) 1 else 0, 2, "switchAutoStatus")) return true
+            return !on && quitterAutoParLaVentilation()
+        }
+        val actif = acInt("getAutoStatus")?.takeIf { it >= 0 }?.let { it == 1 }
+        if (actif == on) {
+            climLog("auto=$on (déjà)", true)
+            return true
+        }
+        return if (on) acSet("setAutoStatus", 1).also { climLog("auto=true (appui)", it) }
+               else quitterAutoParLaVentilation()
+    }
+
+    private fun quitterAutoParLaVentilation(): Boolean {
+        val etat = getClimateState() ?: return false
+        val niveau = HvacPopup.niveauDeSortie(etat.reglages())
+        return setClimateFan(niveau).also { climLog("auto=false → ventilation manuelle $niveau", it) }
+    }
 
     /**
      * Recirculation — commande **CYCLIQUE**, pas une affectation.

@@ -626,6 +626,7 @@
       case 'HVAC_TEMP_UP': case 'HVAC_TEMP_DOWN':
         c.clim.temp = clamp(c.clim.temp + (action === 'HVAC_TEMP_UP' ? 1 : -1), c.clim.tMin, c.clim.tMax); msg = S('clim_temperature') + ' → ' + c.clim.temp + ' °C'; break;
       case 'HVAC_FAN_UP': case 'HVAC_FAN_DOWN':
+        c.clim.auto = false;   // un niveau réglé à la main fait sortir d'AUTO
         c.clim.fan = clamp(c.clim.fan + (action === 'HVAC_FAN_UP' ? 1 : -1), c.clim.fMin, c.clim.fMax); msg = S('clim_fan') + ' → ' + c.clim.fan; break;
       case 'DEFROST_FRONT_TOGGLE': c.clim.defF = !c.clim.defF; msg = S('ac_auto_def_front') + ' → ' + onOff(c.clim.defF); break;
       case 'DEFROST_REAR_TOGGLE': c.clim.defR = !c.clim.defR; msg = S('ac_auto_def_rear') + ' → ' + onOff(c.clim.defR); break;
@@ -826,7 +827,7 @@
       case 'hvac_fan': {
         const v = isCycle ? cyc(c.clim.fan, c.clim.fMin, c.clim.fMax) : parseInt(raw, 10);
         if (isNaN(v)) return log(false, 'REFUS SET hvac_fan : nombre attendu');
-        c.clim.fan = clamp(v, c.clim.fMin, c.clim.fMax); done = String(c.clim.fan) + (c.clim.fan !== v ? ' (ramené entre ' + c.clim.fMin + ' et ' + c.clim.fMax + ')' : ''); break;
+        c.clim.auto = false; c.clim.fan = clamp(v, c.clim.fMin, c.clim.fMax); done = String(c.clim.fan) + (c.clim.fan !== v ? ' (ramené entre ' + c.clim.fMin + ' et ' + c.clim.fMax + ')' : ''); break;
       }
       case 'hvac_recirc': {
         let v = isCycle ? cyc(c.clim.loop, 0, 2) : ({ INNER: 0, OUTSIDE: 1, AUTO: 2, 0: 0, 1: 1, 2: 2 })[up];
@@ -1150,7 +1151,7 @@
         h += '<div class="a-card" data-hl="clim"><div class="a-h">' + esc(S('clim_card_title')) + '</div>' +
           '<div class="a-cols sep"><div><div class="a-row"><span class="lbl">' + esc(S('clim_temperature')) + '</span><span class="a-val" data-out="climTemp">' + cl.temp + '°</span></div>' +
           range('climTemp', cl.tMin, cl.tMax, cl.temp) + '</div>' +
-          '<div><div class="a-row"><span class="lbl">' + esc(S('clim_fan')) + '</span><span class="a-val" data-out="climFan">' + cl.fan + '</span></div>' +
+          '<div><div class="a-row"><span class="lbl">' + esc(S('clim_fan')) + '</span><span class="a-val" data-out="climFan">' + (cl.auto ? esc(S('clim_auto').toUpperCase()) : cl.fan) + '</span></div>' +
           range('climFan', cl.fMin, cl.fMax, cl.fan) + '</div></div></div>';
         const tg = (a, on, key) => '<button class="b' + (on ? ' on' : '') + '" data-a="' + a + '">' + esc(S(key)) + '</button>';
         const lp = (n, key) => '<button class="b' + (cl.loop === n ? ' on' : '') + '" data-a="climLoop" data-v="' + n + '">' + esc(S(key)) + '</button>';
@@ -1823,9 +1824,9 @@
       // On clampe, on ne boucle pas : comme dans l'application.
       if (dir === 'ok') cl.auto = !cl.auto;
       else if (dir === 'up' || dir === 'down') cl.temp = clamp(cl.temp + (dir === 'up' ? 1 : -1), cl.tMin, cl.tMax);
-      // En AUTO il n'y a pas de cran d'où partir : gauche/droite en sortent, le geste suivant règle.
-      else if (cl.auto) cl.auto = false;
-      else cl.fan = clamp(cl.fan + (dir === 'right' ? 1 : -1), cl.fMin, cl.fMax);
+      // Régler la ventilation fait sortir d'AUTO, comme sur l'écran d'origine : on repart du
+      // dernier niveau réglé à la main (celui que la maquette garde dans clim.fan).
+      else { cl.auto = false; cl.fan = clamp(cl.fan + (dir === 'right' ? 1 : -1), cl.fMin, cl.fMax); }
       o.left = o.total; o.flash = dir;
       clearTimeout(this._hvFlash);
       this._hvFlash = setTimeout(() => { const cur = this.ui.overlay; if (cur && cur.type === 'hvac') { cur.flash = null; this.render(); } }, 200);
@@ -1884,13 +1885,16 @@
       }
       if (o.type === 'hvac') {
         const cl = car().clim;
-        // Sans service d'accessibilité, le joystick ne parvient pas à l'application : la fenêtre le dit.
+        // Sans service d'accessibilité, le joystick ne parvient pas à l'application : le repère le dit.
         const nav = state.sc.advService && !garage();
         const cell = (dir, cls, ico, key, on) => '<button class="b hv-cell hv-' + cls + (on ? ' on' : '') + (o.flash === dir ? ' hit' : '') + '" data-a="hvKey" data-v="' + dir + '">' + ico + '<span>' + esc(S(key)) + '</span></button>';
         const ab = (f, on, key, icon) => '<button class="b air sm' + (on ? ' on' : '') + '" data-a="hvAir" data-v="' + f + '">' + AIR_ICON[icon] + '<span>' + esc(S(key)) + '</span></button>';
         const lp = (n, key) => '<button class="b' + (cl.loop === n ? ' on' : '') + '" data-a="hvLoop" data-v="' + n + '">' + esc(S(key)) + '</button>';
         // En AUTO la voiture n'annonce pas de cran de ventilation : on écrit « AUTO », barre vide.
-        return '<div class="a-scrim" data-a="hvBg"><div class="hvacpop" data-hl="hvac-popup"><div class="hv-main"><div class="hv-left"><div class="hv-top"><div class="hv-cross">' +
+        // Repère du joystick (ic_hvac_joystick.xml) ; éteint, il porte l'avertissement.
+        const joy = '<div class="hv-joy' + (nav ? '' : ' off') + '"><svg viewBox="0 0 72 64" aria-hidden="true"><path class="rim" d="M5 26A46 46 0 0 1 67 26"/><rect class="spoke" x="6" y="31" width="60" height="11" rx="5.5"/><rect class="pad" x="33" y="21" width="32" height="32" rx="8"/><path class="arr" d="M49 26l4.5 5.5h-9zM49 48l4.5-5.5h-9zM38 37l5.5-4.5v9zM60 37l-5.5-4.5v9z"/><rect class="dot" x="45.5" y="33.5" width="7" height="7" rx="1.5"/></svg>' +
+          '<b>' + esc(S(nav ? 'hvac_popup_joystick_title' : 'hvac_popup_joystick_off_title')) + '</b><span>' + esc(S(nav ? 'hvac_popup_joystick_text' : 'hvac_popup_joystick_off_text')) + '</span></div>';
+        return '<div class="a-scrim" data-a="hvBg"><div class="hvacpop" data-hl="hvac-popup"><div class="hv-main"><div class="hv-left"><div class="hv-top">' + joy + '<div class="hv-cross">' +
           cell('up', 'up', HV_ICON.temp, 'hvac_popup_temp_up') + cell('left', 'left', HV_ICON.fan, 'hvac_popup_fan_down') + cell('ok', 'ok', HV_ICON.fan, 'clim_auto', cl.auto) +
           cell('right', 'right', HV_ICON.fan, 'hvac_popup_fan_up') + cell('down', 'down', HV_ICON.temp, 'hvac_popup_temp_down') + '</div>' +
           '<div class="hv-vals"><div class="lbl">' + esc(S('clim_temperature')) + '</div><div class="hv-temp">' + cl.temp + ' °C</div>' +
@@ -1901,8 +1905,7 @@
           '<div class="hv-side"><div class="lbl">' + esc(S('hvac_popup_compressor')) + '</div><button class="b hv-ac' + (cl.ac ? ' on' : '') + '" data-a="hvAc">' + esc(S('clim_ac')) + '</button>' +
           '<div class="lbl hv-airlbl">' + esc(S('clim_section_loop')) + '</div>' + lp(0, 'clim_loop_inner') + lp(1, 'clim_loop_outside') + lp(2, 'clim_loop_auto') + '</div></div>' +
           '<div class="hv-bar"><i data-cdbar style="width:' + Math.round(100 * o.left / o.total) + '%"></i></div>' +
-          '<div class="hv-foot"><div class="cd" data-cd>' + esc(S('overlay_countdown', o.left)) + '</div><button class="b nc hv-close" data-a="hvClose">' + HV_ICON.close + esc(S('nav_close')) + '</button></div>' +
-          (nav ? '' : '<div class="hv-hint">' + esc(S('hvac_popup_no_joystick')) + '</div>') + '</div></div>';
+          '<div class="hv-foot"><div class="cd" data-cd>' + esc(S('overlay_countdown', o.left)) + '</div><button class="b nc hv-close" data-a="hvClose">' + HV_ICON.close + esc(S('nav_close')) + '</button></div></div></div>';
       }
       if (o.type === 'update') {
         return '<div class="a-scrim" data-a="upBg"><div class="confirm" data-hl="upd-overlay"><div class="msg"><b>' + esc(S('update_overlay_title')) + '</b>\n<span style="font-size:26px;font-weight:700;color:var(--dash-accent)">' + esc(S('update_overlay_versions', 'v2.6.8', 'v2.x.x')) + '</span></div>' +
@@ -2384,7 +2387,7 @@
       const num = (min, max, def) => { const x = parseInt(t.value, 10); return isNaN(x) ? def : clamp(x, min, max); };
       switch (id) {
         case 'climTemp': c.clim.temp = +t.value; return commit();
-        case 'climFan': c.clim.fan = +t.value; return commit();
+        case 'climFan': c.clim.fan = +t.value; c.clim.auto = false; return commit();
         case 'pkBri': c.brightness = +t.value; if (u.overlay) u.overlay.left = 8; return commit();
         case 'doorLevel': state.door.level = +t.value; return commit();
         case 'eName': if (u.edit) u.edit.name = t.value; return;

@@ -538,7 +538,10 @@
     <string name="hvac_popup_fan_up">Ventil. +</string>
     <string name="hvac_popup_fan_down">Ventil. −</string>
     <string name="hvac_popup_compressor">Compresor</string>
-    <string name="hvac_popup_no_joystick">Sin el servicio de accesibilidad, el joystick cambia el volumen: usa la pantalla.</string>
+    <string name="hvac_popup_joystick_title">Joystick derecho</string>
+    <string name="hvac_popup_joystick_text">Ajusta desde el volante</string>
+    <string name="hvac_popup_joystick_off_title">Joystick inactivo</string>
+    <string name="hvac_popup_joystick_off_text">Activa la accesibilidad o usa la pantalla</string>
     <string name="shortcuts_action_brightness_up">Brillo +</string>
     <string name="shortcuts_action_brightness_down">Brillo -</string>
 

@@ -1493,7 +1493,11 @@ class DashboardFragment : Fragment() {
             climLastState?.acOn?.let { cur -> climateWrite { MG4Hardware.setClimateAc(!cur) } }
         }
         climBtnAuto?.setOnClickListener {
-            climLastState?.autoOn?.let { cur -> climateWrite { MG4Hardware.setClimateAuto(!cur) } }
+            // « Actif » au sens des écrans d'origine : le drapeau, ou le niveau 15 qui le trahit.
+            climLastState?.let { s ->
+                val actif = s.reglages().enAuto
+                climateWrite { MG4Hardware.setClimateAuto(!actif) }
+            }
         }
         climLoopButtons.forEach { (mode, btn) ->
             btn?.setOnClickListener { climateWrite { MG4Hardware.setClimateLoopMode(mode) } }
@@ -1552,18 +1556,26 @@ class DashboardFragment : Fragment() {
                 }
                 climTempValue?.text = s.tempC?.let { "$it°" } ?: "--°"
 
+                // En AUTO la voiture annonce 15, qui n'est pas un cran : on écrit « AUTO », et le
+                // curseur reste sur le dernier niveau réglé à la main — celui d'où l'on repartira
+                // en le déplaçant, ce qui fait sortir d'AUTO.
+                val reglages = s.reglages()
                 climFanSlider?.apply {
                     valueFrom = s.fanMin.toFloat()
                     valueTo   = s.fanMax.toFloat()
-                    s.fanLevel?.let { value = it.coerceIn(s.fanMin, s.fanMax).toFloat() }
+                    (reglages.ventilationReelle ?: s.lastManualFan)
+                        ?.let { value = it.coerceIn(s.fanMin, s.fanMax).toFloat() }
                     isEnabled = s.fanLevel != null
                 }
-                climFanValue?.text = s.fanLevel?.toString() ?: "--"
+                climFanValue?.text = when {
+                    reglages.enAuto -> getString(R.string.clim_auto).uppercase(resources.configuration.locales[0])
+                    else            -> reglages.ventilationReelle?.toString() ?: "--"
+                }
 
                 climLastState = s
                 bindClimToggle(climBtnPower, s.powerOn)
                 bindClimToggle(climBtnAc, s.acOn)
-                bindClimToggle(climBtnAuto, s.autoOn)
+                bindClimToggle(climBtnAuto, if (reglages.enAuto) true else s.autoOn)
 
                 // Valeur illisible → boutons grisés. Valeur lue mais hors échelle (7 « aucun »)
                 // → boutons actifs, aucun allumé : l'utilisateur peut choisir un sens.

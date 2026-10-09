@@ -37,6 +37,7 @@ import com.mg4.control.hardware.StatsCollector
 import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.hardware.MG4Hardware.AebMode
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
+import com.mg4.control.model.HvacPopup
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.model.WindowCommand
 import com.mg4.control.profile.ActiveProfile
@@ -484,13 +485,15 @@ class MG4ControlService : Service() {
         return when (key) {
             ExternalApi.SET_HVAC_POWER    -> flip(st.powerOn)
             ExternalApi.SET_HVAC_AC       -> flip(st.acOn)
-            ExternalApi.SET_HVAC_AUTO     -> flip(st.autoOn)
+            ExternalApi.SET_HVAC_AUTO     -> flip(if (st.reglages().enAuto) true else st.autoOn)
             ExternalApi.SET_DEFROST_FRONT -> flip(st.defrostFront)
             ExternalApi.SET_DEFROST_REAR  -> flip(st.defrostRear)
             // Bornes lues sur le véhicule, jamais codées en dur : elles varient d'un firmware
             // à l'autre, et c'est sur elles que le cycle reboucle.
             ExternalApi.SET_HVAC_TEMP     -> st.tempC?.let { step(it, st.tempMin, st.tempMax) }
-            ExternalApi.SET_HVAC_FAN      -> st.fanLevel?.let { step(it, st.fanMin, st.fanMax) }
+            // En AUTO le niveau annoncé (15) n'est pas un cran : on part du dernier réglé à la main.
+            ExternalApi.SET_HVAC_FAN      -> (st.reglages().ventilationReelle ?: st.lastManualFan)
+                ?.let { step(it, st.fanMin, st.fanMax) }
             ExternalApi.SET_HVAC_RECIRC   -> st.loopMode?.let { step(it, 0, 2) }
             else -> null
         }
@@ -929,16 +932,22 @@ class MG4ControlService : Service() {
                     // dégivrages et recirculation partagent cette lecture d'état, un `else`
                     // fourre-tout les traiterait comme des commandes de ventilation.
                     ShortcutAction.HVAC_FAN_UP, ShortcutAction.HVAC_FAN_DOWN -> {
-                        val actuel = etat.fanLevel
-                        if (actuel == null) {
-                            AppLogger.w(TAG, "SHORTCUT clim ventilation — niveau illisible")
+                        val pas = if (action == ShortcutAction.HVAC_FAN_UP) 1 else -1
+                        // Même règle que le pop-up HVAC et que l'écran d'origine : en AUTO la
+                        // voiture annonce 15, qui n'est pas un cran. En partir écrivait le MAXIMUM
+                        // même pour un « moins » ; on repart du dernier niveau réglé à la main, et
+                        // cette écriture fait sortir d'AUTO.
+                        val reglages = etat.reglages()
+                        val cible = HvacPopup.pasVentilation(reglages, pas)
+                        if (cible == null) {
+                            AppLogger.w(TAG, "SHORTCUT clim ventilation — rien à écrire " +
+                                "(niveau ${etat.fanLevel}, bornes ${etat.fanMin}..${etat.fanMax})")
                             return
                         }
-                        val pas = if (action == ShortcutAction.HVAC_FAN_UP) 1 else -1
-                        val cible = (actuel + pas).coerceIn(etat.fanMin, etat.fanMax)
-                        AppLogger.i(TAG, "SHORTCUT clim ventilation : $actuel → $cible " +
+                        AppLogger.i(TAG, "SHORTCUT clim ventilation : " +
+                            (if (reglages.enAuto) "AUTO" else etat.fanLevel.toString()) + " → $cible " +
                             "(bornes ${etat.fanMin}..${etat.fanMax})")
-                        if (cible != actuel) MG4Hardware.setClimateFan(cible)
+                        MG4Hardware.setClimateFan(cible)
                     }
                     ShortcutAction.DEFROST_FRONT_TOGGLE, ShortcutAction.DEFROST_REAR_TOGGLE -> {
                         val avant  = action == ShortcutAction.DEFROST_FRONT_TOGGLE

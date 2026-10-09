@@ -651,12 +651,12 @@
 .b.air.sm { min-height: 76px; padding: 4px 2px; gap: 2px; font-size: calc(12px * var(--ts, 1)); }
 .b.air.sm .air-ico { width: 28px; height: 28px; }
 
-/* Pop-up HVAC, comme overlay_hvac_popup.xml : carte de 780 dp, croix de cellules 84 × 62 dp et
-   colonne tactile de 220 dp. Sur la voiture (1920 × 720), l'application la gonfle pour qu'elle
-   occupe environ 54 % de la largeur et 72 % de la hauteur : le zoom reproduit cette part d'écran
-   dans la maquette, dessinée en 1280 × 480. */
+/* Pop-up HVAC, comme overlay_hvac_popup.xml : carte de 900 dp, repère du joystick, croix de
+   cellules 84 × 62 dp et colonne tactile de 220 dp. Sur la voiture (1920 × 720), l'application la
+   gonfle pour qu'elle occupe environ 62 % de la largeur et 72 % de la hauteur : le zoom reproduit
+   cette part d'écran dans la maquette, dessinée en 1280 × 480. */
 .hvacpop {
-  width: 780px;
+  width: 900px;
   zoom: .88;
   background: var(--dash-card);
   border: 1px solid var(--dash-border);
@@ -674,6 +674,19 @@
 .hv-side .b.hv-ac { height: 52px; }
 .hv-side .hv-airlbl { margin: 6px 0 0; }
 .hv-top { display: flex; align-items: center; gap: 24px; }
+/* Repère du joystick : 110 dp, à 12 dp de la croix (le reste de l'écart vient du gap). */
+.hv-joy { flex: 0 0 110px; margin-right: -12px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.hv-joy svg { width: 72px; height: 64px; }
+.hv-joy .rim { fill: none; stroke: var(--dash-text-lo); stroke-width: 6; stroke-linecap: round; }
+.hv-joy .spoke { fill: var(--dash-border); }
+.hv-joy .pad { fill: var(--dash-accent-dim); stroke: var(--dash-accent); stroke-width: 2; }
+.hv-joy .arr { fill: var(--dash-accent); }
+.hv-joy .dot { fill: var(--text-primary); }
+.hv-joy b { margin-top: 6px; color: var(--text-primary); font-size: calc(13px * var(--ts, 1)); font-weight: 700; }
+.hv-joy span { margin-top: 2px; color: var(--text-secondary); font-size: calc(12px * var(--ts, 1)); line-height: 1.25; }
+.hv-joy.off .pad { fill: var(--dash-btn); stroke: var(--dash-text-lo); }
+.hv-joy.off .arr, .hv-joy.off .dot { fill: var(--dash-text-lo); }
+.hv-joy.off b { color: var(--dash-warn); }
 .hv-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; }
 .hv-foot .cd { margin-top: 0; }
 .b.hv-close { height: 34px; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 4px; font-size: calc(12px * var(--ts, 1)); }
@@ -705,7 +718,6 @@
 .hvacpop .b.air.sm { min-height: 64px; }
 .hvacpop .b.air.sm .air-ico { width: 26px; height: 26px; }
 .hvacpop .cd { margin-top: 6px; color: var(--text-secondary); font-size: calc(13px * var(--ts, 1)); }
-.hv-hint { margin-top: 4px; color: var(--dash-warn); font-size: calc(13px * var(--ts, 1)); }
 
 /* Cycle de régénération : rang de chaque mode dans la séquence */
 .rc-n {

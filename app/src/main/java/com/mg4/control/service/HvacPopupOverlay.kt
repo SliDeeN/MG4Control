@@ -13,6 +13,7 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -134,7 +135,7 @@ object HvacPopupOverlay {
         fermer()
 
         val localized = LocaleHelper.applyLocale(context)
-        // La mise en page est écrite pour une carte de 780 × 390 dp, trop petite sur l'écran de la
+        // La mise en page est écrite pour une carte de 900 × 390 dp, trop petite sur l'écran de la
         // voiture (constaté sur SWI133). Plutôt que de figer d'autres dp, qui ne conviendraient
         // qu'à UNE densité, on la gonfle avec une densité corrigée : dp et sp suivent d'un bloc,
         // pictos et texte restent nets, et la fenêtre prend la même part de l'écran partout.
@@ -158,7 +159,7 @@ object HvacPopupOverlay {
         v.ac.setOnClickListener            { basculerAc() }
         v.recirculation.forEach { (mode, bouton) -> bouton.setOnClickListener { choisirRecirculation(mode) } }
         v.fermer.setOnClickListener        { fermer() }
-        if (!KeyCaptureService.isEnabled(context)) v.aide.visibility = View.VISIBLE
+        v.repereJoystick(utilisable = KeyCaptureService.isEnabled(context))
 
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val params = WindowManager.LayoutParams(
@@ -223,18 +224,21 @@ object HvacPopupOverlay {
                 afficher()
                 ecrireDiffere("température") { MG4Hardware.setClimateTemp(action.cible) }
             }
+            // Un niveau écrit à la main est aussi ce qui fait SORTIR d'AUTO, comme sur l'écran
+            // d'origine : l'état corrigé n'est donc plus en AUTO.
             is HvacPopup.Action.Ventilation -> {
-                AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : ventilation ${s.fanLevel} → ${action.cible}")
-                etat = s.copy(fanLevel = action.cible)
+                val depuis = if (s.reglages().enAuto) "AUTO" else s.fanLevel.toString()
+                AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : ventilation $depuis → ${action.cible}")
+                etat = s.copy(fanLevel = action.cible, autoOn = s.autoOn?.let { false })
                 afficher()
                 ecrireDiffere("ventilation") { MG4Hardware.setClimateFan(action.cible) }
             }
-            // Clic central, ou geste sur la ventilation alors qu'elle est en AUTO (on en sort).
-            is HvacPopup.Action.Auto -> {
-                AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : ventilation AUTO ${s.autoOn} → ${action.actif}")
-                etat = s.copy(autoOn = action.actif)
+            // Clic central hors AUTO. En AUTO, il rend la main : c'est alors une [Ventilation].
+            HvacPopup.Action.Auto -> {
+                AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : mode AUTO activé")
+                etat = s.copy(autoOn = true)
                 afficher()
-                ecrire { MG4Hardware.setClimateAuto(action.actif) }
+                ecrire { MG4Hardware.setClimateAuto(true) }
             }
             null -> AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : rien à écrire (butée ou valeur illisible)")
         }
@@ -342,15 +346,16 @@ object HvacPopupOverlay {
         v.temperature.text = s.tempC?.let { "$it °C" } ?: "-- °C"
         // En AUTO la voiture annonce 15 pour la ventilation : on écrit « AUTO », pas ce nombre,
         // et la barre reste vide — il n'y a pas de cran à montrer.
-        val niveau = s.reglages().ventilationReelle
+        val r = s.reglages()
+        val niveau = r.ventilationReelle
         v.ventilation.text = when {
-            s.autoOn == true -> v.localized.getString(R.string.clim_auto)
+            r.enAuto -> v.localized.getString(R.string.clim_auto)
                 .uppercase(v.localized.resources.configuration.locales[0])
             else -> niveau?.toString() ?: "--"
         }
         v.barreVentilation.max = s.fanMax
         v.barreVentilation.progress = (niveau ?: 0).coerceIn(0, s.fanMax)
-        v.bascule(v.cellules.getValue(JoystickFocus.Commande.VALIDER), s.autoOn)
+        v.bascule(v.cellules.getValue(JoystickFocus.Commande.VALIDER), if (r.enAuto) true else s.autoOn)
         v.bascule(v.ac, s.acOn)
         v.recirculation.forEach { (mode, bouton) -> v.bascule(bouton, s.loopMode?.let { it == mode }) }
         // Valeur illisible → boutons grisés. Valeur lue mais hors échelle (7 « aucun »)
@@ -383,9 +388,6 @@ object HvacPopupOverlay {
         gestionnaire = null
     }
 
-    private fun MG4Hardware.ClimateState.reglages() =
-        HvacPopup.Reglages(tempC, tempMin, tempMax, fanLevel, fanMin, fanMax, autoOn)
-
     /** Vues du popup affiché et ce qu'il faut pour les peindre ; vit et meurt avec lui. */
     private class Vues(view: View, themed: Context, val localized: Context) {
         val temperature: TextView         = view.findViewById(R.id.hvac_popup_temp)
@@ -394,7 +396,9 @@ object HvacPopupOverlay {
         val minuterie: ProgressBar        = view.findViewById<ProgressBar>(R.id.hvac_popup_timer)
             .apply { max = AUTO_DISMISS_MS.toInt() }
         val decompte: TextView            = view.findViewById(R.id.hvac_popup_countdown)
-        val aide: TextView                = view.findViewById(R.id.hvac_popup_hint)
+        private val joystickIcone: ImageView = view.findViewById(R.id.hvac_joy_icon)
+        private val joystickTitre: TextView  = view.findViewById(R.id.hvac_joy_title)
+        private val joystickTexte: TextView  = view.findViewById(R.id.hvac_joy_text)
         val airFace: MaterialButton       = view.findViewById(R.id.hvac_btn_air_face)
         val airFeet: MaterialButton       = view.findViewById(R.id.hvac_btn_air_feet)
         val airWindshield: MaterialButton = view.findViewById(R.id.hvac_btn_air_windshield_front)
@@ -421,6 +425,7 @@ object HvacPopupOverlay {
         private val texteActif   = themed.getColor(R.color.dash_accent)
         private val texteInactif = themed.getColor(R.color.text_secondary)
         private val bordure      = themed.getColor(R.color.dash_border)
+        private val alerte       = themed.getColor(R.color.dash_warn)
         private val traitFin     = dp(themed, 1f)
         private val traitEpais   = dp(themed, 3f)
 
@@ -435,6 +440,19 @@ object HvacPopupOverlay {
             bouton.iconTint = ColorStateList.valueOf(if (allume) texteActif else texteInactif)
             bouton.isEnabled = actif != null
             bouton.alpha = if (actif != null) 1f else 0.35f
+        }
+
+        /**
+         * Repère à gauche de la croix : elle se pilote au joystick droit du volant. Sans service
+         * d'accessibilité le joystick ne nous parvient pas (il règle le volume) : le repère
+         * s'éteint et renvoie vers l'écran. L'état « utilisable » est celui de la mise en page.
+         */
+        fun repereJoystick(utilisable: Boolean) {
+            if (utilisable) return
+            joystickIcone.setImageResource(R.drawable.ic_hvac_joystick_off)
+            joystickTitre.setText(R.string.hvac_popup_joystick_off_title)
+            joystickTitre.setTextColor(alerte)
+            joystickTexte.setText(R.string.hvac_popup_joystick_off_text)
         }
 
         /** Retour visuel d'un geste : au volant, c'est le seul signe que la commande est passée. */
