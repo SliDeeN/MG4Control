@@ -39,6 +39,7 @@ import com.mg4.control.hardware.MG4Hardware.AebMode
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.HvacPopup
 import com.mg4.control.model.RegenLevel
+import com.mg4.control.model.SeatHeat
 import com.mg4.control.model.WindowCommand
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileApplier
@@ -824,11 +825,10 @@ class MG4ControlService : Service() {
                     AppLogger.w(TAG, "SHORTCUT siège chauffant — niveau illisible, aucune action")
                     return
                 }
-                val suivant = ExternalApi.cycleStep(actuel, 0, 3, 1)
+                // Un appui = UN cran, la commande même de la voiture. Le niveau suivant est le
+                // sien : éteint → 3 → 2 → 1 → éteint (établi sur véhicule, voir SeatHeat).
                 AppLogger.i(TAG, "SHORTCUT siège chauffant ${if (gauche) "gauche" else "droit"} " +
-                    ": $actuel → $suivant (un cran)")
-                // « Niveau suivant » est la commande même de la voiture : UN cran suffit. Viser
-                // `suivant` par la recherche de niveau faisait faire un tour complet au siège.
+                    ": $actuel → ${SeatHeat.next(actuel)} (un cran)")
                 if (gauche) MG4Hardware.stepSeatHeatLeft()
                 else        MG4Hardware.stepSeatHeatRight()
             }

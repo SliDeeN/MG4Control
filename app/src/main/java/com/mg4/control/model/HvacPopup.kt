@@ -96,20 +96,12 @@ object HvacPopup {
             .coerceIn(reglages.fanMin, reglages.fanMax)
 
     // ── Sièges chauffants (firmwares équipés seulement) ──────────────────────
-    private const val NIVEAU_SIEGE_MAX = 3
-
-    /**
-     * Niveau d'un siège chauffant après un appui : éteint → 1 → 2 → 3 → éteint, comme le
-     * raccourci. null si le niveau est illisible — partir d'un 0 supposé alors que le siège est
-     * à 3 ferait DESCENDRE le chauffage.
-     */
-    fun niveauSiegeSuivant(actuel: Int?): Int? =
-        actuel?.let { (it.coerceIn(0, NIVEAU_SIEGE_MAX) + 1) % (NIVEAU_SIEGE_MAX + 1) }
+    // L'ordre des niveaux et le compte des crans vivent dans [SeatHeat].
 
     /** Niveau d'un siège en pastilles pleines et vides : « ● ● ○ » pour 2. */
     fun pastilles(niveau: Int): String {
-        val plein = niveau.coerceIn(0, NIVEAU_SIEGE_MAX)
-        return (1..NIVEAU_SIEGE_MAX).joinToString(" ") { if (it <= plein) "●" else "○" }
+        val plein = niveau.coerceIn(0, SeatHeat.MAX_LEVEL)
+        return (1..SeatHeat.MAX_LEVEL).joinToString(" ") { if (it <= plein) "●" else "○" }
     }
 
     // ── Taille de la fenêtre ─────────────────────────────────────────────────

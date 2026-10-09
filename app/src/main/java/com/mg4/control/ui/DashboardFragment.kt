@@ -477,11 +477,20 @@ class DashboardFragment : Fragment() {
                 if (!isRefreshing)
                     CoroutineScope(Dispatchers.IO).launch { MG4Hardware.setSteeringHeat(checked) }
             }
+            // Au clic la rangée montre le niveau DEMANDÉ ; une fois la commande terminée on la
+            // repeint d'après la voiture. Sans ça elle n'était relue qu'à l'ouverture de l'onglet,
+            // et restait fausse dès que le siège n'était pas là où on l'attendait.
             seatLeftButtons?.let { setupSeatButtons(it) { level ->
-                CoroutineScope(Dispatchers.IO).launch { MG4Hardware.setSeatHeatLeft(level) }
+                CoroutineScope(Dispatchers.IO).launch {
+                    MG4Hardware.setSeatHeatLeft(level)
+                    repeindreSieges()
+                }
             } }
             seatRightButtons?.let { setupSeatButtons(it) { level ->
-                CoroutineScope(Dispatchers.IO).launch { MG4Hardware.setSeatHeatRight(level) }
+                CoroutineScope(Dispatchers.IO).launch {
+                    MG4Hardware.setSeatHeatRight(level)
+                    repeindreSieges()
+                }
             } }
         }
 
@@ -1093,6 +1102,22 @@ class DashboardFragment : Fragment() {
             val active = modeValue == activeMode
             btn?.backgroundTintList = ColorStateList.valueOf(if (active) colorActive else colorInactive)
             btn?.setTextColor(if (active) colorTextActive else colorTextInactive)
+        }
+    }
+
+    /**
+     * Repeint les deux rangées de sièges d'après la voiture. À appeler hors du thread principal,
+     * une fois la commande terminée : [MG4Hardware.setSeatHeatLeft] ne rend la main qu'après
+     * avoir vu la voiture annoncer le niveau (ou y avoir renoncé), la lecture est donc à jour.
+     * Un niveau illisible laisse la rangée telle quelle.
+     */
+    private suspend fun repeindreSieges() {
+        val gauche = MG4Hardware.getSeatHeatLeftOrNull()
+        val droit  = MG4Hardware.getSeatHeatRightOrNull()
+        withContext(Dispatchers.Main) {
+            if (!isAdded) return@withContext
+            gauche?.let { niveau -> seatLeftButtons?.let { applySeatUI(it, niveau) } }
+            droit?.let { niveau -> seatRightButtons?.let { applySeatUI(it, niveau) } }
         }
     }
 

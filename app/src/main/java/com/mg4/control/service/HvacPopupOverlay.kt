@@ -25,6 +25,7 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.model.AirFlow
 import com.mg4.control.model.HvacPopup
+import com.mg4.control.model.SeatHeat
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.LocaleHelper
 import java.util.Locale
@@ -336,16 +337,16 @@ object HvacPopupOverlay {
     }
 
     /**
-     * Siège chauffant : un appui = niveau suivant (éteint → 1 → 2 → 3 → éteint), comme le
-     * raccourci — et donc UN cran envoyé, puisque c'est la commande même de la voiture. Viser le
-     * niveau par la boucle de recherche faisait faire un tour complet au siège (2, 3, éteint, 1,
-     * 2 pour passer de 1 à 2). Deux appuis rapprochés envoient deux crans, espacés par le matériel.
+     * Siège chauffant : un appui = UN cran envoyé, la commande même de la voiture. Le niveau
+     * suivant est donc le sien — éteint → 3 → 2 → 1 → éteint ([SeatHeat.next]) — et c'est lui
+     * qu'on affiche aussitôt, sans attendre la relecture. Deux appuis rapprochés envoient deux
+     * crans, espacés par le matériel.
      */
     private fun cyclerSiege(gauche: Boolean) {
         val c = chauffages ?: return
         relancerDelai()
         val actuel = if (gauche) c.siegeGauche else c.siegeDroit
-        val suivant = HvacPopup.niveauSiegeSuivant(actuel) ?: return
+        val suivant = SeatHeat.next(actuel) ?: return
         val cote = if (gauche) "gauche" else "droit"
         AppLogger.i(TAG, "Pop-up HVAC — siège chauffant $cote : $actuel → $suivant")
         chauffages = if (gauche) c.copy(siegeGauche = suivant) else c.copy(siegeDroit = suivant)

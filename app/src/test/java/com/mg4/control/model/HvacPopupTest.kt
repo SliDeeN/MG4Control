@@ -149,27 +149,6 @@ class HvacPopupTest {
     // ── Sièges chauffants (firmwares équipés seulement) ──────────────────────
 
     @Test
-    fun `un appui sur un siege passe au niveau suivant puis l eteint`() {
-        // Éteint → 1 → 2 → 3 → éteint : comme le raccourci « siège chauffant ».
-        assertEquals(1, HvacPopup.niveauSiegeSuivant(0))
-        assertEquals(2, HvacPopup.niveauSiegeSuivant(1))
-        assertEquals(3, HvacPopup.niveauSiegeSuivant(2))
-        assertEquals(0, HvacPopup.niveauSiegeSuivant(3))
-    }
-
-    @Test
-    fun `un niveau de siege illisible ne se regle pas`() {
-        // Partir d'un 0 supposé alors que le siège est à 3 ferait DESCENDRE le chauffage.
-        assertNull(HvacPopup.niveauSiegeSuivant(null))
-    }
-
-    @Test
-    fun `un niveau de siege hors echelle repart de l echelle`() {
-        assertEquals(0, HvacPopup.niveauSiegeSuivant(7))
-        assertEquals(1, HvacPopup.niveauSiegeSuivant(-1))
-    }
-
-    @Test
     fun `les pastilles montrent le niveau du siege`() {
         assertEquals("○ ○ ○", HvacPopup.pastilles(0))
         assertEquals("● ○ ○", HvacPopup.pastilles(1))

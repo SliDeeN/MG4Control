@@ -1682,14 +1682,15 @@ object MG4Hardware {
     /**
      * Niveau d'un chauffage à crans (sièges chauffants).
      *
-     * La voiture ne sait qu'AVANCER d'un cran : écrire 1 dans la propriété est un appui, comme
-     * sur l'écran d'origine. Pour un niveau précis, [SeatHeat.reach] lit UNE fois, envoie le
-     * nombre de crans qui convient, puis vérifie sans jamais recliquer.
+     * La voiture ne connaît qu'une commande, « un cran » : écrire 1 dans la propriété est un
+     * appui, comme sur l'écran d'origine, et chaque cran fait DESCENDRE — éteint → 3 → 2 → 1 →
+     * éteint (établi sur SWI133 le 2026-10-09, voir [SeatHeat]). Pour un niveau précis,
+     * [SeatHeat.reach] lit UNE fois, envoie le nombre de crans qui convient, puis vérifie sans
+     * jamais recliquer. Monter d'un niveau coûte donc trois crans, en passant par « éteint ».
      *
-     * L'ancienne boucle (lire, cliquer, relire dans les 0,7 s, recliquer) envoyait un cran de
-     * trop dès que la voiture tardait à annoncer le nouveau niveau, puis refaisait tout le tour :
-     * « 1 → 2 » donnait 2, 3, éteint, 1, 2 (constaté sur SWI133 le 2026-10-09). Et sans niveau
-     * lisible, elle cliquait à l'aveugle pendant 7 secondes.
+     * L'ancienne boucle (lire, cliquer, relire, recliquer jusqu'à lire la cible) arrivait au même
+     * résultat sans connaître le sens, mais cliquait à l'aveugle pendant 7 secondes quand le
+     * niveau était illisible, et pouvait recliquer sur une lecture en retard.
      *
      * ⚠️ Bloquant (0,6 s par cran, puis jusqu'à 3 s de vérification) → hors du thread principal.
      */
@@ -1714,8 +1715,9 @@ object MG4Hardware {
         }
 
     /**
-     * UN cran de plus, sans viser de niveau : c'est la commande même de la voiture, et tout ce
-     * qu'il faut pour « niveau suivant » (pop-up HVAC, raccourci siège chauffant).
+     * UN cran, sans viser de niveau : c'est la commande même de la voiture, et tout ce qu'il faut
+     * pour « niveau suivant » (pop-up HVAC, raccourci siège chauffant). Le niveau obtenu est
+     * [SeatHeat.next] : éteint → 3 → 2 → 1 → éteint.
      */
     private fun stepHvacLevel(propId: Int, areaId: Int): Boolean =
         synchronized(hvacClickLock(propId)) { clickHvac(propId, areaId) }
@@ -2078,7 +2080,7 @@ object MG4Hardware {
         return setHvacLevelWithToggle(PROP_SEAT_HEAT_R, AREA_HVAC, level)
     }
 
-    /** Siège chauffant gauche : niveau suivant (éteint → 1 → 2 → 3 → éteint), en UN cran. */
+    /** Siège chauffant gauche : niveau suivant (éteint → 3 → 2 → 1 → éteint), en UN cran. */
     fun stepSeatHeatLeft(): Boolean {
         if (logEnabled) AppLogger.i(TAG, "stepSeatHeatLeft → un cran")
         return stepHvacLevel(PROP_SEAT_HEAT_L, AREA_HVAC)

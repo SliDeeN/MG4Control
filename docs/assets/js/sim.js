@@ -614,9 +614,9 @@
       case 'DROWSINESS_TOGGLE': { const v = !c.dms; if (W.bool('dms', v)) msg = S('safety_drowsiness') + ' → ' + onOff(v); break; }
       case 'DROWSINESS_SEN_CYCLE': { const v = c.dmsSen % 3 + 1; if (W.dmsSen(v)) msg = S('safety_drowsiness_sensitivity') + ' → ' + sensName(v); break; }
       case 'SEAT_HEAT_LEFT_CYCLE': if (!k.heat) { msg = L('Sans effet : pas de sièges chauffants sur ce firmware', 'No effect: no heated seats on this firmware'); break; }
-        c.seatL = (c.seatL + 1) % 4; msg = S('climate_seat_left') + ' → ' + levelName(c.seatL); break;
+        c.seatL = (c.seatL + 3) % 4; msg = S('climate_seat_left') + ' → ' + levelName(c.seatL); break;   // un cran descend : Off → 3 → 2 → 1 → Off
       case 'SEAT_HEAT_RIGHT_CYCLE': if (!k.heat) { msg = L('Sans effet : pas de sièges chauffants sur ce firmware', 'No effect: no heated seats on this firmware'); break; }
-        c.seatR = (c.seatR + 1) % 4; msg = S('climate_seat_right') + ' → ' + levelName(c.seatR); break;
+        c.seatR = (c.seatR + 3) % 4; msg = S('climate_seat_right') + ' → ' + levelName(c.seatR); break;
       case 'STEERING_HEAT_TOGGLE': if (!k.heat) { msg = L('Sans effet : pas de volant chauffant sur ce firmware', 'No effect: no heated steering wheel on this firmware'); break; }
         c.steering = !c.steering; msg = S('climate_steering_heat') + ' → ' + onOff(c.steering); break;
       case 'HVAC_TOGGLE': c.clim.power = !c.clim.power; msg = S('clim_card_title') + ' → ' + onOff(c.clim.power); break;
@@ -2268,8 +2268,9 @@
         case 'hvBg': case 'hvClose': return this.closeOverlay();
         case 'hvKey': return this.hvacKey(v);
         case 'hvAc': if (u.overlay) u.overlay.left = u.overlay.total; c.clim.ac = !c.clim.ac; return r();
-        // Chauffages : un appui = niveau suivant pour un siège, bascule pour le volant.
-        case 'hvSeat': if (u.overlay) u.overlay.left = u.overlay.total; if (v === 'L') c.seatL = (c.seatL + 1) % 4; else c.seatR = (c.seatR + 1) % 4; return r();
+        // Chauffages : un appui = un cran pour un siège (la voiture descend : Off → 3 → 2 → 1 → Off),
+        // bascule pour le volant.
+        case 'hvSeat': if (u.overlay) u.overlay.left = u.overlay.total; if (v === 'L') c.seatL = (c.seatL + 3) % 4; else c.seatR = (c.seatR + 3) % 4; return r();
         case 'hvWheel': if (u.overlay) u.overlay.left = u.overlay.total; c.steering = !c.steering; return r();
         case 'hvLoop': if (u.overlay) u.overlay.left = u.overlay.total; c.clim.loop = n; return r();
         case 'hvAir': {
