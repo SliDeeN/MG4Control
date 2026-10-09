@@ -483,6 +483,10 @@
   animation: simfade .15s ease-out;
 }
 @keyframes simfade { from { opacity: 0; } }
+/* Un popup déjà affiché est reconstruit à chaque geste (la maquette redessine tout) : marqué
+   « still » par sim.js, il ne rejoue pas son animation d'entrée, sinon il clignote. La
+   surbrillance pilotée depuis la page (.hl-on) garde la sienne. */
+.a-scrim.still, .a-toast.still, .a-scrim > .still:not(.hl-on) { animation: none; }
 .a-dialog {
   background: var(--dash-card);
   border: 1px solid var(--dash-border);

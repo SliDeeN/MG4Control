@@ -966,7 +966,19 @@
       this.app.setAttribute('data-app-theme', appTheme());
       this.app.setAttribute('lang', appLang());
       this.app.setAttribute('data-ts', state.settings.textSize);
+      // La maquette redessine TOUT à chaque changement d'état : un popup déjà à l'écran est donc
+      // reconstruit, et son animation d'entrée (fondu depuis le transparent) rejouait à chaque
+      // geste — il clignotait avant d'afficher la nouvelle valeur. On repère ce qui était déjà là
+      // pour le marquer « still » : l'animation ne joue plus qu'à la vraie apparition.
+      const flottants = '.a-scrim > *, .a-toast';
+      const signature = (n) => n.classList[0] + '|' + (n.getAttribute('data-hl') || '');
+      const dejaLa = new Set(Array.from(this.app.querySelectorAll(flottants), signature));
       this.app.innerHTML = this.html();
+      this.app.querySelectorAll(flottants).forEach((n) => {
+        if (!dejaLa.has(signature(n))) return;
+        n.classList.add('still');
+        if (n.parentElement.classList.contains('a-scrim')) n.parentElement.classList.add('still');
+      });
       const sc2 = this.app.querySelector('.a-scroll');
       if (sc2 && key === this._lastKey) sc2.scrollTop = st;
       this._lastKey = key;
