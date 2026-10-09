@@ -538,6 +538,7 @@
     HVAC_TOGGLE: 'shortcuts_action_hvac_toggle', HVAC_AC_TOGGLE: 'shortcuts_action_hvac_ac_toggle', HVAC_TEMP_UP: 'shortcuts_action_hvac_temp_up', HVAC_TEMP_DOWN: 'shortcuts_action_hvac_temp_down',
     HVAC_FAN_UP: 'shortcuts_action_hvac_fan_up', HVAC_FAN_DOWN: 'shortcuts_action_hvac_fan_down', DEFROST_FRONT_TOGGLE: 'shortcuts_action_defrost_front',
     DEFROST_REAR_TOGGLE: 'shortcuts_action_defrost_rear', HVAC_RECIRC_CYCLE: 'shortcuts_action_hvac_recirc',
+    HVAC_POPUP: 'shortcuts_action_hvac_popup',
     BRIGHTNESS_UP: 'shortcuts_action_brightness_up', BRIGHTNESS_DOWN: 'shortcuts_action_brightness_down',
     AUTO_HIGH_BEAM_TOGGLE: 'shortcuts_action_auto_high_beam', BATTERY_HEAT_TOGGLE: 'shortcuts_action_battery_heat',
     MEDIA_NEXT: 'shortcuts_action_media_next', MEDIA_PREVIOUS: 'shortcuts_action_media_prev', MEDIA_PLAY_PAUSE: 'shortcuts_action_media_play_pause',
@@ -558,7 +559,7 @@
     if (k.known) a.push('ADAS_CYCLE', 'ENERGY_SAVING_TOGGLE', 'TSR_TOGGLE');
     if (k.esc) a.push('ESC_TOGGLE', 'DROWSINESS_TOGGLE', 'DROWSINESS_SEN_CYCLE');
     a.push('SEAT_HEAT_LEFT_CYCLE', 'SEAT_HEAT_RIGHT_CYCLE', 'STEERING_HEAT_TOGGLE');
-    if (k.clim) a.push('HVAC_TOGGLE', 'HVAC_AC_TOGGLE', 'HVAC_TEMP_UP', 'HVAC_TEMP_DOWN', 'HVAC_FAN_UP', 'HVAC_FAN_DOWN', 'DEFROST_FRONT_TOGGLE', 'DEFROST_REAR_TOGGLE', 'HVAC_RECIRC_CYCLE');
+    if (k.clim) a.push('HVAC_TOGGLE', 'HVAC_AC_TOGGLE', 'HVAC_TEMP_UP', 'HVAC_TEMP_DOWN', 'HVAC_FAN_UP', 'HVAC_FAN_DOWN', 'DEFROST_FRONT_TOGGLE', 'DEFROST_REAR_TOGGLE', 'HVAC_RECIRC_CYCLE', 'HVAC_POPUP');
     if (k.bri) a.push('BRIGHTNESS_UP', 'BRIGHTNESS_DOWN');
     if (k.beam) a.push('AUTO_HIGH_BEAM_TOGGLE');
     if (k.batHeat) a.push('BATTERY_HEAT_TOGGLE');
@@ -642,6 +643,7 @@
         applyProfile(p, { manual: true }); return 'profile';
       }
       case 'PROFILE_PICKER': { const s = activeSim(); if (s) s.openPicker(); return 'picker'; }
+      case 'HVAC_POPUP': { const s = activeSim(); if (s) s.toggleHvacPopup(); return 'hvac'; }
       case 'OPEN_APP': { const s = activeSim(); if (s) { if (s.ui.screen === 'closed') s.go(state.settings.defaultScreen); } msg = L('MG4Control au premier plan', 'MG4Control brought to front'); break; }
       case 'OPEN_CUSTOM_APP': msg = L('Lancement de ', 'Launching ') + ((extra && extra.app) || '?'); break;
       case 'VEHICLE_POWER_OFF': { const s = activeSim(); if (s) s.askPowerOff(); return 'power'; }
@@ -691,6 +693,14 @@
       keyRt[code] = { capture: true };
       picker.navigate(JOYSTICK[code]);
       emit('nav', { code, dir: JOYSTICK[code] });
+      return;
+    }
+    // Pop-up HVAC ouvert → le joystick y règle directement la clim (même condition).
+    const hvac = instances.find((i) => i.ui.overlay && i.ui.overlay.type === 'hvac');
+    if (hvac && JOYSTICK[code] && state.sc.advService && !garage()) {
+      keyRt[code] = { capture: true };
+      hvac.hvacKey(JOYSTICK[code]);
+      emit('nav', { code, dir: JOYSTICK[code], popup: 'hvac' });
       return;
     }
     const path = claimed(code) ? 'adv' : (isStar(code) && state.sc.enabled && !garage() ? 'classic' : 'launcher');
@@ -1789,6 +1799,35 @@
       o.focus = { r, c }; o.left = 8;
       commit();
     }
+    /**
+     * Pop-up HVAC (HvacPopupOverlay) : le joystick n'y déplace aucun focus, chaque direction agit.
+     * Ouvert et refermé par le même raccourci ; se referme seul après 6 s sans action.
+     */
+    openHvacPopup() {
+      if (!caps().clim) return hud(L('Pop-up HVAC indisponible sur ce firmware', 'HVAC pop-up unavailable on this firmware'));
+      this.closeOverlay();
+      this.ui.overlay = { type: 'hvac', left: 6, total: 6, flash: null };
+      this.startCountdown(() => this.closeOverlay());
+      this.render();
+    }
+    toggleHvacPopup() {
+      const o = this.ui.overlay;
+      if (o && o.type === 'hvac') return this.closeOverlay();
+      this.openHvacPopup();
+    }
+    /** Haut/bas : température ; gauche/droite : ventilation ; centre : fermer. Au doigt comme au joystick. */
+    hvacKey(dir) {
+      const o = this.ui.overlay; if (!o || o.type !== 'hvac') return;
+      if (dir === 'ok') return this.closeOverlay();
+      const cl = car().clim;
+      // On clampe, on ne boucle pas : comme dans l'application.
+      if (dir === 'up' || dir === 'down') cl.temp = clamp(cl.temp + (dir === 'up' ? 1 : -1), cl.tMin, cl.tMax);
+      else cl.fan = clamp(cl.fan + (dir === 'right' ? 1 : -1), cl.fMin, cl.fMax);
+      o.left = o.total; o.flash = dir;
+      clearTimeout(this._hvFlash);
+      this._hvFlash = setTimeout(() => { const cur = this.ui.overlay; if (cur && cur.type === 'hvac') { cur.flash = null; this.render(); } }, 200);
+      commit();
+    }
     showUpdateOverlay() {
       this.closeOverlay();
       this.ui.overlay = { type: 'update' };
@@ -1808,6 +1847,8 @@
         o.left -= 1;
         if (o.left <= 0) { clearInterval(this._cd); onEnd(); return; }
         const el = this.app.querySelector('[data-cd]');
+        const bar = this.app.querySelector('[data-cdbar]');
+        if (bar) bar.style.width = (100 * o.left / (o.total || 8)) + '%';
         if (el) el.textContent = S('overlay_countdown', o.left); else this.render();
       }, 1000);
     }
@@ -1837,6 +1878,24 @@
           '<div class="pk-foot" data-hl="pk-foot"><div><button class="b' + kf('close') + '" data-a="pkClose"' + fc('close') + '>' + esc(S('nav_close')) + '</button><span class="cd" data-cd>' + esc(S('overlay_countdown', o.left)) + '</span></div>' +
           (k.power ? '<button class="b danger' + kf('power') + '" data-a="pkPower"' + fc('power') + '>' + esc(S('shortcuts_action_vehicle_power_off')) + '</button>' : '') +
           '<div style="justify-content:flex-end"><button class="b primary' + kf('open') + '" data-a="pkOpen"' + fc('open') + '>' + esc(S('overlay_open_app')) + '</button></div></div></div></div>';
+      }
+      if (o.type === 'hvac') {
+        const cl = car().clim;
+        // Sans service d'accessibilité, le joystick ne parvient pas à l'application : la fenêtre le dit.
+        const nav = state.sc.advService && !garage();
+        const cell = (dir, cls, ico, key) => '<button class="b hv-cell hv-' + cls + (o.flash === dir ? ' hit' : '') + '" data-a="hvKey" data-v="' + dir + '">' + ico + '<span>' + esc(S(key)) + '</span></button>';
+        const ab = (f, on, key, icon) => '<button class="b air sm' + (on ? ' on' : '') + '" data-a="hvAir" data-v="' + f + '">' + AIR_ICON[icon] + '<span>' + esc(S(key)) + '</span></button>';
+        return '<div class="a-scrim" data-a="hvBg"><div class="hvacpop" data-hl="hvac-popup"><div class="hv-top"><div class="hv-cross">' +
+          cell('up', 'up', HV_ICON.temp, 'hvac_popup_temp_up') + cell('left', 'left', HV_ICON.fan, 'hvac_popup_fan_down') + cell('ok', 'ok', '', 'nav_close') +
+          cell('right', 'right', HV_ICON.fan, 'hvac_popup_fan_up') + cell('down', 'down', HV_ICON.temp, 'hvac_popup_temp_down') + '</div>' +
+          '<div class="hv-vals"><div class="lbl">' + esc(S('clim_temperature')) + '</div><div class="hv-temp">' + cl.temp + ' °C</div>' +
+          '<div class="lbl">' + esc(S('clim_fan')) + '<b>' + cl.fan + '</b></div><div class="hv-fan"><i style="width:' + Math.round(100 * cl.fan / cl.fMax) + '%"></i></div></div></div>' +
+          '<div class="lbl hv-airlbl">' + esc(S('clim_section_airflow')) + '</div><div class="a-grid g4">' +
+          ab('face', cl.air.face, 'clim_air_face', 'face') + ab('feet', cl.air.feet, 'clim_air_feet', 'feet') +
+          ab('ws', cl.air.ws, 'clim_air_windshield_front', 'ws') + ab('rear', cl.defR, 'clim_air_windshield_rear', 'rear') + '</div>' +
+          '<div class="hv-bar"><i data-cdbar style="width:' + Math.round(100 * o.left / o.total) + '%"></i></div>' +
+          '<div class="cd" data-cd>' + esc(S('overlay_countdown', o.left)) + '</div>' +
+          (nav ? '' : '<div class="hv-hint">' + esc(S('hvac_popup_no_joystick')) + '</div>') + '</div></div>';
       }
       if (o.type === 'update') {
         return '<div class="a-scrim" data-a="upBg"><div class="confirm" data-hl="upd-overlay"><div class="msg"><b>' + esc(S('update_overlay_title')) + '</b>\n<span style="font-size:26px;font-weight:700;color:var(--dash-accent)">' + esc(S('update_overlay_versions', 'v2.6.8', 'v2.x.x')) + '</span></div>' +
@@ -1970,7 +2029,7 @@
         const t = e.target.closest('[data-a]');
         if (!t || !this.app.contains(t)) return;
         if (t.disabled || t.classList.contains('dis')) return;
-        if (t.getAttribute('data-a') === 'pkBg' && e.target !== t) return; // clic dans la carte
+        if ((t.getAttribute('data-a') === 'pkBg' || t.getAttribute('data-a') === 'hvBg') && e.target !== t) return; // clic dans la carte
         this.act(t.getAttribute('data-a'), t.getAttribute('data-v'), t);
       });
       this.app.addEventListener('input', (e) => {
@@ -2188,6 +2247,16 @@
         case 'doorRestore': state.door.restore = !state.door.restore; return r();
         // Overlays
         case 'pkBg': case 'pkClose': return this.closeOverlay();
+        case 'hvBg': return this.closeOverlay();
+        case 'hvKey': return this.hvacKey(v);
+        case 'hvAir': {
+          // Mêmes boutons cumulables que la page Clim ; la lunette arrière est le dégivrage arrière.
+          if (u.overlay) u.overlay.left = u.overlay.total;
+          if (v === 'rear') { c.clim.defR = !c.clim.defR; return r(); }
+          const next = Object.assign({}, c.clim.air, { [v]: !c.clim.air[v] });
+          if (!next.face && !next.feet && !next.ws) return;
+          c.clim.air = next; return r();
+        }
         case 'pkBri': c.brightness = n; if (u.overlay) u.overlay.left = 8; return r();
         case 'pkProfile': { const p = state.profiles.find((x) => x.id === v); this.closeOverlay(); if (p) applyProfile(p, { manual: true }); return; }
         case 'pkPower': this.closeOverlay(); return this.askPowerOff();
@@ -2410,6 +2479,9 @@
       const u = this.ui;
       switch (name) {
         case 'picker': return this.openPicker();
+        case 'hvacPopup':
+          if (caps().clim && !this.assigned('HVAC_POPUP')) { state.sc.map.btn2_single = 'HVAC_POPUP'; delete state.sc.extra.btn2_single; }
+          return this.openHvacPopup();
         case 'confirm': { const p = state.profiles.find((x) => x.id === state.auto.p.profileId) || state.profiles[0]; if (p) this.showConfirm(p, () => {}); return; }
         case 'fwUnknown': state.fwDismissed = false; if (state.fw !== 'UNKNOWN') { u.dialog = { type: 'fwUnknown' }; return this.render(); } return commit();
         case 'lang': case 'restore': case 'about': case 'launcherWarn': case 'advWarn': case 'apiConfirm':
@@ -2487,6 +2559,13 @@
   };
   const airSvg = (k) => '<svg class="air-ico" viewBox="0 0 960 960" fill="currentColor" aria-hidden="true"><path d="' + AIR_PATH[k] + '"/></svg>';
   const AIR_ICON = { face: airSvg('face'), feet: airSvg('feet'), ws: airSvg('ws'), rear: airSvg('rear') };
+  // Croix du pop-up HVAC (res/drawable/ic_hvac_temp.xml et ic_hvac_fan.xml) : d'après Google
+  // Material Icons « thermostat » et « toys » (Apache License 2.0).
+  const hvSvg = (d) => '<svg class="hv-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="' + d + '"/></svg>';
+  const HV_ICON = {
+    temp: hvSvg('M15,13V5c0,-1.66 -1.34,-3 -3,-3S9,3.34 9,5v8c-1.21,0.91 -2,2.37 -2,4 0,2.76 2.24,5 5,5s5,-2.24 5,-5c0,-1.63 -0.79,-3.09 -2,-4zM11,5c0,-0.55 0.45,-1 1,-1s1,0.45 1,1h-1v1h1v2h-1v1h1v2h-2L11,5z'),
+    fan: hvSvg('M12,12c0,-3 2.5,-5.5 5.5,-5.5S23,9 23,12H12zM12,12c0,3 -2.5,5.5 -5.5,5.5S1,15 1,12h11zM12,12c-3,0 -5.5,-2.5 -5.5,-5.5S9,1 12,1v11zM12,12c3,0 5.5,2.5 5.5,5.5S15,23 12,23V12z')
+  };
   // Tout fermer / Tout ouvrir (res/drawable/ic_window_all_*.xml) : Material Symbols keyboard_double_arrow_up/down.
   const WIN_PATH = {
     allUp: 'M296,736L240,680L480,440L720,680L664,736L480,553L296,736ZM296,496L240,440L480,200L720,440L664,496L480,313L296,496Z',
@@ -2614,6 +2693,7 @@
     const nm = keyName(d.code);
     const pl = { single: L('appui court', 'short press'), long: L('appui long', 'long press'), double: L('double appui', 'double press') };
     if (t === 'capture') return L('Touche enregistrée : ', 'Key recorded: ') + nm + ' (' + d.code + ')';
+    if (t === 'nav' && d.popup === 'hvac') return nm + L(' → réglage direct dans le pop-up HVAC (joystick)', ' → direct adjustment in the HVAC pop-up (joystick)');
     if (t === 'nav') return nm + L(' → navigation dans le popup de profils (joystick)', ' → navigating the profile popup (joystick)');
     if (t === 'fire') {
       if (d.path === 'launcher') return nm + ', ' + pl[d.press] + (garage() ? L(' → Mode Garage : touche rendue au launcher', ' → Garage mode: key returned to the launcher') : L(' → transmise au launcher d\'origine (non interceptée)', ' → passed to the stock launcher (not intercepted)'));

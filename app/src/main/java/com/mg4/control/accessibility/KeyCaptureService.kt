@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.service.HvacPopupOverlay
 import com.mg4.control.service.MG4ControlService
 import com.mg4.control.service.ProfileConfirmOverlay
 import com.mg4.control.service.ProfilePickerOverlay
@@ -34,8 +35,9 @@ import java.util.concurrent.Executors
  *    uniquement si l'interrupteur des raccourcis avancés est actif — un appui qui s'avère sans
  *    action y est renvoyé au système (voir [rejouer]) ;
  *  • la touche pressée PENDANT un enregistrement, le temps d'un seul appui ;
- *  • le joystick droit (297-301) PENDANT que le popup de profils est affiché — il y sert à
- *    naviguer, et l'avaler est ce qui empêche le volume et la piste de changer en même temps.
+ *  • le joystick droit (297-301) PENDANT qu'un de nos popups est affiché (profils,
+ *    confirmation, HVAC) — il y sert à naviguer ou à régler, et l'avaler est ce qui empêche le
+ *    volume et la piste de changer en même temps.
  * Tout le reste traverse. Avaler une
  * touche par erreur sur une voiture est autrement plus grave que le désagrément qu'on corrige,
  * d'où ce double verrou et le try/catch qui renvoie false en cas d'imprévu.
@@ -166,18 +168,27 @@ class KeyCaptureService : AccessibilityService() {
             // ouvre la navigation : une répétition sans premier down signale un appui commencé
             // avant l'ouverture (un appui long qui vient d'ouvrir le popup, typiquement), et son
             // relâchement appartient au raccourci qui l'a pris en charge.
-            // Si les deux sont ouverts, la confirmation passe d'abord : sa question expire en 8 s.
+            // Si plusieurs sont ouverts, la confirmation passe d'abord : sa question expire en 8 s.
+            // Le pop-up HVAC vient en dernier — il n'attend aucune réponse.
             val commande = JoystickFocus.commande(code)
             if (commande != null && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 val confirmation = ProfileConfirmOverlay.isShowing()
-                if (confirmation || ProfilePickerOverlay.isShowing()) {
+                val profils = ProfilePickerOverlay.isShowing()
+                if (confirmation || profils || HvacPopupOverlay.isShowing()) {
                     navigationEnCours.add(code)
-                    if (confirmation) {
-                        AppLogger.i(TAG, "touche $code — navigation popup confirmation → ${commande.name}")
-                        ProfileConfirmOverlay.naviguer(commande)
-                    } else {
-                        AppLogger.i(TAG, "touche $code — navigation popup profils → ${commande.name}")
-                        ProfilePickerOverlay.naviguer(commande)
+                    when {
+                        confirmation -> {
+                            AppLogger.i(TAG, "touche $code — navigation popup confirmation → ${commande.name}")
+                            ProfileConfirmOverlay.naviguer(commande)
+                        }
+                        profils -> {
+                            AppLogger.i(TAG, "touche $code — navigation popup profils → ${commande.name}")
+                            ProfilePickerOverlay.naviguer(commande)
+                        }
+                        else -> {
+                            AppLogger.i(TAG, "touche $code — pop-up HVAC → ${commande.name}")
+                            HvacPopupOverlay.naviguer(commande)
+                        }
                     }
                     return true
                 }

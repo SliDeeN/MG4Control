@@ -1502,14 +1502,9 @@ class DashboardFragment : Fragment() {
         // ── Sens de l'air : boutons CUMULABLES ──
         // Chaque appui recompose la combinaison à partir du dernier état LU sur la voiture, pas
         // d'un état gardé à l'écran : l'écran d'origine peut l'avoir changé entre-temps.
-        fun basculerAir(face: Boolean = false, feet: Boolean = false, windshield: Boolean = false) {
+        fun basculerAir(part: Int) {
             val lu = climLastState?.airFlow ?: return
-            val actuel = AirFlow.partsOf(lu) ?: AirFlow.Parts(face = false, feet = false, windshield = false)
-            val cible = AirFlow.directionFor(
-                face       = actuel.face xor face,
-                feet       = actuel.feet xor feet,
-                windshield = actuel.windshield xor windshield
-            )
+            val cible = AirFlow.toggled(lu, part)
             // L'air doit bien sortir quelque part : le dernier bouton allumé ne s'éteint pas.
             if (cible == null) {
                 AppLogger.i(CLIM_UI_TAG, "Sens de l'air : dernier bouton actif, appui ignoré (valeur lue=$lu)")
@@ -1522,9 +1517,9 @@ class DashboardFragment : Fragment() {
             climLastState = climLastState?.copy(airFlow = cible)
             climateWrite { MG4Hardware.setClimateAirFlow(cible) }
         }
-        climBtnAirFace?.setOnClickListener       { basculerAir(face = true) }
-        climBtnAirFeet?.setOnClickListener       { basculerAir(feet = true) }
-        climBtnAirWindshield?.setOnClickListener { basculerAir(windshield = true) }
+        climBtnAirFace?.setOnClickListener       { basculerAir(AirFlow.FACE) }
+        climBtnAirFeet?.setOnClickListener       { basculerAir(AirFlow.FEET) }
+        climBtnAirWindshield?.setOnClickListener { basculerAir(AirFlow.WINDSHIELD) }
         // Lunette arrière : hors de l'échelle du sens de l'air, c'est le dégivrage arrière.
         climBtnAirRear?.setOnClickListener {
             climLastState?.defrostRear?.let { cur ->

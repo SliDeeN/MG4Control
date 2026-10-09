@@ -532,6 +532,12 @@
     <string name="shortcuts_action_defrost_front">Desembaciamento dianteiro (ON/OFF)</string>
     <string name="shortcuts_action_defrost_rear">Desembaciamento traseiro (ON/OFF)</string>
     <string name="shortcuts_action_hvac_recirc">Recirculação: ciclo</string>
+    <string name="shortcuts_action_hvac_popup">Pop-up HVAC</string>
+    <string name="hvac_popup_temp_up">Temp. +</string>
+    <string name="hvac_popup_temp_down">Temp. −</string>
+    <string name="hvac_popup_fan_up">Ventil. +</string>
+    <string name="hvac_popup_fan_down">Ventil. −</string>
+    <string name="hvac_popup_no_joystick">Sem o serviço de acessibilidade, o joystick altera o volume: use o ecrã.</string>
     <string name="shortcuts_action_brightness_up">Brilho +</string>
     <string name="shortcuts_action_brightness_down">Brilho -</string>
 

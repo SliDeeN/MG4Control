@@ -63,7 +63,11 @@ enum class ShortcutAction(val id: Int) {
 
     // Batterie : « lue puis écrite » aussi — l'écran d'origine et la fenêtre « température basse »
     // de SystemUI l'activent sans nous.
-    BATTERY_HEAT_TOGGLE(40);
+    BATTERY_HEAT_TOGGLE(40),
+
+    // Pop-up HVAC (issues #120 et #125) : réglage rapide de la clim au joystick droit. Comme
+    // PROFILE_PICKER, l'action n'écrit rien elle-même — elle ouvre la fenêtre, ou la referme.
+    HVAC_POPUP(41);
 
     companion object {
         fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: NONE

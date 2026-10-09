@@ -621,7 +621,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app *, .a-scrim, .a-dialog, .picker, .confirm { animation: none !important; transition: none !important; }
+  .app *, .a-scrim, .a-dialog, .picker, .confirm, .hvacpop { animation: none !important; transition: none !important; }
 }
 
 /* ══════════ 2.6.7 (bêta) ══════════ */
@@ -650,6 +650,48 @@
 /* Éditeur de profil (fragment_profile_edit.xml) : icône de 28 dp, texte de 12 sp, 76 dp de haut. */
 .b.air.sm { min-height: 76px; padding: 4px 2px; gap: 2px; font-size: calc(12px * var(--ts, 1)); }
 .b.air.sm .air-ico { width: 28px; height: 28px; }
+
+/* Pop-up HVAC, comme overlay_hvac_popup.xml : carte de 600 dp, croix de cellules 84 × 62 dp. */
+.hvacpop {
+  width: 600px;
+  background: var(--dash-card);
+  border: 1px solid var(--dash-border);
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.45);
+  animation: simpop .18s ease-out;
+}
+.hvacpop .lbl { color: var(--text-secondary); font-size: calc(13px * var(--ts, 1)); }
+.hvacpop .lbl b { color: var(--text-primary); font-size: calc(22px * var(--ts, 1)); font-weight: 700; margin-left: 8px; }
+.hv-top { display: flex; align-items: center; gap: 24px; }
+.hv-cross { flex: 0 0 auto; display: grid; grid-template-columns: repeat(3, 84px); grid-template-rows: repeat(3, 62px); gap: 6px; }
+.b.hv-cell {
+  height: auto; padding: 4px 2px; border-radius: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  font-size: calc(12px * var(--ts, 1)); text-transform: none; letter-spacing: 0;
+}
+.hv-up { grid-column: 2; grid-row: 1; }
+.hv-left { grid-column: 1; grid-row: 2; }
+.hv-ok { grid-column: 2; grid-row: 2; }
+.hv-right { grid-column: 3; grid-row: 2; }
+.hv-down { grid-column: 2; grid-row: 3; }
+.hv-ico { flex: 0 0 auto; width: 26px; height: 26px; }
+.hv-up .hv-ico { color: var(--dash-danger); }
+.hv-down .hv-ico { color: var(--dash-accent); }
+/* Retour visuel d'un geste : seul signe, au volant, que la commande est passée. */
+.b.hv-cell.hit { border-color: var(--dash-accent); box-shadow: inset 0 0 0 2px var(--dash-accent); }
+.hv-vals { flex: 1; min-width: 0; }
+.hv-temp { color: var(--text-primary); font-size: calc(48px * var(--ts, 1)); font-weight: 700; line-height: 1.1; margin-bottom: 12px; }
+.hv-fan, .hv-bar { border-radius: 4px; background: var(--dash-border); overflow: hidden; }
+.hv-fan { height: 8px; margin-top: 6px; }
+.hv-bar { height: 3px; margin-top: 12px; }
+.hv-fan i, .hv-bar i { display: block; height: 100%; background: var(--dash-accent); }
+.hv-bar i { transition: width 1s linear; }
+.hvacpop .hv-airlbl { margin: 12px 0 6px; }
+.hvacpop .b.air.sm { min-height: 64px; }
+.hvacpop .b.air.sm .air-ico { width: 26px; height: 26px; }
+.hvacpop .cd { margin-top: 6px; color: var(--text-secondary); font-size: calc(13px * var(--ts, 1)); }
+.hv-hint { margin-top: 4px; color: var(--dash-warn); font-size: calc(13px * var(--ts, 1)); }
 
 /* Cycle de régénération : rang de chaque mode dans la séquence */
 .rc-n {

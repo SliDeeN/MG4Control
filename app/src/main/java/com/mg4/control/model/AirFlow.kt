@@ -68,6 +68,24 @@ object AirFlow {
         return mask.takeIf { it != 0 }
     }
 
+    /**
+     * Valeur à écrire après un appui sur le bouton [part] ([FACE], [FEET] ou [WINDSHIELD]) quand
+     * la voiture est sur [direction] : le bouton change d'état, les deux autres gardent le leur.
+     *
+     * null = rien à écrire : ce serait éteindre le dernier bouton allumé — l'air doit bien sortir
+     * quelque part — ou [part] n'est pas un sens de l'air (la lunette arrière a sa commande).
+     * Une valeur lue hors échelle (7, « aucun ») vaut trois boutons éteints.
+     */
+    fun toggled(direction: Int, part: Int): Int? {
+        if (part != FACE && part != FEET && part != WINDSHIELD) return null
+        val actuel = partsOf(direction) ?: Parts(face = false, feet = false, windshield = false)
+        return directionFor(
+            face       = actuel.face xor (part == FACE),
+            feet       = actuel.feet xor (part == FEET),
+            windshield = actuel.windshield xor (part == WINDSHIELD)
+        )
+    }
+
     /** Valeur à écrire pour les boutons cochés d'un profil ; la lunette arrière n'y compte pas. */
     fun directionForMask(mask: Int): Int? = directionFor(
         face       = mask and FACE != 0,

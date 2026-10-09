@@ -532,6 +532,12 @@
     <string name="shortcuts_action_defrost_front">Sbrinamento anteriore (ON/OFF)</string>
     <string name="shortcuts_action_defrost_rear">Sbrinamento posteriore (ON/OFF)</string>
     <string name="shortcuts_action_hvac_recirc">Ricircolo: ciclo</string>
+    <string name="shortcuts_action_hvac_popup">Pop-up HVAC</string>
+    <string name="hvac_popup_temp_up">Temp. +</string>
+    <string name="hvac_popup_temp_down">Temp. −</string>
+    <string name="hvac_popup_fan_up">Ventil. +</string>
+    <string name="hvac_popup_fan_down">Ventil. −</string>
+    <string name="hvac_popup_no_joystick">Senza il servizio di accessibilità, il joystick regola il volume: usa lo schermo.</string>
     <string name="shortcuts_action_brightness_up">Luminosità +</string>
     <string name="shortcuts_action_brightness_down">Luminosità -</string>
 
