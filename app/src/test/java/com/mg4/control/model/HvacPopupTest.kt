@@ -75,4 +75,41 @@ class HvacPopupTest {
         val rien = milieu.copy(temp = null, fan = null)
         assertEquals(Action.Fermer, HvacPopup.action(Commande.VALIDER, rien))
     }
+
+    // ── Taille de la fenêtre ─────────────────────────────────────────────────
+    // Dessinée pour 600 × 375 dp, elle paraissait petite sur la voiture : l'écran y fait
+    // 1920 × 720 pixels à 1 pixel par dp (mesuré sur une photo, SWI133, 2026-10-09).
+
+    @Test
+    fun `sur l ecran de la voiture la fenetre grandit`() {
+        // Limitée par la hauteur : 72 % de 720 px pour 375 dp → × 1,38.
+        assertEquals(1.38f, HvacPopup.echelle(1920, 720, 1f), 0.01f)
+    }
+
+    @Test
+    fun `la place prise a l ecran ne depend pas de la densite`() {
+        // La densité des firmwares A9 n'est pas connue. Si l'un d'eux annonce 1280 × 480 dp
+        // (1,5 pixel par dp), la fenêtre doit couvrir les mêmes pixels, pas déborder.
+        val pixelsParDpDeBase = HvacPopup.echelle(1920, 720, 1f) * 1f
+        assertEquals(pixelsParDpDeBase, HvacPopup.echelle(1920, 720, 1.5f) * 1.5f, 0.001f)
+    }
+
+    @Test
+    fun `un ecran moins large limite par la largeur`() {
+        // 46 % de 1400 px pour 600 dp → × 1,07, sous la limite de hauteur (× 1,38).
+        assertEquals(1.07f, HvacPopup.echelle(1400, 720, 1f), 0.01f)
+    }
+
+    @Test
+    fun `l echelle reste bornee`() {
+        assertEquals(2f, HvacPopup.echelle(8000, 4000, 1f), 0f)
+        assertEquals(0.75f, HvacPopup.echelle(400, 300, 1f), 0f)
+    }
+
+    @Test
+    fun `des mesures absurdes laissent la fenetre telle quelle`() {
+        assertEquals(1f, HvacPopup.echelle(0, 0, 1f), 0f)
+        assertEquals(1f, HvacPopup.echelle(1920, 720, 0f), 0f)
+        assertEquals(1f, HvacPopup.echelle(1920, 720, Float.NaN), 0f)
+    }
 }

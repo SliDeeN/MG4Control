@@ -2,6 +2,7 @@ package com.mg4.control.service
 
 import android.content.Context
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
@@ -24,7 +25,9 @@ import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.model.AirFlow
 import com.mg4.control.model.HvacPopup
 import com.mg4.control.util.LocaleHelper
+import java.util.Locale
 import java.util.concurrent.Executors
+import kotlin.math.roundToInt
 
 /**
  * Pop-up HVAC (issues #120 et #125) : réglage rapide de la clim par-dessus n'importe quel écran,
@@ -123,7 +126,17 @@ object HvacPopupOverlay {
         fermer()
 
         val localized = LocaleHelper.applyLocale(context)
-        val themed = ContextThemeWrapper(localized, R.style.Theme_MG4Control)
+        // La mise en page est écrite pour une carte de 600 × 375 dp, trop petite sur l'écran de la
+        // voiture (constaté sur SWI133). Plutôt que de figer d'autres dp, qui ne conviendraient
+        // qu'à UNE densité, on la gonfle avec une densité corrigée : dp et sp suivent d'un bloc,
+        // pictos et texte restent nets, et la fenêtre prend la même part de l'écran partout.
+        val mesures = localized.resources.displayMetrics
+        val echelle = HvacPopup.echelle(mesures.widthPixels, mesures.heightPixels, mesures.density)
+        val agrandi = localized.createConfigurationContext(
+            Configuration(localized.resources.configuration).apply {
+                densityDpi = (mesures.densityDpi * echelle).roundToInt()
+            })
+        val themed = ContextThemeWrapper(agrandi, R.style.Theme_MG4Control)
         val view = LayoutInflater.from(themed).inflate(R.layout.overlay_hvac_popup, null)
         val v = Vues(view, themed, localized)
 
@@ -150,7 +163,9 @@ object HvacPopupOverlay {
         etat = lu
         overlayView = view
         AppLogger.i(TAG, "Pop-up HVAC affiché : ${lu.tempC} °C (${lu.tempMin}..${lu.tempMax}), " +
-            "ventilation ${lu.fanLevel} (${lu.fanMin}..${lu.fanMax}), sens de l'air ${lu.airFlow}")
+            "ventilation ${lu.fanLevel} (${lu.fanMin}..${lu.fanMax}), sens de l'air ${lu.airFlow} ; " +
+            "échelle ×${String.format(Locale.US, "%.2f", echelle)} (écran ${mesures.widthPixels}×" +
+            "${mesures.heightPixels} px, ${mesures.densityDpi} dpi)")
         afficher()
 
         relancerDelai()

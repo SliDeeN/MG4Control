@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Pop-up HVAC (issues #120 et #125). La croix de gauche montre ce que fait le joystick droit
-     du volant ET se touche du doigt : sans service d'accessibilité, c'est le seul moyen d'agir. -->
+     du volant ET se touche du doigt : sans service d'accessibilité, c'est le seul moyen d'agir.
+
+     Les tailles ci-dessous sont des tailles DE BASE (carte de 600 × 375 dp) : HvacPopupOverlay
+     gonfle cette mise en page avec une densité corrigée pour qu'elle prenne la même part de
+     l'écran sur tous les firmwares (HvacPopup.echelle). Changer la largeur ou la hauteur de la
+     carte demande d'y reporter les constantes. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/hvac_backdrop"
@@ -61,10 +66,14 @@
                     app:strokeColor="@color/dash_border"
                     app:cornerRadius="10dp" />
 
+                <!-- baselineAligned="false" : sinon la rangée aligne les TEXTES des trois cases, et
+                     une case dont le texte n'est pas à la même hauteur que ses voisines se décale
+                     (constaté sur véhicule avec « Fermer », alors sans picto). -->
                 <LinearLayout
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:orientation="horizontal">
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/hvac_btn_fan_down"
@@ -112,6 +121,11 @@
                         android:textColor="@color/text_secondary"
                         android:textSize="12sp"
                         android:maxLines="1"
+                        app:icon="@drawable/ic_hvac_close"
+                        app:iconGravity="top"
+                        app:iconSize="26dp"
+                        app:iconPadding="0dp"
+                        app:iconTint="@color/text_secondary"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"

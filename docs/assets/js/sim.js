@@ -1886,7 +1886,7 @@
         const cell = (dir, cls, ico, key) => '<button class="b hv-cell hv-' + cls + (o.flash === dir ? ' hit' : '') + '" data-a="hvKey" data-v="' + dir + '">' + ico + '<span>' + esc(S(key)) + '</span></button>';
         const ab = (f, on, key, icon) => '<button class="b air sm' + (on ? ' on' : '') + '" data-a="hvAir" data-v="' + f + '">' + AIR_ICON[icon] + '<span>' + esc(S(key)) + '</span></button>';
         return '<div class="a-scrim" data-a="hvBg"><div class="hvacpop" data-hl="hvac-popup"><div class="hv-top"><div class="hv-cross">' +
-          cell('up', 'up', HV_ICON.temp, 'hvac_popup_temp_up') + cell('left', 'left', HV_ICON.fan, 'hvac_popup_fan_down') + cell('ok', 'ok', '', 'nav_close') +
+          cell('up', 'up', HV_ICON.temp, 'hvac_popup_temp_up') + cell('left', 'left', HV_ICON.fan, 'hvac_popup_fan_down') + cell('ok', 'ok', HV_ICON.close, 'nav_close') +
           cell('right', 'right', HV_ICON.fan, 'hvac_popup_fan_up') + cell('down', 'down', HV_ICON.temp, 'hvac_popup_temp_down') + '</div>' +
           '<div class="hv-vals"><div class="lbl">' + esc(S('clim_temperature')) + '</div><div class="hv-temp">' + cl.temp + ' °C</div>' +
           '<div class="lbl">' + esc(S('clim_fan')) + '<b>' + cl.fan + '</b></div><div class="hv-fan"><i style="width:' + Math.round(100 * cl.fan / cl.fMax) + '%"></i></div></div></div>' +
@@ -2559,12 +2559,13 @@
   };
   const airSvg = (k) => '<svg class="air-ico" viewBox="0 0 960 960" fill="currentColor" aria-hidden="true"><path d="' + AIR_PATH[k] + '"/></svg>';
   const AIR_ICON = { face: airSvg('face'), feet: airSvg('feet'), ws: airSvg('ws'), rear: airSvg('rear') };
-  // Croix du pop-up HVAC (res/drawable/ic_hvac_temp.xml et ic_hvac_fan.xml) : d'après Google
-  // Material Icons « thermostat » et « toys » (Apache License 2.0).
+  // Croix du pop-up HVAC (res/drawable/ic_hvac_temp.xml, ic_hvac_fan.xml et ic_hvac_close.xml) :
+  // d'après Google Material Icons « thermostat », « toys » et « close » (Apache License 2.0).
   const hvSvg = (d) => '<svg class="hv-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="' + d + '"/></svg>';
   const HV_ICON = {
     temp: hvSvg('M15,13V5c0,-1.66 -1.34,-3 -3,-3S9,3.34 9,5v8c-1.21,0.91 -2,2.37 -2,4 0,2.76 2.24,5 5,5s5,-2.24 5,-5c0,-1.63 -0.79,-3.09 -2,-4zM11,5c0,-0.55 0.45,-1 1,-1s1,0.45 1,1h-1v1h1v2h-1v1h1v2h-2L11,5z'),
-    fan: hvSvg('M12,12c0,-3 2.5,-5.5 5.5,-5.5S23,9 23,12H12zM12,12c0,3 -2.5,5.5 -5.5,5.5S1,15 1,12h11zM12,12c-3,0 -5.5,-2.5 -5.5,-5.5S9,1 12,1v11zM12,12c3,0 5.5,2.5 5.5,5.5S15,23 12,23V12z')
+    fan: hvSvg('M12,12c0,-3 2.5,-5.5 5.5,-5.5S23,9 23,12H12zM12,12c0,3 -2.5,5.5 -5.5,5.5S1,15 1,12h11zM12,12c-3,0 -5.5,-2.5 -5.5,-5.5S9,1 12,1v11zM12,12c3,0 5.5,2.5 5.5,5.5S15,23 12,23V12z'),
+    close: hvSvg('M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12z')
   };
   // Tout fermer / Tout ouvrir (res/drawable/ic_window_all_*.xml) : Material Symbols keyboard_double_arrow_up/down.
   const WIN_PATH = {
