@@ -4,6 +4,10 @@
      Le clic central bascule la ventilation AUTO ; tout le reste (A/C, recirculation, sens de
      l'air, fermeture) est tactile.
 
+     La carte prend la largeur de son contenu : 900 dp, ou 1136 dp quand la colonne des
+     chauffages est affichée — aussi large que la colonne de droite, pour que le centre reste
+     centré.
+
      Les tailles ci-dessous sont des tailles DE BASE (carte de 900 × 390 dp) : HvacPopupOverlay
      gonfle cette mise en page avec une densité corrigée pour qu'elle prenne la même part de
      l'écran sur tous les firmwares (HvacPopup.echelle). Changer la largeur ou la hauteur de la
@@ -18,7 +22,7 @@
     android:focusable="true">
 
     <LinearLayout
-        android:layout_width="900dp"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:orientation="vertical"
@@ -28,23 +32,126 @@
         android:focusable="true">
 
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:baselineAligned="false">
 
-            <!-- ── Partie pilotée au joystick, et sens de l'air ── -->
+            <!-- ── Chauffages : sièges et volant, sur les firmwares équipés seulement
+                 (FirmwareInfo.hasHeatFeatures — HvacPopupOverlay rend la colonne visible).
+                 Le libellé et l'état de chaque bouton sont posés par le code. ── -->
             <LinearLayout
-                android:layout_width="0dp"
+                android:id="@+id/hvac_heat_column"
+                android:layout_width="220dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:layout_marginEnd="16dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="6dp"
+                    android:text="@string/hvac_popup_heating"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/hvac_btn_seat_left"
+                    android:layout_width="match_parent"
+                    android:layout_height="89dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="6dp"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:maxLines="2"
+                    app:icon="@drawable/ic_seat_heat_left"
+                    app:iconGravity="top"
+                    app:iconSize="30dp"
+                    app:iconPadding="2dp"
+                    app:iconTint="@color/text_secondary"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/hvac_btn_steering_heat"
+                    android:layout_width="match_parent"
+                    android:layout_height="89dp"
+                    android:layout_marginTop="6dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="6dp"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:maxLines="2"
+                    app:icon="@drawable/ic_steering_wheel_heat"
+                    app:iconGravity="top"
+                    app:iconSize="30dp"
+                    app:iconPadding="2dp"
+                    app:iconTint="@color/text_secondary"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/hvac_btn_seat_right"
+                    android:layout_width="match_parent"
+                    android:layout_height="89dp"
+                    android:layout_marginTop="6dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:paddingStart="4dp"
+                    android:paddingEnd="4dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="6dp"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:maxLines="2"
+                    app:icon="@drawable/ic_seat_heat_right"
+                    app:iconGravity="top"
+                    app:iconSize="30dp"
+                    app:iconPadding="2dp"
+                    app:iconTint="@color/text_secondary"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="8dp" />
+
+            </LinearLayout>
+
+            <!-- ── Partie pilotée au joystick, et sens de l'air (largeur fixe : c'est elle, avec les
+                 colonnes, qui donne sa largeur à la carte) ── -->
+            <LinearLayout
+                android:layout_width="632dp"
+                android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+                <!-- Zone du joystick, encadrée : ce qu'il pilote (la croix), d'où (le repère) et le
+                     résultat (température, ventilation). Le reste de la fenêtre est tactile.
+                     Marges serrées en haut et en bas : les cases de la croix ont déjà 3 dp. -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_hvac_joystick_zone"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp">
 
                     <!-- Repère : la croix se pilote au joystick droit du volant. Sans service
                          d'accessibilité, HvacPopupOverlay y met l'avertissement à la place. -->
@@ -311,8 +418,8 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:layout_marginBottom="6dp"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="4dp"
                     android:text="@string/clim_section_airflow"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp" />

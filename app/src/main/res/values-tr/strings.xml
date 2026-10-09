@@ -538,6 +538,7 @@
     <string name="hvac_popup_fan_up">Fan +</string>
     <string name="hvac_popup_fan_down">Fan −</string>
     <string name="hvac_popup_compressor">Kompresör</string>
+    <string name="hvac_popup_heating">Isıtma</string>
     <string name="hvac_popup_joystick_title">Sağ joystick</string>
     <string name="hvac_popup_joystick_text">Direksiyondan ayarlayın</string>
     <string name="hvac_popup_joystick_off_title">Joystick devre dışı</string>

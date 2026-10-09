@@ -95,8 +95,25 @@ object HvacPopup {
         (reglages.dernierNiveau ?: ((reglages.fanMin + reglages.fanMax) / 2))
             .coerceIn(reglages.fanMin, reglages.fanMax)
 
+    // ── Sièges chauffants (firmwares équipés seulement) ──────────────────────
+    private const val NIVEAU_SIEGE_MAX = 3
+
+    /**
+     * Niveau d'un siège chauffant après un appui : éteint → 1 → 2 → 3 → éteint, comme le
+     * raccourci. null si le niveau est illisible — partir d'un 0 supposé alors que le siège est
+     * à 3 ferait DESCENDRE le chauffage.
+     */
+    fun niveauSiegeSuivant(actuel: Int?): Int? =
+        actuel?.let { (it.coerceIn(0, NIVEAU_SIEGE_MAX) + 1) % (NIVEAU_SIEGE_MAX + 1) }
+
+    /** Niveau d'un siège en pastilles pleines et vides : « ● ● ○ » pour 2. */
+    fun pastilles(niveau: Int): String {
+        val plein = niveau.coerceIn(0, NIVEAU_SIEGE_MAX)
+        return (1..NIVEAU_SIEGE_MAX).joinToString(" ") { if (it <= plein) "●" else "○" }
+    }
+
     // ── Taille de la fenêtre ─────────────────────────────────────────────────
-    private const val LARGEUR_DP = 900f      // la carte de overlay_hvac_popup.xml
+    private const val LARGEUR_DP = 900f      // la carte de overlay_hvac_popup.xml, sans chauffages
     private const val HAUTEUR_DP = 390f      // sa hauteur en texte « Standard »
     private const val PART_LARGEUR = 0.63f
     private const val PART_HAUTEUR = 0.72f
@@ -104,8 +121,11 @@ object HvacPopup {
     /**
      * Agrandissement à appliquer à la fenêtre, dessinée pour [LARGEUR_DP] × [HAUTEUR_DP] dp, pour
      * qu'elle prenne la même part de l'ÉCRAN quelle que soit sa densité : au plus 63 % de la
-     * largeur et 72 % de la hauteur. Le reste de la hauteur laisse passer la barre d'état, le
-     * texte « Très grand » et la ligne d'avertissement sans déborder.
+     * largeur et 72 % de la hauteur. Le reste de la hauteur laisse passer la barre d'état et le
+     * texte « Très grand » sans déborder.
+     *
+     * La colonne des chauffages (firmwares équipés) ajoute 236 dp à la carte sans changer cette
+     * échelle : la fenêtre occupe alors environ 79 % de la largeur, à taille de boutons égale.
      *
      * On raisonne en part d'écran, pas en dp fixes : la voiture affiche 1920 × 720 px à 1 px par
      * dp (SWI133, mesuré sur une photo le 2026-10-09 — une première fenêtre de 600 dp n'y

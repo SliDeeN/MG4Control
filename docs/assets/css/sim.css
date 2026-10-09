@@ -51,6 +51,8 @@
   --dash-text-lo: #8E8E93;
   --dash-accent: #0284C7;
   --dash-accent-dim: #E0F2FE;
+  --hvac-zone-stroke: #0284C7;
+  --hvac-zone-fill: #F0F9FF;
   --dash-eco: #16A34A;
   --dash-eco-dim: #DCFCE7;
   --dash-warn: #D97706;
@@ -85,6 +87,8 @@
   --dash-text-lo: #52525B;
   --dash-accent: #38BDF8;
   --dash-accent-dim: #0C4A6E;
+  --hvac-zone-stroke: #2A8CC2;
+  --hvac-zone-fill: #0F1A22;
   --dash-eco: #22C55E;
   --dash-eco-dim: #14532D;
   --dash-warn: #F59E0B;
@@ -668,12 +672,28 @@
 .hvacpop .lbl { color: var(--text-secondary); font-size: calc(13px * var(--ts, 1)); }
 .hvacpop .lbl b { color: var(--text-primary); font-size: calc(22px * var(--ts, 1)); font-weight: 700; margin-left: 8px; }
 .hv-main { display: flex; gap: 16px; }
+/* Colonne des chauffages, sur les firmwares équipés : aussi large que la colonne de droite
+   (220 dp) pour que le centre reste centré ; la carte passe à 1136 dp. */
+.hvacpop.heat { width: 1136px; }
+.hv-heat { flex: 0 0 220px; display: flex; flex-direction: column; gap: 6px; }
+.b.hv-heatb {
+  height: 89px; padding: 6px 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  font-size: calc(13px * var(--ts, 1)); line-height: 1.15; text-transform: none; letter-spacing: 0;
+}
+.hv-heatb .heat-ico { flex: 0 0 auto; width: 30px; height: 30px; }
+.hv-heatb .st { letter-spacing: .08em; }
 .hv-left { flex: 1; min-width: 0; }
 .hv-side { flex: 0 0 220px; display: flex; flex-direction: column; gap: 6px; }
 .hv-side .b { height: 60px; font-size: calc(14px * var(--ts, 1)); }
 .hv-side .b.hv-ac { height: 52px; }
 .hv-side .hv-airlbl { margin: 6px 0 0; }
-.hv-top { display: flex; align-items: center; gap: 24px; }
+/* Zone du joystick, encadrée (bg_hvac_joystick_zone.xml) : repère, croix, température et ventilation. */
+.hv-top {
+  display: flex; align-items: center; gap: 24px;
+  padding: 5px 12px 5px 8px;
+  border: 3px solid var(--hvac-zone-stroke); border-radius: 12px; background: var(--hvac-zone-fill);
+}
 /* Repère du joystick : 110 dp, à 12 dp de la croix (le reste de l'écart vient du gap). */
 .hv-joy { flex: 0 0 110px; margin-right: -12px; display: flex; flex-direction: column; align-items: center; text-align: center; }
 .hv-joy svg { width: 72px; height: 64px; }
@@ -715,6 +735,8 @@
 .hv-fan i, .hv-bar i { display: block; height: 100%; background: var(--dash-accent); }
 .hv-bar i { transition: width 1s linear; }
 .hvacpop .hv-airlbl { margin: 12px 0 6px; }
+/* Sous le cadre, le libellé du sens de l'air est resserré : le cadre a pris sa place. */
+.hv-left > .hv-airlbl { margin: 6px 0 4px; }
 .hvacpop .b.air.sm { min-height: 64px; }
 .hvacpop .b.air.sm .air-ico { width: 26px; height: 26px; }
 .hvacpop .cd { margin-top: 6px; color: var(--text-secondary); font-size: calc(13px * var(--ts, 1)); }

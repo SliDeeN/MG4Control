@@ -38,4 +38,9 @@
     <!-- Danger -->
     <color name="dash_danger">#FFE11D48</color>
     <color name="dash_danger_dim">#FFFFE4E6</color>
+
+    <!-- Pop-up HVAC : cadre de la zone pilotée au joystick. Le fond reste bien plus discret que
+         dash_accent_dim, réservé aux boutons ALLUMÉS — sinon la case AUTO ne ressortirait plus. -->
+    <color name="hvac_zone_stroke">#FF0284C7</color>
+    <color name="hvac_zone_fill">#FFF0F9FF</color>
 </resources>

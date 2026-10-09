@@ -538,6 +538,7 @@
     <string name="hvac_popup_fan_up">Fan +</string>
     <string name="hvac_popup_fan_down">Fan −</string>
     <string name="hvac_popup_compressor">Compressor</string>
+    <string name="hvac_popup_heating">Heating</string>
     <string name="hvac_popup_joystick_title">Right joystick</string>
     <string name="hvac_popup_joystick_text">Adjust from the wheel</string>
     <string name="hvac_popup_joystick_off_title">Joystick inactive</string>

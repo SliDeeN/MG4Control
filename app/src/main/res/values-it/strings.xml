@@ -538,6 +538,7 @@
     <string name="hvac_popup_fan_up">Ventil. +</string>
     <string name="hvac_popup_fan_down">Ventil. −</string>
     <string name="hvac_popup_compressor">Compressore</string>
+    <string name="hvac_popup_heating">Riscaldamento</string>
     <string name="hvac_popup_joystick_title">Joystick destro</string>
     <string name="hvac_popup_joystick_text">Regola dal volante</string>
     <string name="hvac_popup_joystick_off_title">Joystick inattivo</string>

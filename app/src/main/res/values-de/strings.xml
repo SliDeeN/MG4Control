@@ -538,6 +538,7 @@
     <string name="hvac_popup_fan_up">Gebläse +</string>
     <string name="hvac_popup_fan_down">Gebläse −</string>
     <string name="hvac_popup_compressor">Kompressor</string>
+    <string name="hvac_popup_heating">Heizung</string>
     <string name="hvac_popup_joystick_title">Rechter Joystick</string>
     <string name="hvac_popup_joystick_text">Am Lenkrad einstellen</string>
     <string name="hvac_popup_joystick_off_title">Joystick inaktiv</string>

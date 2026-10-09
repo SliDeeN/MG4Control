@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Cadre de la zone du pop-up HVAC pilotée au joystick : repère, croix, température et
+     ventilation. Trait épais et fond léger, choisis sur maquette (2026-10-09). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="12dp" />
+    <solid android:color="@color/hvac_zone_fill" />
+    <stroke android:width="3dp" android:color="@color/hvac_zone_stroke" />
+</shape>
