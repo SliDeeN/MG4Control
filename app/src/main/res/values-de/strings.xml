@@ -537,6 +537,7 @@
     <string name="hvac_popup_temp_down">Temp. −</string>
     <string name="hvac_popup_fan_up">Gebläse +</string>
     <string name="hvac_popup_fan_down">Gebläse −</string>
+    <string name="hvac_popup_compressor">Kompressor</string>
     <string name="hvac_popup_no_joystick">Ohne den Bedienungshilfen-Dienst regelt der Joystick die Lautstärke: Bildschirm verwenden.</string>
     <string name="shortcuts_action_brightness_up">Helligkeit +</string>
     <string name="shortcuts_action_brightness_down">Helligkeit -</string>

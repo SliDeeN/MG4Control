@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Pop-up HVAC (issues #120 et #125). La croix de gauche montre ce que fait le joystick droit
      du volant ET se touche du doigt : sans service d'accessibilité, c'est le seul moyen d'agir.
+     Le clic central bascule la ventilation AUTO ; tout le reste (A/C, recirculation, sens de
+     l'air, fermeture) est tactile.
 
-     Les tailles ci-dessous sont des tailles DE BASE (carte de 600 × 375 dp) : HvacPopupOverlay
+     Les tailles ci-dessous sont des tailles DE BASE (carte de 780 × 390 dp) : HvacPopupOverlay
      gonfle cette mise en page avec une densité corrigée pour qu'elle prenne la même part de
      l'écran sur tous les firmwares (HvacPopup.echelle). Changer la largeur ou la hauteur de la
      carte demande d'y reporter les constantes. -->
@@ -16,7 +18,7 @@
     android:focusable="true">
 
     <LinearLayout
-        android:layout_width="600dp"
+        android:layout_width="780dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:orientation="vertical"
@@ -29,366 +31,488 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:baselineAligned="false">
 
-            <!-- Croix : une direction du joystick = une action, sans focus à déplacer -->
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center_horizontal">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/hvac_btn_temp_up"
-                    android:layout_width="84dp"
-                    android:layout_height="62dp"
-                    android:layout_margin="3dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:minWidth="0dp"
-                    android:minHeight="0dp"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="4dp"
-                    android:text="@string/hvac_popup_temp_up"
-                    android:textAllCaps="false"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    android:maxLines="1"
-                    app:icon="@drawable/ic_hvac_temp"
-                    app:iconGravity="top"
-                    app:iconSize="26dp"
-                    app:iconPadding="0dp"
-                    app:iconTint="@color/dash_danger"
-                    app:backgroundTint="@color/dash_btn"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/dash_border"
-                    app:cornerRadius="10dp" />
-
-                <!-- baselineAligned="false" : sinon la rangée aligne les TEXTES des trois cases, et
-                     une case dont le texte n'est pas à la même hauteur que ses voisines se décale
-                     (constaté sur véhicule avec « Fermer », alors sans picto). -->
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:baselineAligned="false">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/hvac_btn_fan_down"
-                        android:layout_width="84dp"
-                        android:layout_height="62dp"
-                        android:layout_margin="3dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="2dp"
-                        android:paddingEnd="2dp"
-                        android:paddingTop="6dp"
-                        android:paddingBottom="4dp"
-                        android:text="@string/hvac_popup_fan_down"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp"
-                        android:maxLines="1"
-                        app:icon="@drawable/ic_hvac_fan"
-                        app:iconGravity="top"
-                        app:iconSize="26dp"
-                        app:iconPadding="0dp"
-                        app:iconTint="@color/text_secondary"
-                        app:backgroundTint="@color/dash_btn"
-                        app:strokeWidth="1dp"
-                        app:strokeColor="@color/dash_border"
-                        app:cornerRadius="10dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/hvac_btn_close"
-                        android:layout_width="84dp"
-                        android:layout_height="62dp"
-                        android:layout_margin="3dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="2dp"
-                        android:paddingEnd="2dp"
-                        android:paddingTop="6dp"
-                        android:paddingBottom="4dp"
-                        android:text="@string/nav_close"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp"
-                        android:maxLines="1"
-                        app:icon="@drawable/ic_hvac_close"
-                        app:iconGravity="top"
-                        app:iconSize="26dp"
-                        app:iconPadding="0dp"
-                        app:iconTint="@color/text_secondary"
-                        app:backgroundTint="@color/dash_btn"
-                        app:strokeWidth="1dp"
-                        app:strokeColor="@color/dash_border"
-                        app:cornerRadius="10dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/hvac_btn_fan_up"
-                        android:layout_width="84dp"
-                        android:layout_height="62dp"
-                        android:layout_margin="3dp"
-                        android:insetTop="0dp"
-                        android:insetBottom="0dp"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:paddingStart="2dp"
-                        android:paddingEnd="2dp"
-                        android:paddingTop="6dp"
-                        android:paddingBottom="4dp"
-                        android:text="@string/hvac_popup_fan_up"
-                        android:textAllCaps="false"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="12sp"
-                        android:maxLines="1"
-                        app:icon="@drawable/ic_hvac_fan"
-                        app:iconGravity="top"
-                        app:iconSize="26dp"
-                        app:iconPadding="0dp"
-                        app:iconTint="@color/text_secondary"
-                        app:backgroundTint="@color/dash_btn"
-                        app:strokeWidth="1dp"
-                        app:strokeColor="@color/dash_border"
-                        app:cornerRadius="10dp" />
-
-                </LinearLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/hvac_btn_temp_down"
-                    android:layout_width="84dp"
-                    android:layout_height="62dp"
-                    android:layout_margin="3dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:minWidth="0dp"
-                    android:minHeight="0dp"
-                    android:paddingStart="2dp"
-                    android:paddingEnd="2dp"
-                    android:paddingTop="6dp"
-                    android:paddingBottom="4dp"
-                    android:text="@string/hvac_popup_temp_down"
-                    android:textAllCaps="false"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    android:maxLines="1"
-                    app:icon="@drawable/ic_hvac_temp"
-                    app:iconGravity="top"
-                    app:iconSize="26dp"
-                    app:iconPadding="0dp"
-                    app:iconTint="@color/dash_accent"
-                    app:backgroundTint="@color/dash_btn"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/dash_border"
-                    app:cornerRadius="10dp" />
-
-            </LinearLayout>
-
-            <!-- Valeurs lues sur la voiture -->
+            <!-- ── Partie pilotée au joystick, et sens de l'air ── -->
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:layout_marginStart="24dp"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <!-- Croix : une direction du joystick = une action, sans focus à déplacer -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:gravity="center_horizontal">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/hvac_btn_temp_up"
+                            android:layout_width="84dp"
+                            android:layout_height="62dp"
+                            android:layout_margin="3dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:paddingTop="6dp"
+                            android:paddingBottom="4dp"
+                            android:text="@string/hvac_popup_temp_up"
+                            android:textAllCaps="false"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:maxLines="1"
+                            app:icon="@drawable/ic_hvac_temp"
+                            app:iconGravity="top"
+                            app:iconSize="26dp"
+                            app:iconPadding="0dp"
+                            app:iconTint="@color/dash_danger"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="10dp" />
+
+                        <!-- baselineAligned="false" : sinon la rangée aligne les TEXTES des trois
+                             cases, et une case dont le texte n'est pas à la même hauteur que ses
+                             voisines se décale (constaté sur véhicule). -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:baselineAligned="false">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/hvac_btn_fan_down"
+                                android:layout_width="84dp"
+                                android:layout_height="62dp"
+                                android:layout_margin="3dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:minWidth="0dp"
+                                android:minHeight="0dp"
+                                android:paddingStart="2dp"
+                                android:paddingEnd="2dp"
+                                android:paddingTop="6dp"
+                                android:paddingBottom="4dp"
+                                android:text="@string/hvac_popup_fan_down"
+                                android:textAllCaps="false"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp"
+                                android:maxLines="1"
+                                app:icon="@drawable/ic_hvac_fan"
+                                app:iconGravity="top"
+                                app:iconSize="26dp"
+                                app:iconPadding="0dp"
+                                app:iconTint="@color/text_secondary"
+                                app:backgroundTint="@color/dash_btn"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="10dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/hvac_btn_auto"
+                                android:layout_width="84dp"
+                                android:layout_height="62dp"
+                                android:layout_margin="3dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:minWidth="0dp"
+                                android:minHeight="0dp"
+                                android:paddingStart="2dp"
+                                android:paddingEnd="2dp"
+                                android:paddingTop="6dp"
+                                android:paddingBottom="4dp"
+                                android:text="@string/clim_auto"
+                                android:textAllCaps="true"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp"
+                                android:maxLines="1"
+                                app:icon="@drawable/ic_hvac_fan"
+                                app:iconGravity="top"
+                                app:iconSize="26dp"
+                                app:iconPadding="0dp"
+                                app:iconTint="@color/text_secondary"
+                                app:backgroundTint="@color/dash_btn"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="10dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/hvac_btn_fan_up"
+                                android:layout_width="84dp"
+                                android:layout_height="62dp"
+                                android:layout_margin="3dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:minWidth="0dp"
+                                android:minHeight="0dp"
+                                android:paddingStart="2dp"
+                                android:paddingEnd="2dp"
+                                android:paddingTop="6dp"
+                                android:paddingBottom="4dp"
+                                android:text="@string/hvac_popup_fan_up"
+                                android:textAllCaps="false"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp"
+                                android:maxLines="1"
+                                app:icon="@drawable/ic_hvac_fan"
+                                app:iconGravity="top"
+                                app:iconSize="26dp"
+                                app:iconPadding="0dp"
+                                app:iconTint="@color/text_secondary"
+                                app:backgroundTint="@color/dash_btn"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="10dp" />
+
+                        </LinearLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/hvac_btn_temp_down"
+                            android:layout_width="84dp"
+                            android:layout_height="62dp"
+                            android:layout_margin="3dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:paddingStart="2dp"
+                            android:paddingEnd="2dp"
+                            android:paddingTop="6dp"
+                            android:paddingBottom="4dp"
+                            android:text="@string/hvac_popup_temp_down"
+                            android:textAllCaps="false"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:maxLines="1"
+                            app:icon="@drawable/ic_hvac_temp"
+                            app:iconGravity="top"
+                            app:iconSize="26dp"
+                            app:iconPadding="0dp"
+                            app:iconTint="@color/dash_accent"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="10dp" />
+
+                    </LinearLayout>
+
+                    <!-- Valeurs lues sur la voiture -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="24dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/clim_temperature"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/hvac_popup_temp"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:includeFontPadding="false"
+                            android:textColor="@color/text_primary"
+                            android:textSize="48sp"
+                            android:textStyle="bold" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/clim_fan"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+
+                            <!-- Un niveau, ou « AUTO » : en AUTO la voiture n'annonce pas de cran -->
+                            <TextView
+                                android:id="@+id/hvac_popup_fan"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:textColor="@color/text_primary"
+                                android:textSize="22sp"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                        <ProgressBar
+                            android:id="@+id/hvac_popup_fan_bar"
+                            style="?android:attr/progressBarStyleHorizontal"
+                            android:layout_width="match_parent"
+                            android:layout_height="8dp"
+                            android:layout_marginTop="6dp"
+                            android:progressTint="@color/dash_accent"
+                            android:progressBackgroundTint="@color/dash_border" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="6dp"
+                    android:text="@string/clim_section_airflow"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
+                <!-- Sens de l'air : mêmes boutons cumulables et mêmes pictos que la page Clim -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/hvac_btn_air_face"
+                        android:layout_width="0dp"
+                        android:layout_height="64dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="2dp"
+                        android:paddingEnd="2dp"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="4dp"
+                        android:text="@string/clim_air_face"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:textAllCaps="true"
+                        android:maxLines="1"
+                        app:autoSizeTextType="uniform"
+                        app:autoSizeMinTextSize="9sp"
+                        app:autoSizeMaxTextSize="12sp"
+                        app:icon="@drawable/ic_air_face"
+                        app:iconGravity="top"
+                        app:iconSize="26dp"
+                        app:iconPadding="0dp"
+                        app:iconTint="@color/text_secondary"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="8dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/hvac_btn_air_feet"
+                        android:layout_width="0dp"
+                        android:layout_height="64dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="2dp"
+                        android:paddingEnd="2dp"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="4dp"
+                        android:text="@string/clim_air_feet"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:textAllCaps="true"
+                        android:maxLines="1"
+                        app:autoSizeTextType="uniform"
+                        app:autoSizeMinTextSize="9sp"
+                        app:autoSizeMaxTextSize="12sp"
+                        app:icon="@drawable/ic_air_feet"
+                        app:iconGravity="top"
+                        app:iconSize="26dp"
+                        app:iconPadding="0dp"
+                        app:iconTint="@color/text_secondary"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="8dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/hvac_btn_air_windshield_front"
+                        android:layout_width="0dp"
+                        android:layout_height="64dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="2dp"
+                        android:paddingEnd="2dp"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="4dp"
+                        android:text="@string/clim_air_windshield_front"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:textAllCaps="true"
+                        android:maxLines="1"
+                        app:autoSizeTextType="uniform"
+                        app:autoSizeMinTextSize="9sp"
+                        app:autoSizeMaxTextSize="12sp"
+                        app:icon="@drawable/ic_air_windshield_front"
+                        app:iconGravity="top"
+                        app:iconSize="26dp"
+                        app:iconPadding="0dp"
+                        app:iconTint="@color/text_secondary"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="8dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/hvac_btn_air_windshield_rear"
+                        android:layout_width="0dp"
+                        android:layout_height="64dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="2dp"
+                        android:paddingEnd="2dp"
+                        android:paddingTop="6dp"
+                        android:paddingBottom="4dp"
+                        android:text="@string/clim_air_windshield_rear"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:textAllCaps="true"
+                        android:maxLines="1"
+                        app:autoSizeTextType="uniform"
+                        app:autoSizeMinTextSize="9sp"
+                        app:autoSizeMaxTextSize="12sp"
+                        app:icon="@drawable/ic_air_windshield_rear"
+                        app:iconGravity="top"
+                        app:iconSize="26dp"
+                        app:iconPadding="0dp"
+                        app:iconTint="@color/text_secondary"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="8dp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- ── Colonne tactile : compresseur et recirculation ── -->
+            <LinearLayout
+                android:layout_width="220dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
                 android:orientation="vertical">
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="@string/clim_temperature"
+                    android:layout_marginBottom="6dp"
+                    android:text="@string/hvac_popup_compressor"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp" />
 
-                <TextView
-                    android:id="@+id/hvac_popup_temp"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:includeFontPadding="false"
-                    android:textColor="@color/text_primary"
-                    android:textSize="48sp"
-                    android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/hvac_btn_ac"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/clim_ac"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:textAllCaps="true"
+                    android:maxLines="1"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="14sp"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="8dp" />
 
-                <LinearLayout
+                <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
+                    android:layout_marginBottom="6dp"
+                    android:text="@string/clim_section_loop"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/clim_fan"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/hvac_popup_fan"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:textColor="@color/text_primary"
-                        android:textSize="22sp"
-                        android:textStyle="bold" />
-
-                </LinearLayout>
-
-                <ProgressBar
-                    android:id="@+id/hvac_popup_fan_bar"
-                    style="?android:attr/progressBarStyleHorizontal"
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/hvac_btn_loop_inner"
                     android:layout_width="match_parent"
-                    android:layout_height="8dp"
+                    android:layout_height="60dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/clim_loop_inner"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:textAllCaps="true"
+                    android:maxLines="1"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="14sp"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/hvac_btn_loop_outside"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
                     android:layout_marginTop="6dp"
-                    android:progressTint="@color/dash_accent"
-                    android:progressBackgroundTint="@color/dash_border" />
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/clim_loop_outside"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:textAllCaps="true"
+                    android:maxLines="1"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="14sp"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/hvac_btn_loop_auto"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginTop="6dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/clim_loop_auto"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="14sp"
+                    android:textAllCaps="true"
+                    android:maxLines="1"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="10sp"
+                    app:autoSizeMaxTextSize="14sp"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="8dp" />
 
             </LinearLayout>
-
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:layout_marginBottom="6dp"
-            android:text="@string/clim_section_airflow"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
-
-        <!-- Sens de l'air : mêmes boutons cumulables et mêmes pictos que la page Clim -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/hvac_btn_air_face"
-                android:layout_width="0dp"
-                android:layout_height="64dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="4dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:paddingStart="2dp"
-                android:paddingEnd="2dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="4dp"
-                android:text="@string/clim_air_face"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:textAllCaps="true"
-                android:maxLines="1"
-                app:autoSizeTextType="uniform"
-                app:autoSizeMinTextSize="9sp"
-                app:autoSizeMaxTextSize="12sp"
-                app:icon="@drawable/ic_air_face"
-                app:iconGravity="top"
-                app:iconSize="26dp"
-                app:iconPadding="0dp"
-                app:iconTint="@color/text_secondary"
-                app:backgroundTint="@color/dash_btn"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/dash_border"
-                app:cornerRadius="8dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/hvac_btn_air_feet"
-                android:layout_width="0dp"
-                android:layout_height="64dp"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:paddingStart="2dp"
-                android:paddingEnd="2dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="4dp"
-                android:text="@string/clim_air_feet"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:textAllCaps="true"
-                android:maxLines="1"
-                app:autoSizeTextType="uniform"
-                app:autoSizeMinTextSize="9sp"
-                app:autoSizeMaxTextSize="12sp"
-                app:icon="@drawable/ic_air_feet"
-                app:iconGravity="top"
-                app:iconSize="26dp"
-                app:iconPadding="0dp"
-                app:iconTint="@color/text_secondary"
-                app:backgroundTint="@color/dash_btn"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/dash_border"
-                app:cornerRadius="8dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/hvac_btn_air_windshield_front"
-                android:layout_width="0dp"
-                android:layout_height="64dp"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:paddingStart="2dp"
-                android:paddingEnd="2dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="4dp"
-                android:text="@string/clim_air_windshield_front"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:textAllCaps="true"
-                android:maxLines="1"
-                app:autoSizeTextType="uniform"
-                app:autoSizeMinTextSize="9sp"
-                app:autoSizeMaxTextSize="12sp"
-                app:icon="@drawable/ic_air_windshield_front"
-                app:iconGravity="top"
-                app:iconSize="26dp"
-                app:iconPadding="0dp"
-                app:iconTint="@color/text_secondary"
-                app:backgroundTint="@color/dash_btn"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/dash_border"
-                app:cornerRadius="8dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/hvac_btn_air_windshield_rear"
-                android:layout_width="0dp"
-                android:layout_height="64dp"
-                android:layout_weight="1"
-                android:layout_marginStart="4dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:paddingStart="2dp"
-                android:paddingEnd="2dp"
-                android:paddingTop="6dp"
-                android:paddingBottom="4dp"
-                android:text="@string/clim_air_windshield_rear"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:textAllCaps="true"
-                android:maxLines="1"
-                app:autoSizeTextType="uniform"
-                app:autoSizeMinTextSize="9sp"
-                app:autoSizeMaxTextSize="12sp"
-                app:icon="@drawable/ic_air_windshield_rear"
-                app:iconGravity="top"
-                app:iconSize="26dp"
-                app:iconPadding="0dp"
-                app:iconTint="@color/text_secondary"
-                app:backgroundTint="@color/dash_btn"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/dash_border"
-                app:cornerRadius="8dp" />
 
         </LinearLayout>
 
@@ -401,13 +525,49 @@
             android:progressTint="@color/dash_accent"
             android:progressBackgroundTint="@color/dash_border" />
 
-        <TextView
-            android:id="@+id/hvac_popup_countdown"
-            android:layout_width="wrap_content"
+        <!-- Le joystick ne ferme plus la fenêtre (son clic central est AUTO) : bouton tactile -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
-            android:textColor="@color/dash_text_lo"
-            android:textSize="13sp" />
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:baselineAligned="false">
+
+            <TextView
+                android:id="@+id/hvac_popup_countdown"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/dash_text_lo"
+                android:textSize="13sp" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/hvac_btn_close"
+                android:layout_width="wrap_content"
+                android:layout_height="34dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="14dp"
+                android:text="@string/nav_close"
+                android:textAllCaps="false"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:maxLines="1"
+                app:icon="@drawable/ic_hvac_close"
+                app:iconGravity="textStart"
+                app:iconSize="16dp"
+                app:iconPadding="4dp"
+                app:iconTint="@color/text_secondary"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+        </LinearLayout>
 
         <!-- Affiché seulement sans service d'accessibilité -->
         <TextView

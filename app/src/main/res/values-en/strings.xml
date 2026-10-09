@@ -537,6 +537,7 @@
     <string name="hvac_popup_temp_down">Temp −</string>
     <string name="hvac_popup_fan_up">Fan +</string>
     <string name="hvac_popup_fan_down">Fan −</string>
+    <string name="hvac_popup_compressor">Compressor</string>
     <string name="hvac_popup_no_joystick">Without the accessibility service, the joystick changes the volume: use the screen.</string>
     <string name="shortcuts_action_brightness_up">Brightness +</string>
     <string name="shortcuts_action_brightness_down">Brightness -</string>

@@ -1800,8 +1800,9 @@
       commit();
     }
     /**
-     * Pop-up HVAC (HvacPopupOverlay) : le joystick n'y déplace aucun focus, chaque direction agit.
-     * Ouvert et refermé par le même raccourci ; se referme seul après 6 s sans action.
+     * Pop-up HVAC (HvacPopupOverlay) : le joystick n'y déplace aucun focus, chaque direction agit
+     * et le clic central bascule la ventilation AUTO. A/C, recirculation, sens de l'air et fermeture
+     * sont tactiles. Ouvert et refermé par le même raccourci ; se referme seul après 6 s sans action.
      */
     openHvacPopup() {
       if (!caps().clim) return hud(L('Pop-up HVAC indisponible sur ce firmware', 'HVAC pop-up unavailable on this firmware'));
@@ -1815,13 +1816,15 @@
       if (o && o.type === 'hvac') return this.closeOverlay();
       this.openHvacPopup();
     }
-    /** Haut/bas : température ; gauche/droite : ventilation ; centre : fermer. Au doigt comme au joystick. */
+    /** Haut/bas : température ; gauche/droite : ventilation ; centre : ventilation AUTO. Au doigt comme au joystick. */
     hvacKey(dir) {
       const o = this.ui.overlay; if (!o || o.type !== 'hvac') return;
-      if (dir === 'ok') return this.closeOverlay();
       const cl = car().clim;
       // On clampe, on ne boucle pas : comme dans l'application.
-      if (dir === 'up' || dir === 'down') cl.temp = clamp(cl.temp + (dir === 'up' ? 1 : -1), cl.tMin, cl.tMax);
+      if (dir === 'ok') cl.auto = !cl.auto;
+      else if (dir === 'up' || dir === 'down') cl.temp = clamp(cl.temp + (dir === 'up' ? 1 : -1), cl.tMin, cl.tMax);
+      // En AUTO il n'y a pas de cran d'où partir : gauche/droite en sortent, le geste suivant règle.
+      else if (cl.auto) cl.auto = false;
       else cl.fan = clamp(cl.fan + (dir === 'right' ? 1 : -1), cl.fMin, cl.fMax);
       o.left = o.total; o.flash = dir;
       clearTimeout(this._hvFlash);
@@ -1883,18 +1886,22 @@
         const cl = car().clim;
         // Sans service d'accessibilité, le joystick ne parvient pas à l'application : la fenêtre le dit.
         const nav = state.sc.advService && !garage();
-        const cell = (dir, cls, ico, key) => '<button class="b hv-cell hv-' + cls + (o.flash === dir ? ' hit' : '') + '" data-a="hvKey" data-v="' + dir + '">' + ico + '<span>' + esc(S(key)) + '</span></button>';
+        const cell = (dir, cls, ico, key, on) => '<button class="b hv-cell hv-' + cls + (on ? ' on' : '') + (o.flash === dir ? ' hit' : '') + '" data-a="hvKey" data-v="' + dir + '">' + ico + '<span>' + esc(S(key)) + '</span></button>';
         const ab = (f, on, key, icon) => '<button class="b air sm' + (on ? ' on' : '') + '" data-a="hvAir" data-v="' + f + '">' + AIR_ICON[icon] + '<span>' + esc(S(key)) + '</span></button>';
-        return '<div class="a-scrim" data-a="hvBg"><div class="hvacpop" data-hl="hvac-popup"><div class="hv-top"><div class="hv-cross">' +
-          cell('up', 'up', HV_ICON.temp, 'hvac_popup_temp_up') + cell('left', 'left', HV_ICON.fan, 'hvac_popup_fan_down') + cell('ok', 'ok', HV_ICON.close, 'nav_close') +
+        const lp = (n, key) => '<button class="b' + (cl.loop === n ? ' on' : '') + '" data-a="hvLoop" data-v="' + n + '">' + esc(S(key)) + '</button>';
+        // En AUTO la voiture n'annonce pas de cran de ventilation : on écrit « AUTO », barre vide.
+        return '<div class="a-scrim" data-a="hvBg"><div class="hvacpop" data-hl="hvac-popup"><div class="hv-main"><div class="hv-left"><div class="hv-top"><div class="hv-cross">' +
+          cell('up', 'up', HV_ICON.temp, 'hvac_popup_temp_up') + cell('left', 'left', HV_ICON.fan, 'hvac_popup_fan_down') + cell('ok', 'ok', HV_ICON.fan, 'clim_auto', cl.auto) +
           cell('right', 'right', HV_ICON.fan, 'hvac_popup_fan_up') + cell('down', 'down', HV_ICON.temp, 'hvac_popup_temp_down') + '</div>' +
           '<div class="hv-vals"><div class="lbl">' + esc(S('clim_temperature')) + '</div><div class="hv-temp">' + cl.temp + ' °C</div>' +
-          '<div class="lbl">' + esc(S('clim_fan')) + '<b>' + cl.fan + '</b></div><div class="hv-fan"><i style="width:' + Math.round(100 * cl.fan / cl.fMax) + '%"></i></div></div></div>' +
+          '<div class="lbl">' + esc(S('clim_fan')) + '<b>' + (cl.auto ? esc(S('clim_auto').toUpperCase()) : cl.fan) + '</b></div><div class="hv-fan"><i style="width:' + (cl.auto ? 0 : Math.round(100 * cl.fan / cl.fMax)) + '%"></i></div></div></div>' +
           '<div class="lbl hv-airlbl">' + esc(S('clim_section_airflow')) + '</div><div class="a-grid g4">' +
           ab('face', cl.air.face, 'clim_air_face', 'face') + ab('feet', cl.air.feet, 'clim_air_feet', 'feet') +
-          ab('ws', cl.air.ws, 'clim_air_windshield_front', 'ws') + ab('rear', cl.defR, 'clim_air_windshield_rear', 'rear') + '</div>' +
+          ab('ws', cl.air.ws, 'clim_air_windshield_front', 'ws') + ab('rear', cl.defR, 'clim_air_windshield_rear', 'rear') + '</div></div>' +
+          '<div class="hv-side"><div class="lbl">' + esc(S('hvac_popup_compressor')) + '</div><button class="b hv-ac' + (cl.ac ? ' on' : '') + '" data-a="hvAc">' + esc(S('clim_ac')) + '</button>' +
+          '<div class="lbl hv-airlbl">' + esc(S('clim_section_loop')) + '</div>' + lp(0, 'clim_loop_inner') + lp(1, 'clim_loop_outside') + lp(2, 'clim_loop_auto') + '</div></div>' +
           '<div class="hv-bar"><i data-cdbar style="width:' + Math.round(100 * o.left / o.total) + '%"></i></div>' +
-          '<div class="cd" data-cd>' + esc(S('overlay_countdown', o.left)) + '</div>' +
+          '<div class="hv-foot"><div class="cd" data-cd>' + esc(S('overlay_countdown', o.left)) + '</div><button class="b nc hv-close" data-a="hvClose">' + HV_ICON.close + esc(S('nav_close')) + '</button></div>' +
           (nav ? '' : '<div class="hv-hint">' + esc(S('hvac_popup_no_joystick')) + '</div>') + '</div></div>';
       }
       if (o.type === 'update') {
@@ -2247,8 +2254,10 @@
         case 'doorRestore': state.door.restore = !state.door.restore; return r();
         // Overlays
         case 'pkBg': case 'pkClose': return this.closeOverlay();
-        case 'hvBg': return this.closeOverlay();
+        case 'hvBg': case 'hvClose': return this.closeOverlay();
         case 'hvKey': return this.hvacKey(v);
+        case 'hvAc': if (u.overlay) u.overlay.left = u.overlay.total; c.clim.ac = !c.clim.ac; return r();
+        case 'hvLoop': if (u.overlay) u.overlay.left = u.overlay.total; c.clim.loop = n; return r();
         case 'hvAir': {
           // Mêmes boutons cumulables que la page Clim ; la lunette arrière est le dégivrage arrière.
           if (u.overlay) u.overlay.left = u.overlay.total;

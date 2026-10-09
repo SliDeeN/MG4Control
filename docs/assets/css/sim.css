@@ -651,9 +651,13 @@
 .b.air.sm { min-height: 76px; padding: 4px 2px; gap: 2px; font-size: calc(12px * var(--ts, 1)); }
 .b.air.sm .air-ico { width: 28px; height: 28px; }
 
-/* Pop-up HVAC, comme overlay_hvac_popup.xml : carte de 600 dp, croix de cellules 84 × 62 dp. */
+/* Pop-up HVAC, comme overlay_hvac_popup.xml : carte de 780 dp, croix de cellules 84 × 62 dp et
+   colonne tactile de 220 dp. Sur la voiture (1920 × 720), l'application la gonfle pour qu'elle
+   occupe environ 54 % de la largeur et 72 % de la hauteur : le zoom reproduit cette part d'écran
+   dans la maquette, dessinée en 1280 × 480. */
 .hvacpop {
-  width: 600px;
+  width: 780px;
+  zoom: .88;
   background: var(--dash-card);
   border: 1px solid var(--dash-border);
   border-radius: 14px;
@@ -663,7 +667,17 @@
 }
 .hvacpop .lbl { color: var(--text-secondary); font-size: calc(13px * var(--ts, 1)); }
 .hvacpop .lbl b { color: var(--text-primary); font-size: calc(22px * var(--ts, 1)); font-weight: 700; margin-left: 8px; }
+.hv-main { display: flex; gap: 16px; }
+.hv-left { flex: 1; min-width: 0; }
+.hv-side { flex: 0 0 220px; display: flex; flex-direction: column; gap: 6px; }
+.hv-side .b { height: 60px; font-size: calc(14px * var(--ts, 1)); }
+.hv-side .b.hv-ac { height: 52px; }
+.hv-side .hv-airlbl { margin: 6px 0 0; }
 .hv-top { display: flex; align-items: center; gap: 24px; }
+.hv-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; }
+.hv-foot .cd { margin-top: 0; }
+.b.hv-close { height: 34px; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 4px; font-size: calc(12px * var(--ts, 1)); }
+.b.hv-close .hv-ico { width: 16px; height: 16px; }
 .hv-cross { flex: 0 0 auto; display: grid; grid-template-columns: repeat(3, 84px); grid-template-rows: repeat(3, 62px); gap: 6px; }
 .b.hv-cell {
   height: auto; padding: 4px 2px; border-radius: 10px;

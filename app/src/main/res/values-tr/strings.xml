@@ -537,6 +537,7 @@
     <string name="hvac_popup_temp_down">Sıcaklık −</string>
     <string name="hvac_popup_fan_up">Fan +</string>
     <string name="hvac_popup_fan_down">Fan −</string>
+    <string name="hvac_popup_compressor">Kompresör</string>
     <string name="hvac_popup_no_joystick">Erişilebilirlik hizmeti olmadan joystick sesi değiştirir: ekranı kullanın.</string>
     <string name="shortcuts_action_brightness_up">Parlaklık +</string>
     <string name="shortcuts_action_brightness_down">Parlaklık -</string>

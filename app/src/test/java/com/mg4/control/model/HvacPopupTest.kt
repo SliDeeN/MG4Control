@@ -16,8 +16,12 @@ import org.junit.Test
  */
 class HvacPopupTest {
 
-    // Bornes d'un ancien SDK : 16–32 °C, ventilation 1–7.
-    private val milieu = Reglages(temp = 22, tempMin = 16, tempMax = 32, fan = 4, fanMin = 1, fanMax = 7)
+    // Bornes d'un ancien SDK : 16–32 °C, ventilation 1–7. Ventilation réglée à la main.
+    private val milieu = Reglages(
+        temp = 22, tempMin = 16, tempMax = 32, fan = 4, fanMin = 1, fanMax = 7, auto = false)
+
+    // En AUTO, la voiture n'annonce plus un niveau mais 15 (constaté sur SWI133 le 2026-10-09).
+    private val enAuto = milieu.copy(fan = 15, auto = true)
 
     @Test
     fun `haut et bas reglent la temperature d un degre`() {
@@ -29,11 +33,6 @@ class HvacPopupTest {
     fun `droite et gauche reglent la ventilation d un cran`() {
         assertEquals(Action.Ventilation(5), HvacPopup.action(Commande.DROITE, milieu))
         assertEquals(Action.Ventilation(3), HvacPopup.action(Commande.GAUCHE, milieu))
-    }
-
-    @Test
-    fun `le clic central ferme le popup`() {
-        assertEquals(Action.Fermer, HvacPopup.action(Commande.VALIDER, milieu))
     }
 
     @Test
@@ -70,20 +69,54 @@ class HvacPopupTest {
         assertEquals(Action.Ventilation(1), HvacPopup.action(Commande.DROITE, hors))
     }
 
+    // ── Ventilation AUTO : la case centrale de la croix ──────────────────────
+
     @Test
-    fun `le clic central ferme meme si rien n est lisible`() {
-        val rien = milieu.copy(temp = null, fan = null)
-        assertEquals(Action.Fermer, HvacPopup.action(Commande.VALIDER, rien))
+    fun `le clic central bascule la ventilation AUTO`() {
+        assertEquals(Action.Auto(true), HvacPopup.action(Commande.VALIDER, milieu))
+        assertEquals(Action.Auto(false), HvacPopup.action(Commande.VALIDER, enAuto))
+    }
+
+    @Test
+    fun `sans etat AUTO lisible le clic central ne fait rien`() {
+        // Écrire « AUTO actif » sans savoir s'il l'est déjà : c'est l'inverse qui pourrait partir.
+        assertNull(HvacPopup.action(Commande.VALIDER, milieu.copy(auto = null)))
+    }
+
+    @Test
+    fun `en AUTO gauche et droite quittent AUTO sans ecrire de niveau`() {
+        // Le 15 annoncé en AUTO n'est pas un niveau : en partir écrirait le MAXIMUM, même pour
+        // un « moins ». On sort d'AUTO ; la voiture annonce alors son vrai niveau, et c'est le
+        // geste suivant qui règle.
+        assertEquals(Action.Auto(false), HvacPopup.action(Commande.DROITE, enAuto))
+        assertEquals(Action.Auto(false), HvacPopup.action(Commande.GAUCHE, enAuto))
+    }
+
+    @Test
+    fun `un niveau au-dela du maximum n est pas un niveau a regler`() {
+        // AUTO vient d'être coupé mais la voiture annonce encore 15 un instant : rien à écrire.
+        val traine = milieu.copy(fan = 15, auto = false)
+        assertNull(HvacPopup.action(Commande.DROITE, traine))
+        assertNull(HvacPopup.action(Commande.GAUCHE, traine))
+    }
+
+    @Test
+    fun `le niveau affiche est celui de la voiture sauf en AUTO`() {
+        // null = pas de chiffre à montrer : l'écran écrit « AUTO » ou des tirets à la place.
+        assertEquals(4, milieu.ventilationReelle)
+        assertNull(enAuto.ventilationReelle)
+        assertNull(milieu.copy(fan = 15).ventilationReelle)
+        assertNull(milieu.copy(fan = null).ventilationReelle)
     }
 
     // ── Taille de la fenêtre ─────────────────────────────────────────────────
-    // Dessinée pour 600 × 375 dp, elle paraissait petite sur la voiture : l'écran y fait
-    // 1920 × 720 pixels à 1 pixel par dp (mesuré sur une photo, SWI133, 2026-10-09).
+    // Dessinée pour 780 × 390 dp ; l'écran de la voiture fait 1920 × 720 pixels à 1 pixel par dp
+    // (mesuré sur une photo, SWI133, 2026-10-09).
 
     @Test
     fun `sur l ecran de la voiture la fenetre grandit`() {
-        // Limitée par la hauteur : 72 % de 720 px pour 375 dp → × 1,38.
-        assertEquals(1.38f, HvacPopup.echelle(1920, 720, 1f), 0.01f)
+        // Limitée par la hauteur : 72 % de 720 px pour 390 dp → × 1,33.
+        assertEquals(1.33f, HvacPopup.echelle(1920, 720, 1f), 0.01f)
     }
 
     @Test
@@ -96,8 +129,8 @@ class HvacPopupTest {
 
     @Test
     fun `un ecran moins large limite par la largeur`() {
-        // 46 % de 1400 px pour 600 dp → × 1,07, sous la limite de hauteur (× 1,38).
-        assertEquals(1.07f, HvacPopup.echelle(1400, 720, 1f), 0.01f)
+        // 56 % de 1400 px pour 780 dp → × 1,01, sous la limite de hauteur (× 1,33).
+        assertEquals(1.01f, HvacPopup.echelle(1400, 720, 1f), 0.005f)
     }
 
     @Test
