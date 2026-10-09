@@ -375,9 +375,9 @@
     <string name="ac_auto_note">Applicato all\'avvio del veicolo: il climatizzatore e l\'A/C vengono accesi, poi vengono inviate le impostazioni sopra.</string>
     <string name="ac_auto_trigger_label">Attivazione</string>
     <string name="ac_auto_trigger_start">Solo all’avvio</string>
-    <string name="ac_auto_trigger_start_hint">Una sola decisione, all’avvio dell’auto: se la soglia non è raggiunta in quel momento, non si attiva nulla fino al prossimo avvio.</string>
+    <string name="ac_auto_trigger_start_hint">Una sola verifica, all’avvio dell’auto (READY): se la soglia non è raggiunta in quel momento, non si attiva nulla fino al prossimo avvio.</string>
     <string name="ac_auto_trigger_once">Una volta per avvio</string>
-    <string name="ac_auto_trigger_once_hint">Si attiva la prima volta che la soglia viene raggiunta, anche dopo una sosta durante il viaggio, poi non più fino al prossimo avvio.</string>
+    <string name="ac_auto_trigger_once_hint">Se la soglia non è raggiunta all’avvio dell’auto (READY), la verifica viene ripetuta a ogni successivo passaggio in READY. Non appena è raggiunta, le impostazioni vengono applicate una volta, poi più nulla fino al prossimo avvio completo dell’auto.</string>
     <string name="ac_auto_trigger_ready">A ogni passaggio in READY</string>
     <string name="ac_auto_trigger_ready_hint">Le impostazioni vengono inviate ogni volta, anche dopo una breve sosta: sostituiscono quelle fatte a mano.</string>
     <string name="clim_card_title">Climatizzazione</string>

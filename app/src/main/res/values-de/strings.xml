@@ -375,9 +375,9 @@
     <string name="ac_auto_note">Wird beim Start des Fahrzeugs angewendet: Klimaanlage und A/C werden eingeschaltet, dann werden die obigen Einstellungen gesendet.</string>
     <string name="ac_auto_trigger_label">Auslösung</string>
     <string name="ac_auto_trigger_start">Nur beim Start</string>
-    <string name="ac_auto_trigger_start_hint">Eine einzige Entscheidung beim Start des Fahrzeugs: Ist die Schwelle in diesem Moment nicht erreicht, wird bis zum nächsten Start nichts ausgelöst.</string>
+    <string name="ac_auto_trigger_start_hint">Eine einzige Prüfung beim Start des Fahrzeugs (READY): Ist die Schwelle in diesem Moment nicht erreicht, wird bis zum nächsten Start nichts ausgelöst.</string>
     <string name="ac_auto_trigger_once">Einmal pro Start</string>
-    <string name="ac_auto_trigger_once_hint">Löst aus, sobald die Schwelle zum ersten Mal erreicht ist, auch nach einem Halt während der Fahrt, danach bis zum nächsten Start nicht mehr.</string>
+    <string name="ac_auto_trigger_once_hint">Ist die Schwelle beim Start des Fahrzeugs (READY) nicht erreicht, wird die Prüfung bei jedem weiteren Wechsel in READY wiederholt. Sobald sie erreicht ist, werden die Einstellungen einmal angewendet, danach bis zum nächsten vollständigen Start des Fahrzeugs nicht mehr.</string>
     <string name="ac_auto_trigger_ready">Bei jedem Wechsel in READY</string>
     <string name="ac_auto_trigger_ready_hint">Die Einstellungen werden jedes Mal gesendet, auch nach einem kurzen Halt: Sie ersetzen manuell vorgenommene Einstellungen.</string>
     <string name="clim_card_title">Klimaanlage</string>
