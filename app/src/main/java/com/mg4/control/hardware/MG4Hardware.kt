@@ -25,6 +25,7 @@ import com.mg4.control.model.CustomDriveScale
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.HvacPopup
 import com.mg4.control.model.RegenLevel
+import com.mg4.control.model.SeatHeat
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.GarageMode
 import kotlinx.coroutines.CoroutineScope
@@ -1679,30 +1680,63 @@ object MG4Hardware {
     }
 
     /**
-     * HVAC toggle — cycles the property by sending value=1 until target is reached.
-     * Timeout: 7 seconds (from original smali: 0x1b58 ms = 7000 ms).
+     * Niveau d'un chauffage à crans (sièges chauffants).
+     *
+     * La voiture ne sait qu'AVANCER d'un cran : écrire 1 dans la propriété est un appui, comme
+     * sur l'écran d'origine. Pour un niveau précis, [SeatHeat.reach] lit UNE fois, envoie le
+     * nombre de crans qui convient, puis vérifie sans jamais recliquer.
+     *
+     * L'ancienne boucle (lire, cliquer, relire dans les 0,7 s, recliquer) envoyait un cran de
+     * trop dès que la voiture tardait à annoncer le nouveau niveau, puis refaisait tout le tour :
+     * « 1 → 2 » donnait 2, 3, éteint, 1, 2 (constaté sur SWI133 le 2026-10-09). Et sans niveau
+     * lisible, elle cliquait à l'aveugle pendant 7 secondes.
+     *
+     * ⚠️ Bloquant (0,6 s par cran, puis jusqu'à 3 s de vérification) → hors du thread principal.
      */
-    fun setHvacLevelWithToggle(propId: Int, areaId: Int, targetLevel: Int): Boolean {
-        val deadline = System.currentTimeMillis() + 7_000L
-        var lastClickMs = 0L
-        while (System.currentTimeMillis() < deadline) {
-            val current = getIntPropertyHvac(propId, areaId)
-            if (current == targetLevel) {
-                if (logEnabled) AppLogger.i(TAG, "HVAC target reached: $targetLevel")
-                return true
-            }
-            val now = System.currentTimeMillis()
-            if (now - lastClickMs >= 500L) {
-                if (logEnabled) AppLogger.i(TAG, "HVAC click → current=$current target=$targetLevel")
-                setIntPropertyHvac(propId, areaId, 1)
-                lastClickMs = now
-                try { Thread.sleep(200) } catch (_: InterruptedException) {}
-            } else {
-                try { Thread.sleep(250) } catch (_: InterruptedException) {}
-            }
+    fun setHvacLevelWithToggle(propId: Int, areaId: Int, targetLevel: Int): Boolean =
+        synchronized(hvacClickLock(propId)) {
+            // Un cran vient peut-être de partir (pop-up, raccourci) : le niveau lu n'est pas
+            // encore le bon, et compter les crans d'après lui en enverrait un de trop.
+            val depuis = android.os.SystemClock.elapsedRealtime() - (sLastHvacClick[propId] ?: 0L)
+            if (depuis < SeatHeat.READBACK_MS) pauseHvac(SeatHeat.READBACK_MS - depuis)
+            var crans = 0
+            val ok = SeatHeat.reach(
+                cible    = targetLevel,
+                lire     = { getIntPropertyHvac(propId, areaId) },
+                cran     = { crans++; clickHvac(propId, areaId) },
+                attendre = { pauseHvac(it) },
+            )
+            if (!ok) AppLogger.w(TAG, "HVAC 0x${Integer.toHexString(propId)} : niveau $targetLevel non confirmé " +
+                "($crans cran(s) envoyé(s), lu=${getIntPropertyHvac(propId, areaId)})")
+            else if (logEnabled) AppLogger.i(TAG, "HVAC 0x${Integer.toHexString(propId)} : niveau $targetLevel atteint " +
+                "en $crans cran(s)")
+            ok
         }
-        AppLogger.e(TAG, "HVAC timeout! prop=0x${Integer.toHexString(propId)}")
-        return false
+
+    /**
+     * UN cran de plus, sans viser de niveau : c'est la commande même de la voiture, et tout ce
+     * qu'il faut pour « niveau suivant » (pop-up HVAC, raccourci siège chauffant).
+     */
+    private fun stepHvacLevel(propId: Int, areaId: Int): Boolean =
+        synchronized(hvacClickLock(propId)) { clickHvac(propId, areaId) }
+
+    /** Dernier cran envoyé, par propriété : sert à les espacer et à savoir quand relire. */
+    private val sLastHvacClick = java.util.concurrent.ConcurrentHashMap<Int, Long>()
+    private val sHvacClickLocks = java.util.concurrent.ConcurrentHashMap<Int, Any>()
+
+    /** Un seul appelant à la fois par propriété : deux séries de crans entremêlées se fausseraient. */
+    private fun hvacClickLock(propId: Int): Any = sHvacClickLocks.getOrPut(propId) { Any() }
+
+    private fun pauseHvac(ms: Long) {
+        try { Thread.sleep(ms) } catch (_: InterruptedException) {}
+    }
+
+    /** Envoie un cran, à [SeatHeat.CLICK_INTERVAL_MS] au moins du précédent. */
+    private fun clickHvac(propId: Int, areaId: Int): Boolean {
+        val depuis = android.os.SystemClock.elapsedRealtime() - (sLastHvacClick[propId] ?: 0L)
+        if (depuis < SeatHeat.CLICK_INTERVAL_MS) pauseHvac(SeatHeat.CLICK_INTERVAL_MS - depuis)
+        sLastHvacClick[propId] = android.os.SystemClock.elapsedRealtime()
+        return setIntPropertyHvac(propId, areaId, 1)
     }
 
     // -------------------------------------------------------------------------
@@ -2042,6 +2076,18 @@ object MG4Hardware {
     fun setSeatHeatRight(level: Int): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setSeatHeatRight → $level")
         return setHvacLevelWithToggle(PROP_SEAT_HEAT_R, AREA_HVAC, level)
+    }
+
+    /** Siège chauffant gauche : niveau suivant (éteint → 1 → 2 → 3 → éteint), en UN cran. */
+    fun stepSeatHeatLeft(): Boolean {
+        if (logEnabled) AppLogger.i(TAG, "stepSeatHeatLeft → un cran")
+        return stepHvacLevel(PROP_SEAT_HEAT_L, AREA_HVAC)
+    }
+
+    /** Siège chauffant droit : niveau suivant, en UN cran. */
+    fun stepSeatHeatRight(): Boolean {
+        if (logEnabled) AppLogger.i(TAG, "stepSeatHeatRight → un cran")
+        return stepHvacLevel(PROP_SEAT_HEAT_R, AREA_HVAC)
     }
 
     fun setSteeringHeat(on: Boolean): Boolean {

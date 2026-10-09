@@ -58,6 +58,9 @@ object HvacPopupOverlay {
 
     /** Le véhicule met un instant à propager : relire trop tôt rendrait l'ANCIENNE valeur. */
     private const val SETTLE_MS = 700L
+
+    /** Les sièges chauffants annoncent leur niveau plus tard encore que la clim. */
+    private const val SEAT_SETTLE_MS = 1_500L
     private const val FLASH_MS = 180L
 
     /** Relecture d'entretien, en battements de [TICK_MS] : la voiture peut changer d'elle-même. */
@@ -334,8 +337,9 @@ object HvacPopupOverlay {
 
     /**
      * Siège chauffant : un appui = niveau suivant (éteint → 1 → 2 → 3 → éteint), comme le
-     * raccourci. La commande du véhicule avance cran par cran jusqu'au niveau voulu, ce qui prend
-     * du temps : plusieurs appuis rapprochés ne donnent qu'UNE écriture, celle du niveau final.
+     * raccourci — et donc UN cran envoyé, puisque c'est la commande même de la voiture. Viser le
+     * niveau par la boucle de recherche faisait faire un tour complet au siège (2, 3, éteint, 1,
+     * 2 pour passer de 1 à 2). Deux appuis rapprochés envoient deux crans, espacés par le matériel.
      */
     private fun cyclerSiege(gauche: Boolean) {
         val c = chauffages ?: return
@@ -346,8 +350,8 @@ object HvacPopupOverlay {
         AppLogger.i(TAG, "Pop-up HVAC — siège chauffant $cote : $actuel → $suivant")
         chauffages = if (gauche) c.copy(siegeGauche = suivant) else c.copy(siegeDroit = suivant)
         afficher()
-        ecrireDiffere("siège $cote") {
-            if (gauche) MG4Hardware.setSeatHeatLeft(suivant) else MG4Hardware.setSeatHeatRight(suivant)
+        ecrire(SEAT_SETTLE_MS) {
+            if (gauche) MG4Hardware.stepSeatHeatLeft() else MG4Hardware.stepSeatHeatRight()
         }
     }
 
@@ -365,13 +369,14 @@ object HvacPopupOverlay {
         differees.remove(reglage)?.let { handler.removeCallbacks(it) }
         val r = Runnable {
             differees.remove(reglage)
-            ecrire(action)
+            ecrire(action = action)
         }
         differees[reglage] = r
         handler.postDelayed(r, WRITE_DEBOUNCE_MS)
     }
 
-    private fun ecrire(action: () -> Boolean) {
+    /** @param apaisement délai avant de relire : en deçà, la voiture rendrait l'ancienne valeur. */
+    private fun ecrire(apaisement: Long = SETTLE_MS, action: () -> Boolean) {
         ecrituresEnVol++
         vehicule.execute {
             val ok = try { action() } catch (e: Exception) {
@@ -381,8 +386,8 @@ object HvacPopupOverlay {
             handler.post {
                 ecrituresEnVol--
                 if (!ok) vues?.let { Toast.makeText(it.localized, R.string.clim_write_failed, Toast.LENGTH_SHORT).show() }
-                silenceJusqua = SystemClock.uptimeMillis() + SETTLE_MS
-                handler.postDelayed({ relire() }, SETTLE_MS)
+                silenceJusqua = maxOf(silenceJusqua, SystemClock.uptimeMillis() + apaisement)
+                handler.postDelayed({ relire() }, apaisement)
             }
         }
     }

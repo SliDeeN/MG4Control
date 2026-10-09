@@ -826,9 +826,11 @@ class MG4ControlService : Service() {
                 }
                 val suivant = ExternalApi.cycleStep(actuel, 0, 3, 1)
                 AppLogger.i(TAG, "SHORTCUT siège chauffant ${if (gauche) "gauche" else "droit"} " +
-                    ": $actuel → $suivant")
-                if (gauche) MG4Hardware.setSeatHeatLeft(suivant)
-                else        MG4Hardware.setSeatHeatRight(suivant)
+                    ": $actuel → $suivant (un cran)")
+                // « Niveau suivant » est la commande même de la voiture : UN cran suffit. Viser
+                // `suivant` par la recherche de niveau faisait faire un tour complet au siège.
+                if (gauche) MG4Hardware.stepSeatHeatLeft()
+                else        MG4Hardware.stepSeatHeatRight()
             }
 
             ShortcutAction.STEERING_HEAT_TOGGLE -> {
