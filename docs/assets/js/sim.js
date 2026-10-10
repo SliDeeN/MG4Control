@@ -139,6 +139,7 @@
         extra: {},
         fallback: 'HIGH', adasA: 3, adasB: 0, aebA: 1, aebB: 2,
         regenCycle: null,          // séquence composée (null = ordre d'origine)
+        profileCycle: null,        // cycle de profils composé (null = tous les profils, dans l'ordre de la liste)
         toggles: {},
         advOn: false, advService: false,
         adv: []                    // { key, press, action, scope (profil ; null = tous), app?, profileId? (cible) }
@@ -323,6 +324,7 @@
     if (!drivingOk) { toastActive(S('write_refused_moving', String(c.speed), state.settings.gateMax)); return false; }
     // Seul « Appliquer maintenant » (liste des profils) affiche un toast dans l'app ; ailleurs, note du simulateur.
     if (opts.toast) toastActive(S('profile_applied', p.name));
+    else if (opts.cycle) toastActive(S('profile_cycle_applied', p.name));   // Toast du raccourci « Cycle de profils »
     else hud(L('Profil « ', 'Profile “') + p.name + L(' » appliqué', '” applied') + (opts.via ? ' · ' + opts.via : ''));
     return true;
   }
@@ -544,11 +546,20 @@
     MEDIA_NEXT: 'shortcuts_action_media_next', MEDIA_PREVIOUS: 'shortcuts_action_media_prev', MEDIA_PLAY_PAUSE: 'shortcuts_action_media_play_pause',
     VOLUME_UP: 'shortcuts_action_volume_up', VOLUME_DOWN: 'shortcuts_action_volume_down',
     APPLY_PROFILE: 'shortcuts_action_apply_profile', PROFILE_PICKER: 'shortcuts_action_profile_picker',
+    PROFILE_CYCLE: 'shortcuts_action_profile_cycle',
     OPEN_APP: 'shortcuts_action_open_app', OPEN_CUSTOM_APP: 'shortcuts_action_open_custom_app', VEHICLE_POWER_OFF: 'shortcuts_action_vehicle_power_off',
     WINDOWS_OPEN_ALL: 'shortcuts_action_windows_open', WINDOWS_CLOSE_ALL: 'shortcuts_action_windows_close'
   };
   const REGEN_SELECTABLE = ['LOW', 'MEDIUM', 'HIGH', 'ADAPTIVE', 'ONE_PEDAL'];
   const regenOrder = () => (state.sc.regenCycle && state.sc.regenCycle.length >= 2 ? state.sc.regenCycle : REGEN_CYCLE);
+  /** Cycle de profils en vigueur (ProfileCycle.resolve) : profils supprimés retirés ; sans réglage, tous les profils. */
+  const profileOrder = () => {
+    const ids = state.profiles.map((p) => p.id);
+    const kept = (state.sc.profileCycle || []).filter((id) => ids.includes(id));
+    return kept.length ? kept : ids;
+  };
+  // Profil visé par le raccourci « Cycle de profils », tant qu'il attend d'être appliqué (ProfileCycleShortcut).
+  let cycleTarget = null, cycleTimer = null;
   /** Liste des actions proposées, filtrée par firmware (ShortcutsFragment.baseActionItems). */
   function availableActions() {
     const k = caps();
@@ -564,7 +575,7 @@
     if (k.beam) a.push('AUTO_HIGH_BEAM_TOGGLE');
     if (k.batHeat) a.push('BATTERY_HEAT_TOGGLE');
     a.push('MEDIA_NEXT', 'MEDIA_PREVIOUS', 'MEDIA_PLAY_PAUSE', 'VOLUME_UP', 'VOLUME_DOWN',
-      'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_PICKER', 'OPEN_APP', 'OPEN_CUSTOM_APP');
+      'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_PICKER', 'PROFILE_CYCLE', 'OPEN_APP', 'OPEN_CUSTOM_APP');
     if (k.power) a.push('VEHICLE_POWER_OFF');
     return a;
   }
@@ -642,6 +653,25 @@
         const p = extra && state.profiles.find((x) => x.id === extra.profileId);
         if (!p) { hud(L('Profil introuvable : rien n\x27est appliqué', 'Profile not found: nothing is applied')); return ''; }
         applyProfile(p, { manual: true }); return 'profile';
+      }
+      case 'PROFILE_CYCLE': {
+        // Verrou de vitesse : rien ne bouge, ni le profil visé ni le profil actif ; c'est lui qui affiche son message.
+        if (!gateOk()) return '';
+        const order = profileOrder();
+        if (!order.length) { toastActive(S('shortcuts_no_profiles')); return ''; }
+        // Repart du profil VISÉ tant qu'il n'est pas appliqué, sinon du profil actif ; hors cycle → le premier.
+        const i = order.indexOf(cycleTarget || state.activeProfileId);
+        const id = i < 0 ? order[0] : order[(i + 1) % order.length];
+        cycleTarget = id;
+        toastActive(S('profile_cycle_target', state.profiles.find((x) => x.id === id).name));
+        // Appliqué une seconde après le DERNIER appui : deux appuis rapprochés sautent un profil.
+        clearTimeout(cycleTimer);
+        cycleTimer = setTimeout(() => {
+          cycleTarget = null;
+          const p = state.profiles.find((x) => x.id === id);
+          if (p) applyProfile(p, { manual: true, cycle: true });
+        }, 1000);
+        return 'profile';
       }
       case 'PROFILE_PICKER': { const s = activeSim(); if (s) s.openPicker(); return 'picker'; }
       case 'HVAC_POPUP': { const s = activeSim(); if (s) s.toggleHvacPopup(); return 'hvac'; }
@@ -879,7 +909,7 @@
         edit: null, overlay: null, dialog: null, toast: null,
         adv: { rec: false, key: null, press: 'single', action: 'NONE', scope: '' },
         logoTaps: 0, updFb: null, apkFb: null,
-        winOpen: !!opts.winOpen, regenDraft: null, statsOpen: null
+        winOpen: !!opts.winOpen, regenDraft: null, profileDraft: null, statsOpen: null
       };
       if (opts.settingsTab != null) this.ui.tabs.set = +opts.settingsTab;
       if (opts.scTab != null) this.ui.tabs.sc = opts.scTab;
@@ -1395,6 +1425,7 @@
         { id: 'onepedal', label: S('shortcuts_cat_onepedal'), page: this.assigned('ONE_PEDAL') ? this.scOnePedal() : '', sub: true, hl: 'sc-sub-onepedal' },
         { id: 'adas', label: S('shortcuts_cat_adas'), page: this.assigned('ADAS_CYCLE') && caps().known ? this.scAdasCfg() : '', sub: true, hl: 'sc-sub-adas' },
         { id: 'regen', label: S('shortcuts_cat_regen_cycle'), page: this.assigned('REGEN_CYCLE') ? this.scRegen() : '', sub: true, hl: 'sc-sub-regen' },
+        { id: 'profiles', label: S('shortcuts_cat_profile_cycle'), page: this.assigned('PROFILE_CYCLE') ? this.scProfiles() : '', sub: true, hl: 'sc-sub-profiles' },
         { id: 'list', label: S('adv_sc_list_title'), page: this.scList(), sub: true, hidden: !inAdv }
       ]);
       return '<div class="a-page">' + head + body + '<button class="b close" data-a="close">' + esc(S('nav_close')) + '</button></div>';
@@ -1431,6 +1462,25 @@
         '<div class="a-row"><span class="lbl">' + (ok ? esc(S('shortcuts_cfg_regen_summary', d.map((l) => S(keys[l])).join(' → '))) :
         '<span style="color:var(--dash-warn)">' + esc(S('shortcuts_cfg_regen_min')) + '</span>') + '</span></div>' +
         '<div class="a-grid g2"><button class="b" data-a="rcClear">' + esc(S('shortcuts_cfg_regen_clear')) + '</button><button class="b green' + (ok ? '' : ' dis') + '" data-a="rcSave"' + (ok ? '' : ' disabled') + '>' + esc(S('shortcuts_cfg_regen_save')) + '</button></div></div>';
+    }
+    /** Cycle de profils : même écran que le cycle de régénération, avec les profils pour boutons. */
+    scProfiles() {
+      const u = this.ui, ps = state.profiles.slice(0, 5);
+      if (!u.profileDraft) u.profileDraft = profileOrder().slice();
+      // Un profil supprimé entre-temps sort aussi de la composition en cours.
+      const d = u.profileDraft = u.profileDraft.filter((id) => ps.some((p) => p.id === id));
+      const name = (id) => (ps.find((p) => p.id === id) || {}).name || '?';
+      // Nom raccourci sur le bouton (ProfileCycle.label) ; le résumé garde les noms entiers.
+      const short = (n) => (n.length > 16 ? n.slice(0, 15).trimEnd() + '…' : n);
+      const btn = (p) => { const i = d.indexOf(p.id); return '<button class="b' + (i >= 0 ? ' on' : '') + '" data-a="pcToggle" data-v="' + esc(p.id) + '">' + (i >= 0 ? '<span class="rc-n">' + (i + 1) + '</span>' : '') + esc(short(p.name)) + '</button>'; };
+      const ok = d.length >= 2;
+      const head = '<div class="a-h">' + esc(S('shortcuts_action_profile_cycle')) + '</div><div class="a-desc">' + esc(S('shortcuts_cfg_profile_hint')) + '</div>';
+      if (!ps.length) return '<div class="a-sec" data-hl="sc-profiles">' + head + '<div class="a-row"><span class="lbl">' + esc(S('shortcuts_no_profiles')) + '</span></div></div>';
+      return '<div class="a-sec" data-hl="sc-profiles">' + head +
+        '<div class="a-grid g5" style="margin-top:8px">' + ps.map(btn).join('') + '</div>' +
+        '<div class="a-row"><span class="lbl">' + (ok ? esc(S('shortcuts_cfg_regen_summary', d.map(name).join(' → '))) :
+        '<span style="color:var(--dash-warn)">' + esc(S('shortcuts_cfg_profile_min')) + '</span>') + '</span></div>' +
+        '<div class="a-grid g2"><button class="b" data-a="pcClear">' + esc(S('shortcuts_cfg_regen_clear')) + '</button><button class="b green' + (ok ? '' : ' dis') + '" data-a="pcSave"' + (ok ? '' : ' disabled') + '>' + esc(S('shortcuts_cfg_regen_save')) + '</button></div></div>';
     }
     scClassic() {
       const sc = state.sc;
@@ -2346,6 +2396,16 @@
         case 'rcSave':
           if (!u.regenDraft || u.regenDraft.length < 2) return this.toast(S('shortcuts_cfg_regen_min'));
           sc.regenCycle = u.regenDraft.slice(); r(); return this.toast(S('shortcuts_cfg_regen_saved'));
+        case 'pcToggle': {
+          const d = u.profileDraft || profileOrder().slice();
+          const i = d.indexOf(v);
+          if (i >= 0) d.splice(i, 1); else d.push(v);
+          u.profileDraft = d; return this.render();
+        }
+        case 'pcClear': u.profileDraft = []; return this.render();
+        case 'pcSave':
+          if (!u.profileDraft || u.profileDraft.length < 2) return this.toast(S('shortcuts_cfg_profile_min'));
+          sc.profileCycle = u.profileDraft.slice(); r(); return this.toast(S('shortcuts_cfg_regen_saved'));
         case 'edSave': {
           const d = u.dialog, it = sc.adv[d.index];
           const clash = sc.adv.some((x, i) => i !== d.index && x.key === it.key && x.press === it.press && (x.scope || '') === (d.scope || ''));
@@ -2552,6 +2612,11 @@
           // Révèle la page « Cycle regen » : la fonction doit être attribuée quelque part.
           if (!this.assigned('REGEN_CYCLE')) { state.sc.map.btn2_single = 'REGEN_CYCLE'; delete state.sc.extra.btn2_single; }
           u.screen = 'shortcuts'; u.tabs.sc = 'regen'; return commit();
+        case 'profileCycle':
+          // Révèle la page « Cycle profils » et met le raccourci sur la ★ droite du véhicule virtuel.
+          if (!this.assigned('PROFILE_CYCLE')) { state.sc.map.btn2_single = 'PROFILE_CYCLE'; delete state.sc.extra.btn2_single; }
+          u.profileDraft = null;
+          u.screen = 'shortcuts'; u.tabs.sc = 'profiles'; return commit();
         // L'assistant vit dans l'option avancée « Calibrage par vitre » : on l'allume d'abord.
         case 'calibrate': state.winCalAdv = true; u.screen = 'automation'; u.winOpen = true; u.dialog = { type: 'cal', w: 'FR', step: 1 }; return commit();
         case 'statsOn': state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 0; return commit();
@@ -2686,7 +2751,8 @@
   function reset() {
     const fw = state.fw;
     state = initialState(); state.fw = fw;
-    instances.forEach((i) => { i.ui.overlay = null; i.ui.dialog = null; i.ui.edit = null; i.ui.regenDraft = null; if (i.ui.screen === 'profileEdit') i.startEdit(state.profiles[0]); });
+    clearTimeout(cycleTimer); cycleTarget = null;
+    instances.forEach((i) => { i.ui.overlay = null; i.ui.dialog = null; i.ui.edit = null; i.ui.regenDraft = null; i.ui.profileDraft = null; if (i.ui.screen === 'profileEdit') i.startEdit(state.profiles[0]); });
     commit();
   }
 
@@ -2876,7 +2942,7 @@
   function mountApi(el) {
     const EXEC = ['REGEN_CYCLE', 'SEAT_HEAT_LEFT_CYCLE', 'SEAT_HEAT_RIGHT_CYCLE', 'STEERING_HEAT_TOGGLE', 'HVAC_TOGGLE', 'HVAC_TEMP_UP', 'HVAC_TEMP_DOWN', 'HVAC_FAN_UP', 'HVAC_FAN_DOWN',
       'DEFROST_FRONT_TOGGLE', 'DEFROST_REAR_TOGGLE', 'HVAC_RECIRC_CYCLE', 'BRIGHTNESS_UP', 'BRIGHTNESS_DOWN', 'ESC_TOGGLE', 'DROWSINESS_TOGGLE', 'DROWSINESS_SEN_CYCLE',
-      'MEDIA_PLAY_PAUSE', 'MEDIA_NEXT', 'MEDIA_PREVIOUS', 'VOLUME_UP', 'VOLUME_DOWN', 'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'OPEN_CUSTOM_APP', 'ONE_PEDAL', 'ENERGY_SAVING_TOGGLE', 'PROFILE_PICKER', 'OPEN_APP',
+      'MEDIA_PLAY_PAUSE', 'MEDIA_NEXT', 'MEDIA_PREVIOUS', 'VOLUME_UP', 'VOLUME_DOWN', 'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_CYCLE', 'OPEN_CUSTOM_APP', 'ONE_PEDAL', 'ENERGY_SAVING_TOGGLE', 'PROFILE_PICKER', 'OPEN_APP',
       'ADAS_CYCLE', 'TSR_TOGGLE', 'VEHICLE_POWER_OFF'];
     const KEYS = { drive_mode: ['ECO', 'NORMAL', 'SPORT', 'SNOW', 'CUSTOM'], regen: ['OFF', 'LOW', 'MEDIUM', 'HIGH', 'ADAPTIVE', 'ONE_PEDAL'], seat_heat_left: ['0', '1', '2', '3', 'NEXT', 'PREV'],
       seat_heat_right: ['0', '1', '2', '3', 'NEXT', 'PREV'], steering_heat: ['1', '0', 'TOGGLE'], profile: null, hvac_power: ['1', '0', 'TOGGLE'], ac: ['1', '0', 'TOGGLE'], hvac_auto: ['1', '0', 'TOGGLE'],

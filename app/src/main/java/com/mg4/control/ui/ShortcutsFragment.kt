@@ -25,9 +25,11 @@ import com.mg4.control.R
 import com.mg4.control.accessibility.AdvancedShortcuts
 import com.mg4.control.accessibility.KeyCaptureService
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.shortcut.PressType
+import com.mg4.control.shortcut.ProfileCycle
 import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.hardware.MG4Hardware
@@ -77,6 +79,16 @@ class ShortcutsFragment : Fragment() {
 
     /** Repart de la séquence ENREGISTRÉE, en jetant une composition non sauvegardée. */
     private var rechargerCycleRegen: (() -> Unit)? = null
+
+    /**
+     * Cycle de profils en cours d'édition : des IDENTIFIANTS de profil, dans l'ordre des appuis.
+     * Même principe que [regenCycleSel], la position vaut rang.
+     */
+    private val profileCycleSel = mutableListOf<String>()
+
+    /** Pendants de [majCycleRegen] et [rechargerCycleRegen] pour la page du cycle de profils. */
+    private var majCycleProfils: (() -> Unit)? = null
+    private var rechargerCycleProfils: (() -> Unit)? = null
 
     // ── Par-spinner : label list mutable + adapter + vue ─────────────────
     private val spinnerLabelLists = mutableMapOf<String, MutableList<String>>()
@@ -179,6 +191,7 @@ class ShortcutsFragment : Fragment() {
             add(ActionItem(getString(R.string.shortcuts_action_windows_close),   ShortcutAction.WINDOWS_CLOSE_ALL))
             add(ActionItem(getString(R.string.shortcuts_action_apply_profile),   ShortcutAction.APPLY_PROFILE))
             add(ActionItem(getString(R.string.shortcuts_action_profile_picker), ShortcutAction.PROFILE_PICKER))
+            add(ActionItem(getString(R.string.shortcuts_action_profile_cycle),  ShortcutAction.PROFILE_CYCLE))
             add(ActionItem(getString(R.string.shortcuts_action_open_app),       ShortcutAction.OPEN_APP))
             add(ActionItem(getString(R.string.shortcuts_action_open_custom_app),ShortcutAction.OPEN_CUSTOM_APP))
             if (MG4Hardware.hasVehiclePowerOff()) {
@@ -200,6 +213,7 @@ class ShortcutsFragment : Fragment() {
         setupSpinners(view)
         setupConfigListeners(view)
         setupRegenCycle(view)
+        setupProfileCycle(view)
         restoreState()
 
         // En dernier : le rail décide quelles pages existent, il lui faut l'état final.
@@ -247,6 +261,8 @@ class ShortcutsFragment : Fragment() {
         reselectTabs = null
         majCycleRegen = null
         rechargerCycleRegen = null
+        majCycleProfils = null
+        rechargerCycleProfils = null
         rootView = null
         super.onDestroyView()
     }
@@ -835,12 +851,98 @@ class ShortcutsFragment : Fragment() {
     })
 
     /**
+     * Composition du cycle parcouru par le raccourci « Cycle de profils ».
+     *
+     * Même écran et même geste que [setupRegenCycle] — l'ordre des appuis EST l'ordre du cycle,
+     * rien n'est enregistré avant « Sauvegarder » — à une différence près : les boutons ne sont
+     * pas fixes. Les profils se créent, se renomment et se suppriment dans un autre onglet ; ils
+     * sont donc RELUS à chaque arrivée sur la page, et le cycle affiché est celui que le
+     * raccourci parcourrait à cet instant (profils supprimés déjà retirés).
+     */
+    private fun setupProfileCycle(view: View) {
+        // Cinq boutons pour cinq profils au plus (ProfileManager.MAX_PROFILES).
+        val boutons = listOf(
+            R.id.sc_profile_cycle_1, R.id.sc_profile_cycle_2, R.id.sc_profile_cycle_3,
+            R.id.sc_profile_cycle_4, R.id.sc_profile_cycle_5
+        ).mapNotNull { view.findViewById<MaterialButton>(it) }
+        val rangee = view.findViewById<View>(R.id.row_profile_cycle)
+        val vide   = view.findViewById<TextView>(R.id.tv_profile_cycle_empty)
+        val resume = view.findViewById<TextView>(R.id.tv_profile_cycle_summary)
+        val save   = view.findViewById<MaterialButton>(R.id.btn_profile_cycle_save)
+
+        val texteActif   = requireContext().getColor(R.color.text_active)
+        val texteInactif = requireContext().getColor(R.color.text_secondary)
+
+        var profils = emptyList<DrivingProfile>()
+
+        fun maj() {
+            boutons.forEachIndexed { i, btn ->
+                val profil = profils.getOrNull(i)
+                // INVISIBLE et non GONE : avec deux profils, deux boutons de la largeur de la
+                // page se liraient comme deux bandeaux, plus comme des choix.
+                btn.visibility = if (profil != null) View.VISIBLE else View.INVISIBLE
+                if (profil == null) return@forEachIndexed
+                val rang = profileCycleSel.indexOf(profil.id)
+                val on   = rang >= 0
+                btn.text = ProfileCycle.label(profil.name) + "\n" + (if (on) "${rang + 1}" else "\u00A0")
+                btn.backgroundTintList = ColorStateList.valueOf(if (on) accentColor else defColor)
+                btn.setTextColor(if (on) texteActif else texteInactif)
+            }
+            val aucun = profils.isEmpty()
+            vide?.visibility   = if (aucun) View.VISIBLE else View.GONE
+            rangee?.visibility = if (aucun) View.GONE else View.VISIBLE
+
+            val assez = profileCycleSel.size >= ProfileCycle.MIN_PROFILES
+            // Le résumé porte les noms ENTIERS : ceux des boutons sont raccourcis.
+            resume?.text = when {
+                aucun -> ""
+                assez -> getString(
+                    R.string.shortcuts_cfg_regen_summary,
+                    profileCycleSel.mapNotNull { id -> profils.firstOrNull { it.id == id }?.name }
+                        .joinToString(" → "))
+                else  -> getString(R.string.shortcuts_cfg_profile_min)
+            }
+            save?.isEnabled = assez
+            save?.alpha     = if (assez) 1f else 0.4f
+        }
+
+        boutons.forEachIndexed { i, btn ->
+            btn.setOnClickListener {
+                val id = profils.getOrNull(i)?.id ?: return@setOnClickListener
+                if (!profileCycleSel.remove(id)) profileCycleSel.add(id)
+                maj()
+            }
+        }
+
+        view.findViewById<MaterialButton>(R.id.btn_profile_cycle_clear)?.setOnClickListener {
+            profileCycleSel.clear()
+            maj()
+        }
+
+        save?.setOnClickListener {
+            if (profileCycleSel.size < ProfileCycle.MIN_PROFILES) return@setOnClickListener
+            ProfileCycle.save(requireContext(), profileCycleSel)
+            Toast.makeText(requireContext(), R.string.shortcuts_cfg_regen_saved,
+                Toast.LENGTH_SHORT).show()
+        }
+
+        majCycleProfils = { maj() }
+        rechargerCycleProfils = {
+            profils = ProfileManager(requireContext()).getAll().take(boutons.size)
+            profileCycleSel.clear()
+            profileCycleSel.addAll(ProfileCycle.order(requireContext(), profils.map { it.id }))
+            maj()
+        }
+        rechargerCycleProfils?.invoke()
+    }
+
+    /**
      * Rail de gauche — même motif que l'éditeur de profil et les Réglages, à ceci près que
      * plusieurs entrées vont et viennent selon ce que l'utilisateur a attribué.
      *
      * Deux familles d'entrées, deux règles :
      *  • les onglets « Raccourcis » et « Avancés » existent tant que leur page a du contenu ;
-     *  • les trois pages de RÉGLAGE (1 Pédale, ADAS, cycle de régénération) existent quand leur
+     *  • les quatre pages de RÉGLAGE (1 Pédale, ADAS, cycles de régénération et de profils) existent quand leur
      *    fonction est attribuée à un bouton, quelle que soit la voie — c'est [actionEnJeu] qui
      *    tranche, et rien d'autre.
      */
@@ -854,9 +956,11 @@ class ShortcutsFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_onepedal) to view.findViewById<ViewGroup>(R.id.page_sc_onepedal),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_adas)     to view.findViewById<ViewGroup>(R.id.page_sc_adas),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_regen)    to view.findViewById<ViewGroup>(R.id.page_sc_regen),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_profiles) to view.findViewById<ViewGroup>(R.id.page_sc_profiles),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_list)     to view.findViewById<ViewGroup>(R.id.page_sc_list)
         )
-        val pageCycle = tabs[4].second
+        val pageCycle   = tabs[4].second
+        val pageProfils = tabs[5].second
 
         // Chaque page de réglage est adossée à une fonction : elle n'existe que si un bouton la
         // déclenche. C'est la règle qui manquait aux deux premières, dont les réglages ne
@@ -864,7 +968,8 @@ class ShortcutsFragment : Fragment() {
         val pagesReglage = mapOf(
             tabs[2].second to ShortcutAction.ONE_PEDAL,
             tabs[3].second to ShortcutAction.ADAS_CYCLE,
-            tabs[4].second to ShortcutAction.REGEN_CYCLE
+            tabs[4].second to ShortcutAction.REGEN_CYCLE,
+            tabs[5].second to ShortcutAction.PROFILE_CYCLE
         )
         setupAdvancedShortcuts(view)
         val scroll = view.findViewById<ScrollView>(R.id.scroll_shortcuts)
@@ -922,6 +1027,8 @@ class ShortcutsFragment : Fragment() {
                 // abandonnée sans « Sauvegarder » ne doit pas se faire passer pour le réglage
                 // en vigueur.
                 if (page === pageCycle) rechargerCycleRegen?.invoke()
+                // Idem pour le cycle de profils, qui relit en plus la liste des profils.
+                if (page === pageProfils) rechargerCycleProfils?.invoke()
                 scroll?.scrollTo(0, 0)
                 apply()
             }
@@ -1186,7 +1293,10 @@ class ShortcutsFragment : Fragment() {
         setChildrenEnabled(shortcutsContent, enabled)
         // setChildrenEnabled réactive TOUT, « Sauvegarder » compris. Or son état ne dépend pas
         // de l'interrupteur global mais du nombre de modes choisis : il faut le lui rendre.
-        if (enabled) majCycleRegen?.invoke()
+        if (enabled) {
+            majCycleRegen?.invoke()
+            majCycleProfils?.invoke()
+        }
     }
 
     private fun setChildrenEnabled(v: View?, enabled: Boolean) {

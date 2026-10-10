@@ -33,6 +33,7 @@
     <string name="shortcuts_action_tsr">Panneaux (TSR)</string>
     <string name="shortcuts_action_apply_profile">Lancer un profil</string>
     <string name="shortcuts_action_profile_picker">Sélecteur de profil (popup)</string>
+    <string name="shortcuts_action_profile_cycle">Cycle de profils</string>
     <string name="shortcuts_action_vehicle_power_off">Éteindre la voiture</string>
         <string name="overlay_brightness_title">Luminosité</string>
     <string name="overlay_brightness_night">Nuit</string>
@@ -112,6 +113,9 @@
     <string name="profile_save">Enregistrer</string>
     <string name="profile_cancel">Annuler</string>
     <string name="profile_applied">Profil appliqué : %s</string>
+    <string name="profile_cycle_target">Profil : %s</string>
+    <string name="profile_cycle_applied">Profil %s appliqué</string>
+    <string name="profile_cycle_incomplete">Profil %s : application incomplète</string>
     <string name="profile_max_reached">Maximum %d profils atteint</string>
     <!-- [BT-PROFILES] -->
     <string name="profile_bt_device_label">Appareil Bluetooth</string>
@@ -484,6 +488,9 @@
     <string name="shortcuts_cfg_regen_save">Sauvegarder</string>
     <string name="shortcuts_cfg_regen_saved">Cycle enregistré</string>
     <string name="shortcuts_cfg_regen_min">Un cycle demande au moins deux modes.</string>
+    <string name="shortcuts_cat_profile_cycle">Cycle profils</string>
+    <string name="shortcuts_cfg_profile_hint">Touchez les profils dans l\'ordre où vous voulez les parcourir, puis enregistrez. À chaque appui, le raccourci applique le profil qui suit le profil actif.</string>
+    <string name="shortcuts_cfg_profile_min">Un cycle demande au moins deux profils.</string>
     <string name="adv_sc_new">Nouveau raccourci</string>
     <string name="adv_sc_step_key">1 · Touche</string>
     <string name="adv_sc_step_press">2 · Type d\'appui</string>

@@ -33,6 +33,7 @@
     <string name="shortcuts_action_tsr">Schilder (TSR)</string>
     <string name="shortcuts_action_apply_profile">Profil starten</string>
     <string name="shortcuts_action_profile_picker">Profilauswahl (Popup)</string>
+    <string name="shortcuts_action_profile_cycle">Profilzyklus</string>
     <string name="shortcuts_action_vehicle_power_off">Fahrzeug ausschalten</string>
         <string name="overlay_brightness_title">Helligkeit</string>
     <string name="overlay_brightness_night">Nacht</string>
@@ -111,6 +112,9 @@
     <string name="profile_save">Speichern</string>
     <string name="profile_cancel">Abbrechen</string>
     <string name="profile_applied">Profil angewendet: %s</string>
+    <string name="profile_cycle_target">Profil: %s</string>
+    <string name="profile_cycle_applied">Profil %s angewendet</string>
+    <string name="profile_cycle_incomplete">Profil %s: unvollständig angewendet</string>
     <string name="profile_max_reached">Maximum %d Profile erreicht</string>
     <string name="profile_bt_device_label">Bluetooth-Gerät</string>
 
@@ -479,6 +483,9 @@
     <string name="shortcuts_cfg_regen_save">Speichern</string>
     <string name="shortcuts_cfg_regen_saved">Zyklus gespeichert</string>
     <string name="shortcuts_cfg_regen_min">Ein Zyklus braucht mindestens zwei Stufen.</string>
+    <string name="shortcuts_cat_profile_cycle">Profilzyklus</string>
+    <string name="shortcuts_cfg_profile_hint">Tippen Sie die Profile in der gewünschten Reihenfolge an, dann speichern. Jeder Tastendruck wendet das Profil an, das auf das aktive folgt.</string>
+    <string name="shortcuts_cfg_profile_min">Ein Zyklus braucht mindestens zwei Profile.</string>
     <string name="adv_sc_new">Neues Kürzel</string>
     <string name="adv_sc_step_key">1 · Taste</string>
     <string name="adv_sc_step_press">2 · Druckart</string>

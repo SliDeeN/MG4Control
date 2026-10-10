@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.8</span>
-        <b><span data-l="fr">11 nouveautés dans cette version</span></b>
+        <b><span data-l="fr">12 nouveautés dans cette version</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span></button>
       </div>
       <div class="wn-list">
@@ -152,6 +152,7 @@
         <a href="#f-topbar" data-feature="f-topbar"><span data-l="fr">🧭 Onglets agrandis</span></a>
         <a href="#f-audio" data-feature="f-audio"><span data-l="fr">🔉 Volume en quittant : dans Automatisation</span></a>
         <a href="#f-hvacpopup" data-feature="f-hvacpopup"><span data-l="fr">🌡️ Pop-up HVAC au joystick</span></a>
+        <a href="#f-profilecycle" data-feature="f-profilecycle"><span data-l="fr">🔁 Cycle de profils sur un bouton</span></a>
         <a href="#f-sc-new" data-feature="f-sc-new"><span data-l="fr">⭐ Trois nouvelles actions de raccourci</span></a>
       </div>
     </div>
@@ -522,7 +523,7 @@
     </div>
     <div class="pt" data-hl-key="sc-onepedal" data-go="shortcuts:onepedal">
       <h3><span data-l="fr">Réglages à la demande</span></h3>
-      <p data-l="fr">1 Pédale, ADAS et cycle de régénération ont leur page dès que l'action est attribuée.</p>
+      <p data-l="fr">1 Pédale, ADAS, cycle de régénération et cycle de profils ont leur page dès que l'action est attribuée.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <p data-l="fr"><b>Regen de retour du mode 1 Pédale</b> : niveau rétabli au second appui (Fort par défaut). <b>Alternance ADAS</b> : les deux modes entre lesquels le bouton bascule (ACC ↔ Off par défaut).</p>
       </details>
@@ -548,6 +549,13 @@
         <p data-l="fr">Une action de raccourci ouvre la fenêtre, y compris quand Android Auto occupe tout l'écran et masque le bandeau clim. Ici le joystick ne déplace pas de focus : haut/bas changent la température, gauche/droite la ventilation, le centre bascule le mode AUTO (régler la ventilation en fait sortir). L'A/C, la recirculation et le sens de l'air (visage, pieds, pare-brise avant et arrière) se choisissent au doigt ; sur les firmwares équipés (SWI133, SWI68, SWI165), une colonne ajoute les sièges et le volant chauffants. La fenêtre se referme seule après 6 s sans action, d'un second appui sur le raccourci ou par son bouton Fermer. Le joystick nécessite le service d'accessibilité ; sans lui, la fenêtre reste utilisable au doigt. Dans la maquette, la ★ droite du véhicule virtuel l'ouvre et la referme.</p>
       </details>
     </div>
+    <div class="pt is-new" id="f-profilecycle" data-hl-key="sc-profiles" data-demo="profileCycle">
+      <h3><span data-l="fr">Cycle de profils</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.8</span></h3>
+      <p data-l="fr">Un bouton fait défiler vos profils, dans l'ordre que vous avez composé.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Touchez les profils dans l'ordre voulu, re-touchez pour retirer, puis <b>Sauvegarder</b> (au moins deux profils). Réglage global, pour tous les boutons. Sans réglage : tous les profils, dans l'ordre de leur liste. À chaque appui, le raccourci vise le profil qui suit le profil actif (le premier du cycle si le profil actif n'en fait pas partie) et affiche son nom ; il l'applique une seconde plus tard, puis le confirme à l'écran. Deux appuis rapprochés sautent donc un profil sans l'appliquer. Un profil supprimé sort du cycle. Si la sécurité conduite refuse l'écriture, rien ne change. Dans la maquette, la ★ droite du véhicule virtuel fait défiler les profils.</p>
+      </details>
+    </div>
   </div>
   <details class="fold">
     <summary><span data-l="fr">Voir toutes les actions disponibles</span></summary>
@@ -560,7 +568,7 @@
           <tr><td><span data-l="fr">Sécurité</span></td><td data-l="fr">ESC · Somnolence · Somnolence : sensibilité · Système anticollision (alternance de mode) · ADAS (alternance) · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son</td></tr>
           <tr><td><span data-l="fr">Confort</span></td><td data-l="fr">Siège chauffant gauche / droit (cycle) · Volant chauffant · Clim ON/OFF · Clim : A/C · Clim : température ± · Clim : ventilation ± · Dégivrage avant / arrière · Recirculation (cycle) · Luminosité ± (pas de 10 %) · Feux de route automatiques · Pop-up HVAC</td></tr>
           <tr><td><span data-l="fr">Média</span></td><td data-l="fr">Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume −</td></tr>
-          <tr><td><span data-l="fr">Application et véhicule</span></td><td data-l="fr">Lancer un profil · Sélecteur de profil (popup) · Ouvrir MG4Control · Lancer une application · Éteindre la voiture</td></tr>
+          <tr><td><span data-l="fr">Application et véhicule</span></td><td data-l="fr">Lancer un profil · Sélecteur de profil (popup) · Cycle de profils · Ouvrir MG4Control · Lancer une application · Éteindre la voiture</td></tr>
         </tbody>
       </table>
     </div>
@@ -1164,8 +1172,8 @@
 
 <div class="dock" aria-label="Véhicule virtuel"></div>
 
-<script src="assets/js/strings.js?v=1ce33290"></script>
-<script src="assets/js/sim.js?v=64d469eb"></script>
+<script src="assets/js/strings.js?v=218ba4dd"></script>
+<script src="assets/js/sim.js?v=160f20f4"></script>
 <script src="assets/js/site.js?v=2bb0c7ce"></script>
 <script src="assets/js/explorer.js?v=ffc271c4"></script>
 </body>

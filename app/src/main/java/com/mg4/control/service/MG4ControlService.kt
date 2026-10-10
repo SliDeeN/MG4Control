@@ -1018,6 +1018,13 @@ class MG4ControlService : Service() {
             return
         }
 
+        // PROFILE_CYCLE : profil suivant du cycle composé dans l'onglet Raccourcis. Annonce,
+        // délai contre les appuis rapprochés et application sont dans [ProfileCycleShortcut].
+        if (action == ShortcutAction.PROFILE_CYCLE) {
+            ProfileCycleShortcut.press(this@MG4ControlService)
+            return
+        }
+
         // Vitres : action directe, aucune bascule — une pression = une course complète.
         // La FERMETURE emprunte le chemin de la fermeture automatique, le seul qui aille au bout
         // sans personne devant l'écran : au volant, l'utilisateur ne regarde pas l'application.

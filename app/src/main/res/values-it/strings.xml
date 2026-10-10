@@ -33,6 +33,7 @@
     <string name="shortcuts_action_tsr">Segnali (TSR)</string>
     <string name="shortcuts_action_apply_profile">Avvia un profilo</string>
     <string name="shortcuts_action_profile_picker">Selettore profilo (popup)</string>
+    <string name="shortcuts_action_profile_cycle">Ciclo dei profili</string>
     <string name="shortcuts_action_vehicle_power_off">Spegnere l\'auto</string>
         <string name="overlay_brightness_title">Luminosità</string>
     <string name="overlay_brightness_night">Notte</string>
@@ -111,6 +112,9 @@
     <string name="profile_save">Salva</string>
     <string name="profile_cancel">Annulla</string>
     <string name="profile_applied">Profilo applicato: %s</string>
+    <string name="profile_cycle_target">Profilo: %s</string>
+    <string name="profile_cycle_applied">Profilo %s applicato</string>
+    <string name="profile_cycle_incomplete">Profilo %s: applicazione incompleta</string>
     <string name="profile_max_reached">Massimo %d profili raggiunto</string>
     <string name="profile_bt_device_label">Dispositivo Bluetooth</string>
 
@@ -479,6 +483,9 @@
     <string name="shortcuts_cfg_regen_save">Salva</string>
     <string name="shortcuts_cfg_regen_saved">Ciclo salvato</string>
     <string name="shortcuts_cfg_regen_min">Un ciclo richiede almeno due modalità.</string>
+    <string name="shortcuts_cat_profile_cycle">Ciclo profili</string>
+    <string name="shortcuts_cfg_profile_hint">Tocca i profili nell\'ordine in cui vuoi scorrerli, poi salva. Ogni pressione applica il profilo che segue quello attivo.</string>
+    <string name="shortcuts_cfg_profile_min">Un ciclo richiede almeno due profili.</string>
     <string name="adv_sc_new">Nuova scorciatoia</string>
     <string name="adv_sc_step_key">1 · Tasto</string>
     <string name="adv_sc_step_press">2 · Tipo di pressione</string>

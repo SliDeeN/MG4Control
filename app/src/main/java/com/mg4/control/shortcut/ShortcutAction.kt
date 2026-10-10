@@ -67,7 +67,11 @@ enum class ShortcutAction(val id: Int) {
 
     // Pop-up HVAC (issues #120 et #125) : réglage rapide de la clim au joystick droit. Comme
     // PROFILE_PICKER, l'action n'écrit rien elle-même — elle ouvre la fenêtre, ou la referme.
-    HVAC_POPUP(41);
+    HVAC_POPUP(41),
+
+    // Cycle de profils : applique le profil suivant d'une séquence composée par l'utilisateur
+    // (voir ProfileCycle). Le profil visé dépend du profil actif, pas d'un état mémorisé ici.
+    PROFILE_CYCLE(42);
 
     companion object {
         fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: NONE

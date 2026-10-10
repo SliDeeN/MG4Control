@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="en">New</span> · 2.6.8</span>
-        <b><span data-l="en">11 new things in this release</span></b>
+        <b><span data-l="en">12 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -152,6 +152,7 @@
         <a href="#f-topbar" data-feature="f-topbar"><span data-l="en">🧭 Larger tabs</span></a>
         <a href="#f-audio" data-feature="f-audio"><span data-l="en">🔉 Volume when leaving: in Automation</span></a>
         <a href="#f-hvacpopup" data-feature="f-hvacpopup"><span data-l="en">🌡️ HVAC pop-up on the joystick</span></a>
+        <a href="#f-profilecycle" data-feature="f-profilecycle"><span data-l="en">🔁 Profile cycle on a button</span></a>
         <a href="#f-sc-new" data-feature="f-sc-new"><span data-l="en">⭐ Three new shortcut actions</span></a>
       </div>
     </div>
@@ -522,7 +523,7 @@
     </div>
     <div class="pt" data-hl-key="sc-onepedal" data-go="shortcuts:onepedal">
       <h3><span data-l="en">Settings on demand</span></h3>
-      <p data-l="en">One Pedal, ADAS and regeneration cycle get their page as soon as the action is assigned.</p>
+      <p data-l="en">One Pedal, ADAS, regeneration cycle and profile cycle get their page as soon as the action is assigned.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
         <p data-l="en"><b>One Pedal fallback regen</b>: the level restored on the second press (High by default). <b>ADAS alternation</b>: the two modes the button toggles between (ACC ↔ Off by default).</p>
       </details>
@@ -548,6 +549,13 @@
         <p data-l="en">A shortcut action opens the window, including when Android Auto fills the screen and hides the climate bar. Here the joystick moves no focus: up/down change the temperature, left/right the fan speed, the centre toggles AUTO mode (adjusting the fan speed leaves it). A/C, recirculation and the air direction (face, feet, front and rear screen) are chosen by touch; on equipped firmwares (SWI133, SWI68, SWI165), a column adds the heated seats and steering wheel. The window closes by itself after 6 s without action, on a second press of the shortcut or with its Close button. The joystick needs the accessibility service; without it, the window still works by touch. In the mockup, the right ★ of the virtual vehicle opens and closes it.</p>
       </details>
     </div>
+    <div class="pt is-new" id="f-profilecycle" data-hl-key="sc-profiles" data-demo="profileCycle">
+      <h3><span data-l="en">Profile cycle</span><span class="badge-new"><span data-l="en">New</span> · 2.6.8</span></h3>
+      <p data-l="en">One button steps through your profiles, in the order you composed.</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">Tap the profiles in the wanted order, tap again to remove, then <b>Save</b> (at least two profiles). A global setting, for every button. Without it: every profile, in the order of their list. On each press, the shortcut targets the profile that follows the active one (the first of the cycle if the active profile is not part of it) and shows its name; it applies it one second later, then confirms it on screen. Two quick presses therefore skip a profile without applying it. A deleted profile leaves the cycle. If the driving safety lock refuses the write, nothing changes. In the mockup, the right ★ of the virtual vehicle steps through the profiles.</p>
+      </details>
+    </div>
   </div>
   <details class="fold">
     <summary><span data-l="en">See every available action</span></summary>
@@ -560,7 +568,7 @@
           <tr><td><span data-l="en">Safety</span></td><td data-l="en">ESC · Drowsiness · Drowsiness: sensitivity · Collision system (mode alternation) · ADAS (alternation) · Traffic signs (TSR) · Overspeed alert · Speed-limit change alert · Sound</td></tr>
           <tr><td><span data-l="en">Comfort</span></td><td data-l="en">Left / right heated seat (cycle) · Heated wheel · Climate ON/OFF · Climate: A/C · Climate: temperature ± · Climate: fan ± · Front / rear defrost · Recirculation (cycle) · Brightness ± (10% steps) · Automatic high beam · HVAC pop-up</td></tr>
           <tr><td><span data-l="en">Media</span></td><td data-l="en">Play / Pause · Next track · Previous track · Volume + · Volume −</td></tr>
-          <tr><td><span data-l="en">App and vehicle</span></td><td data-l="en">Apply a profile · Profile picker (popup) · Open MG4Control · Launch an app · Power the car off</td></tr>
+          <tr><td><span data-l="en">App and vehicle</span></td><td data-l="en">Apply a profile · Profile picker (popup) · Profile cycle · Open MG4Control · Launch an app · Power the car off</td></tr>
         </tbody>
       </table>
     </div>
@@ -1164,8 +1172,8 @@
 
 <div class="dock" aria-label="Virtual vehicle"></div>
 
-<script src="../assets/js/strings.js?v=1ce33290"></script>
-<script src="../assets/js/sim.js?v=64d469eb"></script>
+<script src="../assets/js/strings.js?v=218ba4dd"></script>
+<script src="../assets/js/sim.js?v=160f20f4"></script>
 <script src="../assets/js/site.js?v=2bb0c7ce"></script>
 <script src="../assets/js/explorer.js?v=ffc271c4"></script>
 </body>

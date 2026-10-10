@@ -33,6 +33,7 @@
     <string name="shortcuts_action_tsr">Signs (TSR)</string>
     <string name="shortcuts_action_apply_profile">Launch a profile</string>
     <string name="shortcuts_action_profile_picker">Profile picker (popup)</string>
+    <string name="shortcuts_action_profile_cycle">Profile cycle</string>
     <string name="shortcuts_action_vehicle_power_off">Power off the car</string>
         <string name="overlay_brightness_title">Brightness</string>
     <string name="overlay_brightness_night">Night</string>
@@ -111,6 +112,9 @@
     <string name="profile_save">Save</string>
     <string name="profile_cancel">Cancel</string>
     <string name="profile_applied">Profile applied: %s</string>
+    <string name="profile_cycle_target">Profile: %s</string>
+    <string name="profile_cycle_applied">Profile %s applied</string>
+    <string name="profile_cycle_incomplete">Profile %s: not fully applied</string>
     <string name="profile_max_reached">Maximum %d profiles reached</string>
     <string name="profile_bt_device_label">Bluetooth device</string>
 
@@ -479,6 +483,9 @@
     <string name="shortcuts_cfg_regen_save">Save</string>
     <string name="shortcuts_cfg_regen_saved">Cycle saved</string>
     <string name="shortcuts_cfg_regen_min">A cycle needs at least two modes.</string>
+    <string name="shortcuts_cat_profile_cycle">Profile cycle</string>
+    <string name="shortcuts_cfg_profile_hint">Tap the profiles in the order you want to cycle through them, then save. Each press applies the profile that follows the active one.</string>
+    <string name="shortcuts_cfg_profile_min">A cycle needs at least two profiles.</string>
     <string name="adv_sc_new">New shortcut</string>
     <string name="adv_sc_step_key">1 · Key</string>
     <string name="adv_sc_step_press">2 · Press type</string>

@@ -33,6 +33,7 @@
     <string name="shortcuts_action_tsr">Levhalar (TSR)</string>
     <string name="shortcuts_action_apply_profile">Bir profil başlat</string>
     <string name="shortcuts_action_profile_picker">Profil seçici (açılır pencere)</string>
+    <string name="shortcuts_action_profile_cycle">Profil döngüsü</string>
     <string name="shortcuts_action_vehicle_power_off">Aracı kapat</string>
         <string name="overlay_brightness_title">Parlaklık</string>
     <string name="overlay_brightness_night">Gece</string>
@@ -111,6 +112,9 @@
     <string name="profile_save">Kaydet</string>
     <string name="profile_cancel">İptal</string>
     <string name="profile_applied">Profil uygulandı: %s</string>
+    <string name="profile_cycle_target">Profil: %s</string>
+    <string name="profile_cycle_applied">%s profili uygulandı</string>
+    <string name="profile_cycle_incomplete">%s profili: tam uygulanamadı</string>
     <string name="profile_max_reached">En fazla %d profile ulaşıldı</string>
     <string name="profile_bt_device_label">Bluetooth cihazı</string>
 
@@ -479,6 +483,9 @@
     <string name="shortcuts_cfg_regen_save">Kaydet</string>
     <string name="shortcuts_cfg_regen_saved">Döngü kaydedildi</string>
     <string name="shortcuts_cfg_regen_min">Bir döngü için en az iki mod gerekir.</string>
+    <string name="shortcuts_cat_profile_cycle">Profil döngüsü</string>
+    <string name="shortcuts_cfg_profile_hint">Dolaşmak istediğiniz sırayla profillere dokunun, sonra kaydedin. Her basışta etkin profilden sonraki profil uygulanır.</string>
+    <string name="shortcuts_cfg_profile_min">Bir döngü için en az iki profil gerekir.</string>
     <string name="adv_sc_new">Yeni kısayol</string>
     <string name="adv_sc_step_key">1 · Tuş</string>
     <string name="adv_sc_step_press">2 · Basış türü</string>

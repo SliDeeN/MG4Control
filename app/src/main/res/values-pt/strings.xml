@@ -33,6 +33,7 @@
     <string name="shortcuts_action_tsr">Sinais (TSR)</string>
     <string name="shortcuts_action_apply_profile">Iniciar um perfil</string>
     <string name="shortcuts_action_profile_picker">Seletor de perfil (popup)</string>
+    <string name="shortcuts_action_profile_cycle">Ciclo de perfis</string>
     <string name="shortcuts_action_vehicle_power_off">Desligar o carro</string>
         <string name="overlay_brightness_title">Brilho</string>
     <string name="overlay_brightness_night">Noite</string>
@@ -111,6 +112,9 @@
     <string name="profile_save">Guardar</string>
     <string name="profile_cancel">Cancelar</string>
     <string name="profile_applied">Perfil aplicado: %s</string>
+    <string name="profile_cycle_target">Perfil: %s</string>
+    <string name="profile_cycle_applied">Perfil %s aplicado</string>
+    <string name="profile_cycle_incomplete">Perfil %s: aplicação incompleta</string>
     <string name="profile_max_reached">Máximo de %d perfis atingido</string>
     <string name="profile_bt_device_label">Dispositivo Bluetooth</string>
 
@@ -479,6 +483,9 @@
     <string name="shortcuts_cfg_regen_save">Guardar</string>
     <string name="shortcuts_cfg_regen_saved">Ciclo guardado</string>
     <string name="shortcuts_cfg_regen_min">Um ciclo precisa de pelo menos dois modos.</string>
+    <string name="shortcuts_cat_profile_cycle">Ciclo perfis</string>
+    <string name="shortcuts_cfg_profile_hint">Toque nos perfis pela ordem por que os quer percorrer e depois guarde. Cada pressão aplica o perfil que se segue ao perfil ativo.</string>
+    <string name="shortcuts_cfg_profile_min">Um ciclo precisa de pelo menos dois perfis.</string>
     <string name="adv_sc_new">Novo atalho</string>
     <string name="adv_sc_step_key">1 · Tecla</string>
     <string name="adv_sc_step_press">2 · Tipo de pressão</string>
