@@ -365,15 +365,18 @@
     <!-- Klima-Automatisierung -->
     <string name="ac_auto_title">Klimaanlage über die Temperatur auslösen</string>
     <string name="ac_auto_desc">Klimaanlage nach der Außentemperatur einstellen</string>
-    <string name="ac_auto_hot">Temperatur darüber</string>
-    <string name="ac_auto_cold">Temperatur darunter</string>
-    <string name="ac_auto_threshold_hot_label">Auslöseschwelle (°C)</string>
-    <string name="ac_auto_threshold_cold_label">Auslöseschwelle (°C)</string>
-    <string name="ac_auto_threshold_hint">-20–60</string>
-    <string name="ac_auto_target_label">Zieltemperatur (°C)</string>
-    <string name="ac_auto_target_hint">15–33</string>
+    <string name="ac_auto_hot">Wenn es heiß ist</string>
+    <string name="ac_auto_cold">Wenn es kalt ist</string>
+    <string name="ac_auto_threshold_hot_label">Außen, ab</string>
+    <string name="ac_auto_threshold_cold_label">Außen, bis</string>
+    <string name="ac_auto_target_label">Klima auf</string>
     <string name="ac_auto_fan_label">Gebläsestufe</string>
-    <string name="ac_auto_fan_hint">1–10</string>
+    <string name="ac_auto_fan_manual">Manuell</string>
+    <string name="ac_auto_fan_level">Stufe</string>
+    <string name="ac_auto_defrost">Scheibenheizung</string>
+    <string name="ac_auto_defrost_front">Vorne</string>
+    <string name="ac_auto_defrost_rear">Hinten</string>
+    <string name="ac_auto_rule_off">Regel deaktiviert</string>
     <string name="ac_auto_def_front">Frontscheibenheizung</string>
     <string name="ac_auto_def_rear">Heckscheibenheizung</string>
     <string name="ac_auto_note">Wird beim Start des Fahrzeugs angewendet: Klimaanlage und A/C werden eingeschaltet, dann werden die obigen Einstellungen gesendet.</string>
@@ -444,8 +447,6 @@
     <string name="common_off">OFF</string>
 
     <!-- Automatisation clim : mode auto + recyclage -->
-    <string name="ac_auto_auto_mode">Automatikmodus</string>
-    <string name="ac_auto_recirc_force">Luftumwälzung erzwingen</string>
     <string name="recirc_inner">Innen</string>
     <string name="recirc_outside">Außen</string>
     <string name="recirc_auto">Auto</string>

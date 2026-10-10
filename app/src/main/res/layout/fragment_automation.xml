@@ -1071,465 +1071,1031 @@
                 android:orientation="vertical"
                 android:visibility="gone">
 
-                <!-- ───────── Règle CHAUD ───────── -->
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/dash_border"
-                    android:layout_marginTop="12dp"
-                    android:layout_marginBottom="10dp" />
-
-                <CheckBox
-                    android:id="@+id/check_ac_hot"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/ac_auto_hot"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp" />
-
+                <!-- Les deux règles côte à côte : l'écran est large, et on compare chaud et froid d'un
+                     coup d'œil. Même structure des deux côtés, câblée par bindClimateRule. -->
                 <LinearLayout
-                    android:id="@+id/row_ac_hot_config"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginStart="8dp"
-                    android:visibility="gone">
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
 
+                    <!-- ───────── Règle CHAUD ───────── -->
                     <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="6dp">
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_section_rounded"
+                        android:padding="12dp">
 
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/ac_auto_threshold_hot_label"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="16sp" />
-
-                        <EditText
-                            android:id="@+id/input_ac_hot_threshold"
-                            android:layout_width="96dp"
-                            android:layout_height="wrap_content"
-                            android:inputType="numberSigned"
-                            android:maxLength="3"
-                            android:gravity="end"
-                            android:hint="@string/ac_auto_threshold_hint"
-                            android:textColor="@color/text_primary"
-                            android:textSize="16sp"
-                            android:imeOptions="actionDone" />
-
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="6dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/ac_auto_target_label"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="16sp" />
-
-                        <EditText
-                            android:id="@+id/input_ac_hot_target"
-                            android:layout_width="96dp"
-                            android:layout_height="wrap_content"
-                            android:inputType="number"
-                            android:maxLength="2"
-                            android:gravity="end"
-                            android:hint="@string/ac_auto_target_hint"
-                            android:textColor="@color/text_primary"
-                            android:textSize="16sp"
-                            android:imeOptions="actionDone" />
-
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/row_ac_hot_fan"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="6dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/ac_auto_fan_label"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="16sp" />
-
-                        <EditText
-                            android:id="@+id/input_ac_hot_fan"
-                            android:layout_width="96dp"
-                            android:layout_height="wrap_content"
-                            android:inputType="number"
-                            android:maxLength="2"
-                            android:gravity="end"
-                            android:hint="@string/ac_auto_fan_hint"
-                            android:textColor="@color/text_primary"
-                            android:textSize="16sp"
-                            android:imeOptions="actionDone" />
-
-                    </LinearLayout>
-
-                    <CheckBox
-                        android:id="@+id/check_ac_hot_def_front"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/ac_auto_def_front"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="16sp" />
-
-                    <CheckBox
-                        android:id="@+id/check_ac_hot_def_rear"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/ac_auto_def_rear"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="16sp" />
-                        <CheckBox
-                            android:id="@+id/check_ac_hot_auto"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="@string/ac_auto_auto_mode"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="16sp" />
-                        <CheckBox
-                            android:id="@+id/check_ac_hot_recirc_force"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="@string/ac_auto_recirc_force"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="16sp" />
                         <LinearLayout
-                            android:id="@+id/row_ac_hot_recirc"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal">
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
 
-                            <Button
-                                android:id="@+id/btn_ac_hot_recirc_inner"
+                            <TextView
                                 android:layout_width="0dp"
-                                android:layout_height="52dp"
+                                android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:layout_marginEnd="3dp"
-                                android:text="@string/recirc_inner"
-                                android:textColor="@color/text_secondary"
-                                android:backgroundTint="@color/dash_btn"
+                                android:text="@string/ac_auto_hot"
+                                android:textColor="@color/dash_warn"
                                 android:textSize="16sp"
-                                android:textAllCaps="true" />
-                            <Button
-                                android:id="@+id/btn_ac_hot_recirc_outside"
-                                android:layout_width="0dp"
-                                android:layout_height="52dp"
-                                android:layout_weight="1"
-                                android:layout_marginEnd="3dp"
-                                android:text="@string/recirc_outside"
-                                android:textColor="@color/text_secondary"
-                                android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
-                                android:textAllCaps="true" />
-                            <Button
-                                android:id="@+id/btn_ac_hot_recirc_auto"
-                                android:layout_width="0dp"
-                                android:layout_height="52dp"
-                                android:layout_weight="1"
-                                android:layout_marginEnd="0dp"
-                                android:text="@string/recirc_auto"
-                                android:textColor="@color/text_secondary"
-                                android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
-                                android:textAllCaps="true" />
+                                android:textStyle="bold" />
+
+                            <Switch
+                                android:id="@+id/switch_ac_hot"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="8dp"
+                                android:scaleX="1.3"
+                                android:scaleY="1.3"
+                                android:checked="false" />
 
                         </LinearLayout>
 
-                </LinearLayout>
-
-                <!-- ───────── Règle FROID ───────── -->
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/dash_border"
-                    android:layout_marginTop="12dp"
-                    android:layout_marginBottom="10dp" />
-
-                <CheckBox
-                    android:id="@+id/check_ac_cold"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/ac_auto_cold"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp" />
-
-                <LinearLayout
-                    android:id="@+id/row_ac_cold_config"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:layout_marginStart="8dp"
-                    android:visibility="gone">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="6dp">
-
                         <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/ac_auto_threshold_cold_label"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="16sp" />
-
-                        <EditText
-                            android:id="@+id/input_ac_cold_threshold"
-                            android:layout_width="96dp"
-                            android:layout_height="wrap_content"
-                            android:inputType="numberSigned"
-                            android:maxLength="3"
-                            android:gravity="end"
-                            android:hint="@string/ac_auto_threshold_hint"
-                            android:textColor="@color/text_primary"
-                            android:textSize="16sp"
-                            android:imeOptions="actionDone" />
-
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="6dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/ac_auto_target_label"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="16sp" />
-
-                        <EditText
-                            android:id="@+id/input_ac_cold_target"
-                            android:layout_width="96dp"
-                            android:layout_height="wrap_content"
-                            android:inputType="number"
-                            android:maxLength="2"
-                            android:gravity="end"
-                            android:hint="@string/ac_auto_target_hint"
-                            android:textColor="@color/text_primary"
-                            android:textSize="16sp"
-                            android:imeOptions="actionDone" />
-
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:id="@+id/row_ac_cold_fan"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:layout_marginTop="6dp">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="@string/ac_auto_fan_label"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="16sp" />
-
-                        <EditText
-                            android:id="@+id/input_ac_cold_fan"
-                            android:layout_width="96dp"
-                            android:layout_height="wrap_content"
-                            android:inputType="number"
-                            android:maxLength="2"
-                            android:gravity="end"
-                            android:hint="@string/ac_auto_fan_hint"
-                            android:textColor="@color/text_primary"
-                            android:textSize="16sp"
-                            android:imeOptions="actionDone" />
-
-                    </LinearLayout>
-
-                    <CheckBox
-                        android:id="@+id/check_ac_cold_def_front"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:text="@string/ac_auto_def_front"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="16sp" />
-
-                    <CheckBox
-                        android:id="@+id/check_ac_cold_def_rear"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/ac_auto_def_rear"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="16sp" />
-                        <CheckBox
-                            android:id="@+id/check_ac_cold_auto"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="@string/ac_auto_auto_mode"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="16sp" />
-                        <CheckBox
-                            android:id="@+id/check_ac_cold_recirc_force"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:text="@string/ac_auto_recirc_force"
-                            android:textColor="@color/text_secondary"
-                            android:textSize="16sp" />
-                        <LinearLayout
-                            android:id="@+id/row_ac_cold_recirc"
+                            android:id="@+id/tv_ac_hot_off"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:orientation="horizontal">
+                            android:layout_marginTop="8dp"
+                            android:text="@string/ac_auto_rule_off"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp"
+                            android:visibility="gone" />
 
-                            <Button
-                                android:id="@+id/btn_ac_cold_recirc_inner"
-                                android:layout_width="0dp"
-                                android:layout_height="52dp"
-                                android:layout_weight="1"
-                                android:layout_marginEnd="3dp"
-                                android:text="@string/recirc_inner"
-                                android:textColor="@color/text_secondary"
-                                android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
-                                android:textAllCaps="true" />
-                            <Button
-                                android:id="@+id/btn_ac_cold_recirc_outside"
-                                android:layout_width="0dp"
-                                android:layout_height="52dp"
-                                android:layout_weight="1"
-                                android:layout_marginEnd="3dp"
-                                android:text="@string/recirc_outside"
-                                android:textColor="@color/text_secondary"
-                                android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
-                                android:textAllCaps="true" />
-                            <Button
-                                android:id="@+id/btn_ac_cold_recirc_auto"
-                                android:layout_width="0dp"
-                                android:layout_height="52dp"
-                                android:layout_weight="1"
-                                android:layout_marginEnd="0dp"
-                                android:text="@string/recirc_auto"
-                                android:textColor="@color/text_secondary"
-                                android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
-                                android:textAllCaps="true" />
+                        <LinearLayout
+                            android:id="@+id/row_ac_hot_config"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:baselineAligned="false">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/ac_auto_threshold_hot_label"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.slider.Slider
+                                    android:id="@+id/slider_ac_hot_threshold"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:valueFrom="-20"
+                                    android:valueTo="60"
+                                    android:value="28"
+                                    android:stepSize="1"
+                                    app:labelBehavior="gone"
+                                    app:thumbRadius="14dp"
+                                    app:trackHeight="10dp"
+                                    app:thumbColor="@color/dash_accent"
+                                    app:trackColorActive="@color/dash_accent"
+                                    app:trackColorInactive="@color/dash_border" />
+
+                                <TextView
+                                    android:id="@+id/tv_ac_hot_threshold"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:minWidth="96dp"
+                                    android:gravity="end"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp"
+                                    android:fontFamily="monospace" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:baselineAligned="false">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/ac_auto_target_label"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.slider.Slider
+                                    android:id="@+id/slider_ac_hot_target"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:valueFrom="15"
+                                    android:valueTo="33"
+                                    android:value="20"
+                                    android:stepSize="1"
+                                    app:labelBehavior="gone"
+                                    app:thumbRadius="14dp"
+                                    app:trackHeight="10dp"
+                                    app:thumbColor="@color/dash_accent"
+                                    app:trackColorActive="@color/dash_accent"
+                                    app:trackColorInactive="@color/dash_border" />
+
+                                <TextView
+                                    android:id="@+id/tv_ac_hot_target"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:minWidth="96dp"
+                                    android:gravity="end"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp"
+                                    android:fontFamily="monospace" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:baselineAligned="false">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/ac_auto_fan_label"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <LinearLayout
+                                    android:id="@+id/row_ac_hot_fan_mode"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="horizontal"
+                                    android:baselineAligned="false"
+                                    android:weightSum="4">
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btn_ac_hot_fan_auto"
+                                        android:layout_width="0dp"
+                                        android:layout_height="52dp"
+                                        android:layout_weight="1"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        android:insetRight="6dp"
+                                        android:paddingStart="2dp"
+                                        android:paddingEnd="8dp"
+                                        android:maxLines="2"
+                                        android:text="@string/clim_auto"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="16sp"
+                                        android:textAllCaps="true"
+                                        app:backgroundTint="@color/dash_btn"
+                                        app:strokeWidth="1dp"
+                                        app:strokeColor="@color/dash_border"
+                                        app:cornerRadius="8dp" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btn_ac_hot_fan_manual"
+                                        android:layout_width="0dp"
+                                        android:layout_height="52dp"
+                                        android:layout_weight="1"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        android:insetRight="6dp"
+                                        android:paddingStart="2dp"
+                                        android:paddingEnd="8dp"
+                                        android:maxLines="2"
+                                        android:text="@string/ac_auto_fan_manual"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="16sp"
+                                        android:textAllCaps="true"
+                                        app:backgroundTint="@color/dash_btn"
+                                        app:strokeWidth="1dp"
+                                        app:strokeColor="@color/dash_border"
+                                        app:cornerRadius="8dp" />
+
+                                </LinearLayout>
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/row_ac_hot_fan"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:baselineAligned="false">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/ac_auto_fan_level"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.slider.Slider
+                                    android:id="@+id/slider_ac_hot_fan"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:valueFrom="1"
+                                    android:valueTo="11"
+                                    android:value="4"
+                                    android:stepSize="1"
+                                    app:labelBehavior="gone"
+                                    app:thumbRadius="14dp"
+                                    app:trackHeight="10dp"
+                                    app:thumbColor="@color/dash_accent"
+                                    app:trackColorActive="@color/dash_accent"
+                                    app:trackColorInactive="@color/dash_border" />
+
+                                <TextView
+                                    android:id="@+id/tv_ac_hot_fan"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:minWidth="96dp"
+                                    android:gravity="end"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp"
+                                    android:fontFamily="monospace" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:baselineAligned="false">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/ac_auto_defrost"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <LinearLayout
+                                    android:id="@+id/row_ac_hot_defrost"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="horizontal"
+                                    android:baselineAligned="false"
+                                    android:weightSum="4">
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btn_ac_hot_def_front"
+                                        android:layout_width="0dp"
+                                        android:layout_height="52dp"
+                                        android:layout_weight="1"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        android:insetRight="6dp"
+                                        android:paddingStart="2dp"
+                                        android:paddingEnd="8dp"
+                                        android:maxLines="2"
+                                        android:text="@string/ac_auto_defrost_front"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="16sp"
+                                        android:textAllCaps="true"
+                                        app:backgroundTint="@color/dash_btn"
+                                        app:strokeWidth="1dp"
+                                        app:strokeColor="@color/dash_border"
+                                        app:cornerRadius="8dp" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btn_ac_hot_def_rear"
+                                        android:layout_width="0dp"
+                                        android:layout_height="52dp"
+                                        android:layout_weight="1"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        android:insetRight="6dp"
+                                        android:paddingStart="2dp"
+                                        android:paddingEnd="8dp"
+                                        android:maxLines="2"
+                                        android:text="@string/ac_auto_defrost_rear"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="16sp"
+                                        android:textAllCaps="true"
+                                        app:backgroundTint="@color/dash_btn"
+                                        app:strokeWidth="1dp"
+                                        app:strokeColor="@color/dash_border"
+                                        app:cornerRadius="8dp" />
+
+                                </LinearLayout>
+
+                            </LinearLayout>
+
+                            <!-- Recirculation : quatre boutons sur une ligne quand la place le permet. Sinon le
+                                 code fait passer « Auto » sur la seconde ligne, sous le premier bouton. -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:baselineAligned="false">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:gravity="center_vertical"
+                                    android:text="@string/clim_section_loop"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <LinearLayout
+                                        android:id="@+id/row_ac_hot_recirc_a"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:baselineAligned="false"
+                                        android:weightSum="4">
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_hot_recirc_keep"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/profile_hvac_unchanged"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_hot_recirc_inner"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/recirc_inner"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_hot_recirc_outside"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/recirc_outside"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_hot_recirc_auto"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/recirc_auto"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                    </LinearLayout>
+
+                                    <LinearLayout
+                                        android:id="@+id/row_ac_hot_recirc_b"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="6dp"
+                                        android:orientation="horizontal"
+                                        android:baselineAligned="false"
+                                        android:weightSum="4"
+                                        android:visibility="gone" />
+
+                                </LinearLayout>
+
+                            </LinearLayout>
 
                         </LinearLayout>
 
+                    </LinearLayout>
+
+                    <!-- ───────── Règle FROID ───────── -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_section_rounded"
+                        android:padding="12dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/ac_auto_cold"
+                                android:textColor="@color/dash_accent"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                            <Switch
+                                android:id="@+id/switch_ac_cold"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginHorizontal="8dp"
+                                android:scaleX="1.3"
+                                android:scaleY="1.3"
+                                android:checked="false" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_ac_cold_off"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/ac_auto_rule_off"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp"
+                            android:visibility="gone" />
+
+                        <LinearLayout
+                            android:id="@+id/row_ac_cold_config"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:orientation="vertical">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:baselineAligned="false">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/ac_auto_threshold_cold_label"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.slider.Slider
+                                    android:id="@+id/slider_ac_cold_threshold"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:valueFrom="-20"
+                                    android:valueTo="60"
+                                    android:value="5"
+                                    android:stepSize="1"
+                                    app:labelBehavior="gone"
+                                    app:thumbRadius="14dp"
+                                    app:trackHeight="10dp"
+                                    app:thumbColor="@color/dash_accent"
+                                    app:trackColorActive="@color/dash_accent"
+                                    app:trackColorInactive="@color/dash_border" />
+
+                                <TextView
+                                    android:id="@+id/tv_ac_cold_threshold"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:minWidth="96dp"
+                                    android:gravity="end"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp"
+                                    android:fontFamily="monospace" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:baselineAligned="false">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/ac_auto_target_label"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.slider.Slider
+                                    android:id="@+id/slider_ac_cold_target"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:valueFrom="15"
+                                    android:valueTo="33"
+                                    android:value="24"
+                                    android:stepSize="1"
+                                    app:labelBehavior="gone"
+                                    app:thumbRadius="14dp"
+                                    app:trackHeight="10dp"
+                                    app:thumbColor="@color/dash_accent"
+                                    app:trackColorActive="@color/dash_accent"
+                                    app:trackColorInactive="@color/dash_border" />
+
+                                <TextView
+                                    android:id="@+id/tv_ac_cold_target"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:minWidth="96dp"
+                                    android:gravity="end"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp"
+                                    android:fontFamily="monospace" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:baselineAligned="false">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/ac_auto_fan_label"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <LinearLayout
+                                    android:id="@+id/row_ac_cold_fan_mode"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="horizontal"
+                                    android:baselineAligned="false"
+                                    android:weightSum="4">
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btn_ac_cold_fan_auto"
+                                        android:layout_width="0dp"
+                                        android:layout_height="52dp"
+                                        android:layout_weight="1"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        android:insetRight="6dp"
+                                        android:paddingStart="2dp"
+                                        android:paddingEnd="8dp"
+                                        android:maxLines="2"
+                                        android:text="@string/clim_auto"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="16sp"
+                                        android:textAllCaps="true"
+                                        app:backgroundTint="@color/dash_btn"
+                                        app:strokeWidth="1dp"
+                                        app:strokeColor="@color/dash_border"
+                                        app:cornerRadius="8dp" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btn_ac_cold_fan_manual"
+                                        android:layout_width="0dp"
+                                        android:layout_height="52dp"
+                                        android:layout_weight="1"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        android:insetRight="6dp"
+                                        android:paddingStart="2dp"
+                                        android:paddingEnd="8dp"
+                                        android:maxLines="2"
+                                        android:text="@string/ac_auto_fan_manual"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="16sp"
+                                        android:textAllCaps="true"
+                                        app:backgroundTint="@color/dash_btn"
+                                        app:strokeWidth="1dp"
+                                        app:strokeColor="@color/dash_border"
+                                        app:cornerRadius="8dp" />
+
+                                </LinearLayout>
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/row_ac_cold_fan"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:baselineAligned="false">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/ac_auto_fan_level"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.slider.Slider
+                                    android:id="@+id/slider_ac_cold_fan"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:valueFrom="1"
+                                    android:valueTo="11"
+                                    android:value="4"
+                                    android:stepSize="1"
+                                    app:labelBehavior="gone"
+                                    app:thumbRadius="14dp"
+                                    app:trackHeight="10dp"
+                                    app:thumbColor="@color/dash_accent"
+                                    app:trackColorActive="@color/dash_accent"
+                                    app:trackColorInactive="@color/dash_border" />
+
+                                <TextView
+                                    android:id="@+id/tv_ac_cold_fan"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:minWidth="96dp"
+                                    android:gravity="end"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp"
+                                    android:fontFamily="monospace" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:baselineAligned="false">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/ac_auto_defrost"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <LinearLayout
+                                    android:id="@+id/row_ac_cold_defrost"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="horizontal"
+                                    android:baselineAligned="false"
+                                    android:weightSum="4">
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btn_ac_cold_def_front"
+                                        android:layout_width="0dp"
+                                        android:layout_height="52dp"
+                                        android:layout_weight="1"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        android:insetRight="6dp"
+                                        android:paddingStart="2dp"
+                                        android:paddingEnd="8dp"
+                                        android:maxLines="2"
+                                        android:text="@string/ac_auto_defrost_front"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="16sp"
+                                        android:textAllCaps="true"
+                                        app:backgroundTint="@color/dash_btn"
+                                        app:strokeWidth="1dp"
+                                        app:strokeColor="@color/dash_border"
+                                        app:cornerRadius="8dp" />
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/btn_ac_cold_def_rear"
+                                        android:layout_width="0dp"
+                                        android:layout_height="52dp"
+                                        android:layout_weight="1"
+                                        android:insetTop="0dp"
+                                        android:insetBottom="0dp"
+                                        android:insetRight="6dp"
+                                        android:paddingStart="2dp"
+                                        android:paddingEnd="8dp"
+                                        android:maxLines="2"
+                                        android:text="@string/ac_auto_defrost_rear"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="16sp"
+                                        android:textAllCaps="true"
+                                        app:backgroundTint="@color/dash_btn"
+                                        app:strokeWidth="1dp"
+                                        app:strokeColor="@color/dash_border"
+                                        app:cornerRadius="8dp" />
+
+                                </LinearLayout>
+
+                            </LinearLayout>
+
+                            <!-- Recirculation : quatre boutons sur une ligne quand la place le permet. Sinon le
+                                 code fait passer « Auto » sur la seconde ligne, sous le premier bouton. -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:baselineAligned="false">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:gravity="center_vertical"
+                                    android:text="@string/clim_section_loop"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <LinearLayout
+                                        android:id="@+id/row_ac_cold_recirc_a"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:baselineAligned="false"
+                                        android:weightSum="4">
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_cold_recirc_keep"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/profile_hvac_unchanged"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_cold_recirc_inner"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/recirc_inner"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_cold_recirc_outside"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/recirc_outside"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_cold_recirc_auto"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/recirc_auto"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                    </LinearLayout>
+
+                                    <LinearLayout
+                                        android:id="@+id/row_ac_cold_recirc_b"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="6dp"
+                                        android:orientation="horizontal"
+                                        android:baselineAligned="false"
+                                        android:weightSum="4"
+                                        android:visibility="gone" />
+
+                                </LinearLayout>
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
                 </LinearLayout>
 
-                <!-- ───────── Mode de déclenchement ───────── -->
-                <View
+                <!-- ───────── Mode de déclenchement : trois boutons, une seule ligne d'aide ───────── -->
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/dash_border"
+                    android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
-                    android:layout_marginBottom="10dp" />
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_section_rounded"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:baselineAligned="false">
+
+                        <TextView
+                            android:layout_width="170dp"
+                            android:layout_height="wrap_content"
+                            android:text="@string/ac_auto_trigger_label"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="horizontal"
+                            android:baselineAligned="false"
+                            android:weightSum="3">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_ac_trigger_start"
+                                android:layout_width="0dp"
+                                android:layout_height="52dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:insetRight="6dp"
+                                android:paddingStart="2dp"
+                                android:paddingEnd="8dp"
+                                android:maxLines="2"
+                                android:text="@string/ac_auto_trigger_start"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                android:textAllCaps="true"
+                                app:backgroundTint="@color/dash_btn"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_ac_trigger_once"
+                                android:layout_width="0dp"
+                                android:layout_height="52dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:insetRight="6dp"
+                                android:paddingStart="2dp"
+                                android:paddingEnd="8dp"
+                                android:maxLines="2"
+                                android:text="@string/ac_auto_trigger_once"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                android:textAllCaps="true"
+                                app:backgroundTint="@color/dash_btn"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_ac_trigger_ready"
+                                android:layout_width="0dp"
+                                android:layout_height="52dp"
+                                android:layout_weight="1"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:insetRight="6dp"
+                                android:paddingStart="2dp"
+                                android:paddingEnd="8dp"
+                                android:maxLines="2"
+                                android:text="@string/ac_auto_trigger_ready"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                android:textAllCaps="true"
+                                app:backgroundTint="@color/dash_btn"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_ac_trigger_hint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/ac_auto_trigger_label"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
-
-                <RadioGroup
-                    android:id="@+id/radio_ac_trigger"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:orientation="vertical">
-
-                    <RadioButton
-                        android:id="@+id/radio_ac_trigger_start"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/ac_auto_trigger_start"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="32dp"
-                        android:layout_marginBottom="6dp"
-                        android:text="@string/ac_auto_trigger_start_hint"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
-
-                    <RadioButton
-                        android:id="@+id/radio_ac_trigger_once"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/ac_auto_trigger_once"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="32dp"
-                        android:layout_marginBottom="6dp"
-                        android:text="@string/ac_auto_trigger_once_hint"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
-
-                    <RadioButton
-                        android:id="@+id/radio_ac_trigger_ready"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/ac_auto_trigger_ready"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="32dp"
-                        android:layout_marginBottom="6dp"
-                        android:text="@string/ac_auto_trigger_ready_hint"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="13sp" />
-
-                </RadioGroup>
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
+                    android:layout_marginTop="10dp"
                     android:text="@string/ac_auto_note"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp" />
+                    android:textSize="13sp" />
 
             </LinearLayout>
 

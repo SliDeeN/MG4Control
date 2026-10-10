@@ -365,15 +365,18 @@
     <!-- Automação do A/C -->
     <string name="ac_auto_title">Ativação do A/C consoante a temperatura</string>
     <string name="ac_auto_desc">Regular a climatização consoante a temperatura exterior</string>
-    <string name="ac_auto_hot">Temperatura superior</string>
-    <string name="ac_auto_cold">Temperatura inferior</string>
-    <string name="ac_auto_threshold_hot_label">Limiar de ativação (°C)</string>
-    <string name="ac_auto_threshold_cold_label">Limiar de ativação (°C)</string>
-    <string name="ac_auto_threshold_hint">-20–60</string>
-    <string name="ac_auto_target_label">Temperatura pretendida (°C)</string>
-    <string name="ac_auto_target_hint">15–33</string>
+    <string name="ac_auto_hot">Quando está calor</string>
+    <string name="ac_auto_cold">Quando está frio</string>
+    <string name="ac_auto_threshold_hot_label">Lá fora, desde</string>
+    <string name="ac_auto_threshold_cold_label">Lá fora, até</string>
+    <string name="ac_auto_target_label">Clima regulado para</string>
     <string name="ac_auto_fan_label">Ventilação</string>
-    <string name="ac_auto_fan_hint">1–10</string>
+    <string name="ac_auto_fan_manual">Manual</string>
+    <string name="ac_auto_fan_level">Nível</string>
+    <string name="ac_auto_defrost">Desembaciamento</string>
+    <string name="ac_auto_defrost_front">Dianteiro</string>
+    <string name="ac_auto_defrost_rear">Traseiro</string>
+    <string name="ac_auto_rule_off">Regra desativada</string>
     <string name="ac_auto_def_front">Desembaciamento dianteiro</string>
     <string name="ac_auto_def_rear">Desembaciamento traseiro</string>
     <string name="ac_auto_note">Aplicado ao arrancar o veículo: a climatização e o A/C são ligados e depois as definições acima são enviadas.</string>
@@ -444,8 +447,6 @@
     <string name="common_off">OFF</string>
 
     <!-- Automatisation clim : mode auto + recyclage -->
-    <string name="ac_auto_auto_mode">Modo automático</string>
-    <string name="ac_auto_recirc_force">Forçar a recirculação de ar</string>
     <string name="recirc_inner">Interior</string>
     <string name="recirc_outside">Exterior</string>
     <string name="recirc_auto">Auto</string>

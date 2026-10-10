@@ -427,8 +427,8 @@
         });
         if (r.recircForce) c.clim.loop = r.recirc;
         setTimeout(() => hud(rule === 'hot'
-          ? L('Automatisation A/C : règle « température supérieure » appliquée', 'A/C automation: “above” rule applied')
-          : L('Automatisation A/C : règle « température inférieure » appliquée', 'A/C automation: “below” rule applied')), 2700);
+          ? L('Automatisation A/C : règle « chaud » appliquée', 'A/C automation: “hot” rule applied')
+          : L('Automatisation A/C : règle « froid » appliquée', 'A/C automation: “cold” rule applied')), 2700);
       }
     }
     // Profil selon la batterie : réarmé à chaque démarrage, évalué après la chaîne des profils.
@@ -1584,23 +1584,33 @@
       const body4 = slider('bhMin', S('batheat_auto_minutes_label'), 5, 120, bh.minutes, S('batheat_auto_minutes_value', bh.minutes), 5) + note('batheat_auto_note');
       const card4 = k.batHeat ? card('auto-batheat', 'batheat_auto_title', esc(S('batheat_auto_desc')), bh.on, 'autoBh', bh.open, 'foldBh', body4) : '';
 
-      // 5. Climatisation selon la température
-      const rule = (id, icon, titleKey) => {
-        const r = a.c[id];
-        const rc = (v, key) => '<button class="b sm' + (r.recirc === v ? ' on' : '') + (r.recircForce ? '' : ' dis') + '" data-a="ruleRecirc" data-v="' + id + ':' + v + '"' + (r.recircForce ? '' : ' disabled') + '>' + esc(S(key)) + '</button>';
-        return '<div class="rule" data-hl="rule-' + id + '"><div class="rule-h"><span class="ico">' + icon + '</span><span style="flex:1">' + esc(S(titleKey)) + '</span>' + sw(r.on, 'ruleOn', false, id) + '</div>' +
-          '<div class="fields"><div class="field"><label>' + esc(S('ac_auto_threshold_hot_label')) + '</label><input class="a-input" type="number" min="-20" max="60" data-c="ruleThr" data-rule="' + id + '" data-fid="thr' + id + '" value="' + r.thr + '"></div>' +
-          '<div class="field"><label>' + esc(S('ac_auto_target_label')) + '</label><input class="a-input" type="number" min="15" max="33" data-c="ruleTarget" data-rule="' + id + '" data-fid="tg' + id + '" value="' + r.target + '"></div>' +
-          '<div class="field"><label>' + esc(S('ac_auto_fan_label')) + '</label><input class="a-input" type="number" min="1" max="10" data-c="ruleFan" data-rule="' + id + '" data-fid="fan' + id + '" value="' + r.fan + '"></div></div>' +
-          '<div class="a-row" style="gap:18px"><label class="a-check"><input type="checkbox" data-c="ruleDefF" data-rule="' + id + '"' + (r.defF ? ' checked' : '') + '> ' + esc(S('ac_auto_def_front')) + '</label>' +
-          '<label class="a-check"><input type="checkbox" data-c="ruleDefR" data-rule="' + id + '"' + (r.defR ? ' checked' : '') + '> ' + esc(S('ac_auto_def_rear')) + '</label><span style="flex:1"></span>' +
-          '<span class="lbl" style="flex:0 0 auto">' + esc(S('ac_auto_auto_mode')) + '</span>' + sw(r.auto, 'ruleAuto', false, id) + '</div>' +
-          '<div class="a-row"><span class="lbl" style="flex:0 0 auto">' + esc(S('ac_auto_recirc_force')) + '</span>' + sw(r.recircForce, 'ruleRecircF', false, id) + '<div class="a-grid g3" style="flex:1">' + rc(0, 'recirc_inner') + rc(1, 'recirc_outside') + rc(2, 'recirc_auto') + '</div></div></div>';
+      // 5. Climatisation selon la température : deux règles côte à côte, curseurs et boutons
+      //    (ClimateRuleEditor côté application). Consigne et ventilation aux bornes de la voiture.
+      const climB = car().clim;
+      const rule = (id, titleKey) => {
+        const r = a.c[id], hot = id === 'hot', sfx = hot ? 'Hot' : 'Cold';
+        const rs = (label, c, min, max, v, dis) => '<div class="rr' + (dis ? ' dim' : '') + '"><span class="rl">' + esc(label) + '</span>' +
+          '<input type="range" class="a-slider" min="' + min + '" max="' + max + '" step="1" value="' + v + '" data-c="' + c + sfx + '" style="--p:' + (max > min ? ((v - min) / (max - min)) * 100 : 0) + '%"' + (dis ? ' disabled' : '') + '>' +
+          '<span class="a-val" data-out="' + c + sfx + '">' + esc(dis ? S('clim_auto') : outText(c + sfx, v)) + '</span></div>';
+        const bt = (label, act, v, on) => '<button class="b sm' + (on ? ' on' : '') + '" data-a="' + act + '" data-v="' + id + ':' + v + '">' + esc(label) + '</button>';
+        const rb = (label, btns) => '<div class="rr top"><span class="rl">' + esc(label) + '</span><div class="rg">' + btns + '</div></div>';
+        const rc = r.recircForce ? r.recirc : -1;   // -1 = « Inchangé » : la recirculation n'est pas pilotée
+        return '<div class="rule" data-hl="rule-' + id + '"><div class="rule-h ' + id + '"><span style="flex:1">' + esc(S(titleKey)) + '</span>' + sw(r.on, 'ruleOn', false, id) + '</div>' +
+          (r.on
+            ? rs(S(hot ? 'ac_auto_threshold_hot_label' : 'ac_auto_threshold_cold_label'), 'rtThr', -20, 60, r.thr) +
+              rs(S('ac_auto_target_label'), 'rtTgt', climB.tMin, climB.tMax, clamp(r.target, climB.tMin, climB.tMax)) +
+              rb(S('ac_auto_fan_label'), bt(S('clim_auto'), 'ruleFanMode', 1, r.auto) + bt(S('ac_auto_fan_manual'), 'ruleFanMode', 0, !r.auto)) +
+              rs(S('ac_auto_fan_level'), 'rtFan', climB.fMin, climB.fMax, clamp(r.fan, climB.fMin, climB.fMax), r.auto) +
+              rb(S('ac_auto_defrost'), bt(S('ac_auto_defrost_front'), 'ruleDef', 'F', r.defF) + bt(S('ac_auto_defrost_rear'), 'ruleDef', 'R', r.defR)) +
+              rb(S('clim_section_loop'), bt(S('profile_hvac_unchanged'), 'ruleRecirc', -1, rc === -1) + bt(S('recirc_inner'), 'ruleRecirc', 0, rc === 0) +
+                bt(S('recirc_outside'), 'ruleRecirc', 1, rc === 1) + bt(S('recirc_auto'), 'ruleRecirc', 2, rc === 2))
+            : '<div class="a-desc" style="margin-top:6px">' + esc(S('ac_auto_rule_off')) + '</div>') + '</div>';
       };
-      const body5 = '<div style="margin-top:8px">' + rule('hot', '🔥', 'ac_auto_hot') + rule('cold', '❄', 'ac_auto_cold') + '</div>' +
-        '<div data-hl="ac-once"><div class="a-sub" style="margin-top:10px">' + esc(S('ac_auto_trigger_label')) + '</div>' +
-        ['start', 'once', 'ready'].map((v) => '<div class="a-row" style="min-height:34px"><label class="a-check"><input type="radio" name="acTrigger" data-c="acTrigger" value="' + v + '"' + (a.c.trigger === v ? ' checked' : '') + '> ' + esc(S('ac_auto_trigger_' + v)) + '</label></div>' +
-          '<div class="a-desc" style="margin:0 0 4px 30px">' + esc(S('ac_auto_trigger_' + v + '_hint')) + '</div>').join('') + '</div>' + note('ac_auto_note');
+      // Déclenchement : trois boutons et UNE ligne d'aide, celle du mode choisi.
+      const body5 = '<div class="rules">' + rule('hot', 'ac_auto_hot') + rule('cold', 'ac_auto_cold') + '</div>' +
+        '<div class="rule" style="margin-top:10px" data-hl="ac-once"><div class="rr"><span class="rl">' + esc(S('ac_auto_trigger_label')) + '</span><div class="rg">' +
+        ['start', 'once', 'ready'].map((v) => '<button class="b sm' + (a.c.trigger === v ? ' on' : '') + '" data-a="acTrig" data-v="' + v + '">' + esc(S('ac_auto_trigger_' + v)) + '</button>').join('') + '</div></div>' +
+        '<div class="a-desc" style="margin-top:6px">' + esc(S('ac_auto_trigger_' + a.c.trigger + '_hint')) + '</div></div>' + note('ac_auto_note');
       const desc5 = esc(S('ac_auto_desc')) + (k.clim ? '' : '<small>' + esc(L('Climatisation non exposée par ce firmware.', 'Climate not exposed by this firmware.')) + '</small>');
       const card5 = card('auto-clim', 'ac_auto_title', desc5, a.c.on, 'autoC', a.c.open, 'foldC', body5);
 
@@ -2316,12 +2326,12 @@
         case 'autoP': state.auto.p.on = !state.auto.p.on; state.auto.p.open = state.auto.p.on; return r();
         case 'autoDir': state.auto.p.dir = v; return r();
         case 'autoC': state.auto.c.on = !state.auto.c.on; state.auto.c.open = state.auto.c.on; return r();
-        case 'ruleOn': case 'ruleAuto': case 'ruleRecircF': {
-          const rule = state.auto.c[el.getAttribute('data-x')];
-          const f = { ruleOn: 'on', ruleAuto: 'auto', ruleRecircF: 'recircForce' }[a];
-          rule[f] = !rule[f]; return r();
-        }
-        case 'ruleRecirc': { const [id, val] = v.split(':'); state.auto.c[id].recirc = +val; return r(); }
+        case 'ruleOn': { const rule = state.auto.c[el.getAttribute('data-x')]; rule.on = !rule.on; return r(); }
+        case 'ruleFanMode': { const [id, val] = v.split(':'); state.auto.c[id].auto = val === '1'; return r(); }
+        case 'ruleDef': { const [id, val] = v.split(':'); const rule = state.auto.c[id]; if (val === 'F') rule.defF = !rule.defF; else rule.defR = !rule.defR; return r(); }
+        // « Inchangé » (-1) ne pilote plus la recirculation et garde le dernier mode choisi.
+        case 'ruleRecirc': { const [id, val] = v.split(':'); const rule = state.auto.c[id]; rule.recircForce = +val >= 0; if (+val >= 0) rule.recirc = +val; return r(); }
+        case 'acTrig': state.auto.c.trigger = v; return r();
         // Audio
         case 'doorOn': state.door.on = !state.door.on; state.door.open = state.door.on; return r();
         case 'doorRestore': state.door.restore = !state.door.restore; return r();
@@ -2514,20 +2524,19 @@
         case 'briDay': state.auto.bri.day = +t.value; return commit();
         case 'briNight': state.auto.bri.night = +t.value; return commit();
         case 'bhMin': state.auto.bh.minutes = +t.value; return commit();
-        case 'acTrigger': state.auto.c.trigger = t.value; return commit();
         case 'stStart': if (u.dialog) u.dialog.startT = t.value; return;
         case 'stEnd': if (u.dialog) u.dialog.endT = t.value; return;
         case 'autoThr': state.auto.p.thr = num(0, 60, 25); return commit();
         case 'autoProfile': state.auto.p.profileId = t.value; return commit();
         case 'autoExec': state.auto.p.autoExec = t.checked; return commit();
-        case 'ruleThr': case 'ruleTarget': case 'ruleFan': {
-          const rule = state.auto.c[t.getAttribute('data-rule')];
-          if (id === 'ruleThr') rule.thr = num(-20, 60, rule.thr);
-          if (id === 'ruleTarget') rule.target = num(15, 33, rule.target);
-          if (id === 'ruleFan') rule.fan = num(1, 10, rule.fan);
+        case 'rtThrHot': case 'rtThrCold': case 'rtTgtHot': case 'rtTgtCold': case 'rtFanHot': case 'rtFanCold': {
+          const hot = id.endsWith('Hot'), rule = state.auto.c[hot ? 'hot' : 'cold'], other = state.auto.c[hot ? 'cold' : 'hot'];
+          // Le seuil froid reste sous le seuil chaud : un curseur poussé trop loin revient à la limite.
+          if (id.startsWith('rtThr')) rule.thr = clamp(hot ? Math.max(+t.value, other.thr + 1) : Math.min(+t.value, other.thr - 1), -20, 60);
+          else if (id.startsWith('rtTgt')) rule.target = +t.value;
+          else rule.fan = +t.value;
           return commit();
         }
-        case 'ruleDefF': case 'ruleDefR': state.auto.c[t.getAttribute('data-rule')][id === 'ruleDefF' ? 'defF' : 'defR'] = t.checked; return commit();
         case 'doorL': state.door.L = t.checked; return commit();
         case 'doorR': state.door.R = t.checked; return commit();
         default: return;
@@ -2639,7 +2648,9 @@
     switch (id) {
       case 'climTemp': return v + '°';
       case 'pkBri': return v + '%';
-      case 'hvTemp': return S('profile_hvac_temp_value', v);
+      case 'hvTemp': case 'rtTgtHot': case 'rtTgtCold': return S('profile_hvac_temp_value', v);
+      case 'rtThrHot': return '\u2265 ' + v + ' °C';
+      case 'rtThrCold': return '\u2264 ' + v + ' °C';
       case 'waSpeed': return v + ' km/h';
       case 'waTime': return v + ' min';
       case 'waDelay': return v + ' s';

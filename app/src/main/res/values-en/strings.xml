@@ -365,15 +365,18 @@
     <!-- A/C automation -->
     <string name="ac_auto_title">Trigger A/C based on temperature</string>
     <string name="ac_auto_desc">Set the climate control according to the outside temperature</string>
-    <string name="ac_auto_hot">Temperature above</string>
-    <string name="ac_auto_cold">Temperature below</string>
-    <string name="ac_auto_threshold_hot_label">Trigger threshold (°C)</string>
-    <string name="ac_auto_threshold_cold_label">Trigger threshold (°C)</string>
-    <string name="ac_auto_threshold_hint">-20–60</string>
-    <string name="ac_auto_target_label">Target temperature (°C)</string>
-    <string name="ac_auto_target_hint">15–33</string>
+    <string name="ac_auto_hot">When it is hot</string>
+    <string name="ac_auto_cold">When it is cold</string>
+    <string name="ac_auto_threshold_hot_label">Outside, from</string>
+    <string name="ac_auto_threshold_cold_label">Outside, up to</string>
+    <string name="ac_auto_target_label">Climate set to</string>
     <string name="ac_auto_fan_label">Fan speed</string>
-    <string name="ac_auto_fan_hint">1–10</string>
+    <string name="ac_auto_fan_manual">Manual</string>
+    <string name="ac_auto_fan_level">Level</string>
+    <string name="ac_auto_defrost">Defrost</string>
+    <string name="ac_auto_defrost_front">Front</string>
+    <string name="ac_auto_defrost_rear">Rear</string>
+    <string name="ac_auto_rule_off">Rule disabled</string>
     <string name="ac_auto_def_front">Front defrost</string>
     <string name="ac_auto_def_rear">Rear defrost</string>
     <string name="ac_auto_note">Applied when the vehicle starts: climate control and A/C are turned on, then the settings above are sent.</string>
@@ -444,8 +447,6 @@
     <string name="common_off">OFF</string>
 
     <!-- Automatisation clim : mode auto + recyclage -->
-    <string name="ac_auto_auto_mode">Automatic mode</string>
-    <string name="ac_auto_recirc_force">Force air recirculation</string>
     <string name="recirc_inner">Inner</string>
     <string name="recirc_outside">Outside</string>
     <string name="recirc_auto">Auto</string>

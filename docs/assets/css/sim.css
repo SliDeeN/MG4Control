@@ -471,6 +471,22 @@
 .field label { display: block; font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); margin-bottom: 4px; }
 .field .a-input { width: 100%; }
 
+/* Automatisation clim : deux règles côte à côte, mêmes lignes des deux côtés */
+.rules { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.rules .rule + .rule { margin-top: 0; }
+.rule .rule-h.hot { color: var(--dash-warn); }
+.rule .rule-h.cold { color: var(--dash-accent); }
+.rr { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.rr .rl { flex: 0 0 128px; font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); }
+.rr .a-slider { flex: 1; min-width: 0; }
+.rr .a-val { flex: 0 0 62px; text-align: right; font-size: calc(15px * var(--ts, 1)); }
+.rr.dim .a-slider, .rr.dim .a-val { opacity: .4; }
+/* Rangée de boutons : le libellé reste à la hauteur de la première ligne quand elle en fait deux. */
+.rr.top { align-items: flex-start; }
+.rr.top .rl { line-height: 42px; }
+.rg { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.rg .b.sm { padding: 0 4px; }
+
 /* ── Overlays (sélecteur de profil, confirmation) et dialogues ─────────── */
 .a-scrim {
   position: absolute;

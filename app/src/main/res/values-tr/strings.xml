@@ -365,15 +365,18 @@
     <!-- A/C automation -->
     <string name="ac_auto_title">Sıcaklığa göre klimayı tetikle</string>
     <string name="ac_auto_desc">Klimayı dış sıcaklığa göre ayarlar</string>
-    <string name="ac_auto_hot">Sıcaklık şunun üstünde</string>
-    <string name="ac_auto_cold">Sıcaklık şunun altında</string>
-    <string name="ac_auto_threshold_hot_label">Tetikleme eşiği (°C)</string>
-    <string name="ac_auto_threshold_cold_label">Tetikleme eşiği (°C)</string>
-    <string name="ac_auto_threshold_hint">-20–60</string>
-    <string name="ac_auto_target_label">Hedef sıcaklık (°C)</string>
-    <string name="ac_auto_target_hint">15–33</string>
+    <string name="ac_auto_hot">Hava sıcakken</string>
+    <string name="ac_auto_cold">Hava soğukken</string>
+    <string name="ac_auto_threshold_hot_label">Dışarısı, en az</string>
+    <string name="ac_auto_threshold_cold_label">Dışarısı, en çok</string>
+    <string name="ac_auto_target_label">Klima ayarı</string>
     <string name="ac_auto_fan_label">Fan hızı</string>
-    <string name="ac_auto_fan_hint">1–10</string>
+    <string name="ac_auto_fan_manual">Manuel</string>
+    <string name="ac_auto_fan_level">Seviye</string>
+    <string name="ac_auto_defrost">Buz çözme</string>
+    <string name="ac_auto_defrost_front">Ön cam</string>
+    <string name="ac_auto_defrost_rear">Arka cam</string>
+    <string name="ac_auto_rule_off">Kural kapalı</string>
     <string name="ac_auto_def_front">Ön cam buz çözme</string>
     <string name="ac_auto_def_rear">Arka cam buz çözme</string>
     <string name="ac_auto_note">Araç çalıştığında uygulanır: klima ve A/C açılır, ardından yukarıdaki ayarlar gönderilir.</string>
@@ -444,8 +447,6 @@
     <string name="common_off">KAPALI</string>
 
     <!-- Automatisation clim : mode auto + recyclage -->
-    <string name="ac_auto_auto_mode">Otomatik mod</string>
-    <string name="ac_auto_recirc_force">İç hava sirkülasyonunu zorla</string>
     <string name="recirc_inner">İç hava</string>
     <string name="recirc_outside">Dış hava</string>
     <string name="recirc_auto">Oto</string>

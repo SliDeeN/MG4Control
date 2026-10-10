@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/site.css?v=f1e558bb">
-  <link rel="stylesheet" href="assets/css/sim.css?v=cc1b1029">
+  <link rel="stylesheet" href="assets/css/sim.css?v=eb331e3e">
   <link rel="stylesheet" href="assets/css/explorer.css?v=cd546543">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -656,9 +656,9 @@
     </div>
     <div class="pt" data-hl-key="auto-clim" data-go="automation">
       <h3><span data-l="fr">Climatisation selon la température</span></h3>
-      <p data-l="fr">Deux règles, chaud et froid, allument la clim avec vos réglages au démarrage.</p>
+      <p data-l="fr">Deux règles côte à côte, chaud et froid, se règlent au curseur et allument la clim avec vos réglages.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Par défaut : au-dessus de 28 °C → 20 °C, en dessous de 5 °C → 24 °C. Chaque règle : seuil (−20 à 60 °C), consigne (15 à 33 °C), ventilation (1 à 10), dégivrages, mode auto et recirculation forcée. Si les deux s'appliquent, « chaud » l'emporte. Si le dernier profil appliqué porte sa propre climatisation, c'est elle qui compte.</p>
+        <p data-l="fr">Par défaut : à partir de 28 °C dehors → 20 °C, jusqu'à 5 °C dehors → 24 °C. Chaque règle a son interrupteur et ses curseurs : seuil extérieur (−20 à 60 °C), consigne et niveau de ventilation aux bornes de la voiture. La ventilation est automatique ou manuelle ; les dégivrages avant et arrière et la recirculation (inchangée, intérieur, extérieur ou auto) se choisissent par boutons. Le seuil froid reste toujours sous le seuil chaud. Si le dernier profil appliqué porte sa propre climatisation, c'est elle qui compte.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-aconce" data-hl-key="ac-once" data-demo="acOnce">
@@ -1172,8 +1172,8 @@
 
 <div class="dock" aria-label="Véhicule virtuel"></div>
 
-<script src="assets/js/strings.js?v=218ba4dd"></script>
-<script src="assets/js/sim.js?v=160f20f4"></script>
+<script src="assets/js/strings.js?v=7d6928f1"></script>
+<script src="assets/js/sim.js?v=d6ea1d98"></script>
 <script src="assets/js/site.js?v=2bb0c7ce"></script>
 <script src="assets/js/explorer.js?v=ffc271c4"></script>
 </body>

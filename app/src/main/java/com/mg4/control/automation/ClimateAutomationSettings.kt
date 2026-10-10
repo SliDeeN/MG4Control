@@ -44,7 +44,8 @@ object ClimateAutomationSettings {
     const val MIN_TARGET = 15
     const val MAX_TARGET = 33
     const val MIN_FAN = 1
-    const val MAX_FAN = 10
+    /** Onze crans sur les firmwares A9, sept sur l'ancien SDK : le plus grand des deux. */
+    const val MAX_FAN = 11
 
     /** Une règle : sa condition de déclenchement et les réglages clim à appliquer. */
     data class Rule(
