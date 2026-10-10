@@ -2,6 +2,7 @@ package com.mg4.control.util
 
 import android.app.UiModeManager
 import android.content.Context
+import android.content.res.Configuration
 import android.provider.Settings
 import androidx.appcompat.app.AppCompatDelegate
 
@@ -110,6 +111,26 @@ object ThemeHelper {
                        else getSystemNightMode(context)
             else    -> AppCompatDelegate.MODE_NIGHT_YES   // "dark" + fallback
         }
+    }
+
+    // ── Fenêtres affichées par le service ────────────────────────────────────
+
+    /**
+     * [context] avec le mode clair/sombre de l'APPLICATION, pour une fenêtre affichée par le
+     * service : sélecteur de profils, confirmations, popup de mise à jour, pop-up HVAC.
+     *
+     * Sans ça ces fenêtres prennent le mode jour/nuit du système, qui n'est pas celui de
+     * l'application et reste figé sur « nuit » sur SWI133 ([PopupUiMode]). Le mode est résolu à
+     * CHAQUE ouverture : en « Auto », la fenêtre suit donc le launcher même si l'application n'est
+     * pas revenue au premier plan depuis son changement de thème.
+     *
+     * À poser avant le `ContextThemeWrapper`, et à utiliser aussi pour toute couleur lue par le
+     * code — une couleur prise sur le contexte du service resterait celle du thème sombre.
+     */
+    fun withAppTheme(context: Context): Context {
+        val config = Configuration(context.resources.configuration)
+        config.uiMode = PopupUiMode.apply(resolveNightMode(context), config.uiMode)
+        return context.createConfigurationContext(config)
     }
 
     // ── Notification de changement (SWI69/131/132) ───────────────────────────

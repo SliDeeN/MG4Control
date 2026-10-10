@@ -1158,7 +1158,9 @@ class MG4ControlService : Service() {
             val inPark = MG4Hardware.isVehicleInPark()
             Handler(Looper.getMainLooper()).post {
                 if (inPark == true) {
-                    val themed = ContextThemeWrapper(LocaleHelper.applyLocale(this@MG4ControlService), R.style.Theme_MG4Control)
+                    val themed = ContextThemeWrapper(
+                        ThemeHelper.withAppTheme(LocaleHelper.applyLocale(this@MG4ControlService)),
+                        R.style.Theme_MG4Control)
                     val dialog = AlertDialog.Builder(themed)
                         .setTitle(R.string.vehicle_power_dialog_title)
                         .setMessage(R.string.vehicle_power_dialog_msg)

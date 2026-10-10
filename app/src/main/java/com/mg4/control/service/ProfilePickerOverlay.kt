@@ -28,6 +28,7 @@ import com.mg4.control.model.DrivingProfile
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.ThemeHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -128,15 +129,17 @@ object ProfilePickerOverlay {
 
         // Le contexte du Service n'a pas de thème Material → on l'enveloppe
         // avec le thème de l'app pour que MaterialButton puisse s'instancier.
-        val themedContext = ContextThemeWrapper(localizedContext, R.style.Theme_MG4Control)
+        val themedContext = ContextThemeWrapper(ThemeHelper.withAppTheme(localizedContext), R.style.Theme_MG4Control)
 
         // Inflate la vue depuis le layout XML (utilise le contexte thémé)
         val view = LayoutInflater.from(themedContext).inflate(R.layout.overlay_profile_picker, null)
 
         // ── Grille 2 colonnes de profils ─────────────────────────────────
         val container      = view.findViewById<LinearLayout>(R.id.overlay_profiles_container)
-        val accentColor    = context.getColor(R.color.dash_accent)
-        val accentDimColor = context.getColor(R.color.dash_accent_dim)
+        // Sur le contexte THÉMÉ : pris sur celui du service, ces deux bleus resteraient ceux du
+        // thème sombre dans une fenêtre claire.
+        val accentColor    = themedContext.getColor(R.color.dash_accent)
+        val accentDimColor = themedContext.getColor(R.color.dash_accent_dim)
         val dm             = context.resources.displayMetrics
 
         fun dp(value: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, dm).toInt()
@@ -371,7 +374,7 @@ object ProfilePickerOverlay {
         // c'est aussi celui qu'applique le délai d'un conflit Bluetooth.
         val premierProfil = grille.indexOfFirst { it.firstOrNull() === lignesProfils.firstOrNull()?.firstOrNull() }
         navigation = OverlayNavigation(
-            context        = context,
+            context        = themedContext,
             grille         = grille,
             depart         = JoystickFocus.Position(premierProfil.coerceAtLeast(0), 0),
             surDeplacement = { resetTimers() },
@@ -391,7 +394,8 @@ object ProfilePickerOverlay {
             val inPark = MG4Hardware.isVehicleInPark()
             handler.post {
                 if (inPark == true) {
-                    val themed = ContextThemeWrapper(LocaleHelper.applyLocale(context), R.style.Theme_MG4Control)
+                    val themed = ContextThemeWrapper(
+                        ThemeHelper.withAppTheme(LocaleHelper.applyLocale(context)), R.style.Theme_MG4Control)
                     val dialog = AlertDialog.Builder(themed)
                         .setTitle(R.string.vehicle_power_dialog_title)
                         .setMessage(R.string.vehicle_power_dialog_msg)

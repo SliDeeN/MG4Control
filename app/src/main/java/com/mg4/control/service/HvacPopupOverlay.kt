@@ -28,6 +28,7 @@ import com.mg4.control.model.HvacPopup
 import com.mg4.control.model.SeatHeat
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.ThemeHelper
 import java.util.Locale
 import java.util.concurrent.Executors
 import kotlin.math.roundToInt
@@ -173,8 +174,10 @@ object HvacPopupOverlay {
         // pictos et texte restent nets, et la fenêtre prend la même part de l'écran partout.
         val mesures = localized.resources.displayMetrics
         val echelle = HvacPopup.echelle(mesures.widthPixels, mesures.heightPixels, mesures.density)
-        val agrandi = localized.createConfigurationContext(
-            Configuration(localized.resources.configuration).apply {
+        // Même contexte pour le thème : clair ou sombre comme l'application, pas comme le système.
+        val auTheme = ThemeHelper.withAppTheme(localized)
+        val agrandi = auTheme.createConfigurationContext(
+            Configuration(auTheme.resources.configuration).apply {
                 densityDpi = (mesures.densityDpi * echelle).roundToInt()
             })
         val themed = ContextThemeWrapper(agrandi, R.style.Theme_MG4Control)

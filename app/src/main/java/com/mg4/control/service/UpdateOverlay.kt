@@ -16,6 +16,7 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.VehicleWriteGate
 import com.mg4.control.update.UpdateInfo
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.ThemeHelper
 
 /**
  * Popup « une mise à jour est disponible », par-dessus l'infodivertissement.
@@ -69,7 +70,7 @@ object UpdateOverlay {
         dismiss(context)
 
         val localized = LocaleHelper.applyLocale(context)
-        val themed = ContextThemeWrapper(localized, R.style.Theme_MG4Control)
+        val themed = ContextThemeWrapper(ThemeHelper.withAppTheme(localized), R.style.Theme_MG4Control)
         val view = LayoutInflater.from(themed).inflate(R.layout.overlay_update, null)
 
         view.findViewById<TextView>(R.id.update_versions).text =

@@ -24,6 +24,8 @@ import com.mg4.control.debug.AppLogger
  *
  * Vit et meurt avec la vue du popup. Thread principal seulement.
  *
+ * @param context contexte THÉMÉ du popup : l'anneau prend la couleur d'accent de son thème.
+ *
  * @param ligneCurseur cellule d'un curseur : gauche/droite y appellent [reglerCurseur] (-1 / +1)
  *                     au lieu de déplacer le focus, et la validation n'y fait rien.
  * @param defilement   conteneur à faire défiler quand la cellule surlignée en dépasse.

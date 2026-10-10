@@ -18,6 +18,7 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.VehicleWriteGate
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.ThemeHelper
 
 /**
  * Popup OUI/NON demandant s'il faut appliquer [profile] parce qu'un seuil est franchi :
@@ -107,7 +108,7 @@ object ProfileConfirmOverlay {
         dismiss(context)
 
         val localized = LocaleHelper.applyLocale(context)
-        val themed = ContextThemeWrapper(localized, R.style.Theme_MG4Control)
+        val themed = ContextThemeWrapper(ThemeHelper.withAppTheme(localized), R.style.Theme_MG4Control)
         val view = LayoutInflater.from(themed).inflate(R.layout.overlay_profile_confirm, null)
 
         view.findViewById<TextView>(R.id.confirm_message).text = message(localized)
@@ -160,7 +161,7 @@ object ProfileConfirmOverlay {
 
         // Joystick : chaque déplacement du focus relance le délai, comme dans le popup profils.
         navigation = OverlayNavigation(
-            context        = context,
+            context        = themed,
             grille         = listOf(listOf(btnYes, btnNo)),
             depart         = JoystickFocus.Position(0, 0),
             surDeplacement = {
