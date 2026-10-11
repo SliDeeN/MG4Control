@@ -706,6 +706,9 @@ class SettingsFragment : Fragment() {
             // Sonde lumière/position : un relevé instantané, à prendre en plein jour, au crépuscule
             // et dans un parking couvert. Ceux pris automatiquement au READY sont déjà gardés.
             com.mg4.control.hardware.LightProbe.run("diagnostic")
+            // Sonde clé (provisoire) : signaux nommés tout de suite, balayage complet en
+            // arrière-plan — son résultat est dans le rapport à l'ouverture suivante.
+            com.mg4.control.hardware.KeyProbe.run("diagnostic")
             val report = MG4Hardware.buildDiagnosticReport(appVersion)
             withContext(Dispatchers.Main) {
                 if (isAdded) tvReport.text = report

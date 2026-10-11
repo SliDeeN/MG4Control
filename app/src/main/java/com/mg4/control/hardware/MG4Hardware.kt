@@ -3767,6 +3767,12 @@ object MG4Hardware {
             sb.appendLine()
         }
 
+        // Sonde clé (provisoire) : signaux nommés des dernières ouvertures, puis le dernier balayage.
+        KeyProbe.reports.forEach {
+            sb.appendLine(it)
+            sb.appendLine()
+        }
+
         if (gen == FirmwareInfo.Gen.SWI132) {
 
             // ── Binder IVehicleSettingService ─────────────────────────────
