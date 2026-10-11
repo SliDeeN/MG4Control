@@ -29,6 +29,7 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.BuildConfig
@@ -39,8 +40,10 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.util.DataUsage
 import com.mg4.control.debug.CrashLogger
 import com.mg4.control.hardware.EnergyProbe
+import com.mg4.control.hardware.KeyProbe
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.VehicleWriteGate
+import com.mg4.control.model.WirelessCharger
 import com.mg4.control.profile.ReadyProfilePolicy
 import com.mg4.control.update.ApkCleanup
 import com.mg4.control.update.UpdateChecker
@@ -55,6 +58,8 @@ import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.TextSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -362,6 +367,11 @@ class SettingsFragment : Fragment() {
 
         // Bouton Diagnostic débloqué via 5 clics sur le logo (cf. MainActivity)
         btnDiagnostic.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
+        // Écran d'essai de la sonde clé (provisoire) : caché et débloqué comme le Diagnostic.
+        view.findViewById<MaterialButton>(R.id.btn_key_probe).apply {
+            visibility = btnDiagnostic.visibility
+            setOnClickListener { showKeyProbeDialog() }
+        }
 
         btnUpdate.setOnClickListener {
             btnUpdate.isEnabled = false
@@ -554,6 +564,69 @@ class SettingsFragment : Fragment() {
                 btn.isEnabled = true
             }
         }, 3_000)
+    }
+
+    // ── Écran d'essai de la sonde clé (provisoire) ───────────────────────────
+
+    /**
+     * Le chargeur de téléphone sans fil en direct : sa valeur relue chaque seconde, ce qui peut
+     * expliquer ses changements, et le journal de ces changements ([KeyProbe]). Sert à savoir
+     * si la valeur suit la clé, la porte ou un simple délai — à retirer avec la sonde.
+     */
+    private fun showKeyProbeDialog() {
+        val ctx = requireContext()
+        val vue = LayoutInflater.from(ctx).inflate(R.layout.dialog_key_probe, null)
+        val valeur   = vue.findViewById<TextView>(R.id.key_probe_value)
+        val sens     = vue.findViewById<TextView>(R.id.key_probe_meaning)
+        val contexte = vue.findViewById<TextView>(R.id.key_probe_context)
+        val journal  = vue.findViewById<TextView>(R.id.key_probe_journal)
+        val balayage = vue.findViewById<MaterialButton>(R.id.btn_key_probe_sweep)
+
+        fun afficher(lectures: List<KeyProbe.Lecture>) {
+            val brut = lectures.firstOrNull { it.nom == KeyProbe.CHARGEUR }?.valeur
+            val etat = brut?.toIntOrNull()
+            valeur.text = etat?.toString() ?: "—"
+            // Lecture refusée : c'est le nom de l'erreur qui renseigne, pas « illisible ».
+            sens.text = if (etat == null && brut != null) brut else WirelessCharger.describe(etat)
+            contexte.text = lectures.filter { it.nom != KeyProbe.CHARGEUR }
+                .joinToString("\n") { "${it.nom} : ${it.valeur}" }
+            // Le plus récent en haut : rien à faire défiler pour voir ce qui vient de bouger.
+            journal.text = KeyProbe.journal().asReversed().joinToString("\n")
+        }
+
+        val dialog = AlertDialog.Builder(ctx)
+            .setTitle(R.string.key_probe_title)
+            .setView(vue)
+            .setNegativeButton(R.string.nav_close, null)
+            .create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(ctx.getColor(R.color.dash_card)))
+
+        // Lectures véhicule hors du fil principal ; le suivi s'arrête avec la fenêtre.
+        val portee = viewLifecycleOwner.lifecycleScope
+        val suivi = portee.launch {
+            while (isActive) {
+                afficher(withContext(Dispatchers.IO) { KeyProbe.poll() })
+                delay(1_000)
+            }
+        }
+        dialog.setOnDismissListener { suivi.cancel() }
+
+        vue.findViewById<MaterialButton>(R.id.btn_key_probe_read).setOnClickListener {
+            portee.launch { afficher(withContext(Dispatchers.IO) { KeyProbe.poll(noter = true) }) }
+        }
+        balayage.setOnClickListener {
+            balayage.isEnabled = false
+            portee.launch {
+                afficher(withContext(Dispatchers.IO) { KeyProbe.sweep("essai"); KeyProbe.poll() })
+                balayage.isEnabled = true
+            }
+        }
+        vue.findViewById<MaterialButton>(R.id.btn_key_probe_clear).setOnClickListener {
+            KeyProbe.clearJournal()
+            journal.text = ""
+        }
+
+        dialog.show()
     }
 
     // ── Dialog Diagnostic ────────────────────────────────────────────────────
