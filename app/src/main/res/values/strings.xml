@@ -172,19 +172,6 @@
 
     <!-- Diagnostic -->
     <string name="btn_diagnostic">Diagnostic</string>
-    <!-- Écran d'essai « Lock when leaving » : provisoire, réservé au développeur — non traduit. -->
-    <string name="btn_lock_probe" translatable="false">Sonde verrouillage (essai)</string>
-    <string name="lock_probe_setting" translatable="false">Réglage d’origine « Lock when leaving »</string>
-    <string name="lock_probe_enable" translatable="false">Activer (écrire 1)</string>
-    <string name="lock_probe_disable" translatable="false">Désactiver (écrire 0)</string>
-    <string name="lock_probe_read" translatable="false">Lire maintenant</string>
-    <string name="lock_probe_clear" translatable="false">Effacer</string>
-    <string name="lock_probe_journal" translatable="false">Journal, le plus récent en haut</string>
-    <string name="lock_probe_context" translatable="false">Suivi, relu chaque seconde</string>
-    <string name="lock_probe_hint" translatable="false">« Activer » envoie la consigne de l’interrupteur d’origine, « Désactiver » la retire. La conclusion s’affiche 5 s après. Essai : activer, sortir, fermer les portes, s’éloigner avec la clé puis revenir — le journal note la clé, le verrouillage et les portes, et part dans le rapport de Diagnostic.</string>
-    <string name="lock_probe_no_path" translatable="false">Pas de commande d’origine sur ce firmware : lecture seule.</string>
-    <string name="lock_probe_not_sent" translatable="false">Consigne non envoyée : service non lié ou voiture en mouvement.</string>
-    <string name="lock_probe_waiting" translatable="false">Consigne envoyée, relecture dans 5 s…</string>
     <string name="diagnostic_unlocked">Diagnostic débloqué</string>
     <string name="diag_title">Diagnostic</string>
     <string name="diag_copy">Copier</string>
