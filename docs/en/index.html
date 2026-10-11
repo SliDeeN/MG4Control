@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="en">New</span> · 2.6.8</span>
-        <b><span data-l="en">12 new things in this release</span></b>
+        <b><span data-l="en">13 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -153,6 +153,7 @@
         <a href="#f-audio" data-feature="f-audio"><span data-l="en">🔉 Volume when leaving: in Automation</span></a>
         <a href="#f-hvacpopup" data-feature="f-hvacpopup"><span data-l="en">🌡️ HVAC pop-up on the joystick</span></a>
         <a href="#f-profilecycle" data-feature="f-profilecycle"><span data-l="en">🔁 Profile cycle on a button</span></a>
+        <a href="#f-readydefault" data-feature="f-readydefault"><span data-l="en">↩️ Back to the default profile at READY</span></a>
         <a href="#f-sc-new" data-feature="f-sc-new"><span data-l="en">⭐ Three new shortcut actions</span></a>
       </div>
     </div>
@@ -440,6 +441,7 @@
       <div class="prec-ctl">
         <label class="tog"><input type="checkbox" name="auto" checked><span class="t"></span><span><span data-l="en">Garage mode off</span></span></label>
         <label class="tog"><input type="checkbox" name="manual"><span class="t"></span><span data-l="en">Profile picked manually recently</span></label>
+        <label class="tog"><input type="checkbox" name="back"><span class="t"></span><span data-l="en">… with the “Return to the default profile” option</span></label>
         <label class="tog"><input type="checkbox" name="temp"><span class="t"></span><span data-l="en">Temperature automation applies</span></label>
         <label class="tog"><input type="checkbox" name="tempconfirm"><span class="t"></span><span data-l="en">… with confirmation popup</span></label>
         <label class="tog"><input type="checkbox" name="bt" checked><span class="t"></span><span data-l="en">Phone tied to a profile connected</span></label>
@@ -477,7 +479,7 @@
       <h3><span data-l="en">Profile picker popup</span></h3>
       <p data-l="en">All your profiles as big buttons: a tap applies the profile and closes the popup.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">That manual choice takes priority at the next ignition. The picker shows whatever the speed (it's also used for brightness); it's the write that gets filtered by the speed lock.</p>
+        <p data-l="en">That manual choice takes priority at the next ignition, unless the “Return to the default profile each time the car enters READY” option is on. The picker shows whatever the speed (it's also used for brightness); it's the write that gets filtered by the speed lock.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="pk-foot" data-demo="picker">
@@ -845,14 +847,22 @@
     </div>
     <div class="pt" data-hl-key="s-autoapply" data-go="settings:2">
       <h3><span data-l="en">Advanced settings</span></h3>
-      <p data-l="en">Garage mode, external API, beta channel, vehicle power-off and speed lock.</p>
+      <p data-l="en">Garage mode, back to the default profile, external API, beta channel, vehicle power-off and speed lock.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
         <ul data-l="en">
           <li><a href="#garage">Garage mode</a>, replacing the old automatic-application switch.</li>
+          <li><a href="#f-readydefault">Return to the default profile each time the car enters READY</a>, to forget a hand-picked profile.</li>
           <li><a href="#api">External API</a>, with explicit confirmation when enabling.</li>
           <li>Update check at launch, <a href="#mises-a-jour">alert on the vehicle screen</a> and beta channel.</li>
           <li><a href="#verrou">Power the vehicle off</a> while keeping the screen on, and <a href="#verrou">speed lock</a> (0 to 250 km/h).</li>
         </ul>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-readydefault" data-hl-key="s-readydefault" data-go="settings:2">
+      <h3><span data-l="en">Back to the default profile</span><span class="badge-new"><span data-l="en">New</span> · 2.6.8</span></h3>
+      <p data-l="en">An option makes the app forget a hand-picked profile each time the car enters READY.</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">By default, a hand-picked profile (picker, app, shortcut) stays in place until the car is switched off: it is re-applied each time the car enters READY. With the “Return to the default profile each time the car enters READY” option in Advanced settings, it is forgotten each time the car enters READY, including after a short stop, and the default profile is applied again. A profile tied to the outside temperature or to a Bluetooth phone keeps priority, as at start-up. In the mockup: apply a profile by hand, then “Leave the car” and “Back to READY”.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="s-maint" data-go="settings:3">
@@ -1172,9 +1182,9 @@
 
 <div class="dock" aria-label="Virtual vehicle"></div>
 
-<script src="../assets/js/strings.js?v=7d6928f1"></script>
-<script src="../assets/js/sim.js?v=d6ea1d98"></script>
-<script src="../assets/js/site.js?v=2bb0c7ce"></script>
+<script src="../assets/js/strings.js?v=9eb58e42"></script>
+<script src="../assets/js/sim.js?v=1d14e10d"></script>
+<script src="../assets/js/site.js?v=aa5935a3"></script>
 <script src="../assets/js/explorer.js?v=ffc271c4"></script>
 </body>
 </html>

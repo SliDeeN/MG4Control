@@ -41,6 +41,7 @@ import com.mg4.control.debug.CrashLogger
 import com.mg4.control.hardware.EnergyProbe
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.VehicleWriteGate
+import com.mg4.control.profile.ReadyProfilePolicy
 import com.mg4.control.update.ApkCleanup
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateNotifier
@@ -256,6 +257,15 @@ class SettingsFragment : Fragment() {
                         .setAction(MG4ControlService.ACTION_GARAGE_CHANGED)
                 )
             }
+        }
+
+        // Passage en READY : oublier le profil choisi à la main et reprendre la chaîne habituelle
+        // (température, Bluetooth, profil par défaut). Lu par le service à chaque passage en
+        // READY : rien à lui signaler, le réglage vaut dès le prochain.
+        val switchRetour = view.findViewById<Switch>(R.id.switch_ready_default)
+        switchRetour.isChecked = ReadyProfilePolicy.isEnabled(requireContext())
+        switchRetour.setOnCheckedChangeListener { _, checked ->
+            ReadyProfilePolicy.setEnabled(requireContext(), checked)
         }
 
         // ── Sécurité conduite (verrou d'écriture par vitesse) ────────────────

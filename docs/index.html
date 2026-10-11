@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.8</span>
-        <b><span data-l="fr">12 nouveautés dans cette version</span></b>
+        <b><span data-l="fr">13 nouveautés dans cette version</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span></button>
       </div>
       <div class="wn-list">
@@ -153,6 +153,7 @@
         <a href="#f-audio" data-feature="f-audio"><span data-l="fr">🔉 Volume en quittant : dans Automatisation</span></a>
         <a href="#f-hvacpopup" data-feature="f-hvacpopup"><span data-l="fr">🌡️ Pop-up HVAC au joystick</span></a>
         <a href="#f-profilecycle" data-feature="f-profilecycle"><span data-l="fr">🔁 Cycle de profils sur un bouton</span></a>
+        <a href="#f-readydefault" data-feature="f-readydefault"><span data-l="fr">↩️ Retour au profil par défaut au READY</span></a>
         <a href="#f-sc-new" data-feature="f-sc-new"><span data-l="fr">⭐ Trois nouvelles actions de raccourci</span></a>
       </div>
     </div>
@@ -440,6 +441,7 @@
       <div class="prec-ctl">
         <label class="tog"><input type="checkbox" name="auto" checked><span class="t"></span><span><span data-l="fr">Mode Garage désactivé</span></span></label>
         <label class="tog"><input type="checkbox" name="manual"><span class="t"></span><span data-l="fr">Profil choisi à la main récemment</span></label>
+        <label class="tog"><input type="checkbox" name="back"><span class="t"></span><span data-l="fr">… avec l'option « Revenir au profil par défaut »</span></label>
         <label class="tog"><input type="checkbox" name="temp"><span class="t"></span><span data-l="fr">Automatisation température applicable</span></label>
         <label class="tog"><input type="checkbox" name="tempconfirm"><span class="t"></span><span data-l="fr">… avec popup de confirmation</span></label>
         <label class="tog"><input type="checkbox" name="bt" checked><span class="t"></span><span data-l="fr">Téléphone associé à un profil connecté</span></label>
@@ -477,7 +479,7 @@
       <h3><span data-l="fr">Popup sélecteur de profil</span></h3>
       <p data-l="fr">Tous vos profils en grands boutons : un appui applique le profil et ferme le popup.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Ce choix manuel devient prioritaire au prochain passage du contact. Le sélecteur s'affiche quelle que soit la vitesse (il sert aussi à la luminosité) ; c'est l'écriture qui est filtrée par le verrou de vitesse.</p>
+        <p data-l="fr">Ce choix manuel devient prioritaire au prochain passage du contact, sauf si l'option « Revenir au profil par défaut à chaque passage en READY » est cochée. Le sélecteur s'affiche quelle que soit la vitesse (il sert aussi à la luminosité) ; c'est l'écriture qui est filtrée par le verrou de vitesse.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="pk-foot" data-demo="picker">
@@ -845,14 +847,22 @@
     </div>
     <div class="pt" data-hl-key="s-autoapply" data-go="settings:2">
       <h3><span data-l="fr">Réglages avancés</span></h3>
-      <p data-l="fr">Mode Garage, API externe, canal bêta, extinction du véhicule et verrou de vitesse.</p>
+      <p data-l="fr">Mode Garage, retour au profil par défaut, API externe, canal bêta, extinction du véhicule et verrou de vitesse.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <ul data-l="fr">
           <li><a href="#garage">Mode Garage</a>, qui remplace l'ancien interrupteur d'application automatique.</li>
+          <li><a href="#f-readydefault">Revenir au profil par défaut à chaque passage en READY</a>, pour oublier un profil choisi à la main.</li>
           <li><a href="#api">API externe</a>, avec confirmation explicite à l'activation.</li>
           <li>Vérification des mises à jour au lancement, <a href="#mises-a-jour">alerte sur l'écran du véhicule</a> et canal bêta.</li>
           <li><a href="#verrou">Éteindre le véhicule</a> en gardant l'écran allumé, et <a href="#verrou">verrou de vitesse</a> (0 à 250 km/h).</li>
         </ul>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-readydefault" data-hl-key="s-readydefault" data-go="settings:2">
+      <h3><span data-l="fr">Retour au profil par défaut</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.8</span></h3>
+      <p data-l="fr">Une option fait oublier le profil choisi à la main à chaque passage en READY.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Par défaut, un profil choisi à la main (sélecteur, application, raccourci) reste en place jusqu'à l'extinction de la voiture : il est réappliqué à chaque passage en READY. Avec l'option « Revenir au profil par défaut à chaque passage en READY » des Réglages avancés, il est oublié à chaque passage en READY, y compris après un arrêt court, et le profil par défaut est réappliqué. Un profil lié à la température extérieure ou à un téléphone Bluetooth garde la priorité, comme au démarrage. Dans la maquette : appliquez un profil à la main, puis « Quitter la voiture » et « Revenir en READY ».</p>
       </details>
     </div>
     <div class="pt" data-hl-key="s-maint" data-go="settings:3">
@@ -1172,9 +1182,9 @@
 
 <div class="dock" aria-label="Véhicule virtuel"></div>
 
-<script src="assets/js/strings.js?v=7d6928f1"></script>
-<script src="assets/js/sim.js?v=d6ea1d98"></script>
-<script src="assets/js/site.js?v=2bb0c7ce"></script>
+<script src="assets/js/strings.js?v=9eb58e42"></script>
+<script src="assets/js/sim.js?v=1d14e10d"></script>
+<script src="assets/js/site.js?v=aa5935a3"></script>
 <script src="assets/js/explorer.js?v=ffc271c4"></script>
 </body>
 </html>

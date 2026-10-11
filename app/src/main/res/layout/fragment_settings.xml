@@ -631,6 +631,56 @@
                     android:layout_height="1dp"
                     android:background="@color/dash_border" />
 
+                <!-- Retour au profil par défaut à chaque passage en READY. Sous le Mode Garage :
+                     les deux décident du profil appliqué sans qu'on le demande. Décoché par
+                     défaut — un profil choisi à la main reste alors en place jusqu'à l'extinction. -->
+                <LinearLayout
+                    android:id="@+id/row_ready_default"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/settings_ready_default"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <Switch
+                            android:scaleX="1.3"
+                            android:scaleY="1.3"
+                            android:layout_marginHorizontal="8dp"
+                            android:id="@+id/switch_ready_default"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="false" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/settings_ready_default_desc"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
                 <!-- API externe (issue #79). Non coche par defaut : tant qu'il l'est, le
                      receiver et le provider refusent tout. C'est LE verrou de cette API. -->
                 <LinearLayout

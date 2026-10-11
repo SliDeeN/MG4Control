@@ -245,6 +245,8 @@
     <string name="settings_auto_apply">Weitere Einstellungen</string>
     <string name="settings_garage_mode">Werkstattmodus</string>
     <string name="settings_garage_mode_desc">Versetzt MG4Control vollständig in den Ruhezustand: keine Tastenkürzel (die Tasten haben wieder ihre ursprüngliche Funktion), kein Profil beim Start, keine Automatisierung. Praktisch, wenn das Fahrzeug in die Werkstatt kommt, ohne die App zu deinstallieren. Ihre Einstellungen bleiben erhalten und kehren zurück, sobald der Modus ausgeschaltet wird.</string>
+    <string name="settings_ready_default">Bei jedem Wechsel in READY zum Standardprofil zurückkehren</string>
+    <string name="settings_ready_default_desc">Standardmäßig bleibt ein von Hand gewähltes Profil aktiv, bis das Fahrzeug ausgeschaltet wird. Mit dieser Option wird es bei jedem Wechsel in READY vergessen, auch nach einem kurzen Halt, und das Standardprofil wird erneut angewendet. Ein Profil, das an die Außentemperatur oder an ein Bluetooth-Telefon gebunden ist, behält wie beim Start den Vorrang.</string>
     <string name="notif_service_active">Dienst aktiv</string>
     <string name="notif_garage_mode">Werkstattmodus — im Ruhezustand</string>
     <string name="settings_auto_update_desc">Beim Start automatisch nach Updates suchen</string>

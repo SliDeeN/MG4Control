@@ -44,6 +44,7 @@ import com.mg4.control.model.WindowCommand
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.profile.ReadyProfilePolicy
 import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateNotifier
@@ -1519,8 +1520,15 @@ class MG4ControlService : Service() {
         val pm = ProfileManager(applicationContext)
 
         // Choix manuel récent (popup volant / app) → prioritaire sur BT et défaut.
-        // L'utilisateur a explicitement sélectionné un profil depuis le démarrage : on le respecte.
-        val manualId = ProfileApplier.lastManualProfileId
+        // L'utilisateur a explicitement sélectionné un profil depuis le démarrage : on le respecte,
+        // SAUF s'il a demandé à revenir au profil par défaut à chaque passage en READY
+        // ([ReadyProfilePolicy]) : le choix est alors oublié et la chaîne ci-dessous décide.
+        val retourDefaut = ReadyProfilePolicy.isEnabled(this)
+        if (ReadyProfilePolicy.forgetsManual(ProfileApplier.lastManualProfileId, retourDefaut)) {
+            AppLogger.i(TAG, "IGNITION → choix manuel oublié (option « revenir au profil par défaut »)")
+            ProfileApplier.lastManualProfileId = null
+        }
+        val manualId = ReadyProfilePolicy.manualToReapply(ProfileApplier.lastManualProfileId, retourDefaut)
         if (manualId != null) {
             val manualProfile = pm.getById(manualId)
             if (manualProfile != null) {

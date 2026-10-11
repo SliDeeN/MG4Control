@@ -132,7 +132,7 @@
       defaultId: daily.id,
       lastManual: null,
       settings: { defaultScreen: 'dashboard', theme: 'auto', api: false, autoUpdate: true, beta: false, gate: false, gateMax: 30,
-                  garage: false, textSize: 'standard', updOverlay: true },
+                  garage: false, textSize: 'standard', updOverlay: true, readyDefault: false },
       sc: {
         enabled: true,
         map: { btn1_single: 'PROFILE_PICKER', btn1_long: 'ONE_PEDAL', btn2_single: 'NONE', btn2_long: 'ADAS_CYCLE' },
@@ -382,10 +382,12 @@
   }
   function ignition() {
     const c = car();
-    const wasReady = c.ready;
+    const wasReady = c.ready, wasOn = c.on;
     c.on = true; c.ready = true; c.maxSpeed = c.speed; c.readyAt = Date.now();
     c.esc = true; c.aebOn = true; // la voiture les rétablit à chaque démarrage
-    state.lastManual = null;       // nouveau démarrage du service
+    // Un retour en READY après un arrêt en cours de trajet garde le profil choisi à la main ;
+    // tout autre appel est un nouveau démarrage, qui l'oublie (extinction de la voiture).
+    if (!(wasOn && !wasReady)) state.lastManual = null;
     if (wasReady) { state.auto.c.evaluated = false; state.auto.c.fired = false; }
     cancelLeaving(!wasReady);
     const trace = [];
@@ -393,9 +395,20 @@
       trace.push(L('Mode Garage : rien n\'est appliqué (profils, Bluetooth et automatisations en veille)', 'Garage mode: nothing is applied (profiles, Bluetooth and automations asleep)'));
       commit(); emit('ignition', { trace }); return trace;
     }
+    // Profil choisi à la main pendant le trajet : réappliqué (ReadyProfilePolicy), sauf si l'option
+    // « Revenir au profil par défaut à chaque passage en READY » le fait oublier — la chaîne
+    // habituelle décide alors : température, Bluetooth, puis profil par défaut.
+    let manual = state.lastManual && state.profiles.find((x) => x.id === state.lastManual);
+    if (manual && state.settings.readyDefault) {
+      trace.push(L('Choix manuel « ', 'Manual choice “') + manual.name + L(' » oublié (option « Revenir au profil par défaut »)', '” forgotten (“Return to the default profile” option)'));
+      state.lastManual = null; manual = null;
+    }
     const a = state.auto.p;
     const p = state.profiles.find((x) => x.id === a.profileId);
-    if (p && tempDecision(a, c.outside)) {
+    if (manual) {
+      trace.push(L('Choix manuel du trajet : « ', 'Manual choice of this trip: “') + manual.name + L(' » réappliqué', '” re-applied'));
+      applyProfile(manual, { via: L('choix manuel', 'manual choice') });
+    } else if (p && tempDecision(a, c.outside)) {
       if (a.autoExec) { trace.push(L('Température → « ', 'Temperature → “') + p.name + L(' » (exécution directe)', '” (direct)')); applyProfile(p, { via: L('température', 'temperature') }); }
       else {
         trace.push(L('Température → popup de confirmation', 'Temperature → confirmation popup'));
@@ -1371,6 +1384,7 @@
       const row = (hl, label, desc, swHtml) => '<div class="a-row" data-hl="' + hl + '" style="padding:6px 0;border-bottom:1px solid var(--dash-border)"><span class="lbl">' + esc(label) + (desc ? '<small>' + esc(desc) + '</small>' : '') + '</span>' + swHtml + '</div>';
       let h = '<div class="a-sec"><div class="a-h">' + esc(S('settings_auto_apply')) + '</div>' +
         row('s-garage s-autoapply', S('settings_garage_mode'), S('settings_garage_mode_desc'), sw(s.garage, 'garage')) +
+        row('s-readydefault', S('settings_ready_default'), S('settings_ready_default_desc'), sw(s.readyDefault, 'readyDefault')) +
         row('s-api', S('settings_external_api'), S('settings_external_api_warn'), sw(s.api, 'api')) +
         row('s-update', S('settings_auto_update_desc'), '', sw(s.autoUpdate, 'autoUpdate')) +
         row('s-updoverlay', S('settings_update_overlay'), S('settings_update_overlay_desc'), sw(s.updOverlay && s.autoUpdate, 'updOverlay', !s.autoUpdate)) +
@@ -2394,6 +2408,7 @@
           return this.render();
         }
         case 'garage': s.garage = !s.garage; return r();
+        case 'readyDefault': s.readyDefault = !s.readyDefault; return r();
         case 'updOverlay': s.updOverlay = !s.updOverlay; return r();
         case 'textSize': s.textSize = v; return r();
         case 'rcToggle': {

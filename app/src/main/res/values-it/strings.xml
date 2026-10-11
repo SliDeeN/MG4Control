@@ -245,6 +245,8 @@
     <string name="settings_auto_apply">Impostazioni aggiuntive</string>
     <string name="settings_garage_mode">Modalità officina</string>
     <string name="settings_garage_mode_desc">Mette MG4Control completamente in pausa: niente scorciatoie (i pulsanti tornano alla loro funzione originale), nessun profilo all\'avvio, nessuna automazione. Utile per lasciare l\'auto in officina senza disinstallare l\'app. Le impostazioni restano e tornano appena la modalità viene disattivata.</string>
+    <string name="settings_ready_default">Tornare al profilo predefinito a ogni passaggio in READY</string>
+    <string name="settings_ready_default_desc">Per impostazione predefinita, un profilo scelto a mano resta attivo fino allo spegnimento dell\'auto. Con questa opzione viene dimenticato a ogni passaggio in READY, anche dopo una sosta breve, e viene riapplicato il profilo predefinito. Se deve applicarsi un profilo legato alla temperatura esterna o a un telefono Bluetooth, mantiene la priorità, come all\'avvio.</string>
     <string name="notif_service_active">Servizio attivo</string>
     <string name="notif_garage_mode">Modalità officina — in pausa</string>
     <string name="settings_auto_update_desc">Controlla aggiornamenti automaticamente all\'avvio</string>

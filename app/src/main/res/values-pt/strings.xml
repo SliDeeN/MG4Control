@@ -245,6 +245,8 @@
     <string name="settings_auto_apply">Definições adicionais</string>
     <string name="settings_garage_mode">Modo oficina</string>
     <string name="settings_garage_mode_desc">Coloca o MG4Control totalmente em pausa: sem atalhos (os botões recuperam a função original), sem perfil ao arrancar, sem automações. Útil para deixar o veículo na oficina sem desinstalar a aplicação. As suas definições são mantidas e voltam assim que o modo for desativado.</string>
+    <string name="settings_ready_default">Voltar ao perfil padrão sempre que o carro passa a READY</string>
+    <string name="settings_ready_default_desc">Por predefinição, um perfil escolhido à mão mantém-se até o carro ser desligado. Com esta opção, é esquecido sempre que o carro passa a READY, mesmo após uma paragem curta, e o perfil padrão volta a ser aplicado. Se um perfil ligado à temperatura exterior ou a um telemóvel Bluetooth tiver de ser aplicado, mantém a prioridade, como no arranque.</string>
     <string name="notif_service_active">Serviço ativo</string>
     <string name="notif_garage_mode">Modo oficina — em pausa</string>
     <string name="settings_auto_update_desc">Verificar atualizações automaticamente no arranque</string>
