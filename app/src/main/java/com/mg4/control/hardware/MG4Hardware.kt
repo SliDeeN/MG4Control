@@ -24,6 +24,7 @@ import com.mg4.control.model.BatteryHeating
 import com.mg4.control.model.CustomDriveScale
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.HvacPopup
+import com.mg4.control.model.LeaveLock
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.model.SeatHeat
 import com.mg4.control.util.FirmwareInfo
@@ -2760,6 +2761,61 @@ object MG4Hardware {
     }
 
     // -------------------------------------------------------------------------
+    // Essai « Lock when leaving » (PROVISOIRE) — voir [LockProbe] et [LeaveLock]
+    //
+    // Réglage d'origine COMFORT_LOCK 0x2140d710 (verrouiller en s'éloignant avec la clé) et son
+    // pendant COMFORT_UNLOCK 0x2140d711 (déverrouiller à l'approche). Voies d'origine :
+    //   • SWI133    : VPM ID_COMFORT_LOCK 0x6030005 / ID_COMFORT_UNLOCK 0x6030006,
+    //                 setIntPropertyRecovery (interrupteur de l'écran Portes, o0/v$p) ;
+    //   • SWI68/165 : VehicleSettingManager get/setLeaveAutoLockMode, getApproachUnlockMode ;
+    //   • A9        : aucune — ni méthode ni texte dans les applis d'origine.
+    // Lecture 0 = coupé, 1 = actif, 3 = indisponible (ligne masquée) ; consigne 0/1, l'état voulu.
+    //
+    // Verrouillage central VEHICLE_LOCK 0x11403800, ici en LECTURE seule (> 0 = verrouillé) :
+    //   SWI133 VPM 0x603000c · SWI68/165 VehicleControlManager.getDoorLock · A9 getZonedVehicleLockState.
+    // -------------------------------------------------------------------------
+
+    private const val VPM_COMFORT_LOCK   = 0x6030005
+    private const val VPM_COMFORT_UNLOCK = 0x6030006
+    private const val VPM_VEHICLE_LOCK   = 0x603000c
+
+    /** Vrai si ce firmware a une commande d'origine pour « Lock when leaving ». */
+    internal fun hasLeaveAutoLockPath(): Boolean = sVpm != null || (FirmwareInfo.isVsmBased() && !isA9Vsm())
+
+    /** « Lock when leaving » par la voie d'origine. -1 si illisible ou sans voie. */
+    internal fun readLeaveAutoLockRaw(): Int = when {
+        isA9Vsm()                 -> -1
+        FirmwareInfo.isVsmBased() -> (callVsm("getLeaveAutoLockMode") as? Int) ?: -1
+        else                      -> getIntPropertyVpm(VPM_COMFORT_LOCK)
+    }
+
+    /** « Unlock when approaching » par la voie d'origine. -1 si illisible ou sans voie. */
+    internal fun readApproachUnlockRaw(): Int = when {
+        isA9Vsm()                 -> -1
+        FirmwareInfo.isVsmBased() -> (callVsm("getApproachUnlockMode") as? Int) ?: -1
+        else                      -> getIntPropertyVpm(VPM_COMFORT_UNLOCK)
+    }
+
+    /** Consigne de l'interrupteur d'origine « Lock when leaving ». Faux si elle n'est pas partie. */
+    internal fun setLeaveAutoLock(on: Boolean): Boolean {
+        val v = if (on) LeaveLock.SET_ON else LeaveLock.SET_OFF
+        val ok = when {
+            isA9Vsm()                 -> false
+            FirmwareInfo.isVsmBased() -> callVsmVoid("setLeaveAutoLockMode", v)
+            else                      -> setIntPropertyVpmRecovery(VPM_COMFORT_LOCK, v)
+        }
+        AppLogger.i(LockProbe.TAG, "setLeaveAutoLock(${if (on) "ON" else "OFF"}) écrit $v → $ok")
+        return ok
+    }
+
+    /** Verrouillage central par la voie d'origine : > 0 = verrouillé. -1 si illisible. */
+    internal fun readCentralLockRaw(): Int = when {
+        isA9Vsm()                 -> (callVsm("getZonedVehicleLockState") as? Int) ?: -1
+        FirmwareInfo.isVsmBased() -> (callVcontrol("getDoorLock") as? Int) ?: -1
+        else                      -> getIntPropertyVpm(VPM_VEHICLE_LOCK)
+    }
+
+    // -------------------------------------------------------------------------
     // Chauffage intelligent de la batterie (« Intelligent battery heating »)
     //
     // Une seule propriété véhicule : DRVNG_PTC_HEAT 0x2140f429, le chauffage PTC de la batterie
@@ -3763,6 +3819,12 @@ object MG4Hardware {
 
         // Sonde lumière/position : relevés des derniers READY et des ouvertures du Diagnostic.
         LightProbe.reports.forEach {
+            sb.appendLine(it)
+            sb.appendLine()
+        }
+
+        // Sonde verrouillage (provisoire) : relevés des ouvertures du Diagnostic, journal de l'essai.
+        LockProbe.reports.forEach {
             sb.appendLine(it)
             sb.appendLine()
         }

@@ -29,6 +29,7 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.BuildConfig
@@ -39,8 +40,10 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.util.DataUsage
 import com.mg4.control.debug.CrashLogger
 import com.mg4.control.hardware.EnergyProbe
+import com.mg4.control.hardware.LockProbe
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.VehicleWriteGate
+import com.mg4.control.model.LeaveLock
 import com.mg4.control.profile.ReadyProfilePolicy
 import com.mg4.control.update.ApkCleanup
 import com.mg4.control.update.UpdateChecker
@@ -55,6 +58,8 @@ import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.TextSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -68,6 +73,9 @@ class SettingsFragment : Fragment() {
 
     private companion object {
         const val STATE_CATEGORY = "settings_category"
+        /** Écran d'essai « Lock when leaving » : délai avant de conclure, et part de la largeur d'écran. */
+        const val LOCK_PROBE_VERDICT_MS = 5_000L
+        const val LOCK_PROBE_WIDTH = 0.82f
     }
 
     override fun onCreateView(
@@ -362,6 +370,11 @@ class SettingsFragment : Fragment() {
 
         // Bouton Diagnostic débloqué via 5 clics sur le logo (cf. MainActivity)
         btnDiagnostic.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
+        // Écran d'essai « Lock when leaving » (provisoire) : caché et débloqué comme le Diagnostic.
+        view.findViewById<MaterialButton>(R.id.btn_lock_probe).apply {
+            visibility = btnDiagnostic.visibility
+            setOnClickListener { showLockProbeDialog() }
+        }
 
         btnUpdate.setOnClickListener {
             btnUpdate.isEnabled = false
@@ -556,6 +569,91 @@ class SettingsFragment : Fragment() {
         }, 3_000)
     }
 
+    // ── Écran d'essai « Lock when leaving » (provisoire) ─────────────────────
+
+    /**
+     * Le réglage d'origine « verrouiller en s'éloignant avec la clé » en direct ([LockProbe]) :
+     * sa valeur relue chaque seconde, la consigne de l'interrupteur d'origine — que l'écran de
+     * réglages masque sur la voiture d'essai — et le journal de ce qui bouge pendant qu'on
+     * s'éloigne (clé, verrouillage, portes). À retirer avec la sonde.
+     */
+    private fun showLockProbeDialog() {
+        val ctx = requireContext()
+        val vue = LayoutInflater.from(ctx).inflate(R.layout.dialog_lock_probe, null)
+        val valeur   = vue.findViewById<TextView>(R.id.lock_probe_value)
+        val sens     = vue.findViewById<TextView>(R.id.lock_probe_meaning)
+        val suivi    = vue.findViewById<TextView>(R.id.lock_probe_context)
+        val verdict  = vue.findViewById<TextView>(R.id.lock_probe_verdict)
+        val journal  = vue.findViewById<TextView>(R.id.lock_probe_journal)
+        val activer  = vue.findViewById<MaterialButton>(R.id.btn_lock_probe_enable)
+        val couper   = vue.findViewById<MaterialButton>(R.id.btn_lock_probe_disable)
+
+        fun afficher(releve: LockProbe.Releve) {
+            valeur.text = releve.leave?.toString() ?: "—"
+            sens.text = LeaveLock.describe(releve.leave)
+            suivi.text = releve.lectures.filter { it.name != LockProbe.LEAVE }
+                .joinToString("\n") { "${it.name} : ${it.value}" }
+            // Le plus récent en haut : rien à faire défiler pour voir ce qui vient de bouger.
+            journal.text = LockProbe.journal().asReversed().joinToString("\n")
+        }
+
+        val dialog = AlertDialog.Builder(ctx).setView(vue).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(ctx.getColor(R.color.dash_card)))
+
+        // Lectures véhicule hors du fil principal ; la relecture s'arrête avec la fenêtre.
+        val portee = viewLifecycleOwner.lifecycleScope
+        val relecture = portee.launch {
+            while (isActive) {
+                afficher(withContext(Dispatchers.IO) { LockProbe.poll() })
+                delay(1_000)
+            }
+        }
+        dialog.setOnDismissListener { relecture.cancel() }
+
+        val commandable = MG4Hardware.hasLeaveAutoLockPath()
+        activer.isEnabled = commandable
+        couper.isEnabled = commandable
+        if (!commandable) {
+            // Couleurs fixes : un bouton désactivé ne se distingue pas sans cela.
+            activer.alpha = 0.4f
+            couper.alpha = 0.4f
+            verdict.setText(R.string.lock_probe_no_path)
+        }
+
+        fun consigne(on: Boolean) {
+            activer.isEnabled = false
+            couper.isEnabled = false
+            portee.launch {
+                if (withContext(Dispatchers.IO) { LockProbe.set(on) }) {
+                    verdict.setText(R.string.lock_probe_waiting)
+                    // Le calculateur met un moment à refléter un réglage : conclure tout de
+                    // suite ferait prendre l'ancienne valeur pour un refus.
+                    delay(LOCK_PROBE_VERDICT_MS)
+                    verdict.text = withContext(Dispatchers.IO) { LockProbe.conclude(on) }.text
+                } else {
+                    verdict.setText(R.string.lock_probe_not_sent)
+                }
+                activer.isEnabled = true
+                couper.isEnabled = true
+            }
+        }
+        activer.setOnClickListener { consigne(true) }
+        couper.setOnClickListener { consigne(false) }
+        vue.findViewById<MaterialButton>(R.id.btn_lock_probe_read).setOnClickListener {
+            portee.launch { afficher(withContext(Dispatchers.IO) { LockProbe.poll(noter = true) }) }
+        }
+        vue.findViewById<MaterialButton>(R.id.btn_lock_probe_clear).setOnClickListener {
+            LockProbe.clearJournal()
+            journal.text = ""
+        }
+        vue.findViewById<MaterialButton>(R.id.btn_lock_probe_close).setOnClickListener { dialog.dismiss() }
+
+        dialog.show()
+        // Deux colonnes : la largeur par défaut d'une boîte de dialogue ne suffit pas.
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * LOCK_PROBE_WIDTH).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
+    }
+
     // ── Dialog Diagnostic ────────────────────────────────────────────────────
 
     private fun showDiagnosticDialog() {
@@ -706,6 +804,8 @@ class SettingsFragment : Fragment() {
             // Sonde lumière/position : un relevé instantané, à prendre en plein jour, au crépuscule
             // et dans un parking couvert. Ceux pris automatiquement au READY sont déjà gardés.
             com.mg4.control.hardware.LightProbe.run("diagnostic")
+            // Sonde verrouillage (provisoire) : un relevé en lecture seule, pour le rapport.
+            LockProbe.run("diagnostic")
             val report = MG4Hardware.buildDiagnosticReport(appVersion)
             withContext(Dispatchers.Main) {
                 if (isAdded) tvReport.text = report
