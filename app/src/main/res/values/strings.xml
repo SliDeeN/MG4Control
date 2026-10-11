@@ -172,14 +172,6 @@
 
     <!-- Diagnostic -->
     <string name="btn_diagnostic">Diagnostic</string>
-    <!-- Écran d'essai de la sonde clé : provisoire, réservé au développeur — non traduit. -->
-    <string name="btn_key_probe" translatable="false">Sonde clé (essai)</string>
-    <string name="key_probe_title" translatable="false">Sonde clé — essai</string>
-    <string name="key_probe_charger" translatable="false">État du chargeur de téléphone sans fil</string>
-    <string name="key_probe_read" translatable="false">Lire maintenant</string>
-    <string name="key_probe_sweep" translatable="false">Balayage complet</string>
-    <string name="key_probe_clear" translatable="false">Effacer le journal</string>
-    <string name="key_probe_hint" translatable="false">Relu chaque seconde. Chaque changement est noté ci-dessous, le plus récent en haut ; le journal part aussi dans le rapport de Diagnostic.</string>
     <string name="diagnostic_unlocked">Diagnostic débloqué</string>
     <string name="diag_title">Diagnostic</string>
     <string name="diag_copy">Copier</string>
