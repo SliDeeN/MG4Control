@@ -739,6 +739,14 @@
       emit('nav', { code, dir: JOYSTICK[code] });
       return;
     }
+    // Popup de confirmation ouvert → le joystick y choisit entre OUI et NON (même condition).
+    const confirm = instances.find((i) => i.ui.overlay && i.ui.overlay.type === 'confirm');
+    if (confirm && JOYSTICK[code] && state.sc.advService && !garage()) {
+      keyRt[code] = { capture: true };
+      confirm.confirmKey(JOYSTICK[code]);
+      emit('nav', { code, dir: JOYSTICK[code], popup: 'confirm' });
+      return;
+    }
     // Pop-up HVAC ouvert → le joystick y règle directement la clim (même condition).
     const hvac = instances.find((i) => i.ui.overlay && i.ui.overlay.type === 'hvac');
     if (hvac && JOYSTICK[code] && state.sc.advService && !garage()) {
@@ -1930,6 +1938,15 @@
       this.startCountdown(() => { const o = this.ui.overlay; this.closeOverlay(); if (o && o.onNo) o.onNo(); });
       this.render();
     }
+    /**
+     * Popup OUI / NON (ProfileConfirmOverlay) au joystick droit : focus de départ sur OUI,
+     * gauche/droite pour changer, clic central pour valider. Chaque déplacement relance le délai.
+     */
+    confirmKey(dir) {
+      const o = this.ui.overlay; if (!o || o.type !== 'confirm') return;
+      if (dir === 'ok') return this.act(o.focus === 1 ? 'cfNo' : 'cfYes');
+      if (dir === 'left' || dir === 'right') { o.focus = dir === 'right' ? 1 : 0; o.left = 8; this.render(); }
+    }
     startCountdown(onEnd) {
       clearInterval(this._cd);
       this._cd = setInterval(() => {
@@ -2010,8 +2027,9 @@
         const p = state.profiles.find((x) => x.id === o.profileId);
         const msg = o.battery ? S('battery_auto_confirm_msg', o.battery.thr, String(o.battery.soc), p ? p.name : '?')
           : S(o.dir === 'ABOVE' ? 'automation_confirm_msg_above' : 'automation_confirm_msg', o.thr, String(o.temp), p ? p.name : '?');
+        const kf = (i) => (state.sc.advService && !garage() && (o.focus || 0) === i ? ' kfocus' : '');
         return '<div class="a-scrim"><div class="confirm" data-hl="confirm"><div class="msg">' + esc(msg) + '</div><div class="yn">' +
-          '<button class="b green" data-a="cfYes">' + esc(S('automation_confirm_yes')) + '</button><button class="b danger" data-a="cfNo">' + esc(S('automation_confirm_no')) + '</button></div>' +
+          '<button class="b green' + kf(0) + '" data-a="cfYes">' + esc(S('automation_confirm_yes')) + '</button><button class="b danger' + kf(1) + '" data-a="cfNo">' + esc(S('automation_confirm_no')) + '</button></div>' +
           '<div class="cd" data-cd>' + esc(S('overlay_countdown', o.left)) + '</div></div></div>';
       }
       return '';
@@ -2831,6 +2849,7 @@
     const pl = { single: L('appui court', 'short press'), long: L('appui long', 'long press'), double: L('double appui', 'double press') };
     if (t === 'capture') return L('Touche enregistrée : ', 'Key recorded: ') + nm + ' (' + d.code + ')';
     if (t === 'nav' && d.popup === 'hvac') return nm + L(' → réglage direct dans le pop-up HVAC (joystick)', ' → direct adjustment in the HVAC pop-up (joystick)');
+    if (t === 'nav' && d.popup === 'confirm') return nm + L(' → choix OUI / NON dans le popup de confirmation (joystick)', ' → YES / NO choice in the confirmation popup (joystick)');
     if (t === 'nav') return nm + L(' → navigation dans le popup de profils (joystick)', ' → navigating the profile popup (joystick)');
     if (t === 'fire') {
       if (d.path === 'launcher') return nm + ', ' + pl[d.press] + (garage() ? L(' → Mode Garage : touche rendue au launcher', ' → Garage mode: key returned to the launcher') : L(' → transmise au launcher d\'origine (non interceptée)', ' → passed to the stock launcher (not intercepted)'));

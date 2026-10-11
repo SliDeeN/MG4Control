@@ -335,7 +335,7 @@
       <p data-l="en">Wheel On/Off and seats on 3 levels, on equipped trims.</p>
       <div class="fw-tags" data-fw="SWI133,SWI68,SWI165"></div>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">The card only shows on equipped trims: SWI69 and SWI131 (Standard/SE versions) as well as SWI132 don't display it.</p>
+        <p data-l="en">The card only shows on equipped trims: SWI69 and SWI131 (Standard/SE versions) as well as SWI132 don't display it. A seat shortcut moves one step per press, in the car's own order: Off, 3, 2, 1, Off. Choosing a level on screen reaches it without running a full cycle.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="clim" data-go="dashboard:2">
@@ -349,7 +349,7 @@
       <h3><span data-l="en">Controls and recirculation</span></h3>
       <p data-l="en">Power, A/C, AUTO and recirculation, kept in sync with the stock screen.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">While the screen is shown, the app follows changes made on the stock screen every 2 s. An unreadable state greys the button out rather than lying.</p>
+        <p data-l="en">While the screen is shown, the app follows changes made on the stock screen every 2 s. An unreadable state greys the button out rather than lying. In AUTO, the car sets the fan speed and the air direction by itself: the level shows “AUTO”, and setting the fan speed by hand leaves that mode.</p>
       </details>
     </div>
     <div class="pt" id="f-airflow" data-hl-key="airflow" data-go="dashboard:2">
@@ -497,7 +497,7 @@
       <h3><span data-l="en">Joystick navigation</span></h3>
       <p data-l="en">The steering wheel's right joystick moves through the window, the centre confirms.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Needs the accessibility service. Focus ring with no wrap-around at the edges; left/right on the slider adjust brightness in 5% steps. The joystick then changes neither volume nor track. Try it with ▲▼◀▶● in the virtual vehicle.</p>
+        <p data-l="en">Needs the accessibility service. Focus ring with no wrap-around at the edges; left/right on the slider adjust brightness in 5% steps. The joystick then changes neither volume nor track. The automation confirmation popup (YES / NO) works the same way: YES is preselected, left/right switch buttons, the centre confirms. Try it with ▲▼◀▶● in the virtual vehicle.</p>
       </details>
     </div>
   </div>
@@ -653,11 +653,11 @@
       <h3><span data-l="en">Profile by temperature</span></h3>
       <p data-l="en">Above or below a threshold, a profile applies, directly or after confirmation.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Threshold from 0 to 60 °C, inclusive. YES / NO popup for 8 s: NO or timeout falls back to the Bluetooth or default profile. Unreadable temperature or deleted profile: the automation is skipped.</p>
+        <p data-l="en">Threshold from 0 to 60 °C, inclusive. YES / NO popup for 8 s, by touch or with the steering wheel's right joystick: NO or timeout falls back to the Bluetooth or default profile. Unreadable temperature or deleted profile: the automation is skipped.</p>
       </details>
     </div>
-    <div class="pt" data-hl-key="auto-clim" data-go="automation">
-      <h3><span data-l="en">Climate by temperature</span></h3>
+    <div class="pt is-new" id="f-acauto" data-hl-key="auto-clim" data-go="automation">
+      <h3><span data-l="en">Climate by temperature</span><span class="badge-new"><span data-l="en">New</span> · 2.6.8</span></h3>
       <p data-l="en">Two rules side by side, hot and cold, are set with sliders and switch the climate on with your settings.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
         <p data-l="en">By default: from 28 °C outside → 20 °C, up to 5 °C outside → 24 °C. Each rule has its own switch and sliders: outside threshold (−20 to 60 °C), setpoint and fan level within the car's own limits. The fan is automatic or manual; front and rear defrost and recirculation (unchanged, inner, outside or auto) are picked with buttons. The cold threshold always stays below the hot one. If the last applied profile carries its own climate settings, those win.</p>
@@ -835,7 +835,7 @@
       <h3><span data-l="en">Interface and text size</span></h3>
       <p data-l="en">Start screen, Auto / Dark / Light theme and Standard, Large or Extra-large text.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">In Auto, the app follows the MG launcher's day/night mode. Text size (+12.5% or +25%) applies to the whole app, popups included, and Turkish joins the languages. Try it in the mockup.</p>
+        <p data-l="en">In Auto, the app follows the MG launcher's day/night mode. Floating windows (profile picker, confirmations, update alert, HVAC pop-up) take the app's theme. Text size (+12.5% or +25%) applies to the whole app, popups included, and Turkish joins the languages. Try it in the mockup.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-topbar" data-hl-key="topbar" data-go="dashboard:0">
@@ -1183,7 +1183,7 @@
 <div class="dock" aria-label="Virtual vehicle"></div>
 
 <script src="../assets/js/strings.js?v=9eb58e42"></script>
-<script src="../assets/js/sim.js?v=1d14e10d"></script>
+<script src="../assets/js/sim.js?v=fc4d4695"></script>
 <script src="../assets/js/site.js?v=aa5935a3"></script>
 <script src="../assets/js/explorer.js?v=ffc271c4"></script>
 </body>
