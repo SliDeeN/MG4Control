@@ -131,7 +131,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.8</span>
-        <b><span data-l="fr">13 nouveautés dans cette version</span><span data-l="en">13 new things in this release</span></b>
+        <b><span data-l="fr">14 nouveautés dans cette version</span><span data-l="en">14 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -147,6 +147,7 @@
         <a href="#f-hvacpopup" data-feature="f-hvacpopup"><span data-l="fr">🌡️ Pop-up HVAC au joystick</span><span data-l="en">🌡️ HVAC pop-up on the joystick</span></a>
         <a href="#f-profilecycle" data-feature="f-profilecycle"><span data-l="fr">🔁 Cycle de profils sur un bouton</span><span data-l="en">🔁 Profile cycle on a button</span></a>
         <a href="#f-readydefault" data-feature="f-readydefault"><span data-l="fr">↩️ Retour au profil par défaut au READY</span><span data-l="en">↩️ Back to the default profile at READY</span></a>
+        <a href="#f-profilecat" data-feature="f-profilecat"><span data-l="fr">🧩 Profils : catégories à la carte</span><span data-l="en">🧩 Profiles: pick your categories</span></a>
         <a href="#f-sc-new" data-feature="f-sc-new"><span data-l="fr">⭐ Trois nouvelles actions de raccourci</span><span data-l="en">⭐ Three new shortcut actions</span></a>
       </div>
     </div>
@@ -419,8 +420,8 @@
       <p data-l="fr">Jusqu'à 5 profils, avec un résumé, un profil par défaut et l'application immédiate.</p>
       <p data-l="en">Up to 5 profiles, with a summary, a default profile and instant apply.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Chaque carte affiche le nom, un résumé (mode · régénération · ADAS) et le badge <b>PAR DÉFAUT</b>, avec Appliquer maintenant, Modifier, Définir par défaut et Supprimer (avec confirmation).</p>
-        <p data-l="en">Each card shows the name, a summary (mode · regeneration · ADAS) and the <b>DEFAULT</b> badge, with Apply now, Edit, Set default and Delete (with confirmation).</p>
+        <p data-l="fr">Chaque carte affiche le nom, un résumé (mode · régénération · ADAS) et le badge <b>PAR DÉFAUT</b>, avec Appliquer maintenant, Modifier, Définir par défaut et Supprimer (avec confirmation). Le résumé ne cite que ce que le profil applique : une catégorie coupée n'y figure pas.</p>
+        <p data-l="en">Each card shows the name, a summary (mode · regeneration · ADAS) and the <b>DEFAULT</b> badge, with Apply now, Edit, Set default and Delete (with confirmation). The summary only lists what the profile applies: a category that is switched off is left out.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="rail" data-go="profileEdit:0">
@@ -432,6 +433,17 @@
         <p data-l="en">The profile name and “default profile” stay visible at the top. Cancel / Save at the bottom; a name is required.</p>
         <p data-l="fr">Un profil ne force rien d'inattendu : les réglages ajoutés au fil des versions (ESC, somnolence, chauffage…) valent « non configuré » dans les anciens profils et ne sont pas écrits. Un vieux profil ne désactive donc jamais l'ESC par omission.</p>
         <p data-l="en">A profile never forces the unexpected: settings added over time (ESC, drowsiness, heating…) count as “not configured” in older profiles and are not written. So an old profile never disables ESC by omission.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-profilecat" data-hl-key="p-cat" data-go="profileEdit:0">
+      <h3><span data-l="fr">Catégories à la carte</span><span data-l="en">Pick your categories</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.8</span></h3>
+      <p data-l="fr">Un interrupteur par onglet : coupé, le profil ne touche pas à cette catégorie.</p>
+      <p data-l="en">One switch per tab: switched off, the profile leaves that category alone.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">En tête de chaque onglet de l'éditeur (Conduite, Sécurité, Confort), un interrupteur « Appliquer les réglages… » décide si le profil s'en occupe. Coupé, l'onglet se replie et le profil n'y écrit rien : la voiture garde ses réglages en place. Un profil peut ainsi ne régler que la sécurité, ou que le confort. Les réglages de l'onglet sont conservés et reviennent quand on le réactive ; le rail affiche « OFF » sous une catégorie coupée.</p>
+        <p data-l="en">At the top of each editor tab (Driving, Safety, Comfort), an “Apply … settings” switch decides whether the profile handles it. Switched off, the tab folds away and the profile writes nothing there: the car keeps its current settings. A profile can then cover safety only, or comfort only. The tab's settings are kept and come back when you switch it on again; the rail shows “OFF” under a category that is switched off.</p>
+        <p data-l="fr">Les profils déjà créés gardent leurs trois catégories actives, et un nouveau profil s'ouvre avec les trois sur ON. Il en faut au moins une pour enregistrer. L'association Bluetooth reste accessible même quand le Confort est coupé.</p>
+        <p data-l="en">Existing profiles keep all three categories on, and a new profile opens with all three switched on. At least one is needed to save. Bluetooth pairing stays available even when Comfort is switched off.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="p-heat" data-go="profileEdit:2">

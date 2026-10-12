@@ -88,6 +88,15 @@ object ProfileApplier {
     private fun applyLocked(profile: DrivingProfile, autoStart: Boolean, onComplete: ((Boolean) -> Unit)?) {
             var ok = true
 
+            // Catégories coupées dans le profil (interrupteur général de l'éditeur) : rien n'en
+            // est écrit, la voiture garde ses réglages. Un profil antérieur à la fonction les a
+            // toutes actives.
+            val conduite = profile.appliesDrive
+            val securite = profile.appliesSafety
+            if (!conduite) AppLogger.i(TAG, "  Conduite non prise en compte par ce profil — inchangée")
+            if (!securite) AppLogger.i(TAG, "  Sécurité non prise en compte par ce profil — inchangée")
+            if (!profile.appliesComfort) AppLogger.i(TAG, "  Confort non pris en compte par ce profil — inchangé")
+
             // Économie d'énergie EN PREMIER (issue #107). Tant qu'elle est active, le véhicule
             // verrouille les niveaux de récupération 1 et 2 (il le signale par
             // REGENERATIVE_LEVEL_DISB, 0x2140a19c). Écrite en dernier comme avant, elle laissait la
@@ -95,33 +104,35 @@ object ProfileApplier {
             // Elle passe par le service ADAS (Katman4) ; s'il n'est pas encore prêt — démarrage à
             // froid —, elle est écrite plus loin dans le bloc ADAS, suivie d'une réécriture de la
             // récupération, voir [applyEnergySavingLate].
-            val economieEnTete = MG4Hardware.isKatman4Ready()
+            val economieEnTete = conduite && MG4Hardware.isKatman4Ready()
             if (economieEnTete) {
                 val esOk = MG4Hardware.setEnergySavingMode(profile.energySaving)
                 AppLogger.i(TAG, "  EnergySaving=${profile.energySaving} (en tête) → $esOk")
             }
 
-            // Mode de conduite (rapide — binder call)
-            val dmOk = MG4Hardware.setDriveMode(profile.driveMode)
-            AppLogger.i(TAG, "  DriveMode=${profile.driveMode.label} → $dmOk")
-            ok = ok && dmOk
+            if (conduite) {
+                // Mode de conduite (rapide — binder call)
+                val dmOk = MG4Hardware.setDriveMode(profile.driveMode)
+                AppLogger.i(TAG, "  DriveMode=${profile.driveMode.label} → $dmOk")
+                ok = ok && dmOk
 
-            // Niveau de régénération (rapide — binder call)
-            val rlOk = MG4Hardware.setRegenLevel(profile.regenLevel)
-            AppLogger.i(TAG, "  RegenLevel=${profile.regenLevel.label} → $rlOk")
-            ok = ok && rlOk
+                // Niveau de régénération (rapide — binder call)
+                val rlOk = MG4Hardware.setRegenLevel(profile.regenLevel)
+                AppLogger.i(TAG, "  RegenLevel=${profile.regenLevel.label} → $rlOk")
+                ok = ok && rlOk
+            }
 
             // Volant + Sièges chauffants — uniquement SWI133 et SWI68 (SWI69/SWI131 n'ont pas ces équipements)
             if (FirmwareInfo.hasHeatFeatures()) {
                 // Chauffages décochés dans le profil = on NE TOUCHE À RIEN (ni allumer, ni éteindre),
                 // sinon appliquer un profil écraserait un réglage que le conducteur vient de faire.
-                if (profile.appliesSteeringHeat) {
+                if (profile.writesSteeringHeat) {
                     val shOk = MG4Hardware.setSteeringHeat(profile.steeringHeat)
                     AppLogger.i(TAG, "  SteeringHeat=${profile.steeringHeat} → $shOk")
                 } else {
                     AppLogger.i(TAG, "  SteeringHeat non pris en compte par ce profil — inchangé")
                 }
-                if (profile.appliesSeatHeat) {
+                if (profile.writesSeatHeat) {
                     val slOk = MG4Hardware.setSeatHeatLeft(profile.seatHeatLeft)
                     AppLogger.i(TAG, "  SeatHeatLeft=${profile.seatHeatLeft} → $slOk")
                     val srOk = MG4Hardware.setSeatHeatRight(profile.seatHeatRight)
@@ -133,7 +144,7 @@ object ProfileApplier {
 
             // Mode Personnalisé — les trois réglages n'ont d'effet que dans ce mode, les
             // écrire ailleurs serait au mieux sans effet, au pire refusé par le véhicule.
-            if (profile.driveMode == DriveMode.CUSTOM) {
+            if (conduite && profile.driveMode == DriveMode.CUSTOM) {
                 profile.customPower?.let {
                     AppLogger.i(TAG, "  Puissance personnalisée=$it → ${MG4Hardware.setCustomPower(it)}")
                 }
@@ -148,7 +159,7 @@ object ProfileApplier {
             // Climatisation — facultative, décochée par défaut. Enchaîne des bascules qui
             // prennent plusieurs secondes, mais on est déjà sur le dispatcher IO sous verrou :
             // rien d'autre n'écrit sur le véhicule pendant ce temps.
-            if (profile.hvacEnabled && MG4Hardware.hasClimateControl()) {
+            if (profile.writesClimate && MG4Hardware.hasClimateControl()) {
                 val climOk = MG4Hardware.applyProfileClimate(
                     power        = profile.hvacPower,
                     ac           = profile.hvacAc,
@@ -167,130 +178,138 @@ object ProfileApplier {
             // ADAS (Katman4) — appliqué dès que le service est prêt
             MG4Hardware.whenKatman4Ready {
                 AppLogger.i(TAG, "  Application ADAS pour profil '${profile.name}'")
-                if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132) {
-                    // ── SWI132 ──────────────────────────────────────────────────────────
-                    //
-                    // SWI132 utilise CarVehicleSettingClient pour l'ADAS (ACC/TJA)
-                    // mais le binder direct IVehicleSettingService pour les alertes sonores.
-                    // → setOverspeedAlarm() et setSpeedLimitTone() envoient les TX binder corrects
-                    //   (0x128 et 0x12a) sans passer par VehicleSettingManager.
+                val gen = FirmwareInfo.getGeneration()
 
-                    // TSR (SLIF) via VSM — appliqué en premier comme SWI133
-                    val tsrOk = MG4Hardware.setTsrMode(profile.tsrEnabled)
-                    AppLogger.i(TAG, "  TsrEnabled=${profile.tsrEnabled} → $tsrOk")
+                // Aides à la conduite et alertes — page Sécurité.
+                if (securite) applyDrivingAids(profile)
 
-                    // Alertes sonores via VSM
-                    // Le firmware SWI132 remet overspeed et speedTone à ON ~400ms après l'activation
-                    // du TSR (même comportement que SWI133). setTsrMode() retourne immédiatement sans
-                    // attendre cette réinitialisation. Si on écrit les alertes trop tôt, le firmware
-                    // les écrase ensuite. On attend 450ms pour laisser le firmware terminer sa
-                    // réinitialisation avant d'appliquer les valeurs du profil.
-                    if (profile.tsrEnabled) {
-                        try { Thread.sleep(450) } catch (_: InterruptedException) {}
-                    }
-                    // Délai de 150ms entre les deux écritures : le middleware traite les propriétés
-                    // dans une file avec debounce — deux écritures trop rapides font que seule la
-                    // dernière est validée. 150ms garantit que la première est traitée.
-                    val oaOk = MG4Hardware.setOverspeedAlarm(profile.overspeedAlarm)
-                    AppLogger.i(TAG, "  OverspeedAlarm=${profile.overspeedAlarm} → $oaOk")
-                    try { Thread.sleep(150) } catch (_: InterruptedException) {}
-                    val stOk = MG4Hardware.setSpeedLimitTone(profile.speedLimitTone)
-                    AppLogger.i(TAG, "  SpeedLimitTone=${profile.speedLimitTone} → $stOk")
+                // Économie d'énergie — page Conduite, sur tout firmware connu. Elle passe par le
+                // même service que les aides, d'où sa place ici quand il n'était pas prêt.
+                if (conduite && gen != FirmwareInfo.Gen.UNKNOWN) applyEnergySavingLate(profile, economieEnTete)
 
-                    // Mode ACC/TJA via CarVehicleSettingClient (setAccTjaState).
-                    // SHWA (ancien codage limiteur) n'est plus un mode ACC/TJA → ramené à Off ;
-                    // le limiteur est géré séparément via setSasMode ci-dessous.
-                    val cruiseMode = if (profile.swi68AdasMode == Swi68Mode.SHWA) Swi68Mode.OFF else profile.swi68AdasMode
-                    val adOk = MG4Hardware.setAccTjaMode(cruiseMode)
-                    AppLogger.i(TAG, "  AdasMode=0x${cruiseMode.toString(16)} → $adOk")
-                    // Limiteur de vitesse (SAS) — appliqué uniquement si le profil l'a configuré.
-                    // Profils créés avant cette fonction (swi132LimiterConfigured=false) → non touché.
-                    if (profile.swi132LimiterConfigured) {
-                        MG4Hardware.setSpeedLimiterMode(profile.swi132SasMode)
-                        AppLogger.i(TAG, "  SasMode=${profile.swi132SasMode} (0=Off 2=Manuel 3=Intelligent)")
-                    }
-                    applyAeb(profile.aebEnabled, profile.aebMode, profile.aebSensitivity)
-                    applySafety(profile)
-
-                    // Économie d'énergie — via CarVehicleSettingClient (setEnduranceMode), même path que SWI69
-                    applyEnergySavingLate(profile, economieEnTete)
-
-                } else if (FirmwareInfo.isVsmBased()) {
-                    // ── SWI68/SWI69/SWI131/SWI165 ──────────────────────────────────────
-                    //
-                    // Le TSR est appliqué EN PREMIER : setTsrMode() bloque 400 ms en interne
-                    // et restaure soundWarning depuis les préférences. On l'appelle en premier
-                    // pour pouvoir ensuite écraser l'alerte sonore avec la valeur du profil.
-                    val tsrOk = MG4Hardware.setTsrMode(profile.tsrEnabled)
-                    AppLogger.i(TAG, "  TsrEnabled=${profile.tsrEnabled} → $tsrOk")
-
-                    // Alerte sonore — appliquée APRÈS le TSR pour écraser sa restauration interne
-                    val swOk = MG4Hardware.setSoundWarning(profile.soundWarning)
-                    AppLogger.i(TAG, "  SoundWarning=${profile.soundWarning} → $swOk")
-
-                    // Mode ACC/TJA — SHWA (ancien codage limiteur) ramené à Off (limiteur géré à part)
-                    val cruiseMode = if (profile.swi68AdasMode == Swi68Mode.SHWA) Swi68Mode.OFF else profile.swi68AdasMode
-                    val adOk = MG4Hardware.setAccTjaMode(cruiseMode)
-                    AppLogger.i(TAG, "  AdasMode=0x${cruiseMode.toString(16)} → $adOk")
-                    // Limiteur de vitesse — appliqué uniquement si le profil l'a configuré.
-                    // (SWI69/SWI131 → setSasMode ; SWI68/SWI165 → setSpeedAsstMode, dispatch interne)
-                    if (profile.swi132LimiterConfigured) {
-                        MG4Hardware.setSpeedLimiterMode(profile.swi132SasMode)
-                        AppLogger.i(TAG, "  LimiterMode=${profile.swi132SasMode} (0=Off 2=Manuel 3=Intelligent)")
-                    }
-                    applyAeb(profile.aebEnabled, profile.aebMode, profile.aebSensitivity)
-                    applySafety(profile)
-
-                    // Économie d'énergie — firmwares VSM hors SWI132 (SWI68/SWI69/SWI131/SWI165)
-                    applyEnergySavingLate(profile, economieEnTete)
-                } else {
-                    // ── SWI133/UNKNOWN ──────────────────────────────────────────────────
-                    //
-                    // Même logique : activer le TSR ré-active OVERSPEED_ALARM et SPEED_LIMIT_TONE.
-                    // setTsrMode() restaure depuis les préférences — on l'appelle en premier
-                    // puis on écrase avec les valeurs du profil.
-                    if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133) {
-                        val tsrOk = MG4Hardware.setTsrMode(profile.tsrEnabled)
-                        AppLogger.i(TAG, "  TsrEnabled=${profile.tsrEnabled} → $tsrOk")
-                    }
-
-                    // Alertes vitesse — appliquées APRÈS le TSR
-                    // Délai de 150ms entre les deux écritures : le middleware véhicule (VPM) traite
-                    // les propriétés dans une file avec debounce — deux écritures trop rapides font
-                    // que seule la dernière est validée. 150ms garantit que la première est traitée.
-                    val oaOk = MG4Hardware.setOverspeedAlarm(profile.overspeedAlarm)
-                    AppLogger.i(TAG, "  OverspeedAlarm=${profile.overspeedAlarm} → $oaOk")
-                    try { Thread.sleep(150) } catch (_: InterruptedException) {}
-                    val stOk = MG4Hardware.setSpeedLimitTone(profile.speedLimitTone)
-                    AppLogger.i(TAG, "  SpeedLimitTone=${profile.speedLimitTone} → $stOk")
-
-                    val adOk = MG4Hardware.setMixedIntelligentDrive(profile.adasMode)
-                    AppLogger.i(TAG, "  AdasMode=${profile.adasMode} → $adOk")
-                    applyAeb(profile.aebEnabled, profile.aebMode, profile.aebSensitivity)
-                    applySafety(profile)
-
-                    // Économie d'énergie — SWI133 via VPM
-                    if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133) {
-                        applyEnergySavingLate(profile, economieEnTete)
-                    }
+                // ELK — page Sécurité, commun à tous les firmwares connus
+                if (securite) {
+                    applyElk(profile.elkMode, profile.elkSensitivity, profile.lasAudibleWarning, profile.lasVibrationReminder)
                 }
-                // ELK — commun à tous les firmwares connus
-                applyElk(profile.elkMode, profile.elkSensitivity, profile.lasAudibleWarning, profile.lasVibrationReminder)
 
-                // Feux de route automatiques — ici et non dans la première partie : sur SWI133
-                // et SWI68/165 ils passent par les services (VPM / VSM) que ce bloc attend.
+                // Feux de route automatiques — page Confort. Ici et non dans la première partie :
+                // sur SWI133 et SWI68/165 ils passent par les services (VPM / VSM) que ce bloc attend.
                 applyAutoHighBeam(profile)
 
                 // ── Passe de vérification ADAS (auto-démarrage uniquement) ────────────
                 // Au démarrage à froid, le firmware peut ré-asserter certains réglages APRÈS
                 // notre écriture (alertes survitesse/ton ~400ms après le SLIF/TSR ; ELK remis à
                 // sa valeur par défaut). On relit après stabilisation et on réécrit en cas d'écart.
-                // Concerne SWI132/SWI133 (2 alertes distinctes + ELK).
-                val gen = FirmwareInfo.getGeneration()
-                if (autoStart && (gen == FirmwareInfo.Gen.SWI133 || gen == FirmwareInfo.Gen.SWI132)) {
+                // Concerne SWI132/SWI133 (2 alertes distinctes + ELK). Sans objet si le profil
+                // n'applique pas la Sécurité : il n'a rien écrit qu'il faille défendre.
+                if (securite && autoStart && (gen == FirmwareInfo.Gen.SWI133 || gen == FirmwareInfo.Gen.SWI132)) {
                     verifyAdasWithRetry(profile)
                 }
             }
+    }
+
+    /**
+     * Aides à la conduite et alertes de la page Sécurité, dans l'ordre que chaque firmware
+     * impose (TSR d'abord, puis les alertes qu'il réinitialise, puis ADAS, AEB, ESC/somnolence).
+     * L'ELK, commun, est appliqué par l'appelant.
+     */
+    private fun applyDrivingAids(profile: DrivingProfile) {
+        if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132) {
+            // ── SWI132 ──────────────────────────────────────────────────────────
+            //
+            // SWI132 utilise CarVehicleSettingClient pour l'ADAS (ACC/TJA)
+            // mais le binder direct IVehicleSettingService pour les alertes sonores.
+            // → setOverspeedAlarm() et setSpeedLimitTone() envoient les TX binder corrects
+            //   (0x128 et 0x12a) sans passer par VehicleSettingManager.
+
+            // TSR (SLIF) via VSM — appliqué en premier comme SWI133
+            val tsrOk = MG4Hardware.setTsrMode(profile.tsrEnabled)
+            AppLogger.i(TAG, "  TsrEnabled=${profile.tsrEnabled} → $tsrOk")
+
+            // Alertes sonores via VSM
+            // Le firmware SWI132 remet overspeed et speedTone à ON ~400ms après l'activation
+            // du TSR (même comportement que SWI133). setTsrMode() retourne immédiatement sans
+            // attendre cette réinitialisation. Si on écrit les alertes trop tôt, le firmware
+            // les écrase ensuite. On attend 450ms pour laisser le firmware terminer sa
+            // réinitialisation avant d'appliquer les valeurs du profil.
+            if (profile.tsrEnabled) {
+                try { Thread.sleep(450) } catch (_: InterruptedException) {}
+            }
+            // Délai de 150ms entre les deux écritures : le middleware traite les propriétés
+            // dans une file avec debounce — deux écritures trop rapides font que seule la
+            // dernière est validée. 150ms garantit que la première est traitée.
+            val oaOk = MG4Hardware.setOverspeedAlarm(profile.overspeedAlarm)
+            AppLogger.i(TAG, "  OverspeedAlarm=${profile.overspeedAlarm} → $oaOk")
+            try { Thread.sleep(150) } catch (_: InterruptedException) {}
+            val stOk = MG4Hardware.setSpeedLimitTone(profile.speedLimitTone)
+            AppLogger.i(TAG, "  SpeedLimitTone=${profile.speedLimitTone} → $stOk")
+
+            // Mode ACC/TJA via CarVehicleSettingClient (setAccTjaState).
+            // SHWA (ancien codage limiteur) n'est plus un mode ACC/TJA → ramené à Off ;
+            // le limiteur est géré séparément via setSasMode ci-dessous.
+            val cruiseMode = if (profile.swi68AdasMode == Swi68Mode.SHWA) Swi68Mode.OFF else profile.swi68AdasMode
+            val adOk = MG4Hardware.setAccTjaMode(cruiseMode)
+            AppLogger.i(TAG, "  AdasMode=0x${cruiseMode.toString(16)} → $adOk")
+            // Limiteur de vitesse (SAS) — appliqué uniquement si le profil l'a configuré.
+            // Profils créés avant cette fonction (swi132LimiterConfigured=false) → non touché.
+            if (profile.swi132LimiterConfigured) {
+                MG4Hardware.setSpeedLimiterMode(profile.swi132SasMode)
+                AppLogger.i(TAG, "  SasMode=${profile.swi132SasMode} (0=Off 2=Manuel 3=Intelligent)")
+            }
+            applyAeb(profile.aebEnabled, profile.aebMode, profile.aebSensitivity)
+            applySafety(profile)
+
+        } else if (FirmwareInfo.isVsmBased()) {
+            // ── SWI68/SWI69/SWI131/SWI165 ──────────────────────────────────────
+            //
+            // Le TSR est appliqué EN PREMIER : setTsrMode() bloque 400 ms en interne
+            // et restaure soundWarning depuis les préférences. On l'appelle en premier
+            // pour pouvoir ensuite écraser l'alerte sonore avec la valeur du profil.
+            val tsrOk = MG4Hardware.setTsrMode(profile.tsrEnabled)
+            AppLogger.i(TAG, "  TsrEnabled=${profile.tsrEnabled} → $tsrOk")
+
+            // Alerte sonore — appliquée APRÈS le TSR pour écraser sa restauration interne
+            val swOk = MG4Hardware.setSoundWarning(profile.soundWarning)
+            AppLogger.i(TAG, "  SoundWarning=${profile.soundWarning} → $swOk")
+
+            // Mode ACC/TJA — SHWA (ancien codage limiteur) ramené à Off (limiteur géré à part)
+            val cruiseMode = if (profile.swi68AdasMode == Swi68Mode.SHWA) Swi68Mode.OFF else profile.swi68AdasMode
+            val adOk = MG4Hardware.setAccTjaMode(cruiseMode)
+            AppLogger.i(TAG, "  AdasMode=0x${cruiseMode.toString(16)} → $adOk")
+            // Limiteur de vitesse — appliqué uniquement si le profil l'a configuré.
+            // (SWI69/SWI131 → setSasMode ; SWI68/SWI165 → setSpeedAsstMode, dispatch interne)
+            if (profile.swi132LimiterConfigured) {
+                MG4Hardware.setSpeedLimiterMode(profile.swi132SasMode)
+                AppLogger.i(TAG, "  LimiterMode=${profile.swi132SasMode} (0=Off 2=Manuel 3=Intelligent)")
+            }
+            applyAeb(profile.aebEnabled, profile.aebMode, profile.aebSensitivity)
+            applySafety(profile)
+        } else {
+            // ── SWI133/UNKNOWN ──────────────────────────────────────────────────
+            //
+            // Même logique : activer le TSR ré-active OVERSPEED_ALARM et SPEED_LIMIT_TONE.
+            // setTsrMode() restaure depuis les préférences — on l'appelle en premier
+            // puis on écrase avec les valeurs du profil.
+            if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133) {
+                val tsrOk = MG4Hardware.setTsrMode(profile.tsrEnabled)
+                AppLogger.i(TAG, "  TsrEnabled=${profile.tsrEnabled} → $tsrOk")
+            }
+
+            // Alertes vitesse — appliquées APRÈS le TSR
+            // Délai de 150ms entre les deux écritures : le middleware véhicule (VPM) traite
+            // les propriétés dans une file avec debounce — deux écritures trop rapides font
+            // que seule la dernière est validée. 150ms garantit que la première est traitée.
+            val oaOk = MG4Hardware.setOverspeedAlarm(profile.overspeedAlarm)
+            AppLogger.i(TAG, "  OverspeedAlarm=${profile.overspeedAlarm} → $oaOk")
+            try { Thread.sleep(150) } catch (_: InterruptedException) {}
+            val stOk = MG4Hardware.setSpeedLimitTone(profile.speedLimitTone)
+            AppLogger.i(TAG, "  SpeedLimitTone=${profile.speedLimitTone} → $stOk")
+
+            val adOk = MG4Hardware.setMixedIntelligentDrive(profile.adasMode)
+            AppLogger.i(TAG, "  AdasMode=${profile.adasMode} → $adOk")
+            applyAeb(profile.aebEnabled, profile.aebMode, profile.aebSensitivity)
+            applySafety(profile)
+        }
     }
 
     /**
@@ -436,7 +455,7 @@ object ProfileApplier {
      * `null` = profil qui ne s'est pas prononcé, y compris tout profil antérieur à la fonction.
      */
     private fun applyAutoHighBeam(profile: DrivingProfile) {
-        val voulu = profile.autoHighBeam
+        val voulu = profile.writesAutoHighBeam
         if (voulu == null) {
             AppLogger.i(TAG, "  AutoHighBeam non pris en compte par ce profil — inchangé")
             return

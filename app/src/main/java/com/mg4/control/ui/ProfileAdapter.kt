@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.mg4.control.R
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.DrivingProfile
+import com.mg4.control.model.ProfileSections
 import com.mg4.control.util.FirmwareInfo
 
 class ProfileAdapter(
@@ -57,13 +58,13 @@ class ProfileAdapter(
         }
 
         holder.tvName.text    = profile.name
-        holder.tvSummary.text = buildString {
-            append(": ")
-            append(profile.driveMode.label)
-            append(" · ")
-            append(profile.regenLevel.label)
-            if (adasLabel.isNotEmpty()) { append(" · "); append(adasLabel) }
-        }
+        // Seulement ce que le profil applique : une catégorie coupée n'est pas annoncée.
+        holder.tvSummary.text = ": " + ProfileSections.summary(
+            profile, adasLabel,
+            context.getString(R.string.profile_cat_drive),
+            context.getString(R.string.profile_cat_safety),
+            context.getString(R.string.profile_cat_comfort)
+        )
 
         holder.tvDefault.visibility = if (isDefault) View.VISIBLE else View.GONE
         holder.tvName.setTextColor(

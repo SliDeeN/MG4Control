@@ -412,6 +412,13 @@
     <string name="profile_cat_drive">Fahren</string>
     <string name="profile_cat_safety">Sicherheit</string>
     <string name="profile_cat_comfort">Komfort</string>
+    <string name="profile_cat_apply_drive">Fahreinstellungen anwenden</string>
+    <string name="profile_cat_apply_safety">Sicherheitseinstellungen anwenden</string>
+    <string name="profile_cat_apply_comfort">Komforteinstellungen anwenden</string>
+    <string name="profile_cat_off_drive">Dieses Profil ändert die Fahreinstellungen nicht. Das Fahrzeug behält die aktuellen bei.</string>
+    <string name="profile_cat_off_safety">Dieses Profil ändert die Sicherheitseinstellungen nicht. Das Fahrzeug behält die aktuellen bei.</string>
+    <string name="profile_cat_off_comfort">Dieses Profil ändert die Komforteinstellungen nicht. Das Fahrzeug behält die aktuellen bei.</string>
+    <string name="profile_cat_none_enabled">Mindestens eine Kategorie aktivieren, um das Profil zu speichern.</string>
     <string name="climate_seat_heat">Sitzheizung</string>
 
     <!-- Reglages : categories -->

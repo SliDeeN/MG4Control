@@ -196,6 +196,10 @@
 }
 .a-rail .a-tab.sub { height: 48px; margin-left: 18px; font-size: calc(13px * var(--ts, 1)); }
 .a-rail .a-tab.on { background: var(--dash-accent-dim); color: var(--dash-accent); border-color: var(--dash-accent); }
+/* Catégorie de profil coupée : « OFF » sous le nom, bouton atténué. */
+.a-rail .a-tab.off { opacity: .55; }
+.a-rail .a-tab small { display: block; font-size: inherit; line-height: 1.15; }
+.a-cat-off { padding: 0 4px 10px; }
 .a-vline { flex: 0 0 1px; background: var(--dash-border); }
 .a-scroll {
   flex: 1;

@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/site.css?v=f1e558bb">
-  <link rel="stylesheet" href="../assets/css/sim.css?v=eb331e3e">
+  <link rel="stylesheet" href="../assets/css/sim.css?v=c21600ce">
   <link rel="stylesheet" href="../assets/css/explorer.css?v=cd546543">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="en">New</span> · 2.6.8</span>
-        <b><span data-l="en">13 new things in this release</span></b>
+        <b><span data-l="en">14 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -154,6 +154,7 @@
         <a href="#f-hvacpopup" data-feature="f-hvacpopup"><span data-l="en">🌡️ HVAC pop-up on the joystick</span></a>
         <a href="#f-profilecycle" data-feature="f-profilecycle"><span data-l="en">🔁 Profile cycle on a button</span></a>
         <a href="#f-readydefault" data-feature="f-readydefault"><span data-l="en">↩️ Back to the default profile at READY</span></a>
+        <a href="#f-profilecat" data-feature="f-profilecat"><span data-l="en">🧩 Profiles: pick your categories</span></a>
         <a href="#f-sc-new" data-feature="f-sc-new"><span data-l="en">⭐ Three new shortcut actions</span></a>
       </div>
     </div>
@@ -386,7 +387,7 @@
       <h3><span data-l="en">Profile list</span></h3>
       <p data-l="en">Up to 5 profiles, with a summary, a default profile and instant apply.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Each card shows the name, a summary (mode · regeneration · ADAS) and the <b>DEFAULT</b> badge, with Apply now, Edit, Set default and Delete (with confirmation).</p>
+        <p data-l="en">Each card shows the name, a summary (mode · regeneration · ADAS) and the <b>DEFAULT</b> badge, with Apply now, Edit, Set default and Delete (with confirmation). The summary only lists what the profile applies: a category that is switched off is left out.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="rail" data-go="profileEdit:0">
@@ -395,6 +396,14 @@
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
         <p data-l="en">The profile name and “default profile” stay visible at the top. Cancel / Save at the bottom; a name is required.</p>
         <p data-l="en">A profile never forces the unexpected: settings added over time (ESC, drowsiness, heating…) count as “not configured” in older profiles and are not written. So an old profile never disables ESC by omission.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-profilecat" data-hl-key="p-cat" data-go="profileEdit:0">
+      <h3><span data-l="en">Pick your categories</span><span class="badge-new"><span data-l="en">New</span> · 2.6.8</span></h3>
+      <p data-l="en">One switch per tab: switched off, the profile leaves that category alone.</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">At the top of each editor tab (Driving, Safety, Comfort), an “Apply … settings” switch decides whether the profile handles it. Switched off, the tab folds away and the profile writes nothing there: the car keeps its current settings. A profile can then cover safety only, or comfort only. The tab's settings are kept and come back when you switch it on again; the rail shows “OFF” under a category that is switched off.</p>
+        <p data-l="en">Existing profiles keep all three categories on, and a new profile opens with all three switched on. At least one is needed to save. Bluetooth pairing stays available even when Comfort is switched off.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="p-heat" data-go="profileEdit:2">
@@ -1182,8 +1191,8 @@
 
 <div class="dock" aria-label="Virtual vehicle"></div>
 
-<script src="../assets/js/strings.js?v=9eb58e42"></script>
-<script src="../assets/js/sim.js?v=fc4d4695"></script>
+<script src="../assets/js/strings.js?v=e32b8ba0"></script>
+<script src="../assets/js/sim.js?v=66e19164"></script>
 <script src="../assets/js/site.js?v=aa5935a3"></script>
 <script src="../assets/js/explorer.js?v=ffc271c4"></script>
 </body>

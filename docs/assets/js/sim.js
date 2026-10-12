@@ -59,11 +59,15 @@
       esc: true, dms: true, dmsSen: 2,
       steeringApply: true, steeringOn: false, seatApply: true, seatL: 0, seatR: 0,
       bt: null,
+      // Interrupteur général de chaque catégorie : coupée, le profil n'y écrit rien.
+      cat: { drive: true, safety: true, comfort: true },
       // Réglages du mode Personnalisé (null = non configuré) et bloc climatisation
       customPower: null, customSteer: null, customPedal: null,
       hvac: { enabled: false, power: true, ac: true, auto: false, temp: 21, fan: 4, loop: null, air: null }
     }, o);
   }
+  /** Catégorie d'un profil prise en compte ? Absente (profil d'avant la fonction) = oui. */
+  function catOn(p, k) { return !(p.cat && p.cat[k] === false); }
   const WINDOWS = ['FL', 'FR', 'RL', 'RR'];
   const WIN_KEY = { FL: 'win_front_left', FR: 'win_front_right', RL: 'win_rear_left', RR: 'win_rear_right' };
   const AIR = { FACE: 1, FEET: 2, WS: 4, REAR: 8 };
@@ -284,14 +288,24 @@
   function applyProfile(p, opts) {
     opts = opts || {};
     const c = car(), k = caps();
-    const drivingOk = gateOk(true);
-    if (drivingOk) {
+    // Catégorie coupée dans le profil = rien n'en est écrit, la voiture garde ses réglages.
+    const drive = catOn(p, 'drive'), safety = catOn(p, 'safety'), comfort = catOn(p, 'comfort');
+    // Le verrou de vitesse ne concerne que la conduite et la sécurité : un profil qui ne
+    // règle que le confort n'a rien à se voir refuser.
+    const drivingOk = drive || safety ? gateOk(true) : true;
+    if (drivingOk && drive) {
       c.driveMode = p.driveMode;
       if (p.driveMode !== 'SNOW') c.regen = p.regen;
-      if (k.known) {
-        c.energy = p.driveMode === 'SNOW' ? false : p.energy;
-        c.tsr = p.tsr;
+      if (k.known) c.energy = p.driveMode === 'SNOW' ? false : p.energy;
+      // Les trois réglages du mode Personnalisé, écrits seulement si le profil est en CUSTOM.
+      if (p.driveMode === 'CUSTOM') {
+        if (p.customPower != null) c.custom.power = p.customPower;
+        if (p.customSteer != null) c.custom.steer = p.customSteer;
+        if (p.customPedal != null) c.custom.pedal = p.customPedal;
       }
+    }
+    if (drivingOk && safety) {
+      if (k.known) c.tsr = p.tsr;
       c.adas = p.adas;
       if (k.twoAlerts) { c.overspeed = p.tsr ? p.overspeed : false; c.speedTone = p.tsr ? p.speedTone : false; }
       else c.sound = p.sound;
@@ -305,19 +319,13 @@
         c.esc = p.esc; if (!p.esc) c.aebOn = false;
         c.dms = p.dms; c.dmsSen = p.dmsSen;
       }
-      // Les trois réglages du mode Personnalisé, écrits seulement si le profil est en CUSTOM.
-      if (p.driveMode === 'CUSTOM') {
-        if (p.customPower != null) c.custom.power = p.customPower;
-        if (p.customSteer != null) c.custom.steer = p.customSteer;
-        if (p.customPedal != null) c.custom.pedal = p.customPedal;
-      }
     }
     // Le confort n'est jamais bloqué par le verrou de vitesse.
-    if (k.heat) {
+    if (comfort && k.heat) {
       if (p.steeringApply) c.steering = p.steeringOn;
       if (p.seatApply) { c.seatL = p.seatL; c.seatR = p.seatR; }
     }
-    if (p.hvac && p.hvac.enabled && k.clim) applyProfileClimate(p.hvac);
+    if (comfort && p.hvac && p.hvac.enabled && k.clim) applyProfileClimate(p.hvac);
     state.activeProfileId = p.id;   // « profil actif » des raccourcis par profil
     if (opts.manual) state.lastManual = p.id;
     commit();
@@ -419,7 +427,7 @@
     // Automatisation climatisation : un profil actif qui porte un bloc clim l'emporte.
     const cc = state.auto.c;
     const ap = activeProfile();
-    if (cc.on && caps().clim && ap && ap.hvac && ap.hvac.enabled) {
+    if (cc.on && caps().clim && ap && ap.hvac && ap.hvac.enabled && catOn(ap, 'comfort')) {
       trace.push(L('Automatisation A/C ignorée : le profil « ', 'A/C automation skipped: profile “') + ap.name + L(' » porte sa propre climatisation', '” carries its own climate'));
       cc.evaluated = true;         // le profil a décidé de la climatisation pour ce démarrage
     } else if (cc.on && caps().clim && (cc.trigger === 'start' ? cc.evaluated : cc.trigger === 'once' && cc.fired)) {
@@ -1086,7 +1094,7 @@
       if (cur < 0 || !tabs[cur].page) cur = usable.length ? usable[0] : 0;
       const rail = tabs.map((t, i) => {
         if (!t.page || (t.hidden && i !== cur)) return '';
-        return '<button class="a-tab' + (t.sub ? ' sub' : '') + (i === cur ? ' on' : '') + '" data-a="tab" data-v="' + tabKey + ':' + id(t, i) + '" data-hl="rail' + (t.hl ? ' ' + t.hl : '') + '">' + esc(t.label) + '</button>';
+        return '<button class="a-tab' + (t.sub ? ' sub' : '') + (t.off ? ' off' : '') + (i === cur ? ' on' : '') + '" data-a="tab" data-v="' + tabKey + ':' + id(t, i) + '" data-hl="rail' + (t.hl ? ' ' + t.hl : '') + '">' + esc(t.label) + (t.off ? '<small>' + esc(S('climate_off')) + '</small>' : '') + '</button>';
       }).join('');
       return '<div class="a-body ' + (extraCls || '') + '"><div class="a-rail" data-hl="rail">' + rail + '</div><div class="a-vline"></div><div class="a-scroll"><div class="a-stack">' + (tabs[cur] ? tabs[cur].page : '') + '</div></div></div>';
     }
@@ -1242,7 +1250,12 @@
       let a = '';
       if (k.g === 'SWI133') a = ['ADAS Off', 'Lim.', 'Auto', 'ACC', 'ICA'][p.adas];
       else if (k.vsm) a = p.adas === 3 ? 'ACC' : p.adas === 4 ? 'TJA' : 'ADAS Off';
-      return ': ' + DRIVE_LABEL[p.driveMode] + ' · ' + REGEN_LABEL[p.regen] + (a ? ' · ' + a : '');
+      const parts = [];
+      if (catOn(p, 'drive')) parts.push(DRIVE_LABEL[p.driveMode], REGEN_LABEL[p.regen]);
+      if (catOn(p, 'safety') && a) parts.push(a);
+      // Rien à citer : le résumé nomme les catégories actives.
+      if (!parts.length) ['drive', 'safety', 'comfort'].forEach((c) => { if (catOn(p, c)) parts.push(S('profile_cat_' + c)); });
+      return ': ' + parts.join(' · ');
     }
     profilesHtml() {
       const items = state.profiles.map((p) => {
@@ -1261,7 +1274,7 @@
     }
 
     startEdit(p) {
-      this.ui.edit = p ? Object.assign({}, p, { hvac: Object.assign({}, p.hvac), _new: false, _default: p.id === state.defaultId })
+      this.ui.edit = p ? Object.assign({}, p, { hvac: Object.assign({}, p.hvac), cat: Object.assign({ drive: true, safety: true, comfort: true }, p.cat), _new: false, _default: p.id === state.defaultId })
         : Object.assign(mkProfile({ name: '' }), { _new: true, _default: state.profiles.length === 0 });
       this.ui.tabs.edit = 0;
     }
@@ -1271,13 +1284,27 @@
         '<span class="a-title" style="flex:0 0 auto">' + esc(e._new ? S('profile_add') : S('profile_edit')) + '</span>' +
         '<input class="a-input" style="flex:1" data-c="eName" data-fid="eName" maxlength="24" placeholder="' + esc(S('profile_name_hint')) + '" value="' + esc(e.name) + '" data-hl="ename">' +
         '<span class="lbl" style="flex:0 0 auto;font-size:15px">' + esc(S('profile_set_as_default')) + '</span>' + sw(e._default, 'eDefault') + '</div></div>';
+      // Une page sans aucun réglage sur ce firmware reste absente du rail, comme avant.
+      const cat = (key, content, tail) => ({
+        label: S('profile_cat_' + key), off: !catOn(e, key),
+        page: content || tail ? this.catPage(e, key, content, tail) : ''
+      });
       const body = this.railLayout('edit', [
-        { label: S('profile_cat_drive'), page: this.editDrive(e) },
-        { label: S('profile_cat_safety'), page: this.editSafety(e) },
-        { label: S('profile_cat_comfort'), page: this.editComfort(e) }
+        cat('drive', this.editDrive(e)),
+        cat('safety', this.editSafety(e)),
+        cat('comfort', this.editComfort(e), this.editBt(e))
       ]);
       const foot = '<div class="a-grid g2"><button class="b" data-a="eCancel">' + esc(S('profile_cancel')) + '</button><button class="b green" data-a="eSave" data-hl="esave">' + esc(S('profile_save')) + '</button></div>';
       return '<div class="a-page">' + head + body + foot + '</div>';
+    }
+    /**
+     * Interrupteur général d'une catégorie : coupée, la page se replie sur une phrase et le
+     * profil n'y écrit rien. [tail] reste affiché dans tous les cas (association Bluetooth).
+     */
+    catPage(e, key, content, tail) {
+      const on = catOn(e, key);
+      return '<div class="a-sec" data-hl="p-cat"><div class="a-row"><span class="lbl"><b>' + esc(S('profile_cat_apply_' + key)) + '</b></span>' + sw(on, 'eCat', false, key) + '</div></div>' +
+        (on ? content : '<div class="a-desc a-cat-off">' + esc(S('profile_cat_off_' + key)) + '</div>') + (tail || '');
     }
     editDrive(e) {
       const k = caps(), snow = e.driveMode === 'SNOW';
@@ -1331,9 +1358,12 @@
           '<div class="a-sub" style="margin-top:8px">' + esc(S('climate_seat_right')) + '</div><div class="a-grid g4">' + lv('eSeatR', e.seatR) + '</div></div>';
       }
       if (k.clim) h += this.editHvac(e.hvac);
-      const opts = '<option value="">' + esc(S('profile_bt_none')) + '</option>' + state.bt.devices.map((d) => '<option value="' + esc(d.mac) + '"' + (e.bt === d.mac ? ' selected' : '') + '>' + esc(d.name) + ' (' + esc(d.mac) + ')</option>').join('');
-      h += '<div class="a-sec" data-hl="p-bt"><div class="a-row"><span class="lbl">' + esc(S('profile_bt_device_label')) + '</span><select class="a-select" data-c="eBt">' + opts + '</select></div></div>';
       return h;
+    }
+    /** Association Bluetooth : hors de la zone repliable, elle déclenche le profil sans être un réglage de confort. */
+    editBt(e) {
+      const opts = '<option value="">' + esc(S('profile_bt_none')) + '</option>' + state.bt.devices.map((d) => '<option value="' + esc(d.mac) + '"' + (e.bt === d.mac ? ' selected' : '') + '>' + esc(d.name) + ' (' + esc(d.mac) + ')</option>').join('');
+      return '<div class="a-sec" data-hl="p-bt"><div class="a-row"><span class="lbl">' + esc(S('profile_bt_device_label')) + '</span><select class="a-select" data-c="eBt">' + opts + '</select></div></div>';
     }
 
     /** Bloc climatisation du profil, décoché par défaut. */
@@ -2289,10 +2319,12 @@
         case 'eSeatL': e.seatL = n; return this.render();
         case 'eSeatR': e.seatR = n; return this.render();
         case 'eDefault': e._default = !e._default; return this.render();
+        case 'eCat': { const key = el.getAttribute('data-x'); e.cat[key] = !catOn(e, key); return this.render(); }
         case 'eCancel': u.edit = null; u.screen = 'profiles'; return this.render();
         case 'eSave': {
           const name = (e.name || '').trim();
           if (!name) return this.toast(S('profile_name_required'));
+          if (!['drive', 'safety', 'comfort'].some((c2) => catOn(e, c2))) return this.toast(S('profile_cat_none_enabled'));
           const p = Object.assign({}, e, { name });
           const isDef = p._default; delete p._new; delete p._default;
           const i = state.profiles.findIndex((x) => x.id === p.id);

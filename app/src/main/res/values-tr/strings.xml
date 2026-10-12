@@ -412,6 +412,13 @@
     <string name="profile_cat_drive">Sürüş</string>
     <string name="profile_cat_safety">Güvenlik</string>
     <string name="profile_cat_comfort">Konfor</string>
+    <string name="profile_cat_apply_drive">Sürüş ayarlarını uygula</string>
+    <string name="profile_cat_apply_safety">Güvenlik ayarlarını uygula</string>
+    <string name="profile_cat_apply_comfort">Konfor ayarlarını uygula</string>
+    <string name="profile_cat_off_drive">Bu profil sürüş ayarlarını değiştirmez. Araç mevcut ayarlarını korur.</string>
+    <string name="profile_cat_off_safety">Bu profil güvenlik ayarlarını değiştirmez. Araç mevcut ayarlarını korur.</string>
+    <string name="profile_cat_off_comfort">Bu profil konfor ayarlarını değiştirmez. Araç mevcut ayarlarını korur.</string>
+    <string name="profile_cat_none_enabled">Profili kaydetmek için en az bir kategoriyi açın.</string>
     <string name="climate_seat_heat">Koltuk ısıtma</string>
 
     <!-- Reglages : categories -->

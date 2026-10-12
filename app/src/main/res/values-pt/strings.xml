@@ -412,6 +412,13 @@
     <string name="profile_cat_drive">Condução</string>
     <string name="profile_cat_safety">Segurança</string>
     <string name="profile_cat_comfort">Conforto</string>
+    <string name="profile_cat_apply_drive">Aplicar as definições de condução</string>
+    <string name="profile_cat_apply_safety">Aplicar as definições de segurança</string>
+    <string name="profile_cat_apply_comfort">Aplicar as definições de conforto</string>
+    <string name="profile_cat_off_drive">Este perfil não altera as definições de condução. O carro mantém as atuais.</string>
+    <string name="profile_cat_off_safety">Este perfil não altera as definições de segurança. O carro mantém as atuais.</string>
+    <string name="profile_cat_off_comfort">Este perfil não altera as definições de conforto. O carro mantém as atuais.</string>
+    <string name="profile_cat_none_enabled">Ative pelo menos uma categoria para guardar o perfil.</string>
     <string name="climate_seat_heat">Bancos aquecidos</string>
 
     <!-- Reglages : categories -->

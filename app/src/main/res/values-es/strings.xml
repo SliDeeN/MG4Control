@@ -412,6 +412,13 @@
     <string name="profile_cat_drive">Conducción</string>
     <string name="profile_cat_safety">Seguridad</string>
     <string name="profile_cat_comfort">Confort</string>
+    <string name="profile_cat_apply_drive">Aplicar los ajustes de conducción</string>
+    <string name="profile_cat_apply_safety">Aplicar los ajustes de seguridad</string>
+    <string name="profile_cat_apply_comfort">Aplicar los ajustes de confort</string>
+    <string name="profile_cat_off_drive">Este perfil no modifica los ajustes de conducción. El coche conserva los actuales.</string>
+    <string name="profile_cat_off_safety">Este perfil no modifica los ajustes de seguridad. El coche conserva los actuales.</string>
+    <string name="profile_cat_off_comfort">Este perfil no modifica los ajustes de confort. El coche conserva los actuales.</string>
+    <string name="profile_cat_none_enabled">Activa al menos una categoría para guardar el perfil.</string>
     <string name="climate_seat_heat">Asientos calefactados</string>
 
     <!-- Reglages : categories -->

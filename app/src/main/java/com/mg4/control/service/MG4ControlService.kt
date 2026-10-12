@@ -1465,7 +1465,9 @@ class MG4ControlService : Service() {
         // écritures véhicule : quand cette vérification a lieu, il désigne bien le profil du
         // cycle en cours.
         val profilActif = ActiveProfile.id(ctx)?.let { ProfileManager(ctx).getById(it) }
-        if (profilActif?.hvacEnabled == true) {
+        // writesClimate et non hvacEnabled : un profil dont la catégorie Confort est coupée
+        // n'écrit pas sa climatisation, il n'a donc rien décidé.
+        if (profilActif?.writesClimate == true) {
             AppLogger.i(TAG, "Auto A/C ($origin) : le profil actif '${profilActif.name}' porte " +
                 "sa propre climatisation — priorité au profil")
             // Le profil a décidé de la climatisation pour ce démarrage : c'est une décision.

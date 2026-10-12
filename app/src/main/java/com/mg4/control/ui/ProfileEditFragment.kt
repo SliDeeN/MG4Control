@@ -21,6 +21,7 @@ import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.AirFlow
 import com.mg4.control.model.DrivingProfile
+import com.mg4.control.model.ProfileSections
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.util.FirmwareInfo
@@ -677,6 +678,54 @@ class ProfileEditFragment : Fragment() {
         val etName = view.findViewById<EditText>(R.id.et_profile_name)
         if (existing != null) etName.setText(existing.name)
 
+        // ── Interrupteur général de chaque catégorie ─────────────────────────
+        // Coupée, une catégorie n'est pas appliquée par le profil : la voiture garde ses réglages.
+        // Actives toutes les trois pour un nouveau profil comme pour un profil d'avant la fonction.
+        var driveCatSel   = data.appliesDrive
+        var safetyCatSel  = data.appliesSafety
+        var comfortCatSel = data.appliesComfort
+
+        /** Le rail dit quelles catégories sont coupées sans qu'il faille ouvrir chaque page. */
+        fun majRail() {
+            listOf(
+                Triple(R.id.btn_cat_drive,   R.string.profile_cat_drive,   driveCatSel),
+                Triple(R.id.btn_cat_safety,  R.string.profile_cat_safety,  safetyCatSel),
+                Triple(R.id.btn_cat_comfort, R.string.profile_cat_comfort, comfortCatSel)
+            ).forEach { (btnId, nameRes, enabled) ->
+                view.findViewById<MaterialButton>(btnId).apply {
+                    text = ProfileSections.railLabel(getString(nameRes), enabled, getString(R.string.climate_off))
+                    alpha = if (enabled) 1f else 0.55f
+                }
+            }
+        }
+
+        /**
+         * Coupée, la page se replie sur une phrase d'explication — même geste que les cartes
+         * d'automatisation. Ses réglages ne sont ni effacés ni modifiés : ils restent dans le
+         * formulaire et dans le profil, pour les retrouver en réactivant la catégorie.
+         */
+        fun bindCategorySwitch(switchId: Int, contentId: Int, hintId: Int, initial: Boolean, onChange: (Boolean) -> Unit) {
+            val contenu = view.findViewById<View>(contentId)
+            val phrase  = view.findViewById<View>(hintId)
+            fun maj(on: Boolean) {
+                contenu.visibility = if (on) View.VISIBLE else View.GONE
+                phrase.visibility  = if (on) View.GONE else View.VISIBLE
+            }
+            view.findViewById<Switch>(switchId).apply {
+                isChecked = initial
+                setOnCheckedChangeListener { _, checked ->
+                    onChange(checked)
+                    maj(checked)
+                    majRail()
+                }
+            }
+            maj(initial)
+        }
+        bindCategorySwitch(R.id.sw_cat_drive_enabled, R.id.content_cat_drive, R.id.tv_cat_drive_off, driveCatSel) { driveCatSel = it }
+        bindCategorySwitch(R.id.sw_cat_safety_enabled, R.id.content_cat_safety, R.id.tv_cat_safety_off, safetyCatSel) { safetyCatSel = it }
+        bindCategorySwitch(R.id.sw_cat_comfort_enabled, R.id.content_cat_comfort, R.id.tv_cat_comfort_off, comfortCatSel) { comfortCatSel = it }
+        majRail()
+
         // ── Rail de catégories ───────────────────────────────────────────────
         bindCategoryRail(view) { btn, on -> activateBtn(btn, on) }
 
@@ -691,6 +740,11 @@ class ProfileEditFragment : Fragment() {
             if (name.isEmpty()) {
                 etName.error = getString(R.string.profile_name_required)
                 etName.requestFocus()
+                return@setOnClickListener
+            }
+            // Un profil sans aucune catégorie n'écrirait rien sur la voiture.
+            if (!ProfileSections.anyEnabled(driveCatSel, safetyCatSel, comfortCatSel)) {
+                Toast.makeText(ctx, R.string.profile_cat_none_enabled, Toast.LENGTH_LONG).show()
                 return@setOnClickListener
             }
 
@@ -742,6 +796,9 @@ class ProfileEditFragment : Fragment() {
                 hvacLoopMode     = hvacLoopSel,
                 hvacAirFlow      = hvacAirSel,
                 autoHighBeam     = if (highBeamEnabledSel) highBeamOnSel else null,
+                driveEnabled     = driveCatSel,
+                safetyEnabled    = safetyCatSel,
+                comfortEnabled   = comfortCatSel,
                 btDeviceMac    = selectedBtMac   // [BT-PROFILES]
             )
             manager.save(profile)
@@ -770,10 +827,24 @@ class ProfileEditFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_cat_safety)  to view.findViewById<ViewGroup>(R.id.page_cat_safety),
             view.findViewById<MaterialButton>(R.id.btn_cat_comfort) to view.findViewById<ViewGroup>(R.id.page_cat_comfort)
         )
+        // Les sections d'une page sont dans son conteneur repliable. C'est LUI qu'on inspecte :
+        // l'en-tête à interrupteur est toujours visible, et le repli d'une catégorie coupée
+        // masque le conteneur sans toucher à la visibilité de ses sections.
+        val contents = mapOf(
+            R.id.page_cat_drive   to R.id.content_cat_drive,
+            R.id.page_cat_safety  to R.id.content_cat_safety,
+            R.id.page_cat_comfort to R.id.content_cat_comfort
+        )
         val scroll = view.findViewById<ScrollView>(R.id.scroll_profile_edit)
 
-        fun hasVisibleContent(page: ViewGroup): Boolean =
-            (0 until page.childCount).any { page.getChildAt(it).visibility == View.VISIBLE }
+        fun anyVisible(group: ViewGroup, from: Int): Boolean =
+            (from until group.childCount).any { group.getChildAt(it).visibility == View.VISIBLE }
+
+        fun hasVisibleContent(page: ViewGroup): Boolean {
+            val content = view.findViewById<ViewGroup>(contents.getValue(page.id))
+            // Après le conteneur : ce qui reste affiché catégorie coupée (association Bluetooth).
+            return anyVisible(content, 0) || anyVisible(page, page.indexOfChild(content) + 1)
+        }
 
         val usable = tabs.filter { (_, page) -> hasVisibleContent(page) }
         tabs.forEach { (btn, page) ->

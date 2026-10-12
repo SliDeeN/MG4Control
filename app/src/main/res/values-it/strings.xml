@@ -412,6 +412,13 @@
     <string name="profile_cat_drive">Guida</string>
     <string name="profile_cat_safety">Sicurezza</string>
     <string name="profile_cat_comfort">Comfort</string>
+    <string name="profile_cat_apply_drive">Applica le impostazioni di guida</string>
+    <string name="profile_cat_apply_safety">Applica le impostazioni di sicurezza</string>
+    <string name="profile_cat_apply_comfort">Applica le impostazioni di comfort</string>
+    <string name="profile_cat_off_drive">Questo profilo non modifica le impostazioni di guida. La vettura mantiene quelle attuali.</string>
+    <string name="profile_cat_off_safety">Questo profilo non modifica le impostazioni di sicurezza. La vettura mantiene quelle attuali.</string>
+    <string name="profile_cat_off_comfort">Questo profilo non modifica le impostazioni di comfort. La vettura mantiene quelle attuali.</string>
+    <string name="profile_cat_none_enabled">Attiva almeno una categoria per salvare il profilo.</string>
     <string name="climate_seat_heat">Sedili riscaldati</string>
 
     <!-- Reglages : categories -->
