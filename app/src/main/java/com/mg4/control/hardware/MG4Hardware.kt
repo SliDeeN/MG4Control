@@ -5569,6 +5569,13 @@ object MG4Hardware {
             ?.let { it.copy(lastManualFan = rememberManualFan(it)) }
             ?.also { traceAirFlowChange(it) }
 
+    /**
+     * Vrai quand la climatisation répond. Au démarrage à froid elle arrive APRÈS
+     * CarPropertyManager sur les firmwares A9 (client carapi, obtenu une fois le client de
+     * réglages connecté) : un préréglage envoyé avant serait abandonné (issue #121).
+     */
+    fun isClimateReachable(): Boolean = getClimateState() != null
+
     // ── Dernier niveau de ventilation réglé à la main ─────────────────────────
     // En AUTO la voiture n'annonce plus de cran : elle rend 15, que les écrans d'origine affichent
     // « AUTO ». Pour en sortir, ces écrans écrivent le dernier niveau qu'ils ont vu, ± 1 ; ils le
