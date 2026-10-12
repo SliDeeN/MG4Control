@@ -731,7 +731,7 @@
 .hv-joy.off .pad { fill: var(--dash-btn); stroke: var(--dash-text-lo); }
 .hv-joy.off .arr, .hv-joy.off .dot { fill: var(--dash-text-lo); }
 .hv-joy.off b { color: var(--dash-warn); }
-.hv-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; }
+.hv-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 21px; }
 .hv-foot .cd { margin-top: 0; }
 .b.hv-close { height: 34px; padding: 0 14px 0 10px; display: flex; align-items: center; gap: 4px; font-size: calc(12px * var(--ts, 1)); }
 .b.hv-close .hv-ico { width: 16px; height: 16px; }
@@ -753,11 +753,9 @@
 .b.hv-cell.hit { border-color: var(--dash-accent); box-shadow: inset 0 0 0 2px var(--dash-accent); }
 .hv-vals { flex: 1; min-width: 0; }
 .hv-temp { color: var(--text-primary); font-size: calc(48px * var(--ts, 1)); font-weight: 700; line-height: 1.1; margin-bottom: 12px; }
-.hv-fan, .hv-bar { border-radius: 4px; background: var(--dash-border); overflow: hidden; }
+.hv-fan { border-radius: 4px; background: var(--dash-border); overflow: hidden; }
 .hv-fan { height: 8px; margin-top: 6px; }
-.hv-bar { height: 3px; margin-top: 12px; }
-.hv-fan i, .hv-bar i { display: block; height: 100%; background: var(--dash-accent); }
-.hv-bar i { transition: width 1s linear; }
+.hv-fan i { display: block; height: 100%; background: var(--dash-accent); }
 .hvacpop .hv-airlbl { margin: 12px 0 6px; }
 /* Sous le cadre, le libellé du sens de l'air est resserré : le cadre a pris sa place. */
 .hv-left > .hv-airlbl { margin: 6px 0 4px; }

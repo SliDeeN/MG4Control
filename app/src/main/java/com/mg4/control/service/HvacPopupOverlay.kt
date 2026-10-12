@@ -28,6 +28,7 @@ import com.mg4.control.model.HvacPopup
 import com.mg4.control.model.SeatHeat
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.ThemeHelper
 import java.util.Locale
 import java.util.concurrent.Executors
@@ -46,13 +47,12 @@ import kotlin.math.roundToInt
  * Aucun verrou de conduite : la clim est un réglage de confort (cf. T-904), et c'est justement
  * en roulant que ce popup sert.
  *
- * Ouvert et refermé par le même raccourci ([toggle]) ; se referme seul après [AUTO_DISMISS_MS]
- * sans action.
+ * Ouvert et refermé par le même raccourci ([toggle]) ; se referme seul, sans action, après le
+ * délai réglé dans Réglages › Interface ([PopupDelay]).
  */
 object HvacPopupOverlay {
 
     private const val TAG = "MG4_OVERLAY"
-    private const val AUTO_DISMISS_MS = 6_000L
     private const val TICK_MS = 100L
 
     /** Plusieurs pas rapprochés du joystick ne donnent qu'UNE écriture, celle de la valeur finale. */
@@ -89,6 +89,8 @@ object HvacPopupOverlay {
      */
     private data class Chauffages(val siegeGauche: Int?, val siegeDroit: Int?, val volant: Boolean?)
     private var chauffages: Chauffages? = null
+    /** Délai de fermeture lu à l'ouverture : le changer n'agit pas sur un pop-up déjà affiché. */
+    private var delaiMs = PopupDelay.DEFAULT_SECONDS * 1_000L
     private var echeance = 0L
     private var tick: Runnable? = null
 
@@ -165,6 +167,7 @@ object HvacPopupOverlay {
 
     private fun showOnMain(context: Context, lu: MG4Hardware.ClimateState, chauds: Chauffages?) {
         fermer()
+        delaiMs = PopupDelay.millis(context)
 
         val localized = LocaleHelper.applyLocale(context)
         // La mise en page est écrite pour une carte de 900 × 390 dp (1136 avec la colonne des
@@ -237,7 +240,6 @@ object HvacPopupOverlay {
                     fermer()
                     return
                 }
-                actuelles.minuterie.progress = reste.toInt()
                 actuelles.decompte.text = actuelles.localized.getString(
                     R.string.overlay_countdown, ((reste + 999) / 1_000).toInt())
                 handler.postDelayed(this, TICK_MS)
@@ -249,7 +251,7 @@ object HvacPopupOverlay {
 
     /** Chaque geste, au joystick comme au doigt, redonne le délai complet. */
     private fun relancerDelai() {
-        echeance = SystemClock.uptimeMillis() + AUTO_DISMISS_MS
+        echeance = SystemClock.uptimeMillis() + delaiMs
     }
 
     private fun surCommande(commande: JoystickFocus.Commande) {
@@ -476,8 +478,6 @@ object HvacPopupOverlay {
         val temperature: TextView         = view.findViewById(R.id.hvac_popup_temp)
         val ventilation: TextView         = view.findViewById(R.id.hvac_popup_fan)
         val barreVentilation: ProgressBar = view.findViewById(R.id.hvac_popup_fan_bar)
-        val minuterie: ProgressBar        = view.findViewById<ProgressBar>(R.id.hvac_popup_timer)
-            .apply { max = AUTO_DISMISS_MS.toInt() }
         val decompte: TextView            = view.findViewById(R.id.hvac_popup_countdown)
         private val joystickIcone: ImageView = view.findViewById(R.id.hvac_joy_icon)
         private val joystickTitre: TextView  = view.findViewById(R.id.hvac_joy_title)

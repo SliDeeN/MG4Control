@@ -28,6 +28,7 @@ import com.mg4.control.model.DrivingProfile
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.ThemeHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -49,8 +50,7 @@ import kotlinx.coroutines.launch
  */
 object ProfilePickerOverlay {
 
-    private const val TAG             = "MG4_OVERLAY"
-    private const val AUTO_DISMISS_MS = 8_000L
+    private const val TAG = "MG4_OVERLAY"
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -248,8 +248,10 @@ object ProfilePickerOverlay {
         AppLogger.i(TAG, "Overlay affiché — ${profilesToShow.size} profil(s)")
 
         // ── Compte à rebours ──────────────────────────────────────────────
+        // Délai réglé dans Réglages › Interface, lu à l'ouverture.
+        val delaiMs = PopupDelay.millis(context)
         val tvCountdown = view.findViewById<TextView>(R.id.overlay_countdown)
-        var remaining = (AUTO_DISMISS_MS / 1_000L).toInt()
+        var remaining = (delaiMs / 1_000L).toInt()
 
         val tick: Runnable = object : Runnable {
             override fun run() {
@@ -274,15 +276,15 @@ object ProfilePickerOverlay {
             onAutoDismiss?.invoke()
         }
         dismissRunnable = dr
-        handler.postDelayed(dr, AUTO_DISMISS_MS)
+        handler.postDelayed(dr, delaiMs)
 
         // Ré-arme les deux timers (appelé à chaque interaction luminosité pour
         // ne pas fermer le popup pendant le réglage).
         fun resetTimers() {
             handler.removeCallbacks(dr)
-            handler.postDelayed(dr, AUTO_DISMISS_MS)
+            handler.postDelayed(dr, delaiMs)
             countdownRunnable?.let { handler.removeCallbacks(it) }
-            remaining = (AUTO_DISMISS_MS / 1_000L).toInt()
+            remaining = (delaiMs / 1_000L).toInt()
             handler.post(tick)
         }
 

@@ -272,6 +272,8 @@
     <string name="settings_theme_dark">Dunkles Design</string>
     <string name="settings_theme_light">Helles Design</string>
     <string name="settings_text_size">Textgröße</string>
+    <string name="settings_popup_delay">Zeit bis zum Schließen der Pop-ups</string>
+    <string name="settings_popup_delay_desc">Profilauswahl, Automatisierungsabfrage und HVAC-Pop-up. Jede Aktion startet die Zeit neu.</string>
     <string name="settings_text_size_standard">Standard</string>
     <string name="settings_text_size_large">Groß</string>
     <string name="settings_text_size_xlarge">Sehr groß</string>

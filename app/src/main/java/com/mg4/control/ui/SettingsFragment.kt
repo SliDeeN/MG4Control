@@ -31,6 +31,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.slider.Slider
 import com.mg4.control.BuildConfig
 import com.mg4.control.api.ExternalApi
 import com.mg4.control.R
@@ -52,6 +53,7 @@ import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.service.MG4ControlService
 import com.mg4.control.util.GarageMode
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.TextSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -198,6 +200,30 @@ class SettingsFragment : Fragment() {
                 AppLogger.i("MG4_SETTINGS", "Taille du texte → ${size.key} (×${size.scale})")
                 requireActivity().recreate()
             }
+        }
+
+        // ── Délai avant fermeture des pop-ups : 1 à 60 s ─────────────────────
+        // Commun au sélecteur de profils, à la confirmation d'automatisation et au pop-up HVAC,
+        // qui le lisent chacun à leur ouverture : rien à redémarrer.
+        val tvPopupDelay = view.findViewById<TextView>(R.id.tv_popup_delay)
+        view.findViewById<Slider>(R.id.slider_popup_delay).apply {
+            valueFrom = PopupDelay.MIN_SECONDS.toFloat()
+            valueTo   = PopupDelay.MAX_SECONDS.toFloat()
+            // Dans la plage par construction : hors de [valueFrom, valueTo], le curseur lève une exception.
+            value = PopupDelay.seconds(requireContext()).toFloat()
+            tvPopupDelay.text = getString(R.string.win_auto_delay_value, value.toInt())
+            addOnChangeListener { _, v, _ ->
+                val secondes = PopupDelay.fromSlider(v)
+                tvPopupDelay.text = getString(R.string.win_auto_delay_value, secondes)
+                PopupDelay.set(requireContext(), secondes)
+            }
+            // Une ligne au journal par réglage, au relâchement, et non une par cran traversé.
+            addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+                override fun onStartTrackingTouch(slider: Slider) {}
+                override fun onStopTrackingTouch(slider: Slider) {
+                    AppLogger.i("MG4_SETTINGS", "Délai de fermeture des pop-ups → ${PopupDelay.fromSlider(slider.value)} s")
+                }
+            })
         }
 
         // ── Canal de mise a jour beta ────────────────────────────────────────

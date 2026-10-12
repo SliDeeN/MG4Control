@@ -272,6 +272,8 @@
     <string name="settings_theme_dark">Dark mode</string>
     <string name="settings_theme_light">Light mode</string>
     <string name="settings_text_size">Text size</string>
+    <string name="settings_popup_delay">Pop-up auto-close delay</string>
+    <string name="settings_popup_delay_desc">Profile picker, automation confirmation and HVAC pop-up. Each action restarts the delay.</string>
     <string name="settings_text_size_standard">Standard</string>
     <string name="settings_text_size_large">Large</string>
     <string name="settings_text_size_xlarge">Extra large</string>

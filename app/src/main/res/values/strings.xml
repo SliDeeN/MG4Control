@@ -274,6 +274,8 @@
     <string name="settings_theme_dark">Mode sombre</string>
     <string name="settings_theme_light">Mode clair</string>
     <string name="settings_text_size">Taille du texte</string>
+    <string name="settings_popup_delay">Délai avant fermeture des pop-ups</string>
+    <string name="settings_popup_delay_desc">Sélecteur de profils, confirmation d\'automatisation et pop-up HVAC. Chaque action relance le délai.</string>
     <string name="settings_text_size_standard">Standard</string>
     <string name="settings_text_size_large">Grand</string>
     <string name="settings_text_size_xlarge">Très grand</string>

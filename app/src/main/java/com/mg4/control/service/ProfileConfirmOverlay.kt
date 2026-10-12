@@ -18,13 +18,15 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.VehicleWriteGate
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.ThemeHelper
 
 /**
  * Popup OUI/NON demandant s'il faut appliquer [profile] parce qu'un seuil est franchi :
  * température extérieure ([show]) ou niveau de batterie ([showBattery]).
- * Calqué sur ProfilePickerOverlay (fenêtre overlay, compte à rebours 8 s, verrou 0 km/h).
- * OUI → onConfirmed ; NON ou timeout → onDeclined (une seule fois).
+ * Calqué sur ProfilePickerOverlay (fenêtre overlay, compte à rebours, verrou 0 km/h).
+ * OUI → onConfirmed ; NON ou timeout → onDeclined (une seule fois). Le délai est celui de
+ * Réglages › Interface ([PopupDelay]).
  *
  * Comme le popup profils, il se pilote au joystick droit du volant (voir [naviguer]) si le
  * service d'accessibilité est actif : focus de départ sur OUI, gauche/droite pour changer,
@@ -33,7 +35,6 @@ import com.mg4.control.util.ThemeHelper
 object ProfileConfirmOverlay {
 
     private const val TAG = "MG4_OVERLAY"
-    private const val AUTO_DISMISS_MS = 8_000L
 
     private val handler = Handler(Looper.getMainLooper())
     @Volatile private var overlayView: View? = null
@@ -137,11 +138,12 @@ object ProfileConfirmOverlay {
             PixelFormat.TRANSLUCENT
         ).apply { gravity = Gravity.CENTER }
         wm.addView(view, params)
+        val delaiMs = PopupDelay.millis(context)
         overlayView = view
         AppLogger.i(TAG, "Confirm affiché pour '${profile.name}'")
 
         val tvCountdown = view.findViewById<TextView>(R.id.confirm_countdown)
-        var remaining = (AUTO_DISMISS_MS / 1_000L).toInt()
+        var remaining = (delaiMs / 1_000L).toInt()
         val tick = object : Runnable {
             override fun run() {
                 if (overlayView == null) return
@@ -157,7 +159,7 @@ object ProfileConfirmOverlay {
             finish(false)
         }
         dismissRunnable = dr
-        handler.postDelayed(dr, AUTO_DISMISS_MS)
+        handler.postDelayed(dr, delaiMs)
 
         // Joystick : chaque déplacement du focus relance le délai, comme dans le popup profils.
         navigation = OverlayNavigation(
@@ -166,9 +168,9 @@ object ProfileConfirmOverlay {
             depart         = JoystickFocus.Position(0, 0),
             surDeplacement = {
                 handler.removeCallbacks(dr)
-                handler.postDelayed(dr, AUTO_DISMISS_MS)
+                handler.postDelayed(dr, delaiMs)
                 handler.removeCallbacks(tick)
-                remaining = (AUTO_DISMISS_MS / 1_000L).toInt()
+                remaining = (delaiMs / 1_000L).toInt()
                 handler.post(tick)
             },
         ).also { it.afficher() }

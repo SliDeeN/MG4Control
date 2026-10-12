@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/site.css?v=f1e558bb">
-  <link rel="stylesheet" href="assets/css/sim.css?v=c21600ce">
+  <link rel="stylesheet" href="assets/css/sim.css?v=114b6fd3">
   <link rel="stylesheet" href="assets/css/explorer.css?v=cd546543">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.8</span>
-        <b><span data-l="fr">14 nouveautés dans cette version</span></b>
+        <b><span data-l="fr">15 nouveautés dans cette version</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span></button>
       </div>
       <div class="wn-list">
@@ -155,6 +155,7 @@
         <a href="#f-profilecycle" data-feature="f-profilecycle"><span data-l="fr">🔁 Cycle de profils sur un bouton</span></a>
         <a href="#f-readydefault" data-feature="f-readydefault"><span data-l="fr">↩️ Retour au profil par défaut au READY</span></a>
         <a href="#f-profilecat" data-feature="f-profilecat"><span data-l="fr">🧩 Profils : catégories à la carte</span></a>
+        <a href="#f-popupdelay" data-feature="f-popupdelay"><span data-l="fr">⏱️ Délai des pop-ups réglable</span></a>
         <a href="#f-sc-new" data-feature="f-sc-new"><span data-l="fr">⭐ Trois nouvelles actions de raccourci</span></a>
       </div>
     </div>
@@ -460,7 +461,7 @@
         <div class="flow">
           <div class="flow-step" data-step="manual"><span class="k">1</span><span data-l="fr">Choix manuel récent (popup sélecteur, application, API)</span></div>
           <div class="flow-step" data-step="temp"><span class="k">2</span><span data-l="fr">Automatisation selon la température extérieure</span></div>
-          <div class="flow-step" data-step="bt"><span class="k">3</span><span data-l="fr">Profil associé au Bluetooth connecté (plusieurs : sélecteur restreint, le 1ᵉʳ au bout de 8 s)</span></div>
+          <div class="flow-step" data-step="bt"><span class="k">3</span><span data-l="fr">Profil associé au Bluetooth connecté (plusieurs : sélecteur restreint, le 1ᵉʳ à la fin du délai)</span></div>
           <div class="flow-step" data-step="def"><span class="k">4</span><span data-l="fr">Profil par défaut</span></div>
         </div>
         <p class="flow-out"></p>
@@ -493,7 +494,7 @@
     </div>
     <div class="pt" data-hl-key="pk-foot" data-demo="picker">
       <h3><span data-l="fr">Fermeture automatique</span></h3>
-      <p data-l="fr">La fenêtre se ferme seule après 8 s, avec Éteindre la voiture et Ouvrir MG4Control en bas.</p>
+      <p data-l="fr">La fenêtre se ferme seule après un délai réglable (10 s par défaut), avec Éteindre la voiture et Ouvrir MG4Control en bas.</p>
     </div>
     <div class="pt" data-hl-key="pk-grid" data-demo="btConflict">
       <h3><span data-l="fr">Conflit Bluetooth</span></h3>
@@ -557,7 +558,7 @@
       <h3><span data-l="fr">Pop-up HVAC</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.8</span></h3>
       <p data-l="fr">La clim en un geste, par-dessus l'écran en cours : le joystick droit règle la température et la ventilation.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Une action de raccourci ouvre la fenêtre, y compris quand Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim. Ici le joystick ne déplace pas de focus : haut/bas changent la température, gauche/droite la ventilation, le centre bascule le mode AUTO (régler la ventilation en fait sortir). L'A/C, la recirculation et le sens de l'air (visage, pieds, pare-brise avant et arrière) se choisissent au doigt ; sur les firmwares équipés (SWI133, SWI68, SWI165), une colonne ajoute les sièges et le volant chauffants. La fenêtre se referme seule après 6 s sans action, d'un second appui sur le raccourci ou par son bouton Fermer. Le joystick nécessite le service d'accessibilité ; sans lui, la fenêtre reste utilisable au doigt. Dans la maquette, la ★ droite du véhicule virtuel l'ouvre et la referme.</p>
+        <p data-l="fr">Une action de raccourci ouvre la fenêtre, y compris quand Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim. Ici le joystick ne déplace pas de focus : haut/bas changent la température, gauche/droite la ventilation, le centre bascule le mode AUTO (régler la ventilation en fait sortir). L'A/C, la recirculation et le sens de l'air (visage, pieds, pare-brise avant et arrière) se choisissent au doigt ; sur les firmwares équipés (SWI133, SWI68, SWI165), une colonne ajoute les sièges et le volant chauffants. La fenêtre se referme seule après le délai réglé (10 s par défaut) sans action, d'un second appui sur le raccourci ou par son bouton Fermer. Le joystick nécessite le service d'accessibilité ; sans lui, la fenêtre reste utilisable au doigt. Dans la maquette, la ★ droite du véhicule virtuel l'ouvre et la referme.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-profilecycle" data-hl-key="sc-profiles" data-demo="profileCycle">
@@ -662,7 +663,7 @@
       <h3><span data-l="fr">Profil selon la température</span></h3>
       <p data-l="fr">Au-dessus ou en dessous d'un seuil, un profil s'applique, directement ou après confirmation.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Seuil de 0 à 60 °C, borne incluse. Popup OUI / NON pendant 8 s, au doigt ou au joystick droit du volant : NON ou délai écoulé, on retombe sur le profil Bluetooth ou par défaut. Température illisible ou profil supprimé : l'automatisation est ignorée.</p>
+        <p data-l="fr">Seuil de 0 à 60 °C, borne incluse. Popup OUI / NON pendant le délai réglé (10 s par défaut), au doigt ou au joystick droit du volant : NON ou délai écoulé, on retombe sur le profil Bluetooth ou par défaut. Température illisible ou profil supprimé : l'automatisation est ignorée.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-acauto" data-hl-key="auto-clim" data-go="automation">
@@ -845,6 +846,13 @@
       <p data-l="fr">Écran de démarrage, thème Auto / Sombre / Clair et texte Standard, Grand ou Très grand.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <p data-l="fr">En Auto, l'app suit le mode jour/nuit du launcher MG. Les fenêtres flottantes (sélecteur de profil, confirmations, alerte de mise à jour, pop-up HVAC) prennent le thème de l'application. La taille du texte (+12,5 % ou +25 %) s'applique à toute l'app, popups compris, et le turc rejoint les langues. Essayez dans la maquette.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-popupdelay" data-hl-key="s-popupdelay" data-go="settings:1">
+      <h3><span data-l="fr">Délai des pop-ups</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.8</span></h3>
+      <p data-l="fr">Un curseur règle le temps avant la fermeture automatique des pop-ups, de 1 à 60 secondes.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Dans Réglages, onglet Interface. Le délai, de 10 secondes par défaut, vaut pour les trois fenêtres qui se ferment seules : le sélecteur de profils, la question OUI / NON des automatisations et le pop-up HVAC. Chaque action dans la fenêtre relance le délai, et le prochain pop-up ouvert utilise la nouvelle valeur. Sans réponse à la fin du délai, la question OUI / NON vaut NON.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-topbar" data-hl-key="topbar" data-go="dashboard:0">
@@ -1191,8 +1199,8 @@
 
 <div class="dock" aria-label="Véhicule virtuel"></div>
 
-<script src="assets/js/strings.js?v=e32b8ba0"></script>
-<script src="assets/js/sim.js?v=66e19164"></script>
+<script src="assets/js/strings.js?v=06b35e6d"></script>
+<script src="assets/js/sim.js?v=ca0b990d"></script>
 <script src="assets/js/site.js?v=aa5935a3"></script>
 <script src="assets/js/explorer.js?v=ffc271c4"></script>
 </body>

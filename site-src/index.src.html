@@ -131,7 +131,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.8</span>
-        <b><span data-l="fr">14 nouveautés dans cette version</span><span data-l="en">14 new things in this release</span></b>
+        <b><span data-l="fr">15 nouveautés dans cette version</span><span data-l="en">15 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -148,6 +148,7 @@
         <a href="#f-profilecycle" data-feature="f-profilecycle"><span data-l="fr">🔁 Cycle de profils sur un bouton</span><span data-l="en">🔁 Profile cycle on a button</span></a>
         <a href="#f-readydefault" data-feature="f-readydefault"><span data-l="fr">↩️ Retour au profil par défaut au READY</span><span data-l="en">↩️ Back to the default profile at READY</span></a>
         <a href="#f-profilecat" data-feature="f-profilecat"><span data-l="fr">🧩 Profils : catégories à la carte</span><span data-l="en">🧩 Profiles: pick your categories</span></a>
+        <a href="#f-popupdelay" data-feature="f-popupdelay"><span data-l="fr">⏱️ Délai des pop-ups réglable</span><span data-l="en">⏱️ Adjustable pop-up delay</span></a>
         <a href="#f-sc-new" data-feature="f-sc-new"><span data-l="fr">⭐ Trois nouvelles actions de raccourci</span><span data-l="en">⭐ Three new shortcut actions</span></a>
       </div>
     </div>
@@ -511,7 +512,7 @@
         <div class="flow">
           <div class="flow-step" data-step="manual"><span class="k">1</span><span data-l="fr">Choix manuel récent (popup sélecteur, application, API)</span><span data-l="en">Recent manual choice (picker popup, app, API)</span></div>
           <div class="flow-step" data-step="temp"><span class="k">2</span><span data-l="fr">Automatisation selon la température extérieure</span><span data-l="en">Outside-temperature automation</span></div>
-          <div class="flow-step" data-step="bt"><span class="k">3</span><span data-l="fr">Profil associé au Bluetooth connecté (plusieurs : sélecteur restreint, le 1ᵉʳ au bout de 8 s)</span><span data-l="en">Profile tied to the connected Bluetooth device (several: restricted picker, the 1st after 8 s)</span></div>
+          <div class="flow-step" data-step="bt"><span class="k">3</span><span data-l="fr">Profil associé au Bluetooth connecté (plusieurs : sélecteur restreint, le 1ᵉʳ à la fin du délai)</span><span data-l="en">Profile tied to the connected Bluetooth device (several: restricted picker, the 1st when the delay runs out)</span></div>
           <div class="flow-step" data-step="def"><span class="k">4</span><span data-l="fr">Profil par défaut</span><span data-l="en">Default profile</span></div>
         </div>
         <p class="flow-out"></p>
@@ -549,8 +550,8 @@
     </div>
     <div class="pt" data-hl-key="pk-foot" data-demo="picker">
       <h3><span data-l="fr">Fermeture automatique</span><span data-l="en">Auto close</span></h3>
-      <p data-l="fr">La fenêtre se ferme seule après 8 s, avec Éteindre la voiture et Ouvrir MG4Control en bas.</p>
-      <p data-l="en">The window closes by itself after 8 s, with Power the car off and Open MG4Control at the bottom.</p>
+      <p data-l="fr">La fenêtre se ferme seule après un délai réglable (10 s par défaut), avec Éteindre la voiture et Ouvrir MG4Control en bas.</p>
+      <p data-l="en">The window closes by itself after an adjustable delay (10 s by default), with Power the car off and Open MG4Control at the bottom.</p>
     </div>
     <div class="pt" data-hl-key="pk-grid" data-demo="btConflict">
       <h3><span data-l="fr">Conflit Bluetooth</span><span data-l="en">Bluetooth conflict</span></h3>
@@ -629,8 +630,8 @@
       <p data-l="fr">La clim en un geste, par-dessus l'écran en cours : le joystick droit règle la température et la ventilation.</p>
       <p data-l="en">Climate in one move, on top of the current screen: the right joystick sets temperature and fan speed.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Une action de raccourci ouvre la fenêtre, y compris quand Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim. Ici le joystick ne déplace pas de focus : haut/bas changent la température, gauche/droite la ventilation, le centre bascule le mode AUTO (régler la ventilation en fait sortir). L'A/C, la recirculation et le sens de l'air (visage, pieds, pare-brise avant et arrière) se choisissent au doigt ; sur les firmwares équipés (SWI133, SWI68, SWI165), une colonne ajoute les sièges et le volant chauffants. La fenêtre se referme seule après 6 s sans action, d'un second appui sur le raccourci ou par son bouton Fermer. Le joystick nécessite le service d'accessibilité ; sans lui, la fenêtre reste utilisable au doigt. Dans la maquette, la ★ droite du véhicule virtuel l'ouvre et la referme.</p>
-        <p data-l="en">A shortcut action opens the window, including when Android Auto or CarPlay fills the screen and hides the climate bar. Here the joystick moves no focus: up/down change the temperature, left/right the fan speed, the centre toggles AUTO mode (adjusting the fan speed leaves it). A/C, recirculation and the air direction (face, feet, front and rear screen) are chosen by touch; on equipped firmwares (SWI133, SWI68, SWI165), a column adds the heated seats and steering wheel. The window closes by itself after 6 s without action, on a second press of the shortcut or with its Close button. The joystick needs the accessibility service; without it, the window still works by touch. In the mockup, the right ★ of the virtual vehicle opens and closes it.</p>
+        <p data-l="fr">Une action de raccourci ouvre la fenêtre, y compris quand Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim. Ici le joystick ne déplace pas de focus : haut/bas changent la température, gauche/droite la ventilation, le centre bascule le mode AUTO (régler la ventilation en fait sortir). L'A/C, la recirculation et le sens de l'air (visage, pieds, pare-brise avant et arrière) se choisissent au doigt ; sur les firmwares équipés (SWI133, SWI68, SWI165), une colonne ajoute les sièges et le volant chauffants. La fenêtre se referme seule après le délai réglé (10 s par défaut) sans action, d'un second appui sur le raccourci ou par son bouton Fermer. Le joystick nécessite le service d'accessibilité ; sans lui, la fenêtre reste utilisable au doigt. Dans la maquette, la ★ droite du véhicule virtuel l'ouvre et la referme.</p>
+        <p data-l="en">A shortcut action opens the window, including when Android Auto or CarPlay fills the screen and hides the climate bar. Here the joystick moves no focus: up/down change the temperature, left/right the fan speed, the centre toggles AUTO mode (adjusting the fan speed leaves it). A/C, recirculation and the air direction (face, feet, front and rear screen) are chosen by touch; on equipped firmwares (SWI133, SWI68, SWI165), a column adds the heated seats and steering wheel. The window closes by itself after the set delay (10 s by default) without action, on a second press of the shortcut or with its Close button. The joystick needs the accessibility service; without it, the window still works by touch. In the mockup, the right ★ of the virtual vehicle opens and closes it.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-profilecycle" data-hl-key="sc-profiles" data-demo="profileCycle">
@@ -753,8 +754,8 @@
       <p data-l="fr">Au-dessus ou en dessous d'un seuil, un profil s'applique, directement ou après confirmation.</p>
       <p data-l="en">Above or below a threshold, a profile applies, directly or after confirmation.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Seuil de 0 à 60 °C, borne incluse. Popup OUI / NON pendant 8 s, au doigt ou au joystick droit du volant : NON ou délai écoulé, on retombe sur le profil Bluetooth ou par défaut. Température illisible ou profil supprimé : l'automatisation est ignorée.</p>
-        <p data-l="en">Threshold from 0 to 60 °C, inclusive. YES / NO popup for 8 s, by touch or with the steering wheel's right joystick: NO or timeout falls back to the Bluetooth or default profile. Unreadable temperature or deleted profile: the automation is skipped.</p>
+        <p data-l="fr">Seuil de 0 à 60 °C, borne incluse. Popup OUI / NON pendant le délai réglé (10 s par défaut), au doigt ou au joystick droit du volant : NON ou délai écoulé, on retombe sur le profil Bluetooth ou par défaut. Température illisible ou profil supprimé : l'automatisation est ignorée.</p>
+        <p data-l="en">Threshold from 0 to 60 °C, inclusive. YES / NO popup for the set delay (10 s by default), by touch or with the steering wheel's right joystick: NO or timeout falls back to the Bluetooth or default profile. Unreadable temperature or deleted profile: the automation is skipped.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-acauto" data-hl-key="auto-clim" data-go="automation">
@@ -976,6 +977,15 @@
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
         <p data-l="fr">En Auto, l'app suit le mode jour/nuit du launcher MG. Les fenêtres flottantes (sélecteur de profil, confirmations, alerte de mise à jour, pop-up HVAC) prennent le thème de l'application. La taille du texte (+12,5 % ou +25 %) s'applique à toute l'app, popups compris, et le turc rejoint les langues. Essayez dans la maquette.</p>
         <p data-l="en">In Auto, the app follows the MG launcher's day/night mode. Floating windows (profile picker, confirmations, update alert, HVAC pop-up) take the app's theme. Text size (+12.5% or +25%) applies to the whole app, popups included, and Turkish joins the languages. Try it in the mockup.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-popupdelay" data-hl-key="s-popupdelay" data-go="settings:1">
+      <h3><span data-l="fr">Délai des pop-ups</span><span data-l="en">Pop-up delay</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.8</span></h3>
+      <p data-l="fr">Un curseur règle le temps avant la fermeture automatique des pop-ups, de 1 à 60 secondes.</p>
+      <p data-l="en">A slider sets how long pop-ups stay open before closing by themselves, from 1 to 60 seconds.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Dans Réglages, onglet Interface. Le délai, de 10 secondes par défaut, vaut pour les trois fenêtres qui se ferment seules : le sélecteur de profils, la question OUI / NON des automatisations et le pop-up HVAC. Chaque action dans la fenêtre relance le délai, et le prochain pop-up ouvert utilise la nouvelle valeur. Sans réponse à la fin du délai, la question OUI / NON vaut NON.</p>
+        <p data-l="en">In Settings, Interface tab. The delay, 10 seconds by default, applies to the three windows that close by themselves: the profile picker, the YES / NO question of the automations and the HVAC pop-up. Each action in the window restarts the delay, and the next pop-up opened uses the new value. With no answer when the delay runs out, the YES / NO question counts as NO.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-topbar" data-hl-key="topbar" data-go="dashboard:0">

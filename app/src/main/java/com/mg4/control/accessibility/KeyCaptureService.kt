@@ -168,7 +168,7 @@ class KeyCaptureService : AccessibilityService() {
             // ouvre la navigation : une répétition sans premier down signale un appui commencé
             // avant l'ouverture (un appui long qui vient d'ouvrir le popup, typiquement), et son
             // relâchement appartient au raccourci qui l'a pris en charge.
-            // Si plusieurs sont ouverts, la confirmation passe d'abord : sa question expire en 8 s.
+            // Si plusieurs sont ouverts, la confirmation passe d'abord : sa question expire toute seule.
             // Le pop-up HVAC vient en dernier — il n'attend aucune réponse.
             val commande = JoystickFocus.commande(code)
             if (commande != null && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {

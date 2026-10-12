@@ -11,6 +11,7 @@ import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.service.ProfileConfirmOverlay
 import com.mg4.control.util.GarageMode
+import com.mg4.control.util.PopupDelay
 
 /**
  * Automatisation « profil selon la batterie » (issue #112) : surveille le niveau de batterie
@@ -19,8 +20,9 @@ import com.mg4.control.util.GarageMode
  *
  * **Indépendante de la chaîne de démarrage** (manuel → température → Bluetooth → défaut) : la
  * batterie baisse en roulant, elle n'a rien à faire dans un choix qui ne se fait qu'au contact.
- * Au démarrage, la première vérification attend [STARTUP_DELAY_MS] que cette chaîne ait fini —
- * popup de la température compris —, puis la remplace si la batterie est déjà sous le seuil.
+ * Au démarrage, la première vérification attend que cette chaîne ait fini — le délai du popup
+ * de la température ([PopupDelay]) plus [STARTUP_MARGIN_MS] —, puis la remplace si la batterie
+ * est déjà sous le seuil.
  *
  * **Un choix manuel ne la bloque pas** : franchir le seuil est un nouvel événement, c'est
  * précisément pour lui que l'automatisation a été activée. En mode confirmation, le conducteur
@@ -35,8 +37,11 @@ object BatteryAutomation {
     /** Une batterie ne perd pas un pour cent en trente secondes, même sur autoroute. */
     private const val TICK_MS = 30_000L
 
-    /** Laisse la chaîne de démarrage finir, popup de 8 s de la température compris. */
-    private const val STARTUP_DELAY_MS = 12_000L
+    /**
+     * Marge laissée à la chaîne de démarrage APRÈS le délai du popup de confirmation de la
+     * température, qui se règle (Réglages › Interface) : l'attente le suit, elle n'est pas figée.
+     */
+    private const val STARTUP_MARGIN_MS = 4_000L
 
     private val thread = HandlerThread("mg4-soc-auto").apply { start() }
     private val worker = Handler(thread.looper)
@@ -55,7 +60,7 @@ object BatteryAutomation {
                 // Chaque démarrage ouvre un nouvel épisode : batterie encore basse ce matin,
                 // profil économie à nouveau.
                 trigger.rearm()
-                worker.postDelayed(tick, STARTUP_DELAY_MS)
+                worker.postDelayed(tick, PopupDelay.millis(context) + STARTUP_MARGIN_MS)
             }
         }
     }

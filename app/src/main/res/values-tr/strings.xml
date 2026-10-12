@@ -272,6 +272,8 @@
     <string name="settings_theme_dark">Koyu tema</string>
     <string name="settings_theme_light">Açık tema</string>
     <string name="settings_text_size">Yazı boyutu</string>
+    <string name="settings_popup_delay">Açılır pencerelerin kapanma süresi</string>
+    <string name="settings_popup_delay_desc">Profil seçici, otomasyon onayı ve HVAC açılır penceresi. Her işlem süreyi yeniden başlatır.</string>
     <string name="settings_text_size_standard">Standart</string>
     <string name="settings_text_size_large">Büyük</string>
     <string name="settings_text_size_xlarge">Çok büyük</string>

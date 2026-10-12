@@ -66,6 +66,8 @@
       hvac: { enabled: false, power: true, ac: true, auto: false, temp: 21, fan: 4, loop: null, air: null }
     }, o);
   }
+  /** Délai avant fermeture des pop-ups, en secondes (Réglages › Interface) : 1 à 60, 10 par défaut. */
+  function popupDelay() { const v = +state.settings.popupDelay; return v >= 1 && v <= 60 ? Math.round(v) : 10; }
   /** Catégorie d'un profil prise en compte ? Absente (profil d'avant la fonction) = oui. */
   function catOn(p, k) { return !(p.cat && p.cat[k] === false); }
   const WINDOWS = ['FL', 'FR', 'RL', 'RR'];
@@ -136,7 +138,7 @@
       defaultId: daily.id,
       lastManual: null,
       settings: { defaultScreen: 'dashboard', theme: 'auto', api: false, autoUpdate: true, beta: false, gate: false, gateMax: 30,
-                  garage: false, textSize: 'standard', updOverlay: true, readyDefault: false },
+                  garage: false, textSize: 'standard', updOverlay: true, readyDefault: false, popupDelay: 10 },
       sc: {
         enabled: true,
         map: { btn1_single: 'PROFILE_PICKER', btn1_long: 'ONE_PEDAL', btn2_single: 'NONE', btn2_long: 'ADAS_CYCLE' },
@@ -1415,7 +1417,10 @@
       return '<div class="a-sec" data-hl="s-default"><div class="a-h">' + esc(S('settings_default_screen')) + '</div><div class="a-grid g3">' + ds('dashboard', 'settings_default_screen_dashboard') + ds('profiles', 'nav_profiles') + ds('shortcuts', 'nav_shortcuts') + '</div></div>' +
         '<div class="a-sec" data-hl="s-theme"><div class="a-h">' + esc(S('settings_theme')) + '</div><div class="a-grid g3">' + th('auto', 'settings_theme_auto') + th('dark', 'settings_theme_dark') + th('light', 'settings_theme_light') + '</div></div>' +
         '<div class="a-sec" data-hl="s-textsize"><div class="a-h">' + esc(S('settings_text_size')) + '</div><div class="a-grid g3">' +
-          ['standard', 'large', 'xlarge'].map((v) => '<button class="b' + (s.textSize === v ? ' on' : '') + '" data-a="textSize" data-v="' + v + '">' + esc(S('settings_text_size_' + v)) + '</button>').join('') + '</div></div>';
+          ['standard', 'large', 'xlarge'].map((v) => '<button class="b' + (s.textSize === v ? ' on' : '') + '" data-a="textSize" data-v="' + v + '">' + esc(S('settings_text_size_' + v)) + '</button>').join('') + '</div></div>' +
+        '<div class="a-sec" data-hl="s-popupdelay"><div class="a-h">' + esc(S('settings_popup_delay')) + '</div>' +
+          '<div class="a-row"><div style="flex:1">' + range('popupDelay', 1, 60, popupDelay()) + '</div><span class="a-val" data-out="popupDelay">' + popupDelay() + ' s</span></div>' +
+          '<div class="a-desc">' + esc(S('settings_popup_delay_desc')) + '</div></div>';
     }
     setAdv() {
       const s = state.settings, k = caps();
@@ -1884,7 +1889,7 @@
      */
     openPicker(subset, onAuto) {
       this.closeOverlay();
-      this.ui.overlay = { type: 'picker', left: 8, subset: subset || null, onAuto: onAuto || null, focus: null };
+      this.ui.overlay = { type: 'picker', left: popupDelay(), subset: subset || null, onAuto: onAuto || null, focus: null };
       this.startCountdown(() => { const o = this.ui.overlay; this.closeOverlay(); if (o && o.onAuto) o.onAuto(); });
       this.render();
     }
@@ -1921,18 +1926,18 @@
           r = nr; c = best;
         }
       }
-      o.focus = { r, c }; o.left = 8;
+      o.focus = { r, c }; o.left = popupDelay();
       commit();
     }
     /**
      * Pop-up HVAC (HvacPopupOverlay) : le joystick n'y déplace aucun focus, chaque direction agit
      * et le clic central bascule la ventilation AUTO. A/C, recirculation, sens de l'air et fermeture
-     * sont tactiles. Ouvert et refermé par le même raccourci ; se referme seul après 6 s sans action.
+     * sont tactiles. Ouvert et refermé par le même raccourci ; se referme seul, sans action, après le délai réglé (Réglages › Interface).
      */
     openHvacPopup() {
       if (!caps().clim) return hud(L('Pop-up HVAC indisponible sur ce firmware', 'HVAC pop-up unavailable on this firmware'));
       this.closeOverlay();
-      this.ui.overlay = { type: 'hvac', left: 6, total: 6, flash: null };
+      this.ui.overlay = { type: 'hvac', left: popupDelay(), total: popupDelay(), flash: null };
       this.startCountdown(() => this.closeOverlay());
       this.render();
     }
@@ -1964,7 +1969,7 @@
     showConfirm(p, onNo, battery) {
       this.closeOverlay();
       const a = state.auto.p;
-      this.ui.overlay = { type: 'confirm', profileId: p.id, left: 8, onNo, dir: a.dir, thr: a.thr, temp: state.car.outside, battery: battery || null };
+      this.ui.overlay = { type: 'confirm', profileId: p.id, left: popupDelay(), onNo, dir: a.dir, thr: a.thr, temp: state.car.outside, battery: battery || null };
       this.startCountdown(() => { const o = this.ui.overlay; this.closeOverlay(); if (o && o.onNo) o.onNo(); });
       this.render();
     }
@@ -1975,7 +1980,7 @@
     confirmKey(dir) {
       const o = this.ui.overlay; if (!o || o.type !== 'confirm') return;
       if (dir === 'ok') return this.act(o.focus === 1 ? 'cfNo' : 'cfYes');
-      if (dir === 'left' || dir === 'right') { o.focus = dir === 'right' ? 1 : 0; o.left = 8; this.render(); }
+      if (dir === 'left' || dir === 'right') { o.focus = dir === 'right' ? 1 : 0; o.left = popupDelay(); this.render(); }
     }
     startCountdown(onEnd) {
       clearInterval(this._cd);
@@ -1984,8 +1989,6 @@
         o.left -= 1;
         if (o.left <= 0) { clearInterval(this._cd); onEnd(); return; }
         const el = this.app.querySelector('[data-cd]');
-        const bar = this.app.querySelector('[data-cdbar]');
-        if (bar) bar.style.width = (100 * o.left / (o.total || 8)) + '%';
         if (el) el.textContent = S('overlay_countdown', o.left); else this.render();
       }, 1000);
     }
@@ -2045,7 +2048,6 @@
           ab('ws', cl.air.ws, 'clim_air_windshield_front', 'ws') + ab('rear', cl.defR, 'clim_air_windshield_rear', 'rear') + '</div></div>' +
           '<div class="hv-side"><div class="lbl">' + esc(S('hvac_popup_compressor')) + '</div><button class="b hv-ac' + (cl.ac ? ' on' : '') + '" data-a="hvAc">' + esc(S('clim_ac')) + '</button>' +
           '<div class="lbl hv-airlbl">' + esc(S('clim_section_loop')) + '</div>' + lp(0, 'clim_loop_inner') + lp(1, 'clim_loop_outside') + lp(2, 'clim_loop_auto') + '</div></div>' +
-          '<div class="hv-bar"><i data-cdbar style="width:' + Math.round(100 * o.left / o.total) + '%"></i></div>' +
           '<div class="hv-foot"><div class="cd" data-cd>' + esc(S('overlay_countdown', o.left)) + '</div><button class="b nc hv-close" data-a="hvClose">' + HV_ICON.close + esc(S('nav_close')) + '</button></div></div></div>';
       }
       if (o.type === 'update') {
@@ -2191,7 +2193,7 @@
           const out = this.app.querySelector('[data-out="' + t.getAttribute('data-c') + '"]');
           const id = t.getAttribute('data-c');
           if (out) out.textContent = outText(id, t.value);
-          if (id === 'pkBri' && this.ui.overlay) this.ui.overlay.left = 8;
+          if (id === 'pkBri' && this.ui.overlay) this.ui.overlay.left = popupDelay();
         } else if (t.getAttribute('data-c') === 'eName' && this.ui.edit) {
           this.ui.edit.name = t.value;
         }
@@ -2417,7 +2419,7 @@
           if (!next.face && !next.feet && !next.ws) return;
           c.clim.air = next; return r();
         }
-        case 'pkBri': c.brightness = n; if (u.overlay) u.overlay.left = 8; return r();
+        case 'pkBri': c.brightness = n; if (u.overlay) u.overlay.left = popupDelay(); return r();
         case 'pkProfile': { const p = state.profiles.find((x) => x.id === v); this.closeOverlay(); if (p) applyProfile(p, { manual: true }); return; }
         case 'pkPower': this.closeOverlay(); return this.askPowerOff();
         case 'pkOpen': this.closeOverlay(); u.screen = state.settings.defaultScreen; return this.render();
@@ -2547,7 +2549,7 @@
       switch (id) {
         case 'climTemp': c.clim.temp = +t.value; return commit();
         case 'climFan': c.clim.fan = +t.value; c.clim.auto = false; return commit();
-        case 'pkBri': c.brightness = +t.value; if (u.overlay) u.overlay.left = 8; return commit();
+        case 'pkBri': c.brightness = +t.value; if (u.overlay) u.overlay.left = popupDelay(); return commit();
         case 'doorLevel': state.door.level = +t.value; return commit();
         case 'eName': if (u.edit) u.edit.name = t.value; return;
         case 'eBt': if (u.edit) u.edit.bt = t.value || null; return this.render();
@@ -2570,6 +2572,7 @@
         case 'waSpeed': state.winAuto.speed = +t.value; return commit();
         case 'waTime': state.winAuto.time = +t.value; return commit();
         case 'waDelay': state.winAuto.delay = +t.value; return commit();
+        case 'popupDelay': state.settings.popupDelay = clamp(+t.value, 1, 60); return commit();
         case 'waBeepVol': state.winAuto.beepVol = +t.value; return commit();
         case 'winCourse': state.winCourse = Math.round(+t.value * 1000); return commit();
         case 'stCurrency': state.stats.currency = (t.value || '').slice(0, 3) || '€'; return commit();
@@ -2718,7 +2721,7 @@
       case 'rtThrCold': return '\u2264 ' + v + ' °C';
       case 'waSpeed': return v + ' km/h';
       case 'waTime': return v + ' min';
-      case 'waDelay': return v + ' s';
+      case 'waDelay': case 'popupDelay': return v + ' s';
       case 'waBeepVol': case 'batThr': case 'briDay': case 'briNight': return v + ' %';
       case 'bhMin': return S('batheat_auto_minutes_value', v);
       case 'winCourse': return S('win_cal_seconds', fmtS(+v * 1000));
