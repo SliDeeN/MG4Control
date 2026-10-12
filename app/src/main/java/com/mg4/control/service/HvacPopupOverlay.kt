@@ -1,23 +1,17 @@
 package com.mg4.control.service
 
 import android.content.Context
-import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
-import android.widget.ImageView
-import android.widget.ProgressBar
-import android.widget.TextView
 import android.widget.Toast
-import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
 import com.mg4.control.accessibility.JoystickFocus
 import com.mg4.control.accessibility.KeyCaptureService
@@ -31,7 +25,9 @@ import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.ThemeHelper
 import java.util.Locale
+import java.util.concurrent.Executor
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.roundToInt
 
 /**
@@ -49,6 +45,11 @@ import kotlin.math.roundToInt
  *
  * Ouvert et refermé par le même raccourci ([toggle]) ; se referme seul, sans action, après le
  * délai réglé dans Réglages › Interface ([PopupDelay]).
+ *
+ * Deux présentations ([HvacPopupStyle]), une par raccourci, le temps de les comparer : cette
+ * classe garde les règles — lecture, bornes, anti-rebond, écritures, relecture — et confie la
+ * peinture à un [HvacPopupSkin]. L'autre raccourci, pressé pendant que la fenêtre est ouverte,
+ * passe d'une présentation à l'autre.
  */
 object HvacPopupOverlay {
 
@@ -73,22 +74,31 @@ object HvacPopupOverlay {
     /** Lectures et écritures clim : appels binder, certains bloquants (bascules relues). */
     private val vehicule = Executors.newSingleThreadExecutor()
 
+    /**
+     * Sièges chauffants réglés à un niveau PRÉCIS (présentation « moderne ») : jusqu'à trois
+     * crans espacés, puis une vérification — plusieurs secondes. Une file par siège, pour ne
+     * retenir ni la température ni la ventilation derrière, et garder l'ordre des demandes.
+     */
+    private val fileSiegeGauche by lazy { Executors.newSingleThreadExecutor() }
+    private val fileSiegeDroit by lazy { Executors.newSingleThreadExecutor() }
+
+    /** Numéro de la dernière demande par siège : une consigne dépassée ne s'envoie pas. */
+    private val demandeSiegeGauche = AtomicInteger()
+    private val demandeSiegeDroit = AtomicInteger()
+
     @Volatile private var overlayView: View? = null
 
     // ── Tout ce qui suit : thread principal seulement ────────────────────────
     private var ouvertureEnCours = false
-    private var vues: Vues? = null
+    private var vues: HvacPopupSkin? = null
+    private var styleAffiche: HvacPopupStyle? = null
     private var gestionnaire: WindowManager? = null
 
     /** Dernier état lu, corrigé de ce qui vient d'être demandé (voir [surCommande]). */
     private var etat: MG4Hardware.ClimateState? = null
 
-    /**
-     * Sièges et volant chauffants ; null sur les firmwares qui n'en ont pas, et la colonne reste
-     * alors masquée. Un champ à null = illisible : son bouton est grisé.
-     */
-    private data class Chauffages(val siegeGauche: Int?, val siegeDroit: Int?, val volant: Boolean?)
-    private var chauffages: Chauffages? = null
+    /** Sièges et volant chauffants ; null sur les firmwares qui n'en ont pas. */
+    private var chauffages: HvacPopupSkin.Chauffages? = null
     /** Délai de fermeture lu à l'ouverture : le changer n'agit pas sur un pop-up déjà affiché. */
     private var delaiMs = PopupDelay.DEFAULT_SECONDS * 1_000L
     private var echeance = 0L
@@ -116,14 +126,19 @@ object HvacPopupOverlay {
         handler.post { surCommande(commande) }
     }
 
-    /** Raccourci : ouvre le popup, ou le referme s'il est déjà à l'écran. */
-    fun toggle(context: Context) {
+    /**
+     * Raccourci : ouvre le popup dans la présentation [style], ou le referme s'il est déjà à
+     * l'écran dans celle-ci. Ouvert dans l'autre, il change de présentation.
+     */
+    fun toggle(context: Context, style: HvacPopupStyle = HvacPopupStyle.CLASSIC) {
         val app = context.applicationContext
         handler.post {
             if (overlayView != null) {
-                AppLogger.i(TAG, "Pop-up HVAC — second appui du raccourci → fermeture")
+                val autre = styleAffiche != style
+                AppLogger.i(TAG, if (autre) "Pop-up HVAC — raccourci de l'autre présentation → ${style.name}"
+                    else "Pop-up HVAC — second appui du raccourci → fermeture")
                 fermer()
-                return@post
+                if (!autre) return@post
             }
             if (ouvertureEnCours) return@post
             ouvertureEnCours = true
@@ -134,7 +149,7 @@ object HvacPopupOverlay {
                     ouvertureEnCours = false
                     // Sans état, il n'y aurait ni valeur à montrer ni base pour « un cran de plus ».
                     if (lu == null) AppLogger.w(TAG, "Pop-up HVAC non affiché : état clim illisible")
-                    else showOnMain(app, lu, chauds)
+                    else showOnMain(app, lu, chauds, style)
                 }
             }
         }
@@ -151,32 +166,35 @@ object HvacPopupOverlay {
      * Même règle que la carte des chauffages du tableau de bord : SWI133, SWI68 et SWI165.
      * Ailleurs (finitions sans ces équipements, ou firmware sans commande connue) → null.
      */
-    private fun lireChauffages(): Chauffages? {
+    private fun lireChauffages(): HvacPopupSkin.Chauffages? {
         if (!FirmwareInfo.hasHeatFeatures()) return null
         return try {
-            Chauffages(
+            HvacPopupSkin.Chauffages(
                 siegeGauche = MG4Hardware.getSeatHeatLeftOrNull(),
                 siegeDroit  = MG4Hardware.getSeatHeatRightOrNull(),
                 volant      = MG4Hardware.getSteeringHeatOrNull(),
             )
         } catch (e: Exception) {
             AppLogger.w(TAG, "Pop-up HVAC — lecture chauffages : ${e.message}")
-            Chauffages(null, null, null)
+            HvacPopupSkin.Chauffages(null, null, null)
         }
     }
 
-    private fun showOnMain(context: Context, lu: MG4Hardware.ClimateState, chauds: Chauffages?) {
+    private fun showOnMain(
+        context: Context, lu: MG4Hardware.ClimateState, chauds: HvacPopupSkin.Chauffages?, style: HvacPopupStyle,
+    ) {
         fermer()
         delaiMs = PopupDelay.millis(context)
 
         val localized = LocaleHelper.applyLocale(context)
-        // La mise en page est écrite pour une carte de 900 × 390 dp (1136 avec la colonne des
-        // chauffages, à la même échelle), trop petite sur l'écran de la
+        // La mise en page est écrite pour une carte de base (900 × 390 dp pour celle d'origine,
+        // 1136 avec la colonne des chauffages, à la même échelle), trop petite sur l'écran de la
         // voiture (constaté sur SWI133). Plutôt que de figer d'autres dp, qui ne conviendraient
         // qu'à UNE densité, on la gonfle avec une densité corrigée : dp et sp suivent d'un bloc,
         // pictos et texte restent nets, et la fenêtre prend la même part de l'écran partout.
         val mesures = localized.resources.displayMetrics
-        val echelle = HvacPopup.echelle(mesures.widthPixels, mesures.heightPixels, mesures.density)
+        val echelle = HvacPopup.echelle(
+            mesures.widthPixels, mesures.heightPixels, mesures.density, style.largeurDp, style.hauteurDp)
         // Même contexte pour le thème : clair ou sombre comme l'application, pas comme le système.
         val auTheme = ThemeHelper.withAppTheme(localized)
         val agrandi = auTheme.createConfigurationContext(
@@ -184,26 +202,26 @@ object HvacPopupOverlay {
                 densityDpi = (mesures.densityDpi * echelle).roundToInt()
             })
         val themed = ContextThemeWrapper(agrandi, R.style.Theme_MG4Control)
-        val view = LayoutInflater.from(themed).inflate(R.layout.overlay_hvac_popup, null)
-        val v = Vues(view, themed, localized)
-
-        view.findViewById<View>(R.id.hvac_backdrop).setOnClickListener { fermer() }
-        // Même chemin au doigt qu'au joystick : mêmes bornes, même anti-rebond.
-        v.cellules.forEach { (commande, bouton) -> bouton.setOnClickListener { surCommande(commande) } }
-        v.airFace.setOnClickListener       { basculerAir(AirFlow.FACE) }
-        v.airFeet.setOnClickListener       { basculerAir(AirFlow.FEET) }
-        v.airWindshield.setOnClickListener { basculerAir(AirFlow.WINDSHIELD) }
-        v.airRear.setOnClickListener       { basculerLunette() }
-        v.ac.setOnClickListener            { basculerAc() }
-        v.recirculation.forEach { (mode, bouton) -> bouton.setOnClickListener { choisirRecirculation(mode) } }
-        v.fermer.setOnClickListener        { fermer() }
-        if (chauds != null) {
-            v.colonneChauffages.visibility = View.VISIBLE
-            v.siegeGauche.setOnClickListener { cyclerSiege(gauche = true) }
-            v.siegeDroit.setOnClickListener  { cyclerSiege(gauche = false) }
-            v.volant.setOnClickListener      { basculerVolant() }
+        // Gonflée, branchée et peinte une première fois AVANT d'être posée à l'écran, et sous
+        // garde : une mise en page fautive (vue introuvable, mauvais type) lèverait ici, sur le
+        // thread principal du service, et l'emporterait avec elle. La fenêtre ne s'ouvre pas, le
+        // journal dit pourquoi.
+        val (view, v) = try {
+            val gonflee = LayoutInflater.from(themed).inflate(style.layout, null)
+            val presentation: HvacPopupSkin = when (style) {
+                HvacPopupStyle.CLASSIC -> HvacPopupSkinClassic(gonflee, themed, localized)
+                HvacPopupStyle.MODERN  -> HvacPopupSkinModern(gonflee, themed, localized)
+            }
+            gonflee.findViewById<View>(R.id.hvac_backdrop).setOnClickListener { fermer() }
+            presentation.brancher(gestes, avecChauffages = chauds != null)
+            presentation.repereJoystick(utilisable = KeyCaptureService.isEnabled(context))
+            presentation.peindre(lu, chauds)
+            gonflee to presentation
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Pop-up HVAC (${style.name}) non affiché — mise en page : " +
+                "${e.javaClass.simpleName} ${e.message}")
+            return
         }
-        v.repereJoystick(utilisable = KeyCaptureService.isEnabled(context))
 
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val params = WindowManager.LayoutParams(
@@ -216,10 +234,11 @@ object HvacPopupOverlay {
         wm.addView(view, params)
         gestionnaire = wm
         vues = v
+        styleAffiche = style
         etat = lu
         chauffages = chauds
         overlayView = view
-        AppLogger.i(TAG, "Pop-up HVAC affiché : ${lu.tempC} °C (${lu.tempMin}..${lu.tempMax}), " +
+        AppLogger.i(TAG, "Pop-up HVAC affiché (${style.name}) : ${lu.tempC} °C (${lu.tempMin}..${lu.tempMax}), " +
             "ventilation ${lu.fanLevel} (${lu.fanMin}..${lu.fanMax}) AUTO=${lu.autoOn}, A/C=${lu.acOn}, " +
             "recirculation ${lu.loopMode}, sens de l'air ${lu.airFlow}, chauffages ${chauds ?: "absents"} ; " +
             "échelle ×${String.format(Locale.US, "%.2f", echelle)} (écran ${mesures.widthPixels}×" +
@@ -240,14 +259,26 @@ object HvacPopupOverlay {
                     fermer()
                     return
                 }
-                actuelles.decompte.text = actuelles.localized.getString(
-                    R.string.overlay_countdown, ((reste + 999) / 1_000).toInt())
+                actuelles.decompte(((reste + 999) / 1_000).toInt())
                 handler.postDelayed(this, TICK_MS)
             }
         }
         tick = t
         handler.post(t)
     }
+
+    /** Ce que les vues remontent : mêmes chemins quelle que soit la présentation. */
+    private val gestes = HvacPopupSkin.Gestes(
+        commande      = ::surCommande,
+        air           = ::basculerAir,
+        lunette       = ::basculerLunette,
+        ac            = ::basculerAc,
+        recirculation = ::choisirRecirculation,
+        siegeSuivant  = ::cyclerSiege,
+        siegeNiveau   = ::choisirSiege,
+        volant        = ::basculerVolant,
+        fermer        = ::fermer,
+    )
 
     /** Chaque geste, au joystick comme au doigt, redonne le délai complet. */
     private fun relancerDelai() {
@@ -361,6 +392,35 @@ object HvacPopupOverlay {
         }
     }
 
+    /**
+     * Siège chauffant, niveau choisi DIRECTEMENT (présentation « moderne »). La voiture ne connaît
+     * qu'« un cran », et un cran descend : [MG4Hardware.setSeatHeatLeft] compte ceux qu'il faut —
+     * un pour descendre d'un niveau, trois pour en monter un, en passant par « éteint ».
+     *
+     * Le niveau demandé s'affiche aussitôt. L'anti-rebond ne garde que le dernier toucher, et une
+     * consigne restée en file derrière une série de crans en cours ne part pas si une plus
+     * récente l'a remplacée : le siège ne passe pas par tous les niveaux touchés en chemin.
+     */
+    private fun choisirSiege(gauche: Boolean, niveau: Int) {
+        val c = chauffages ?: return
+        relancerDelai()
+        val actuel = (if (gauche) c.siegeGauche else c.siegeDroit) ?: return
+        if (actuel == niveau || niveau !in 0..SeatHeat.MAX_LEVEL) return
+        val cote = if (gauche) "gauche" else "droit"
+        AppLogger.i(TAG, "Pop-up HVAC — siège chauffant $cote : $actuel → $niveau (niveau choisi)")
+        chauffages = if (gauche) c.copy(siegeGauche = niveau) else c.copy(siegeDroit = niveau)
+        afficher()
+        val demandes = if (gauche) demandeSiegeGauche else demandeSiegeDroit
+        val demande = demandes.incrementAndGet()
+        ecrireDiffere("siège $cote", SEAT_SETTLE_MS, if (gauche) fileSiegeGauche else fileSiegeDroit) {
+            when {
+                demandes.get() != demande -> true
+                gauche -> MG4Hardware.setSeatHeatLeft(niveau)
+                else   -> MG4Hardware.setSeatHeatRight(niveau)
+            }
+        }
+    }
+
     private fun basculerVolant() {
         val c = chauffages ?: return
         relancerDelai()
@@ -371,20 +431,25 @@ object HvacPopupOverlay {
         ecrire { MG4Hardware.setSteeringHeat(!actuel) }
     }
 
-    private fun ecrireDiffere(reglage: String, action: () -> Boolean) {
+    private fun ecrireDiffere(
+        reglage: String, apaisement: Long = SETTLE_MS, file: Executor = vehicule, action: () -> Boolean,
+    ) {
         differees.remove(reglage)?.let { handler.removeCallbacks(it) }
         val r = Runnable {
             differees.remove(reglage)
-            ecrire(action = action)
+            ecrire(apaisement, file, action)
         }
         differees[reglage] = r
         handler.postDelayed(r, WRITE_DEBOUNCE_MS)
     }
 
-    /** @param apaisement délai avant de relire : en deçà, la voiture rendrait l'ancienne valeur. */
-    private fun ecrire(apaisement: Long = SETTLE_MS, action: () -> Boolean) {
+    /**
+     * @param apaisement délai avant de relire : en deçà, la voiture rendrait l'ancienne valeur.
+     * @param file       où l'écriture attend son tour ; [vehicule] sauf pour ce qui dure.
+     */
+    private fun ecrire(apaisement: Long = SETTLE_MS, file: Executor = vehicule, action: () -> Boolean) {
         ecrituresEnVol++
-        vehicule.execute {
+        file.execute {
             val ok = try { action() } catch (e: Exception) {
                 AppLogger.w(TAG, "Pop-up HVAC — écriture clim : ${e.message}")
                 false
@@ -419,36 +484,7 @@ object HvacPopupOverlay {
 
     private fun afficher() {
         val s = etat ?: return
-        val v = vues ?: return
-        v.temperature.text = s.tempC?.let { "$it °C" } ?: "-- °C"
-        // En AUTO la voiture annonce 15 pour la ventilation : on écrit « AUTO », pas ce nombre,
-        // et la barre reste vide — il n'y a pas de cran à montrer.
-        val r = s.reglages()
-        val niveau = r.ventilationReelle
-        v.ventilation.text = when {
-            r.enAuto -> v.localized.getString(R.string.clim_auto)
-                .uppercase(v.localized.resources.configuration.locales[0])
-            else -> niveau?.toString() ?: "--"
-        }
-        v.barreVentilation.max = s.fanMax
-        v.barreVentilation.progress = (niveau ?: 0).coerceIn(0, s.fanMax)
-        v.bascule(v.cellules.getValue(JoystickFocus.Commande.VALIDER), if (r.enAuto) true else s.autoOn)
-        v.bascule(v.ac, s.acOn)
-        v.recirculation.forEach { (mode, bouton) -> v.bascule(bouton, s.loopMode?.let { it == mode }) }
-        // Valeur illisible → boutons grisés. Valeur lue mais hors échelle (7 « aucun »)
-        // → boutons actifs, aucun allumé : l'utilisateur peut choisir un sens.
-        val air = s.airFlow?.let { AirFlow.partsOf(it) }
-        v.bascule(v.airFace,       s.airFlow?.let { air?.face == true })
-        v.bascule(v.airFeet,       s.airFlow?.let { air?.feet == true })
-        v.bascule(v.airWindshield, s.airFlow?.let { air?.windshield == true })
-        v.bascule(v.airRear,       s.defrostRear)
-        chauffages?.let { c ->
-            v.siege(v.siegeGauche, R.string.climate_seat_left, c.siegeGauche)
-            v.siege(v.siegeDroit, R.string.climate_seat_right, c.siegeDroit)
-            v.bascule(v.volant, c.volant)
-            v.volant.text = v.localized.getString(R.string.climate_steering_heat) + "\n" +
-                v.localized.getString(if (c.volant == true) R.string.climate_on else R.string.climate_off)
-        }
+        vues?.peindre(s, chauffages)
     }
 
     private fun fermer() {
@@ -460,6 +496,7 @@ object HvacPopupOverlay {
         differees.clear()
         restantes.forEach { handler.removeCallbacks(it); it.run() }
         vues = null
+        styleAffiche = null
         etat = null
         chauffages = null
         val v = overlayView ?: return
@@ -471,95 +508,5 @@ object HvacPopupOverlay {
             AppLogger.i(TAG, "Erreur fermeture pop-up HVAC : ${e.message}")
         }
         gestionnaire = null
-    }
-
-    /** Vues du popup affiché et ce qu'il faut pour les peindre ; vit et meurt avec lui. */
-    private class Vues(view: View, themed: Context, val localized: Context) {
-        val temperature: TextView         = view.findViewById(R.id.hvac_popup_temp)
-        val ventilation: TextView         = view.findViewById(R.id.hvac_popup_fan)
-        val barreVentilation: ProgressBar = view.findViewById(R.id.hvac_popup_fan_bar)
-        val decompte: TextView            = view.findViewById(R.id.hvac_popup_countdown)
-        private val joystickIcone: ImageView = view.findViewById(R.id.hvac_joy_icon)
-        private val joystickTitre: TextView  = view.findViewById(R.id.hvac_joy_title)
-        private val joystickTexte: TextView  = view.findViewById(R.id.hvac_joy_text)
-        val airFace: MaterialButton       = view.findViewById(R.id.hvac_btn_air_face)
-        val airFeet: MaterialButton       = view.findViewById(R.id.hvac_btn_air_feet)
-        val airWindshield: MaterialButton = view.findViewById(R.id.hvac_btn_air_windshield_front)
-        val airRear: MaterialButton       = view.findViewById(R.id.hvac_btn_air_windshield_rear)
-        val ac: MaterialButton            = view.findViewById(R.id.hvac_btn_ac)
-        val colonneChauffages: View       = view.findViewById(R.id.hvac_heat_column)
-        val siegeGauche: MaterialButton   = view.findViewById(R.id.hvac_btn_seat_left)
-        val siegeDroit: MaterialButton    = view.findViewById(R.id.hvac_btn_seat_right)
-        val volant: MaterialButton        = view.findViewById(R.id.hvac_btn_steering_heat)
-        val fermer: MaterialButton        = view.findViewById(R.id.hvac_btn_close)
-
-        val recirculation: Map<Int, MaterialButton> = mapOf(
-            MG4Hardware.LoopMode.INNER   to view.findViewById<MaterialButton>(R.id.hvac_btn_loop_inner),
-            MG4Hardware.LoopMode.OUTSIDE to view.findViewById<MaterialButton>(R.id.hvac_btn_loop_outside),
-            MG4Hardware.LoopMode.AUTO    to view.findViewById<MaterialButton>(R.id.hvac_btn_loop_auto),
-        )
-
-        val cellules: Map<JoystickFocus.Commande, MaterialButton> = mapOf(
-            JoystickFocus.Commande.HAUT    to view.findViewById<MaterialButton>(R.id.hvac_btn_temp_up),
-            JoystickFocus.Commande.BAS     to view.findViewById<MaterialButton>(R.id.hvac_btn_temp_down),
-            JoystickFocus.Commande.GAUCHE  to view.findViewById<MaterialButton>(R.id.hvac_btn_fan_down),
-            JoystickFocus.Commande.DROITE  to view.findViewById<MaterialButton>(R.id.hvac_btn_fan_up),
-            JoystickFocus.Commande.VALIDER to view.findViewById<MaterialButton>(R.id.hvac_btn_auto),
-        )
-
-        private val fondActif    = themed.getColor(R.color.dash_accent_dim)
-        private val fondInactif  = themed.getColor(R.color.dash_btn)
-        private val texteActif   = themed.getColor(R.color.dash_accent)
-        private val texteInactif = themed.getColor(R.color.text_secondary)
-        private val bordure      = themed.getColor(R.color.dash_border)
-        private val alerte       = themed.getColor(R.color.dash_warn)
-        private val traitFin     = dp(themed, 1f)
-        private val traitEpais   = dp(themed, 3f)
-
-        /**
-         * Bouton bascule, peint comme ceux de la page Clim : accentué quand actif.
-         * Un état null = non lisible sur ce firmware → bouton grisé et inerte, plutôt que menteur.
-         */
-        fun bascule(bouton: MaterialButton, actif: Boolean?) {
-            val allume = actif == true
-            bouton.backgroundTintList = ColorStateList.valueOf(if (allume) fondActif else fondInactif)
-            bouton.setTextColor(if (allume) texteActif else texteInactif)
-            bouton.iconTint = ColorStateList.valueOf(if (allume) texteActif else texteInactif)
-            bouton.isEnabled = actif != null
-            bouton.alpha = if (actif != null) 1f else 0.35f
-        }
-
-        /** Siège chauffant : son nom, et son niveau en pastilles ; allumé dès le niveau 1. */
-        fun siege(bouton: MaterialButton, nom: Int, niveau: Int?) {
-            bascule(bouton, niveau?.let { it > 0 })
-            bouton.text = localized.getString(nom) + "\n" + HvacPopup.pastilles(niveau ?: 0)
-        }
-
-        /**
-         * Repère à gauche de la croix : elle se pilote au joystick droit du volant. Sans service
-         * d'accessibilité le joystick ne nous parvient pas (il règle le volume) : le repère
-         * s'éteint et renvoie vers l'écran. L'état « utilisable » est celui de la mise en page.
-         */
-        fun repereJoystick(utilisable: Boolean) {
-            if (utilisable) return
-            joystickIcone.setImageResource(R.drawable.ic_hvac_joystick_off)
-            joystickTitre.setText(R.string.hvac_popup_joystick_off_title)
-            joystickTitre.setTextColor(alerte)
-            joystickTexte.setText(R.string.hvac_popup_joystick_off_text)
-        }
-
-        /** Retour visuel d'un geste : au volant, c'est le seul signe que la commande est passée. */
-        fun eclairer(commande: JoystickFocus.Commande) {
-            val bouton = cellules[commande] ?: return
-            bouton.strokeColor = ColorStateList.valueOf(texteActif)
-            bouton.strokeWidth = traitEpais
-            bouton.postDelayed({
-                bouton.strokeColor = ColorStateList.valueOf(bordure)
-                bouton.strokeWidth = traitFin
-            }, FLASH_MS)
-        }
-
-        private fun dp(context: Context, value: Float) = TypedValue.applyDimension(
-            TypedValue.COMPLEX_UNIT_DIP, value, context.resources.displayMetrics).toInt()
     }
 }

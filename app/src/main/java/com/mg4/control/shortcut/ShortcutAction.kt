@@ -71,7 +71,11 @@ enum class ShortcutAction(val id: Int) {
 
     // Cycle de profils : applique le profil suivant d'une séquence composée par l'utilisateur
     // (voir ProfileCycle). Le profil visé dépend du profil actif, pas d'un état mémorisé ici.
-    PROFILE_CYCLE(42);
+    PROFILE_CYCLE(42),
+
+    // Pop-up HVAC, présentation « moderne » : la même fenêtre que HVAC_POPUP, autrement mise en
+    // page. Les deux coexistent le temps de les comparer en voiture (voir HvacPopupStyle).
+    HVAC_POPUP_MODERN(43);
 
     companion object {
         fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: NONE

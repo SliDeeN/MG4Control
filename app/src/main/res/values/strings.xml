@@ -557,6 +557,7 @@
     <string name="shortcuts_action_defrost_rear">Dégivrage arrière (ON/OFF)</string>
     <string name="shortcuts_action_hvac_recirc">Recirculation : cycle</string>
     <string name="shortcuts_action_hvac_popup">Pop-up HVAC</string>
+    <string name="shortcuts_action_hvac_popup_modern">Pop-up HVAC – nouveau design</string>
     <string name="hvac_popup_temp_up">Temp. +</string>
     <string name="hvac_popup_temp_down">Temp. −</string>
     <string name="hvac_popup_fan_up">Ventil. +</string>

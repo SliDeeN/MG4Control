@@ -105,8 +105,8 @@ object HvacPopup {
     }
 
     // ── Taille de la fenêtre ─────────────────────────────────────────────────
-    private const val LARGEUR_DP = 900f      // la carte de overlay_hvac_popup.xml, sans chauffages
-    private const val HAUTEUR_DP = 390f      // sa hauteur en texte « Standard »
+    const val LARGEUR_DP = 900f      // la carte de overlay_hvac_popup.xml, sans chauffages
+    const val HAUTEUR_DP = 390f      // sa hauteur en texte « Standard »
     private const val PART_LARGEUR = 0.63f
     private const val PART_HAUTEUR = 0.72f
 
@@ -122,12 +122,30 @@ object HvacPopup {
      * On raisonne en part d'écran, pas en dp fixes : la voiture affiche 1920 × 720 px à 1 px par
      * dp (SWI133, mesuré sur une photo le 2026-10-09 — une première fenêtre de 600 dp n'y
      * couvrait que 31 % de la largeur), mais la densité des firmwares A9 n'est pas connue.
+     *
+     * [largeurDp] × [hauteurDp] : la carte de base de la présentation affichée, sans sa colonne
+     * des chauffages — par défaut celle d'origine.
      */
-    fun echelle(largeurPx: Int, hauteurPx: Int, densite: Float): Float {
+    fun echelle(
+        largeurPx: Int, hauteurPx: Int, densite: Float,
+        largeurDp: Float = LARGEUR_DP, hauteurDp: Float = HAUTEUR_DP,
+    ): Float {
         if (largeurPx <= 0 || hauteurPx <= 0 || !(densite > 0f)) return 1f
-        val parLargeur = PART_LARGEUR * largeurPx / (LARGEUR_DP * densite)
-        val parHauteur = PART_HAUTEUR * hauteurPx / (HAUTEUR_DP * densite)
+        val parLargeur = PART_LARGEUR * largeurPx / (largeurDp * densite)
+        val parHauteur = PART_HAUTEUR * hauteurPx / (hauteurDp * densite)
         return minOf(parLargeur, parHauteur).coerceIn(0.75f, 2f)
+    }
+
+    // ── Jauge (présentation « moderne ») ─────────────────────────────────────
+
+    /**
+     * Où se trouve [valeur] entre [min] et [max], de 0 à 1 : la part de l'arc à remplir. Une
+     * valeur hors bornes reste sur la jauge, à son extrémité ; null — jauge vide — sans valeur
+     * lue ou sans étendue à parcourir.
+     */
+    fun part(valeur: Int?, min: Int, max: Int): Float? {
+        if (valeur == null || max <= min) return null
+        return ((valeur - min).toFloat() / (max - min)).coerceIn(0f, 1f)
     }
 
     /**

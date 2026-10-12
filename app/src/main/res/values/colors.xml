@@ -43,4 +43,11 @@
          dash_accent_dim, réservé aux boutons ALLUMÉS — sinon la case AUTO ne ressortirait plus. -->
     <color name="hvac_zone_stroke">#FF0284C7</color>
     <color name="hvac_zone_fill">#FFF0F9FF</color>
+
+    <!-- Pop-up HVAC « moderne » : texte et pictos posés SUR un fond plein (accent, chauffage), et
+         segment choisi d'un sélecteur de niveau. -->
+    <color name="hvac_on_accent">#FFFFFFFF</color>
+    <color name="hvac_on_heat">#FFFFFFFF</color>
+    <color name="hvac_on_eco">#FFFFFFFF</color>
+    <color name="hvac_segment_on">#FFFFFFFF</color>
 </resources>

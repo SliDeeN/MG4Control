@@ -5,6 +5,7 @@ import com.mg4.control.model.HvacPopup.Action
 import com.mg4.control.model.HvacPopup.Reglages
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -194,5 +195,48 @@ class HvacPopupTest {
         assertEquals(1f, HvacPopup.echelle(0, 0, 1f), 0f)
         assertEquals(1f, HvacPopup.echelle(1920, 720, 0f), 0f)
         assertEquals(1f, HvacPopup.echelle(1920, 720, Float.NaN), 0f)
+    }
+
+    // ── Présentation « moderne » : une autre carte de base, la même règle ────
+
+    @Test
+    fun `une autre carte de base donne sa propre echelle`() {
+        // 836 × 392 dp sans la colonne des chauffages : limitée par la hauteur, 72 % de 720 px.
+        val echelle = HvacPopup.echelle(1920, 720, 1f, largeurDp = 836f, hauteurDp = 392f)
+        assertEquals(0.72f * 720f / 392f, echelle, 0.0005f)
+        // Avec la colonne des chauffages (1072 dp) elle tient encore dans l'écran, marges comprises.
+        assertTrue(1072f * echelle < 0.8f * 1920f)
+        // Écran moins large : 63 % de 1400 px pour 836 dp → × 1,055 (× 0,98 avec la carte d'origine).
+        assertEquals(1.055f, HvacPopup.echelle(1400, 720, 1f, largeurDp = 836f, hauteurDp = 392f), 0.001f)
+    }
+
+    @Test
+    fun `sans carte precisee c est celle de la presentation d origine`() {
+        assertEquals(
+            HvacPopup.echelle(1920, 720, 1f),
+            HvacPopup.echelle(1920, 720, 1f, HvacPopup.LARGEUR_DP, HvacPopup.HAUTEUR_DP), 0f)
+    }
+
+    // ── Jauge de température ─────────────────────────────────────────────────
+
+    @Test
+    fun `la jauge montre ou se trouve la temperature entre ses bornes`() {
+        assertEquals(0f, HvacPopup.part(17, 17, 33)!!, 0f)
+        assertEquals(0.25f, HvacPopup.part(21, 17, 33)!!, 0.0001f)
+        assertEquals(1f, HvacPopup.part(33, 17, 33)!!, 0f)
+    }
+
+    @Test
+    fun `une valeur hors bornes reste sur la jauge`() {
+        assertEquals(0f, HvacPopup.part(10, 17, 33)!!, 0f)
+        assertEquals(1f, HvacPopup.part(40, 17, 33)!!, 0f)
+    }
+
+    @Test
+    fun `sans valeur ou sans etendue la jauge reste vide`() {
+        assertNull(HvacPopup.part(null, 17, 33))
+        // Bornes illisibles rendues égales, ou inversées : rien à situer.
+        assertNull(HvacPopup.part(20, 20, 20))
+        assertNull(HvacPopup.part(20, 33, 17))
     }
 }

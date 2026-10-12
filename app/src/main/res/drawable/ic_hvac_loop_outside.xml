@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pop-up HVAC « moderne » — recirculation : air EXTÉRIEUR, la flèche entre dans la voiture. Dessiné pour l'application (silhouette de voiture
+     commune aux trois modes). Blanc : c'est la vue qui colore le pictogramme. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="1.5"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M5.2,17.5 H2.8 V13.2 C2.8,12.3 3.4,11.8 4.2,11.6 L6.6,11 L8.8,7.6 C9.2,6.9 9.9,6.5 10.7,6.5 H14.9 C15.7,6.5 16.4,6.9 16.9,7.5 L19.4,10.9 L20.4,11.3 C20.9,11.5 21.2,12 21.2,12.6 V17.5 H19 M15.4,17.5 H8.8 M5.2,17.5 a1.8,1.8 0 1,0 3.6,0 a1.8,1.8 0 1,0 -3.6,0 M15.4,17.5 a1.8,1.8 0 1,0 3.6,0 a1.8,1.8 0 1,0 -3.6,0"/>
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="1.5"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M0.8,14.2 H12.6 M10.4,12 L12.6,14.2 L10.4,16.4"/>
+</vector>

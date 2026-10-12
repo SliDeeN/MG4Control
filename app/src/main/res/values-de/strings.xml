@@ -552,6 +552,7 @@
     <string name="shortcuts_action_defrost_rear">Entfrosten hinten (ON/OFF)</string>
     <string name="shortcuts_action_hvac_recirc">Umluft: Wechsel</string>
     <string name="shortcuts_action_hvac_popup">HVAC-Pop-up</string>
+    <string name="shortcuts_action_hvac_popup_modern">HVAC-Pop-up – neues Design</string>
     <string name="hvac_popup_temp_up">Temp. +</string>
     <string name="hvac_popup_temp_down">Temp. −</string>
     <string name="hvac_popup_fan_up">Gebläse +</string>

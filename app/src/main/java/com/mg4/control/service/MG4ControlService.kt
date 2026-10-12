@@ -999,9 +999,11 @@ class MG4ControlService : Service() {
             return
         }
 
-        // HVAC_POPUP : même famille — un second appui referme la fenêtre.
-        if (action == ShortcutAction.HVAC_POPUP) {
-            HvacPopupOverlay.toggle(this@MG4ControlService)
+        // HVAC_POPUP : même famille — un second appui referme la fenêtre. Deux présentations,
+        // une par raccourci, le temps de les comparer.
+        if (action == ShortcutAction.HVAC_POPUP || action == ShortcutAction.HVAC_POPUP_MODERN) {
+            val style = if (action == ShortcutAction.HVAC_POPUP) HvacPopupStyle.CLASSIC else HvacPopupStyle.MODERN
+            HvacPopupOverlay.toggle(this@MG4ControlService, style)
             return
         }
 
