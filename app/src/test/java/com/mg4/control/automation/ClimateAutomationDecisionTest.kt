@@ -91,6 +91,34 @@ class ClimateAutomationDecisionTest {
         assertFalse(ClimateAutomationDecision.allowed(c, evaluated = true, triggered = false))
     }
 
+    // ── Priorité au profil (issue #121, journal du 2026-10-13) ──────────────
+    // Le profil actif est mémorisé d une session à l autre : au démarrage du service il désigne
+    // encore celui du trajet précédent, qui ne sera peut-être pas appliqué cette fois.
+
+    @Test fun `le profil du trajet precedent n a pas priorite`() {
+        // Aucun profil appliqué depuis le démarrage de l application : personne devant qui s effacer.
+        assertFalse(ClimateAutomationDecision.yieldsToProfile(sessionProfileWritesClimate = null))
+    }
+
+    @Test fun `le profil applique depuis le demarrage a priorite s il regle la climatisation`() {
+        assertTrue(ClimateAutomationDecision.yieldsToProfile(sessionProfileWritesClimate = true))
+        assertFalse(ClimateAutomationDecision.yieldsToProfile(sessionProfileWritesClimate = false))
+    }
+
+    @Test fun `au demarrage on attend le profil s il peut regler la climatisation`() {
+        assertTrue(ClimateAutomationDecision.waitsForStartProfile(anyProfileWritesClimate = true, appliedThisSession = false))
+    }
+
+    @Test fun `rien a attendre quand aucun profil ne regle la climatisation`() {
+        // Aucun profil ne peut avoir priorité : l automatisation décide tout de suite, comme avant.
+        assertFalse(ClimateAutomationDecision.waitsForStartProfile(anyProfileWritesClimate = false, appliedThisSession = false))
+    }
+
+    @Test fun `rien a attendre une fois un profil applique`() {
+        // Réouverture de l application en cours de trajet : le profil de la session est connu.
+        assertFalse(ClimateAutomationDecision.waitsForStartProfile(anyProfileWritesClimate = true, appliedThisSession = true))
+    }
+
     @Test fun `seule une temperature lisible vaut decision`() {
         assertTrue(ClimateAutomationDecision.decides(12.5f))
         assertFalse(ClimateAutomationDecision.decides(null))

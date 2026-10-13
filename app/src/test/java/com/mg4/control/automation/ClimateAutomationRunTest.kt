@@ -28,6 +28,32 @@ class ClimateAutomationRunTest {
     private fun autorisee(run: ClimateAutomationRun, trigger: Trigger) =
         ClimateAutomationDecision.allowed(cfg(trigger), run.evaluated, run.triggered)
 
+    // ── Journal du 2026-10-13 : le profil du trajet précédent ────────────────
+    // SWI69, « Au démarrage seulement ». 14:58:19, démarrage du service : le profil actif mémorisé
+    // est encore HVAC1 (bloc clim), celui de la veille. 14:58:22, contact : c est ECO, le profil
+    // par défaut, qui est appliqué — il ne touche pas à la climatisation. L automatisation
+    // s était effacée devant HVAC1 et tenait cela pour SA décision : plus rien ensuite.
+
+    @Test fun `s effacer devant le profil de la veille ne consomme pas l occasion du demarrage`() {
+        val run = ClimateAutomationRun()
+
+        // Démarrage du service : aucun profil appliqué depuis le démarrage de l application.
+        if (ClimateAutomationDecision.yieldsToProfile(sessionProfileWritesClimate = null)) run.decidedNothing()
+
+        // Contact, trois secondes plus tard : ECO vient d être appliqué, il ne règle pas la clim.
+        assertTrue(autorisee(run, Trigger.START_ONLY))
+        assertFalse(ClimateAutomationDecision.yieldsToProfile(sessionProfileWritesClimate = false))
+    }
+
+    @Test fun `le profil applique a ce demarrage decide pour la climatisation`() {
+        // Cas inverse : le profil du démarrage porte un bloc clim. C est une décision, et l unique
+        // occasion du mode « au démarrage seulement » est bien consommée.
+        val run = ClimateAutomationRun()
+        if (ClimateAutomationDecision.yieldsToProfile(sessionProfileWritesClimate = true)) run.decidedNothing()
+        assertFalse(autorisee(run, Trigger.START_ONLY))
+        assertTrue(autorisee(run, Trigger.ONCE_PER_START))
+    }
+
     // ── Le défaut du journal ─────────────────────────────────────────────────
 
     @Test fun `un envoi qui n a pas pu partir ne consomme pas l occasion du demarrage`() {

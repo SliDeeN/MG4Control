@@ -36,6 +36,26 @@ object ClimateAutomationDecision {
         }
 
     /**
+     * Vrai quand l'automatisation s'efface devant le profil : il a été appliqué DEPUIS le démarrage
+     * de l'application et il règle lui-même la climatisation.
+     *
+     * [sessionProfileWritesClimate] est nul tant qu'aucun profil n'a été appliqué depuis le
+     * démarrage. Le profil actif, lui, est mémorisé d'une session à l'autre : au démarrage du
+     * service il désigne encore celui du trajet précédent, qui ne sera peut-être pas appliqué
+     * cette fois. S'effacer devant lui laissait la climatisation sans personne pour la régler —
+     * et, en mode « au démarrage seulement », consommait l'unique occasion (issue #121).
+     */
+    fun yieldsToProfile(sessionProfileWritesClimate: Boolean?): Boolean = sessionProfileWritesClimate == true
+
+    /**
+     * Vrai quand l'évaluation du démarrage doit attendre le profil du démarrage : un profil
+     * enregistré règle la climatisation — lui seul peut avoir priorité — et aucun profil n'a encore
+     * été appliqué depuis le démarrage de l'application. Sinon il n'y a personne à attendre.
+     */
+    fun waitsForStartProfile(anyProfileWritesClimate: Boolean, appliedThisSession: Boolean): Boolean =
+        anyProfileWritesClimate && !appliedThisSession
+
+    /**
      * Vrai quand une évaluation vaut décision : la température a pu être lue. Illisible, elle ne
      * dit ni « chaud » ni « pas chaud » — l'occasion du démarrage n'est pas consommée.
      */

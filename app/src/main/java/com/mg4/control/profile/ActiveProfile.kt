@@ -28,11 +28,21 @@ object ActiveProfile {
     private const val PREFS = "mg4_profiles"
     private const val KEY = "active_profile_id"
 
+    /**
+     * Id du profil appliqué DEPUIS le démarrage de l'application, ou `null` si aucun ne l'a encore
+     * été. En mémoire seulement, au contraire de [id] : au démarrage du service, [id] désigne
+     * encore le profil du trajet précédent, alors que celui de ce démarrage n'est pas encore
+     * appliqué. Qui demande « quel profil vient de régler la voiture ? » lit celui-ci (issue #121).
+     */
+    @Volatile var sessionId: String? = null
+        private set
+
     /** Id du profil actif, ou `null` si aucun n'a encore été appliqué. */
     fun id(ctx: Context?): String? =
         ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY, null)
 
     fun set(ctx: Context?, profileId: String?) {
+        sessionId = profileId
         val prefs = ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE) ?: return
         if (profileId == null) prefs.edit().remove(KEY).apply()
         else prefs.edit().putString(KEY, profileId).apply()

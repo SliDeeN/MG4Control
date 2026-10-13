@@ -440,9 +440,12 @@ véhicule au moment d'appliquer et la consigne y est clampée : elles diffèrent
 autres firmwares.
 
 > [!NOTE]
-> **Le profil est prioritaire sur l'automatisation A/C.** Si le profil actif porte un bloc
-> climatisation, l'automatisation par température ne fait rien et le journalise. Sans cette règle
-> les deux s'écriraient dessus au contact, dans un ordre que rien ne garantit.
+> **Le profil est prioritaire sur l'automatisation A/C.** Si le profil appliqué depuis le démarrage
+> de l'application porte un bloc climatisation, l'automatisation par température ne fait rien et le
+> journalise. Sans cette règle les deux s'écriraient dessus au contact, dans un ordre que rien ne
+> garantit. Au démarrage, quand un profil enregistré règle la climatisation, l'automatisation attend
+> que le profil du démarrage soit appliqué — une dizaine de secondes au plus — avant de décider : le
+> profil du trajet précédent ne compte pas.
 
 ### Compatibilité firmware inconnue (UNKNOWN)
 - Fenêtre d'avertissement au démarrage si le firmware n'est pas reconnu, avec la version lue sur
@@ -1462,9 +1465,11 @@ vehicle when applying and the setpoint is clamped to them: they differ between A
 firmwares.
 
 > [!NOTE]
-> **The profile wins over the A/C automation.** If the active profile carries a climate block, the
-> temperature automation does nothing and logs it. Without that rule the two would write over each
-> other at ignition, in an order nothing guarantees.
+> **The profile wins over the A/C automation.** If the profile applied since the app started
+> carries a climate block, the temperature automation does nothing and logs it. Without this rule
+> both would write over each other at ignition, in an order nothing guarantees. At start-up, when a
+> saved profile sets the climate, the automation waits for the start-up profile to be applied —
+> about ten seconds at most — before deciding: the previous trip's profile does not count.
 
 ### Unknown firmware (UNKNOWN)
 - Warning window at startup when the firmware is not recognised, showing the version read from the

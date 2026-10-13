@@ -148,6 +148,13 @@ class MG4ControlService : Service() {
          *  500 ms, soit une dizaine de secondes avant de renoncer à l'envoi. */
         private const val CLIMATE_READY_ATTEMPTS = 20
         private const val CLIMATE_READY_PAUSE_MS = 500L
+        /** Attente du profil du démarrage avant d'évaluer l'automatisation A/C (issue #121) : au
+         *  démarrage à froid il arrive par le premier contact, environ 3 s après le service. Une
+         *  dizaine de secondes au plus ; sans profil appliqué d'ici là, elle décide seule. */
+        private const val CLIMATE_START_PROFILE_ATTEMPTS = 20
+        private const val CLIMATE_START_PROFILE_PAUSE_MS = 500L
+        /** Vrai pendant cette attente : [onStartCommand] est rejoué à chaque ouverture de l'application. */
+        @Volatile private var climateStartWaiting = false
 
     }
 
@@ -331,9 +338,60 @@ class MG4ControlService : Service() {
         }
         if (handleAdvancedShortcutIntent(intent)) return START_STICKY
         if (handleExternalApiIntent(intent)) return START_STICKY
-        tryClimateAutomation("démarrage service")
+        climateAutomationAtStart()
         scheduleDefaultProfileOnce()
         return START_STICKY
+    }
+
+    /**
+     * Automatisation A/C au démarrage du service — APRÈS le profil du démarrage (issue #121).
+     *
+     * Un profil qui règle lui-même la climatisation a priorité sur elle, et ce profil n'est connu
+     * qu'une fois appliqué : par la chaîne du démarrage ([scheduleDefaultProfileOnce]) ou par le
+     * premier contact, quelques secondes plus tard. Évaluée tout de suite, l'automatisation
+     * jugeait sur le profil du trajet PRÉCÉDENT, encore mémorisé : elle s'effaçait devant un profil
+     * qui n'allait pas être appliqué, ou envoyait sa règle juste avant qu'un profil à bloc clim
+     * n'écrive par-dessus.
+     *
+     * On attend donc qu'un profil ait été appliqué, une dizaine de secondes au plus : au-delà (pas
+     * de profil par défaut, voiture pas encore en marche) elle décide seule. Rien à attendre quand
+     * aucun profil enregistré ne règle la climatisation, ni quand l'automatisation n'a rien à
+     * faire — [tryClimateAutomation] dit alors pourquoi, comme avant.
+     */
+    private fun climateAutomationAtStart() {
+        val ctx = applicationContext
+        val utile = !GarageMode.isOn(ctx) && ClimateAutomationSettings.read(ctx).enabled &&
+            MG4Hardware.hasClimateControl()
+        val attend = utile && ClimateAutomationDecision.waitsForStartProfile(
+            anyProfileWritesClimate = ProfileManager(ctx).getAll().any { it.writesClimate },
+            appliedThisSession = ActiveProfile.sessionId != null)
+        if (!attend) {
+            tryClimateAutomation("démarrage service")
+            return
+        }
+        // onStartCommand est rejoué à chaque ouverture de l'application : une seule attente à la fois.
+        if (climateStartWaiting) {
+            AppLogger.i(TAG, "Auto A/C (démarrage service) : attente du profil du démarrage déjà en cours — skip")
+            return
+        }
+        climateStartWaiting = true
+        AppLogger.i(TAG, "Auto A/C (démarrage service) : un profil enregistré règle la climatisation — " +
+            "attente du profil du démarrage")
+        CoroutineScope(Dispatchers.IO).launch {
+            val debut = System.currentTimeMillis()
+            val applique = ClimateAutomationRun.awaitReady(CLIMATE_START_PROFILE_ATTEMPTS, CLIMATE_START_PROFILE_PAUSE_MS) {
+                ActiveProfile.sessionId != null
+            }
+            val attente = System.currentTimeMillis() - debut
+            // Sur le fil principal, comme les autres déclencheurs.
+            Handler(Looper.getMainLooper()).post {
+                climateStartWaiting = false
+                AppLogger.i(TAG, "Auto A/C (démarrage service) : " +
+                    if (applique) "profil du démarrage appliqué après $attente ms"
+                    else "aucun profil appliqué après ${attente / 1000} s — l'automatisation décide seule")
+                tryClimateAutomation("démarrage service")
+            }
+        }
     }
 
     /**
@@ -1427,13 +1485,16 @@ class MG4ControlService : Service() {
         // à dire : sans cette règle les deux s'écriraient dessus au contact, dans un ordre que
         // rien ne garantit, et le résultat dépendrait de qui finit en dernier.
         //
-        // Le profil actif est renseigné DÈS L'ENTRÉE de ProfileApplier.apply(), avant même les
-        // écritures véhicule : quand cette vérification a lieu, il désigne bien le profil du
-        // cycle en cours.
-        val profilActif = ActiveProfile.id(ctx)?.let { ProfileManager(ctx).getById(it) }
+        // Seul compte un profil appliqué DEPUIS le démarrage de l'application
+        // ([ActiveProfile.sessionId]) : le profil actif mémorisé désigne, au démarrage du service,
+        // celui du trajet précédent — qui ne sera peut-être pas appliqué cette fois (issue #121).
+        // Il est renseigné DÈS L'ENTRÉE de ProfileApplier.apply(), avant même les écritures
+        // véhicule : au contact, où le profil est appliqué juste avant, il désigne bien le profil
+        // du cycle en cours ; au démarrage du service, [climateAutomationAtStart] l'attend.
+        val profilActif = ActiveProfile.sessionId?.let { ProfileManager(ctx).getById(it) }
         // writesClimate et non hvacEnabled : un profil dont la catégorie Confort est coupée
         // n'écrit pas sa climatisation, il n'a donc rien décidé.
-        if (profilActif?.writesClimate == true) {
+        if (profilActif != null && ClimateAutomationDecision.yieldsToProfile(profilActif.writesClimate)) {
             AppLogger.i(TAG, "Auto A/C ($origin) : le profil actif '${profilActif.name}' porte " +
                 "sa propre climatisation — priorité au profil")
             // Le profil a décidé de la climatisation pour ce démarrage : c'est une décision.
