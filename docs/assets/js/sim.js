@@ -48,7 +48,7 @@
     297: ['Joystick haut', 'Joystick up'], 298: ['Joystick bas', 'Joystick down'],
     299: ['Joystick gauche', 'Joystick left'], 300: ['Joystick droite', 'Joystick right'], 301: ['Joystick centre', 'Joystick centre']
   };
-  const APPS = ['MG Launcher', 'Spotify', 'Google Maps', 'Waze', 'YouTube Music', 'Radio'];
+  const APPS = ['ABRP', 'Bluetooth', 'Chargemap', 'Deezer', 'Files', 'Google Maps', 'MG Launcher', 'Radio', 'Settings', 'Spotify', 'TomTom GO', 'Waze', 'YouTube', 'YouTube Music'];
 
   function mkProfile(o) {
     return Object.assign({
@@ -741,7 +741,7 @@
   function keyDown(code) {
     const rec = instances.find((i) => i.ui.adv.rec);
     if (rec) { rec.captureKey(code); emit('capture', { code }); keyRt[code] = { capture: true }; return; }
-    // Popup de profils ouvert → le joystick droit y navigue (service d'accessibilité requis).
+    // Sélecteur de profils ouvert → le joystick droit y navigue (service d'accessibilité requis).
     const picker = instances.find((i) => i.ui.overlay && i.ui.overlay.type === 'picker');
     if (picker && JOYSTICK[code] && state.sc.advService && !garage()) {
       keyRt[code] = { capture: true };
@@ -749,7 +749,7 @@
       emit('nav', { code, dir: JOYSTICK[code] });
       return;
     }
-    // Popup de confirmation ouvert → le joystick y choisit entre OUI et NON (même condition).
+    // Bandeau de confirmation affiché → le joystick y choisit entre NON et OUI (même condition).
     const confirm = instances.find((i) => i.ui.overlay && i.ui.overlay.type === 'confirm');
     if (confirm && JOYSTICK[code] && state.sc.advService && !garage()) {
       keyRt[code] = { capture: true };
@@ -1031,10 +1031,23 @@
       // reconstruit, et son animation d'entrée (fondu depuis le transparent) rejouait à chaque
       // geste — il clignotait avant d'afficher la nouvelle valeur. On repère ce qui était déjà là
       // pour le marquer « still » : l'animation ne joue plus qu'à la vraie apparition.
-      const flottants = '.a-scrim > *, .a-toast';
+      const flottants = '.a-scrim > *, .a-bannerbox > *, .a-toast';
       const signature = (n) => n.classList[0] + '|' + (n.getAttribute('data-hl') || '');
       const dejaLa = new Set(Array.from(this.app.querySelectorAll(flottants), signature));
+      // Listes qui défilent dans une fenêtre (grille de choix, listes d'un raccourci, journal) :
+      // reconstruites elles aussi à chaque geste, on leur rend leur position.
+      const positions = {};
+      this.app.querySelectorAll('[data-sk]').forEach((n) => { positions[n.getAttribute('data-sk')] = n.scrollTop; });
       this.app.innerHTML = this.html();
+      this.app.querySelectorAll('[data-sk]').forEach((n) => {
+        const id = n.getAttribute('data-sk');
+        if (id in positions) { n.scrollTop = positions[id]; return; }
+        // À l'ouverture, le choix en cours est amené en vue, une ligne au-dessus restant visible.
+        const on = n.querySelector('.on');
+        if (!on) return;
+        const a = on.getBoundingClientRect(), b = n.getBoundingClientRect(), z = b.height / n.offsetHeight || 1;
+        n.scrollTop = Math.max(0, (a.top - b.top - a.height) / z);
+      });
       this.app.querySelectorAll(flottants).forEach((n) => {
         if (!dejaLa.has(signature(n))) return;
         n.classList.add('still');
@@ -1872,7 +1885,7 @@
           else if (c.powerComputed) lines.push([S('stats_detail_power_computed'), this.num(c.powerComputed, 1) + ' kW']);
           lines.push([S('stats_detail_battery'), c.soc[0] + ' % → ' + c.soc[1] + ' %'], [S('stats_detail_temp'), this.num(c.temp, 1) + ' °C'], [S('stats_detail_tariff'), tariff]);
           h += this.detailBox(lines, '<div class="a-grid g2" style="margin-top:6px"><button class="b sm" data-a="stFix" data-v="' + i + '">' + esc(S('stats_fix_tariff')) + '</button>' +
-            (c.reconstructed && !c.timesKnown ? '<button class="b sm primary" data-a="stComplete" data-v="' + i + '">' + esc(S('stats_complete_session')) + '</button>' : '<span></span>') + '</div>');
+            (c.reconstructed ? '<button class="b sm primary" data-a="stComplete" data-v="' + i + '">' + esc(S('stats_complete_session')) + '</button>' : '<span></span>') + '</div>');
         }
       });
       return h;
@@ -1882,32 +1895,36 @@
     }
 
     // ── Overlays ───────────────────────────────────────────────────────────
+    // Présentation de la 2.6.8 : deux pop-ups plein cadre (sélecteur de profils, HVAC) et trois
+    // bandeaux en bas de l'écran (confirmation, mise à jour, extinction). Dimensions reprises de
+    // overlay_*.xml : la carte de base (1108 × 392 dp) occupe ici la même part d'écran que sur la
+    // voiture, où l'application l'agrandit d'un bloc (OverlayKit).
     /**
-     * Sélecteur de profil. Sans argument : tous les profils (raccourci volant, API).
+     * Sélecteur de profils. Sans argument : tous les profils (raccourci volant, API).
      * Avec `subset` (conflit Bluetooth) : seuls les profils des téléphones connectés, et
      * `onAuto` (application du 1er) si personne ne choisit avant la fin du décompte.
      */
     openPicker(subset, onAuto) {
       this.closeOverlay();
-      this.ui.overlay = { type: 'picker', left: popupDelay(), subset: subset || null, onAuto: onAuto || null, focus: null };
+      this.ui.overlay = { type: 'picker', left: popupDelay(), subset: subset || null, onAuto: onAuto || null, focus: { r: 0, c: 0 } };
       this.startCountdown(() => { const o = this.ui.overlay; this.closeOverlay(); if (o && o.onAuto) o.onAuto(); });
       this.render();
     }
+    pickerList() { const o = this.ui.overlay; return o.subset ? state.profiles.filter((p) => o.subset.includes(p.id)) : state.profiles; }
+    /** Lignes du joystick, comme dans l'application : les cartes, puis préréglages et actions, puis le curseur. */
     pickerRows() {
-      const o = this.ui.overlay, k = caps(), rows = [];
-      if (k.bri) { rows.push(['bri:15', 'bri:50', 'bri:100']); rows.push(['slider']); }
-      const ids = (o.subset || state.profiles.map((p) => p.id)).filter((id) => state.profiles.some((p) => p.id === id));
-      for (let i = 0; i < ids.length; i += 2) rows.push(ids.slice(i, i + 2).map((id) => 'p:' + id));
-      rows.push(['close'].concat(k.power ? ['power'] : [], ['open']));
+      const k = caps(), rows = [];
+      const ids = this.pickerList().map((p) => 'p:' + p.id);
+      if (ids.length) rows.push(ids);
+      rows.push((k.bri ? ['bri:15', 'bri:50', 'bri:100'] : []).concat(['open'], k.power ? ['power'] : []));
+      if (k.bri) rows.push(['slider']);
       return rows;
     }
-    /** Joystick droit dans le popup : sans rebouclage, cellule la plus proche horizontalement. */
+    /** Joystick droit dans le sélecteur : sans rebouclage ; en changeant de ligne, la cellule la plus proche à l'écran. */
     navigate(dir) {
       const o = this.ui.overlay; if (!o || o.type !== 'picker') return;
       const rows = this.pickerRows();
-      if (!o.focus) { const first = rows.findIndex((r) => r[0].startsWith('p:')); o.focus = { r: first < 0 ? 0 : first, c: 0 }; }
-      let { r, c } = o.focus;
-      r = clamp(r, 0, rows.length - 1); c = clamp(c, 0, rows[r].length - 1);
+      let r = clamp(o.focus.r, 0, rows.length - 1), c = clamp(o.focus.c, 0, rows[r].length - 1);
       const cell = rows[r][c];
       if (dir === 'ok') {
         if (cell !== 'slider') { const el = this.app.querySelector('[data-cell="' + cell + '"]'); if (el) el.click(); }
@@ -1920,9 +1937,10 @@
       } else {
         const nr = clamp(r + (dir === 'up' ? -1 : 1), 0, rows.length - 1);
         if (nr !== r) {
-          const x = (c + 0.5) / rows[r].length;
-          let best = 0, bd = 9;
-          rows[nr].forEach((_, i) => { const d = Math.abs((i + 0.5) / rows[nr].length - x); if (d < bd) { bd = d; best = i; } });
+          const mid = (id) => { const el = this.app.querySelector('[data-cell="' + id + '"]'); if (!el) return 0; const b = el.getBoundingClientRect(); return b.left + b.width / 2; };
+          const x = mid(cell);
+          let best = 0, bd = Infinity;
+          rows[nr].forEach((id, i) => { const d = Math.abs(mid(id) - x); if (d < bd) { bd = d; best = i; } });
           r = nr; c = best;
         }
       }
@@ -1931,8 +1949,8 @@
     }
     /**
      * Pop-up HVAC (HvacPopupOverlay) : le joystick n'y déplace aucun focus, chaque direction agit
-     * et le clic central bascule la ventilation AUTO. A/C, recirculation, sens de l'air et fermeture
-     * sont tactiles. Ouvert et refermé par le même raccourci ; se referme seul, sans action, après le délai réglé (Réglages › Interface).
+     * et le clic central bascule la ventilation AUTO. Tout le reste est tactile. Ouvert et refermé
+     * par le même raccourci ; se referme seul, sans action, après le délai réglé (Réglages › Interface).
      */
     openHvacPopup() {
       if (!caps().clim) return hud(L('Pop-up HVAC indisponible sur ce firmware', 'HVAC pop-up unavailable on this firmware'));
@@ -1961,27 +1979,46 @@
       this._hvFlash = setTimeout(() => { const cur = this.ui.overlay; if (cur && cur.type === 'hvac') { cur.flash = null; this.render(); } }, 200);
       commit();
     }
+    /** Bandeau « une mise à jour est disponible » (UpdateOverlay) : sans réponse dans le délai, c'est « plus tard ». */
     showUpdateOverlay() {
       this.closeOverlay();
-      this.ui.overlay = { type: 'update' };
+      this.ui.overlay = { type: 'update', left: popupDelay() };
+      this.startCountdown(() => this.closeOverlay());
       this.render();
     }
+    /** Bandeau OUI / NON des automatisations (ProfileConfirmOverlay) : le focus du joystick part de OUI, à droite. */
     showConfirm(p, onNo, battery) {
       this.closeOverlay();
       const a = state.auto.p;
-      this.ui.overlay = { type: 'confirm', profileId: p.id, left: popupDelay(), onNo, dir: a.dir, thr: a.thr, temp: state.car.outside, battery: battery || null };
+      this.ui.overlay = { type: 'confirm', profileId: p.id, left: popupDelay(), onNo, dir: a.dir, thr: a.thr, temp: state.car.outside, battery: battery || null, focus: 1 };
       this.startCountdown(() => { const o = this.ui.overlay; this.closeOverlay(); if (o && o.onNo) o.onNo(); });
       this.render();
     }
-    /**
-     * Popup OUI / NON (ProfileConfirmOverlay) au joystick droit : focus de départ sur OUI,
-     * gauche/droite pour changer, clic central pour valider. Chaque déplacement relance le délai.
-     */
+    /** Joystick droit sur le bandeau : gauche = NON, droite = OUI, clic central pour valider. Chaque déplacement relance le délai. */
     confirmKey(dir) {
       const o = this.ui.overlay; if (!o || o.type !== 'confirm') return;
-      if (dir === 'ok') return this.act(o.focus === 1 ? 'cfNo' : 'cfYes');
+      if (dir === 'ok') return this.act(o.focus === 0 ? 'cfNo' : 'cfYes');
       if (dir === 'left' || dir === 'right') { o.focus = dir === 'right' ? 1 : 0; o.left = popupDelay(); this.render(); }
     }
+    /**
+     * Extinction du véhicule. Depuis un raccourci ou le sélecteur de profils : bandeau en bas de
+     * l'écran (VehiclePowerOffOverlay), qui dit aussi pourquoi c'est impossible hors de P. Depuis
+     * les Réglages (`settings`) : fenêtre de l'application, et un simple message hors de P.
+     */
+    askPowerOff(settings) {
+      if (!car().on) return;
+      const park = car().speed === 0;
+      if (settings) {
+        if (!park) return this.toast(S('vehicle_power_need_park'), 3000);
+        this.ui.dialog = { type: 'powerOff' }; return this.render();
+      }
+      this.closeOverlay();
+      this.ui.overlay = { type: 'power', left: popupDelay(), park };
+      this.startCountdown(() => this.closeOverlay());
+      this.render();
+    }
+    /** Décompte : écrit en toutes lettres dans un pop-up, réduit à « 10 s » sur le bouton d'un bandeau. */
+    cdText(o) { return o.type === 'picker' || o.type === 'hvac' ? S('overlay_countdown', o.left) : S('win_auto_delay_value', o.left); }
     startCountdown(onEnd) {
       clearInterval(this._cd);
       this._cd = setInterval(() => {
@@ -1989,140 +2026,238 @@
         o.left -= 1;
         if (o.left <= 0) { clearInterval(this._cd); onEnd(); return; }
         const el = this.app.querySelector('[data-cd]');
-        if (el) el.textContent = S('overlay_countdown', o.left); else this.render();
+        if (el) el.textContent = this.cdText(o); else this.render();
       }, 1000);
     }
     closeOverlay() { clearInterval(this._cd); this.ui.overlay = null; this.render(); }
+
+    /** Repère du joystick dans l'en-tête d'un pop-up ; sans service d'accessibilité, il dit pourquoi le joystick ne répond pas. */
+    joyChip(nav, gestures) {
+      if (!nav) return '<div class="ov-chip off"><span>' + MW.target + esc(S('hvac_popup_joystick_off_title') + ' · ' + S('hvac_popup_joystick_off_text')) + '</span></div>';
+      return '<div class="ov-chip"><span>' + MW.target + esc(S('hvac_popup_joystick_title')) + '</span>' + gestures.map(([ico, t]) => '<span>' + ico + esc(t) + '</span>').join('') + '</div>';
+    }
+    /** En-tête d'un pop-up : pictogramme, titre, décompte, croix, et le repère du joystick posé par-dessus. */
+    ovHead(icon, title, o, closeAct, chip, chipPlace) {
+      return '<div class="ov-head">' + icon + '<div class="ov-title">' + esc(title) + '</div><span class="ov-cd" data-cd>' + esc(this.cdText(o)) + '</span>' +
+        '<button class="ov-x" data-a="' + closeAct + '" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button>' +
+        '<div class="ov-chipbox" style="' + chipPlace + '">' + chip + '</div></div>';
+    }
     overlayHtml() {
-      const o = this.ui.overlay, k = caps();
+      const o = this.ui.overlay, k = caps(), c = car();
+      // Sans service d'accessibilité, le joystick ne parvient pas à l'application.
+      const nav = state.sc.advService && !garage();
       if (o.type === 'picker') {
-        const c = car();
-        // Anneau de focus du joystick : seulement si le service d'accessibilité tourne.
-        const nav = state.sc.advService && !garage();
         const rows = this.pickerRows();
-        let focusCell = null;
-        if (nav) {
-          const f = o.focus || { r: Math.max(0, rows.findIndex((r) => r[0].startsWith('p:'))), c: 0 };
-          const rr = rows[clamp(f.r, 0, rows.length - 1)];
-          focusCell = rr[clamp(f.c, 0, rr.length - 1)];
-        }
-        const fc = (cell) => ' data-cell="' + cell + '"' + (cell === focusCell ? ' data-kf="1"' : '');
-        const kf = (cell) => (cell === focusCell ? ' kfocus' : '');
-        const bri = k.bri ? '<div class="pk-bri" data-hl="pk-bri"><span class="lbl">☀ ' + esc(S('overlay_brightness_title')) + '</span>' +
-          '<button class="b' + kf('bri:15') + '" data-a="pkBri" data-v="15"' + fc('bri:15') + '>' + esc(S('overlay_brightness_night')) + '</button><button class="b' + kf('bri:50') + '" data-a="pkBri" data-v="50"' + fc('bri:50') + '>' + esc(S('overlay_brightness_mid')) + '</button><button class="b' + kf('bri:100') + '" data-a="pkBri" data-v="100"' + fc('bri:100') + '>' + esc(S('overlay_brightness_day')) + '</button>' +
-          '<div style="flex:1" class="pk-slider' + kf('slider') + '">' + range('pkBri', 5, 100, c.brightness, false, 'big') + '</div><span class="a-val" data-out="pkBri">' + c.brightness + '%</span></div><div class="p-line" style="margin:0"></div>' : '';
-        const list = o.subset ? state.profiles.filter((p) => o.subset.includes(p.id)) : state.profiles;
-        const profiles = list.length ? list.map((p) => '<button class="b' + kf('p:' + p.id) + '" data-a="pkProfile" data-v="' + p.id + '"' + fc('p:' + p.id) + '>' + esc(p.name) + '</button>').join('') : '<div class="pk-empty">' + esc(S('shortcuts_no_profiles')) + '</div>';
-        return '<div class="a-scrim" data-a="pkBg"><div class="picker" data-hl="picker"><div class="pk-title">' + esc(S('overlay_profile_title')) + '</div>' + bri +
-          '<div class="pk-grid" data-hl="pk-grid">' + profiles + '</div>' +
-          '<div class="pk-foot" data-hl="pk-foot"><div><button class="b' + kf('close') + '" data-a="pkClose"' + fc('close') + '>' + esc(S('nav_close')) + '</button><span class="cd" data-cd>' + esc(S('overlay_countdown', o.left)) + '</span></div>' +
-          (k.power ? '<button class="b danger' + kf('power') + '" data-a="pkPower"' + fc('power') + '>' + esc(S('shortcuts_action_vehicle_power_off')) + '</button>' : '') +
-          '<div style="justify-content:flex-end"><button class="b primary' + kf('open') + '" data-a="pkOpen"' + fc('open') + '>' + esc(S('overlay_open_app')) + '</button></div></div></div></div>';
+        const row = rows[clamp(o.focus.r, 0, rows.length - 1)];
+        const focusCell = nav ? row[clamp(o.focus.c, 0, row.length - 1)] : null;
+        const at = (cell) => ' data-cell="' + cell + '"';
+        const kf = (cell) => (cell === focusCell ? ' ov-foc' : '');
+        const list = this.pickerList(), n = list.length;
+        // Largeur d'une carte (ProfilePicker.largeurCarteDp) : la rangée est partagée, 340 dp au plus.
+        const w = n ? Math.min(340, (1076 - (n - 1) * 10) / n) : 0;
+        const cards = n ? list.map((p) => {
+          const on = p.id === state.activeProfileId;
+          // Rien sur un réglage que le profil n'écrira pas : sans la catégorie Conduite, ni mode ni
+          // régénération, et le résumé nomme les catégories qu'il applique.
+          const sum = catOn(p, 'drive') ? S('drive_section_regen') + ' ' + REGEN_LABEL[p.regen]
+            : ['safety', 'comfort'].filter((x) => catOn(p, x)).map((x) => S('profile_cat_' + x)).join(' · ');
+          return '<button class="pkp-card' + (on ? ' on' : '') + kf('p:' + p.id) + '" style="width:' + w + 'px" data-a="pkProfile" data-v="' + p.id + '"' + at('p:' + p.id) + '>' +
+            '<span class="pkp-top">' + modePill(p) + '<i></i>' + (on ? '<span class="mw-pill line">' + esc(S('overlay_profile_active')) + '</span>' : '') + '</span>' +
+            '<b>' + esc(p.name) + '</b><small>' + esc(sum) + '</small><i></i><em>' + esc(S(on ? 'overlay_profile_current' : 'overlay_profile_apply')) + '</em></button>';
+        }).join('') : '<div class="pkp-empty">' + esc(S('shortcuts_no_profiles')) + '</div>';
+        // Un préréglage est allumé quand la luminosité lui est égale ; le curseur a sa propre ligne,
+        // gauche et droite du joystick le règlent.
+        const presets = [[15, 'overlay_brightness_night'], [50, 'overlay_brightness_mid'], [100, 'overlay_brightness_day']];
+        const bri = k.bri ? '<div class="ov-pan pkp-bri" data-hl="pk-bri"><div class="pkp-brirow">' + MW.brightness + '<div class="ov-seg">' +
+          presets.map(([v, key]) => '<button class="' + (c.brightness === v ? 'on' : '') + kf('bri:' + v) + '" data-a="pkBri" data-v="' + v + '"' + at('bri:' + v) + '>' + esc(S(key)) + '</button>').join('') +
+          '</div><span class="pkp-val" data-out="pkBri">' + c.brightness + '%</span></div>' +
+          '<div class="pkp-slider' + kf('slider') + '"' + at('slider') + '>' + range('pkBri', 5, 100, c.brightness, false, 'big') + '</div></div>' : '';
+        const tile = (cell, a, label, ico, danger) => '<button class="pkp-act' + (danger ? ' danger' : '') + kf(cell) + '" data-a="' + a + '"' + at(cell) + '>' + ico + '<span>' + esc(label) + '</span></button>';
+        const actions = '<div class="ov-pan pkp-acts' + (!k.bri ? ' wide' : k.power ? ' two' : ' one') + '" data-hl="pk-foot">' + tile('open', 'pkOpen', S('overlay_open_app'), MW.open) +
+          (k.power ? tile('power', 'pkPower', S('shortcuts_action_vehicle_power_off'), MW.power, true) : '') + '</div>';
+        const chip = this.joyChip(nav, [[MW.stickMove, S('overlay_joy_navigate')], [MW.stickClick, S('overlay_joy_validate')]]);
+        return '<div class="a-scrim" data-a="pkBg"><div class="ov-card pkp" data-hl="picker">' +
+          this.ovHead(MW.profiles, S('overlay_profile_title'), o, 'pkClose', chip, 'left:0;right:0') +
+          '<div class="pkp-cards" data-hl="pk-grid">' + cards + '</div><div class="pkp-strip">' + bri + actions + '</div></div></div>';
       }
       if (o.type === 'hvac') {
-        const cl = car().clim;
-        // Sans service d'accessibilité, le joystick ne parvient pas à l'application : le repère le dit.
-        const nav = state.sc.advService && !garage();
-        const cell = (dir, cls, ico, key, on) => '<button class="b hv-cell hv-' + cls + (on ? ' on' : '') + (o.flash === dir ? ' hit' : '') + '" data-a="hvKey" data-v="' + dir + '">' + ico + '<span>' + esc(S(key)) + '</span></button>';
-        const ab = (f, on, key, icon) => '<button class="b air sm' + (on ? ' on' : '') + '" data-a="hvAir" data-v="' + f + '">' + AIR_ICON[icon] + '<span>' + esc(S(key)) + '</span></button>';
-        const lp = (n, key) => '<button class="b' + (cl.loop === n ? ' on' : '') + '" data-a="hvLoop" data-v="' + n + '">' + esc(S(key)) + '</button>';
-        // En AUTO la voiture n'annonce pas de cran de ventilation : on écrit « AUTO », barre vide.
-        // Repère du joystick (ic_hvac_joystick.xml) ; éteint, il porte l'avertissement.
-        const joy = '<div class="hv-joy' + (nav ? '' : ' off') + '"><svg viewBox="0 0 72 64" aria-hidden="true"><path class="rim" d="M5 26A46 46 0 0 1 67 26"/><rect class="spoke" x="6" y="31" width="60" height="11" rx="5.5"/><rect class="pad" x="33" y="21" width="32" height="32" rx="8"/><path class="arr" d="M49 26l4.5 5.5h-9zM49 48l4.5-5.5h-9zM38 37l5.5-4.5v9zM60 37l-5.5-4.5v9z"/><rect class="dot" x="45.5" y="33.5" width="7" height="7" rx="1.5"/></svg>' +
-          '<b>' + esc(S(nav ? 'hvac_popup_joystick_title' : 'hvac_popup_joystick_off_title')) + '</b><span>' + esc(S(nav ? 'hvac_popup_joystick_text' : 'hvac_popup_joystick_off_text')) + '</span></div>';
+        const cl = c.clim, heatOn = k.heat;
+        const hit = (d) => (o.flash === d ? ' hit' : '');
+        // Une couleur par niveau de siège, pour le lire d'un coup d'œil : éteint en gris, puis vert,
+        // orange, rouge. Le niveau se choisit d'un toucher.
+        const LV = ['', '--dash-eco', '--dash-warn', '--dash-danger'], ON = ['', '--hvac-on-eco', '--hvac-on-heat', '--text-active'];
+        const seat = (side, v, key) => '<div class="hvp-seat"><b>' + esc(S(key)) + '</b><span' + (v ? ' style="color:var(' + LV[v] + ')"' : '') + '>' + esc(S(v ? 'climate_level_' + v : 'climate_off')) + '</span></div>' +
+          '<div class="ov-seg">' + [0, 1, 2, 3].map((lv) => '<button' + (lv === v ? ' class="on"' + (lv ? ' style="background:var(' + LV[lv] + ');color:var(' + ON[lv] + ')"' : '') : '') +
+            ' data-a="hpSeat" data-v="' + side + ':' + lv + '">' + (lv ? MW['heat' + lv] : esc(S('climate_off'))) + '</button>').join('') + '</div>';
         // Sièges et volant chauffants : colonne de gauche, sur les firmwares équipés seulement.
-        const c = car(), heatOn = caps().heat;
-        const hb = (a, v, on, ico, key, st) => '<button class="b hv-heatb' + (on ? ' on' : '') + '" data-a="' + a + '"' + (v ? ' data-v="' + v + '"' : '') + '>' + ico + '<span>' + esc(S(key)) + '</span><span class="st">' + esc(st) + '</span></button>';
-        const dots = (n) => [1, 2, 3].map((i) => (i <= n ? '●' : '○')).join(' ');
-        const heat = heatOn ? '<div class="hv-heat"><div class="lbl">' + esc(S('hvac_popup_heating')) + '</div>' +
-          hb('hvSeat', 'L', c.seatL > 0, HEAT_ICON.seatL, 'climate_seat_left', dots(c.seatL)) +
-          hb('hvWheel', null, c.steering, HEAT_ICON.wheel, 'climate_steering_heat', S(c.steering ? 'climate_on' : 'climate_off')) +
-          hb('hvSeat', 'R', c.seatR > 0, HEAT_ICON.seatR, 'climate_seat_right', dots(c.seatR)) + '</div>' : '';
-        return '<div class="a-scrim" data-a="hvBg"><div class="hvacpop' + (heatOn ? ' heat' : '') + '" data-hl="hvac-popup"><div class="hv-main">' + heat + '<div class="hv-left"><div class="hv-top">' + joy + '<div class="hv-cross">' +
-          cell('up', 'up', HV_ICON.temp, 'hvac_popup_temp_up') + cell('left', 'left', HV_ICON.fan, 'hvac_popup_fan_down') + cell('ok', 'ok', HV_ICON.fan, 'clim_auto', cl.auto) +
-          cell('right', 'right', HV_ICON.fan, 'hvac_popup_fan_up') + cell('down', 'down', HV_ICON.temp, 'hvac_popup_temp_down') + '</div>' +
-          '<div class="hv-vals"><div class="lbl">' + esc(S('clim_temperature')) + '</div><div class="hv-temp">' + cl.temp + ' °C</div>' +
-          '<div class="lbl">' + esc(S('clim_fan')) + '<b>' + (cl.auto ? esc(S('clim_auto').toUpperCase()) : cl.fan) + '</b></div><div class="hv-fan"><i style="width:' + (cl.auto ? 0 : Math.round(100 * cl.fan / cl.fMax)) + '%"></i></div></div></div>' +
-          '<div class="lbl hv-airlbl">' + esc(S('clim_section_airflow')) + '</div><div class="a-grid g4">' +
-          ab('face', cl.air.face, 'clim_air_face', 'face') + ab('feet', cl.air.feet, 'clim_air_feet', 'feet') +
-          ab('ws', cl.air.ws, 'clim_air_windshield_front', 'ws') + ab('rear', cl.defR, 'clim_air_windshield_rear', 'rear') + '</div></div>' +
-          '<div class="hv-side"><div class="lbl">' + esc(S('hvac_popup_compressor')) + '</div><button class="b hv-ac' + (cl.ac ? ' on' : '') + '" data-a="hvAc">' + esc(S('clim_ac')) + '</button>' +
-          '<div class="lbl hv-airlbl">' + esc(S('clim_section_loop')) + '</div>' + lp(0, 'clim_loop_inner') + lp(1, 'clim_loop_outside') + lp(2, 'clim_loop_auto') + '</div></div>' +
-          '<div class="hv-foot"><div class="cd" data-cd>' + esc(S('overlay_countdown', o.left)) + '</div><button class="b nc hv-close" data-a="hvClose">' + HV_ICON.close + esc(S('nav_close')) + '</button></div></div></div>';
+        const heat = heatOn ? '<div class="ov-pan hvp-heat"><div class="ov-cap">' + esc(S('hvac_popup_heating')) + '</div>' + seat('L', c.seatL, 'climate_seat_left') + seat('R', c.seatR, 'climate_seat_right') +
+          '<i></i><button class="ov-tile hvp-wheel' + (c.steering ? ' lit' : '') + '" data-a="hpWheel">' + HEAT_WHEEL + '<span>' + esc(S('climate_steering_heat')) + '</span><em></em></button></div>' : '';
+        // Jauge de température (ArcGaugeView) : un arc de 270°, ouvert vers le bas.
+        const gw = 196, gh = 186, r = Math.min(gw / 2 - 10, (gh - 38) / 1.7071), cx = gw / 2, cy = 10 + r, e = r * 0.7071;
+        const part = clamp((cl.temp - cl.tMin) / (cl.tMax - cl.tMin), 0, 1), ang = (135 + 270 * part) * Math.PI / 180;
+        const gx = (cx + r * Math.cos(ang)).toFixed(1), gy = (cy + r * Math.sin(ang)).toFixed(1);
+        const from = 'M' + (cx - e).toFixed(1) + ',' + (cy + e).toFixed(1) + ' A' + r.toFixed(1) + ',' + r.toFixed(1) + ' 0 ';
+        const gauge = '<div class="hvp-gauge"><svg width="' + gw + '" height="' + gh + '" aria-hidden="true"><path class="g-track" d="' + from + '1 1 ' + (cx + e).toFixed(1) + ',' + (cy + e).toFixed(1) + '"/>' +
+          (part > 0 ? '<path class="g-val" d="' + from + (part > 2 / 3 ? 1 : 0) + ' 1 ' + gx + ',' + gy + '"/>' : '') +
+          '<circle class="g-knob" cx="' + gx + '" cy="' + gy + '" r="9"/><circle class="g-ring" cx="' + gx + '" cy="' + gy + '" r="7.5"/></svg>' +
+          '<div class="hvp-temp"><small>' + esc(S('clim_temperature')) + '</small><div><b>' + cl.temp + '</b><span>°C</span></div></div>' +
+          '<small class="hvp-lim" style="left:' + Math.round(cx - e - 22) + 'px">' + cl.tMin + '°</small><small class="hvp-lim" style="left:' + Math.round(cx + e - 22) + 'px">' + cl.tMax + '°</small></div>';
+        const round = (dir, cls, ico) => '<button class="hvp-round ' + cls + hit(dir) + '" data-a="hpKey" data-v="' + dir + '">' + ico + '</button>';
+        // En AUTO la voiture n'annonce pas de cran de ventilation : on écrit « AUTO », aucun segment allumé.
+        const bar = '<div class="hvp-bar">' + Array.from({ length: cl.fMax }, (_, i) => '<i' + (!cl.auto && i < cl.fan ? ' class="on"' : '') + '></i>').join('') + '</div>';
+        const air = (f, on, key) => '<button class="ov-tile hvp-air' + (on ? ' on' : '') + '" data-a="hpAir" data-v="' + f + '">' + AIR_ICON[f] + '<span>' + esc(S(key)) + '</span></button>';
+        const loop = (nb, key, ico) => '<button class="ov-tile hvp-loop' + (cl.loop === nb ? ' on' : '') + '" data-a="hpLoop" data-v="' + nb + '">' + ico + '<span>' + esc(S(key)) + '</span></button>';
+        const zone = '<div class="hvp-zone"><div class="hvp-row">' + round('down', 'cold', MW.minus) + gauge + round('up', 'hot', MW.plus) +
+          '<div class="hvp-fan"><small>' + esc(S('clim_fan')) + '</small><div class="hvp-fanv">' + MW.fan + '<b>' + (cl.auto ? esc(S('clim_auto').toUpperCase()) : cl.fan) + '</b></div>' + bar +
+          '<div class="hvp-fanrow"><button class="ov-tile' + hit('left') + '" data-a="hpKey" data-v="left">' + MW.minus + '</button>' +
+          '<button class="ov-tile auto' + (cl.auto ? ' on' : '') + hit('ok') + '" data-a="hpKey" data-v="ok">' + esc(S('clim_auto')) + '</button>' +
+          '<button class="ov-tile' + hit('right') + '" data-a="hpKey" data-v="right">' + MW.plus + '</button></div></div></div>' +
+          '<div class="hvp-airs">' + air('face', cl.air.face, 'clim_air_face') + air('feet', cl.air.feet, 'clim_air_feet') +
+          air('ws', cl.air.ws, 'clim_air_windshield_front') + air('rear', cl.defR, 'clim_air_windshield_rear') + '</div></div>';
+        const side = '<div class="ov-pan hvp-side"><button class="hvp-ac' + (cl.ac ? ' on' : '') + '" data-a="hpAc">' + MW.ac + '<b>' + esc(S('clim_ac')) + '</b><span>' + esc(S(cl.ac ? 'climate_on' : 'climate_off')) + '</span></button>' +
+          '<div class="ov-cap">' + esc(S('clim_section_loop')) + '</div>' + loop(0, 'clim_loop_inner', MW.loopInner) + loop(1, 'clim_loop_outside', MW.loopOutside) + loop(2, 'clim_loop_auto', MW.loopAuto) + '</div>';
+        const chip = this.joyChip(nav, [[MW.stickV, S('clim_temperature')], [MW.stickH, S('clim_fan')], [MW.stickClick, S('clim_auto').toUpperCase()]]);
+        // Le repère est calé au-dessus du cadre bleu ; sans colonne des chauffages le cadre est tout à
+        // gauche, sous le titre, qui s'efface alors devant le repère.
+        return '<div class="a-scrim" data-a="hpBg"><div class="ov-card hvp' + (heatOn ? ' heat' : '') + '" data-hl="hvac-popup">' +
+          this.ovHead(MW.fan, S('clim_card_title'), o, 'hpClose', chip, 'left:' + (heatOn ? 244 : 0) + 'px;width:600px') +
+          '<div class="hvp-body">' + heat + zone + side + '</div></div></div>';
+      }
+      return this.bannerHtml(o, nav);
+    }
+    /**
+     * Bandeaux : une question posée en bas de l'écran, sans le cacher. Ce qui est touché ailleurs va
+     * à l'application du dessous — le bandeau n'assombrit ni ne bloque rien. Le décompte est écrit
+     * sur le bouton qui vaut « non » : c'est lui que le délai déclenche.
+     */
+    bannerHtml(o, nav) {
+      const cd = '<span data-cd>' + esc(this.cdText(o)) + '</span>';
+      const box = (hl, inner) => '<div class="a-bannerbox"><div class="a-banner" data-hl="' + hl + '">' + inner + '</div></div>';
+      if (o.type === 'confirm') {
+        const p = state.profiles.find((x) => x.id === o.profileId), bat = o.battery;
+        const unit = bat ? '%' : '°C', value = bat ? bat.soc : o.temp, thr = (bat ? bat.thr : o.thr) + ' ' + unit;
+        const kf = (i) => (nav && o.focus === i ? ' ov-foc' : '');
+        return box('confirm', (bat ? MW.battery : MW.temperature) +
+          '<div class="bn-meas"><div><b>' + esc(this.num(+value, 1)) + '</b><span>' + unit + '</span></div><small>' + esc(S(!bat && o.dir === 'ABOVE' ? 'automation_confirm_above' : 'automation_confirm_below', thr)) + '</small></div><i class="bn-sep"></i>' +
+          '<div class="bn-main"><small>' + esc(S('automation_confirm_question')) + '</small><div class="bn-line"><b>' + esc(p ? p.name : '?') + '</b>' + (p ? modePill(p) : '') + '</div></div>' +
+          '<button class="bn-b' + kf(0) + '" style="width:170px" data-a="cfNo"><b>' + esc(S('automation_confirm_no')) + '</b>' + cd + '</button>' +
+          '<button class="bn-b p' + kf(1) + '" style="width:170px" data-a="cfYes"><b>' + esc(S('automation_confirm_yes')) + '</b></button>');
       }
       if (o.type === 'update') {
-        return '<div class="a-scrim" data-a="upBg"><div class="confirm" data-hl="upd-overlay"><div class="msg"><b>' + esc(S('update_overlay_title')) + '</b>\n<span style="font-size:26px;font-weight:700;color:var(--dash-accent)">' + esc(S('update_overlay_versions', 'v2.6.8', 'v2.x.x')) + '</span></div>' +
-          '<div class="yn"><button class="b primary" data-a="upInstall">' + esc(S('update_overlay_install')) + '</button><button class="b" data-a="upSkip">' + esc(S('update_overlay_skip')) + '</button></div>' +
-          '<button class="b ghost full" style="margin-top:10px;border:0;opacity:.7;text-transform:none" data-a="upDisable">' + esc(S('update_overlay_disable')) + '</button></div></div>';
+        return box('upd-overlay', MW.update + '<div class="bn-main"><small>' + esc(S('update_overlay_title')) + '</small><div class="bn-line"><span class="mw-pillv">2.6.8</span>' + MW.arrow + '<span class="mw-pillv acc">2.x.x</span>' +
+          '<button class="bn-link" data-a="upDisable">' + esc(S('update_overlay_disable')) + '</button></div></div>' +
+          '<button class="bn-b" style="width:150px" data-a="upLater"><b>' + esc(S('update_later_btn')) + '</b>' + cd + '</button>' +
+          '<button class="bn-b" style="width:200px" data-a="upSkip"><b>' + esc(S('update_overlay_skip')) + '</b></button>' +
+          '<button class="bn-b p" style="width:200px" data-a="upInstall">' + MW.update + '<b>' + esc(S('update_overlay_install')) + '</b></button>');
       }
-      if (o.type === 'confirm') {
-        const p = state.profiles.find((x) => x.id === o.profileId);
-        const msg = o.battery ? S('battery_auto_confirm_msg', o.battery.thr, String(o.battery.soc), p ? p.name : '?')
-          : S(o.dir === 'ABOVE' ? 'automation_confirm_msg_above' : 'automation_confirm_msg', o.thr, String(o.temp), p ? p.name : '?');
-        const kf = (i) => (state.sc.advService && !garage() && (o.focus || 0) === i ? ' kfocus' : '');
-        return '<div class="a-scrim"><div class="confirm" data-hl="confirm"><div class="msg">' + esc(msg) + '</div><div class="yn">' +
-          '<button class="b green' + kf(0) + '" data-a="cfYes">' + esc(S('automation_confirm_yes')) + '</button><button class="b danger' + kf(1) + '" data-a="cfNo">' + esc(S('automation_confirm_no')) + '</button></div>' +
-          '<div class="cd" data-cd>' + esc(S('overlay_countdown', o.left)) + '</div></div></div>';
+      if (o.type === 'power') {
+        const park = o.park;
+        return box('power-banner', '<span class="bn-ico ' + (park ? 'danger' : 'warn') + '">' + (park ? MW.power : MW.park) + '</span>' +
+          '<div class="bn-main"><b class="bn-title">' + esc(S(park ? 'vehicle_power_banner_title' : 'vehicle_power_banner_impossible')) + '</b><small>' + esc(S(park ? 'vehicle_power_banner_msg' : 'vehicle_power_need_park')) + '</small></div>' +
+          '<button class="bn-b" style="width:190px" data-a="pwCancel"><b>' + esc(S(park ? 'vehicle_power_dialog_cancel' : 'nav_close')) + '</b>' + cd + '</button>' +
+          (park ? '<button class="bn-b d" style="width:190px" data-a="powerOk">' + MW.power + '<b>' + esc(S('vehicle_power_dialog_confirm')) + '</b></button>' : ''));
       }
       return '';
     }
-    askPowerOff() {
-      if (!car().on) return;
-      if (car().speed > 0) { this.toast(S('vehicle_power_need_park'), 3000); return; }
-      this.ui.dialog = { type: 'powerOff' }; this.render();
-    }
 
-    // ── Dialogues ──────────────────────────────────────────────────────────
+    // ── Fenêtres de l'application ──────────────────────────────────────────
+    // Présentation de la 2.6.8 (AppDialog et dialog_*.xml) : une carte arrondie sans décor, dessinée
+    // aux dimensions de l'application puis réduite d'un bloc (.mw, zoom) pour tenir dans la maquette.
+    price(v) { return Math.abs(v) < 10 ? this.num(v, 3) : v.toLocaleString(appLang() === 'en' ? 'en-GB' : appLang(), { maximumFractionDigits: 2, useGrouping: false }); }
     dialogHtml(d) {
-      const btn = (label, a, cls, v) => '<button class="b ' + (cls || '') + '" data-a="' + a + '"' + (v != null ? ' data-v="' + esc(v) + '"' : '') + '>' + esc(label) + '</button>';
-      const wrap = (inner, cls) => '<div class="a-scrim"><div class="a-dialog ' + (cls || '') + '" role="dialog">' + inner + '</div></div>';
+      const B = (label, a, cls, v, ico) => '<button class="mw-b ' + (cls || '') + '" data-a="' + a + '"' + (v != null ? ' data-v="' + esc(v) + '"' : '') + '>' + (ico || '') + '<span>' + esc(label) + '</span></button>';
+      const win = (w, inner, cls, hl) => '<div class="a-scrim"><div class="mw ' + (cls || '') + '"' + (hl ? ' data-hl="' + hl + '"' : '') + ' style="width:' + w + 'px" role="dialog">' + inner + '</div></div>';
+      const head = (ico, title, sub, end, tone) => '<div class="mw-head"><span class="mw-badge ' + (tone || '') + '">' + ico + '</span><div class="mw-ht"><div class="mw-t">' + esc(title) + '</div>' +
+        (sub ? '<div class="mw-s">' + esc(sub) + '</div>' : '') + '</div>' + (end || '') + '</div>';
+      // Confirmation simple (AppDialog.confirmer) : tout centré, et la couleur dit la nature de
+      // l'action — bleu : ordinaire ; orange : à lire avant d'accepter ; rouge : efface ou éteint.
+      // Un texte à plusieurs paragraphes est aligné au bord, il se lit mal centré.
+      const confirm = (o) => {
+        const tone = o.tone || '';
+        const body = o.html ? '<div class="mw-cm left">' + o.html + '</div>' : o.msg ? '<div class="mw-cm' + (o.msg.indexOf('\n\n') >= 0 ? ' left' : '') + '">' + esc(o.msg) + '</div>' : '';
+        return win(640, '<span class="mw-badge big ' + tone + '">' + (o.ico || (tone ? MW.warning : MW.question)) + '</span><div class="mw-ct">' + esc(o.title) + '</div>' + body +
+          '<div class="mw-acts tall">' + (o.no ? B(o.no, o.noAct || 'dlgClose') : '') + B(o.yes, o.yesAct || 'dlgClose', tone === 'danger' ? 'd' : tone === 'warn' ? 'w' : 'p') + '</div>', 'c');
+      };
+      const press = { single: 'adv_sc_press_short', long: 'adv_sc_press_long_lbl', double: 'adv_sc_press_double' };
       switch (d.type) {
         case 'fwUnknown':
-          return wrap('<h3 style="color:var(--dash-warn)">' + esc(S('fw_unknown_title')) + '</h3><p><span class="badge-fw">SWI???-00000</span></p><p>' + esc(S('fw_unknown_body')) + '</p><p style="font-size:13px">' + esc(S('fw_unknown_hint')) + '</p>' +
-            '<div class="actions">' + btn(S('fw_unknown_btn_close'), 'fwClose', 'danger') + btn(S('fw_unknown_btn_continue'), 'fwContinue', 'primary') + '</div>');
+          // « Continuer » mène à Réglages › Infos, là où le firmware se choisit : la consigne le dit.
+          return win(700, '<span class="mw-badge big warn">' + MW.warning + '</span><div class="mw-ct">' + esc(S('fw_unknown_title').replace(/^⚠\s*/, '')) + '</div>' +
+            '<div class="mw-fw"><span>' + esc(S('settings_firmware_version')) + '</span><b>SWI???-00000</b></div><div class="mw-cm">' + esc(S('fw_unknown_body')) + '</div>' +
+            '<div class="mw-hint">' + esc(S('fw_unknown_hint_settings', S('nav_settings'), S('settings_cat_info'))) + '</div>' +
+            '<div class="mw-acts tall">' + B(S('fw_unknown_btn_close'), 'fwClose') + B(S('fw_unknown_btn_continue'), 'fwContinue', 'w') + '</div>', 'c');
         case 'lang': {
-          const b = (c) => btn(S('settings_language_' + c), 'pickLang', 'nc', c);
-          return wrap('<h3>' + esc(S('settings_language_pick_title')) + '</h3><div class="a-grid g3">' + b('fr') + b('en') + b('de') + b('es') + b('pt') + b('it') + b('tr') + '</div>');
+          // Chaque langue s'écrit dans SA langue ; la question est redite en anglais sous le titre.
+          const tile = (code) => '<button class="mw-lang" data-a="pickLang" data-v="' + code + '"><b>' + esc(S('settings_language_' + code)) + '</b><span>' + code.toUpperCase() + '</span></button>';
+          const title = S('settings_language_pick_title'), en = 'Choose your language';
+          return win(820, '<span class="mw-badge mid">' + MW.language + '</span><div class="mw-ct">' + esc(title) + '</div>' + (title !== en ? '<div class="mw-s center">' + en + '</div>' : '') +
+            '<div class="mw-langs">' + ['fr', 'en', 'de', 'es'].map(tile).join('') + '</div><div class="mw-langs three">' + ['pt', 'it', 'tr'].map(tile).join('') + '</div>', 'c');
         }
-        case 'update':
-          if (d.step === 'progress') return wrap('<h3>' + esc(S('update_available_title')) + '</h3><p>' + esc(S('update_downloading_pct', d.pct || 0)) + '</p><div style="height:10px;border-radius:5px;background:var(--dash-btn);overflow:hidden"><div style="height:100%;width:' + (d.pct || 0) + '%;background:var(--dash-accent)"></div></div><div class="actions">' + btn(S('update_cancel'), 'dlgClose') + '</div>');
-          if (d.step === 'done') return wrap('<h3>' + esc(S('update_manual_title')) + '</h3><p>' + esc(S('update_downloaded_instructions')) + '</p><div class="actions">' + btn(S('update_close'), 'dlgClose', 'primary') + '</div>');
-          if (d.step === 'manual') return wrap('<h3>' + esc(S('update_manual_title')) + '</h3><div class="a-cols"><p style="flex:2">' + esc(S('update_manual_instructions')) + '</p><div style="flex:1;text-align:center">' + qrBox() + '<div class="a-desc" style="font-size:12px;margin-top:6px">' + esc(S('update_gh_releases_link')) + '</div></div></div><div class="actions">' + btn(S('update_close'), 'dlgClose', 'primary') + '</div>', 'wide');
-          if (d.step === 'data') return wrap('<h3>' + esc(S('update_data_warn_title')) + '</h3><p>' + esc(S('update_data_warn_message')) + '</p><div class="actions">' + btn(S('update_cancel'), 'dlgClose') + btn(S('update_continue'), 'updDownload', 'primary') + '</div>');
-          return wrap('<h3>' + esc(S('update_available_title')) + '</h3>' +
-            '<div class="a-row" style="gap:20px;justify-content:center;font-size:18px"><span><small class="a-desc">' + esc(S('update_current_label')) + '</small><br><b>v2.6.8</b></span><span style="font-size:24px">→</span><span><small class="a-desc">' + esc(S('update_new_label')) + '</small><br><b style="color:var(--dash-eco)">v2.x.x</b></span></div>' +
-            '<div class="a-sub" style="margin-top:8px">' + esc(S('update_release_notes_label')) + '</div><p style="background:var(--dash-section);border-radius:8px;padding:8px">' + esc(L('(exemple : le texte des notes de version de GitHub s\'affiche ici)', '(example: the GitHub release notes are shown here)')) + '</p>' +
-            '<p style="color:var(--dash-warn)">' + esc(S('update_data_warning')) + '</p>' +
-            '<div class="actions">' + btn(S('update_skip_btn'), 'dlgClose', 'ghost') + '<span class="spacer"></span>' + btn(S('update_later_btn'), 'dlgClose') + btn(S('update_manual_btn'), 'updManual') + btn(S('update_auto_btn'), 'updAuto', 'primary') + '</div>', 'wide');
-        case 'restore':
-          return wrap('<h3>' + esc(S('profile_restore_title')) + '</h3><p>' + esc(S('profile_restore_msg', 3)) + '</p><div class="actions">' + btn(S('profile_restore_cancel'), 'dlgClose') + btn(S('profile_restore_confirm'), 'restoreYes', 'primary') + '</div>');
+        case 'update': {
+          // Trois états sous le même en-tête (UpdateDialogManager) : les nouveautés et les actions,
+          // le téléchargement, l'installation à la main. Hors Wi-Fi, une confirmation passe devant.
+          if (d.step === 'data') return confirm({ tone: 'warn', title: S('update_data_warn_title'), msg: S('update_data_warn_message'), yes: S('update_continue'), no: S('update_cancel'), yesAct: 'updDownload', noAct: 'updBack' });
+          const top = head(MW.download, S('update_available_title'), null, '<span class="mw-vers"><span class="mw-pillv">v2.6.8</span>' + MW.arrow + '<span class="mw-pillv acc">v2.x.x</span></span>');
+          if (d.step === 'progress') return win(1100, top + '<div class="mw-pan mt16"><div class="mw-status">' + esc(S('update_downloading_pct', d.pct || 0)) + '</div><div class="mw-prog"><i style="width:' + (d.pct || 0) + '%"></i></div></div>' +
+            '<div class="mw-acts">' + B(S('update_cancel'), 'dlgClose') + '</div>');
+          if (d.step === 'manual' || d.step === 'done') return win(1100, top + '<div class="mw-cols mt16"><div class="mw-pan grow"><div class="mw-cap">' + esc(S('update_manual_title')) + '</div>' +
+            '<div class="mw-text">' + esc(S(d.step === 'done' ? 'update_downloaded_instructions' : 'update_manual_instructions')) + '</div></div>' +
+            '<div class="mw-pan mw-qr" style="width:240px">' + qrBox(160) + '<span>' + esc(S('update_gh_releases_link')) + '</span></div></div><div class="mw-acts">' + B(S('update_close'), 'dlgClose') + '</div>');
+          const notes = L('(exemple : le texte des notes de version de GitHub s\'affiche ici)\n\n• Pop-up HVAC : nouvelle présentation\n• Sélecteur de profils en cartes\n• Bandeaux de confirmation en bas de l\'écran\n• Délai de fermeture des pop-ups réglable\n• Interrupteur par catégorie dans les profils\n• Automatisation selon le niveau de batterie\n• Luminosité automatique\n• Chauffage intelligent de la batterie\n• Feux de route automatiques\n• Cycle de profils au volant',
+            '(example: the GitHub release notes are shown here)\n\n• HVAC pop-up: new look\n• Profile picker as cards\n• Confirmation banners at the bottom of the screen\n• Adjustable pop-up closing delay\n• Per-category switch in profiles\n• Automation based on battery level\n• Automatic brightness\n• Smart battery heating\n• Automatic high beams\n• Profile cycle on the steering wheel');
+          return win(1100, top + '<div class="mw-cols mt16" style="height:320px"><div class="mw-col grow"><div class="mw-pan grow"><div class="mw-cap">' + esc(S('update_release_notes_label')) + '</div>' +
+            '<div class="mw-scroll mw-text" data-sk="notes">' + esc(notes) + '</div></div><div class="mw-warn">' + esc(S('update_data_warning')) + '</div></div>' +
+            '<div class="mw-col" style="width:330px">' + B(S('update_auto_btn'), 'updAuto', 'p xl') + B(S('update_manual_btn'), 'updManual') + B(S('update_later_btn'), 'dlgClose') +
+            '<button class="mw-link" data-a="dlgClose">' + esc(S('update_skip_btn')) + '</button></div></div>');
+        }
+        case 'restore': {
+          // La carte liste les profils retrouvés (RestoreProfilesDialog) ; sans profil dans la maquette, trois exemples.
+          const found = state.profiles.length ? state.profiles : [{ name: L('Quotidien', 'Daily'), driveMode: 'NORMAL' }, { name: L('Autoroute', 'Motorway'), driveMode: 'ECO' }, { name: L('Hiver', 'Winter'), driveMode: 'NORMAL' }];
+          return win(760, head(MW.restore, S('profile_restore_title'), S('profile_restore_msg', found.length)) +
+            '<div class="mw-profs">' + found.map((p) => '<div class="mw-prof">' + modePill(p) + '<b>' + esc(p.name) + '</b></div>').join('') + '</div>' +
+            '<div class="mw-acts tall">' + B(S('profile_restore_cancel'), 'dlgClose') + B(S('profile_restore_confirm'), 'restoreYes', 'p', null, MW.restore) + '</div>');
+        }
         case 'apiConfirm':
-          return wrap('<h3>' + esc(S('external_api_confirm_title')) + '</h3><div class="warnbox">' + esc(S('external_api_confirm_warn')) + '</div><p>' + esc(S('external_api_confirm_msg')) + '</p><p><b>' + esc(S('external_api_confirm_risk')) + '</b></p>' +
-            '<div class="actions">' + btn(S('profile_cancel'), 'dlgClose') + btn(S('external_api_confirm_ok'), 'apiOk', 'danger') + '</div>', 'wide');
+          return confirm({ tone: 'danger', title: S('external_api_confirm_title'), yes: S('external_api_confirm_ok'), no: S('profile_cancel'), yesAct: 'apiOk',
+            html: '<b class="red">' + esc(S('external_api_confirm_warn')) + '</b>\n\n' + esc(S('external_api_confirm_msg')) + '\n\n<span class="red">' + esc(S('external_api_confirm_risk')) + '</span>' });
         case 'advWarn':
-          return wrap('<h3>' + esc(S('adv_sc_enable_warn_title')) + '</h3><p>' + esc(S('adv_sc_enable_warn_msg')) + '</p><div class="actions">' + btn(S('profile_cancel'), 'dlgClose') + btn(S('adv_sc_enable_warn_ok'), 'advWarnOk', 'primary') + '</div>', 'wide');
+          return confirm({ tone: 'warn', title: S('adv_sc_enable_warn_title'), msg: S('adv_sc_enable_warn_msg'), yes: S('adv_sc_enable_warn_ok'), no: S('profile_cancel'), yesAct: 'advWarnOk' });
         case 'launcherWarn':
-          return wrap('<h3>' + esc(S('shortcuts_warning_title')) + '</h3><p>' + esc(S('shortcuts_warning_message')) + '</p><div class="actions">' + btn(S('shortcuts_warning_ok'), 'dlgClose', 'primary') + '</div>', 'wide');
+          return confirm({ tone: 'warn', title: S('shortcuts_warning_title'), msg: S('shortcuts_warning_message'), yes: S('shortcuts_warning_ok') });
+        case 'noProfiles':
+          return confirm({ tone: 'warn', title: S('shortcuts_no_profiles'), yes: S('nav_close') });
         case 'powerOff':
-          return wrap('<h3>' + esc(S('vehicle_power_dialog_title')) + '</h3><p>' + esc(S('vehicle_power_dialog_msg')) + '</p><div class="actions">' + btn(S('vehicle_power_dialog_cancel'), 'dlgClose') + btn(S('vehicle_power_dialog_confirm'), 'powerOk', 'danger') + '</div>');
-        case 'pickApp':
-          return wrap('<h3>' + esc(S('shortcuts_pick_app_title')) + '</h3><div class="opt-list">' + APPS.map((n) => btn(n, 'pickApp', 'nc', n)).join('') + '</div><div class="actions">' + btn(S('profile_cancel'), 'pickCancel') + '</div>');
-        case 'pickProfile':
-          return wrap('<h3>' + esc(S('shortcuts_pick_profile_title')) + '</h3><div class="opt-list">' + state.profiles.map((p) => btn(p.name, 'pickProfile', 'nc', p.id)).join('') + '</div><div class="actions">' + btn(S('profile_cancel'), 'pickCancel') + '</div>');
-        case 'replace': {
-          const pl = { single: 'adv_sc_press_short', long: 'adv_sc_press_long_lbl', double: 'adv_sc_press_double' };
-          return wrap('<h3>' + esc(S('adv_sc_replace_title')) + '</h3><p>' + esc(S('adv_sc_replace_msg', keyName(d.item.key), S(pl[d.item.press]).toLowerCase(), this.actionLabel(d.old.action, d.old))) + '</p>' +
-            '<div class="actions">' + btn(S('profile_cancel'), 'dlgClose') + btn(S('adv_sc_replace_ok'), 'replaceOk', 'primary') + '</div>');
+          return confirm({ tone: 'danger', ico: MW.power, title: S('vehicle_power_dialog_title'), msg: S('vehicle_power_dialog_msg'), yes: S('vehicle_power_dialog_confirm'), no: S('vehicle_power_dialog_cancel'), yesAct: 'powerOk' });
+        case 'pickApp': case 'pickProfile': {
+          // Grille de tuiles qui défile (AppDialog.choisir) : trois lignes et demie visibles, la tuile
+          // coupée montre qu'il y a une suite ; le choix en cours est marqué.
+          const app = d.type === 'pickApp';
+          const items = app ? APPS.map((nm) => ({ v: nm, label: nm, mark: appIcon(nm) })) : state.profiles.map((p) => ({ v: p.id, label: p.name, mark: modePill(p) }));
+          return win(1040, head(MW.list, S(app ? 'shortcuts_pick_app_title' : 'shortcuts_pick_profile_title'), S(app ? 'choice_count_apps' : 'choice_count_profiles', items.length)) +
+            '<div class="mw-grid' + (items.length > 12 ? ' long' : '') + '" data-sk="pick">' + items.map((it) => '<button class="mw-choice' + (it.v === d.cur ? ' on' : '') + '" data-a="' + d.type + '" data-v="' + esc(it.v) + '">' + it.mark + '<b>' + esc(it.label) + '</b></button>').join('') + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'pickCancel') + '</div>', '', 'mw-pick');
         }
+        case 'replace':
+          return confirm({ ico: MW.swap, title: S('adv_sc_replace_title'), yes: S('adv_sc_replace_ok'), no: S('profile_cancel'), yesAct: 'replaceOk',
+            msg: S('adv_sc_replace_msg', keyName(d.item.key), S(press[d.item.press]) + ' · ' + this.scopeName(d.item.scope), this.actionLabel(d.old.action, d.old)) });
         case 'editAdv': {
+          // Deux listes côte à côte (dialog_edit_shortcut.xml) : la fonction et le profil se
+          // choisissent sans rien ouvrir, chaque liste défile de son côté.
           const it = state.sc.adv[d.index] || {};
-          return wrap('<h3>' + esc(S('adv_sc_edit_title')) + '</h3><p><b>' + esc(keyName(it.key) + ' · ' + S({ single: 'adv_sc_press_short', long: 'adv_sc_press_long_lbl', double: 'adv_sc_press_double' }[it.press])) + '</b></p>' +
-            '<div class="a-sub">' + esc(S('adv_sc_step_action')) + '</div><div class="a-row">' + this.actionSelect(d.action, 'edAction', '', it) + '</div>' +
-            '<div class="a-sub" style="margin-top:8px">' + esc(S('adv_sc_step_profile')) + '</div><div class="a-row">' + this.scopeSelect(d.scope, 'edScope') + '</div>' +
-            '<div class="actions">' + btn(S('profile_cancel'), 'dlgClose') + btn(S('profile_save'), 'edSave', 'primary') + '</div>');
+          const acts = availableActions().filter((a) => a !== 'NONE');
+          if (d.action && !acts.includes(d.action)) acts.push(d.action);
+          const opt = (a, v, label, on) => '<button class="mw-opt' + (on ? ' on' : '') + '" data-a="' + a + '" data-v="' + esc(v) + '">' + esc(label) + '</button>';
+          const col = (cap, sk, items) => '<div class="mw-pan grow mw-listcol"><div class="mw-cap">' + esc(cap) + '</div><div class="mw-scroll" data-sk="' + sk + '">' + items + '</div></div>';
+          // Les libellés du formulaire portent leur numéro d'étape (« 3 · Fonction ») : ici, le mot seul.
+          const word = (key) => S(key).replace(/^.*·\s*/, '');
+          return win(1040, head(MW.edit, S('adv_sc_edit_title'), keyName(it.key) + ' · ' + S(press[it.press])) + '<div class="mw-cols mt14" style="height:340px">' +
+            col(word('adv_sc_step_action'), 'ed-action', acts.map((a) => opt('edAction', a, a === it.action ? this.actionLabel(a, it) : S(ACTION_KEY[a]), a === d.action)).join('')) +
+            col(word('adv_sc_step_profile'), 'ed-scope', opt('edScope', '', S('adv_sc_all_profiles'), !d.scope) + state.profiles.map((p) => opt('edScope', p.id, p.name, d.scope === p.id)).join('')) + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(S('profile_save'), 'edSave', 'p') + '</div>');
         }
         case 'cal': {
           const w = d.w, pos = car().windows[w], moving = !!winMotion[w];
+          const btn = (label, a, cls, v) => '<button class="b ' + (cls || '') + '" data-a="' + a + '"' + (v != null ? ' data-v="' + esc(v) + '"' : '') + '>' + esc(label) + '</button>';
           let body = '', acts = btn(S('win_cal_cancel'), 'calCancel');
           if (d.step === 1) {
             body = '<p>' + esc(S('win_cal_close_instruction')) + '</p>';
@@ -2135,44 +2270,56 @@
             body = '<p>' + esc(S('win_cal_result', fmtS(d.down), fmtS(d.up))) + '</p>';
             acts += btn(S('win_cal_redo'), 'calRedo') + btn(S('win_cal_save'), 'calSave', 'primary');
           }
-          return wrap('<h3>' + esc(S('win_cal_wizard_title', S(WIN_KEY[w]))) + '</h3><div class="a-sub">' + esc(S('win_cal_step', d.step)) + '</div>' +
+          return '<div class="a-scrim"><div class="a-dialog wide" role="dialog"><h3>' + esc(S('win_cal_wizard_title', S(WIN_KEY[w]))) + '</h3><div class="a-sub">' + esc(S('win_cal_step', d.step)) + '</div>' +
             (d.msg ? '<p style="color:var(--dash-warn)">' + esc(d.msg) + '</p>' : '') + body +
             '<div class="win-bar wide"><i style="width:' + pos + '%"></i></div><p style="font-size:13px;color:var(--dash-danger)">⚠ ' + esc(S('win_cal_warning')) + '</p>' +
-            '<div class="actions">' + acts + '</div>', 'wide');
+            '<div class="actions">' + acts + '</div></div></div>';
         }
         case 'stClear':
-          return wrap('<h3>' + esc(S('stats_clear')) + '</h3><p>' + esc(S('stats_clear_confirm', state.stats.trips.length, state.stats.charges.length)) + '</p><div class="actions">' + btn(S('profile_cancel'), 'dlgClose') + btn(S('stats_clear'), 'stClearOk', 'danger') + '</div>');
-        case 'stFix': {
-          const c = state.stats.charges[d.index];
-          const cur = c.fixedPrice != null ? c.fixedPrice : c.type === 'DC' ? state.stats.priceDc : state.stats.priceAc;
-          return wrap('<h3>' + esc(S('stats_fix_tariff')) + '</h3><p>' + esc(S('stats_fix_tariff_note')) + '</p><div class="a-row"><input class="a-input num" style="width:140px" type="number" step="0.001" min="0" data-c="stFixVal" data-fid="stFixVal" value="' + cur + '"><span class="lbl">' + esc(state.stats.currency) + '/kWh</span></div>' +
-            '<div class="actions">' + btn(S('profile_cancel'), 'dlgClose') + btn(S('stats_save'), 'stFixOk', 'primary') + '</div>');
-        }
+          return confirm({ tone: 'danger', ico: MW.trash, title: S('stats_clear'), msg: S('stats_clear_confirm', state.stats.trips.length, state.stats.charges.length), yes: S('stats_clear'), no: S('nav_close'), yesAct: 'stClearOk' });
+        case 'stFix':
+          // Sans clavier (StatsDialogs.tarif) : le prix entre un − et un +, et dessous le pas de ces
+          // boutons. Un appui maintenu répète le pas.
+          return win(680, head(MW.plug, S('stats_fix_tariff'), S('stats_fix_tariff_note')) +
+            '<div class="mw-pan mt14"><div class="mw-price"><button class="mw-step big" data-a="stFixStep" data-v="-1" data-rep>' + MW.minus + '</button><div><b>' + esc(this.price(d.val)) + '</b><span>' + esc(state.stats.currency) + '/kWh</span></div>' +
+            '<button class="mw-step big" data-a="stFixStep" data-v="1" data-rep>' + MW.plus + '</button></div>' +
+            '<div class="ov-seg mw-seg sm">' + d.steps.map((st, i) => '<button' + (i === d.stepI ? ' class="on"' : '') + ' data-a="stFixPas" data-v="' + i + '">± ' + esc(this.price(st)) + '</button>').join('') + '</div></div>' +
+            '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + B(S('stats_tariff_default'), 'stFixDef') + B(S('stats_save'), 'stFixOk', 'p') + '</div>');
         case 'stComplete': {
-          const t2 = (ms) => new Date(ms).toTimeString().slice(0, 5);
-          const c = state.stats.charges[d.index];
-          return wrap('<h3>' + esc(S('stats_complete_session')) + '</h3><p>' + esc(S('stats_complete_note')) + '</p>' +
-            '<div class="a-sub">' + esc(S('stats_complete_type')) + '</div><div class="a-grid g2">' + ['AC', 'DC'].map((t) => '<button class="b sm' + (d.typeSel === t ? ' on' : '') + '" data-a="stType" data-v="' + t + '">' + esc(S(t === 'AC' ? 'stats_charge_ac' : 'stats_charge_dc')) + '</button>').join('') + '</div>' +
-            '<div class="fields" style="grid-template-columns:1fr 1fr"><div class="field"><label>' + esc(S('stats_complete_start')) + '</label><input class="a-input" type="time" data-c="stStart" value="' + (d.startT || t2(c.start)) + '"></div>' +
-            '<div class="field"><label>' + esc(S('stats_complete_end')) + '</label><input class="a-input" type="time" data-c="stEnd" value="' + (d.endT || t2(c.end)) + '"></div></div>' +
-            '<div class="actions">' + btn(S('profile_cancel'), 'dlgClose') + btn(S('stats_save'), 'stCompleteOk', 'primary') + '</div>');
+          // Sans clavier (StatsDialogs.completer). Une heure reste « non renseignée » tant qu'on n'y
+          // touche pas : enregistrer le seul type de prise ne doit pas inventer des horaires. Le
+          // premier appui montre l'heure du relevé, la croix l'efface.
+          const two = (x) => String(x).padStart(2, '0');
+          const types = [['AC', 'stats_charge_ac'], ['DC', 'stats_charge_dc'], ['', 'stats_charge_unknown']];
+          const step = (which, part, dir) => '<button class="mw-step" data-a="stStep" data-v="' + which + ':' + part + ':' + dir + '" data-rep>' + (dir > 0 ? MW.plus : MW.minus) + '</button>';
+          const time = (which, key) => {
+            const t = d[which];
+            return '<div class="mw-pan grow"><div class="mw-timecap"><span class="mw-cap">' + esc(S(key).replace(/\s*\(.*$/, '')) + '</span>' + (t ? '<button class="mw-clear" data-a="stClearT" data-v="' + which + '" aria-label="' + esc(S('stats_charge_unknown')) + '">' + MW.close + '</button>' : '') + '</div>' +
+              '<div class="mw-timerow' + (t ? '' : ' unset') + '">' + step(which, 'h', -1) + '<b>' + (t ? two(t[0]) : '– –') + '</b>' + step(which, 'h', 1) + '<em>:</em>' + step(which, 'm', -1) + '<b>' + (t ? two(t[1]) : '– –') + '</b>' + step(which, 'm', 1) + '</div></div>';
+          };
+          return win(820, head(MW.plug, S('stats_complete_session'), S('stats_complete_note')) + '<div class="mw-cap mt14 mb6">' + esc(S('stats_complete_type')) + '</div>' +
+            '<div class="ov-seg mw-seg">' + types.map(([v, key]) => '<button' + ((d.typeSel || '') === v ? ' class="on"' : '') + ' data-a="stType" data-v="' + v + '">' + esc(S(key)) + '</button>').join('') + '</div>' +
+            '<div class="mw-cols mt12">' + time('start', 'stats_complete_start') + time('end', 'stats_complete_end') + '</div>' +
+            '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + B(S('stats_save'), 'stCompleteOk', 'p') + '</div>');
         }
         case 'delProfile': {
           const p = state.profiles.find((x) => x.id === d.id);
-          // Titre identique à ProfileFragment (texte en dur dans l'app).
-          return wrap('<h3>' + esc('Supprimer "' + (p ? p.name : '') + '" ?') + '</h3><p>' + esc(L('Ce profil sera supprimé.', 'This profile will be deleted.')) + '</p><div class="actions">' + btn(S('profile_cancel'), 'dlgClose') + btn(S('profile_delete'), 'delOk', 'danger') + '</div>');
+          return confirm({ tone: 'danger', ico: MW.trash, title: S('profile_delete_title', p ? p.name : ''), yes: S('profile_delete'), no: S('profile_cancel'), yesAct: 'delOk' });
         }
-        case 'about':
-          return wrap('<div class="a-row" style="border-bottom:1px solid var(--dash-border);margin-bottom:10px"><h3 style="margin:0">' + esc(S('info_title')) + '</h3></div><div class="a-cols sep"><div>' +
-            '<div style="font-size:24px;font-weight:700">' + esc(S('app_name')) + '</div><div class="a-desc">' + esc(S('info_based_on')) + '</div>' +
-            '<div class="a-row"><span class="a-sub" style="margin:0">' + esc(S('info_version_label')) + '</span><b>2.6.8</b></div>' +
-            '<div class="a-sub">' + esc(S('info_firmware_label')) + '</div><div class="a-desc" style="font-family:ui-monospace,monospace">' + esc(gen() === 'UNKNOWN' ? 'SWI???-00000' : gen() + '-xxxxx') + '</div></div>' +
-            '<div><div class="a-cols"><div style="text-align:center">' + qrBox() + '<div class="a-desc" style="font-size:12px">' + esc(S('info_github_link')) + '</div></div><div style="text-align:center">' + qrBox() + '<div class="a-desc" style="font-size:12px">' + esc(S('info_gitlab_link')) + '</div></div></div>' +
-            '<p style="margin-top:8px;text-align:center">' + esc(S('info_made_with_love')) + '</p><p style="font-size:12px;text-align:center">' + esc(S('info_special_thanks')) + '</p></div></div>' +
-            '<div class="actions">' + btn(S('info_close'), 'dlgClose', 'primary') + '</div>', 'xl');
+        case 'about': {
+          // Deux colonnes (dialog_app_info.xml) : l'application et ses crédits, puis les QR codes des dépôts.
+          const pill = (key, v) => '<span class="mw-pillv"><i>' + esc(S(key)) + '</i>' + esc(v) + '</span>';
+          const qr = (nm) => '<div class="mw-qr">' + qrBox(150) + '<span>' + nm + '</span></div>';
+          return win(1000, '<div class="mw-cols"><div class="mw-col grow">' + head(MW.info, S('app_name'), S('info_based_on')) +
+            '<div class="mw-pills">' + pill('info_version_label', '2.6.8') + pill('info_firmware_label', gen() === 'UNKNOWN' ? 'SWI???-00000' : gen() + '-xxxxx') + '</div>' +
+            '<div class="mw-credit">' + esc(S('info_made_with_love')) + '</div><div class="mw-thanks">' + esc(S('info_special_thanks')) + '</div></div>' +
+            '<div class="mw-pan mw-qrs">' + qr('GitHub') + qr('GitLab') + '</div></div><div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
+        }
         case 'diag':
-          return wrap('<h3>' + esc(S('diag_title')) + '</h3><pre style="margin:0;max-height:250px;overflow:auto;background:var(--dash-section);border-radius:8px;padding:10px;font-size:12px;line-height:1.45;color:var(--text-secondary);white-space:pre-wrap">' +
-            esc(diagSample()) + '</pre><div class="actions">' + btn(S('diag_copy'), 'diagCopy') + btn(S('diag_download'), 'diagDl') + btn(S('info_close'), 'dlgClose', 'primary') + '</div>', 'xl');
+          // Le journal plein cadre (dialog_diagnostic.xml) : les actions restent en haut, le reste défile.
+          return win(1320, head(MW.bug, S('diag_title'), null, '<div class="mw-tools">' + B(S(d.copied ? 'diag_copied' : 'diag_copy'), 'diagCopy', 'sm') + B(S('diag_download'), 'diagDl', 'sm') +
+            '<button class="mw-round" data-a="dlgClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>') +
+            '<div class="mw-pan mw-log" data-sk="diag"><pre>' + esc(diagSample()) + '</pre></div>');
         default: return '';
       }
     }
@@ -2183,7 +2330,7 @@
         const t = e.target.closest('[data-a]');
         if (!t || !this.app.contains(t)) return;
         if (t.disabled || t.classList.contains('dis')) return;
-        if ((t.getAttribute('data-a') === 'pkBg' || t.getAttribute('data-a') === 'hvBg') && e.target !== t) return; // clic dans la carte
+        if ((t.getAttribute('data-a') === 'pkBg' || t.getAttribute('data-a') === 'hpBg') && e.target !== t) return; // clic dans la carte
         this.act(t.getAttribute('data-a'), t.getAttribute('data-v'), t);
       });
       this.app.addEventListener('input', (e) => {
@@ -2205,6 +2352,19 @@
       this.app.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && e.target.matches('input.a-input')) e.target.blur();
       });
+      // Boutons − et + des saisies sans clavier : un appui fait un pas, un appui maintenu le répète.
+      // La maquette redessine tout à chaque pas : le bouton relâché n'est plus celui qui a été
+      // enfoncé, il n'y a donc pas de clic en plus à la fin.
+      const stopRepeat = () => { clearTimeout(this._repT); clearInterval(this._repI); };
+      this.app.addEventListener('pointerdown', (e) => {
+        const t = e.target.closest('[data-rep]');
+        if (!t) return;
+        const a = t.getAttribute('data-a'), v = t.getAttribute('data-v');
+        stopRepeat();
+        this._repT = setTimeout(() => { this._repI = setInterval(() => this.act(a, v, null), 110); }, 450);
+      });
+      window.addEventListener('pointerup', stopRepeat);
+      window.addEventListener('pointercancel', stopRepeat);
       // Assistant de calibration : la vitre bouge tant que le bouton reste enfoncé, et l'appui est chronométré.
       this.app.addEventListener('pointerdown', (e) => {
         const h = e.target.closest('[data-hold]');
@@ -2343,13 +2503,18 @@
         case 'autoUpdate': s.autoUpdate = !s.autoUpdate; return r();
         case 'beta': s.beta = !s.beta; return r();
         case 'gate': s.gate = !s.gate; return r();
-        case 'powerOff': return this.askPowerOff();
-        case 'powerOk': u.dialog = null; if (car().speed === 0) { c.on = false; commit(); this.toast(L('Véhicule mis hors tension, l\'écran reste actif.', 'Vehicle powered off, the screen stays on.')); } return;
+        case 'powerOff': return this.askPowerOff(true);
+        case 'powerOk':
+          // Confirmé depuis la fenêtre des Réglages ou depuis le bandeau : le levier est revérifié à l'envoi.
+          u.dialog = null;
+          if (u.overlay && u.overlay.type === 'power') { clearInterval(this._cd); u.overlay = null; }
+          if (car().speed === 0) { c.on = false; commit(); this.toast(L('Véhicule mis hors tension, l\'écran reste actif.', 'Vehicle powered off, the screen stays on.')); } else this.render();
+          return;
         case 'checkUpd': u.updFb = 'ok'; this.render(); clearTimeout(this._updT); this._updT = setTimeout(() => { u.updFb = null; this.render(); }, 3000); return;
         case 'cleanApk': u.apkFb = S('clean_apk_none'); this.render(); clearTimeout(this._apkT); this._apkT = setTimeout(() => { u.apkFb = null; this.render(); }, 3000); return;
         case 'about': u.dialog = { type: 'about' }; return this.render();
         case 'diag': u.dialog = { type: 'diag' }; return this.render();
-        case 'diagCopy': return this.toast(S('diag_copied'));
+        case 'diagCopy': if (u.dialog) u.dialog.copied = true; return this.render();   // le bouton dit « Copié ! », la fenêtre reste
         case 'diagDl': return this.toast(S('diag_downloaded', 'Download/MG4Control_diag.txt'));
         case 'force': state.forced = v; state.fwDismissed = true; return r();
         // Raccourcis
@@ -2403,15 +2568,15 @@
         case 'doorRestore': state.door.restore = !state.door.restore; return r();
         // Overlays
         case 'pkBg': case 'pkClose': return this.closeOverlay();
-        case 'hvBg': case 'hvClose': return this.closeOverlay();
-        case 'hvKey': return this.hvacKey(v);
-        case 'hvAc': if (u.overlay) u.overlay.left = u.overlay.total; c.clim.ac = !c.clim.ac; return r();
-        // Chauffages : un appui = un cran pour un siège (la voiture descend : Off → 3 → 2 → 1 → Off),
-        // bascule pour le volant.
-        case 'hvSeat': if (u.overlay) u.overlay.left = u.overlay.total; if (v === 'L') c.seatL = (c.seatL + 3) % 4; else c.seatR = (c.seatR + 3) % 4; return r();
-        case 'hvWheel': if (u.overlay) u.overlay.left = u.overlay.total; c.steering = !c.steering; return r();
-        case 'hvLoop': if (u.overlay) u.overlay.left = u.overlay.total; c.clim.loop = n; return r();
-        case 'hvAir': {
+        case 'hpBg': case 'hpClose': return this.closeOverlay();
+        case 'hpKey': return this.hvacKey(v);
+        case 'hpAc': if (u.overlay) u.overlay.left = u.overlay.total; c.clim.ac = !c.clim.ac; return r();
+        // Chauffages : le niveau d'un siège se choisit d'un toucher — l'application y amène la voiture
+        // cran par cran, elle qui ne sait que descendre (Off → 3 → 2 → 1 → Off) ; bascule pour le volant.
+        case 'hpSeat': { const [side, lv] = v.split(':'); if (u.overlay) u.overlay.left = u.overlay.total; if (side === 'L') c.seatL = +lv; else c.seatR = +lv; return r(); }
+        case 'hpWheel': if (u.overlay) u.overlay.left = u.overlay.total; c.steering = !c.steering; return r();
+        case 'hpLoop': if (u.overlay) u.overlay.left = u.overlay.total; c.clim.loop = n; return r();
+        case 'hpAir': {
           // Mêmes boutons cumulables que la page Clim ; la lunette arrière est le dégivrage arrière.
           if (u.overlay) u.overlay.left = u.overlay.total;
           if (v === 'rear') { c.clim.defR = !c.clim.defR; return r(); }
@@ -2423,12 +2588,17 @@
         case 'pkProfile': { const p = state.profiles.find((x) => x.id === v); this.closeOverlay(); if (p) applyProfile(p, { manual: true }); return; }
         case 'pkPower': this.closeOverlay(); return this.askPowerOff();
         case 'pkOpen': this.closeOverlay(); u.screen = state.settings.defaultScreen; return this.render();
-        case 'cfYes': { const o = u.overlay; const p = state.profiles.find((x) => x.id === o.profileId); this.closeOverlay(); if (p) applyProfile(p, { via: L('température', 'temperature') }); return; }
+        case 'cfYes': { const o = u.overlay; const p = state.profiles.find((x) => x.id === o.profileId); this.closeOverlay(); if (p) applyProfile(p, { via: o.battery ? L('batterie', 'battery') : L('température', 'temperature') }); return; }
         case 'cfNo': { const o = u.overlay; this.closeOverlay(); if (o && o.onNo) o.onNo(); return; }
+        case 'pwCancel': return this.closeOverlay();
         // Dialogues
         case 'dlgClose': u.dialog = null; return this.render();
         case 'fwClose': state.fwDismissed = true; u.screen = 'closed'; commit(); return;
-        case 'fwContinue': state.fwDismissed = true; return r();
+        // « Continuer » mène là où le firmware se choisit : Réglages › Infos, sur ses pastilles.
+        case 'fwContinue': state.fwDismissed = true; u.screen = 'settings'; u.tabs.set = 3; commit(); this.highlight('s-fw'); return;
+        case 'updBack': u.dialog = { type: 'update', step: 'info' }; return this.render();
+        case 'edAction': if (u.dialog) u.dialog.action = v; return this.render();
+        case 'edScope': if (u.dialog) u.dialog.scope = v; return this.render();
         case 'pickLang': state.appLang = v; u.dialog = null; return r();
         case 'updAuto': u.dialog = { type: 'update', step: 'data' }; return this.render();
         case 'updManual': u.dialog = { type: 'update', step: 'manual' }; return this.render();
@@ -2437,7 +2607,7 @@
           const tick = () => { if (!u.dialog || u.dialog.step !== 'progress') return; u.dialog.pct += 12; if (u.dialog.pct >= 100) { u.dialog = { type: 'update', step: 'done' }; this.render(); return; } this.render(); setTimeout(tick, 220); };
           setTimeout(tick, 220); return;
         }
-        case 'restoreYes': u.dialog = null; this.render(); return this.toast(S('profile_restore_done', 3));
+        case 'restoreYes': u.dialog = null; this.render(); return this.toast(S('profile_restore_done', state.profiles.length || 3));
 
         // ── Mode personnalisé, clim du profil, cycle regen, vitres, statistiques, MAJ ──
         case 'custom': { const [f, i] = v.split(':'); if (W.custom(f, +i)) r(); return; }
@@ -2488,7 +2658,8 @@
           const clash = sc.adv.some((x, i) => i !== d.index && x.key === it.key && x.press === it.press && (x.scope || '') === (d.scope || ''));
           if (clash) return this.toast(S('adv_sc_edit_conflict'));
           if ((d.action === 'OPEN_CUSTOM_APP' || d.action === 'APPLY_PROFILE') && d.action !== it.action) {
-            u.dialog = { type: d.action === 'OPEN_CUSTOM_APP' ? 'pickApp' : 'pickProfile', then: { kind: 'advEdit', index: d.index, action: d.action, scope: d.scope } };
+            u.dialog = { type: d.action === 'OPEN_CUSTOM_APP' ? 'pickApp' : 'pickProfile', cur: d.action === 'OPEN_CUSTOM_APP' ? it.app : it.profileId,
+                         then: { kind: 'advEdit', index: d.index, action: d.action, scope: d.scope } };
             return this.render();
           }
           it.action = d.action; it.scope = d.scope || null; u.dialog = null; r(); return this.toast(S('adv_sc_updated'));
@@ -2517,25 +2688,42 @@
         case 'stOpen': u.statsOpen = u.statsOpen === v ? null : v; return this.render();
         case 'stClear': u.dialog = { type: 'stClear' }; return this.render();
         case 'stClearOk': state.stats.trips = []; state.stats.charges = []; u.dialog = null; return r();
-        case 'stFix': u.dialog = { type: 'stFix', index: n }; return this.render();
-        case 'stFixOk': {
-          const inp = this.app.querySelector('[data-c="stFixVal"]');
-          const val = inp ? parseFloat(inp.value) : NaN;
-          if (!isNaN(val)) state.stats.charges[u.dialog.index].fixedPrice = clamp(val, 0, 5);
-          u.dialog = null; return r();
+        case 'stFix': {
+          const ch = state.stats.charges[n], def = ch.type === 'DC' ? state.stats.priceDc : state.stats.priceAc, val = ch.fixedPrice != null ? ch.fixedPrice : def;
+          // Le plus grand des deux : un tarif par défaut à zéro (charge gratuite) ne doit pas réduire les pas à ceux d'un prix nul.
+          u.dialog = { type: 'stFix', index: n, val, steps: priceSteps(Math.max(val, def)), stepI: 1 };
+          return this.render();
         }
-        case 'stComplete': u.dialog = { type: 'stComplete', index: n, typeSel: state.stats.charges[n].type }; return this.render();
+        case 'stFixStep': if (u.dialog) u.dialog.val = priceMove(u.dialog.val, u.dialog.steps[u.dialog.stepI], n); return this.render();
+        case 'stFixPas': if (u.dialog) u.dialog.stepI = n; return this.render();
+        case 'stFixDef': state.stats.charges[u.dialog.index].fixedPrice = null; u.dialog = null; return r();
+        case 'stFixOk': state.stats.charges[u.dialog.index].fixedPrice = u.dialog.val; u.dialog = null; return r();
+        case 'stComplete': {
+          const ch = state.stats.charges[n], hm = (ms) => { const t = new Date(ms); return [t.getHours(), t.getMinutes()]; };
+          // Des horaires déjà saisis sont repris ; sinon ils restent « non renseignés », et le relevé
+          // de l'application ne sert que de point de départ au premier appui.
+          u.dialog = { type: 'stComplete', index: n, typeSel: ch.type || '', start: ch.timesKnown ? hm(ch.start) : null, end: ch.timesKnown ? hm(ch.end) : null, prop: { start: hm(ch.start), end: hm(ch.end) } };
+          return this.render();
+        }
         case 'stType': u.dialog.typeSel = v; return this.render();
+        case 'stStep': { const d = u.dialog; if (!d) return; const [which, part, dir] = v.split(':'); d[which] = d[which] ? timeStep(d[which], part, +dir) : d.prop[which]; return this.render(); }
+        case 'stClearT': u.dialog[v] = null; return this.render();
         case 'stCompleteOk': {
           const d = u.dialog, c2 = state.stats.charges[d.index];
-          const toMs = (hhmm, base) => { const [h, m] = (hhmm || '').split(':').map(Number); const t = new Date(base); t.setHours(h, m, 0, 0); return t.getTime(); };
-          if (d.startT) c2.start = toMs(d.startT, c2.start);
-          if (d.endT) { let e2 = toMs(d.endT, c2.start); if (e2 <= c2.start) e2 += 86400000; c2.end = e2; }  // une charge de nuit enjambe minuit
-          c2.type = d.typeSel || c2.type; c2.timesKnown = true;
-          c2.powerComputed = c2.kwh / ((c2.end - c2.start) / 3600000);
+          const at = (hm, base) => { const t = new Date(base); t.setHours(hm[0], hm[1], 0, 0); return t.getTime(); };
+          c2.type = d.typeSel || null;
+          // Les deux horaires renseignés : la fin est calée sur son relevé, le début sur la fin (une
+          // charge de nuit enjambe minuit), et la puissance moyenne redevient calculable.
+          if (d.start && d.end) {
+            c2.end = at(d.end, c2.end);
+            let s2 = at(d.start, c2.end);
+            if (s2 >= c2.end) s2 -= 86400000;
+            c2.start = s2; c2.timesKnown = true;
+            c2.powerComputed = c2.kwh / ((c2.end - c2.start) / 3600000);
+          }
           u.dialog = null; return r();
         }
-        case 'upBg': return this.closeOverlay();
+        case 'upLater': return this.closeOverlay();
         case 'upInstall': this.closeOverlay(); u.screen = 'settings'; u.dialog = { type: 'update', step: 'info' }; return this.render();
         case 'upSkip': this.closeOverlay(); return;
         case 'upDisable': s.updOverlay = false; this.closeOverlay(); r(); return this.toast(S('update_overlay_disabled_toast'), 3200);
@@ -2557,16 +2745,15 @@
         case 'scSlot': {
           const slot = t.getAttribute('data-slot'), val = t.value;
           if (val === 'OPEN_CUSTOM_APP' || val === 'APPLY_PROFILE') {
-            if (val === 'APPLY_PROFILE' && !state.profiles.length) { this.toast(S('shortcuts_no_profiles')); return this.render(); }
-            u.dialog = { type: val === 'OPEN_CUSTOM_APP' ? 'pickApp' : 'pickProfile', then: { kind: 'slot', slot, action: val } };
+            if (val === 'APPLY_PROFILE' && !state.profiles.length) { u.dialog = { type: 'noProfiles' }; return this.render(); }
+            const ex = sc.extra[slot] || {};
+            u.dialog = { type: val === 'OPEN_CUSTOM_APP' ? 'pickApp' : 'pickProfile', cur: val === 'OPEN_CUSTOM_APP' ? ex.app : ex.profileId, then: { kind: 'slot', slot, action: val } };
             return this.render();
           }
           sc.map[slot] = val; delete sc.extra[slot]; delete sc.toggles[val]; return commit();
         }
         case 'advAction': u.adv.action = t.value; this.render(); return;   // révèle la page de réglage de la fonction
         case 'advScope': u.adv.scope = t.value; return;
-        case 'edAction': if (u.dialog) u.dialog.action = t.value; return;
-        case 'edScope': if (u.dialog) u.dialog.scope = t.value; return;
         case 'hvTemp': if (u.edit) u.edit.hvac.temp = +t.value; return this.render();
         case 'hvFan': if (u.edit) u.edit.hvac.fan = +t.value; return this.render();
         case 'waSpeed': state.winAuto.speed = +t.value; return commit();
@@ -2592,8 +2779,6 @@
         case 'briDay': state.auto.bri.day = +t.value; return commit();
         case 'briNight': state.auto.bri.night = +t.value; return commit();
         case 'bhMin': state.auto.bh.minutes = +t.value; return commit();
-        case 'stStart': if (u.dialog) u.dialog.startT = t.value; return;
-        case 'stEnd': if (u.dialog) u.dialog.endT = t.value; return;
         case 'autoThr': state.auto.p.thr = num(0, 60, 25); return commit();
         case 'autoProfile': state.auto.p.profileId = t.value; return commit();
         case 'autoExec': state.auto.p.autoExec = t.checked; return commit();
@@ -2661,7 +2846,15 @@
           u.dialog = { type: name }; return this.render();
         case 'update': u.dialog = { type: 'update', step: 'info' }; return this.render();
         case 'diag': state.diagUnlocked = true; u.dialog = { type: 'diag' }; return commit();
-        case 'powerOff': return this.askPowerOff();
+        case 'powerOff': u.screen = 'settings'; u.tabs.set = 2; return this.askPowerOff(true);
+        case 'powerBanner': return this.askPowerOff();
+        case 'pickApp': u.screen = 'shortcuts'; u.dialog = { type: 'pickApp', cur: 'Waze' }; return this.render();
+        case 'statsComplete': case 'statsTariff': {
+          // La session que l'application n'a pas vue : c'est elle qui se complète.
+          const i = Math.max(0, state.stats.charges.findIndex((x) => x.reconstructed));
+          state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 2; u.statsOpen = 'c' + i; commit();
+          return this.act(name === 'statsComplete' ? 'stComplete' : 'stFix', String(i));
+        }
         case 'newProfile': this.startEdit(null); u.screen = 'profileEdit'; return this.render();
         case 'updOverlay': return this.showUpdateOverlay();
         case 'btConflict': {
@@ -2739,22 +2932,80 @@
   };
   const airSvg = (k) => '<svg class="air-ico" viewBox="0 0 960 960" fill="currentColor" aria-hidden="true"><path d="' + AIR_PATH[k] + '"/></svg>';
   const AIR_ICON = { face: airSvg('face'), feet: airSvg('feet'), ws: airSvg('ws'), rear: airSvg('rear') };
-  // Croix du pop-up HVAC (res/drawable/ic_hvac_temp.xml, ic_hvac_fan.xml et ic_hvac_close.xml) :
-  // d'après Google Material Icons « thermostat », « toys » et « close » (Apache License 2.0).
-  // Chauffages du pop-up HVAC (res/drawable/ic_seat_heat_*.xml, ic_steering_wheel_heat.xml) :
-  // Google Material Symbols seat_heat_left, seat_heat_right et steering_wheel_heat (Apache License 2.0).
-  const heatSvg = (ds) => '<svg class="heat-ico" viewBox="0 0 960 960" fill="currentColor" aria-hidden="true">' + ds.map((d) => '<path d="' + d + '"/>').join('') + '</svg>';
-  const HEAT_ICON = {
-    seatL: heatSvg(['M801,502L735,458L748,437Q754,428 757,418.5Q760,409 760,398Q760,384 755,371Q750,358 740,348Q719,327 707.5,299.5Q696,272 696,242Q696,219 702.5,198Q709,177 721,158L734,138L801,182L787,203Q781,212 778.5,221.5Q776,231 776,242Q776,256 781,269Q786,282 796,292Q817,313 828.5,340.5Q840,368 840,398Q840,421 833.5,442Q827,463 815,482L801,502ZM633,502L567,458L580,437Q586,428 589,418.5Q592,409 592,398Q592,384 587,371Q582,358 572,348Q551,327 539.5,299.5Q528,272 528,242Q528,219 534.5,198Q541,177 553,158L566,138L633,182L619,203Q613,212 610.5,221.5Q608,231 608,242Q608,256 613,269Q618,282 628,292Q649,313 660.5,340.5Q672,368 672,398Q672,421 665.5,442Q659,463 647,482L633,502ZM466,502L399,458L413,437Q419,428 422,418.5Q425,409 425,398Q425,384 419.5,371Q414,358 404,348Q383,327 371.5,299.5Q360,272 360,242Q360,219 366,198Q372,177 385,158L399,138L466,182L452,203Q446,211 443,221Q440,231 440,242Q440,256 445,269Q450,282 460,292Q481,313 492.5,340.5Q504,368 504,398Q504,421 497.5,442Q491,463 479,482L466,502ZM302,840Q275,840 254,823.5Q233,807 225,781L129,408Q125,393 122.5,377.5Q120,362 120,346Q120,318 126.5,291Q133,264 146,239Q155,221 171.5,210.5Q188,200 208,200Q231,200 248,217Q265,234 265,257Q265,268 261,278Q257,288 249,296Q230,316 226.5,342.5Q223,369 234,394L254,436Q283,499 301.5,566Q320,633 320,703L320,747Q337,736 356,728Q375,720 396,720L600,720Q634,720 657.5,743.5Q681,767 681,800L681,840L302,840Z']),
-    seatR: heatSvg(['M561,502L495,458L508,437Q514,428 517,418.5Q520,409 520,398Q520,384 514.5,371Q509,358 499,348Q478,327 467,299.5Q456,272 456,242Q456,219 462.5,198Q469,177 481,158L494,138L561,182L547,203Q541,212 538,221.5Q535,231 535,242Q535,256 540.5,269Q546,282 556,292Q577,313 588,340.5Q599,368 599,398Q599,421 593,442Q587,463 575,482L561,502ZM393,502L327,458L340,437Q346,428 349,418.5Q352,409 352,398Q352,384 346.5,371Q341,358 331,348Q310,327 299,299.5Q288,272 288,242Q288,219 294.5,198Q301,177 313,158L326,138L393,182L379,203Q373,212 370,221.5Q367,231 367,242Q367,256 372.5,269Q378,282 388,292Q409,313 420,340.5Q431,368 431,398Q431,421 425,442Q419,463 407,482L393,502ZM225,502L159,458L173,437Q179,428 181.5,418.5Q184,409 184,398Q184,384 179,371Q174,358 164,348Q143,327 131.5,299.5Q120,272 120,242Q120,219 126,198Q132,177 145,158L159,138L225,182L211,203Q205,211 202,221Q199,231 199,242Q199,256 204.5,269Q210,282 220,292Q241,313 252.5,340.5Q264,368 264,398Q264,421 257.5,442Q251,463 239,482L225,502ZM279,840L279,800Q279,767 302,743.5Q325,720 359,720L563,720Q584,720 603,728Q622,736 639,747L639,703Q639,633 658,566Q677,499 706,436L725,394Q736,369 733,342.5Q730,316 711,296Q703,288 699,278Q695,268 695,257Q695,234 711.5,217Q728,200 751,200Q771,200 788,210.5Q805,221 814,239Q827,264 833.5,291Q840,318 840,346Q840,362 838,377.5Q836,393 831,408L735,781Q727,807 705.5,823.5Q684,840 657,840L279,840Z']),
-    wheel: heatSvg(['M881,382L815,338L828,317Q834,308 837,298.5Q840,289 840,278Q840,264 835,251Q830,238 820,228Q799,207 787.5,179.5Q776,152 776,122Q776,99 782.5,78Q789,57 801,38L814,18L881,62L867,83Q861,92 858.5,101.5Q856,111 856,122Q856,136 861,149Q866,162 876,172Q897,193 908.5,220.5Q920,248 920,278Q920,301 913.5,322Q907,343 895,362L881,382ZM713,382L647,338L660,317Q666,308 669,298.5Q672,289 672,278Q672,264 667,251Q662,238 652,228Q631,207 619.5,179.5Q608,152 608,122Q608,99 614.5,78Q621,57 633,38L646,18L713,62L699,83Q693,92 690.5,101.5Q688,111 688,122Q688,136 693,149Q698,162 708,172Q729,193 740.5,220.5Q752,248 752,278Q752,301 745.5,322Q739,343 727,362L713,382ZM520,797Q629,783 706,706Q783,629 797,520L640,520L520,670L520,797ZM546,382L479,338L493,317Q499,308 502,298.5Q505,289 505,278Q505,264 499.5,251Q494,238 484,228Q463,207 451.5,179.5Q440,152 440,122Q440,99 446,78Q452,57 465,38L479,18L546,62L532,83Q526,91 523,101Q520,111 520,122Q520,136 525,149Q530,162 540,172Q561,193 572.5,220.5Q584,248 584,278Q584,301 577.5,322Q571,343 559,362L546,382ZM163,520Q177,629 254,706Q331,783 440,797L440,670L320,520L163,520ZM163,440L878,440Q879,450 879.5,460Q880,470 880,480Q880,563 848.5,636Q817,709 763,763Q709,817 636,848.5Q563,880 480,880Q397,880 324,848.5Q251,817 197,763Q143,709 111.5,636Q80,563 80,480Q80,345 159,240.5Q238,136 360,98L360,184Q281,216 227.5,283.5Q174,351 163,440Z'])
+  // Pictogrammes des pop-ups et fenêtres « modernes » : tracés repris tels quels des drawables de
+  // l'application (res/drawable/ic_hvac_*.xml, ic_overlay_*.xml, ic_dialog_*.xml, ic_heat_level_*.xml),
+  // par le script qui a servi à écrire ce bloc. Blancs dans l'application, ils prennent ici la couleur du texte.
+  const MW = {
+    fan: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,12c0,-3 2.5,-5.5 5.5,-5.5S23,9 23,12H12zM12,12c0,3 -2.5,5.5 -5.5,5.5S1,15 1,12h11zM12,12c-3,0 -5.5,-2.5 -5.5,-5.5S9,1 12,1v11zM12,12c3,0 5.5,2.5 5.5,5.5S15,23 12,23V12z" fill="currentColor"/></svg>',
+    close: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12z" fill="currentColor"/></svg>',
+    minus: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6,12 H18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    plus: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6,12 H18 M12,6 V18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    ac: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M22,11h-4.17l3.24,-3.24 -1.41,-1.42L15,11h-2V9l4.66,-4.66 -1.42,-1.41L13,6.17V2h-2v4.17L7.76,2.93 6.34,4.34 11,9v2H9L4.34,6.34 2.93,7.76 6.17,11H2v2h4.17l-3.24,3.24 1.41,1.42L9,13h2v2l-4.66,4.66 1.42,1.41L11,17.83V22h2v-4.17l3.24,3.24 1.42,-1.41L13,15v-2h2l4.66,4.66 1.41,-1.42L17.83,13H22z" fill="currentColor"/></svg>',
+    target: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,7c-2.76,0 -5,2.24 -5,5s2.24,5 5,5 5,-2.24 5,-5 -2.24,-5 -5,-5zM12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM12,20c-4.42,0 -8,-3.58 -8,-8s3.58,-8 8,-8 8,3.58 8,8 -3.58,8 -8,8z" fill="currentColor"/></svg>',
+    loopInner: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2,17.5 H2.8 V13.2 C2.8,12.3 3.4,11.8 4.2,11.6 L6.6,11 L8.8,7.6 C9.2,6.9 9.9,6.5 10.7,6.5 H14.9 C15.7,6.5 16.4,6.9 16.9,7.5 L19.4,10.9 L20.4,11.3 C20.9,11.5 21.2,12 21.2,12.6 V17.5 H19 M15.4,17.5 H8.8 M5.2,17.5 a1.8,1.8 0 1,0 3.6,0 a1.8,1.8 0 1,0 -3.6,0 M15.4,17.5 a1.8,1.8 0 1,0 3.6,0 a1.8,1.8 0 1,0 -3.6,0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.6,9.6 H11.6 C10.4,9.6 9.6,10.5 9.6,11.6 C9.6,12.7 10.4,13.6 11.6,13.6 H14 M12.6,11.9 L14.3,13.6 L12.6,15.3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    loopOutside: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2,17.5 H2.8 V13.2 C2.8,12.3 3.4,11.8 4.2,11.6 L6.6,11 L8.8,7.6 C9.2,6.9 9.9,6.5 10.7,6.5 H14.9 C15.7,6.5 16.4,6.9 16.9,7.5 L19.4,10.9 L20.4,11.3 C20.9,11.5 21.2,12 21.2,12.6 V17.5 H19 M15.4,17.5 H8.8 M5.2,17.5 a1.8,1.8 0 1,0 3.6,0 a1.8,1.8 0 1,0 -3.6,0 M15.4,17.5 a1.8,1.8 0 1,0 3.6,0 a1.8,1.8 0 1,0 -3.6,0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M0.8,14.2 H12.6 M10.4,12 L12.6,14.2 L10.4,16.4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    loopAuto: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2,17.5 H2.8 V13.2 C2.8,12.3 3.4,11.8 4.2,11.6 L6.6,11 L8.8,7.6 C9.2,6.9 9.9,6.5 10.7,6.5 H14.9 C15.7,6.5 16.4,6.9 16.9,7.5 L19.4,10.9 L20.4,11.3 C20.9,11.5 21.2,12 21.2,12.6 V17.5 H19 M15.4,17.5 H8.8 M5.2,17.5 a1.8,1.8 0 1,0 3.6,0 a1.8,1.8 0 1,0 -3.6,0 M15.4,17.5 a1.8,1.8 0 1,0 3.6,0 a1.8,1.8 0 1,0 -3.6,0" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.9,15.2 L12.3,9.2 L14.7,15.2 M10.8,13.1 H13.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    heat1: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5,14h3v5h-3z" fill="currentColor"/><path d="M10.5,10h3v9h-3z" fill="currentColor" opacity="0.3"/><path d="M16,6h3v13h-3z" fill="currentColor" opacity="0.3"/></svg>',
+    heat2: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5,14h3v5h-3z" fill="currentColor"/><path d="M10.5,10h3v9h-3z" fill="currentColor"/><path d="M16,6h3v13h-3z" fill="currentColor" opacity="0.3"/></svg>',
+    heat3: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5,14h3v5h-3z" fill="currentColor"/><path d="M10.5,10h3v9h-3z" fill="currentColor"/><path d="M16,6h3v13h-3z" fill="currentColor"/></svg>',
+    stickV: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,4.5 V19.5 M8.5,8 L12,4.5 L15.5,8 M8.5,16 L12,19.5 L15.5,16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    stickH: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5,12 H19.5 M8,8.5 L4.5,12 L8,15.5 M16,8.5 L19.5,12 L16,15.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    stickClick: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7,6 H17 a3,3 0 0 1 3,3 V15 a3,3 0 0 1 -3,3 H7 a3,3 0 0 1 -3,-3 V9 a3,3 0 0 1 3,-3 z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9,12 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0z" fill="currentColor"/></svg>',
+    stickMove: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,3.5 V20.5 M3.5,12 H20.5 M9.5,6 L12,3.5 L14.5,6 M9.5,18 L12,20.5 L14.5,18 M6,9.5 L3.5,12 L6,14.5 M18,9.5 L20.5,12 L18,14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    profiles: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3,12 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M9.8,12 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0 M3.4,10.6 H9.9 M14.1,10.6 H20.6 M12,14.2 V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    brightness: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8,12 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 M12,2.5 V5 M12,19 V21.5 M2.5,12 H5 M19,12 H21.5 M5.3,5.3 L7,7 M17,17 L18.7,18.7 M5.3,18.7 L7,17 M17,7 L18.7,5.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    open: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10,5 H6 a1,1 0 0 0 -1,1 V18 a1,1 0 0 0 1,1 H18 a1,1 0 0 0 1,-1 V14 M13.5,5 H19 V10.5 M19,5 L11,13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    power: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,3.5 V11.5 M7.4,6.7 a7,7 0 1,0 9.2,0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    temperature: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14,14.8 V5 a2,2 0 0 0 -4,0 V14.8 a4,4 0 1 0 4,0 z M12,9 V17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    battery: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,8 H18 a1,1 0 0 1 1,1 V15 a1,1 0 0 1 -1,1 H4 a1,1 0 0 1 -1,-1 V9 a1,1 0 0 1 1,-1 z M21.5,10.5 V13.5 M6,11 V13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    update: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,4 V15 M7.5,10.5 L12,15 L16.5,10.5 M5,19.5 H19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    arrow: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5,12 H19 M13,6 L19,12 L13,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    park: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3,12 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M10,16.5 V7.5 H13 a2.5,2.5 0 0 1 0,5 H10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    restore: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,12 a8,8 0 1,0 2.6,-5.9 M4,4.5 V8.5 H8 M12,8 V12.5 L15,14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    question: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3,12 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M9.6,9.4 a2.5,2.5 0 1,1 3.6,2.3 c-0.8,0.5 -1.2,1 -1.2,2 M12,16.9 V17.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    warning: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,4.5 L21,19.5 H3 Z M12,10.5 V14.5 M12,17 V17.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    trash: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5,7 H19 M10,7 V5 H14 V7 M7,7 L8,19 H16 L17,7 M10.5,10.5 V16 M13.5,10.5 V16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    swap: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5,9 H18 M14.5,5.5 L18,9 L14.5,12.5 M19,15 H6 M9.5,11.5 L6,15 L9.5,18.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    language: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3,12 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M3,12 H21 M12,3 c-3,3 -3,15 0,18 M12,3 c3,3 3,15 0,18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    list: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8,7 H20 M8,12 H20 M8,17 H20 M4,7 V7.1 M4,12 V12.1 M4,17 V17.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    edit: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,20 H8 L19,9 L15,5 L4,16 Z M13,7 L17,11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    plug: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9,3 V8 M15,3 V8 M6,8 H18 V12 a6,6 0 0 1 -12,0 Z M12,18 V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    bug: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8,9 a4,4 0 0 1 8,0 V15 a4,4 0 0 1 -8,0 Z M4,12 H8 M16,12 H20 M5,7 L8,9 M19,7 L16,9 M5,18 L8,16 M19,18 L16,16 M12,11 V19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    info: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3,12 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M12,11 V16.5 M12,7.8 V8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    download: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,4 V15 M7.5,10.5 L12,15 L16.5,10.5 M5,19.5 H19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   };
-  const hvSvg = (d) => '<svg class="hv-ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="' + d + '"/></svg>';
-  const HV_ICON = {
-    temp: hvSvg('M15,13V5c0,-1.66 -1.34,-3 -3,-3S9,3.34 9,5v8c-1.21,0.91 -2,2.37 -2,4 0,2.76 2.24,5 5,5s5,-2.24 5,-5c0,-1.63 -0.79,-3.09 -2,-4zM11,5c0,-0.55 0.45,-1 1,-1s1,0.45 1,1h-1v1h1v2h-1v1h1v2h-2L11,5z'),
-    fan: hvSvg('M12,12c0,-3 2.5,-5.5 5.5,-5.5S23,9 23,12H12zM12,12c0,3 -2.5,5.5 -5.5,5.5S1,15 1,12h11zM12,12c-3,0 -5.5,-2.5 -5.5,-5.5S9,1 12,1v11zM12,12c3,0 5.5,2.5 5.5,5.5S15,23 12,23V12z'),
-    close: hvSvg('M19,6.41L17.59,5 12,10.59 6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 12,13.41 17.59,19 19,17.59 13.41,12z')
-  };
+  // Volant chauffant du pop-up HVAC (res/drawable/ic_steering_wheel_heat.xml) : Google Material
+  // Symbols steering_wheel_heat (Apache License 2.0).
+  const HEAT_WHEEL = '<svg class="heat-ico" viewBox="0 0 960 960" fill="currentColor" aria-hidden="true"><path d="M881,382L815,338L828,317Q834,308 837,298.5Q840,289 840,278Q840,264 835,251Q830,238 820,228Q799,207 787.5,179.5Q776,152 776,122Q776,99 782.5,78Q789,57 801,38L814,18L881,62L867,83Q861,92 858.5,101.5Q856,111 856,122Q856,136 861,149Q866,162 876,172Q897,193 908.5,220.5Q920,248 920,278Q920,301 913.5,322Q907,343 895,362L881,382ZM713,382L647,338L660,317Q666,308 669,298.5Q672,289 672,278Q672,264 667,251Q662,238 652,228Q631,207 619.5,179.5Q608,152 608,122Q608,99 614.5,78Q621,57 633,38L646,18L713,62L699,83Q693,92 690.5,101.5Q688,111 688,122Q688,136 693,149Q698,162 708,172Q729,193 740.5,220.5Q752,248 752,278Q752,301 745.5,322Q739,343 727,362L713,382ZM520,797Q629,783 706,706Q783,629 797,520L640,520L520,670L520,797ZM546,382L479,338L493,317Q499,308 502,298.5Q505,289 505,278Q505,264 499.5,251Q494,238 484,228Q463,207 451.5,179.5Q440,152 440,122Q440,99 446,78Q452,57 465,38L479,18L546,62L532,83Q526,91 523,101Q520,111 520,122Q520,136 525,149Q530,162 540,172Q561,193 572.5,220.5Q584,248 584,278Q584,301 577.5,322Q571,343 559,362L546,382ZM163,520Q177,629 254,706Q331,783 440,797L440,670L320,520L163,520ZM163,440L878,440Q879,450 879.5,460Q880,470 880,480Q880,563 848.5,636Q817,709 763,763Q709,817 636,848.5Q563,880 480,880Q397,880 324,848.5Q251,817 197,763Q143,709 111.5,636Q80,563 80,480Q80,345 159,240.5Q238,136 360,98L360,184Q281,216 227.5,283.5Q174,351 163,440Z"/></svg>';
+  // Pastille du mode de conduite d'un profil : une teinte par mode, la même partout où un profil est
+  // montré (OverlayKit.pastilleMode). Sans la catégorie Conduite le profil n'écrit pas de mode : la
+  // pastille garde sa place, vide, pour que les noms restent alignés.
+  const MODE_PILL = { ECO: ['--dash-eco', '--hvac-on-eco'], NORMAL: ['--dash-accent', '--hvac-on-accent'], SPORT: ['--dash-danger', '--text-active'],
+                      SNOW: ['--mode-snow', '--mode-on-snow'], CUSTOM: ['--dash-warn', '--hvac-on-heat'] };
+  function modePill(p) {
+    if (!catOn(p, 'drive')) return '<span class="mw-pill" style="visibility:hidden">–</span>';
+    const m = MODE_PILL[p.driveMode] || MODE_PILL.NORMAL;
+    return '<span class="mw-pill" style="background:var(' + m[0] + ');color:var(' + m[1] + ')">' + esc(DRIVE_LABEL[p.driveMode] || p.driveMode) + '</span>';
+  }
+  /** Icône d'une application dans la grille de choix : la maquette n'a pas les vraies, une pastille à l'initiale en tient lieu. */
+  function appIcon(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+    return '<span class="mw-appico" style="background:hsl(' + h + ' 45% 42%)">' + esc(name.charAt(0)) + '</span>';
+  }
+  // Correction d'un tarif aux boutons − / + (PriceStepper) : quatre pas de dix en dix, calés sur
+  // l'ordre de grandeur du prix — du millième à l'unité en euros.
+  function priceSteps(ref) {
+    const e = ref > 0 ? Math.floor(Math.log10(ref)) : 0, f = Math.max(0.001, Math.pow(10, e - 3));
+    return [0, 1, 2, 3].map((i) => f * Math.pow(10, i));
+  }
+  const priceMove = (v, step, dir) => clamp(Math.round((v + dir * step) * 1000) / 1000, 0, 100000);
+  /** Heure après un appui sur − ou + (ChargeTimes.step) : minutes de cinq en cinq, chaque compteur tourne sur lui-même. */
+  function timeStep(t, part, dir) {
+    if (part === 'h') return [(t[0] + dir + 24) % 24, t[1]];
+    const cran = Math.floor(t[1] / 5);
+    return [t[0], ((dir > 0 ? cran + 1 : t[1] % 5 === 0 ? cran - 1 : cran) * 5 + 60) % 60];
+  }
   // Tout fermer / Tout ouvrir (res/drawable/ic_window_all_*.xml) : Material Symbols keyboard_double_arrow_up/down.
   const WIN_PATH = {
     allUp: 'M296,736L240,680L480,440L720,680L664,736L480,553L296,736ZM296,496L240,440L480,200L720,440L664,496L480,313L296,496Z',
@@ -2770,8 +3021,8 @@
     if (n) return appLang() === 'fr' ? n[0] : n[1];
     return S('adv_sc_key_unknown', code);
   }
-  function qrBox() {
-    return '<svg width="110" height="110" viewBox="0 0 110 110" aria-hidden="true" style="border-radius:8px;background:#fff"><rect x="8" y="8" width="28" height="28" fill="none" stroke="#111" stroke-width="6"/><rect x="74" y="8" width="28" height="28" fill="none" stroke="#111" stroke-width="6"/><rect x="8" y="74" width="28" height="28" fill="none" stroke="#111" stroke-width="6"/><text x="55" y="62" text-anchor="middle" font-size="13" font-family="Roboto,sans-serif" fill="#111">QR</text></svg>';
+  function qrBox(size) {
+    return '<svg width="' + (size || 110) + '" height="' + (size || 110) + '" viewBox="0 0 110 110" aria-hidden="true" style="border-radius:8px;background:#fff"><rect x="8" y="8" width="28" height="28" fill="none" stroke="#111" stroke-width="6"/><rect x="74" y="8" width="28" height="28" fill="none" stroke="#111" stroke-width="6"/><rect x="8" y="74" width="28" height="28" fill="none" stroke="#111" stroke-width="6"/><text x="55" y="62" text-anchor="middle" font-size="13" font-family="Roboto,sans-serif" fill="#111">QR</text></svg>';
   }
   function diagSample() {
     const g = gen();

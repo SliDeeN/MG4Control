@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Diagnostic : le journal plein cadre — proposition « A » choisie sur maquette le 2026-10-13.
+     Les actions restent en haut, tout le reste de la fenêtre est le journal, qui défile : un
+     crash enregistré d'abord (en rouge), puis le rapport matériel, puis les dernières lignes du
+     journal de l'application. Rempli par SettingsFragment.showDiagnosticDialog.
+
+     Fenêtre de l'application : tailles normales, pas l'agrandissement des pop-ups. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_hvac_modern_card"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <FrameLayout
+            android:id="@+id/diag_badge"
+            android:layout_width="52dp"
+            android:layout_height="52dp">
+
+            <ImageView
+                android:id="@+id/diag_icon"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_dialog_bug" />
+
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="14dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/diag_title"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <!-- Annonce d'un crash enregistré ; retirée sinon -->
+            <TextView
+                android:id="@+id/diag_crash_flag"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/dash_danger"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/diag_clear_crash"
+            android:layout_width="wrap_content"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:gravity="center"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:text="@string/diag_clear_crash"
+            android:textColor="@color/dash_danger"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/diag_copy"
+            android:layout_width="wrap_content"
+            android:layout_height="52dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:gravity="center"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:text="@string/diag_copy"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/diag_download"
+            android:layout_width="wrap_content"
+            android:layout_height="52dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:gravity="center"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:text="@string/diag_download"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+        <ImageView
+            android:id="@+id/diag_close"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_marginStart="10dp"
+            android:background="@drawable/bg_dialog_round"
+            android:padding="15dp"
+            android:contentDescription="@string/nav_close"
+            android:src="@drawable/ic_hvac_close" />
+
+    </LinearLayout>
+
+    <!-- Hauteur donnée ET poids : le journal a sa taille, et la cède si l'écran est trop bas. -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="380dp"
+        android:layout_weight="1"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/bg_hvac_panel"
+        android:padding="14dp">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:overScrollMode="never">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/diag_crash"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:visibility="gone"
+                    android:typeface="monospace"
+                    android:lineSpacingMultiplier="1.2"
+                    android:textColor="@color/dash_danger"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/diag_report"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/diag_loading"
+                    android:typeface="monospace"
+                    android:lineSpacingMultiplier="1.2"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
+                <TextView
+                    android:id="@+id/diag_logs"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:typeface="monospace"
+                    android:lineSpacingMultiplier="1.2"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+        </ScrollView>
+
+    </FrameLayout>
+
+</LinearLayout>

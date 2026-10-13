@@ -1,155 +1,282 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
+<!-- Choix de la langue, au premier lancement : sept grandes tuiles sur deux lignes — proposition
+     « A » choisie sur maquette le 2026-10-13. Chaque langue s'écrit dans SA langue, c'est ce qui
+     la fait reconnaître ; son code est dessous. On n'en sort qu'en choisissant.
+
+     Fenêtre de l'application : tailles normales, pas l'agrandissement des pop-ups. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/bg_card_rounded"
-    android:padding="16dp">
+    android:background="@drawable/bg_hvac_modern_card"
+    android:padding="20dp">
 
-    <!-- Titre -->
+    <FrameLayout
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:layout_gravity="center_horizontal"
+        android:background="@drawable/bg_dialog_icon">
+
+        <ImageView
+            android:id="@+id/iv_language_icon"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_dialog_language" />
+
+    </FrameLayout>
+
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center_horizontal"
         android:text="@string/settings_language_pick_title"
-        android:textColor="@color/dash_text_lo"
-        android:textSize="10sp"
-        android:textStyle="bold"
-        android:textAllCaps="true"
-        android:letterSpacing="0.12"
-        android:gravity="center"
-        android:paddingTop="4dp"
-        android:paddingBottom="14dp" />
+        android:textColor="@color/text_primary"
+        android:textSize="23sp"
+        android:textStyle="bold" />
 
-    <!-- Ligne 1 : FR | EN | DE -->
+    <!-- La même question en anglais : sans réglage, l'application s'ouvre en français, que tout
+         le monde ne lit pas. Retirée par MainActivity quand le titre est déjà en anglais. -->
+    <TextView
+        android:id="@+id/tv_language_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:gravity="center_horizontal"
+        android:text="Choose your language"
+        android:textColor="@color/text_secondary"
+        android:textSize="15sp"
+        tools:ignore="HardcodedText" />
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
         android:orientation="horizontal"
-        android:layout_marginBottom="8dp">
+        android:baselineAligned="false">
 
-        <com.google.android.material.button.MaterialButton
+        <LinearLayout
             android:id="@+id/btn_pick_fr"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="84dp"
             android:layout_weight="1"
-            android:layout_marginEnd="5dp"
-            android:text="@string/settings_language_fr"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            app:backgroundTint="@color/dash_btn"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="10dp" />
+            android:background="@drawable/bg_dialog_tile"
+            android:orientation="vertical"
+            android:gravity="center">
 
-        <com.google.android.material.button.MaterialButton
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_language_fr"
+                android:textColor="@color/text_primary"
+                android:textSize="21sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="FR"
+                android:textColor="@color/dash_accent"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:ignore="HardcodedText" />
+
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/btn_pick_en"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="84dp"
             android:layout_weight="1"
-            android:layout_marginStart="5dp"
-            android:layout_marginEnd="5dp"
-            android:text="@string/settings_language_en"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            app:backgroundTint="@color/dash_btn"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="10dp" />
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:orientation="vertical"
+            android:gravity="center">
 
-        <com.google.android.material.button.MaterialButton
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_language_en"
+                android:textColor="@color/text_primary"
+                android:textSize="21sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="EN"
+                android:textColor="@color/dash_accent"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:ignore="HardcodedText" />
+
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/btn_pick_de"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="84dp"
             android:layout_weight="1"
-            android:layout_marginStart="5dp"
-            android:text="@string/settings_language_de"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            app:backgroundTint="@color/dash_btn"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="10dp" />
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:orientation="vertical"
+            android:gravity="center">
 
-    </LinearLayout>
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_language_de"
+                android:textColor="@color/text_primary"
+                android:textSize="21sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
 
-    <!-- Ligne 2 : ES | PT | IT -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="DE"
+                android:textColor="@color/dash_accent"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:ignore="HardcodedText" />
 
-        <com.google.android.material.button.MaterialButton
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/btn_pick_es"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="84dp"
             android:layout_weight="1"
-            android:layout_marginEnd="5dp"
-            android:text="@string/settings_language_es"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            app:backgroundTint="@color/dash_btn"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="10dp" />
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:orientation="vertical"
+            android:gravity="center">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_pick_pt"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:layout_marginStart="5dp"
-            android:layout_marginEnd="5dp"
-            android:text="@string/settings_language_pt"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            app:backgroundTint="@color/dash_btn"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="10dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_language_es"
+                android:textColor="@color/text_primary"
+                android:textSize="21sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_pick_it"
-            android:layout_width="0dp"
-            android:layout_height="52dp"
-            android:layout_weight="1"
-            android:layout_marginStart="5dp"
-            android:text="@string/settings_language_it"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            app:backgroundTint="@color/dash_btn"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="10dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ES"
+                android:textColor="@color/dash_accent"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:ignore="HardcodedText" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
-    <!-- Ligne 3 : TR -->
+    <!-- Trois tuiles, de la même largeur que celles du dessus : la ligne est centrée par ses marges. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:paddingStart="98dp"
+        android:paddingEnd="98dp"
         android:orientation="horizontal"
-        android:layout_marginTop="8dp">
+        android:baselineAligned="false">
 
-        <com.google.android.material.button.MaterialButton
+        <LinearLayout
+            android:id="@+id/btn_pick_pt"
+            android:layout_width="0dp"
+            android:layout_height="84dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_dialog_tile"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_language_pt"
+                android:textColor="@color/text_primary"
+                android:textSize="21sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="PT"
+                android:textColor="@color/dash_accent"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:ignore="HardcodedText" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btn_pick_it"
+            android:layout_width="0dp"
+            android:layout_height="84dp"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_language_it"
+                android:textColor="@color/text_primary"
+                android:textSize="21sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="IT"
+                android:textColor="@color/dash_accent"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:ignore="HardcodedText" />
+
+        </LinearLayout>
+
+        <LinearLayout
             android:id="@+id/btn_pick_tr"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="84dp"
             android:layout_weight="1"
-            android:layout_marginEnd="5dp"
-            android:text="@string/settings_language_tr"
-            android:textColor="@color/text_secondary"
-            android:textSize="12sp"
-            app:backgroundTint="@color/dash_btn"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="10dp" />
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:orientation="vertical"
+            android:gravity="center">
 
-        <View
-            android:layout_width="0dp"
-            android:layout_height="1dp"
-            android:layout_weight="2" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_language_tr"
+                android:textColor="@color/text_primary"
+                android:textSize="21sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TR"
+                android:textColor="@color/dash_accent"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:ignore="HardcodedText" />
+
+        </LinearLayout>
 
     </LinearLayout>
 

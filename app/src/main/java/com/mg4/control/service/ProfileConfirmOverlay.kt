@@ -1,36 +1,36 @@
 package com.mg4.control.service
 
 import android.content.Context
-import android.graphics.PixelFormat
+import android.content.res.ColorStateList
 import android.os.Handler
 import android.os.Looper
-import android.view.ContextThemeWrapper
-import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
+import android.widget.ImageView
 import android.widget.TextView
-import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
 import com.mg4.control.accessibility.JoystickFocus
 import com.mg4.control.automation.AutomationSettings
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.VehicleWriteGate
 import com.mg4.control.model.DrivingProfile
-import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.PopupDelay
-import com.mg4.control.util.ThemeHelper
 
 /**
- * Popup OUI/NON demandant s'il faut appliquer [profile] parce qu'un seuil est franchi :
- * température extérieure ([show]) ou niveau de batterie ([showBattery]).
- * Calqué sur ProfilePickerOverlay (fenêtre overlay, compte à rebours, verrou 0 km/h).
- * OUI → onConfirmed ; NON ou timeout → onDeclined (une seule fois). Le délai est celui de
+ * Question OUI / NON : faut-il appliquer [DrivingProfile] parce qu'un seuil est franchi —
+ * température extérieure ([show]) ou niveau de batterie ([showBattery]) ?
+ * OUI → onConfirmed ; NON ou délai écoulé → onDeclined (une seule fois). Le délai est celui de
  * Réglages › Interface ([PopupDelay]).
  *
- * Comme le popup profils, il se pilote au joystick droit du volant (voir [naviguer]) si le
- * service d'accessibilité est actif : focus de départ sur OUI, gauche/droite pour changer,
- * clic central pour valider. Ne rien faire reste un NON.
+ * C'est un BANDEAU en bas de l'écran (proposition « C », choisie sur maquette le 2026-10-13) : la
+ * question arrive souvent en roulant, elle ne doit ni assombrir ni cacher ce qui est derrière.
+ * La fenêtre n'occupe que la place du bandeau : toucher l'écran ailleurs agit sur l'application
+ * du dessous et ne répond PAS à la question — seuls NON et le délai refusent.
+ *
+ * Il se pilote au joystick droit du volant (voir [naviguer]) si le service d'accessibilité est
+ * actif : focus de départ sur OUI, gauche / droite pour changer, clic central pour valider. Ne
+ * rien faire reste un NON.
  */
 object ProfileConfirmOverlay {
 
@@ -43,6 +43,15 @@ object ProfileConfirmOverlay {
 
     /** Focus au joystick du popup affiché ; vit et meurt avec la vue. Thread principal seulement. */
     private var navigation: OverlayNavigation? = null
+
+    /** Ce qui a déclenché la question : la mesure, son seuil, et de quel côté elle l'a franchi. */
+    private class Declencheur(
+        val icone: Int,
+        val valeur: Float,
+        val seuil: Int,
+        val unite: String,
+        val auDessus: Boolean,
+    )
 
     /**
      * Vrai si le popup est à l'écran. Lu depuis [com.mg4.control.accessibility.KeyCaptureService]
@@ -67,14 +76,10 @@ object ProfileConfirmOverlay {
         onConfirmed: () -> Unit,
         onDeclined: () -> Unit
     ) {
-        handler.post {
-            showOnMain(context, profile, onConfirmed, onDeclined) { localized ->
-                val tempStr = String.format(java.util.Locale.getDefault(), "%.1f", currentTemp)
-                val msgRes = if (direction == AutomationSettings.Direction.ABOVE)
-                    R.string.automation_confirm_msg_above else R.string.automation_confirm_msg
-                localized.getString(msgRes, threshold, tempStr, profile.name)
-            }
-        }
+        val declencheur = Declencheur(
+            R.drawable.ic_overlay_temperature, currentTemp, threshold, "°C",
+            auDessus = direction == AutomationSettings.Direction.ABOVE)
+        handler.post { showOnMain(context, profile, declencheur, onConfirmed, onDeclined) }
     }
 
     /** Même popup, pour l'automatisation batterie (issue #112). */
@@ -86,20 +91,16 @@ object ProfileConfirmOverlay {
         onConfirmed: () -> Unit,
         onDeclined: () -> Unit
     ) {
-        handler.post {
-            showOnMain(context, profile, onConfirmed, onDeclined) { localized ->
-                val socStr = String.format(java.util.Locale.getDefault(), "%.1f", currentSoc)
-                localized.getString(R.string.battery_auto_confirm_msg, threshold, socStr, profile.name)
-            }
-        }
+        val declencheur = Declencheur(R.drawable.ic_overlay_battery, currentSoc, threshold, "%", auDessus = false)
+        handler.post { showOnMain(context, profile, declencheur, onConfirmed, onDeclined) }
     }
 
     private fun showOnMain(
         context: Context,
         profile: DrivingProfile,
+        declencheur: Declencheur,
         onConfirmed: () -> Unit,
         onDeclined: () -> Unit,
-        message: (Context) -> String
     ) {
         // En roulant (verrou actif) : pas d'écriture → on décline directement (fallback BT/défaut).
         if (!VehicleWriteGate.isAllowedNow()) {
@@ -108,46 +109,88 @@ object ProfileConfirmOverlay {
         }
         dismiss(context)
 
-        val localized = LocaleHelper.applyLocale(context)
-        val themed = ContextThemeWrapper(ThemeHelper.withAppTheme(localized), R.style.Theme_MG4Control)
-        val view = LayoutInflater.from(themed).inflate(R.layout.overlay_profile_confirm, null)
-
-        view.findViewById<TextView>(R.id.confirm_message).text = message(localized)
-
         // Un seul chemin de sortie : garde-fou pour ne déclencher qu'un callback.
         var done = false
-        fun finish(confirmed: Boolean) {
-            if (done) return
-            done = true
-            dismiss(context)
-            if (confirmed) onConfirmed() else onDeclined()
+        val finish: (Boolean) -> Unit = { confirmed ->
+            if (!done) {
+                done = true
+                dismiss(context)
+                if (confirmed) onConfirmed() else onDeclined()
+            }
         }
 
-        val btnYes = view.findViewById<MaterialButton>(R.id.confirm_btn_yes)
-        val btnNo  = view.findViewById<MaterialButton>(R.id.confirm_btn_no)
+        // Sous garde : une mise en page fautive lèverait ici, sur le thread principal du service,
+        // et l'emporterait avec elle. Sans bandeau, la question vaut NON — comme sans réponse.
+        try {
+            poser(context, profile, declencheur, finish)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Confirm non affiché — ${e.javaClass.simpleName} ${e.message} → onDeclined")
+            finish(false)
+        }
+    }
+
+    private fun poser(context: Context, profile: DrivingProfile, d: Declencheur, finish: (Boolean) -> Unit) {
+        // Même agrandissement que les deux grands pop-ups : densité corrigée, thème de l'application.
+        val contextes = OverlayKit.contextesBandeau(context)
+        val localized = contextes.localized
+        val themed = contextes.themed
+        val view = LayoutInflater.from(themed).inflate(R.layout.overlay_profile_confirm, null)
+
+        val accent          = themed.getColor(R.color.dash_accent)
+        val textePrincipal  = themed.getColor(R.color.text_primary)
+        val rayonTuile      = OverlayKit.dp(themed, 12f).toFloat()
+
+        // ── Ce qui a déclenché la question ───────────────────────────────
+        val langue = localized.resources.configuration.locales[0]
+        view.findViewById<ImageView>(R.id.confirm_icon).apply {
+            setImageResource(d.icone)
+            imageTintList = ColorStateList.valueOf(accent)
+        }
+        view.findViewById<TextView>(R.id.confirm_value).text = String.format(langue, "%.1f", d.valeur)
+        view.findViewById<TextView>(R.id.confirm_unit).text = d.unite
+        view.findViewById<TextView>(R.id.confirm_threshold).text = localized.getString(
+            if (d.auDessus) R.string.automation_confirm_above else R.string.automation_confirm_below,
+            "${d.seuil} ${d.unite}")
+
+        // ── Le profil proposé ────────────────────────────────────────────
+        view.findViewById<TextView>(R.id.confirm_profile).text = profile.name
+        val mode = view.findViewById<TextView>(R.id.confirm_mode)
+        // Rien sur un réglage que le profil n'écrira pas : sans la catégorie Conduite, pas de mode.
+        if (profile.appliesDrive) {
+            val (fond, texte) = OverlayKit.pastilleMode(themed, profile.driveMode)
+            mode.text = profile.driveMode.label
+            mode.setTextColor(texte)
+            OverlayKit.fond(mode, fond, rayon = OverlayKit.dp(themed, 10f).toFloat())
+        } else {
+            mode.visibility = View.GONE
+        }
+
+        // ── La réponse ───────────────────────────────────────────────────
+        val btnNo  = view.findViewById<View>(R.id.confirm_btn_no)
+        val btnYes = view.findViewById<TextView>(R.id.confirm_btn_yes)
+        OverlayKit.fond(
+            btnNo, themed.getColor(R.color.dash_btn), themed.getColor(R.color.dash_border),
+            OverlayKit.dp(themed, 1f), rayonTuile)
+        OverlayKit.fond(btnYes, accent, rayon = rayonTuile)
+        btnYes.setTextColor(themed.getColor(R.color.hvac_on_accent))
         btnYes.setOnClickListener { finish(true) }
         btnNo.setOnClickListener { finish(false) }
-        view.findViewById<View>(R.id.confirm_backdrop).setOnClickListener { finish(false) }
 
+        // La fenêtre n'a que la taille du bandeau : ce qui est touché ailleurs va à l'application
+        // du dessous.
         val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-            PixelFormat.TRANSLUCENT
-        ).apply { gravity = Gravity.CENTER }
-        wm.addView(view, params)
         val delaiMs = PopupDelay.millis(context)
+        wm.addView(view, OverlayKit.fenetreBandeau(themed))
         overlayView = view
-        AppLogger.i(TAG, "Confirm affiché pour '${profile.name}'")
+        AppLogger.i(TAG, "Confirm affiché pour '${profile.name}' (${d.valeur} ${d.unite}, seuil ${d.seuil})")
 
+        // Le temps qui reste s'écrit sur NON : c'est la réponse retenue quand il est écoulé.
         val tvCountdown = view.findViewById<TextView>(R.id.confirm_countdown)
         var remaining = (delaiMs / 1_000L).toInt()
         val tick = object : Runnable {
             override fun run() {
                 if (overlayView == null) return
-                tvCountdown.text = localized.getString(R.string.overlay_countdown, remaining)
+                tvCountdown.text = localized.getString(R.string.win_auto_delay_value, remaining)
                 if (remaining > 0) { remaining--; handler.postDelayed(this, 1_000L) }
             }
         }
@@ -161,11 +204,13 @@ object ProfileConfirmOverlay {
         dismissRunnable = dr
         handler.postDelayed(dr, delaiMs)
 
-        // Joystick : chaque déplacement du focus relance le délai, comme dans le popup profils.
+        // Joystick : les cellules dans l'ordre de l'écran — NON à gauche, OUI à droite —, focus de
+        // départ sur OUI. Chaque déplacement relance le délai, comme dans le popup profils.
+        // L'anneau prend la couleur du texte : en accent, il ne se verrait pas sur le bouton OUI.
         navigation = OverlayNavigation(
             context        = themed,
-            grille         = listOf(listOf(btnYes, btnNo)),
-            depart         = JoystickFocus.Position(0, 0),
+            grille         = listOf(listOf(btnNo, btnYes)),
+            depart         = JoystickFocus.Position(0, 1),
             surDeplacement = {
                 handler.removeCallbacks(dr)
                 handler.postDelayed(dr, delaiMs)
@@ -173,6 +218,7 @@ object ProfileConfirmOverlay {
                 remaining = (delaiMs / 1_000L).toInt()
                 handler.post(tick)
             },
+            couleurAnneau  = textePrincipal,
         ).also { it.afficher() }
     }
 

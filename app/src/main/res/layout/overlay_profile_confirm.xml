@@ -1,88 +1,182 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Confirmation OUI / NON d'une automatisation (profil selon la température, selon la batterie) :
+     un BANDEAU en bas de l'écran — proposition « C » choisie sur maquette le 2026-10-13. La
+     question arrive souvent en roulant ; elle ne doit ni assombrir ni cacher l'écran derrière
+     elle, navigation comprise. Pas de fond, pas de repère du joystick : on fait discret.
+
+     À gauche ce qui a déclenché la question (la mesure et son seuil), au milieu le profil proposé,
+     à droite NON — avec le temps qui reste avant qu'il ne soit retenu d'office — puis OUI.
+
+     Rien n'est peint ici hors la carte : fonds et teintes sont posés par ProfileConfirmOverlay,
+     qui suit le thème de l'application.
+
+     Tailles DE BASE : ProfileConfirmOverlay gonfle la mise en page à la même échelle que le
+     pop-up HVAC et le sélecteur de profils, dont le bandeau reprend la largeur (1108 dp). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/confirm_backdrop"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#99000000"
-    android:clickable="true"
-    android:focusable="true">
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
 
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginHorizontal="40dp"
-        android:orientation="vertical"
-        android:background="@drawable/bg_card_rounded"
-        android:paddingHorizontal="32dp"
-        android:paddingTop="28dp"
-        android:paddingBottom="20dp"
+        android:id="@+id/confirm_card"
+        android:layout_width="1108dp"
+        android:layout_height="80dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:baselineAligned="false"
+        android:background="@drawable/bg_hvac_modern_card"
+        android:paddingStart="18dp"
+        android:paddingEnd="12dp"
         android:clickable="true"
         android:focusable="true">
 
-        <!-- Message encadré -->
-        <TextView
-            android:id="@+id/confirm_message"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_confirm_message"
-            android:paddingHorizontal="24dp"
-            android:paddingVertical="22dp"
-            android:gravity="center"
-            android:textColor="@color/text_primary"
-            android:textSize="21sp"
-            android:lineSpacingExtra="6dp"
-            android:layout_marginBottom="28dp" />
+        <!-- ── Ce qui a déclenché la question ── -->
+        <ImageView
+            android:id="@+id/confirm_icon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:importantForAccessibility="no" />
 
-        <!-- Gros boutons OUI (gauche) / NON (droite) -->
         <LinearLayout
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:layout_marginStart="10dp"
+            android:orientation="vertical">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/confirm_btn_yes"
-                android:layout_width="0dp"
-                android:layout_height="72dp"
-                android:layout_weight="1"
-                android:layout_marginEnd="12dp"
-                android:text="@string/automation_confirm_yes"
-                android:textColor="@color/dash_accent"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:textAllCaps="true"
-                app:backgroundTint="@color/dash_accent_dim"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/dash_accent"
-                app:cornerRadius="12dp" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/confirm_btn_no"
-                android:layout_width="0dp"
-                android:layout_height="72dp"
-                android:layout_weight="1"
-                android:layout_marginStart="12dp"
-                android:text="@string/automation_confirm_no"
+                <TextView
+                    android:id="@+id/confirm_value"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:includeFontPadding="false"
+                    android:textColor="@color/text_primary"
+                    android:textSize="30sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+
+                <TextView
+                    android:id="@+id/confirm_unit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="3dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="15sp"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/confirm_threshold"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:textColor="@color/text_secondary"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:textAllCaps="true"
-                app:backgroundTint="@color/dash_btn"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/dash_border"
-                app:cornerRadius="12dp" />
+                android:textSize="12sp"
+                android:maxLines="1" />
 
         </LinearLayout>
 
-        <!-- Timer (bas gauche) -->
-        <TextView
-            android:id="@+id/confirm_countdown"
-            android:layout_width="wrap_content"
+        <View
+            android:layout_width="1dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginTop="14dp"
+            android:layout_marginBottom="14dp"
+            android:background="@color/dash_border" />
+
+        <!-- ── Le profil proposé ── -->
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:textColor="@color/dash_text_lo"
-            android:textSize="15sp" />
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/automation_confirm_question"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:maxLines="1" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <!-- Largeur bornée : un nom long se coupe, sans pousser la pastille hors du bandeau -->
+                <TextView
+                    android:id="@+id/confirm_profile"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:maxWidth="360dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <!-- Mode de conduite ; masqué si le profil n'applique pas la catégorie Conduite -->
+                <TextView
+                    android:id="@+id/confirm_mode"
+                    android:layout_width="wrap_content"
+                    android:layout_height="20dp"
+                    android:layout_marginStart="10dp"
+                    android:gravity="center"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- ── La réponse. NON à gauche, OUI à droite ; sans réponse, c'est NON. ── -->
+        <LinearLayout
+            android:id="@+id/confirm_btn_no"
+            android:layout_width="170dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="16dp"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/automation_confirm_no"
+                android:textColor="@color/text_primary"
+                android:textSize="19sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/confirm_countdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:maxLines="1" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/confirm_btn_yes"
+            android:layout_width="170dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="10dp"
+            android:gravity="center"
+            android:text="@string/automation_confirm_yes"
+            android:textSize="19sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
 
     </LinearLayout>
 

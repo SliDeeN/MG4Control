@@ -1,143 +1,147 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Dialog "Firmware non reconnu"
-    Affiché au démarrage si le firmware n'est ni SWI133 ni SWI68.
-    Deux choix : fermer l'application ou continuer et sélectionner un mode manuellement.
--->
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="wrap_content"
+<!-- « Firmware non reconnu » : affichée à l'ouverture quand le firmware de la voiture n'est aucun
+     de ceux que l'application connaît, et qu'aucun mode de compatibilité n'a encore été choisi.
+     Deux sorties : fermer l'application, ou continuer — ce qui ouvre Réglages › Infos, là où le
+     firmware se choisit (MainActivity.checkUnknownFirmware).
+
+     Même construction que les confirmations de l'application (dialog_confirm.xml, style choisi
+     sur maquette le 2026-10-13), en ton d'avertissement, avec deux éléments de plus : le firmware
+     lu sur la voiture, en pastille, et la consigne dans un encadré.
+
+     Fenêtre de l'application : tailles normales, pas l'agrandissement des pop-ups. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/bg_card_rounded"
-    android:minWidth="480dp">
+    android:background="@drawable/bg_hvac_modern_card"
+    android:padding="20dp">
 
-    <!-- ── En-tête warning ────────────────────────────────────────── -->
-    <LinearLayout
+    <FrameLayout
+        android:layout_width="68dp"
+        android:layout_height="68dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_dialog_icon_warn">
+
+        <ImageView
+            android:id="@+id/iv_fw_unknown_icon"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_dialog_warning" />
+
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/tv_fw_unknown_title"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center_horizontal"
+        android:textColor="@color/text_primary"
+        android:textSize="23sp"
+        android:textStyle="bold" />
+
+    <!-- Ce que la voiture annonce (ex. « SWI70-27958-1213R ») -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="32dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_dialog_tile"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="14dp">
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp">
 
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/fw_unknown_title"
-            android:textColor="@color/dash_danger"
-            android:textSize="9sp"
-            android:textStyle="bold"
-            android:letterSpacing="0.12"
-            android:textAllCaps="true" />
+            android:text="@string/settings_firmware_version"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:maxLines="1" />
 
-        <!-- Badge firmware détecté -->
         <TextView
             android:id="@+id/tv_fw_detected_badge"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textColor="@color/dash_danger"
-            android:textSize="10sp"
+            android:layout_marginStart="8dp"
+            android:textColor="@color/text_primary"
+            android:textSize="14sp"
             android:textStyle="bold"
-            android:fontFamily="monospace"
-            android:background="@drawable/bg_section_rounded"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingTop="3dp"
-            android:paddingBottom="3dp" />
+            android:maxLines="1" />
 
     </LinearLayout>
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/dash_border" />
-
-    <!-- ── Corps ──────────────────────────────────────────────────── -->
-    <TextView
-        android:id="@+id/tv_fw_unknown_body"
+    <!-- Poids : c'est ce qui laisse le texte rétrécir — et défiler — sur un écran peu haut. -->
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/fw_unknown_body"
-        android:textColor="@color/text_secondary"
-        android:textSize="12sp"
-        android:lineSpacingMultiplier="1.3"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="16dp" />
-
-    <!-- ── Indication chips ───────────────────────────────────────── -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="@drawable/bg_section_rounded"
-        android:layout_marginStart="20dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginBottom="16dp"
-        android:padding="12dp">
+        android:layout_weight="1"
+        android:layout_marginTop="12dp"
+        android:overScrollMode="never">
 
         <TextView
+            android:id="@+id/tv_fw_unknown_body"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/fw_unknown_hint"
-            android:textColor="@color/dash_text_lo"
-            android:textSize="11sp"
-            android:lineSpacingMultiplier="1.3"
-            android:gravity="center" />
+            android:gravity="center_horizontal"
+            android:text="@string/fw_unknown_body"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp" />
 
-    </LinearLayout>
+    </ScrollView>
 
-    <!-- ── Pied de page : boutons ─────────────────────────────────── -->
-    <View
+    <!-- Ce que fait « Continuer » -->
+    <TextView
+        android:id="@+id/tv_fw_unknown_hint"
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/dash_border" />
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:background="@drawable/bg_dialog_hint"
+        android:gravity="center_horizontal"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:textColor="@color/text_primary"
+        android:textSize="14sp" />
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="64dp"
+        android:layout_marginTop="18dp"
         android:orientation="horizontal"
-        android:gravity="center"
-        android:padding="12dp">
+        android:baselineAligned="false">
 
-        <!-- Fermer l'application -->
-        <com.google.android.material.button.MaterialButton
+        <TextView
             android:id="@+id/btn_fw_close_app"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="match_parent"
             android:layout_weight="1"
-            android:layout_marginEnd="8dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:gravity="center"
             android:text="@string/fw_unknown_btn_close"
-            android:textColor="@color/dash_danger"
-            android:textSize="11sp"
-            android:textAllCaps="true"
-            android:backgroundTint="@color/dash_danger_dim"
-            app:strokeColor="@color/dash_danger"
-            app:strokeWidth="1dp"
-            app:cornerRadius="8dp" />
+            android:textColor="@color/text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
 
-        <!-- Continuer -->
-        <com.google.android.material.button.MaterialButton
+        <TextView
             android:id="@+id/btn_fw_continue"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
             android:layout_width="0dp"
-            android:layout_height="44dp"
+            android:layout_height="match_parent"
             android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_dialog_warn"
+            android:gravity="center"
             android:text="@string/fw_unknown_btn_continue"
-            android:textColor="@color/dash_accent"
-            android:textSize="11sp"
-            android:textAllCaps="true"
-            android:backgroundTint="@color/dash_accent_dim"
-            app:strokeColor="@color/dash_accent"
-            app:strokeWidth="1dp"
-            app:cornerRadius="8dp" />
+            android:textColor="@color/hvac_on_heat"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
 
     </LinearLayout>
 

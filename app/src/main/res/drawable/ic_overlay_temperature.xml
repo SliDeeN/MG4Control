@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Confirmation d'une automatisation — température extérieure : un thermomètre. Dessiné pour l'application.
+     Blanc : c'est la vue qui colore le pictogramme. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="2"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M14,14.8 V5 a2,2 0 0 0 -4,0 V14.8 a4,4 0 1 0 4,0 z M12,9 V17"/>
+</vector>

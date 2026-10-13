@@ -1,13 +1,12 @@
 package com.mg4.control
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +18,9 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.service.MG4ControlService
+import com.mg4.control.ui.AppDialog
+import com.mg4.control.ui.RestoreProfilesDialog
+import com.mg4.control.ui.SettingsFragment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -123,14 +125,13 @@ class MainActivity : AppCompatActivity() {
             if (backup == null || backup.profiles.isEmpty()) return@launch
             withContext(Dispatchers.Main) {
                 if (isFinishing || isDestroyed) return@withContext
-                AlertDialog.Builder(this@MainActivity)
-                    .setTitle(R.string.profile_restore_title)
-                    .setMessage(getString(R.string.profile_restore_msg, backup.profiles.size))
-                    .setCancelable(false)
-                    .setNegativeButton(R.string.profile_restore_cancel) { _, _ ->
+                RestoreProfilesDialog.show(
+                    context = this@MainActivity,
+                    profils = backup.profiles,
+                    onIgnorer = {
                         settings.edit().putBoolean("restore_prompt_dismissed", true).apply()
-                    }
-                    .setPositiveButton(R.string.profile_restore_confirm) { _, _ ->
+                    },
+                    onRestaurer = {
                         CoroutineScope(Dispatchers.IO).launch {
                             val n = pm.restoreFrom(backup)
                             withContext(Dispatchers.Main) {
@@ -143,8 +144,8 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
                         }
-                    }
-                    .show()
+                    },
+                )
             }
         }
     }
@@ -208,26 +209,35 @@ class MainActivity : AppCompatActivity() {
         val dialogView = LayoutInflater.from(this)
             .inflate(R.layout.dialog_unknown_firmware, null)
 
+        dialogView.findViewById<ImageView>(R.id.iv_fw_unknown_icon).imageTintList =
+            ColorStateList.valueOf(getColor(R.color.dash_warn))
+        // Le libellé porte un « ⚠ » en tête, hérité de l'ancienne fenêtre : ici c'est le
+        // pictogramme qui le dit.
+        dialogView.findViewById<TextView>(R.id.tv_fw_unknown_title).text =
+            getString(R.string.fw_unknown_title).removePrefix("⚠").trim()
         // Affiche la chaîne firmware brute dans le badge (ex: "SWI69-12345")
         dialogView.findViewById<TextView>(R.id.tv_fw_detected_badge).text =
             FirmwareInfo.getDetectedString()
+        // La consigne nomme l'écran par ses libellés : elle reste juste dans toutes les langues.
+        dialogView.findViewById<TextView>(R.id.tv_fw_unknown_hint).text = getString(
+            R.string.fw_unknown_hint_settings,
+            getString(R.string.nav_settings), getString(R.string.settings_cat_info))
 
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        // On n'en sort que par l'un des deux boutons : sans mode choisi, l'application ne sait
+        // pas quelles commandes envoyer à la voiture.
+        val dialog = AppDialog.afficher(this, dialogView, 700f, annulable = false)
 
-        dialogView.findViewById<MaterialButton>(R.id.btn_fw_close_app).setOnClickListener {
+        dialogView.findViewById<View>(R.id.btn_fw_close_app).setOnClickListener {
             finishAffinity()
         }
 
-        dialogView.findViewById<MaterialButton>(R.id.btn_fw_continue).setOnClickListener {
+        // Droit là où le firmware se choisit : Réglages › Infos, sur ses pastilles.
+        dialogView.findViewById<View>(R.id.btn_fw_continue).setOnClickListener {
             dialog.dismiss()
-            // L'utilisateur peut maintenant taper sur les chips SWI133/SWI68
+            navController.navigate(
+                R.id.settingsFragment,
+                Bundle().apply { putBoolean(SettingsFragment.ARG_SHOW_FIRMWARE, true) })
         }
-
-        dialog.show()
     }
 
     // ── Boutons de navigation dans la top-bar ─────────────────────────────────
@@ -301,11 +311,12 @@ class MainActivity : AppCompatActivity() {
         val dialogView = LayoutInflater.from(this)
             .inflate(R.layout.dialog_language_picker, null)
 
-        val dialog = AlertDialog.Builder(this)
-            .setView(dialogView)
-            .setCancelable(false)
-            .create()
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        dialogView.findViewById<ImageView>(R.id.iv_language_icon).imageTintList =
+            ColorStateList.valueOf(getColor(R.color.dash_accent))
+        dialogView.findViewById<TextView>(R.id.tv_language_subtitle).apply {
+            if (text.toString() == getString(R.string.settings_language_pick_title)) visibility = View.GONE
+        }
+        val dialog = AppDialog.afficher(this, dialogView, 820f, annulable = false)
 
         val buttons = mapOf(
             R.id.btn_pick_fr to "fr",
@@ -317,14 +328,12 @@ class MainActivity : AppCompatActivity() {
             R.id.btn_pick_tr to "tr"
         )
         buttons.forEach { (viewId, code) ->
-            dialogView.findViewById<MaterialButton>(viewId).setOnClickListener {
+            dialogView.findViewById<View>(viewId).setOnClickListener {
                 dialog.dismiss()
                 LocaleHelper.setLanguage(this, code)
                 recreate()
             }
         }
-
-        dialog.show()
     }
 
     companion object {

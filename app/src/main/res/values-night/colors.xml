@@ -50,4 +50,9 @@
     <color name="hvac_on_heat">#FF2A1700</color>
     <color name="hvac_on_eco">#FF052E16</color>
     <color name="hvac_segment_on">#FF3F3F46</color>
+
+    <!-- Sélecteur de profils : pastille du mode de conduite. Eco, Normal, Sport et Custom prennent
+         les teintes de la palette ; Snow a la sienne. -->
+    <color name="mode_snow">#FFA5B4FC</color>
+    <color name="mode_on_snow">#FF1E1B4B</color>
 </resources>

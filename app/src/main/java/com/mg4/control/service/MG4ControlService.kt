@@ -1,7 +1,6 @@
 package com.mg4.control.service
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -17,8 +16,6 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
 import androidx.core.content.ContextCompat
-import android.view.ContextThemeWrapper
-import android.view.WindowManager
 import android.widget.Toast
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.R
@@ -999,11 +996,9 @@ class MG4ControlService : Service() {
             return
         }
 
-        // HVAC_POPUP : même famille — un second appui referme la fenêtre. Deux présentations,
-        // une par raccourci, le temps de les comparer.
-        if (action == ShortcutAction.HVAC_POPUP || action == ShortcutAction.HVAC_POPUP_MODERN) {
-            val style = if (action == ShortcutAction.HVAC_POPUP) HvacPopupStyle.CLASSIC else HvacPopupStyle.MODERN
-            HvacPopupOverlay.toggle(this@MG4ControlService, style)
+        // HVAC_POPUP : même famille — un second appui referme la fenêtre.
+        if (action == ShortcutAction.HVAC_POPUP) {
+            HvacPopupOverlay.toggle(this@MG4ControlService)
             return
         }
 
@@ -1049,7 +1044,7 @@ class MG4ControlService : Service() {
 
         // VEHICLE_POWER_OFF : check P → confirmation (overlay) → extinction. Sinon message "en P".
         if (action == ShortcutAction.VEHICLE_POWER_OFF) {
-            showVehiclePowerOffConfirm()
+            VehiclePowerOffOverlay.demander(this@MG4ControlService, "raccourci")
             return
         }
 
@@ -1157,39 +1152,6 @@ class MG4ControlService : Service() {
             ShortcutAction.OVERSPEED_ALARM      -> MG4Hardware.setOverspeedAlarm(on)
             ShortcutAction.SPEED_LIMIT_TONE     -> MG4Hardware.setSpeedLimitTone(on)
             else -> {}
-        }
-    }
-
-    /**
-     * Raccourci « Éteindre la voiture » : vérifie d'abord la position P (lecture gear), puis affiche
-     * le MÊME dialogue de confirmation que les Réglages, en fenêtre overlay (déclenché depuis le
-     * service). Si pas en P → Toast. `vehiclePowerOff()` re-vérifie le P au moment de l'envoi.
-     */
-    private fun showVehiclePowerOffConfirm() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val inPark = MG4Hardware.isVehicleInPark()
-            Handler(Looper.getMainLooper()).post {
-                if (inPark == true) {
-                    val themed = ContextThemeWrapper(
-                        ThemeHelper.withAppTheme(LocaleHelper.applyLocale(this@MG4ControlService)),
-                        R.style.Theme_MG4Control)
-                    val dialog = AlertDialog.Builder(themed)
-                        .setTitle(R.string.vehicle_power_dialog_title)
-                        .setMessage(R.string.vehicle_power_dialog_msg)
-                        .setNegativeButton(R.string.vehicle_power_dialog_cancel, null)
-                        .setPositiveButton(R.string.vehicle_power_dialog_confirm) { _, _ ->
-                            CoroutineScope(Dispatchers.IO).launch {
-                                val ok = MG4Hardware.vehiclePowerOff()
-                                AppLogger.i(TAG, "SHORTCUT VEHICLE_POWER_OFF confirmé → $ok")
-                            }
-                        }
-                        .create()
-                    dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-                    dialog.show()
-                } else {
-                    Toast.makeText(this@MG4ControlService, R.string.vehicle_power_need_park, Toast.LENGTH_LONG).show()
-                }
-            }
         }
     }
 

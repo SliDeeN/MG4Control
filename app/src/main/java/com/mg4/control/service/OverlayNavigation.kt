@@ -7,6 +7,7 @@ import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.InsetDrawable
 import android.util.TypedValue
 import android.view.View
+import android.widget.HorizontalScrollView
 import android.widget.ScrollView
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
@@ -29,6 +30,9 @@ import com.mg4.control.debug.AppLogger
  * @param ligneCurseur cellule d'un curseur : gauche/droite y appellent [reglerCurseur] (-1 / +1)
  *                     au lieu de déplacer le focus, et la validation n'y fait rien.
  * @param defilement   conteneur à faire défiler quand la cellule surlignée en dépasse.
+ * @param defilementHorizontal idem pour une rangée qui défile de gauche à droite.
+ * @param couleurAnneau couleur de l'anneau ; par défaut l'accent du thème — invisible sur une
+ *                      cellule elle-même remplie d'accent, d'où ce paramètre.
  * @param surDeplacement appelé à chaque déplacement du focus (typiquement : relancer le délai).
  */
 internal class OverlayNavigation(
@@ -39,8 +43,10 @@ internal class OverlayNavigation(
     private val ligneCurseur: View? = null,
     private val defilement: ScrollView? = null,
     private val reglerCurseur: ((Int) -> Unit)? = null,
+    private val defilementHorizontal: HorizontalScrollView? = null,
+    couleurAnneau: Int? = null,
 ) {
-    private val couleur = context.getColor(R.color.dash_accent)
+    private val couleur = couleurAnneau ?: context.getColor(R.color.dash_accent)
     private val epaisseur = dp(context, 4f).toInt()
     private val arrondi = dp(context, 12f)
 
@@ -106,6 +112,7 @@ internal class OverlayNavigation(
 
     /** Fait défiler le conteneur si la cellule surlignée en dépasse. */
     private fun amenerDansLaVue(v: View) {
+        amenerDansLaRangee(v)
         val sv = defilement ?: return
         if (sv.height == 0 || !estDans(v, sv)) return
         val r = Rect()
@@ -114,6 +121,23 @@ internal class OverlayNavigation(
         when {
             r.top < sv.scrollY                -> sv.smoothScrollTo(0, r.top)
             r.bottom > sv.scrollY + sv.height -> sv.smoothScrollTo(0, r.bottom - sv.height)
+        }
+    }
+
+    /**
+     * Rangée horizontale : la cellule surlignée revient en entier dans la vue, avec un peu de sa
+     * voisine — sinon rien ne dirait qu'il en reste une au-delà.
+     */
+    private fun amenerDansLaRangee(v: View) {
+        val rangee = defilementHorizontal ?: return
+        if (rangee.width == 0 || !estDans(v, rangee)) return
+        val r = Rect()
+        v.getDrawingRect(r)
+        rangee.offsetDescendantRectToMyCoords(v, r)
+        val voisine = v.width / 4
+        when {
+            r.left < rangee.scrollX                 -> rangee.smoothScrollTo((r.left - voisine).coerceAtLeast(0), 0)
+            r.right > rangee.scrollX + rangee.width -> rangee.smoothScrollTo(r.right - rangee.width + voisine, 0)
         }
     }
 

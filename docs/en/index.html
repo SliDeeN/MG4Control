@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/site.css?v=f1e558bb">
-  <link rel="stylesheet" href="../assets/css/sim.css?v=114b6fd3">
+  <link rel="stylesheet" href="../assets/css/sim.css?v=78a04701">
   <link rel="stylesheet" href="../assets/css/explorer.css?v=cd546543">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="en">New</span> · 2.6.8</span>
-        <b><span data-l="en">15 new things in this release</span></b>
+        <b><span data-l="en">16 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -156,6 +156,7 @@
         <a href="#f-readydefault" data-feature="f-readydefault"><span data-l="en">↩️ Back to the default profile at READY</span></a>
         <a href="#f-profilecat" data-feature="f-profilecat"><span data-l="en">🧩 Profiles: pick your categories</span></a>
         <a href="#f-popupdelay" data-feature="f-popupdelay"><span data-l="en">⏱️ Adjustable pop-up delay</span></a>
+        <a href="#f-newlook" data-feature="f-newlook"><span data-l="en">🪟 Redesigned pop-ups and windows</span></a>
         <a href="#f-sc-new" data-feature="f-sc-new"><span data-l="en">⭐ Three new shortcut actions</span></a>
       </div>
     </div>
@@ -439,7 +440,7 @@
       <h3><span data-l="en">Backup in the car</span></h3>
       <p data-l="en">Profiles are copied to the car and can be restored after a reinstall.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">File <code>MG4Control/mg4_profiles_backup.json</code> in the vehicle's storage. On reinstall, if the app has no profile, a popup offers to restore them.</p>
+        <p data-l="en">File <code>MG4Control/mg4_profiles_backup.json</code> in the vehicle's storage. On reinstall, if the app has no profile, a window lists the profiles found and offers to restore them.</p>
       </details>
     </div>
   </div>
@@ -453,13 +454,13 @@
         <label class="tog"><input type="checkbox" name="manual"><span class="t"></span><span data-l="en">Profile picked manually recently</span></label>
         <label class="tog"><input type="checkbox" name="back"><span class="t"></span><span data-l="en">… with the “Return to the default profile” option</span></label>
         <label class="tog"><input type="checkbox" name="temp"><span class="t"></span><span data-l="en">Temperature automation applies</span></label>
-        <label class="tog"><input type="checkbox" name="tempconfirm"><span class="t"></span><span data-l="en">… with confirmation popup</span></label>
+        <label class="tog"><input type="checkbox" name="tempconfirm"><span class="t"></span><span data-l="en">… with confirmation banner</span></label>
         <label class="tog"><input type="checkbox" name="bt" checked><span class="t"></span><span data-l="en">Phone tied to a profile connected</span></label>
         <label class="tog"><input type="checkbox" name="def" checked><span class="t"></span><span data-l="en">A default profile exists</span></label>
       </div>
       <div>
         <div class="flow">
-          <div class="flow-step" data-step="manual"><span class="k">1</span><span data-l="en">Recent manual choice (picker popup, app, API)</span></div>
+          <div class="flow-step" data-step="manual"><span class="k">1</span><span data-l="en">Recent manual choice (profile picker, app, API)</span></div>
           <div class="flow-step" data-step="temp"><span class="k">2</span><span data-l="en">Outside-temperature automation</span></div>
           <div class="flow-step" data-step="bt"><span class="k">3</span><span data-l="en">Profile tied to the connected Bluetooth device (several: restricted picker, the 1st when the delay runs out)</span></div>
           <div class="flow-step" data-step="def"><span class="k">4</span><span data-l="en">Default profile</span></div>
@@ -482,19 +483,19 @@
       <h3><span data-l="en">Brightness in one move</span></h3>
       <p data-l="en">Night, Medium, Day and a thick slider, easy to hit while driving.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Presets at 15%, 50% and 100%. 5% floor: the screen can never be switched off by mistake.</p>
+        <p data-l="en">Presets at 15%, 50% and 100%; the one matching the current brightness stays lit. 5% floor: the screen can never be switched off by mistake.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="pk-grid" data-demo="picker">
-      <h3><span data-l="en">Profile picker popup</span></h3>
-      <p data-l="en">All your profiles as big buttons: a tap applies the profile and closes the popup.</p>
+      <h3><span data-l="en">Your profiles as cards</span></h3>
+      <p data-l="en">One card per profile, with its drive mode in colour and the current profile marked “Active”: a tap applies the profile and closes the window.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">That manual choice takes priority at the next ignition, unless the “Return to the default profile each time the car enters READY” option is on. The picker shows whatever the speed (it's also used for brightness); it's the write that gets filtered by the speed lock.</p>
+        <p data-l="en">Each card shows the profile's mode (Eco, Normal, Sport, Snow, Custom) and regeneration. That manual choice takes priority at the next ignition, unless the “Return to the default profile each time the car enters READY” option is on. The picker shows whatever the speed (it's also used for brightness); it's the write that gets filtered by the speed lock.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="pk-foot" data-demo="picker">
       <h3><span data-l="en">Auto close</span></h3>
-      <p data-l="en">The window closes by itself after an adjustable delay (10 s by default), with Power the car off and Open MG4Control at the bottom.</p>
+      <p data-l="en">The window closes by itself after an adjustable delay (10 s by default), counted down at the top right. Open MG4Control and Power the car off sit below the cards.</p>
     </div>
     <div class="pt" data-hl-key="pk-grid" data-demo="btConflict">
       <h3><span data-l="en">Bluetooth conflict</span></h3>
@@ -507,7 +508,7 @@
       <h3><span data-l="en">Joystick navigation</span></h3>
       <p data-l="en">The steering wheel's right joystick moves through the window, the centre confirms.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Needs the accessibility service. Focus ring with no wrap-around at the edges; left/right on the slider adjust brightness in 5% steps. The joystick then changes neither volume nor track. The automation confirmation popup (YES / NO) works the same way: YES is preselected, left/right switch buttons, the centre confirms. Try it with ▲▼◀▶● in the virtual vehicle.</p>
+        <p data-l="en">Needs the accessibility service: a hint at the top of the window recalls the gestures, or warns that the joystick is inactive. Focus ring with no wrap-around at the edges; left/right on the slider adjust brightness in 5% steps. The joystick then changes neither volume nor track. The automation confirmation banner (NO / YES) works the same way: YES is preselected, left/right switch buttons, the centre confirms. Try it with ▲▼◀▶● in the virtual vehicle.</p>
       </details>
     </div>
   </div>
@@ -558,7 +559,7 @@
       <h3><span data-l="en">HVAC pop-up</span><span class="badge-new"><span data-l="en">New</span> · 2.6.8</span></h3>
       <p data-l="en">Climate in one move, on top of the current screen: the right joystick sets temperature and fan speed.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">A shortcut action opens the window, including when Android Auto or CarPlay fills the screen and hides the climate bar. Here the joystick moves no focus: up/down change the temperature, left/right the fan speed, the centre toggles AUTO mode (adjusting the fan speed leaves it). A/C, recirculation and the air direction (face, feet, front and rear screen) are chosen by touch; on equipped firmwares (SWI133, SWI68, SWI165), a column adds the heated seats and steering wheel. The window closes by itself after the set delay (10 s by default) without action, on a second press of the shortcut or with its Close button. The joystick needs the accessibility service; without it, the window still works by touch. In the mockup, the right ★ of the virtual vehicle opens and closes it.</p>
+        <p data-l="en">A shortcut action opens the window, including when Android Auto or CarPlay fills the screen and hides the climate bar. Here the joystick moves no focus: up/down change the temperature, left/right the fan speed, the centre toggles AUTO mode (adjusting the fan speed leaves it). A hint at the top of the window recalls these gestures, and a gauge shows the temperature between its two limits. A/C, recirculation and the air direction (face, feet, front and rear screen) are chosen by touch; on equipped firmwares (SWI133, SWI68, SWI165), a column adds the heated steering wheel and the seats, whose level is picked with one tap, one colour per level: green, orange, red. The window closes by itself after the set delay (10 s by default) without action, on a second press of the shortcut or with its cross. The joystick needs the accessibility service; without it, the window still works by touch. In the mockup, the right ★ of the virtual vehicle opens and closes it.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-profilecycle" data-hl-key="sc-profiles" data-demo="profileCycle">
@@ -654,7 +655,7 @@
     <p data-l="en">One tab, seven automations. Each has its own switch, and its card unfolds when you turn it on.</p>
     <div class="demo-bar">
       <span class="lbl"><span data-l="en">Try:</span></span>
-      <button type="button" data-demo-btn="confirm"><span data-l="en">Confirmation popup</span></button>
+      <button type="button" data-demo-btn="confirm"><span data-l="en">Confirmation banner</span></button>
       <button type="button" data-demo-btn="dock"><span data-l="en">Set the temperature and the battery</span></button>
     </div>
   </div>
@@ -663,7 +664,7 @@
       <h3><span data-l="en">Profile by temperature</span></h3>
       <p data-l="en">Above or below a threshold, a profile applies, directly or after confirmation.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Threshold from 0 to 60 °C, inclusive. YES / NO popup for the set delay (10 s by default), by touch or with the steering wheel's right joystick: NO or timeout falls back to the Bluetooth or default profile. Unreadable temperature or deleted profile: the automation is skipped.</p>
+        <p data-l="en">Threshold from 0 to 60 °C, inclusive. A banner at the bottom of the screen asks the question for the set delay (10 s by default), without hiding navigation: it shows the reading, the threshold and the profile, and is answered by touch or with the steering wheel's right joystick. NO or timeout falls back to the Bluetooth or default profile. Unreadable temperature or deleted profile: the automation is skipped.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-acauto" data-hl-key="auto-clim" data-go="automation">
@@ -787,6 +788,11 @@
     <div class="sec-kicker"><span data-l="en">Top bar</span></div>
     <h2><span data-l="en">Statistics</span></h2>
     <p data-l="en">Trips, charging and cost. Off by default; everything stays in the car, nothing is sent anywhere.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="en">Try:</span></span>
+      <button type="button" data-demo-btn="statsComplete"><span data-l="en">Complete a charge</span></button>
+      <button type="button" data-demo-btn="statsTariff"><span data-l="en">Fix a tariff</span></button>
+    </div>
   </div>
   <div class="points three">
     <div class="pt" id="f-stats" data-hl-key="st-summary" data-demo="statsOn">
@@ -814,7 +820,7 @@
       <h3><span data-l="en">Charging</span></h3>
       <p data-l="en">Energy charged, cost and AC / DC sessions, even while the head unit was off.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">An overnight charge is <b>reconstructed</b> on wake-up; you can <b>complete</b> it (plug type, times) to get the average power, and <b>fix the tariff</b> of a session.</p>
+        <p data-l="en">An overnight charge is <b>reconstructed</b> on wake-up; you can <b>complete</b> it (plug type, times) to get the average power, and <b>fix the tariff</b> of a session. Both are entered without a keyboard, with − and + buttons: hours and minutes (in steps of five) for the times, a step of your choice for the tariff.</p>
       </details>
     </div>
   </div>
@@ -838,21 +844,28 @@
       <h3><span data-l="en">Languages</span></h3>
       <p data-l="en">Seven languages, asked on the very first launch and changeable later.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Français, English, Deutsch, Español, Português, Italiano and Türkçe.</p>
+        <p data-l="en">Français, English, Deutsch, Español, Português, Italiano and Türkçe. On first launch, seven large tiles: each language is written in its own language.</p>
       </details>
     </div>
     <div class="pt" id="f-textsize" data-hl-key="s-textsize" data-go="settings:1">
       <h3><span data-l="en">Interface and text size</span></h3>
       <p data-l="en">Start screen, Auto / Dark / Light theme and Standard, Large or Extra-large text.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">In Auto, the app follows the MG launcher's day/night mode. Floating windows (profile picker, confirmations, update alert, HVAC pop-up) take the app's theme. Text size (+12.5% or +25%) applies to the whole app, popups included, and Turkish joins the languages. Try it in the mockup.</p>
+        <p data-l="en">In Auto, the app follows the MG launcher's day/night mode. Pop-ups and banners (profile picker, HVAC pop-up, confirmation, update alert, power-off) take the app's theme. Text size (+12.5% or +25%) applies to the whole app, popups included, and Turkish joins the languages. Try it in the mockup.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-popupdelay" data-hl-key="s-popupdelay" data-go="settings:1">
       <h3><span data-l="en">Pop-up delay</span><span class="badge-new"><span data-l="en">New</span> · 2.6.8</span></h3>
       <p data-l="en">A slider sets how long pop-ups stay open before closing by themselves, from 1 to 60 seconds.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">In Settings, Interface tab. The delay, 10 seconds by default, applies to the three windows that close by themselves: the profile picker, the YES / NO question of the automations and the HVAC pop-up. Each action in the window restarts the delay, and the next pop-up opened uses the new value. With no answer when the delay runs out, the YES / NO question counts as NO.</p>
+        <p data-l="en">In Settings, Interface tab. The delay, 10 seconds by default, applies to everything that closes by itself: the profile picker, the HVAC pop-up and the three banners (YES / NO question of the automations, update alert, vehicle power-off). Each action in a pop-up restarts the delay, and the next one opened uses the new value. With no answer when the delay runs out, the question counts as NO, the update alert as “later”, and the power-off is cancelled.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-newlook" data-hl-key="mw-pick" data-demo="pickApp">
+      <h3><span data-l="en">Redesigned pop-ups and windows</span><span class="badge-new"><span data-l="en">New</span> · 2.6.8</span></h3>
+      <p data-l="en">The same look everywhere: rounded cards, large buttons, and no more keyboard input.</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">On top of the car's screen, the profile picker and the HVAC pop-up are shown full frame, and three banners at the bottom of the screen — automation confirmation, update available, vehicle power-off — leave the rest usable. Inside the app, confirmations all look alike: blue for an ordinary action, orange for a warning, red for whatever deletes or powers off. An app or a profile is picked from a grid of tiles, a shortcut is edited in two side-by-side lists, and the times or tariff of a charge are set with − and + buttons.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-topbar" data-hl-key="topbar" data-go="dashboard:0">
@@ -898,7 +911,7 @@
       <h3><span data-l="en">Unrecognised firmware</span></h3>
       <p data-l="en">A warning shows, then you can force a compatibility mode.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">The warning shows the raw detected version and offers Close the app or Continue. The chips in Settings → Info then become tappable; the choice is saved and survives restarts.</p>
+        <p data-l="en">The warning shows the raw detected version and offers Close the app or Continue, which opens Settings → Info directly: tap the chip of the firmware closest to yours. The choice is saved and survives restarts.</p>
       </details>
     </div>
   </div>
@@ -948,6 +961,7 @@
     <div class="demo-bar">
       <span class="lbl"><span data-l="en">Try:</span></span>
       <button type="button" data-demo-btn="dock"><span data-l="en">Raise the virtual vehicle's speed</span></button>
+      <button type="button" data-demo-btn="powerBanner" data-hl="power-banner"><span data-l="en">Power-off banner</span></button>
     </div>
   </div>
   <div class="points">
@@ -967,7 +981,7 @@
       <h3><span data-l="en">Power the car off, screen on</span></h3>
       <p data-l="en">Powers the vehicle down while keeping music and navigation, lever in P only.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Mirrors the MG launcher's “Vehicle Power → Off”. Available in Settings, the profile picker and shortcuts. The app checks the lever before the confirmation, then again when sending. Deliberately left out of the external API.</p>
+        <p data-l="en">Mirrors the MG launcher's “Vehicle Power → Off”. Available in Settings, the profile picker and shortcuts. The app checks the lever before the confirmation, then again when sending. From a shortcut or the profile picker, the confirmation is a banner at the bottom of the screen: it closes by itself after the pop-up delay, and says “Cannot power off” if the car isn't in P. Deliberately left out of the external API.</p>
       </details>
     </div>
   </div>
@@ -1002,9 +1016,9 @@
   <div class="points three">
     <div class="pt" id="f-updalert" data-hl-key="upd-overlay" data-demo="updOverlay">
       <h3><span data-l="en">Alert on the vehicle screen</span></h3>
-      <p data-l="en">A message announces the new release without opening the app, never while driving.</p>
+      <p data-l="en">A banner at the bottom of the screen announces the new release without opening the app, never while driving.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en"><b>Install update</b> opens the usual dialog, <b>Skip this version</b> stops offering it, <b>Stop telling me</b> turns the alert off; tapping the background means “later”. Check 20 s after ignition, 6 h minimum between requests, only once per session.</p>
+        <p data-l="en"><b>Install update</b> opens the usual dialog, <b>Skip this version</b> stops offering it, <b>Stop telling me</b> turns the alert off, <b>Later</b> closes the banner, as does no answer when the pop-up delay runs out. The rest of the screen stays usable. Check 20 s after ignition, 6 h minimum between requests, only once per session.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="s-checkupd" data-go="settings:3">
@@ -1018,7 +1032,7 @@
       <h3><span data-l="en">Safe download</span></h3>
       <p data-l="en">The APK must come from GitHub or GitLab and carry the same signature, otherwise it's deleted.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Without Wi-Fi, a warning reminds you about 10 MB will go through the car's mobile data. Manual install is possible: QR code to the releases, a FAT32 USB stick and the file manager. The <b>offline</b> variant has neither network nor automatic updates.</p>
+        <p data-l="en">The update window shows the release notes on the left and the actions on the right. Without Wi-Fi, a warning reminds you about 10 MB will go through the car's mobile data. Manual install is possible: QR code to the releases, a FAT32 USB stick and the file manager. The <b>offline</b> variant has neither network nor automatic updates.</p>
       </details>
     </div>
   </div>
@@ -1199,8 +1213,8 @@
 
 <div class="dock" aria-label="Virtual vehicle"></div>
 
-<script src="../assets/js/strings.js?v=06b35e6d"></script>
-<script src="../assets/js/sim.js?v=ca0b990d"></script>
+<script src="../assets/js/strings.js?v=aaec5ae6"></script>
+<script src="../assets/js/sim.js?v=2e66957f"></script>
 <script src="../assets/js/site.js?v=aa5935a3"></script>
 <script src="../assets/js/explorer.js?v=ffc271c4"></script>
 </body>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fenêtres de l'application — la langue : un globe. Dessiné pour l'application.
+     Blanc : c'est la vue qui colore le pictogramme. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="2"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M3,12 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M3,12 H21 M12,3 c-3,3 -3,15 0,18 M12,3 c3,3 3,15 0,18"/>
+</vector>

@@ -71,14 +71,17 @@ enum class ShortcutAction(val id: Int) {
 
     // Cycle de profils : applique le profil suivant d'une séquence composée par l'utilisateur
     // (voir ProfileCycle). Le profil visé dépend du profil actif, pas d'un état mémorisé ici.
-    PROFILE_CYCLE(42),
-
-    // Pop-up HVAC, présentation « moderne » : la même fenêtre que HVAC_POPUP, autrement mise en
-    // page. Les deux coexistent le temps de les comparer en voiture (voir HvacPopupStyle).
-    HVAC_POPUP_MODERN(43);
+    PROFILE_CYCLE(42);
 
     companion object {
-        fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: NONE
+        /**
+         * Identifiants retirés, mais peut-être encore écrits dans les préférences d'une voiture.
+         * 43 : le pop-up HVAC « nouveau design » de l'essai d'octobre 2026, devenu LE pop-up HVAC —
+         * un raccourci qui le porte doit continuer de l'ouvrir. Ne pas réattribuer ces numéros.
+         */
+        private val RETIRES = mapOf(43 to HVAC_POPUP)
+
+        fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: RETIRES[id] ?: NONE
     }
 }
 

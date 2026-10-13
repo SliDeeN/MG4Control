@@ -147,27 +147,21 @@ class HvacPopupTest {
         assertNull(HvacPopup.pasVentilation(milieu.copy(fan = null), +1))
     }
 
-    // ── Sièges chauffants (firmwares équipés seulement) ──────────────────────
-
-    @Test
-    fun `les pastilles montrent le niveau du siege`() {
-        assertEquals("○ ○ ○", HvacPopup.pastilles(0))
-        assertEquals("● ○ ○", HvacPopup.pastilles(1))
-        assertEquals("● ● ○", HvacPopup.pastilles(2))
-        assertEquals("● ● ●", HvacPopup.pastilles(3))
-        // Rien d'illisible à l'écran pour une valeur inattendue.
-        assertEquals("● ● ●", HvacPopup.pastilles(9))
-        assertEquals("○ ○ ○", HvacPopup.pastilles(-1))
-    }
-
     // ── Taille de la fenêtre ─────────────────────────────────────────────────
-    // Dessinée pour 900 × 390 dp ; l'écran de la voiture fait 1920 × 720 pixels à 1 pixel par dp
-    // (mesuré sur une photo, SWI133, 2026-10-09).
+    // Carte de 864 × 392 dp, 1108 avec la colonne des chauffages ; l'écran de la voiture annonce
+    // 1920 × 720 pixels à 1 pixel par dp (SWI133).
 
     @Test
     fun `sur l ecran de la voiture la fenetre grandit`() {
-        // Limitée par la hauteur : 72 % de 720 px pour 390 dp → × 1,33.
-        assertEquals(1.33f, HvacPopup.echelle(1920, 720, 1f), 0.01f)
+        // Limitée par la hauteur : 82 % de 720 px pour 392 dp → × 1,51.
+        val echelle = HvacPopup.echelle(1920, 720, 1f)
+        assertEquals(0.82f * 720f / 392f, echelle, 0.0005f)
+        // La colonne des chauffages élargit la carte sans changer l'échelle : la hauteur limite
+        // toujours…
+        val avecChauffages = HvacPopup.LARGEUR_DP + HvacPopup.CHAUFFAGES_DP
+        assertEquals(echelle, HvacPopup.echelle(1920, 720, 1f, avecChauffages), 0f)
+        // … et la carte tient dans ce que le rail de navigation laisse à la fenêtre (≈ 1754 px).
+        assertTrue(avecChauffages * echelle < 1754f)
     }
 
     @Test
@@ -180,8 +174,8 @@ class HvacPopupTest {
 
     @Test
     fun `un ecran moins large limite par la largeur`() {
-        // 63 % de 1400 px pour 900 dp → × 0,98, sous la limite de hauteur (× 1,33).
-        assertEquals(0.98f, HvacPopup.echelle(1400, 720, 1f), 0.005f)
+        // 96 % de 1400 px pour 1108 dp → × 1,21, sous la limite de hauteur (× 1,51).
+        assertEquals(0.96f * 1400f / 1108f, HvacPopup.echelle(1400, 720, 1f, 1108f), 0.0005f)
     }
 
     @Test
@@ -197,24 +191,44 @@ class HvacPopupTest {
         assertEquals(1f, HvacPopup.echelle(1920, 720, Float.NaN), 0f)
     }
 
-    // ── Présentation « moderne » : une autre carte de base, la même règle ────
+    @Test
+    fun `une autre carte donne sa propre echelle`() {
+        // Le sélecteur de profils : 1108 × 392 dp, mêmes parts d'écran.
+        assertEquals(0.82f * 720f / 392f, HvacPopup.echelle(1920, 720, 1f, 1108f, 392f), 0.0005f)
+        // Une carte plus haute grossit moins.
+        assertEquals(0.82f * 720f / 500f, HvacPopup.echelle(1920, 720, 1f, 1108f, 500f), 0.0005f)
+        // D'autres parts d'écran, pour un pop-up qui doit rester plus discret : ici la largeur limite.
+        assertEquals(0.5f * 1920f / 1108f,
+            HvacPopup.echelle(1920, 720, 1f, 1108f, 392f, partLargeur = 0.5f, partHauteur = 0.5f), 0.0005f)
+    }
+
+    // ── Filet : la fenêtre réellement accordée ───────────────────────────────
+    // L'écran annoncé n'est pas la place disponible : barre d'état et rail de navigation en
+    // prennent une part (fenêtre d'environ 1754 × 650 px sur SWI133, d'après la photo).
 
     @Test
-    fun `une autre carte de base donne sa propre echelle`() {
-        // 836 × 392 dp sans la colonne des chauffages : limitée par la hauteur, 72 % de 720 px.
-        val echelle = HvacPopup.echelle(1920, 720, 1f, largeurDp = 836f, hauteurDp = 392f)
-        assertEquals(0.72f * 720f / 392f, echelle, 0.0005f)
-        // Avec la colonne des chauffages (1072 dp) elle tient encore dans l'écran, marges comprises.
-        assertTrue(1072f * echelle < 0.8f * 1920f)
-        // Écran moins large : 63 % de 1400 px pour 836 dp → × 1,055 (× 0,98 avec la carte d'origine).
-        assertEquals(1.055f, HvacPopup.echelle(1400, 720, 1f, largeurDp = 836f, hauteurDp = 392f), 0.001f)
+    fun `une carte qui tient n est pas reduite`() {
+        assertEquals(1f, HvacPopup.reduction(1754, 650, 1669, 590, marge = 12), 0f)
+        // Juste à la marge : elle tient encore.
+        assertEquals(1f, HvacPopup.reduction(1754, 650, 1730, 626, marge = 12), 0f)
     }
 
     @Test
-    fun `sans carte precisee c est celle de la presentation d origine`() {
-        assertEquals(
-            HvacPopup.echelle(1920, 720, 1f),
-            HvacPopup.echelle(1920, 720, 1f, HvacPopup.LARGEUR_DP, HvacPopup.HAUTEUR_DP), 0f)
+    fun `une carte trop large ou trop haute est reduite d un bloc`() {
+        // Trop large : (1500 − 2 × 12) / 1669.
+        assertEquals(1476f / 1669f, HvacPopup.reduction(1500, 650, 1669, 590, marge = 12), 0.0001f)
+        // Trop haute : (560 − 2 × 12) / 590.
+        assertEquals(536f / 590f, HvacPopup.reduction(1754, 560, 1669, 590, marge = 12), 0.0001f)
+        // Les deux : la plus sévère des deux contraintes.
+        assertEquals(536f / 590f, HvacPopup.reduction(1700, 560, 1669, 590, marge = 12), 0.0001f)
+    }
+
+    @Test
+    fun `sans mesures fiables on ne reduit pas`() {
+        assertEquals(1f, HvacPopup.reduction(0, 0, 1669, 590, marge = 12), 0f)
+        assertEquals(1f, HvacPopup.reduction(1754, 650, 0, 0, marge = 12), 0f)
+        // Fenêtre plus petite que ses marges : rien de sensé à en tirer.
+        assertEquals(1f, HvacPopup.reduction(20, 20, 1669, 590, marge = 12), 0f)
     }
 
     // ── Jauge de température ─────────────────────────────────────────────────

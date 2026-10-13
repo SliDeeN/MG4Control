@@ -1,43 +1,190 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Modification d'un raccourci avancé : sa fonction et son profil, dans une seule boîte.
+<!-- Modification d'un raccourci avancé : sa fonction et son profil, dans une seule fenêtre et en
+     deux listes côte à côte — proposition « A » choisie sur maquette le 2026-10-13. Les deux se
+     choisissent sans rien ouvrir, chaque liste défile de son côté et s'ouvre sur le choix en cours.
 
-     Deux dialogues enchaînés auraient été plus simples à écrire, mais on ne peut alors plus
+     Deux fenêtres enchaînées auraient été plus simples à écrire, mais on ne peut alors plus
      revenir sur le premier choix après avoir vu le second, et annuler à mi-chemin laisse un
-     raccourci à moitié modifié. -->
+     raccourci à moitié modifié.
+
+     Fenêtre de l'application : tailles normales, pas l'agrandissement des pop-ups. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingStart="24dp"
-    android:paddingEnd="24dp"
-    android:paddingTop="18dp"
-    android:paddingBottom="6dp">
+    android:background="@drawable/bg_hvac_modern_card"
+    android:padding="20dp">
 
-    <TextView
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/adv_sc_step_action"
-        android:textColor="@color/text_secondary"
-        android:textSize="16sp" />
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
-    <Spinner
-        android:id="@+id/spinner_edit_action"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp" />
+        <FrameLayout
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_dialog_icon">
 
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="18dp"
-        android:text="@string/adv_sc_step_profile"
-        android:textColor="@color/text_secondary"
-        android:textSize="16sp" />
+            <ImageView
+                android:id="@+id/edit_shortcut_icon"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_dialog_edit" />
 
-    <Spinner
-        android:id="@+id/spinner_edit_profile"
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="14dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/adv_sc_edit_title"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <!-- La touche et le type d'appui : ce qui ne se modifie pas ici -->
+            <TextView
+                android:id="@+id/edit_shortcut_key"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Hauteur donnée ET poids : les listes ont leur taille, et la cèdent si l'écran est trop bas. -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp" />
+        android:layout_height="340dp"
+        android:layout_weight="1"
+        android:layout_marginTop="14dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_hvac_panel"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/edit_caption_action"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.08"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:maxLines="1" />
+
+            <ScrollView
+                android:id="@+id/edit_scroll_action"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:overScrollMode="never">
+
+                <LinearLayout
+                    android:id="@+id/edit_list_action"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+            </ScrollView>
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_hvac_panel"
+            android:orientation="vertical"
+            android:padding="14dp">
+
+            <TextView
+                android:id="@+id/edit_caption_profile"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="10dp"
+                android:textAllCaps="true"
+                android:letterSpacing="0.08"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:maxLines="1" />
+
+            <ScrollView
+                android:id="@+id/edit_scroll_profile"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:overScrollMode="never">
+
+                <LinearLayout
+                    android:id="@+id/edit_list_profile"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+            </ScrollView>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_marginTop="14dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
+        <TextView
+            android:id="@+id/edit_cancel"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_dialog_tile"
+            android:gravity="center"
+            android:text="@string/profile_cancel"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/edit_save"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_dialog_primary"
+            android:gravity="center"
+            android:text="@string/profile_save"
+            android:textColor="@color/hvac_on_accent"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+    </LinearLayout>
 
 </LinearLayout>

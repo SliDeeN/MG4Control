@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sélecteur de profils — éteindre la voiture : le symbole marche / arrêt. Dessiné pour l'application.
+     Blanc : c'est la vue qui colore le pictogramme. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="2"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M12,3.5 V11.5 M7.4,6.7 a7,7 0 1,0 9.2,0"/>
+</vector>

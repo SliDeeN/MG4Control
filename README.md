@@ -146,10 +146,10 @@ Actions disponibles — celles qui dépendent du firmware n'apparaissent pas sur
 |---|---|
 | Conduite | 1 Pédale · Cycle Régénération Personnalisé · Éco. énergie · Chauffage de la batterie ON/OFF |
 | Sécurité | ESC · Somnolence · Somnolence : sensibilité · Système Anticollision · ADAS · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son |
-| Confort | Siège chauffant gauche · Siège chauffant droit · Volant chauffant · Clim ON/OFF · Clim : A/C ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant · Dégivrage arrière · Recirculation · Feux de route automatiques ON/OFF · Luminosité ± |
+| Confort | Siège chauffant gauche · Siège chauffant droit · Volant chauffant · Clim ON/OFF · Clim : A/C ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant · Dégivrage arrière · Recirculation · Feux de route automatiques ON/OFF · Luminosité ± · Pop-up HVAC |
 | Vitres | Ouvrir toutes les vitres · Fermer toutes les vitres |
 | Média | Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume - |
-| Application et véhicule | Lancer un profil · Sélecteur de profil · Ouvrir MG4Control · Lancer une application · Éteindre la voiture |
+| Application et véhicule | Lancer un profil · Sélecteur de profils · Cycle de profils · Ouvrir MG4Control · Lancer une application · Éteindre la voiture |
 
 Les actions de confort et de sécurité **relisent l'état sur le véhicule à chaque pression** au lieu
 de mémoriser le leur : l'utilisateur agit aussi depuis l'écran d'origine, un état gardé en mémoire
@@ -163,7 +163,10 @@ A/B suit encore un état mémorisé.
 
 La liste des raccourcis avancés affiche pour chaque ligne le **bouton** (nom et code), le **type
 d'appui**, la **fonction**, puis *Modifier* et *Supprimer*. Réattribuer un bouton déjà utilisé sur
-le même type d'appui demande confirmation et nomme la fonction qui va être remplacée.
+le même type d'appui demande confirmation et nomme la fonction qui va être remplacée. *Modifier*
+ouvre une fenêtre à deux listes côte à côte — la fonction et le profil —, chacune ouverte sur le
+choix en cours ; l'application ou le profil visé par un raccourci se choisit dans une grille de
+tuiles.
 
 #### Raccourcis associés à un profil
 Un raccourci avancé porte une touche, un type d'appui, une fonction — et un **profil**, « Tous les
@@ -205,12 +208,34 @@ raccourci n'aurait plus rien à parcourir après le premier appui. Le réglage e
 même séquence pour tous les boutons qui déclenchent la fonction — et sans réglage, le comportement
 d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
 
+#### Pop-up HVAC
+L'action **Pop-up HVAC** ouvre la climatisation par-dessus l'écran en cours — y compris quand
+Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim d'origine. Le joystick droit
+du volant n'y déplace aucun focus : haut/bas règlent la température, gauche/droite la ventilation,
+le clic central bascule le mode AUTO (régler la ventilation en fait sortir). Un repère dans
+l'en-tête rappelle ces gestes, ou prévient que le joystick est inactif tant que le service
+d'accessibilité n'est pas activé — la fenêtre reste alors utilisable au doigt. Se choisissent au
+doigt : l'A/C, la recirculation, le sens de l'air et, sur les firmwares équipés (SWI133, SWI68,
+SWI165), le volant chauffant et le niveau de chaque siège, avec une couleur par niveau (vert,
+orange, rouge). La fenêtre se referme d'un second appui sur le raccourci, par sa croix, ou seule
+après le délai des pop-ups.
+
+#### Cycle de profils
+L'action **Cycle de profils** fait défiler les profils, dans un ordre composé sur sa page (au
+moins deux profils ; sans réglage, tous les profils dans l'ordre de leur liste). À chaque appui le
+raccourci vise le profil qui suit le profil actif et affiche son nom ; il l'applique une seconde
+plus tard, puis le confirme à l'écran. Deux appuis rapprochés sautent donc un profil sans
+l'appliquer. Si le verrou de vitesse refuse l'écriture, rien ne change.
+
 ### Automatisation
 - **Application d'un profil selon la température extérieure** : seuil, sens
-  (inférieure/supérieure), profil à appliquer, exécution directe ou popup de confirmation
+  (inférieure/supérieure), profil à appliquer, exécution directe ou bandeau de confirmation
 - **Application d'un profil selon la batterie** : quand le niveau passe sous un seuil réglable au
   curseur (5–60 %), au démarrage comme en roulant ; une fois par épisode, réarmée à chaque
-  démarrage ou après une recharge ; exécution directe ou popup de confirmation
+  démarrage ou après une recharge ; exécution directe ou bandeau de confirmation
+- **Bandeau de confirmation** : la question se pose en bas de l'écran, sans masquer la navigation
+  — la mesure et son seuil, le profil proposé, NON et OUI. Elle se répond au doigt ou au joystick
+  droit du volant (OUI présélectionné) ; NON, ou le délai des pop-ups écoulé, et rien n'est appliqué
 - **Luminosité automatique au démarrage** : au passage en READY, l'écran prend une luminosité
   choisie d'après les feux et/ou la météo — au moins une source, les feux seuls par défaut.
   **Feux seuls** (ni données mobiles, ni GPS ; seul mode de la version hors ligne) : deux
@@ -273,21 +298,55 @@ Durée de course et calibrage restent réglables option coupée : ils servent au
 - Application automatique du profil par défaut **au démarrage du véhicule**
 - **Association Bluetooth** : un profil peut être lié à un appareil et s'applique à sa connexion
 - **Sauvegarde automatique dans la mémoire du véhicule** : elle survit à la désinstallation de
-  l'application, et une popup propose de restaurer les profils à la réinstallation
+  l'application, et à la réinstallation une fenêtre liste les profils retrouvés et propose de les
+  restaurer
 - Précédence entre déclencheurs : manuel → température → Bluetooth → profil par défaut
 
 ### Réglages
 Écran organisé en **quatre onglets** :
-- **Langues** : français, anglais, allemand, espagnol, italien, portugais
-- **Interface** : écran affiché au démarrage, apparence (auto / sombre / clair)
-- **Réglages avancés** : **Mode Garage** (cf. ci-dessous), vérification des mises à jour au
-  lancement, **alerte de mise à jour sur l'écran du véhicule**, **canal bêta**, extinction du
-  véhicule écran allumé, blocage des réglages de conduite au-delà d'une vitesse donnée,
-  **API externe** (cf. section dédiée)
+- **Langues** : français, anglais, allemand, espagnol, italien, portugais, turc — la langue est
+  demandée au premier lancement, dans une fenêtre à sept grandes tuiles
+- **Interface** : écran affiché au démarrage, apparence (auto / sombre / clair), taille du texte
+  (standard / grand / très grand), **délai avant la fermeture des pop-ups** (1 à 60 s, 10 par
+  défaut)
+- **Réglages avancés** : **Mode Garage** (cf. ci-dessous), retour au profil par défaut à chaque
+  passage en READY (option, décochée), vérification des mises à jour au lancement, **alerte de mise
+  à jour sur l'écran du véhicule**, **canal bêta**, extinction du véhicule écran allumé, blocage des
+  réglages de conduite au-delà d'une vitesse donnée, **API externe** (cf. section dédiée)
 - **Infos** : vérification des mises à jour, nettoyage des APK, **consommation de données**
   (aujourd'hui, semaine en cours, mois courant, 30 derniers jours), dialog « À propos » (version de
   l'app, firmware, QR codes), indicateur de firmware, et bouton Diagnostic révélé par 5 clics sur
   le logo
+
+### Pop-ups et fenêtres
+Depuis la 2.6.8, tout ce qui s'affiche en fenêtre partage la même présentation : cartes arrondies,
+gros boutons, et plus aucune saisie au clavier.
+
+**Par-dessus l'écran de la voiture**, quelle que soit l'application en cours :
+
+| Élément | Présentation |
+|---|---|
+| Sélecteur de profils | Plein cadre : une carte par profil (mode de conduite en couleur, profil en cours marqué « Actif »), luminosité (Nuit / Moyen / Jour et curseur), Ouvrir MG4Control, Éteindre la voiture |
+| Pop-up HVAC | Plein cadre : chauffages, température et ventilation au joystick, A/C et recirculation |
+| Confirmation d'une automatisation | Bandeau en bas de l'écran : mesure, seuil, profil proposé, NON / OUI |
+| Mise à jour disponible | Bandeau : versions, Plus tard / Ignorer cette version / Installer la MAJ |
+| Extinction du véhicule | Bandeau : Annuler / Éteindre — ou « Extinction impossible » hors de P |
+
+Les deux pop-ups se pilotent au **joystick droit du volant** (service d'accessibilité requis) ; un
+repère dans leur en-tête rappelle les gestes, ou prévient que le joystick est inactif. Un bandeau
+ne masque ni n'assombrit rien : ce qui est touché ailleurs va à l'application du dessous. Tout se
+referme seul après le **délai des pop-ups** (*Réglages → Interface*) ; sur un bandeau, le décompte
+est écrit sur le bouton qui vaut « non » — c'est lui que le délai déclenche.
+
+**Dans l'application** :
+- les **confirmations** se ressemblent toutes — un pictogramme, un titre, un texte, un ou deux
+  boutons — et leur couleur dit la nature de l'action : bleu pour une action ordinaire, orange pour
+  un avertissement, rouge pour ce qui efface ou éteint ;
+- une **application** ou un **profil** se choisit dans une grille de tuiles qui défile ;
+- un **raccourci avancé** se modifie dans deux listes côte à côte ;
+- les **horaires** et le **tarif** d'une recharge (onglet Statistiques) se règlent aux boutons −
+  et +, sans clavier — celui de la voiture couvre la moitié de l'écran. Les minutes vont de cinq en
+  cinq, le pas du tarif se choisit, et un appui maintenu répète le pas.
 
 ### Mode Garage
 Un seul interrupteur met MG4Control **en veille complète**, sans rien désinstaller ni
@@ -323,32 +382,37 @@ repère, un mode oublié se manifesterait par « plus rien ne marche » sans la 
 > en Mode Garage activé à la première ouverture : couper l'application était bien l'intention.
 
 ### Alerte de mise à jour sur l'écran du véhicule
-Une mise à jour ne se découvre plus seulement en ouvrant MG4Control : un message apparaît
-**par-dessus l'infodivertissement**, comme le popup de confirmation de profil, et annonce la
-version installée face à la nouvelle. Trois choix :
+Une mise à jour ne se découvre plus seulement en ouvrant MG4Control : un bandeau apparaît **en bas
+de l'écran, par-dessus l'infodivertissement**, comme celui de la confirmation de profil, et annonce
+la version installée face à la nouvelle. Quatre choix :
 
 | Bouton | Effet |
 |---|---|
 | **Installer la MAJ** | Ouvre MG4Control sur le dialogue de mise à jour habituel, sans refaire la requête réseau |
 | **Ignorer cette version** | Cette version n'est plus proposée, ni ici ni au lancement de l'application |
-| **Ne plus me prévenir** | Coupe ce popup. Le dialogue au lancement de MG4Control, lui, reste |
+| **Plus tard** | Referme le bandeau : rien n'est retenu, l'annonce reviendra |
+| **Ne plus me prévenir** | Coupe ce bandeau. Le dialogue au lancement de MG4Control, lui, reste |
 
-Toucher le fond assombri vaut « plus tard » : rien n'est retenu, l'annonce reviendra.
+Sans réponse, le bandeau se referme seul après le délai des pop-ups, ce qui vaut « plus tard ». Il
+n'assombrit ni ne bloque rien : le reste de l'écran reste utilisable.
 
 Quatre garde-fous, parce que ce chemin n'est déclenché par personne :
 - la vérification a lieu **20 s après le coup de contact** — au moment même, la liaison données de
   la voiture n'est pas encore montée ;
 - **six heures minimum** entre deux interrogations réseau, la voiture étant sur un forfait données ;
-- **rien ne s'affiche en roulant** (même verrou que le popup multiprofils) ;
+- **rien ne s'affiche en roulant** (même verrou que le sélecteur de profils) ;
 - une version déjà proposée ne l'est plus dans la même session — et le marquage n'a lieu que si le
-  popup est **réellement apparu**.
+  bandeau est **réellement apparu**.
 
-L'interrupteur historique « vérifier les mises à jour au lancement » coupe aussi ce popup : c'est
+L'interrupteur historique « vérifier les mises à jour au lancement » coupe aussi ce bandeau : c'est
 un réglage que l'utilisateur croit global, et il l'est.
 
 ### Profils
 - Liste des profils avec application, définition par défaut, modification, suppression
 - **Éditeur en plein écran** organisé en trois catégories : Conduite, Sécurité, Confort
+- **Un interrupteur par catégorie**, en tête de chaque onglet : coupée, l'onglet se replie et le
+  profil n'y écrit rien — un profil peut ne régler que la sécurité, ou que le confort. Il en faut au
+  moins une pour enregistrer ; les profils déjà créés gardent leurs trois catégories actives
 - Le nom du profil et le réglage « profil par défaut » restent visibles sur les trois onglets
 - Volant et sièges chauffants disposent d'un interrupteur de **prise en compte** : décoché, le
   profil ne touche pas au réglage au lieu de l'éteindre
@@ -381,10 +445,11 @@ autres firmwares.
 > les deux s'écriraient dessus au contact, dans un ordre que rien ne garantit.
 
 ### Compatibilité firmware inconnue (UNKNOWN)
-- Dialog d'avertissement au démarrage si le firmware n'est pas reconnu
+- Fenêtre d'avertissement au démarrage si le firmware n'est pas reconnu, avec la version lue sur
+  la voiture
 - L'utilisateur peut fermer l'application ou continuer
-- En mode "Continuer", les pastilles de firmware (*Réglages → Infos*) deviennent cliquables pour
-  forcer un mode de compatibilité
+- « Continuer » ouvre directement *Réglages → Infos*, où les pastilles de firmware sont cliquables
+  pour forcer un mode de compatibilité
 - Le choix forcé est persisté en SharedPreferences et survit aux redémarrages de l'app
 
 ---
@@ -517,6 +582,9 @@ MG4Control/
 │   │   │   ├── ShortcutsFragment.kt   # Raccourcis classiques + avancés + liste
 │   │   │   ├── AutomationFragment.kt  # Automatisations
 │   │   │   ├── ProfileAdapter.kt      # Adaptateur RecyclerView profils
+│   │   │   ├── AppDialog.kt           # Fenêtres de l'app : confirmation, grille de choix, listes, boutons − / +
+│   │   │   ├── RestoreProfilesDialog.kt # « Restaurer les profils ? » — liste des profils retrouvés
+│   │   │   ├── StatsDialogs.kt        # Compléter une recharge, corriger un tarif (sans clavier)
 │   │   │   ├── ConsoleFragment.kt     # Journal de debug en temps réel
 │   │   │   ├── DriveRegenFragment.kt  # Héritage (non utilisé en v2)
 │   │   │   ├── ClimateFragment.kt     # Héritage (non utilisé en v2)
@@ -524,9 +592,13 @@ MG4Control/
 │   │   │
 │   │   ├── service/
 │   │   │   ├── MG4ControlService.kt   # Service de premier plan (boot, raccourcis, API externe)
-│   │   │   ├── ProfilePickerOverlay.kt# Sélecteur de profil en fenêtre flottante
-│   │   │   ├── ProfileConfirmOverlay.kt # Confirmation OUI/NON des automatisations
-│   │   │   └── UpdateOverlay.kt      # Popup « MAJ disponible » sur l'écran du véhicule
+│   │   │   ├── OverlayKit.kt          # Socle des pop-ups et bandeaux : échelle, fonds, place à l'écran
+│   │   │   ├── OverlayNavigation.kt   # Navigation au joystick droit dans un pop-up
+│   │   │   ├── ProfilePickerOverlay.kt# Sélecteur de profils (pop-up plein cadre)
+│   │   │   ├── HvacPopupOverlay.kt    # Pop-up HVAC (+ HvacPopupSkin.kt, sa peinture)
+│   │   │   ├── ProfileConfirmOverlay.kt # Bandeau OUI/NON des automatisations
+│   │   │   ├── VehiclePowerOffOverlay.kt # Bandeau de confirmation d'extinction
+│   │   │   └── UpdateOverlay.kt      # Bandeau « MAJ disponible » sur l'écran du véhicule
 │   │   │
 │   │   ├── receiver/
 │   │   │   └── BootReceiver.kt        # Récepteur de démarrage système
@@ -535,7 +607,7 @@ MG4Control/
 │   │   │   ├── FirmwareInfo.kt        # Détection firmware + mode forcé
 │   │   │   ├── GarageMode.kt          # Mode Garage — met tous les automatismes en veille
 │   │   │   ├── FirmwareHelper.kt      # Lecture version firmware complète (async)
-│   │   │   ├── LocaleHelper.kt        # Gestion de la langue (6 langues)
+│   │   │   ├── LocaleHelper.kt        # Gestion de la langue (7 langues) et de la taille du texte
 │   │   │   ├── ThemeHelper.kt         # Thème auto / sombre / clair
 │   │   │   └── DataUsage.kt           # Consommation de données (interface Ethernet)
 │   │   │
@@ -719,6 +791,19 @@ mieux vaut pas d'onglet qu'un onglet qui ouvre une page vide.
 Valeurs communes aux écrans refondus, calées sur la lisibilité au volant : titres **20sp**,
 en-têtes de section **13sp**, libellés et boutons **16sp**, hauteur de bouton **52dp**, onglets du
 rail **64dp**, rail **180dp**, padding de carte **14dp**.
+
+### Fenêtres et pop-ups
+- **Fenêtres de l'application** — `ui/AppDialog` : une carte arrondie sans décor, à la largeur
+  qu'on lui donne (celle par défaut d'un dialogue Android est trop étroite pour un écran de
+  voiture). `confirmer` pour une confirmation simple, au ton neutre, d'alerte ou de danger ;
+  `choisir` pour une grille de tuiles ; `options` pour une liste à choix unique ; `segments` pour un
+  choix à cases ; `repeter` pour un bouton − ou + qui se répète quand on le maintient. Tout nouveau
+  oui / non de l'application passe par `AppDialog.confirmer`.
+- **Pop-ups et bandeaux** — `service/OverlayKit` : leurs mises en page sont écrites pour une carte
+  de base (1108 × 392 dp) et gonflées avec une densité corrigée, pour occuper la même part de
+  l'écran partout. Si la fenêtre accordée est plus petite que prévu, la carte est réduite d'un
+  bloc et le journal `MG4_OVERLAY` donne la place trouvée. Les teintes sont posées par le code :
+  ces mises en page sont gonflées hors de l'activité, sans la fabrique AppCompat.
 
 ### Palette de couleurs
 
@@ -1095,10 +1180,10 @@ Available actions — those depending on the firmware do not show up on the othe
 |---|---|
 | Driving | One Pedal · Custom Regeneration Cycle · Energy saving · Battery heating ON/OFF |
 | Safety | ESC · Drowsiness · Drowsiness: sensitivity · Forward collision · ADAS · Traffic signs (TSR) · Overspeed alert · Speed limit change alert · Sound |
-| Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: A/C ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Automatic high beam ON/OFF · Brightness ± |
+| Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: A/C ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Automatic high beam ON/OFF · Brightness ± · HVAC pop-up |
 | Windows | Open all windows · Close all windows |
 | Media | Play / Pause · Next track · Previous track · Volume + · Volume - |
-| App and vehicle | Apply a profile · Profile picker · Open MG4Control · Launch an app · Power the car off |
+| App and vehicle | Apply a profile · Profile picker · Profile cycle · Open MG4Control · Launch an app · Power the car off |
 
 Comfort and safety actions **re-read the state from the vehicle on every press** instead of
 remembering their own: the user also acts from the stock screen, so a remembered state would drift
@@ -1112,7 +1197,9 @@ collision A/B cycle still follows a remembered state.
 
 Each row of the advanced list shows the **button** (name and code), the **press type**, the
 **action**, then *Edit* and *Delete*. Reassigning a button already used with the same press type
-asks for confirmation and names the action about to be replaced.
+asks for confirmation and names the action about to be replaced. *Edit* opens a window with two
+side-by-side lists — the action and the profile — each opened on the current choice; the app or
+profile a shortcut targets is picked from a grid of tiles.
 
 #### Profile-scoped shortcuts
 An advanced shortcut carries a key, a press type, an action — and a **profile**, "All profiles" by
@@ -1153,12 +1240,34 @@ shortcut would have nothing left to walk through after the first press. The sett
 the same sequence for every button triggering the action — and with no setting at all, the original
 behaviour stands unchanged (Low → Medium → High → Adaptive).
 
+#### HVAC pop-up
+The **HVAC pop-up** action opens the climate controls on top of the current screen — including
+when Android Auto or CarPlay fills the screen and hides the stock climate bar. The steering
+wheel's right joystick moves no focus there: up/down set the temperature, left/right the fan
+speed, the centre click toggles AUTO mode (adjusting the fan speed leaves it). A hint in the header
+recalls these gestures, or warns that the joystick is inactive until the accessibility service is
+enabled — the window then still works by touch. Chosen by touch: A/C, recirculation, air direction
+and, on equipped firmwares (SWI133, SWI68, SWI165), the heated steering wheel and each seat's
+level, one colour per level (green, orange, red). The window closes on a second press of the
+shortcut, with its cross, or by itself after the pop-up delay.
+
+#### Profile cycle
+The **Profile cycle** action steps through the profiles, in an order composed on its page (at
+least two profiles; without it, every profile in the order of their list). On each press the
+shortcut targets the profile that follows the active one and shows its name; it applies it one
+second later, then confirms it on screen. Two quick presses therefore skip a profile without
+applying it. If the speed lock refuses the write, nothing changes.
+
 ### Automation
 - **Apply a profile from the outside temperature**: threshold, direction (below/above), profile to
-  apply, direct execution or confirmation popup
+  apply, direct execution or confirmation banner
 - **Apply a profile from the battery level**: when the charge drops below a threshold set with a
   slider (5–60 %), at start-up or while driving; once per episode, re-armed at every start or after
-  charging; direct execution or confirmation popup
+  charging; direct execution or confirmation banner
+- **Confirmation banner**: the question is asked at the bottom of the screen, without hiding
+  navigation — the reading and its threshold, the proposed profile, NO and YES. It is answered by
+  touch or with the steering wheel's right joystick (YES preselected); on NO, or once the pop-up
+  delay has run out, nothing is applied
 - **Automatic brightness at start-up**: when the car goes READY, the screen takes a brightness
   chosen from the lights and/or the weather — at least one source, lights only by default.
   **Lights only** (no mobile data, no GPS; the only mode of the offline version): two adjustable
@@ -1217,20 +1326,53 @@ shortcuts use them too.
 - Instant one-tap profile application
 - Automatic default profile application **on vehicle startup**
 - **Bluetooth pairing**: a profile can be tied to a device and applied when it connects
-- **Automatic backup into the vehicle's storage**: it survives uninstalling the app, and a popup
-  offers to restore the profiles on reinstall
+- **Automatic backup into the vehicle's storage**: it survives uninstalling the app, and on
+  reinstall a window lists the profiles found and offers to restore them
 - Trigger precedence: manual → temperature → Bluetooth → default profile
 
 ### Settings
 Screen organised into **four tabs**:
-- **Languages**: French, English, German, Spanish, Italian, Portuguese
-- **Interface**: screen shown at startup, appearance (auto / dark / light)
-- **Advanced**: **Garage mode** (see below), update check at launch, **update alert on the
+- **Languages**: French, English, German, Spanish, Italian, Portuguese, Turkish — the language is
+  asked on first launch, in a window with seven large tiles
+- **Interface**: screen shown at startup, appearance (auto / dark / light), text size (standard /
+  large / extra large), **pop-up closing delay** (1 to 60 s, 10 by default)
+- **Advanced**: **Garage mode** (see below), return to the default profile each time the car
+  enters READY (option, off by default), update check at launch, **update alert on the
   vehicle screen**, **beta channel**, power the car off while keeping the screen on, block driving
   settings above a given speed, **external API** (see the dedicated section)
 - **Info**: update check, APK cleanup, **data usage** (today, current week, current month, last 30
   days), "About" dialog (app version, firmware, QR codes), firmware indicator, and a Diagnostic
   button revealed by 5 taps on the logo
+
+### Pop-ups and windows
+Since 2.6.8, everything shown in a window shares the same look: rounded cards, large buttons, and
+no more keyboard input.
+
+**On top of the car's screen**, whatever app is running:
+
+| Item | Layout |
+|---|---|
+| Profile picker | Full frame: one card per profile (drive mode in colour, current profile marked "Active"), brightness (Night / Medium / Day and a slider), Open MG4Control, Power the car off |
+| HVAC pop-up | Full frame: heating, temperature and fan speed on the joystick, A/C and recirculation |
+| Automation confirmation | Banner at the bottom of the screen: reading, threshold, proposed profile, NO / YES |
+| Update available | Banner: versions, Later / Skip this version / Install update |
+| Vehicle power-off | Banner: Cancel / Power off — or "Cannot power off" outside P |
+
+Both pop-ups are driven with the **steering wheel's right joystick** (accessibility service
+required); a hint in their header recalls the gestures, or warns that the joystick is inactive. A
+banner neither hides nor dims anything: whatever is touched elsewhere goes to the app underneath.
+Everything closes by itself after the **pop-up delay** (*Settings → Interface*); on a banner, the
+countdown is written on the button that means "no" — the one the delay triggers.
+
+**Inside the app**:
+- **confirmations** all look alike — an icon, a title, a text, one or two buttons — and their
+  colour tells the nature of the action: blue for an ordinary action, orange for a warning, red for
+  whatever deletes or powers off;
+- an **app** or a **profile** is picked from a scrolling grid of tiles;
+- an **advanced shortcut** is edited in two side-by-side lists;
+- the **times** and the **tariff** of a charge (Statistics tab) are set with − and + buttons,
+  without a keyboard — the car's one covers half the screen. Minutes go in steps of five, the
+  tariff step is selectable, and holding a button repeats the step.
 
 ### Garage mode
 A single switch puts MG4Control **fully to sleep**, without uninstalling or reconfiguring
@@ -1265,31 +1407,36 @@ forgotten mode would show up as "nothing works any more" with no explanation wha
 > Garage mode on first launch: stopping the app from acting was the intent.
 
 ### Update alert on the vehicle screen
-An update is no longer found only by opening MG4Control: a message appears **over the
-infotainment**, like the profile confirmation popup, showing the installed version against the new
-one. Three choices:
+An update is no longer found only by opening MG4Control: a banner appears **at the bottom of the
+screen, over the infotainment**, like the profile confirmation one, showing the installed version
+against the new one. Four choices:
 
 | Button | Effect |
 |---|---|
 | **Install update** | Opens MG4Control on the usual update dialog, without repeating the network request |
 | **Skip this version** | That version is no longer offered, here or at app launch |
-| **Stop telling me** | Turns this popup off. The dialog at MG4Control launch stays |
+| **Later** | Closes the banner: nothing is remembered, the alert will come back |
+| **Stop telling me** | Turns this banner off. The dialog at MG4Control launch stays |
 
-Tapping the dimmed background means "later": nothing is remembered, the alert will come back.
+With no answer, the banner closes by itself after the pop-up delay, which means "later". It neither
+dims nor blocks anything: the rest of the screen stays usable.
 
 Four safeguards, because nobody triggers this path:
 - the check runs **20 s after ignition** — at the moment itself the car's data link is not up yet;
 - **six hours minimum** between network requests, the car being on a data plan;
-- **nothing shows while driving** (same lock as the multi-profile popup);
+- **nothing shows while driving** (same lock as the profile picker);
 - a version already offered is not offered again in the same session — and it is only marked as
-  offered if the popup **actually appeared**.
+  offered if the banner **actually appeared**.
 
-The long-standing "check for updates at launch" switch also turns this popup off: it is a setting
+The long-standing "check for updates at launch" switch also turns this banner off: it is a setting
 users read as global, and it is.
 
 ### Profiles
 - Profile list with apply, set as default, edit and delete
 - **Full-screen editor** organised into three categories: Driving, Safety, Comfort
+- **One switch per category**, at the top of each tab: switched off, the tab folds away and the
+  profile writes nothing there — a profile can cover safety only, or comfort only. At least one is
+  needed to save; existing profiles keep their three categories on
 - The profile name and the "default profile" setting stay visible across the three tabs
 - Heated steering wheel and seats have an **apply** switch: unchecked, the profile leaves the
   setting alone instead of turning it off
@@ -1320,9 +1467,10 @@ firmwares.
 > other at ignition, in an order nothing guarantees.
 
 ### Unknown firmware (UNKNOWN)
-- Warning dialog at startup when the firmware is not recognised
+- Warning window at startup when the firmware is not recognised, showing the version read from the
+  car
 - The user can close the app or continue
-- In "continue" mode the firmware chips (*Settings → Info*) become tappable to force a
+- "Continue" opens *Settings → Info* directly, where the firmware chips are tappable to force a
   compatibility mode
 - The forced choice is persisted in SharedPreferences and survives app restarts
 
@@ -1454,6 +1602,9 @@ MG4Control/
 │   │   │   ├── ShortcutsFragment.kt   # Classic + advanced shortcuts + list
 │   │   │   ├── AutomationFragment.kt  # Automations
 │   │   │   ├── ProfileAdapter.kt      # Profile RecyclerView adapter
+│   │   │   ├── AppDialog.kt           # App windows: confirmation, choice grid, lists, − / + buttons
+│   │   │   ├── RestoreProfilesDialog.kt # "Restore profiles?" — lists the profiles found
+│   │   │   ├── StatsDialogs.kt        # Complete a charge, fix a tariff (no keyboard)
 │   │   │   ├── ConsoleFragment.kt     # Real-time debug log viewer
 │   │   │   ├── DriveRegenFragment.kt  # Legacy (unused in v2)
 │   │   │   ├── ClimateFragment.kt     # Legacy (unused in v2)
@@ -1461,9 +1612,13 @@ MG4Control/
 │   │   │
 │   │   ├── service/
 │   │   │   ├── MG4ControlService.kt   # Foreground service (boot, shortcuts, external API)
-│   │   │   ├── ProfilePickerOverlay.kt# Floating profile picker
-│   │   │   ├── ProfileConfirmOverlay.kt # YES/NO confirmation for automations
-│   │   │   └── UpdateOverlay.kt      # "Update available" popup on the vehicle screen
+│   │   │   ├── OverlayKit.kt          # Base of pop-ups and banners: scale, backgrounds, room on screen
+│   │   │   ├── OverlayNavigation.kt   # Right-joystick navigation inside a pop-up
+│   │   │   ├── ProfilePickerOverlay.kt# Profile picker (full-frame pop-up)
+│   │   │   ├── HvacPopupOverlay.kt    # HVAC pop-up (+ HvacPopupSkin.kt, its painting)
+│   │   │   ├── ProfileConfirmOverlay.kt # YES/NO banner for automations
+│   │   │   ├── VehiclePowerOffOverlay.kt # Power-off confirmation banner
+│   │   │   └── UpdateOverlay.kt      # "Update available" banner on the vehicle screen
 │   │   │
 │   │   ├── receiver/
 │   │   │   └── BootReceiver.kt        # System boot receiver
@@ -1472,7 +1627,7 @@ MG4Control/
 │   │   │   ├── FirmwareInfo.kt        # Firmware detection + forced mode
 │   │   │   ├── GarageMode.kt          # Garage mode — puts every automatism to sleep
 │   │   │   ├── FirmwareHelper.kt      # Full firmware version string reader (async)
-│   │   │   ├── LocaleHelper.kt        # Language management (6 languages)
+│   │   │   ├── LocaleHelper.kt        # Language management (7 languages) and text size
 │   │   │   ├── ThemeHelper.kt         # Auto / dark / light theme
 │   │   │   └── DataUsage.kt           # Data usage (Ethernet interface)
 │   │   │
@@ -1649,6 +1804,18 @@ than a tab opening an empty page.
 Values shared by the reworked screens, tuned for readability while driving: titles **20sp**,
 section headers **13sp**, labels and buttons **16sp**, button height **52dp**, rail tabs **64dp**,
 rail width **180dp**, card padding **14dp**.
+
+### Windows and pop-ups
+- **App windows** — `ui/AppDialog`: a rounded card with no chrome, at the width it is given (an
+  Android dialog's default width is too narrow for a car screen). `confirmer` for a simple
+  confirmation, with a neutral, warning or danger tone; `choisir` for a grid of tiles; `options`
+  for a single-choice list; `segments` for a segmented choice; `repeter` for a − or + button that
+  repeats while held. Every new yes / no in the app goes through `AppDialog.confirmer`.
+- **Pop-ups and banners** — `service/OverlayKit`: their layouts are written for a base card
+  (1108 × 392 dp) and inflated with a corrected density, to take the same share of the screen
+  everywhere. If the window granted is smaller than expected, the card is shrunk as a whole and the
+  `MG4_OVERLAY` log gives the room found. Tints are set in code: these layouts are inflated outside
+  the activity, without the AppCompat factory.
 
 ### Color Palette
 

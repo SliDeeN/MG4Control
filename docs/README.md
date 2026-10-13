@@ -159,3 +159,18 @@ powershell -ExecutionPolicy Bypass -File site-src/build.ps1
 Les règles par firmware sont regroupées dans la fonction `caps()` de `sim.js`, et la liste des
 actions de raccourci dans `availableActions()`. Ce sont les deux endroits à relire lorsqu'une
 fonctionnalité change.
+
+Les pop-ups et les fenêtres reprennent les mises en page de l'application, avec leurs dimensions :
+
+- `overlayHtml()` et `bannerHtml()` : ce qui se pose par-dessus l'écran de la voiture (sélecteur de
+  profils, pop-up HVAC, bandeaux), d'après `res/layout/overlay_*.xml`. La carte de base de
+  1108 × 392 dp occupe dans la maquette la même part d'écran que sur la voiture ;
+- `dialogHtml()` : les fenêtres de l'application, d'après `res/layout/dialog_*.xml`. Elles sont
+  dessinées à leurs dimensions puis réduites d'un bloc par la classe `.mw` (`zoom` dans `sim.css`),
+  la plus large faisant 1320 dp pour un écran de maquette de 1280 ;
+- le bloc `MW` : les pictogrammes, dont les tracés sont recopiés des drawables de l'application
+  (`ic_hvac_*`, `ic_overlay_*`, `ic_dialog_*`, `ic_heat_level_*`). Un pictogramme qui change dans
+  l'application est à recopier ici.
+
+Le rendu est groupé en fin de tâche (`commit()`, micro-tâche) : un essai qui lit la maquette juste
+après une action doit attendre un tour avant de regarder.

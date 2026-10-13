@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Une tuile de la grille de choix (dialog_choice.xml) : ce qui la fait reconnaître — l'icône
+     d'une application, ou la pastille du mode d'un profil — puis son nom. Posés par
+     AppDialog.choisir ; ce qui ne sert pas est retiré. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="104dp"
+    android:layout_weight="1"
+    android:background="@drawable/bg_dialog_tile"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:paddingStart="8dp"
+    android:paddingEnd="8dp">
+
+    <ImageView
+        android:id="@+id/choice_item_icon"
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:layout_marginBottom="8dp"
+        android:importantForAccessibility="no" />
+
+    <TextView
+        android:id="@+id/choice_item_pill"
+        android:layout_width="wrap_content"
+        android:layout_height="22dp"
+        android:layout_marginBottom="8dp"
+        android:gravity="center"
+        android:paddingStart="9dp"
+        android:paddingEnd="9dp"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/choice_item_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:textColor="@color/text_primary"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+</LinearLayout>

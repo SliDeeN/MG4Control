@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fenêtres de l'application — une mise à jour à télécharger : une flèche vers un plateau. Dessiné pour l'application.
+     Blanc : c'est la vue qui colore le pictogramme. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="2"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M12,4 V15 M7.5,10.5 L12,15 L16.5,10.5 M5,19.5 H19"/>
+</vector>

@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/site.css?v=f1e558bb">
-  <link rel="stylesheet" href="assets/css/sim.css?v=114b6fd3">
+  <link rel="stylesheet" href="assets/css/sim.css?v=78a04701">
   <link rel="stylesheet" href="assets/css/explorer.css?v=cd546543">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.8</span>
-        <b><span data-l="fr">15 nouveautés dans cette version</span></b>
+        <b><span data-l="fr">16 nouveautés dans cette version</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span></button>
       </div>
       <div class="wn-list">
@@ -156,6 +156,7 @@
         <a href="#f-readydefault" data-feature="f-readydefault"><span data-l="fr">↩️ Retour au profil par défaut au READY</span></a>
         <a href="#f-profilecat" data-feature="f-profilecat"><span data-l="fr">🧩 Profils : catégories à la carte</span></a>
         <a href="#f-popupdelay" data-feature="f-popupdelay"><span data-l="fr">⏱️ Délai des pop-ups réglable</span></a>
+        <a href="#f-newlook" data-feature="f-newlook"><span data-l="fr">🪟 Pop-ups et fenêtres redessinés</span></a>
         <a href="#f-sc-new" data-feature="f-sc-new"><span data-l="fr">⭐ Trois nouvelles actions de raccourci</span></a>
       </div>
     </div>
@@ -439,7 +440,7 @@
       <h3><span data-l="fr">Sauvegarde dans la voiture</span></h3>
       <p data-l="fr">Les profils sont copiés dans la voiture et restaurables après une réinstallation.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Fichier <code>MG4Control/mg4_profiles_backup.json</code> dans la mémoire du véhicule. À la réinstallation, si l'app n'a aucun profil, une popup propose de les restaurer.</p>
+        <p data-l="fr">Fichier <code>MG4Control/mg4_profiles_backup.json</code> dans la mémoire du véhicule. À la réinstallation, si l'app n'a aucun profil, une fenêtre liste les profils retrouvés et propose de les restaurer.</p>
       </details>
     </div>
   </div>
@@ -453,13 +454,13 @@
         <label class="tog"><input type="checkbox" name="manual"><span class="t"></span><span data-l="fr">Profil choisi à la main récemment</span></label>
         <label class="tog"><input type="checkbox" name="back"><span class="t"></span><span data-l="fr">… avec l'option « Revenir au profil par défaut »</span></label>
         <label class="tog"><input type="checkbox" name="temp"><span class="t"></span><span data-l="fr">Automatisation température applicable</span></label>
-        <label class="tog"><input type="checkbox" name="tempconfirm"><span class="t"></span><span data-l="fr">… avec popup de confirmation</span></label>
+        <label class="tog"><input type="checkbox" name="tempconfirm"><span class="t"></span><span data-l="fr">… avec bandeau de confirmation</span></label>
         <label class="tog"><input type="checkbox" name="bt" checked><span class="t"></span><span data-l="fr">Téléphone associé à un profil connecté</span></label>
         <label class="tog"><input type="checkbox" name="def" checked><span class="t"></span><span data-l="fr">Un profil par défaut existe</span></label>
       </div>
       <div>
         <div class="flow">
-          <div class="flow-step" data-step="manual"><span class="k">1</span><span data-l="fr">Choix manuel récent (popup sélecteur, application, API)</span></div>
+          <div class="flow-step" data-step="manual"><span class="k">1</span><span data-l="fr">Choix manuel récent (sélecteur de profils, application, API)</span></div>
           <div class="flow-step" data-step="temp"><span class="k">2</span><span data-l="fr">Automatisation selon la température extérieure</span></div>
           <div class="flow-step" data-step="bt"><span class="k">3</span><span data-l="fr">Profil associé au Bluetooth connecté (plusieurs : sélecteur restreint, le 1ᵉʳ à la fin du délai)</span></div>
           <div class="flow-step" data-step="def"><span class="k">4</span><span data-l="fr">Profil par défaut</span></div>
@@ -482,19 +483,19 @@
       <h3><span data-l="fr">Luminosité en un geste</span></h3>
       <p data-l="fr">Nuit, Moyen, Jour et un curseur épais, faciles à viser en roulant.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Préréglages 15 %, 50 % et 100 %. Plancher à 5 % : l'écran ne peut jamais être éteint par erreur.</p>
+        <p data-l="fr">Préréglages 15 %, 50 % et 100 % ; celui qui correspond à la luminosité en cours reste allumé. Plancher à 5 % : l'écran ne peut jamais être éteint par erreur.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="pk-grid" data-demo="picker">
-      <h3><span data-l="fr">Popup sélecteur de profil</span></h3>
-      <p data-l="fr">Tous vos profils en grands boutons : un appui applique le profil et ferme le popup.</p>
+      <h3><span data-l="fr">Vos profils en cartes</span></h3>
+      <p data-l="fr">Une carte par profil, avec son mode de conduite en couleur et le profil en cours marqué « Actif » : un appui applique le profil et ferme la fenêtre.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Ce choix manuel devient prioritaire au prochain passage du contact, sauf si l'option « Revenir au profil par défaut à chaque passage en READY » est cochée. Le sélecteur s'affiche quelle que soit la vitesse (il sert aussi à la luminosité) ; c'est l'écriture qui est filtrée par le verrou de vitesse.</p>
+        <p data-l="fr">Chaque carte rappelle le mode (Eco, Normal, Sport, Snow, Custom) et la régénération du profil. Ce choix manuel devient prioritaire au prochain passage du contact, sauf si l'option « Revenir au profil par défaut à chaque passage en READY » est cochée. Le sélecteur s'affiche quelle que soit la vitesse (il sert aussi à la luminosité) ; c'est l'écriture qui est filtrée par le verrou de vitesse.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="pk-foot" data-demo="picker">
       <h3><span data-l="fr">Fermeture automatique</span></h3>
-      <p data-l="fr">La fenêtre se ferme seule après un délai réglable (10 s par défaut), avec Éteindre la voiture et Ouvrir MG4Control en bas.</p>
+      <p data-l="fr">La fenêtre se ferme seule après un délai réglable (10 s par défaut), décompté en haut à droite. Ouvrir MG4Control et Éteindre la voiture sont sous les cartes.</p>
     </div>
     <div class="pt" data-hl-key="pk-grid" data-demo="btConflict">
       <h3><span data-l="fr">Conflit Bluetooth</span></h3>
@@ -507,7 +508,7 @@
       <h3><span data-l="fr">Navigation au joystick</span></h3>
       <p data-l="fr">Le joystick droit du volant se déplace dans la fenêtre, le centre valide.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Nécessite le service d'accessibilité. Anneau de focus sans rebouclage aux bords ; gauche/droite sur le curseur règlent la luminosité par crans de 5 %. Le joystick ne change alors ni le volume ni la piste. Le popup de confirmation des automatisations (OUI / NON) se pilote de la même façon : OUI est présélectionné, gauche/droite changent de bouton, le centre valide. Essayez avec ▲▼◀▶● du véhicule virtuel.</p>
+        <p data-l="fr">Nécessite le service d'accessibilité : un repère en haut de la fenêtre rappelle les gestes, ou prévient que le joystick est inactif. Anneau de focus sans rebouclage aux bords ; gauche/droite sur le curseur règlent la luminosité par crans de 5 %. Le joystick ne change alors ni le volume ni la piste. Le bandeau de confirmation des automatisations (NON / OUI) se pilote de la même façon : OUI est présélectionné, gauche/droite changent de bouton, le centre valide. Essayez avec ▲▼◀▶● du véhicule virtuel.</p>
       </details>
     </div>
   </div>
@@ -558,7 +559,7 @@
       <h3><span data-l="fr">Pop-up HVAC</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.8</span></h3>
       <p data-l="fr">La clim en un geste, par-dessus l'écran en cours : le joystick droit règle la température et la ventilation.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Une action de raccourci ouvre la fenêtre, y compris quand Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim. Ici le joystick ne déplace pas de focus : haut/bas changent la température, gauche/droite la ventilation, le centre bascule le mode AUTO (régler la ventilation en fait sortir). L'A/C, la recirculation et le sens de l'air (visage, pieds, pare-brise avant et arrière) se choisissent au doigt ; sur les firmwares équipés (SWI133, SWI68, SWI165), une colonne ajoute les sièges et le volant chauffants. La fenêtre se referme seule après le délai réglé (10 s par défaut) sans action, d'un second appui sur le raccourci ou par son bouton Fermer. Le joystick nécessite le service d'accessibilité ; sans lui, la fenêtre reste utilisable au doigt. Dans la maquette, la ★ droite du véhicule virtuel l'ouvre et la referme.</p>
+        <p data-l="fr">Une action de raccourci ouvre la fenêtre, y compris quand Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim. Ici le joystick ne déplace pas de focus : haut/bas changent la température, gauche/droite la ventilation, le centre bascule le mode AUTO (régler la ventilation en fait sortir). Un repère en haut de la fenêtre rappelle ces gestes, et une jauge montre la température entre ses deux bornes. L'A/C, la recirculation et le sens de l'air (visage, pieds, pare-brise avant et arrière) se choisissent au doigt ; sur les firmwares équipés (SWI133, SWI68, SWI165), une colonne ajoute le volant chauffant et les sièges, dont le niveau se choisit d'un toucher — une couleur par niveau : vert, orange, rouge. La fenêtre se referme seule après le délai réglé (10 s par défaut) sans action, d'un second appui sur le raccourci ou par sa croix. Le joystick nécessite le service d'accessibilité ; sans lui, la fenêtre reste utilisable au doigt. Dans la maquette, la ★ droite du véhicule virtuel l'ouvre et la referme.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-profilecycle" data-hl-key="sc-profiles" data-demo="profileCycle">
@@ -654,7 +655,7 @@
     <p data-l="fr">Un onglet, sept automatisations. Chacune a son interrupteur, et sa carte se déplie quand vous l'activez.</p>
     <div class="demo-bar">
       <span class="lbl"><span data-l="fr">Essayer :</span></span>
-      <button type="button" data-demo-btn="confirm"><span data-l="fr">Popup de confirmation</span></button>
+      <button type="button" data-demo-btn="confirm"><span data-l="fr">Bandeau de confirmation</span></button>
       <button type="button" data-demo-btn="dock"><span data-l="fr">Régler la température et la batterie</span></button>
     </div>
   </div>
@@ -663,7 +664,7 @@
       <h3><span data-l="fr">Profil selon la température</span></h3>
       <p data-l="fr">Au-dessus ou en dessous d'un seuil, un profil s'applique, directement ou après confirmation.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Seuil de 0 à 60 °C, borne incluse. Popup OUI / NON pendant le délai réglé (10 s par défaut), au doigt ou au joystick droit du volant : NON ou délai écoulé, on retombe sur le profil Bluetooth ou par défaut. Température illisible ou profil supprimé : l'automatisation est ignorée.</p>
+        <p data-l="fr">Seuil de 0 à 60 °C, borne incluse. Un bandeau en bas de l'écran pose la question pendant le délai réglé (10 s par défaut), sans masquer la navigation : il rappelle la mesure, le seuil et le profil, et se répond au doigt ou au joystick droit du volant. NON ou délai écoulé, on retombe sur le profil Bluetooth ou par défaut. Température illisible ou profil supprimé : l'automatisation est ignorée.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-acauto" data-hl-key="auto-clim" data-go="automation">
@@ -787,6 +788,11 @@
     <div class="sec-kicker"><span data-l="fr">Barre du haut</span></div>
     <h2><span data-l="fr">Statistiques</span></h2>
     <p data-l="fr">Trajets, recharges et coût. Désactivé par défaut ; tout reste dans la voiture, rien n'est envoyé ailleurs.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="fr">Essayer :</span></span>
+      <button type="button" data-demo-btn="statsComplete"><span data-l="fr">Compléter une recharge</span></button>
+      <button type="button" data-demo-btn="statsTariff"><span data-l="fr">Corriger un tarif</span></button>
+    </div>
   </div>
   <div class="points three">
     <div class="pt" id="f-stats" data-hl-key="st-summary" data-demo="statsOn">
@@ -814,7 +820,7 @@
       <h3><span data-l="fr">Recharge</span></h3>
       <p data-l="fr">Énergie rechargée, coût et sessions AC / DC, même quand le boîtier était éteint.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Une charge de nuit est <b>reconstituée</b> au réveil ; on peut la <b>compléter</b> (type de prise, heures) pour obtenir la puissance moyenne, et <b>corriger le tarif</b> d'une session.</p>
+        <p data-l="fr">Une charge de nuit est <b>reconstituée</b> au réveil ; on peut la <b>compléter</b> (type de prise, heures) pour obtenir la puissance moyenne, et <b>corriger le tarif</b> d'une session. Ces deux saisies se font sans clavier, aux boutons − et + : heures et minutes (de cinq en cinq) pour les horaires, un pas au choix pour le tarif.</p>
       </details>
     </div>
   </div>
@@ -838,21 +844,28 @@
       <h3><span data-l="fr">Langues</span></h3>
       <p data-l="fr">Sept langues, demandées au tout premier lancement et modifiables ensuite.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Français, English, Deutsch, Español, Português, Italiano et Türkçe.</p>
+        <p data-l="fr">Français, English, Deutsch, Español, Português, Italiano et Türkçe. Au premier lancement, sept grandes tuiles : chaque langue s'y écrit dans sa propre langue.</p>
       </details>
     </div>
     <div class="pt" id="f-textsize" data-hl-key="s-textsize" data-go="settings:1">
       <h3><span data-l="fr">Interface et taille du texte</span></h3>
       <p data-l="fr">Écran de démarrage, thème Auto / Sombre / Clair et texte Standard, Grand ou Très grand.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">En Auto, l'app suit le mode jour/nuit du launcher MG. Les fenêtres flottantes (sélecteur de profil, confirmations, alerte de mise à jour, pop-up HVAC) prennent le thème de l'application. La taille du texte (+12,5 % ou +25 %) s'applique à toute l'app, popups compris, et le turc rejoint les langues. Essayez dans la maquette.</p>
+        <p data-l="fr">En Auto, l'app suit le mode jour/nuit du launcher MG. Les pop-ups et les bandeaux (sélecteur de profils, pop-up HVAC, confirmation, alerte de mise à jour, extinction) prennent le thème de l'application. La taille du texte (+12,5 % ou +25 %) s'applique à toute l'app, popups compris, et le turc rejoint les langues. Essayez dans la maquette.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-popupdelay" data-hl-key="s-popupdelay" data-go="settings:1">
       <h3><span data-l="fr">Délai des pop-ups</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.8</span></h3>
       <p data-l="fr">Un curseur règle le temps avant la fermeture automatique des pop-ups, de 1 à 60 secondes.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Dans Réglages, onglet Interface. Le délai, de 10 secondes par défaut, vaut pour les trois fenêtres qui se ferment seules : le sélecteur de profils, la question OUI / NON des automatisations et le pop-up HVAC. Chaque action dans la fenêtre relance le délai, et le prochain pop-up ouvert utilise la nouvelle valeur. Sans réponse à la fin du délai, la question OUI / NON vaut NON.</p>
+        <p data-l="fr">Dans Réglages, onglet Interface. Le délai, de 10 secondes par défaut, vaut pour tout ce qui se ferme seul : le sélecteur de profils, le pop-up HVAC et les trois bandeaux (question OUI / NON des automatisations, alerte de mise à jour, extinction du véhicule). Chaque action dans un pop-up relance le délai, et le prochain ouvert utilise la nouvelle valeur. Sans réponse à la fin du délai, la question vaut NON, l'alerte de mise à jour « plus tard », et l'extinction est annulée.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-newlook" data-hl-key="mw-pick" data-demo="pickApp">
+      <h3><span data-l="fr">Pop-ups et fenêtres redessinés</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.8</span></h3>
+      <p data-l="fr">La même présentation partout : cartes arrondies, gros boutons, et plus aucune saisie au clavier.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Par-dessus l'écran de la voiture, le sélecteur de profils et le pop-up HVAC s'affichent en plein cadre, et trois bandeaux en bas de l'écran — confirmation d'une automatisation, mise à jour disponible, extinction du véhicule — laissent le reste utilisable. Dans l'application, les confirmations se ressemblent toutes : bleu pour une action ordinaire, orange pour un avertissement, rouge pour ce qui efface ou éteint. Une application ou un profil se choisit dans une grille de tuiles, un raccourci se modifie dans deux listes côte à côte, et les horaires ou le tarif d'une recharge se règlent aux boutons − et +.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-topbar" data-hl-key="topbar" data-go="dashboard:0">
@@ -898,7 +911,7 @@
       <h3><span data-l="fr">Firmware non reconnu</span></h3>
       <p data-l="fr">Un avertissement s'affiche, puis vous pouvez forcer un mode de compatibilité.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">L'avertissement affiche la version brute détectée et propose Fermer l'app ou Continuer. Les pastilles de Réglages → Infos deviennent alors cliquables ; le choix est mémorisé et survit aux redémarrages.</p>
+        <p data-l="fr">L'avertissement affiche la version brute détectée et propose Fermer l'app ou Continuer, qui ouvre directement Réglages → Infos : touchez-y la pastille du firmware le plus proche du vôtre. Le choix est mémorisé et survit aux redémarrages.</p>
       </details>
     </div>
   </div>
@@ -948,6 +961,7 @@
     <div class="demo-bar">
       <span class="lbl"><span data-l="fr">Essayer :</span></span>
       <button type="button" data-demo-btn="dock"><span data-l="fr">Monter la vitesse du véhicule virtuel</span></button>
+      <button type="button" data-demo-btn="powerBanner" data-hl="power-banner"><span data-l="fr">Bandeau d'extinction</span></button>
     </div>
   </div>
   <div class="points">
@@ -967,7 +981,7 @@
       <h3><span data-l="fr">Éteindre la voiture, écran allumé</span></h3>
       <p data-l="fr">Coupe le véhicule en gardant la musique et la navigation, levier en P uniquement.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Reproduit le « Vehicle Power → Off » du launcher MG. Disponible dans Réglages, le sélecteur de profil et les raccourcis. L'app vérifie le levier avant la confirmation, puis encore à l'envoi. Volontairement absent de l'API externe.</p>
+        <p data-l="fr">Reproduit le « Vehicle Power → Off » du launcher MG. Disponible dans Réglages, le sélecteur de profil et les raccourcis. L'app vérifie le levier avant la confirmation, puis encore à l'envoi. Depuis un raccourci ou le sélecteur de profils, la confirmation est un bandeau en bas de l'écran : il se referme seul après le délai des pop-ups, et annonce « Extinction impossible » si la voiture n'est pas en P. Volontairement absent de l'API externe.</p>
       </details>
     </div>
   </div>
@@ -1002,9 +1016,9 @@
   <div class="points three">
     <div class="pt" id="f-updalert" data-hl-key="upd-overlay" data-demo="updOverlay">
       <h3><span data-l="fr">Alerte sur l'écran du véhicule</span></h3>
-      <p data-l="fr">Un message signale la nouvelle version sans ouvrir l'app, jamais en roulant.</p>
+      <p data-l="fr">Un bandeau en bas de l'écran signale la nouvelle version sans ouvrir l'app, jamais en roulant.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr"><b>Installer la MAJ</b> ouvre le dialogue habituel, <b>Ignorer cette version</b> ne la propose plus, <b>Ne plus me prévenir</b> coupe l'alerte ; toucher le fond vaut « plus tard ». Vérification 20 s après le contact, 6 h minimum entre deux requêtes, une seule fois par session.</p>
+        <p data-l="fr"><b>Installer la MAJ</b> ouvre le dialogue habituel, <b>Ignorer cette version</b> ne la propose plus, <b>Ne plus me prévenir</b> coupe l'alerte, <b>Plus tard</b> referme le bandeau — comme l'absence de réponse à la fin du délai des pop-ups. Le reste de l'écran reste utilisable. Vérification 20 s après le contact, 6 h minimum entre deux requêtes, une seule fois par session.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="s-checkupd" data-go="settings:3">
@@ -1018,7 +1032,7 @@
       <h3><span data-l="fr">Téléchargement sûr</span></h3>
       <p data-l="fr">L'APK doit venir de GitHub ou GitLab et porter la même signature, sinon il est supprimé.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Sans Wi-Fi, un avertissement rappelle qu'environ 10 Mo passeront par les données mobiles de la voiture. Installation manuelle possible : QR code vers les releases, clé USB en FAT32 et gestionnaire de fichiers. La variante <b>offline</b> n'a ni réseau ni mise à jour automatique.</p>
+        <p data-l="fr">La fenêtre de mise à jour montre les notes de version à gauche et les actions à droite. Sans Wi-Fi, un avertissement rappelle qu'environ 10 Mo passeront par les données mobiles de la voiture. Installation manuelle possible : QR code vers les releases, clé USB en FAT32 et gestionnaire de fichiers. La variante <b>offline</b> n'a ni réseau ni mise à jour automatique.</p>
       </details>
     </div>
   </div>
@@ -1199,8 +1213,8 @@
 
 <div class="dock" aria-label="Véhicule virtuel"></div>
 
-<script src="assets/js/strings.js?v=06b35e6d"></script>
-<script src="assets/js/sim.js?v=ca0b990d"></script>
+<script src="assets/js/strings.js?v=aaec5ae6"></script>
+<script src="assets/js/sim.js?v=2e66957f"></script>
 <script src="assets/js/site.js?v=aa5935a3"></script>
 <script src="assets/js/explorer.js?v=ffc271c4"></script>
 </body>

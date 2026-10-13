@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Overlay affiché au-dessus du launcher MG quand l'utilisateur déclenche
-    le raccourci "Sélecteur de profil" via le volant.
-    Le fond semi-transparent capte les appuis en dehors de la carte pour la fermer.
-    Les boutons de profil sont ajoutés en grille 2 colonnes dans ProfilePickerOverlay.kt.
--->
-<FrameLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- Sélecteur de profils (pop-up du raccourci volant, et du conflit de profils Bluetooth), refait
+     dans le style du pop-up HVAC « moderne » : proposition « B » choisie sur maquette le
+     2026-10-13 — les profils en une rangée de grandes cartes, la luminosité et les actions en
+     bandeau dessous.
+
+     Presque rien n'est peint ici : fonds, teintes et états sont posés par ProfilePickerOverlay,
+     qui suit le thème de l'application. Les cartes de profil (item_overlay_profile_card.xml) sont
+     ajoutées par le code, à la largeur que donne ProfilePicker.largeurCarteDp.
+
+     Tailles DE BASE, pour une carte de 1108 × 392 dp : ProfilePickerOverlay gonfle la mise en page
+     avec une densité corrigée, comme le pop-up HVAC. Changer la largeur ou la hauteur de la carte
+     demande d'y reporter ses constantes, et ProfilePicker.RANGEE_DP (la rangée : 1076 dp).
+
+     Le curseur de luminosité est SOUS les préréglages, pas à côté : au joystick, gauche / droite
+     le règlent, il lui faut donc sa propre ligne — on y descend, on en remonte. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/overlay_backdrop"
     android:layout_width="match_parent"
@@ -15,235 +23,300 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- Carte centrale — pleine largeur avec marges latérales -->
     <LinearLayout
         android:id="@+id/overlay_card"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_gravity="center"
-        android:layout_marginHorizontal="60dp"
-        android:layout_marginVertical="16dp"
         android:orientation="vertical"
-        android:background="@drawable/bg_card_rounded"
-        android:paddingHorizontal="24dp"
-        android:paddingTop="24dp"
-        android:paddingBottom="20dp"
+        android:background="@drawable/bg_hvac_modern_card"
+        android:padding="16dp"
         android:clickable="true"
         android:focusable="true">
 
-        <!-- Titre -->
-        <TextView
+        <!-- ── En-tête : titre, décompte, fermeture — et, par-dessus, centré, le repère du
+             joystick (ou l'avertissement, sans service d'accessibilité). ── -->
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/overlay_profile_title"
-            android:textColor="@color/text_primary"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="18dp" />
+            android:layout_height="44dp"
+            android:layout_marginBottom="10dp">
 
-        <!-- ☀ Luminosité (en haut) — masqué si le firmware ne supporte pas le contrôle -->
-        <LinearLayout
-            android:id="@+id/overlay_brightness_section"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:layout_marginBottom="14dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/overlay_brightness_title"
-                android:textColor="@color/dash_text_lo"
-                android:textSize="15sp"
-                android:textStyle="bold"
-                android:letterSpacing="0.08"
-                android:textAllCaps="true"
-                android:layout_marginBottom="12dp" />
-
-            <!-- 3 presets : Nuit / Moyen / Jour (gros boutons, faciles à viser) -->
             <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:layout_marginBottom="12dp">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/overlay_bri_night"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp" android:layout_height="74dp" android:layout_weight="1"
-                    android:layout_marginEnd="5dp"
-                    android:text="@string/overlay_brightness_night"
-                    android:textColor="@color/text_secondary" android:textSize="18sp" android:textAllCaps="true"
-                    app:backgroundTint="@color/dash_btn" app:strokeColor="@color/dash_border" app:strokeWidth="1dp" app:cornerRadius="10dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/overlay_bri_mid"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp" android:layout_height="74dp" android:layout_weight="1"
-                    android:layout_marginStart="5dp" android:layout_marginEnd="5dp"
-                    android:text="@string/overlay_brightness_mid"
-                    android:textColor="@color/text_secondary" android:textSize="18sp" android:textAllCaps="true"
-                    app:backgroundTint="@color/dash_btn" app:strokeColor="@color/dash_border" app:strokeWidth="1dp" app:cornerRadius="10dp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/overlay_bri_day"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp" android:layout_height="74dp" android:layout_weight="1"
-                    android:layout_marginStart="5dp"
-                    android:text="@string/overlay_brightness_day"
-                    android:textColor="@color/text_secondary" android:textSize="18sp" android:textAllCaps="true"
-                    app:backgroundTint="@color/dash_btn" app:strokeColor="@color/dash_border" app:strokeWidth="1dp" app:cornerRadius="10dp" />
-
-            </LinearLayout>
-
-            <!-- Curseur (gros pouce + piste épaisse, réglable en conduisant) + % -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
 
-                <com.google.android.material.slider.Slider
-                    android:id="@+id/overlay_bri_slider"
+                <ImageView
+                    android:id="@+id/overlay_title_icon"
+                    android:layout_width="26dp"
+                    android:layout_height="26dp"
+                    android:layout_marginStart="4dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_overlay_profiles" />
+
+                <TextView
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:valueFrom="5"
-                    android:valueTo="100"
-                    android:value="50"
-                    android:stepSize="1"
-                    app:labelBehavior="gone"
-                    app:thumbRadius="16dp"
-                    app:trackHeight="12dp"
-                    app:thumbColor="@color/dash_accent"
-                    app:trackColorActive="@color/dash_accent"
-                    app:trackColorInactive="@color/dash_border" />
-
-                <TextView
-                    android:id="@+id/overlay_bri_value"
-                    android:layout_width="64dp"
-                    android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
-                    android:gravity="end"
-                    android:text="--%"
+                    android:text="@string/overlay_profile_title"
                     android:textColor="@color/text_primary"
-                    android:textSize="22sp"
-                    android:textStyle="bold" />
-
-            </LinearLayout>
-
-            <!-- Séparateur -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/dash_border"
-                android:layout_marginTop="14dp" />
-
-        </LinearLayout>
-
-        <!-- Liste de profils défilante (prend l'espace restant entre luminosité et bas) -->
-        <ScrollView
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:fillViewport="false"
-            android:scrollbars="vertical">
-
-            <!-- Conteneur grille 2 colonnes (rempli dynamiquement) -->
-            <LinearLayout
-                android:id="@+id/overlay_profiles_container"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical" />
-
-        </ScrollView>
-
-        <!-- Séparateur -->
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="@color/dash_border"
-            android:layout_marginTop="14dp"
-            android:layout_marginBottom="12dp" />
-
-        <!-- Ligne bas : bouton Fermer + compte à rebours -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
-
-            <!-- Zone gauche (poids 1) : FERMER + compte à rebours -->
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="horizontal"
-                android:gravity="center_vertical|start">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/overlay_btn_close"
-                    android:layout_width="wrap_content"
-                    android:layout_height="48dp"
-                    android:text="@string/nav_close"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="15sp"
-                    android:textAllCaps="true"
-                    app:backgroundTint="@color/dash_btn"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/dash_border"
-                    app:cornerRadius="8dp"
-                    app:icon="@android:drawable/ic_menu_close_clear_cancel"
-                    app:iconTint="@color/dash_text_lo"
-                    app:iconGravity="textStart" />
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
 
                 <TextView
                     android:id="@+id/overlay_countdown"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="16dp"
-                    android:textColor="@color/dash_text_lo"
-                    android:textSize="14sp" />
+                    android:layout_marginEnd="12dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:maxLines="1" />
+
+                <ImageView
+                    android:id="@+id/overlay_btn_close"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:contentDescription="@string/nav_close"
+                    android:scaleType="center"
+                    android:src="@drawable/ic_hvac_close" />
 
             </LinearLayout>
 
-            <!-- Centre : bouton Éteindre la voiture (gated firmware dans le code) -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/overlay_btn_poweroff"
-                android:layout_width="wrap_content"
-                android:layout_height="48dp"
-                android:text="@string/shortcuts_action_vehicle_power_off"
-                android:textColor="@color/text_secondary"
-                android:textSize="15sp"
-                android:textAllCaps="true"
-                app:backgroundTint="@color/dash_btn"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/dash_border"
-                app:cornerRadius="8dp"
-                app:icon="@android:drawable/ic_lock_power_off"
-                app:iconTint="@color/dash_text_lo"
-                app:iconGravity="textStart" />
-
-            <!-- Zone droite (poids 1) : bouton Ouvrir MG4Control (équilibre aussi le centre) -->
             <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
+                android:id="@+id/overlay_joy_chip"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:layout_gravity="center"
                 android:orientation="horizontal"
-                android:gravity="center_vertical|end">
+                android:gravity="center_vertical"
+                android:paddingStart="12dp"
+                android:paddingEnd="14dp">
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/overlay_btn_open_app"
+                <TextView
+                    android:id="@+id/overlay_joy_title"
                     android:layout_width="wrap_content"
-                    android:layout_height="48dp"
+                    android:layout_height="wrap_content"
+                    android:drawableStart="@drawable/ic_hvac_target"
+                    android:drawablePadding="6dp"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/overlay_joy_move"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:drawableStart="@drawable/ic_overlay_stick_move"
+                    android:drawablePadding="3dp"
+                    android:text="@string/overlay_joy_navigate"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+
+                <TextView
+                    android:id="@+id/overlay_joy_ok"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:drawableStart="@drawable/ic_hvac_stick_click"
+                    android:drawablePadding="4dp"
+                    android:text="@string/overlay_joy_validate"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+        </FrameLayout>
+
+        <!-- ── Profils : une rangée de cartes. Largeur fixe : c'est elle qui donne sa largeur
+             à la carte. Au-delà de cinq profils elle défile, et la sixième carte dépasse du bord. ── -->
+        <HorizontalScrollView
+            android:id="@+id/overlay_profiles_scroll"
+            android:layout_width="1076dp"
+            android:layout_height="170dp"
+            android:fillViewport="true"
+            android:overScrollMode="never"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:id="@+id/overlay_profiles_container"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:gravity="center_horizontal"
+                android:baselineAligned="false" />
+
+        </HorizontalScrollView>
+
+        <!-- ── Bandeau : luminosité à gauche, actions à droite ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="124dp"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <!-- Luminosité — masquée si le firmware ne sait pas la régler -->
+            <LinearLayout
+                android:id="@+id/overlay_brightness_section"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginEnd="12dp"
+                android:orientation="vertical"
+                android:background="@drawable/bg_hvac_panel"
+                android:padding="12dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:baselineAligned="false">
+
+                    <ImageView
+                        android:id="@+id/overlay_bri_icon"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:contentDescription="@string/overlay_brightness_title"
+                        android:src="@drawable/ic_overlay_brightness" />
+
+                    <!-- Préréglages : Nuit / Moyen / Jour ; celui qui correspond au curseur s'allume -->
+                    <LinearLayout
+                        android:id="@+id/overlay_bri_presets"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:orientation="horizontal"
+                        android:baselineAligned="false"
+                        android:padding="4dp">
+
+                        <TextView
+                            android:id="@+id/overlay_bri_night"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:text="@string/overlay_brightness_night"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:maxLines="1" />
+
+                        <TextView
+                            android:id="@+id/overlay_bri_mid"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:text="@string/overlay_brightness_mid"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:maxLines="1" />
+
+                        <TextView
+                            android:id="@+id/overlay_bri_day"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:gravity="center"
+                            android:text="@string/overlay_brightness_day"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            android:maxLines="1" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/overlay_bri_value"
+                        android:layout_width="76dp"
+                        android:layout_height="wrap_content"
+                        android:gravity="end"
+                        android:textColor="@color/text_primary"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        android:maxLines="1" />
+
+                </LinearLayout>
+
+                <!-- Curseur (gros pouce, piste épaisse) : sa ligne à lui pour le joystick -->
+                <FrameLayout
+                    android:id="@+id/overlay_bri_slider_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1">
+
+                    <com.google.android.material.slider.Slider
+                        android:id="@+id/overlay_bri_slider"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:valueFrom="5"
+                        android:valueTo="100"
+                        android:value="50"
+                        android:stepSize="1"
+                        app:labelBehavior="gone"
+                        app:thumbRadius="14dp"
+                        app:trackHeight="10dp"
+                        app:thumbColor="@color/dash_accent"
+                        app:trackColorActive="@color/dash_accent"
+                        app:trackColorInactive="@color/dash_border" />
+
+                </FrameLayout>
+
+            </LinearLayout>
+
+            <!-- Actions : ouvrir l'application, et éteindre la voiture sur les firmwares qui le savent -->
+            <LinearLayout
+                android:id="@+id/overlay_actions"
+                android:layout_width="430dp"
+                android:layout_height="match_parent"
+                android:orientation="horizontal"
+                android:baselineAligned="false"
+                android:background="@drawable/bg_hvac_panel"
+                android:padding="12dp">
+
+                <TextView
+                    android:id="@+id/overlay_btn_open_app"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="10dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:drawableTop="@drawable/ic_overlay_open"
+                    android:drawablePadding="6dp"
                     android:text="@string/overlay_open_app"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="15sp"
-                    android:textAllCaps="true"
-                    app:backgroundTint="@color/dash_btn"
-                    app:strokeWidth="1dp"
-                    app:strokeColor="@color/dash_border"
-                    app:cornerRadius="8dp" />
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:maxLines="2" />
+
+                <TextView
+                    android:id="@+id/overlay_btn_poweroff"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:gravity="center"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="10dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:drawableTop="@drawable/ic_overlay_power"
+                    android:drawablePadding="6dp"
+                    android:text="@string/shortcuts_action_vehicle_power_off"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:maxLines="2" />
 
             </LinearLayout>
 

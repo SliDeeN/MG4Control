@@ -1,6 +1,5 @@
 package com.mg4.control.ui
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Rect
@@ -495,112 +494,51 @@ class StatsFragment : Fragment() {
      * la bonne.
      */
     private fun askCompletion(session: ChargeSession) {
-        val ctx = requireContext()
-        var type = session.type
-        val boutons = mutableListOf<Pair<MaterialButton, ChargeType?>>()
-
-        fun peindre() = boutons.forEach { (b, valeur) ->
-            val on = valeur == type
-            b.backgroundTintList = ColorStateList.valueOf(
-                ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn))
-            b.setTextColor(ctx.getColor(if (on) R.color.dash_accent else R.color.text_secondary))
-            b.strokeColor = ColorStateList.valueOf(
-                ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border))
+        StatsDialogs.completer(requireContext(), session) { type, debut, fin ->
+            val (d, f) = ChargeTimes.resolve(debut, fin, session.startMs, session.endMs)
+            store.completeCharge(session.startMs, type, d, f)
+            render()
         }
-
-        fun champ(valeur: Long?) = EditText(ctx).apply {
-            inputType = InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME
-            setText(valeur?.let { ChargeTimes.hhmm(it) } ?: "")
-            setTextColor(ctx.getColor(R.color.text_primary))
-        }
-        val debut = champ(session.userStartMs)
-        val fin = champ(session.userEndMs)
-
-        val corps = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(ctx, 20), dp(ctx, 4), dp(ctx, 20), 0)
-            addView(label(ctx, getString(R.string.stats_complete_type), 13f, R.color.text_secondary))
-            addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                listOf(
-                    ChargeType.AC to R.string.stats_charge_ac,
-                    ChargeType.DC to R.string.stats_charge_dc,
-                    null to R.string.stats_charge_unknown,
-                ).forEach { (valeur, libelle) ->
-                    addView(MaterialButton(ctx).apply {
-                        text = getString(libelle)
-                        textSize = 13f
-                        isAllCaps = false
-                        strokeWidth = dp(ctx, 1)
-                        cornerRadius = dp(ctx, 8)
-                        layoutParams = LinearLayout.LayoutParams(0, dp(ctx, 52), 1f)
-                            .also { it.marginEnd = dp(ctx, 6) }
-                        setOnClickListener { type = valeur; peindre() }
-                        boutons += this to valeur
-                    })
-                }
-            })
-            addView(label(ctx, getString(R.string.stats_complete_start), 13f, R.color.text_secondary))
-            addView(debut)
-            addView(label(ctx, getString(R.string.stats_complete_end), 13f, R.color.text_secondary))
-            addView(fin)
-        }
-        peindre()
-
-        AlertDialog.Builder(ctx)
-            .setTitle(R.string.stats_complete_session)
-            .setMessage(getString(R.string.stats_complete_note))
-            .setView(corps)
-            .setPositiveButton(R.string.stats_save) { _, _ ->
-                val (d, f) = ChargeTimes.resolve(
-                    debut.text.toString(), fin.text.toString(), session.startMs, session.endMs
-                )
-                store.completeCharge(session.startMs, type, d, f)
-                render()
-            }
-            .setNegativeButton(R.string.nav_close, null)
-            .show()
     }
 
     private fun askTariff(session: ChargeSession, s: StatsSettings) {
-        val ctx = requireContext()
-        val input = EditText(ctx).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-            setText(fmt3(session.tariffOverride ?: s.priceFor(session.type)))
-            setTextColor(ctx.getColor(R.color.text_primary))
-        }
-        AlertDialog.Builder(ctx)
-            .setTitle(R.string.stats_fix_tariff)
-            .setMessage(getString(R.string.stats_fix_tariff_note))
-            .setView(input)
-            .setPositiveButton(R.string.stats_save) { _, _ ->
-                val value = input.text.toString().replace(',', '.').toFloatOrNull()
-                if (value != null) {
-                    store.overrideTariff(session.startMs, StatsSettings.clampPrice(value))
-                    render()
-                }
-            }
-            .setNeutralButton(R.string.stats_tariff_default) { _, _ ->
+        val defaut = s.priceFor(session.type)
+        val prix = session.tariffOverride ?: defaut
+        StatsDialogs.tarif(
+            requireContext(),
+            prix = prix,
+            // Le plus grand des deux : un tarif par défaut à zéro (charge gratuite) ne doit pas
+            // réduire les pas à ceux d'un prix nul.
+            reference = maxOf(prix, defaut),
+            unite = "${s.currency}/kWh",
+            onEnregistrer = { valeur ->
+                store.overrideTariff(session.startMs, StatsSettings.clampPrice(valeur))
+                render()
+            },
+            onDefaut = {
                 store.overrideTariff(session.startMs, null)
                 render()
-            }
-            .setNegativeButton(R.string.nav_close, null)
-            .show()
+            },
+        )
     }
 
     private fun confirmClear() {
         val ctx = requireContext()
         val h = store.history()
-        AlertDialog.Builder(ctx)
-            .setTitle(R.string.stats_clear)
-            .setMessage(getString(R.string.stats_clear_confirm, h.trips.size, h.charges.size))
-            .setPositiveButton(R.string.stats_clear) { _, _ ->
+        AppDialog.confirmer(
+            ctx,
+            titre = getString(R.string.stats_clear),
+            message = getString(R.string.stats_clear_confirm, h.trips.size, h.charges.size),
+            ton = AppDialog.Ton.DANGER,
+            icone = R.drawable.ic_dialog_trash,
+            oui = getString(R.string.stats_clear),
+            non = getString(R.string.nav_close),
+            onOui = {
                 store.clear()
                 expanded = null
                 render()
-            }
-            .setNegativeButton(R.string.nav_close, null)
-            .show()
+            },
+        )
     }
 
     // ═════════════════════════════════════════════════════════════════════════

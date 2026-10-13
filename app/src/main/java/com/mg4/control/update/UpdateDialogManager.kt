@@ -5,6 +5,7 @@ import android.app.AlertDialog
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Paint
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
@@ -18,9 +19,9 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.button.MaterialButton
 import com.mg4.control.util.QrCode
 import com.mg4.control.R
+import com.mg4.control.ui.AppDialog
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
@@ -38,13 +39,18 @@ object UpdateDialogManager {
     private const val GITHUB_RELEASES_URL =
         "https://github.com/SliDeeN/MG4Control/releases/latest"
 
+    /** Largeur de la fenêtre, en dp : celle de la maquette retenue. */
+    private const val LARGEUR_DP = 1100f
+
     fun show(activity: AppCompatActivity, info: UpdateInfo) {
         val view = LayoutInflater.from(activity).inflate(R.layout.dialog_update, null)
 
-        val dialog = AlertDialog.Builder(activity)
-            .setView(view)
-            .setCancelable(false)
-            .create()
+        // On n'en sort que par un bouton : toucher à côté ne doit pas faire disparaître une mise
+        // à jour, ni un téléchargement en cours.
+        val dialog = AppDialog.afficher(activity, view, LARGEUR_DP, annulable = false)
+        val accent = ColorStateList.valueOf(activity.getColor(R.color.dash_accent))
+        view.findViewById<ImageView>(R.id.iv_update_icon).imageTintList = accent
+        view.findViewById<ImageView>(R.id.iv_update_arrow).imageTintList = accent
 
         // ── Références vues ──────────────────────────────────────────────────
         val groupInfo     = view.findViewById<View>(R.id.group_info)
@@ -56,22 +62,21 @@ object UpdateDialogManager {
         val tvTo         = view.findViewById<TextView>(R.id.tv_version_to)
         val tvNotes      = view.findViewById<TextView>(R.id.tv_release_notes)
         val rowDataWarn  = view.findViewById<View>(R.id.row_data_warning)
-        val btnAuto      = view.findViewById<MaterialButton>(R.id.btn_update_auto)
-        val btnManual    = view.findViewById<MaterialButton>(R.id.btn_update_manual)
-        val btnLater     = view.findViewById<MaterialButton>(R.id.btn_update_later)
-        val btnSkip      = view.findViewById<MaterialButton>(R.id.btn_update_skip)
+        val btnAuto      = view.findViewById<TextView>(R.id.btn_update_auto)
+        val btnManual    = view.findViewById<TextView>(R.id.btn_update_manual)
+        val btnLater     = view.findViewById<TextView>(R.id.btn_update_later)
+        val btnSkip      = view.findViewById<TextView>(R.id.btn_update_skip)
 
         // Phase 2 — Progress
         val tvStatus     = view.findViewById<TextView>(R.id.tv_progress_status)
         val progressBar  = view.findViewById<ProgressBar>(R.id.progress_bar)
-        val btnCancel    = view.findViewById<MaterialButton>(R.id.btn_cancel_download)
+        val btnCancel    = view.findViewById<TextView>(R.id.btn_cancel_download)
 
         // Phase 3 — Manuel
         val ivQr         = view.findViewById<ImageView>(R.id.iv_update_qr)
         val tvGhLink     = view.findViewById<TextView>(R.id.tv_update_gh_link)
-        val tvApkPath    = view.findViewById<TextView>(R.id.tv_apk_path)
         val tvManualInst = view.findViewById<TextView>(R.id.tv_manual_instructions)
-        val btnClose     = view.findViewById<MaterialButton>(R.id.btn_close_manual)
+        val btnClose     = view.findViewById<TextView>(R.id.btn_close_manual)
 
         // ── Remplissage initial ──────────────────────────────────────────────
         val currentVersion = try {
@@ -86,7 +91,8 @@ object UpdateDialogManager {
         rowDataWarn.visibility = if (onWifi) View.GONE else View.VISIBLE
 
 
-        // ── Bouton NE PLUS ME RAPPELER ───────────────────────────────────────
+        // ── Lien NE PLUS ME RAPPELER ─────────────────────────────────────────
+        btnSkip.paintFlags = btnSkip.paintFlags or Paint.UNDERLINE_TEXT_FLAG
         btnSkip.setOnClickListener {
             UpdateChecker.skipVersion(activity, info.versionName)
             dialog.dismiss()
@@ -112,7 +118,6 @@ object UpdateDialogManager {
         fun showManualPanel(inDownloads: Boolean = false) {
             if (inDownloads) {
                 tvManualInst.text = activity.getString(R.string.update_downloaded_instructions)
-                tvApkPath.visibility = View.GONE
             }
             switchTo(groupInfo, groupProgress, groupManual, showGroup = groupManual)
         }
@@ -123,17 +128,20 @@ object UpdateDialogManager {
         // ── Bouton TÉLÉCHARGER L'APK ──────────────────────────────────────────
         btnAuto.setOnClickListener {
             if (!onWifi) {
-                AlertDialog.Builder(activity)
-                    .setTitle(R.string.update_data_warn_title)
-                    .setMessage(R.string.update_data_warn_message)
-                    .setPositiveButton(R.string.update_continue) { _, _ ->
+                AppDialog.confirmer(
+                    activity,
+                    titre = activity.getString(R.string.update_data_warn_title),
+                    message = activity.getString(R.string.update_data_warn_message),
+                    ton = AppDialog.Ton.ALERTE,
+                    oui = activity.getString(R.string.update_continue),
+                    non = activity.getString(R.string.update_cancel),
+                    onOui = {
                         switchTo(groupInfo, groupProgress, groupManual, showGroup = groupProgress)
                         launchDownload(activity, info, dialog, tvStatus, progressBar, btnCancel) {
                             showManualPanel(inDownloads = true)
                         }
-                    }
-                    .setNegativeButton(R.string.update_cancel, null)
-                    .show()
+                    },
+                )
             } else {
                 switchTo(groupInfo, groupProgress, groupManual, showGroup = groupProgress)
                 launchDownload(activity, info, dialog, tvStatus, progressBar, btnCancel) {
@@ -141,8 +149,6 @@ object UpdateDialogManager {
                 }
             }
         }
-
-        dialog.show()
     }
 
     // ── Téléchargement via DownloadManager → dossier Téléchargements public ───
@@ -153,7 +159,7 @@ object UpdateDialogManager {
         dialog: AlertDialog,
         tvStatus: TextView,
         progressBar: ProgressBar,
-        btnCancel: MaterialButton,
+        btnCancel: TextView,
         onDownloaded: () -> Unit
     ) {
         // Deuxième barrière : UpdateChecker a déjà filtré l'URL, on ne fait jamais

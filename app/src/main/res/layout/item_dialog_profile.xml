@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Un profil retrouvé, dans la fenêtre « Restaurer les profils ? » : la pastille de son mode de
+     conduite et son nom. Largeur et pastille posées par RestoreProfilesDialog. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_dialog_tile"
+    android:padding="12dp">
+
+    <!-- Mode de conduite ; invisible si le profil n'applique pas la catégorie Conduite -->
+    <TextView
+        android:id="@+id/dialog_profile_mode"
+        android:layout_width="wrap_content"
+        android:layout_height="22dp"
+        android:gravity="center"
+        android:paddingStart="9dp"
+        android:paddingEnd="9dp"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/dialog_profile_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/text_primary"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+</LinearLayout>

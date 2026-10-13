@@ -1,6 +1,5 @@
 package com.mg4.control.ui
 
-import android.app.AlertDialog
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -63,14 +62,18 @@ class ProfileFragment : Fragment() {
                 openEditor(existing = profile, data = profile)
             },
             onDelete = { profile ->
-                AlertDialog.Builder(requireContext())
-                    .setTitle("Supprimer \"${profile.name}\" ?")
-                    .setPositiveButton(R.string.profile_delete) { _, _ ->
+                AppDialog.confirmer(
+                    requireContext(),
+                    titre = getString(R.string.profile_delete_title, profile.name),
+                    ton = AppDialog.Ton.DANGER,
+                    icone = R.drawable.ic_dialog_trash,
+                    oui = getString(R.string.profile_delete),
+                    non = getString(R.string.profile_cancel),
+                    onOui = {
                         manager.delete(profile.id)
                         refreshList()
-                    }
-                    .setNegativeButton(R.string.profile_cancel, null)
-                    .show()
+                    },
+                )
             }
         )
 

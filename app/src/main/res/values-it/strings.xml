@@ -41,6 +41,11 @@
     <string name="overlay_brightness_day">Giorno</string>
 <string name="overlay_profile_title">Profili di guida</string>
     <string name="overlay_open_app">Apri MG4Control</string>
+    <string name="overlay_joy_navigate">Naviga</string>
+    <string name="overlay_joy_validate">Conferma</string>
+    <string name="overlay_profile_active">Attivo</string>
+    <string name="overlay_profile_current">Profilo attuale</string>
+    <string name="overlay_profile_apply">Applica</string>
     <string name="overlay_countdown">Chiusura tra %1$ds</string>
     <string name="shortcuts_profile_prefix">Avvia profilo</string>
     <string name="shortcuts_pick_profile_title">Scegli un profilo</string>
@@ -48,6 +53,8 @@
     <string name="shortcuts_action_open_app">Apri MG4Control</string>
     <string name="shortcuts_action_open_custom_app">Avvia un\'app</string>
     <string name="shortcuts_pick_app_title">Scegli un\'app</string>
+    <string name="choice_count_apps">Applicazioni: %1$d</string>
+    <string name="choice_count_profiles">Profili: %1$d</string>
     <string name="shortcuts_open_custom_prefix">Avvia</string>
     <string name="shortcuts_warning_title">Scorciatoie al volante</string>
     <string name="shortcuts_warning_message">⚠ Se il launcher ufficiale è configurato su un tasto, avrà la priorità su MG4Control.\n\nEsempio: se la telecamera 360° è assegnata alla pressione singola nel launcher, MG4Control non riuscirà a intercettare quel tasto e la telecamera si attiverà al suo posto.\n\nSi consiglia di disattivare le scorciatoie del launcher ufficiale per evitare conflitti.</string>
@@ -106,6 +113,7 @@
     <string name="profile_set_default">Imposta predefinito</string>
     <string name="profile_set_as_default">Imposta come profilo predefinito</string>
     <string name="profile_delete">Elimina</string>
+    <string name="profile_delete_title">Eliminare «%1$s»?</string>
     <string name="profile_edit">Modifica</string>
     <string name="profile_name_hint">Nome del profilo</string>
     <string name="profile_name_required">Il nome è obbligatorio</string>
@@ -236,6 +244,7 @@
     <string name="fw_unknown_title">⚠ Firmware sconosciuto</string>
     <string name="fw_unknown_body">Questo firmware non è ancora supportato nativamente da MG4 Control.\n\nPuoi continuare selezionando manualmente una modalità di compatibilità, ma alcune funzioni potrebbero non funzionare correttamente.</string>
     <string name="fw_unknown_hint">Dopo aver chiuso questa finestra, tocca SWI133 o SWI68 nella barra superiore per scegliere la tua modalità di compatibilità.</string>
+    <string name="fw_unknown_hint_settings">«Continua» apre %1$s › %2$s: scegli lì il firmware più vicino al tuo.</string>
     <string name="fw_unknown_btn_close">Chiudi app</string>
     <string name="fw_unknown_btn_continue">Continua</string>
 
@@ -267,6 +276,9 @@
     <string name="vehicle_power_dialog_confirm">Spegni</string>
     <string name="vehicle_power_dialog_cancel">Annulla</string>
     <string name="vehicle_power_need_park">L\'auto deve essere ferma, con il cambio in P.</string>
+    <string name="vehicle_power_banner_title">Spegnere il veicolo?</string>
+    <string name="vehicle_power_banner_msg">Il veicolo viene spento, lo schermo resta attivo.</string>
+    <string name="vehicle_power_banner_impossible">Spegnimento impossibile</string>
     <string name="settings_theme">Aspetto</string>
     <string name="settings_theme_auto">Auto</string>
     <string name="settings_theme_dark">Modalità scura</string>
@@ -316,6 +328,9 @@
     <string name="automation_confirm_msg">La temperatura esterna è sotto i %1$d°C\n(%2$s°C temperatura attuale)\nApplicare il profilo «%3$s»?</string>
     <string name="automation_confirm_yes">SÌ</string>
     <string name="automation_confirm_no">NO</string>
+    <string name="automation_confirm_below">sotto la soglia di %1$s</string>
+    <string name="automation_confirm_above">sopra la soglia di %1$s</string>
+    <string name="automation_confirm_question">Applicare il profilo?</string>
     <string name="automation_direction_label">Attiva quando la temperatura esterna è:</string>
     <string name="automation_dir_below">Inferiore a</string>
     <string name="automation_dir_above">Superiore a</string>
@@ -552,7 +567,6 @@
     <string name="shortcuts_action_defrost_rear">Sbrinamento posteriore (ON/OFF)</string>
     <string name="shortcuts_action_hvac_recirc">Ricircolo: ciclo</string>
     <string name="shortcuts_action_hvac_popup">Pop-up HVAC</string>
-    <string name="shortcuts_action_hvac_popup_modern">Pop-up HVAC – nuovo design</string>
     <string name="hvac_popup_temp_up">Temp. +</string>
     <string name="hvac_popup_temp_down">Temp. −</string>
     <string name="hvac_popup_fan_up">Ventil. +</string>
@@ -560,7 +574,6 @@
     <string name="hvac_popup_compressor">Compressore</string>
     <string name="hvac_popup_heating">Riscaldamento</string>
     <string name="hvac_popup_joystick_title">Joystick destro</string>
-    <string name="hvac_popup_joystick_text">Regola dal volante</string>
     <string name="hvac_popup_joystick_off_title">Joystick inattivo</string>
     <string name="hvac_popup_joystick_off_text">Attiva l’accessibilità o usa lo schermo</string>
     <string name="shortcuts_action_brightness_up">Luminosità +</string>

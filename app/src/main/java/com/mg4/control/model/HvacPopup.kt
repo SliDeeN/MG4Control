@@ -35,7 +35,7 @@ object HvacPopup {
         /** Un niveau de ventilation écrit à la main — c'est aussi ce qui fait sortir d'AUTO. */
         data class Ventilation(val cible: Int) : Action()
 
-        /** Passer en mode AUTO : la case centrale de la croix. */
+        /** Passer en mode AUTO : le clic central du joystick, ou le bouton AUTO. */
         object Auto : Action()
     }
 
@@ -95,45 +95,59 @@ object HvacPopup {
         (reglages.dernierNiveau ?: ((reglages.fanMin + reglages.fanMax) / 2))
             .coerceIn(reglages.fanMin, reglages.fanMax)
 
-    // ── Sièges chauffants (firmwares équipés seulement) ──────────────────────
-    // L'ordre des niveaux et le compte des crans vivent dans [SeatHeat].
-
-    /** Niveau d'un siège en pastilles pleines et vides : « ● ● ○ » pour 2. */
-    fun pastilles(niveau: Int): String {
-        val plein = niveau.coerceIn(0, SeatHeat.MAX_LEVEL)
-        return (1..SeatHeat.MAX_LEVEL).joinToString(" ") { if (it <= plein) "●" else "○" }
-    }
-
     // ── Taille de la fenêtre ─────────────────────────────────────────────────
-    const val LARGEUR_DP = 900f      // la carte de overlay_hvac_popup.xml, sans chauffages
-    const val HAUTEUR_DP = 390f      // sa hauteur en texte « Standard »
-    private const val PART_LARGEUR = 0.63f
-    private const val PART_HAUTEUR = 0.72f
+    const val LARGEUR_DP = 864f      // la carte de overlay_hvac_popup.xml, sans chauffages
+    const val HAUTEUR_DP = 392f
+
+    /** Ce que la colonne des chauffages ajoute à la largeur de la carte, sur les firmwares équipés. */
+    const val CHAUFFAGES_DP = 244f
+    const val PART_LARGEUR = 0.96f
+    const val PART_HAUTEUR = 0.82f
 
     /**
-     * Agrandissement à appliquer à la fenêtre, dessinée pour [LARGEUR_DP] × [HAUTEUR_DP] dp, pour
-     * qu'elle prenne la même part de l'ÉCRAN quelle que soit sa densité : au plus 63 % de la
-     * largeur et 72 % de la hauteur. Le reste de la hauteur laisse passer la barre d'état et le
-     * texte « Très grand » sans déborder.
+     * Agrandissement à appliquer à un pop-up dessiné pour une carte de [largeurDp] × [hauteurDp]
+     * dp, pour qu'il prenne la même part de l'ÉCRAN quelle que soit sa densité : au plus
+     * [partLargeur] de la largeur et [partHauteur] de la hauteur. Par défaut, la carte du pop-up
+     * HVAC sans sa colonne des chauffages ; le sélecteur de profils passe par ici avec la sienne.
      *
-     * La colonne des chauffages (firmwares équipés) ajoute 236 dp à la carte sans changer cette
-     * échelle : la fenêtre occupe alors environ 79 % de la largeur, à taille de boutons égale.
+     * Sur la voiture c'est la hauteur qui limite : 82 % de l'écran, presque toute celle que la
+     * barre d'état laisse (réglé après l'essai du 2026-10-13, pour des commandes plus grandes).
+     * Les 96 % de largeur ne servent que de garde sur un écran étroit.
      *
      * On raisonne en part d'écran, pas en dp fixes : la voiture affiche 1920 × 720 px à 1 px par
      * dp (SWI133, mesuré sur une photo le 2026-10-09 — une première fenêtre de 600 dp n'y
      * couvrait que 31 % de la largeur), mais la densité des firmwares A9 n'est pas connue.
      *
-     * [largeurDp] × [hauteurDp] : la carte de base de la présentation affichée, sans sa colonne
-     * des chauffages — par défaut celle d'origine.
+     * ⚠️ L'écran annoncé n'est pas la place réellement accordée à la fenêtre : la barre d'état et
+     * le rail de navigation en prennent une part (voir [reduction]).
      */
     fun echelle(
         largeurPx: Int, hauteurPx: Int, densite: Float,
         largeurDp: Float = LARGEUR_DP, hauteurDp: Float = HAUTEUR_DP,
+        partLargeur: Float = PART_LARGEUR, partHauteur: Float = PART_HAUTEUR,
     ): Float {
         if (largeurPx <= 0 || hauteurPx <= 0 || !(densite > 0f)) return 1f
-        val parLargeur = PART_LARGEUR * largeurPx / (largeurDp * densite)
-        val parHauteur = PART_HAUTEUR * hauteurPx / (hauteurDp * densite)
+        val parLargeur = partLargeur * largeurPx / (largeurDp * densite)
+        val parHauteur = partHauteur * hauteurPx / (hauteurDp * densite)
         return minOf(parLargeur, parHauteur).coerceIn(0.75f, 2f)
+    }
+
+    /**
+     * Filet : de combien réduire la carte pour qu'elle tienne dans la fenêtre RÉELLEMENT accordée,
+     * marges comprises ; 1 si elle tient, ou sans mesures fiables.
+     *
+     * [echelle] part de l'écran annoncé, mais la fenêtre du pop-up s'arrête à la barre d'état et
+     * au rail de navigation : sur SWI133 elle ne fait qu'environ 1754 × 650 px sur 1920 × 720
+     * (photo du 2026-10-13, le pop-up y est centré à droite et en bas du centre de l'écran). Cette
+     * place n'est connue qu'une fois la fenêtre posée, et rien ne dit qu'elle soit la même sur
+     * les autres firmwares : plutôt qu'une carte coupée, une carte un peu plus petite.
+     */
+    fun reduction(fenetreLargeur: Int, fenetreHauteur: Int, carteLargeur: Int, carteHauteur: Int, marge: Int): Float {
+        if (carteLargeur <= 0 || carteHauteur <= 0) return 1f
+        val placeLargeur = fenetreLargeur - 2 * marge
+        val placeHauteur = fenetreHauteur - 2 * marge
+        if (placeLargeur <= 0 || placeHauteur <= 0) return 1f
+        return minOf(1f, placeLargeur.toFloat() / carteLargeur, placeHauteur.toFloat() / carteHauteur)
     }
 
     // ── Jauge (présentation « moderne ») ─────────────────────────────────────

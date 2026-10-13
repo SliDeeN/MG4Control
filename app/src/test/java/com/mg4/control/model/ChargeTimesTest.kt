@@ -82,4 +82,37 @@ class ChargeTimesTest {
     fun `l'heure affichee est sur vingt-quatre heures`() {
         assertEquals("22:05", ChargeTimes.hhmm(t(2026, 9, 20, 22, 5), paris))
     }
+
+    // ── Boutons − / + : la saisie sans clavier ───────────────────────────────
+
+    @Test
+    fun `les heures tournent sur vingt-quatre, sans toucher aux minutes`() {
+        assertEquals(23 to 30, ChargeTimes.step(22 to 30, hours = 1, minutes = 0))
+        assertEquals(0 to 30, ChargeTimes.step(23 to 30, hours = 1, minutes = 0))
+        assertEquals(23 to 30, ChargeTimes.step(0 to 30, hours = -1, minutes = 0))
+    }
+
+    @Test
+    fun `les minutes vont de cinq en cinq et tournent sans changer l'heure`() {
+        assertEquals(22 to 35, ChargeTimes.step(22 to 30, hours = 0, minutes = 1))
+        assertEquals(22 to 25, ChargeTimes.step(22 to 30, hours = 0, minutes = -1))
+        // Pas de retenue : chaque compteur se règle seul, comme sur une molette.
+        assertEquals(22 to 0, ChargeTimes.step(22 to 55, hours = 0, minutes = 1))
+        assertEquals(22 to 55, ChargeTimes.step(22 to 0, hours = 0, minutes = -1))
+    }
+
+    @Test
+    fun `une minute saisie autrefois au clavier rejoint le multiple de cinq voisin`() {
+        assertEquals(22 to 35, ChargeTimes.step(22 to 32, hours = 0, minutes = 1))
+        assertEquals(22 to 30, ChargeTimes.step(22 to 32, hours = 0, minutes = -1))
+        assertEquals(22 to 0, ChargeTimes.step(22 to 58, hours = 0, minutes = 1))
+    }
+
+    @Test
+    fun `l'heure affichee se relit telle quelle`() {
+        // Ce que la fenêtre enregistre repasse par parse : l'aller-retour doit être exact.
+        assertEquals(6 to 5, ChargeTimes.parse(ChargeTimes.text(6 to 5)))
+        assertEquals("06:05", ChargeTimes.text(6 to 5))
+    }
 }
+

@@ -41,6 +41,11 @@
     <string name="overlay_brightness_day">Tag</string>
 <string name="overlay_profile_title">Fahrprofile</string>
     <string name="overlay_open_app">MG4Control öffnen</string>
+    <string name="overlay_joy_navigate">Navigieren</string>
+    <string name="overlay_joy_validate">Auswählen</string>
+    <string name="overlay_profile_active">Aktiv</string>
+    <string name="overlay_profile_current">Aktuelles Profil</string>
+    <string name="overlay_profile_apply">Anwenden</string>
     <string name="overlay_countdown">Schließt in %1$ds</string>
     <string name="shortcuts_profile_prefix">Profil starten:</string>
     <string name="shortcuts_pick_profile_title">Profil auswählen</string>
@@ -48,6 +53,8 @@
     <string name="shortcuts_action_open_app">MG4Control öffnen</string>
     <string name="shortcuts_action_open_custom_app">App starten</string>
     <string name="shortcuts_pick_app_title">App auswählen</string>
+    <string name="choice_count_apps">Apps: %1$d</string>
+    <string name="choice_count_profiles">Profile: %1$d</string>
     <string name="shortcuts_open_custom_prefix">Starten</string>
     <string name="shortcuts_warning_title">Lenkrad-Kurzbefehle</string>
     <string name="shortcuts_warning_message">⚠ Wenn der offizielle Launcher einer Taste zugewiesen ist, hat er Vorrang vor MG4Control.\n\nBeispiel: Wenn die 360°-Kamera im Launcher auf einfaches Drücken eingestellt ist, kann MG4Control diese Taste nicht abfangen und die Kamera wird stattdessen aktiviert.\n\nEs wird empfohlen, die Kurzbefehle des offiziellen Launchers zu deaktivieren, um Konflikte zu vermeiden.</string>
@@ -106,6 +113,7 @@
     <string name="profile_set_default">Als Standard festlegen</string>
     <string name="profile_set_as_default">Als Standardprofil festlegen</string>
     <string name="profile_delete">Löschen</string>
+    <string name="profile_delete_title">„%1$s“ löschen?</string>
     <string name="profile_edit">Bearbeiten</string>
     <string name="profile_name_hint">Profilname</string>
     <string name="profile_name_required">Name ist erforderlich</string>
@@ -236,6 +244,7 @@
     <string name="fw_unknown_title">⚠ Unbekannte Firmware</string>
     <string name="fw_unknown_body">Diese Firmware wird von MG4 Control noch nicht nativ unterstützt.\n\nSie können fortfahren, indem Sie manuell einen Kompatibilitätsmodus auswählen, aber einige Funktionen funktionieren möglicherweise nicht korrekt.</string>
     <string name="fw_unknown_hint">Tippen Sie nach dem Schließen dieses Fensters auf SWI133 oder SWI68 in der oberen Leiste, um Ihren Kompatibilitätsmodus auszuwählen.</string>
+    <string name="fw_unknown_hint_settings">„Weiter“ öffnet %1$s › %2$s: Wählen Sie dort die Firmware, die Ihrer am nächsten kommt.</string>
     <string name="fw_unknown_btn_close">App beenden</string>
     <string name="fw_unknown_btn_continue">Weiter</string>
 
@@ -267,6 +276,9 @@
     <string name="vehicle_power_dialog_confirm">Ausschalten</string>
     <string name="vehicle_power_dialog_cancel">Abbrechen</string>
     <string name="vehicle_power_need_park">Das Fahrzeug muss stehen, Gang in Stellung P.</string>
+    <string name="vehicle_power_banner_title">Fahrzeug ausschalten?</string>
+    <string name="vehicle_power_banner_msg">Das Fahrzeug wird ausgeschaltet, der Bildschirm bleibt an.</string>
+    <string name="vehicle_power_banner_impossible">Ausschalten nicht möglich</string>
     <string name="settings_theme">Erscheinungsbild</string>
     <string name="settings_theme_auto">Auto</string>
     <string name="settings_theme_dark">Dunkles Design</string>
@@ -316,6 +328,9 @@
     <string name="automation_confirm_msg">Die Außentemperatur liegt unter %1$d°C\n(%2$s°C aktuelle Temperatur)\nProfil „%3$s“ anwenden?</string>
     <string name="automation_confirm_yes">JA</string>
     <string name="automation_confirm_no">NEIN</string>
+    <string name="automation_confirm_below">unter dem Schwellenwert von %1$s</string>
+    <string name="automation_confirm_above">über dem Schwellenwert von %1$s</string>
+    <string name="automation_confirm_question">Profil anwenden?</string>
     <string name="automation_direction_label">Auslösen, wenn die Außentemperatur ist:</string>
     <string name="automation_dir_below">Unter</string>
     <string name="automation_dir_above">Über</string>
@@ -552,7 +567,6 @@
     <string name="shortcuts_action_defrost_rear">Entfrosten hinten (ON/OFF)</string>
     <string name="shortcuts_action_hvac_recirc">Umluft: Wechsel</string>
     <string name="shortcuts_action_hvac_popup">HVAC-Pop-up</string>
-    <string name="shortcuts_action_hvac_popup_modern">HVAC-Pop-up – neues Design</string>
     <string name="hvac_popup_temp_up">Temp. +</string>
     <string name="hvac_popup_temp_down">Temp. −</string>
     <string name="hvac_popup_fan_up">Gebläse +</string>
@@ -560,7 +574,6 @@
     <string name="hvac_popup_compressor">Kompressor</string>
     <string name="hvac_popup_heating">Heizung</string>
     <string name="hvac_popup_joystick_title">Rechter Joystick</string>
-    <string name="hvac_popup_joystick_text">Am Lenkrad einstellen</string>
     <string name="hvac_popup_joystick_off_title">Joystick inaktiv</string>
     <string name="hvac_popup_joystick_off_text">Bedienungshilfe aktivieren oder Bildschirm nutzen</string>
     <string name="shortcuts_action_brightness_up">Helligkeit +</string>
