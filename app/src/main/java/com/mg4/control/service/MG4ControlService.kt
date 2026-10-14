@@ -1049,11 +1049,10 @@ class MG4ControlService : Service() {
     private fun executeToggle(action: ShortcutAction, pressKey: String = "") {
         val prefs = getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
 
-        // PROFILE_PICKER : overlay flottant au-dessus du launcher — aucun toggle d'état
+        // PROFILE_PICKER : overlay flottant au-dessus du launcher — un second appui le referme
+        // (issue #137), comme le pop-up HVAC.
         if (action == ShortcutAction.PROFILE_PICKER) {
-            Handler(Looper.getMainLooper()).post {
-                ProfilePickerOverlay.show(this@MG4ControlService)
-            }
+            ProfilePickerOverlay.toggle(this@MG4ControlService)
             return
         }
 

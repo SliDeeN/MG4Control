@@ -120,6 +120,8 @@
     <string name="profile_save">Kaydet</string>
     <string name="profile_cancel">İptal</string>
     <string name="profile_applied">Profil uygulandı: %s</string>
+    <string name="profile_applied_check_logs">Profil uygulandı (günlükleri kontrol edin)</string>
+    <string name="profile_default_set">Varsayılan profil: %1$s</string>
     <string name="profile_cycle_target">Profil: %s</string>
     <string name="profile_cycle_applied">%s profili uygulandı</string>
     <string name="profile_cycle_incomplete">%s profili: tam uygulanamadı</string>

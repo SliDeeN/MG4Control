@@ -120,6 +120,8 @@
     <string name="profile_save">Speichern</string>
     <string name="profile_cancel">Abbrechen</string>
     <string name="profile_applied">Profil angewendet: %s</string>
+    <string name="profile_applied_check_logs">Profil angewendet (Logs prüfen)</string>
+    <string name="profile_default_set">Standardprofil: %1$s</string>
     <string name="profile_cycle_target">Profil: %s</string>
     <string name="profile_cycle_applied">Profil %s angewendet</string>
     <string name="profile_cycle_incomplete">Profil %s: unvollständig angewendet</string>

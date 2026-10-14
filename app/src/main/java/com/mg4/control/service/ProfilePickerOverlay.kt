@@ -87,6 +87,12 @@ object ProfilePickerOverlay {
     private var dismissRunnable: Runnable? = null
     private var countdownRunnable: Runnable? = null
 
+    /**
+     * Repli du pop-up affiché (conflit Bluetooth), à jouer s'il se ferme sans choix ni « Fermer » :
+     * à l'échéance, ou quand on rappuie sur le raccourci ([toggle]). Thread principal seulement.
+     */
+    private var repli: (() -> Unit)? = null
+
     /** Focus au joystick du popup affiché ; vit et meurt avec la vue. Thread principal seulement. */
     private var navigation: OverlayNavigation? = null
 
@@ -112,6 +118,39 @@ object ProfilePickerOverlay {
      */
     fun show(context: Context) {
         handler.post { showOnMainThread(context, profiles = null, onAutoDismiss = null) }
+    }
+
+    /**
+     * Raccourci volant : ouvre le popup avec tous les profils, ou le referme s'il est déjà à
+     * l'écran (issue #137). Avant, un second appui le refermait et le rouvrait aussitôt : on le
+     * croyait impossible à fermer. Peut être appelé depuis n'importe quel thread.
+     */
+    fun toggle(context: Context) {
+        handler.post {
+            if (overlayView != null) fermerParRaccourciSurMain(context, "second appui du raccourci")
+            else showOnMainThread(context, profiles = null, onAutoDismiss = null)
+        }
+    }
+
+    /**
+     * Appui long, au joystick, de la touche qui a ouvert le popup (issue #137) : le referme s'il
+     * est encore là, n'ouvre jamais. Peut être appelé depuis n'importe quel thread.
+     */
+    fun fermerParRaccourci(context: Context) {
+        handler.post { fermerParRaccourciSurMain(context, "appui long du joystick") }
+    }
+
+    /**
+     * Fermeture demandée par le raccourci : comme l'échéance, elle laisse partir le repli d'un
+     * conflit Bluetooth — sans quoi aucun profil ne serait appliqué.
+     */
+    private fun fermerParRaccourciSurMain(context: Context, origine: String) {
+        if (overlayView == null) return
+        val enAttente = repli
+        AppLogger.i(TAG, "Overlay — $origine → fermeture" +
+            if (enAttente != null) " (repli du conflit Bluetooth, comme à l'échéance)" else "")
+        dismissOnMainThread(context)
+        enAttente?.invoke()
     }
 
     /**
@@ -158,6 +197,7 @@ object ProfilePickerOverlay {
 
         // Si déjà affiché → on remplace (sans déclencher l'ancien onAutoDismiss)
         dismissOnMainThread(context)
+        repli = onAutoDismiss
 
         val profilesToShow = profiles ?: ProfileManager(context).getAll()
         if (profilesToShow.isEmpty()) {
@@ -542,6 +582,7 @@ object ProfilePickerOverlay {
     }
 
     private fun dismissOnMainThread(context: Context) {
+        repli = null
         dismissRunnable?.let  { handler.removeCallbacks(it) }
         countdownRunnable?.let { handler.removeCallbacks(it) }
         dismissRunnable   = null

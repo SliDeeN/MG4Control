@@ -120,6 +120,8 @@
     <string name="profile_save">Save</string>
     <string name="profile_cancel">Cancel</string>
     <string name="profile_applied">Profile applied: %s</string>
+    <string name="profile_applied_check_logs">Profile applied (check the logs)</string>
+    <string name="profile_default_set">Default profile: %1$s</string>
     <string name="profile_cycle_target">Profile: %s</string>
     <string name="profile_cycle_applied">Profile %s applied</string>
     <string name="profile_cycle_incomplete">Profile %s: not fully applied</string>

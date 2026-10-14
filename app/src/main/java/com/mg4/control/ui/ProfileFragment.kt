@@ -48,7 +48,7 @@ class ProfileFragment : Fragment() {
                 ProfileApplier.apply(profile) { ok ->
                     requireActivity().runOnUiThread {
                         val msg = if (ok) getString(R.string.profile_applied, profile.name)
-                                  else "Profil appliqué (vérifier les logs)"
+                                  else getString(R.string.profile_applied_check_logs)
                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                     }
                 }
@@ -56,7 +56,8 @@ class ProfileFragment : Fragment() {
             onSetDefault = { profile ->
                 manager.setDefault(profile.id)
                 refreshList()
-                Toast.makeText(context, "Profil par défaut : ${profile.name}", Toast.LENGTH_SHORT).show()
+                // Écrit en dur en français jusqu'à l'issue #138 : affiché tel quel dans toutes les langues.
+                Toast.makeText(context, getString(R.string.profile_default_set, profile.name), Toast.LENGTH_SHORT).show()
             },
             onEdit = { profile ->
                 openEditor(existing = profile, data = profile)
