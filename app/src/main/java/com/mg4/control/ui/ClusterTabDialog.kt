@@ -141,10 +141,12 @@ object ClusterTabDialog {
             if (swi133) append("\nVPM 0x2030013 : ${l.vpm ?: "–"}")
             append("\nIPK_CNTR_AREA 0x21407b0a : ${l.centre ?: "–"}")
             append("\nFICM_NAVI_READY_STS 0x21407b16 : ${l.pret ?: "–"}")
+            append("\nFICM_START_UP_STS 0x21407b00 : ${l.demarre ?: "–"}")
+            append("\nLVDS_ELEC_READY 0x21407b4a : ${l.lvds ?: "–"}")
         }
     }
 
     private fun decrire(l: ClusterTabReader.Lecture): String =
         "${l.valeur ?: "illisible"} (${ClusterTab.fromValue(l.valeur)?.name ?: "hors du code"}) " +
-            "[cpm=${l.cpm} vpm=${l.vpm} centre=${l.centre} prête=${l.pret}]"
+            "[cpm=${l.cpm} vpm=${l.vpm} centre=${l.centre} prête=${l.pret} démarré=${l.demarre} lvds=${l.lvds}]"
 }

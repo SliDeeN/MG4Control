@@ -67,6 +67,11 @@ object DisplayProbe {
         Signal("FICM_APP_READY_STS", 0x21407b01, 0x204000b),
         Signal("FICM_NAVI_READY_STS", 0x21407b16, 0x204000c),
         Signal("FICM_PHONE_READY_STS", 0x21407b17, 0x204000d),
+        // Envoyé à 1 au démarrage par l'appli du combiné de SWI68 (`sendStartUpSts`) ; sur A9 par
+        // `sendFICMReadyToIPK`, que rien n'appelle. Le combiné l'attend peut-être avant toute image.
+        Signal("FICM_START_UP_STS (écran central démarré)", 0x21407b00, 0x204000a),
+        // « Liaison vidéo prête » : déclaré sur SWI69 et SWI133, utilisé par aucun code trouvé.
+        Signal("LVDS_ELEC_READY (liaison vidéo prête)", 0x21407b4a, 0),
         Signal("FICM_CARD_DSP_MD", 0x21407b24, 0x204001c),
         Signal("FICM_CARD_DSP_TYP", 0x21407b22, 0),
     )

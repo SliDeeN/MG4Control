@@ -16,25 +16,35 @@ object ClusterTabReader {
     const val VPM_TAB = 0x2030013
     /** `IPK_CNTR_AREA`, relevé à côté : suit-il l'onglet, ou dit-il autre chose ? */
     const val PROP_CENTRE = 0x21407b0a
+    /** `FICM_START_UP_STS` : « écran central démarré », envoyé à 1 par l'appli du combiné de SWI68. */
+    const val PROP_START_UP = 0x21407b00
+    /** `LVDS_ELEC_READY` : « liaison vidéo prête », déclaré sur SWI69 et SWI133. */
+    const val PROP_LVDS_READY = 0x21407b4a
 
     private const val AREA_GLOBAL = 0x1000000
 
     /**
      * `null` = illisible par cette voie. [vpm] n'est lu que sur SWI133. [pret] : « image prête » de
-     * la navigation ([ClusterReadySignal.PROP_NAVI_READY]), suivi pendant l'essai A9.
+     * la navigation ([ClusterReadySignal.PROP_NAVI_READY]), suivi pendant l'essai A9. [demarre] et
+     * [lvds] : les deux autres signaux qu'attend peut-être le combiné avant d'afficher une image.
      */
-    data class Lecture(val cpm: Int?, val vpm: Int?, val centre: Int?, val pret: Int? = null) {
+    data class Lecture(
+        val cpm: Int?, val vpm: Int?, val centre: Int?, val pret: Int? = null,
+        val demarre: Int? = null, val lvds: Int? = null,
+    ) {
         /** Valeur retenue : celle du CarPropertyManager, sinon celle de l'ancien SDK. */
         val valeur: Int? get() = cpm ?: vpm
     }
 
-    /** Hors du fil principal : jusqu'à cinq lectures binder. */
+    /** Hors du fil principal : une dizaine de lectures binder au plus. */
     fun lire(): Lecture = Lecture(
         cpm = cpm(PROP_TAB),
         vpm = if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133)
             MG4Hardware.vpmIntForProbe(VPM_TAB).takeIf { it >= 0 } else null,
         centre = cpm(PROP_CENTRE),
         pret = cpm(ClusterReadySignal.PROP_NAVI_READY),
+        demarre = cpm(PROP_START_UP),
+        lvds = cpm(PROP_LVDS_READY),
     )
 
     /**
