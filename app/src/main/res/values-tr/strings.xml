@@ -700,7 +700,12 @@
     <string name="stats_battery_title">Batarya</string>
     <string name="stats_battery_label">Araç bataryası</string>
     <string name="stats_battery_option">%1$d kWh · %2$s kWh kullanılabilir (%3$s)</string>
-    <string name="stats_battery_note">Şarj enerjisini batarya yüzdesinden hesaplamak için kullanılır. Bataryayı değiştirmek, kayıtlı şarjları yeniden hesaplar.</string>
+    <string name="stats_battery_note">Sağlık durumuyla birlikte, şarj enerjisini batarya yüzdesinden hesaplamak için kullanılır. Sağlık durumunu bilmiyorsanız 100 % bırakın: bir bayi veya bir OBD uygulaması ölçebilir. Değiştirmek, kayıtlı şarjları yeniden hesaplar.</string>
+    <string name="stats_soh_label">Sağlık durumu (SOH)</string>
+    <string name="stats_soh_value">%1$s %%</string>
+    <string name="stats_soh_effective">Kullanılan net kapasite: %1$s kWh (%2$s × %3$s %%)</string>
+    <string name="stats_soh_less">Sağlık durumunu azalt</string>
+    <string name="stats_soh_more">Sağlık durumunu artır</string>
     <string name="stats_battery_banner">Şarj enerjisi seçili bataryaya bağlıdır: %1$s. Aracınızınkiyle aynı olduğunu kontrol edin.</string>
     <string name="stats_battery_banner_ok">Doğru</string>
     <string name="stats_battery_banner_change">Değiştir</string>

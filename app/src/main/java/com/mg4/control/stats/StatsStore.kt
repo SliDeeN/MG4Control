@@ -45,6 +45,7 @@ class StatsStore(private val context: Context) {
         private const val KEY_CAPACITY_USER = "capacity_user_set"
         private const val KEY_SKIP_SHORT = "skip_short_trips"
         private const val KEY_MIN_TRIP = "min_trip_km"
+        private const val KEY_SOH = "state_of_health_percent"
         private const val KEY_ENERGY_CHECKS = "energy_checks"
         private const val MAX_ENERGY_CHECKS = 40
 
@@ -91,6 +92,7 @@ class StatsStore(private val context: Context) {
         ).usableKwh,
         skipShortTrips = prefs.getBoolean(KEY_SKIP_SHORT, false),
         minTripKm = prefs.getFloat(KEY_MIN_TRIP, StatsSettings.DEFAULT_MIN_TRIP_KM),
+        stateOfHealthPercent = StatsSettings.clampSoh(prefs.getFloat(KEY_SOH, StatsSettings.DEFAULT_SOH)),
     )
 
     fun saveSettings(s: StatsSettings) {
@@ -103,6 +105,7 @@ class StatsStore(private val context: Context) {
             putFloat(KEY_CAPACITY, s.capacityKwh)
             putBoolean(KEY_SKIP_SHORT, s.skipShortTrips)
             putFloat(KEY_MIN_TRIP, s.minTripKm)
+            putFloat(KEY_SOH, s.stateOfHealthPercent)
         }
     }
 
@@ -126,7 +129,7 @@ class StatsStore(private val context: Context) {
         if (batterie == settings().battery) return false
         saveSettings(settings().copy(capacityKwh = batterie.usableKwh))
         AppLogger.i(TAG, "capacité lue sur le véhicule : $kwh kWh → batterie ${batterie.nominalKwh} kWh")
-        recalculateCharges(batterie.usableKwh)
+        recalculateCharges(settings().effectiveCapacityKwh)
         return true
     }
 

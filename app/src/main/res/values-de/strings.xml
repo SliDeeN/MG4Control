@@ -700,7 +700,12 @@
     <string name="stats_battery_title">Batterie</string>
     <string name="stats_battery_label">Fahrzeugbatterie</string>
     <string name="stats_battery_option">%1$d kWh · %2$s kWh nutzbar (%3$s)</string>
-    <string name="stats_battery_note">Dient dazu, die Energie der Ladungen aus dem Batteriestand in Prozent zu berechnen. Ein Wechsel der Batterie berechnet die bereits aufgezeichneten Ladungen neu.</string>
+    <string name="stats_battery_note">Dient zusammen mit dem Batteriezustand dazu, die Energie der Ladungen aus dem Batteriestand in Prozent zu berechnen. Lass 100 %, wenn du den Batteriezustand nicht kennst: Eine Werkstatt oder eine OBD-App kann ihn messen. Eine Änderung berechnet die bereits aufgezeichneten Ladungen neu.</string>
+    <string name="stats_soh_label">Batteriezustand (SOH)</string>
+    <string name="stats_soh_value">%1$s %%</string>
+    <string name="stats_soh_effective">Verwendete Nutzkapazität: %1$s kWh (%2$s × %3$s %%)</string>
+    <string name="stats_soh_less">Batteriezustand verringern</string>
+    <string name="stats_soh_more">Batteriezustand erhöhen</string>
     <string name="stats_battery_banner">Die Ladeenergie hängt von der eingestellten Batterie ab: %1$s. Prüfen Sie, ob sie zu Ihrem Fahrzeug passt.</string>
     <string name="stats_battery_banner_ok">Stimmt</string>
     <string name="stats_battery_banner_change">Ändern</string>

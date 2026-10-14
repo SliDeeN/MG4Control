@@ -700,7 +700,12 @@
     <string name="stats_battery_title">Bateria</string>
     <string name="stats_battery_label">Bateria do carro</string>
     <string name="stats_battery_option">%1$d kWh · %2$s kWh úteis (%3$s)</string>
-    <string name="stats_battery_note">Serve para calcular a energia dos carregamentos a partir da percentagem de bateria. Mudar de bateria recalcula os carregamentos já registados.</string>
+    <string name="stats_battery_note">Serve, com o estado de saúde, para calcular a energia dos carregamentos a partir da percentagem de bateria. Deixa 100 % se não conheceres o estado de saúde: um concessionário ou uma app OBD podem medi-lo. Alterá-los recalcula os carregamentos já registados.</string>
+    <string name="stats_soh_label">Estado de saúde (SOH)</string>
+    <string name="stats_soh_value">%1$s %%</string>
+    <string name="stats_soh_effective">Capacidade útil usada: %1$s kWh (%2$s × %3$s %%)</string>
+    <string name="stats_soh_less">Diminuir o estado de saúde</string>
+    <string name="stats_soh_more">Aumentar o estado de saúde</string>
     <string name="stats_battery_banner">A energia dos carregamentos depende da bateria selecionada: %1$s. Verifique se é a do seu carro.</string>
     <string name="stats_battery_banner_ok">Está correta</string>
     <string name="stats_battery_banner_change">Alterar</string>

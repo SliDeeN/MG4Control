@@ -1,6 +1,7 @@
 package com.mg4.control.model
 
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Réglages de l'onglet Statistiques. Pur : la persistance vit dans `stats/StatsStore`.
@@ -23,8 +24,17 @@ data class StatsSettings(
     /** Vrai pour ne plus enregistrer les trajets plus courts que [minTripKm]. */
     val skipShortTrips: Boolean = false,
     val minTripKm: Float = DEFAULT_MIN_TRIP_KM,
+    /**
+     * État de santé de la batterie, en % (2026-10-14) : 100 par défaut, rien ne change pour qui
+     * n'y touche pas. Les pourcentages affichés couvrent la batterie TELLE QU'ELLE EST : usée, elle
+     * stocke moins d'énergie par point de pourcentage.
+     */
+    val stateOfHealthPercent: Float = DEFAULT_SOH,
 ) {
     val battery: Battery get() = Battery.nearest(capacityKwh)
+
+    /** Ce que vaut 100 % aujourd'hui : capacité utile × état de santé. Convertit les recharges. */
+    val effectiveCapacityKwh: Float get() = capacityKwh * stateOfHealthPercent / 100f
 
     /**
      * Faux pour un trajet que le filtre des petits trajets écarte. La distance jugée est celle que
@@ -57,7 +67,7 @@ data class StatsSettings(
     fun kwhFromSoc(socStart: Float?, socEnd: Float?): Float? {
         if (socStart == null || socEnd == null) return null
         val delta = socEnd - socStart
-        return if (delta <= 0f) null else (delta / 100f * capacityKwh).roundTenth()
+        return if (delta <= 0f) null else (delta / 100f * effectiveCapacityKwh).roundTenth()
     }
 
     enum class Retention(val days: Int) {
@@ -81,6 +91,24 @@ data class StatsSettings(
          * vaut quelques centimes ou plusieurs milliers d'unités (roupie indonésienne, dong).
          */
         const val MAX_PRICE = 100_000f
+
+        /**
+         * État de santé : 50 à 100 %, par pas de 0,5. Plus fin n'aurait pas de sens — l'état de
+         * santé lui-même est une estimation, à quelques points près.
+         */
+        const val DEFAULT_SOH = 100f
+        const val MIN_SOH = 50f
+        const val MAX_SOH = 100f
+        const val SOH_STEP = 0.5f
+
+        /** Valeur utilisable : calée sur le pas, ramenée dans la plage ; 100 % pour une lecture ratée. */
+        fun clampSoh(value: Float): Float {
+            if (!value.isFinite()) return DEFAULT_SOH
+            return ((value / SOH_STEP).roundToInt() * SOH_STEP).coerceIn(MIN_SOH, MAX_SOH)
+        }
+
+        /** Un pas de − ou de + ([direction] = −1 ou 1). */
+        fun stepSoh(current: Float, direction: Int): Float = clampSoh(current + direction * SOH_STEP)
 
         fun clampPrice(value: Float): Float = value.coerceIn(0f, MAX_PRICE)
         fun clampMinTrip(value: Float): Float = value.coerceIn(MIN_TRIP_FLOOR_KM, MIN_TRIP_CEILING_KM)

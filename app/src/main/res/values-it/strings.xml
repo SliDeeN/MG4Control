@@ -700,7 +700,12 @@
     <string name="stats_battery_title">Batteria</string>
     <string name="stats_battery_label">Batteria dell’auto</string>
     <string name="stats_battery_option">%1$d kWh · %2$s kWh utili (%3$s)</string>
-    <string name="stats_battery_note">Serve a calcolare l’energia delle ricariche a partire dalla percentuale di batteria. Cambiare batteria ricalcola le ricariche già registrate.</string>
+    <string name="stats_battery_note">Serve, insieme allo stato di salute, a calcolare l\'energia delle ricariche a partire dalla percentuale di batteria. Lascia 100 % se non conosci lo stato di salute: un concessionario o un\'app OBD possono misurarlo. Modificarli ricalcola le ricariche già registrate.</string>
+    <string name="stats_soh_label">Stato di salute (SOH)</string>
+    <string name="stats_soh_value">%1$s %%</string>
+    <string name="stats_soh_effective">Capacità utile usata: %1$s kWh (%2$s × %3$s %%)</string>
+    <string name="stats_soh_less">Diminuisci lo stato di salute</string>
+    <string name="stats_soh_more">Aumenta lo stato di salute</string>
     <string name="stats_battery_banner">L’energia delle ricariche dipende dalla batteria impostata: %1$s. Verifica che sia quella della tua auto.</string>
     <string name="stats_battery_banner_ok">È corretta</string>
     <string name="stats_battery_banner_change">Cambia</string>
