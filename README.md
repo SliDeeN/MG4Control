@@ -302,6 +302,53 @@ Durée de course et calibrage restent réglables option coupée : ils servent au
   restaurer
 - Précédence entre déclencheurs : manuel → température → Bluetooth → profil par défaut
 
+### Statistiques
+Onglet de la barre du haut, **désactivé par défaut** : tant qu'il n'est pas activé, rien n'est
+relevé. Tout reste dans la voiture, dans un fichier privé de l'application ; rien n'est envoyé
+ailleurs. Trois sous-onglets sur le rail habituel :
+
+- **Général** : résumé sur 30 jours ou sur tout l'historique — distance, consommation, énergie
+  consommée, récupérée et rechargée, coût. Réglages : prix du kWh en charge lente et en charge rapide
+  (jusqu'à 100 000, pour toutes les monnaies), monnaie, batterie de la voiture (51, 64 ou 77 kWh),
+  filtre des petits trajets, durée de conservation (30 jours à 1 an, 3 mois par défaut) et
+  « Tout supprimer »
+- **Trajets** : chaque trajet avec sa durée, sa distance, sa consommation et le détail de l'énergie
+- **Recharge** : énergie rechargée, coût et sessions AC / DC, y compris les charges faites pendant
+  que le boîtier dormait
+
+D'où viennent les chiffres :
+
+| Mesure | Source |
+|---|---|
+| Bornes d'un trajet | Le contact — les compteurs d'énergie de la voiture repartent de zéro au même moment |
+| Distance | Intégration de la vitesse, relevée toutes les 10 s en roulant ; l'odomètre, qui ne publie que le kilomètre entier, sert de garde-fou |
+| Énergie d'un trajet, SWI133 et SWI132 | Compteurs de la voiture, au dixième de kWh : total, climatisation, accessoires, récupération |
+| Énergie d'un trajet, autres firmwares | Leurs compteurs restent à zéro : tension × courant de la batterie, relevés chaque seconde en roulant. Le détail se limite à « Moteur » et « Climatisation et autres », au kWh entier |
+| Énergie d'une charge | Écart de pourcentage × capacité utile de la batterie choisie |
+| Type et puissance d'une charge | Type lu sur la voiture (alternatif ou continu) ; puissance mesurée si le boîtier est éveillé pendant la charge, sinon calculée (énergie ÷ durée) et annoncée comme telle |
+
+Règles à connaître :
+- **Charge de nuit** : le boîtier s'éteint pendant la charge et rien n'est relevé. Au réveil, le
+  pourcentage est comparé au dernier relevé et la charge est **reconstituée**. On peut la
+  **compléter** — type de prise, heures de début et de fin, aux boutons − et + — pour obtenir sa
+  puissance moyenne
+- **Coût d'un trajet** : il suit le **prix moyen de l'énergie réellement rechargée** sur la période,
+  pas le tarif domicile — sans quoi un plein en borne rapide disparaîtrait du coût. Le tarif d'une
+  charge se **corrige** depuis son détail ; le prix moyen et le coût des trajets suivent
+- **Consommation d'une période** : calculée sur les totaux, pas en moyennant les trajets — un trajet
+  de 2 km pèserait sinon autant qu'un trajet de 200 km
+- **Précision affichée** : quand l'incertitude d'une consommation dépasse 10 % (trajet court, compteur
+  au dixième de kWh), elle s'affiche avec « ≈ » et sans décimale
+- **Petits trajets** : filtre désactivé par défaut ; activé, un trajet plus court que la distance
+  choisie (1 km par défaut, de 0,1 à 50 km) n'est pas enregistré
+- **Batterie** : en changer recalcule les recharges déjà enregistrées ; tant qu'elle n'a pas été
+  confirmée, l'onglet Recharge le rappelle
+- **Coupures** : le trajet en cours est enregistré après chaque relevé, et un trajet interrompu par
+  l'extinction du boîtier est clos au démarrage suivant. L'historique est écrit dans un fichier
+  temporaire puis renommé : une coupure d'alimentation ne le tronque jamais
+- **Horloge** : un boîtier réveillé par la charge peut repartir sur son horloge d'usine (2019) ; les
+  relevés datés d'avant 2025 sont écartés
+
 ### Réglages
 Écran organisé en **quatre onglets** :
 - **Langues** : français, anglais, allemand, espagnol, italien, portugais, turc — la langue est
@@ -543,6 +590,9 @@ MG4Control/
 │   │   │   ├── DrivingProfile.kt      # Modèle de données d'un profil
 │   │   │   ├── DriveMode.kt           # Enum modes de conduite (ECO/NORMAL/SPORT/SNOW/CUSTOM)
 │   │   │   ├── RegenLevel.kt          # Enum niveaux de régénération + ordre du cycle par défaut
+│   │   │   ├── StatsTracker.kt        # Statistiques : trajets et charges (machine à états pure, testée)
+│   │   │   ├── StatsSummary.kt        # Statistiques : agrégats d'une période (coût, consommation)
+│   │   │   ├── PowerIntegrator.kt     # Énergie par tension × courant (firmwares sans compteurs)
 │   │   │   └── ProfileBackup.kt       # Format de la sauvegarde véhicule
 │   │   │
 │   │   ├── profile/
@@ -553,7 +603,11 @@ MG4Control/
 │   │   │
 │   │   ├── hardware/
 │   │   │   ├── MG4Hardware.kt         # Abstraction matérielle (4 couches)
+│   │   │   ├── StatsCollector.kt      # Relevés des statistiques (seulement si elles sont activées)
 │   │   │   └── VehicleWriteGate.kt    # Verrou de vitesse posé dans les primitives d'écriture
+│   │   │
+│   │   ├── stats/
+│   │   │   └── StatsStore.kt          # Historique des statistiques : fichier, purge à la lecture
 │   │   │
 │   │   ├── accessibility/
 │   │   │   ├── KeyCaptureService.kt   # Service d'accessibilité — voit les touches avant le launcher
@@ -584,6 +638,7 @@ MG4Control/
 │   │   │   ├── SettingsFragment.kt    # Réglages (rail 4 onglets)
 │   │   │   ├── ShortcutsFragment.kt   # Raccourcis classiques + avancés + liste
 │   │   │   ├── AutomationFragment.kt  # Automatisations
+│   │   │   ├── StatsFragment.kt       # Statistiques (rail 3 onglets)
 │   │   │   ├── ProfileAdapter.kt      # Adaptateur RecyclerView profils
 │   │   │   ├── AppDialog.kt           # Fenêtres de l'app : confirmation, grille de choix, listes, boutons − / +
 │   │   │   ├── RestoreProfilesDialog.kt # « Restaurer les profils ? » — liste des profils retrouvés
@@ -1333,6 +1388,50 @@ shortcuts use them too.
   reinstall a window lists the profiles found and offers to restore them
 - Trigger precedence: manual → temperature → Bluetooth → default profile
 
+### Statistics
+A top-bar tab, **off by default**: until it is turned on, nothing is recorded. Everything stays in
+the car, in a private file of the app; nothing is sent anywhere. Three sub-tabs on the usual rail:
+
+- **General**: summary over 30 days or the whole history — distance, consumption, energy used,
+  recovered and charged, cost. Settings: kWh price for slow and fast charging (up to 100,000, for
+  every currency), currency, the car's battery (51, 64 or 77 kWh), short-trip filter, retention
+  (30 days to 1 year, 3 months by default) and "Delete all"
+- **Trips**: each trip with its duration, distance, consumption and energy breakdown
+- **Charging**: energy charged, cost and AC / DC sessions, including charges made while the head
+  unit was asleep
+
+Where the figures come from:
+
+| Measure | Source |
+|---|---|
+| Trip boundaries | Ignition — the car's energy counters restart from zero at the same moment |
+| Distance | Integration of the speed, read every 10 s while driving; the odometer, which only publishes whole kilometres, is the safeguard |
+| Trip energy, SWI133 and SWI132 | The car's counters, in tenths of a kWh: total, climate, accessories, regeneration |
+| Trip energy, other firmwares | Their counters stay at zero: battery voltage × current, read every second while driving. The breakdown is limited to "Motor" and "Climate control and others", in whole kWh |
+| Charge energy | Percentage gained × usable capacity of the chosen battery |
+| Charge type and power | Type read from the car (AC or DC); power measured if the head unit is awake during the charge, otherwise computed (energy ÷ duration) and labelled as such |
+
+Rules worth knowing:
+- **Overnight charge**: the head unit sleeps during the charge and nothing is read. On wake-up, the
+  percentage is compared with the last reading and the charge is **reconstructed**. It can be
+  **completed** — plug type, start and end times, with − and + buttons — to get its average power
+- **Trip cost**: it follows the **average price of the energy actually charged** over the period,
+  not the home tariff — otherwise a fast-charger top-up would vanish from the cost. A charge's
+  tariff is **corrected** from its detail; the average price and trip costs follow
+- **Consumption over a period**: computed on the totals, not by averaging trips — otherwise a 2 km
+  trip would weigh as much as a 200 km one
+- **Displayed precision**: when a consumption's uncertainty exceeds 10% (short trip, counter in
+  tenths of a kWh), it is shown with "≈" and no decimal
+- **Short trips**: filter off by default; when on, a trip shorter than the chosen distance (1 km by
+  default, 0.1 to 50 km) is not recorded
+- **Battery**: changing it recalculates the charges already recorded; until it has been confirmed,
+  the Charging tab reminds you
+- **Power cuts**: the ongoing trip is saved after each reading, and a trip cut short by the head
+  unit switching off is closed at the next start-up. The history is written to a temporary file
+  then renamed: a power cut never truncates it
+- **Clock**: a head unit woken up by charging may restart on its factory clock (2019); readings
+  dated before 2025 are discarded
+
 ### Settings
 Screen organised into **four tabs**:
 - **Languages**: French, English, German, Spanish, Italian, Portuguese, Turkish — the language is
@@ -1565,6 +1664,9 @@ MG4Control/
 │   │   │   ├── DrivingProfile.kt      # Profile data model
 │   │   │   ├── DriveMode.kt           # Drive mode enum (ECO/NORMAL/SPORT/SNOW/CUSTOM)
 │   │   │   ├── RegenLevel.kt          # Regen level enum + default shortcut cycle order
+│   │   │   ├── StatsTracker.kt        # Statistics: trips and charges (pure state machine, tested)
+│   │   │   ├── StatsSummary.kt        # Statistics: aggregates of a period (cost, consumption)
+│   │   │   ├── PowerIntegrator.kt     # Energy from voltage × current (firmwares without counters)
 │   │   │   └── ProfileBackup.kt       # Vehicle backup format
 │   │   │
 │   │   ├── profile/
@@ -1575,7 +1677,11 @@ MG4Control/
 │   │   │
 │   │   ├── hardware/
 │   │   │   ├── MG4Hardware.kt         # Hardware abstraction (4 layers)
+│   │   │   ├── StatsCollector.kt      # Statistics readings (only when turned on)
 │   │   │   └── VehicleWriteGate.kt    # Speed lock, enforced inside the write primitives
+│   │   │
+│   │   ├── stats/
+│   │   │   └── StatsStore.kt          # Statistics history: file, purged on read
 │   │   │
 │   │   ├── accessibility/
 │   │   │   ├── KeyCaptureService.kt   # Accessibility service — sees keys before the launcher
@@ -1606,6 +1712,7 @@ MG4Control/
 │   │   │   ├── SettingsFragment.kt    # Settings (4-tab rail)
 │   │   │   ├── ShortcutsFragment.kt   # Classic + advanced shortcuts + list
 │   │   │   ├── AutomationFragment.kt  # Automations
+│   │   │   ├── StatsFragment.kt       # Statistics (3-tab rail)
 │   │   │   ├── ProfileAdapter.kt      # Profile RecyclerView adapter
 │   │   │   ├── AppDialog.kt           # App windows: confirmation, choice grid, lists, − / + buttons
 │   │   │   ├── RestoreProfilesDialog.kt # "Restore profiles?" — lists the profiles found
