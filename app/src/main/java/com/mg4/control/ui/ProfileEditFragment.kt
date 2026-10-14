@@ -114,6 +114,7 @@ class ProfileEditFragment : Fragment() {
         var selectedBtMac: String? = data.btDeviceMac   // [BT-PROFILES]
         var selectedDrive   = data.driveMode
         var selectedRegen   = data.regenLevel
+        var regenEnabledSel = data.appliesRegen   // issue #140 : coupé = régénération inchangée
         var steeringOn      = data.steeringHeat
         var steeringEnabled = data.appliesSteeringHeat
         var seatHeatEnabled = data.appliesSeatHeat
@@ -181,15 +182,23 @@ class ProfileEditFragment : Fragment() {
         )
         val btnOnePedal = view.findViewById<MaterialButton>(R.id.btn_regen_one_pedal_d)
 
+        val noteRegen = view.findViewById<View>(R.id.tv_regen_unchanged_note)
+        // Dernier état dicté par le mode et l'économie d'énergie, pour le recalculer quand on
+        // bascule l'interrupteur de la section.
+        var regenContexte = true
+
         fun setRegenEnabled(enabled: Boolean) {
+            regenContexte = enabled
             val isSnow = selectedDrive == DriveMode.SNOW
             regenBtns.forEach { btn ->
                 // ONE_PEDAL reste accessible même quand Éco énergie est actif,
                 // sauf en mode SNOW où tous les niveaux de regen sont indisponibles.
-                val btnEnabled = enabled || (btn == btnOnePedal && !isSnow)
+                // Interrupteur de la section coupé (issue #140) : plus rien n'est accessible.
+                val btnEnabled = regenEnabledSel && (enabled || (btn == btnOnePedal && !isSnow))
                 btn.isEnabled = btnEnabled
                 btn.alpha = if (btnEnabled) 1f else 0.35f
             }
+            noteRegen.visibility = if (regenEnabledSel) View.GONE else View.VISIBLE
         }
 
         /**
@@ -224,6 +233,15 @@ class ProfileEditFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_regen_one_pedal_d) to RegenLevel.ONE_PEDAL
         )
         bindGroup(regenPairs, selectedRegen) { selectedRegen = it }
+
+        // Interrupteur de la section : coupé, le profil ne touche ni au niveau ni à la conduite à
+        // une pédale (issue #140). Le niveau choisi est gardé, pour le retrouver en le rallumant.
+        val swRegen = view.findViewById<Switch>(R.id.sw_regen_enabled)
+        swRegen.isChecked = regenEnabledSel
+        swRegen.setOnCheckedChangeListener { _, checked ->
+            regenEnabledSel = checked
+            setRegenEnabled(regenContexte)
+        }
 
         // ── Mode Personnalisé : puissance, direction, pédale ─────────────────
         val cdPower = listOf(
@@ -757,6 +775,7 @@ class ProfileEditFragment : Fragment() {
                 name           = name,
                 driveMode      = selectedDrive,
                 regenLevel     = selectedRegen,
+                regenEnabled   = regenEnabledSel,
                 steeringHeat   = steeringOn,
                 seatHeatLeft   = seatLeft,
                 seatHeatRight  = seatRight,

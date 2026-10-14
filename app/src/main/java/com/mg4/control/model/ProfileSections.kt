@@ -13,16 +13,18 @@ object ProfileSections {
      * Résumé d'un profil dans la liste : mode de conduite, régénération, aide à la conduite —
      * chacun seulement si sa catégorie est appliquée, pour ne pas annoncer un réglage que le
      * profil n'écrira pas. [adasLabel] est vide sur les firmwares sans libellé. Quand il ne
-     * reste rien à citer, le résumé nomme les catégories actives.
+     * reste rien à citer, le résumé nomme les catégories actives. [regenUnchanged] remplace le
+     * niveau de régénération quand le profil n'y touche pas (issue #140).
      */
     fun summary(
         profile: DrivingProfile, adasLabel: String,
-        driveName: String, safetyName: String, comfortName: String
+        driveName: String, safetyName: String, comfortName: String,
+        regenUnchanged: String,
     ): String {
         val reglages = buildList {
             if (profile.appliesDrive) {
                 add(profile.driveMode.label)
-                add(profile.regenLevel.label)
+                add(if (profile.appliesRegen) profile.regenLevel.label else regenUnchanged)
             }
             if (profile.appliesSafety && adasLabel.isNotEmpty()) add(adasLabel)
         }

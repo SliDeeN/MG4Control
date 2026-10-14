@@ -2,6 +2,7 @@ package com.mg4.control.model
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.Locale
 
@@ -19,8 +20,36 @@ class ClusterGaugeTest {
         val s = ClusterGauge.consumption(kw = 26f, kmh = 130f)
         assertEquals(GaugeUnit.WH_PER_KM, s.unit)
         assertEquals(200f, s.value, delta)
-        assertEquals(0.5f, s.fraction, delta)
+        assertEquals(0.32f, s.fraction, 0.005f)
         assertEquals(GaugeLevel.WARN, s.level)
+    }
+
+    // ── Échelle (essai en roulant du 2026-10-14 : pointes à plus de 2 500 Wh/km) ──
+
+    @Test fun `l anneau va jusqu a 3000 Wh par km`() {
+        assertEquals(0f, ClusterGauge.consumptionFraction(0f), delta)
+        assertEquals(1f, ClusterGauge.consumptionFraction(3000f), delta)
+        assertEquals(1f, ClusterGauge.consumptionFraction(8000f), delta)
+    }
+
+    @Test fun `une pointe a 2500 se lit encore sans remplir l anneau`() {
+        val f = ClusterGauge.consumptionFraction(2500f)
+        assertTrue(f in 0.9f..0.99f)
+    }
+
+    @Test fun `la conduite courante garde de la place sur l anneau`() {
+        // Linéaire jusqu'à 3 000, 150 Wh/km n'en ferait que 5 % : l'anneau ne bougerait qu'aux pointes.
+        assertTrue(ClusterGauge.consumptionFraction(150f) > 0.25f)
+        assertTrue(ClusterGauge.consumptionFraction(500f) in 0.45f..0.55f)
+    }
+
+    @Test fun `l anneau monte toujours avec la consommation`() {
+        var avant = -1f
+        for (wh in 0..3000 step 50) {
+            val f = ClusterGauge.consumptionFraction(wh.toFloat())
+            assertTrue("$wh Wh/km", f > avant)
+            avant = f
+        }
     }
 
     @Test fun `la couleur suit la consommation`() {
@@ -30,7 +59,7 @@ class ClusterGaugeTest {
     }
 
     @Test fun `une forte acceleration remplit l anneau sans le depasser`() {
-        val s = ClusterGauge.consumption(95f, 60f)
+        val s = ClusterGauge.consumption(95f, 20f)   // 4 750 Wh/km
         assertEquals(1f, s.fraction, delta)
         assertEquals(GaugeLevel.DANGER, s.level)
     }
@@ -55,13 +84,20 @@ class ClusterGaugeTest {
 
     // ── B : puissance ────────────────────────────────────────────────────────
 
-    @Test fun `la puissance remplit l arc vers la droite`() {
-        assertEquals(0.5f, ClusterGauge.power(75f).fraction, delta)
-        assertEquals(GaugeLevel.WARN, ClusterGauge.power(75f).level)
-        assertEquals(GaugeLevel.ECO, ClusterGauge.power(30f).level)
-        assertEquals(GaugeLevel.DANGER, ClusterGauge.power(120f).level)
-        assertEquals(1f, ClusterGauge.power(200f).fraction, delta)
+    @Test fun `la puissance remplit l arc vers la droite, jusqu a 320 kW`() {
+        // 320 kW : la XPower (2026-10-14). À 150, l'arc restait plein en accélération franche.
+        assertEquals(0.5f, ClusterGauge.power(160f).fraction, delta)
+        assertEquals(1f, ClusterGauge.power(320f).fraction, delta)
+        assertEquals(1f, ClusterGauge.power(400f).fraction, delta)
         assertEquals(GaugeUnit.KW, ClusterGauge.power(75f).unit)
+    }
+
+    @Test fun `la couleur de la puissance se juge en kW, pas en part de l arc`() {
+        // Seuils inchangés par le passage à 320 kW : sinon le rouge ne viendrait jamais sur une
+        // MG4 de 150 kW.
+        assertEquals(GaugeLevel.ECO, ClusterGauge.power(30f).level)
+        assertEquals(GaugeLevel.WARN, ClusterGauge.power(75f).level)
+        assertEquals(GaugeLevel.DANGER, ClusterGauge.power(120f).level)
     }
 
     @Test fun `la recuperation remplit l arc vers la gauche`() {

@@ -116,10 +116,15 @@ object ProfileApplier {
                 AppLogger.i(TAG, "  DriveMode=${profile.driveMode.label} → $dmOk")
                 ok = ok && dmOk
 
-                // Niveau de régénération (rapide — binder call)
-                val rlOk = MG4Hardware.setRegenLevel(profile.regenLevel)
-                AppLogger.i(TAG, "  RegenLevel=${profile.regenLevel.label} → $rlOk")
-                ok = ok && rlOk
+                // Niveau de régénération (rapide — binder call). « Inchangée » (issue #140) : on
+                // ne touche à rien, la conduite à une pédale comprise — c'en est un niveau.
+                if (profile.appliesRegen) {
+                    val rlOk = MG4Hardware.setRegenLevel(profile.regenLevel)
+                    AppLogger.i(TAG, "  RegenLevel=${profile.regenLevel.label} → $rlOk")
+                    ok = ok && rlOk
+                } else {
+                    AppLogger.i(TAG, "  RegenLevel non pris en compte par ce profil — inchangée")
+                }
             }
 
             // Volant + Sièges chauffants — uniquement SWI133 et SWI68 (SWI69/SWI131 n'ont pas ces équipements)
@@ -327,6 +332,8 @@ object ProfileApplier {
         }
         val esOk = MG4Hardware.setEnergySavingMode(profile.energySaving)
         AppLogger.i(TAG, "  EnergySaving=${profile.energySaving} → $esOk")
+        // Rien à réécrire si le profil laisse la régénération inchangée (issue #140).
+        if (!profile.writesRegen) return
         val rlOk = MG4Hardware.setRegenLevel(profile.regenLevel)
         AppLogger.i(TAG, "  RegenLevel=${profile.regenLevel.label} (réécrite après l'économie) → $rlOk")
     }

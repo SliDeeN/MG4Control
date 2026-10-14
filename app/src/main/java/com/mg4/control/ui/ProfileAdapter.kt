@@ -63,7 +63,8 @@ class ProfileAdapter(
             profile, adasLabel,
             context.getString(R.string.profile_cat_drive),
             context.getString(R.string.profile_cat_safety),
-            context.getString(R.string.profile_cat_comfort)
+            context.getString(R.string.profile_cat_comfort),
+            regenUnchanged = context.getString(R.string.regen_unchanged_short)
         )
 
         holder.tvDefault.visibility = if (isDefault) View.VISIBLE else View.GONE

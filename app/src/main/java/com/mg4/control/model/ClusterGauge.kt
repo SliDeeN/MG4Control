@@ -2,6 +2,7 @@ package com.mg4.control.model
 
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.ln
 
 /**
  * Module affiché dans la zone centrale du combiné (Réglages › Interface, 2026-10-14). Deux au
@@ -49,8 +50,16 @@ object ClusterGauge {
     /** Sous cette vitesse, des Wh/km divisent par presque rien : on affiche des kW. */
     const val STOP_KMH = 5f
 
-    /** Anneau plein. Au-delà, il reste plein : une accélération à basse vitesse dépasse 1 000. */
-    const val WH_KM_FULL = 400f
+    /**
+     * Anneau plein. Au-delà, il reste plein. Premier essai à 400 : en roulant, les accélérations
+     * dépassent 2 500 Wh/km (retour du 2026-10-14) et l'anneau restait plein à chaque pointe.
+     */
+    const val WH_KM_FULL = 3000f
+    /**
+     * Courbure de l'échelle logarithmique ([consumptionFraction]) : plus elle est petite, plus le
+     * bas de l'échelle s'étale. À 100, 150 Wh/km prend un quart de l'anneau, 500 la moitié.
+     */
+    const val WH_KM_CURVE = 100f
     /** Seuils de couleur des Wh/km : vert en dessous du premier, orange, puis rouge. */
     const val WH_KM_WARN = 170f
     const val WH_KM_DANGER = 300f
@@ -59,11 +68,17 @@ object ClusterGauge {
     const val REGEN_FULL_KW = 60f
     /** Anneau plein à l'arrêt : la clim à fond et le chauffage n'y arrivent pas. */
     const val STOPPED_FULL_KW = 20f
-    /** Arc plein du module B, à peu près la puissance de la MG4 la plus courante. */
-    const val POWER_FULL_KW = 150f
-    /** Seuils de couleur du module B, en part de l'arc. */
-    const val POWER_WARN = 0.3f
-    const val POWER_DANGER = 0.6f
+    /**
+     * Arc plein du module B : la puissance de la XPower, la plus puissante des MG4. Premier essai à
+     * 150 kW, où l'arc d'une XPower restait plein en accélération franche (2026-10-14).
+     */
+    const val POWER_FULL_KW = 320f
+    /**
+     * Seuils de couleur du module B, en kW et non en part de l'arc : le passage à 320 kW ne doit pas
+     * repousser le rouge hors de portée d'une MG4 de 150 kW. Ce sont ceux du premier essai.
+     */
+    const val POWER_WARN_KW = 45f
+    const val POWER_DANGER_KW = 90f
 
     /** Poids de la nouvelle valeur dans le lissage : assez vif pour suivre un freinage. */
     const val SMOOTHING = 0.5f
@@ -79,8 +94,18 @@ object ClusterGauge {
             wh >= WH_KM_WARN -> GaugeLevel.WARN
             else -> GaugeLevel.ECO
         }
-        return GaugeState(part(wh / WH_KM_FULL), niveau, wh, GaugeUnit.WH_PER_KM)
+        return GaugeState(consumptionFraction(wh), niveau, wh, GaugeUnit.WH_PER_KM)
     }
+
+    /**
+     * Part de l'anneau pour [wh] Wh/km, sur une échelle **logarithmique** jusqu'à [WH_KM_FULL].
+     *
+     * Linéaire jusqu'à 3 000, la conduite courante (150 à 250 Wh/km) tiendrait dans les dix
+     * premiers pour cent et l'anneau ne bougerait qu'aux pointes. Ici : 150 → 27 %, 200 → 32 %,
+     * 500 → 52 %, 1 000 → 70 %, 2 500 → 95 %.
+     */
+    fun consumptionFraction(wh: Float): Float =
+        part((ln(1.0 + wh.coerceAtLeast(0f) / WH_KM_CURVE) / ln(1.0 + WH_KM_FULL / WH_KM_CURVE)).toFloat())
 
     // ── Module B ─────────────────────────────────────────────────────────────
 
@@ -88,8 +113,8 @@ object ClusterGauge {
         if (kw < 0f) return GaugeState(-part(-kw / REGEN_FULL_KW), GaugeLevel.ACCENT, kw, GaugeUnit.KW)
         val f = part(kw / POWER_FULL_KW)
         val niveau = when {
-            f > POWER_DANGER -> GaugeLevel.DANGER
-            f > POWER_WARN -> GaugeLevel.WARN
+            kw > POWER_DANGER_KW -> GaugeLevel.DANGER
+            kw > POWER_WARN_KW -> GaugeLevel.WARN
             else -> GaugeLevel.ECO
         }
         return GaugeState(f, niveau, kw, GaugeUnit.KW)

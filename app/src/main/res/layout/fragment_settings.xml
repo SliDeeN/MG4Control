@@ -1325,6 +1325,27 @@
                 app:iconTint="@color/dash_text_lo"
                 app:iconGravity="textStart" />
 
+            <!-- ── Bouton ONGLET DU COMBINÉ : outil de relevé, caché et débloqué avec le
+                 Diagnostic (5 appuis sur le logo), juste au-dessus de lui. ── -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_cluster_tab"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"
+                android:text="@string/btn_cluster_tab"
+                android:textColor="@color/dash_warn"
+                android:textSize="16sp"
+                android:letterSpacing="0.06"
+                android:textAllCaps="true"
+                app:backgroundTint="@color/dash_warn_dim"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_warn"
+                app:cornerRadius="10dp"
+                app:icon="@android:drawable/ic_menu_info_details"
+                app:iconTint="@color/dash_warn"
+                app:iconGravity="textStart" />
+
             <!-- ── Bouton DIAGNOSTIC (caché — 5 clics sur "Vérifier les mises à jour") ── -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_diagnostic"

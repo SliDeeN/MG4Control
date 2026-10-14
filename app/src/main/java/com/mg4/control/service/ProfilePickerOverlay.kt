@@ -522,14 +522,16 @@ object ProfilePickerOverlay {
             mode.text = profile.driveMode.label
             mode.setTextColor(texte)
             OverlayKit.fond(mode, fond, rayon = p.rayonPastille)
-            resume.text = localized.getString(R.string.drive_section_regen) + " " + profile.regenLevel.label
+            resume.text = localized.getString(R.string.drive_section_regen) + " " +
+                if (profile.appliesRegen) profile.regenLevel.label else localized.getString(R.string.regen_unchanged)
         } else {
             mode.visibility = View.INVISIBLE
             resume.text = ProfileSections.summary(
                 profile, adasLabel = "",
                 driveName   = localized.getString(R.string.profile_cat_drive),
                 safetyName  = localized.getString(R.string.profile_cat_safety),
-                comfortName = localized.getString(R.string.profile_cat_comfort))
+                comfortName = localized.getString(R.string.profile_cat_comfort),
+                regenUnchanged = localized.getString(R.string.regen_unchanged_short))
         }
 
         carte.findViewById<TextView>(R.id.profile_card_name).text = profile.name

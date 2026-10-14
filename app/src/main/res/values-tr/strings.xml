@@ -95,6 +95,9 @@
     <string name="regen_one_pedal">Tek pedal</string>
     <string name="regen_adaptive_short">Uyarl.</string>
     <string name="regen_one_pedal_short">1 Ped.</string>
+    <string name="regen_unchanged">değiştirilmez</string>
+    <string name="regen_unchanged_short">Rejen. değiştirilmez</string>
+    <string name="regen_unchanged_note">Değiştirilmez: profil ne rejenerasyon seviyesine ne de tek pedal sürüşe dokunur.</string>
 
     <!-- Climate -->
     <string name="climate_steering_heat">Direksiyon ısıtma</string>
@@ -762,4 +765,19 @@
     <string name="cluster_battery">BATARYA</string>
     <string name="cluster_regen_word">rejenerasyon</string>
     <string name="cluster_stopped_word">duruşta</string>
+
+    <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
+    <string name="btn_cluster_tab">Gösterge paneli sekmesi</string>
+    <string name="cluster_tab_hint">Sekmeyi direksiyon tuşlarıyla değiştirin: numara anlık olarak güncellenir. Her değişiklik Teşhis günlüğüne yazılır.</string>
+    <string name="cluster_tab_code_name">Orijinal koda göre: %1$s</string>
+    <string name="cluster_tab_unknown">Orijinal kodda olmayan değer</string>
+    <string name="cluster_tab_unreadable">Okunamıyor</string>
+    <string name="cluster_tab_0">Yol bilgisayarı</string>
+    <string name="cluster_tab_1">Navigasyon</string>
+    <string name="cluster_tab_2">Müzik ve radyo</string>
+    <string name="cluster_tab_3">Telefon</string>
+    <string name="cluster_tab_4">Uyarı merkezi</string>
+    <string name="cluster_tab_5">Ayarlar</string>
+    <string name="cluster_tab_6">Sürüş asistanı</string>
+    <string name="cluster_tab_7">Ayrılmış</string>
 </resources>

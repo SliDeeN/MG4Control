@@ -474,6 +474,11 @@ class SettingsFragment : Fragment() {
         // Bouton Diagnostic débloqué via 5 clics sur le logo (cf. MainActivity)
         btnDiagnostic.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
 
+        // Onglet du combiné : outil de relevé, débloqué avec le Diagnostic (même principe).
+        val btnClusterTab = view.findViewById<MaterialButton>(R.id.btn_cluster_tab)
+        btnClusterTab.visibility = btnDiagnostic.visibility
+        btnClusterTab.setOnClickListener { ClusterTabDialog.afficher(requireContext()) }
+
         btnUpdate.setOnClickListener {
             btnUpdate.isEnabled = false
 

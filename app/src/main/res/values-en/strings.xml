@@ -95,6 +95,9 @@
     <string name="regen_one_pedal">1 Pedal</string>
     <string name="regen_adaptive_short">Adapt.</string>
     <string name="regen_one_pedal_short">1 Ped.</string>
+    <string name="regen_unchanged">unchanged</string>
+    <string name="regen_unchanged_short">Regen unchanged</string>
+    <string name="regen_unchanged_note">Unchanged: the profile touches neither the regeneration level nor one-pedal driving.</string>
 
     <!-- Climate -->
     <string name="climate_steering_heat">Heated steering</string>
@@ -762,4 +765,19 @@
     <string name="cluster_battery">BATTERY</string>
     <string name="cluster_regen_word">regenerating</string>
     <string name="cluster_stopped_word">stationary</string>
+
+    <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
+    <string name="btn_cluster_tab">Cluster tab</string>
+    <string name="cluster_tab_hint">Switch tabs with the steering wheel buttons: the number follows live. Each change is written to the Diagnostic log.</string>
+    <string name="cluster_tab_code_name">According to the original code: %1$s</string>
+    <string name="cluster_tab_unknown">Value not in the original code</string>
+    <string name="cluster_tab_unreadable">Unreadable</string>
+    <string name="cluster_tab_0">Trip computer</string>
+    <string name="cluster_tab_1">Navigation</string>
+    <string name="cluster_tab_2">Music and radio</string>
+    <string name="cluster_tab_3">Phone</string>
+    <string name="cluster_tab_4">Warning centre</string>
+    <string name="cluster_tab_5">Settings</string>
+    <string name="cluster_tab_6">Driving assistance</string>
+    <string name="cluster_tab_7">Reserved</string>
 </resources>
