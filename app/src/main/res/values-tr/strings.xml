@@ -756,7 +756,11 @@
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Sürücü ekranı</string>
     <string name="settings_cluster_module">Gösterge panelinde modül</string>
-    <string name="settings_cluster_module_desc">Gösterge panelinin ortasında navigasyon, müzik veya telefon yerine bir MG4Control modülü gösterir.</string>
+    <string name="settings_cluster_module_desc">Gösterge panelinin ortasında, seçilen sekmelerde, orijinal sayfalarının yerine bir MG4Control modülü gösterir.</string>
+    <string name="settings_cluster_tab_nav">Navigasyon sekmesi</string>
+    <string name="settings_cluster_tab_media">Müzik sekmesi</string>
+    <string name="settings_cluster_none">Hiçbiri</string>
+    <string name="settings_cluster_tabs_note">Yol bilgisayarı, lastik basıncı ve ayarlar gösterge panelinin kendisi tarafından çizilir: orada modül görünemez.</string>
     <string name="settings_cluster_consumption">Tüketim</string>
     <string name="settings_cluster_power">Güç</string>
     <string name="settings_cluster_refresh">Gösterge yenileme hızı</string>

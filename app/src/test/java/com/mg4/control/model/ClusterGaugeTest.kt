@@ -21,7 +21,7 @@ class ClusterGaugeTest {
         assertEquals(GaugeUnit.WH_PER_KM, s.unit)
         assertEquals(200f, s.value, delta)
         assertEquals(0.32f, s.fraction, 0.005f)
-        assertEquals(GaugeLevel.WARN, s.level)
+        assertEquals(GaugeLevel.CONSUMPTION, s.level)
     }
 
     // ── Échelle (essai en roulant du 2026-10-14 : pointes à plus de 2 500 Wh/km) ──
@@ -52,16 +52,18 @@ class ClusterGaugeTest {
         }
     }
 
-    @Test fun `la couleur suit la consommation`() {
-        assertEquals(GaugeLevel.ECO, ClusterGauge.consumption(6f, 50f).level)        // 120 Wh/km
-        assertEquals(GaugeLevel.WARN, ClusterGauge.consumption(8.5f, 50f).level)     // 170 Wh/km
-        assertEquals(GaugeLevel.DANGER, ClusterGauge.consumption(15f, 50f).level)    // 300 Wh/km
+    @Test fun `la consommation garde une seule couleur, quelle qu en soit la valeur`() {
+        // Demande du 2026-10-14 : orange partout, plus de vert ni de rouge selon les Wh/km.
+        assertEquals(GaugeLevel.CONSUMPTION, ClusterGauge.consumption(6f, 50f).level)     // 120 Wh/km
+        assertEquals(GaugeLevel.CONSUMPTION, ClusterGauge.consumption(15f, 50f).level)    // 300 Wh/km
+        // À l'arrêt aussi : c'est de la consommation (clim, accessoires).
+        assertEquals(GaugeLevel.CONSUMPTION, ClusterGauge.consumption(1.8f, 0f).level)
     }
 
     @Test fun `une forte acceleration remplit l anneau sans le depasser`() {
         val s = ClusterGauge.consumption(95f, 20f)   // 4 750 Wh/km
         assertEquals(1f, s.fraction, delta)
-        assertEquals(GaugeLevel.DANGER, s.level)
+        assertEquals(GaugeLevel.CONSUMPTION, s.level)
     }
 
     @Test fun `en recuperation, la jauge donne les kW recuperes`() {
@@ -69,7 +71,7 @@ class ClusterGaugeTest {
         assertEquals(GaugeUnit.KW_REGEN, s.unit)
         assertEquals(38f, s.value, delta)
         assertEquals(38f / 60f, s.fraction, delta)
-        assertEquals(GaugeLevel.ACCENT, s.level)
+        assertEquals(GaugeLevel.REGEN, s.level)
     }
 
     @Test fun `a l arret, des Wh par km n ont pas de sens - on donne des kW`() {
@@ -92,18 +94,15 @@ class ClusterGaugeTest {
         assertEquals(GaugeUnit.KW, ClusterGauge.power(75f).unit)
     }
 
-    @Test fun `la couleur de la puissance se juge en kW, pas en part de l arc`() {
-        // Seuils inchangés par le passage à 320 kW : sinon le rouge ne viendrait jamais sur une
-        // MG4 de 150 kW.
-        assertEquals(GaugeLevel.ECO, ClusterGauge.power(30f).level)
-        assertEquals(GaugeLevel.WARN, ClusterGauge.power(75f).level)
-        assertEquals(GaugeLevel.DANGER, ClusterGauge.power(120f).level)
+    @Test fun `la puissance consommee garde une seule couleur`() {
+        assertEquals(GaugeLevel.CONSUMPTION, ClusterGauge.power(30f).level)
+        assertEquals(GaugeLevel.CONSUMPTION, ClusterGauge.power(300f).level)
     }
 
     @Test fun `la recuperation remplit l arc vers la gauche`() {
         val s = ClusterGauge.power(-30f)
         assertEquals(-0.5f, s.fraction, delta)
-        assertEquals(GaugeLevel.ACCENT, s.level)
+        assertEquals(GaugeLevel.REGEN, s.level)
         assertEquals(-30f, s.value, delta)
         assertEquals(-1f, ClusterGauge.power(-90f).fraction, delta)
     }

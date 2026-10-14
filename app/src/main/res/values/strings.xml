@@ -773,7 +773,11 @@
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Écran conducteur</string>
     <string name="settings_cluster_module">Module sur le combiné</string>
-    <string name="settings_cluster_module_desc">Affiche un module MG4Control au centre du combiné, à la place de la navigation, de la musique ou du téléphone.</string>
+    <string name="settings_cluster_module_desc">Affiche un module MG4Control au centre du combiné, sur les onglets choisis, à la place de leur page d\'origine.</string>
+    <string name="settings_cluster_tab_nav">Onglet Navigation</string>
+    <string name="settings_cluster_tab_media">Onglet Musique</string>
+    <string name="settings_cluster_none">Aucun</string>
+    <string name="settings_cluster_tabs_note">Ordinateur de bord, pression des pneus et réglages sont dessinés par le combiné lui-même : un module ne peut pas s\'y afficher.</string>
     <string name="settings_cluster_consumption">Consommation</string>
     <string name="settings_cluster_power">Puissance</string>
     <string name="settings_cluster_refresh">Actualisation de la jauge</string>

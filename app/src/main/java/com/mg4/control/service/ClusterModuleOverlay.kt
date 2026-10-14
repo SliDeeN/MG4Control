@@ -10,12 +10,16 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.Display
 import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.hardware.ClusterTabReader
 import com.mg4.control.hardware.EnergyReader
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.ReadyWatcher
 import com.mg4.control.model.ClusterGauge
+import com.mg4.control.model.ClusterModule
+import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ClusterTrip
 import com.mg4.control.model.DriveMode
 import com.mg4.control.ui.widget.ClusterGaugeView
@@ -28,7 +32,8 @@ import com.mg4.control.util.LocaleHelper
  * Le combiné est un calculateur à part ; seule sa zone centrale vient de l'écran central, par un
  * écran Android à lui (le n° 1 sur SWI68 et SWI165), où SystemUI lance l'appli SAIC du combiné.
  * Le module est une fenêtre de 260 × 260 px posée sur cet écran, à la place du carré de cette
- * appli : il recouvre sa page (navigation, musique, téléphone) tant qu'il est affiché.
+ * appli. Il suit l'onglet choisi au volant : sur Navigation et Musique, le module réglé pour
+ * l'onglet, ou rien — la fenêtre devient alors transparente et la page d'origine reparaît.
  *
  * Affiché dès le démarrage de l'application, réglage activé — et non plus en READY seulement
  * (demande du 2026-10-14). Si l'écran du combiné n'existe pas encore à ce moment-là (démarrage du
@@ -71,6 +76,9 @@ internal object ClusterModuleOverlay {
     private var kwLisse: Float? = null
     private var dernierKwMs = 0L
     private var dernierLentMs = 0L
+    /** Dernier onglet et dernier module annoncés au journal : un mot par changement, pas par relevé. */
+    private var dernierOnglet: Int? = -1
+    private var dernierModule: ClusterModule? = null
     private var mode: DriveMode? = null
     private var batterie: Float? = null
 
@@ -186,7 +194,9 @@ internal object ClusterModuleOverlay {
             vue = v
             fenetres = wm
             ecranId = ecran.displayId
-            AppLogger.i(TAG, "$origine : module ${ClusterModuleSettings.module(ctx).key} affiché sur l'écran " +
+            AppLogger.i(TAG, "$origine : fenêtre posée (navigation=" +
+                "${ClusterModuleSettings.moduleFor(ctx, ClusterTab.NAVIGATION)?.key ?: "aucun"}, musique=" +
+                "${ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA)?.key ?: "aucun"}) sur l'écran " +
                 "${ecran.displayId} « ${ecran.name} » ${taille.x}×${taille.y} px — carré de ${place.side} px " +
                 "en (${place.x}, ${place.y})")
             demarrerReleves()
@@ -217,6 +227,8 @@ internal object ClusterModuleOverlay {
             kwLisse = null
             dernierKwMs = 0L
             dernierLentMs = 0L
+            dernierOnglet = -1
+            dernierModule = null
             lecteur.removeCallbacks(tic)
             lecteur.post(tic)
         }
@@ -251,16 +263,39 @@ internal object ClusterModuleOverlay {
                 mode = runCatching { MG4Hardware.getDriveMode() }.getOrNull()
                 batterie = runCatching { EnergyReader.soc() }.getOrNull()
             }
-            val contenu = ClusterGaugeView.Contenu(
-                module = ClusterModuleSettings.module(ctx),
-                kw = kwLisse,
-                kmh = kmh,
-                mode = mode,
-                moyenneWhKm = trajet.averageWhPerKm(),
-                recupWh = trajet.regenWh(),
-                batterie = batterie,
-            )
-            main.post { vue?.montrer(contenu, intervalle) }
+            // Le module suit l'onglet choisi au volant. Les relevés, eux, continuent quel que
+            // soit l'onglet : la moyenne du trajet ne doit pas avoir de trou.
+            val onglet = runCatching { ClusterTabReader.onglet() }.getOrNull()
+            val module = ClusterModuleSettings.moduleToShow(onglet,
+                ClusterModuleSettings.moduleFor(ctx, ClusterTab.NAVIGATION),
+                ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA))
+            if (onglet != dernierOnglet || module != dernierModule) {
+                AppLogger.i(TAG, "onglet ${onglet ?: "illisible"} (${ClusterTab.fromValue(onglet)?.name ?: "?"}) → " +
+                    (module?.let { "module ${it.key}" } ?: "aucun module, page d'origine"))
+                dernierOnglet = onglet
+                dernierModule = module
+            }
+            val contenu = module?.let {
+                ClusterGaugeView.Contenu(
+                    module = it,
+                    kw = kwLisse,
+                    kmh = kmh,
+                    mode = mode,
+                    moyenneWhKm = trajet.averageWhPerKm(),
+                    recupWh = trajet.regenWh(),
+                    batterie = batterie,
+                )
+            }
+            main.post {
+                val v = vue ?: return@post
+                if (contenu == null) {
+                    // Transparente : la page d'origine de l'onglet reparaît dessous.
+                    v.visibility = View.INVISIBLE
+                } else {
+                    v.visibility = View.VISIBLE
+                    v.montrer(contenu, intervalle)
+                }
+            }
             lecteur.postDelayed(this, intervalle)
         }
     }

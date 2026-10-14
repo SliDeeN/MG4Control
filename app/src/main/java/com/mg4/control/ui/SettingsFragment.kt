@@ -52,6 +52,7 @@ import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.model.ClusterModule
+import com.mg4.control.model.ClusterTab
 import com.mg4.control.service.ClusterModuleOverlay
 import com.mg4.control.util.TextSize
 import kotlinx.coroutines.CoroutineScope
@@ -234,24 +235,28 @@ class SettingsFragment : Fragment() {
             })
         }
 
-        // ── Module sur le combiné : interrupteur et choix du module ──────────
+        // ── Module sur le combiné : interrupteur et un module par onglet ──────
         // Désactivé par défaut ; activer déplie le choix. Le service relit l'interrupteur aussitôt
-        // (ClusterModuleOverlay.refresh), et le module choisi à chaque relevé : rien à redémarrer.
+        // (ClusterModuleOverlay.refresh), et les modules à chaque relevé : rien à redémarrer.
         val switchCluster = view.findViewById<Switch>(R.id.switch_cluster_module)
         val rowClusterChoice = view.findViewById<View>(R.id.row_cluster_choice)
         val rowClusterRefresh = view.findViewById<View>(R.id.row_cluster_refresh)
-        val clusterBtns = listOf(
-            ClusterModule.CONSUMPTION to view.findViewById<MaterialButton>(R.id.btn_cluster_consumption),
-            ClusterModule.POWER       to view.findViewById(R.id.btn_cluster_power)
+        // Pour chaque onglet : « Aucun » (null), Consommation, Puissance.
+        val clusterBtns: List<Triple<ClusterTab, ClusterModule?, MaterialButton>> = listOf(
+            Triple(ClusterTab.NAVIGATION, null, view.findViewById(R.id.btn_cluster_nav_none)),
+            Triple(ClusterTab.NAVIGATION, ClusterModule.CONSUMPTION, view.findViewById(R.id.btn_cluster_nav_consumption)),
+            Triple(ClusterTab.NAVIGATION, ClusterModule.POWER, view.findViewById(R.id.btn_cluster_nav_power)),
+            Triple(ClusterTab.MEDIA, null, view.findViewById(R.id.btn_cluster_media_none)),
+            Triple(ClusterTab.MEDIA, ClusterModule.CONSUMPTION, view.findViewById(R.id.btn_cluster_media_consumption)),
+            Triple(ClusterTab.MEDIA, ClusterModule.POWER, view.findViewById(R.id.btn_cluster_media_power)),
         )
         fun updateClusterCard() {
             val ctx = requireContext()
             val deplie = if (ClusterModuleSettings.isEnabled(ctx)) View.VISIBLE else View.GONE
             rowClusterChoice.visibility = deplie
             rowClusterRefresh.visibility = deplie
-            val choisi = ClusterModuleSettings.module(ctx)
-            clusterBtns.forEach { (module, btn) ->
-                val active = module == choisi
+            clusterBtns.forEach { (onglet, module, btn) ->
+                val active = module == ClusterModuleSettings.moduleFor(ctx, onglet)
                 btn.backgroundTintList = ColorStateList.valueOf(if (active) accentDim else inactiveColor)
                 btn.setTextColor(if (active) textActive else textInactive)
                 btn.strokeColor = ColorStateList.valueOf(
@@ -267,11 +272,11 @@ class SettingsFragment : Fragment() {
             ClusterModuleOverlay.refresh(requireContext())
             updateClusterCard()
         }
-        clusterBtns.forEach { (module, btn) ->
+        clusterBtns.forEach { (onglet, module, btn) ->
             btn.setOnClickListener {
-                if (module == ClusterModuleSettings.module(requireContext())) return@setOnClickListener
-                ClusterModuleSettings.setModule(requireContext(), module)
-                AppLogger.i(ClusterModuleOverlay.TAG, "Module du combiné → ${module.key}")
+                if (module == ClusterModuleSettings.moduleFor(requireContext(), onglet)) return@setOnClickListener
+                ClusterModuleSettings.setModuleFor(requireContext(), onglet, module)
+                AppLogger.i(ClusterModuleOverlay.TAG, "Module du combiné, onglet ${onglet.name} → ${module?.key ?: "aucun"}")
                 updateClusterCard()
             }
         }

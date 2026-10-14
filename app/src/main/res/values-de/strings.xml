@@ -756,7 +756,11 @@
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Fahrerdisplay</string>
     <string name="settings_cluster_module">Modul im Kombiinstrument</string>
-    <string name="settings_cluster_module_desc">Zeigt ein MG4Control-Modul in der Mitte des Kombiinstruments, anstelle von Navigation, Musik oder Telefon.</string>
+    <string name="settings_cluster_module_desc">Zeigt ein MG4Control-Modul in der Mitte des Kombiinstruments, auf den gewählten Reitern, anstelle ihrer ursprünglichen Seite.</string>
+    <string name="settings_cluster_tab_nav">Reiter Navigation</string>
+    <string name="settings_cluster_tab_media">Reiter Musik</string>
+    <string name="settings_cluster_none">Keins</string>
+    <string name="settings_cluster_tabs_note">Bordcomputer, Reifendruck und Einstellungen zeichnet das Kombiinstrument selbst: Dort kann kein Modul erscheinen.</string>
     <string name="settings_cluster_consumption">Verbrauch</string>
     <string name="settings_cluster_power">Leistung</string>
     <string name="settings_cluster_refresh">Aktualisierung der Anzeige</string>

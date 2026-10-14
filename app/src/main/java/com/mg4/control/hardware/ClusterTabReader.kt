@@ -33,6 +33,14 @@ object ClusterTabReader {
         centre = cpm(PROP_CENTRE),
     )
 
+    /**
+     * Onglet seul, pour le module du combiné qui le relit à chaque relevé : la voie du
+     * CarPropertyManager, sinon celle de l'ancien SDK. `null` = illisible.
+     */
+    fun onglet(): Int? = cpm(PROP_TAB)
+        ?: if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133)
+            MG4Hardware.vpmIntForProbe(VPM_TAB).takeIf { it >= 0 } else null
+
     /** Zone globale d'abord, comme les autres propriétés vendeur ; zone 0 sinon. */
     private fun cpm(id: Int): Int? {
         val manager = MG4Hardware.carPropertyManager() ?: return null

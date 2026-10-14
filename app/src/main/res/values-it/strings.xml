@@ -756,7 +756,11 @@
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Display del conducente</string>
     <string name="settings_cluster_module">Modulo sul quadro strumenti</string>
-    <string name="settings_cluster_module_desc">Mostra un modulo MG4Control al centro del quadro strumenti, al posto di navigazione, musica o telefono.</string>
+    <string name="settings_cluster_module_desc">Mostra un modulo MG4Control al centro del quadro strumenti, sulle schede scelte, al posto della loro pagina originale.</string>
+    <string name="settings_cluster_tab_nav">Scheda Navigazione</string>
+    <string name="settings_cluster_tab_media">Scheda Musica</string>
+    <string name="settings_cluster_none">Nessuno</string>
+    <string name="settings_cluster_tabs_note">Computer di bordo, pressione pneumatici e impostazioni sono disegnati dal quadro stesso: lì non può comparire alcun modulo.</string>
     <string name="settings_cluster_consumption">Consumo</string>
     <string name="settings_cluster_power">Potenza</string>
     <string name="settings_cluster_refresh">Aggiornamento dell\'indicatore</string>

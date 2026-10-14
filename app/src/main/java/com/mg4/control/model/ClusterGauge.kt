@@ -19,8 +19,11 @@ enum class ClusterModule(val key: String) {
     }
 }
 
-/** Couleur d'une jauge : les teintes de l'application. */
-enum class GaugeLevel { ECO, ACCENT, WARN, DANGER }
+/**
+ * Couleur d'une jauge : orange pour la consommation, bleu pour la récupération. Plus de vert ni de
+ * rouge selon la valeur (demande du 2026-10-14) — le chiffre dit déjà combien.
+ */
+enum class GaugeLevel { CONSUMPTION, REGEN }
 
 /** Ce que dit le grand chiffre. */
 enum class GaugeUnit {
@@ -60,9 +63,6 @@ object ClusterGauge {
      * bas de l'échelle s'étale. À 100, 150 Wh/km prend un quart de l'anneau, 500 la moitié.
      */
     const val WH_KM_CURVE = 100f
-    /** Seuils de couleur des Wh/km : vert en dessous du premier, orange, puis rouge. */
-    const val WH_KM_WARN = 170f
-    const val WH_KM_DANGER = 300f
 
     /** Récupération maximale montrée, des deux modules. */
     const val REGEN_FULL_KW = 60f
@@ -73,12 +73,6 @@ object ClusterGauge {
      * 150 kW, où l'arc d'une XPower restait plein en accélération franche (2026-10-14).
      */
     const val POWER_FULL_KW = 320f
-    /**
-     * Seuils de couleur du module B, en kW et non en part de l'arc : le passage à 320 kW ne doit pas
-     * repousser le rouge hors de portée d'une MG4 de 150 kW. Ce sont ceux du premier essai.
-     */
-    const val POWER_WARN_KW = 45f
-    const val POWER_DANGER_KW = 90f
 
     /** Poids de la nouvelle valeur dans le lissage : assez vif pour suivre un freinage. */
     const val SMOOTHING = 0.5f
@@ -86,15 +80,10 @@ object ClusterGauge {
     // ── Module A ─────────────────────────────────────────────────────────────
 
     fun consumption(kw: Float, kmh: Float?): GaugeState {
-        if (kw < 0f) return GaugeState(part(-kw / REGEN_FULL_KW), GaugeLevel.ACCENT, -kw, GaugeUnit.KW_REGEN)
+        if (kw < 0f) return GaugeState(part(-kw / REGEN_FULL_KW), GaugeLevel.REGEN, -kw, GaugeUnit.KW_REGEN)
         val wh = whPerKm(kw, kmh)
-            ?: return GaugeState(part(kw / STOPPED_FULL_KW), GaugeLevel.ACCENT, kw, GaugeUnit.KW_STOPPED)
-        val niveau = when {
-            wh >= WH_KM_DANGER -> GaugeLevel.DANGER
-            wh >= WH_KM_WARN -> GaugeLevel.WARN
-            else -> GaugeLevel.ECO
-        }
-        return GaugeState(consumptionFraction(wh), niveau, wh, GaugeUnit.WH_PER_KM)
+            ?: return GaugeState(part(kw / STOPPED_FULL_KW), GaugeLevel.CONSUMPTION, kw, GaugeUnit.KW_STOPPED)
+        return GaugeState(consumptionFraction(wh), GaugeLevel.CONSUMPTION, wh, GaugeUnit.WH_PER_KM)
     }
 
     /**
@@ -110,14 +99,8 @@ object ClusterGauge {
     // ── Module B ─────────────────────────────────────────────────────────────
 
     fun power(kw: Float): GaugeState {
-        if (kw < 0f) return GaugeState(-part(-kw / REGEN_FULL_KW), GaugeLevel.ACCENT, kw, GaugeUnit.KW)
-        val f = part(kw / POWER_FULL_KW)
-        val niveau = when {
-            kw > POWER_DANGER_KW -> GaugeLevel.DANGER
-            kw > POWER_WARN_KW -> GaugeLevel.WARN
-            else -> GaugeLevel.ECO
-        }
-        return GaugeState(f, niveau, kw, GaugeUnit.KW)
+        if (kw < 0f) return GaugeState(-part(-kw / REGEN_FULL_KW), GaugeLevel.REGEN, kw, GaugeUnit.KW)
+        return GaugeState(part(kw / POWER_FULL_KW), GaugeLevel.CONSUMPTION, kw, GaugeUnit.KW)
     }
 
     /** Consommation instantanée, ou `null` à l'arrêt, en récupération ou vitesse illisible. */

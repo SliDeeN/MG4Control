@@ -756,7 +756,11 @@
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Ecrã do condutor</string>
     <string name="settings_cluster_module">Módulo no painel de instrumentos</string>
-    <string name="settings_cluster_module_desc">Mostra um módulo do MG4Control no centro do painel de instrumentos, em vez da navegação, da música ou do telefone.</string>
+    <string name="settings_cluster_module_desc">Mostra um módulo do MG4Control no centro do painel de instrumentos, nos separadores escolhidos, em vez da sua página original.</string>
+    <string name="settings_cluster_tab_nav">Separador Navegação</string>
+    <string name="settings_cluster_tab_media">Separador Música</string>
+    <string name="settings_cluster_none">Nenhum</string>
+    <string name="settings_cluster_tabs_note">O computador de bordo, a pressão dos pneus e as definições são desenhados pelo próprio painel: aí não pode aparecer nenhum módulo.</string>
     <string name="settings_cluster_consumption">Consumo</string>
     <string name="settings_cluster_power">Potência</string>
     <string name="settings_cluster_refresh">Atualização do indicador</string>

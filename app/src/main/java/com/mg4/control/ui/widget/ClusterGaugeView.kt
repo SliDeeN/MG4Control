@@ -244,10 +244,8 @@ class ClusterGaugeView(context: Context) : View(context) {
     private fun whKm(v: Float?): String = v?.let { "${it.roundToInt()} Wh/km" } ?: "–"
 
     private fun couleur(niveau: GaugeLevel): Int = sombre.getColor(when (niveau) {
-        GaugeLevel.ECO -> R.color.dash_eco
-        GaugeLevel.ACCENT -> R.color.dash_accent
-        GaugeLevel.WARN -> R.color.dash_warn
-        GaugeLevel.DANGER -> R.color.dash_danger
+        GaugeLevel.CONSUMPTION -> R.color.dash_warn
+        GaugeLevel.REGEN -> R.color.dash_accent
     })
 
     private companion object {

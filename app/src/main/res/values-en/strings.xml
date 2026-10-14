@@ -756,7 +756,11 @@
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Driver display</string>
     <string name="settings_cluster_module">Module on the instrument cluster</string>
-    <string name="settings_cluster_module_desc">Shows an MG4Control module in the centre of the instrument cluster, in place of navigation, music or phone.</string>
+    <string name="settings_cluster_module_desc">Shows an MG4Control module in the centre of the instrument cluster, on the chosen tabs, in place of their original page.</string>
+    <string name="settings_cluster_tab_nav">Navigation tab</string>
+    <string name="settings_cluster_tab_media">Music tab</string>
+    <string name="settings_cluster_none">None</string>
+    <string name="settings_cluster_tabs_note">Trip computer, tyre pressure and settings are drawn by the cluster itself: a module can\'t appear there.</string>
     <string name="settings_cluster_consumption">Consumption</string>
     <string name="settings_cluster_power">Power</string>
     <string name="settings_cluster_refresh">Gauge refresh rate</string>
