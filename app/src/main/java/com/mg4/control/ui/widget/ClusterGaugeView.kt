@@ -73,7 +73,8 @@ class ClusterGaugeView(context: Context) : View(context) {
     private val moyen = Typeface.create("sans-serif-medium", Typeface.NORMAL)
     private val cadre = RectF()
 
-    fun montrer(c: Contenu) {
+    /** [intervalleMs] : cadence des relevés — l'anneau doit avoir fini de glisser au suivant. */
+    fun montrer(c: Contenu, intervalleMs: Long) {
         contenu = c
         val nouveau = c.kw?.let {
             if (c.module == ClusterModule.POWER) ClusterGauge.power(it) else ClusterGauge.consumption(it, c.kmh)
@@ -81,7 +82,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         etat = nouveau
         animation?.cancel()
         animation = ValueAnimator.ofFloat(partAffichee, nouveau?.fraction ?: 0f).apply {
-            duration = ANIMATION_MS
+            duration = (intervalleMs * 8 / 10).coerceIn(ANIMATION_MIN_MS, ANIMATION_MAX_MS)
             interpolator = DecelerateInterpolator()
             addUpdateListener {
                 partAffichee = it.animatedValue as Float
@@ -260,7 +261,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         const val RAYON_A = 80f
         const val RAYON_B = 88f
         const val EPAISSEUR = 13f
-        /** Un peu moins que l'intervalle des relevés : l'anneau a fini de glisser quand le suivant arrive. */
-        const val ANIMATION_MS = 800L
+        /** Glissement de l'anneau : 80 % de l'intervalle des relevés, dans ces bornes. */
+        const val ANIMATION_MIN_MS = 50L
+        const val ANIMATION_MAX_MS = 800L
     }
 }

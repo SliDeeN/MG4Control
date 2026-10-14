@@ -33,8 +33,9 @@ import com.mg4.control.util.LocaleHelper
  * Affiché dès le démarrage de l'application, réglage activé — et non plus en READY seulement
  * (demande du 2026-10-14). Si l'écran du combiné n'existe pas encore à ce moment-là (démarrage du
  * boîtier), le module s'y pose dès qu'il apparaît. La moyenne du trajet et la récupération, elles,
- * repartent de zéro à chaque passage en READY. Lecture seule : puissance batterie et vitesse chaque
- * seconde, mode de conduite et batterie toutes les dix secondes.
+ * repartent de zéro à chaque passage en READY. Lecture seule : puissance batterie et vitesse à la
+ * cadence réglée (0,1 à 1 s, [ClusterModuleSettings.refreshMs]), mode de conduite et batterie
+ * toutes les dix secondes.
  *
  * Vu sur le combiné le 2026-10-14 (SWI133) : la fenêtre s'y affiche bien. La place du carré vient
  * de la mise en page de l'appli SAIC ([ClusterGauge.placement]) ; le journal ([TAG]) donne l'écran
@@ -44,11 +45,13 @@ internal object ClusterModuleOverlay {
 
     const val TAG = "MG4_CLUSTER"
 
-    private const val TICK_MS = 1_000L
-    /** Mode de conduite et batterie bougent peu : relus tous les dix relevés. */
-    private const val LENT_TOUS_LES = 10
-    /** Relevés de puissance manqués d'affilée avant d'afficher « – » plutôt que la dernière valeur. */
-    private const val MANQUES_TOLERES = 3
+    /** Mode de conduite et batterie bougent peu : relus toutes les dix secondes, quelle que soit la cadence. */
+    private const val LENT_MS = 10_000L
+    /**
+     * Puissance illisible depuis plus longtemps : « – » plutôt que la dernière valeur. En temps et
+     * non en relevés manqués : à 0,1 s, trois relevés ne feraient que 0,3 s.
+     */
+    private const val MANQUE_TOLERE_MS = 3_000L
 
     private val main = Handler(Looper.getMainLooper())
     private val lecteur: Handler by lazy { Handler(HandlerThread("mg4-cluster").also { it.start() }.looper) }
@@ -66,8 +69,8 @@ internal object ClusterModuleOverlay {
     private var enMarche = false
     private val trajet = ClusterTrip()
     private var kwLisse: Float? = null
-    private var manques = 0
-    private var tics = 0
+    private var dernierKwMs = 0L
+    private var dernierLentMs = 0L
     private var mode: DriveMode? = null
     private var batterie: Float? = null
 
@@ -212,8 +215,8 @@ internal object ClusterModuleOverlay {
             enMarche = true
             trajet.reset()
             kwLisse = null
-            manques = 0
-            tics = 0
+            dernierKwMs = 0L
+            dernierLentMs = 0L
             lecteur.removeCallbacks(tic)
             lecteur.post(tic)
         }
@@ -230,20 +233,24 @@ internal object ClusterModuleOverlay {
         override fun run() {
             if (!enMarche) return
             val ctx = appContext ?: return
+            val intervalle = ClusterModuleSettings.refreshMs(ctx).toLong()
+            val maintenant = SystemClock.elapsedRealtime()
             val kw = runCatching { EnergyReader.dischargeKw() }.getOrNull()
             val kmh = runCatching { MG4Hardware.getVehicleSpeedKmh() }.getOrNull()?.takeIf { it in 0f..300f }
-            trajet.add(SystemClock.elapsedRealtime(), kw, kmh)
+            trajet.add(maintenant, kw, kmh)
+            // Lissage par relevé : plus la cadence est rapide, plus la jauge suit vite. C'est ce
+            // qu'on demande au curseur — le chiffre bouge aussi davantage.
             if (kw != null) {
                 kwLisse = ClusterGauge.smooth(kwLisse, kw)
-                manques = 0
-            } else if (++manques >= MANQUES_TOLERES) {
+                dernierKwMs = maintenant
+            } else if (maintenant - dernierKwMs > MANQUE_TOLERE_MS) {
                 kwLisse = null
             }
-            if (tics % LENT_TOUS_LES == 0) {
+            if (dernierLentMs == 0L || maintenant - dernierLentMs >= LENT_MS) {
+                dernierLentMs = maintenant
                 mode = runCatching { MG4Hardware.getDriveMode() }.getOrNull()
                 batterie = runCatching { EnergyReader.soc() }.getOrNull()
             }
-            tics++
             val contenu = ClusterGaugeView.Contenu(
                 module = ClusterModuleSettings.module(ctx),
                 kw = kwLisse,
@@ -253,8 +260,8 @@ internal object ClusterModuleOverlay {
                 recupWh = trajet.regenWh(),
                 batterie = batterie,
             )
-            main.post { vue?.montrer(contenu) }
-            lecteur.postDelayed(this, TICK_MS)
+            main.post { vue?.montrer(contenu, intervalle) }
+            lecteur.postDelayed(this, intervalle)
         }
     }
 }

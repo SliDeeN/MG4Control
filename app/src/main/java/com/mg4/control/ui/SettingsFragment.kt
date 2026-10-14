@@ -239,13 +239,16 @@ class SettingsFragment : Fragment() {
         // (ClusterModuleOverlay.refresh), et le module choisi à chaque relevé : rien à redémarrer.
         val switchCluster = view.findViewById<Switch>(R.id.switch_cluster_module)
         val rowClusterChoice = view.findViewById<View>(R.id.row_cluster_choice)
+        val rowClusterRefresh = view.findViewById<View>(R.id.row_cluster_refresh)
         val clusterBtns = listOf(
             ClusterModule.CONSUMPTION to view.findViewById<MaterialButton>(R.id.btn_cluster_consumption),
             ClusterModule.POWER       to view.findViewById(R.id.btn_cluster_power)
         )
         fun updateClusterCard() {
             val ctx = requireContext()
-            rowClusterChoice.visibility = if (ClusterModuleSettings.isEnabled(ctx)) View.VISIBLE else View.GONE
+            val deplie = if (ClusterModuleSettings.isEnabled(ctx)) View.VISIBLE else View.GONE
+            rowClusterChoice.visibility = deplie
+            rowClusterRefresh.visibility = deplie
             val choisi = ClusterModuleSettings.module(ctx)
             clusterBtns.forEach { (module, btn) ->
                 val active = module == choisi
@@ -272,6 +275,31 @@ class SettingsFragment : Fragment() {
                 updateClusterCard()
             }
         }
+        // Actualisation de la jauge, 0,1 à 1 s : relue à chaque relevé, rien à redémarrer. Le
+        // nombre est écrit dans la langue de l'application (0,5 s / 0.5 s), jamais Locale.ROOT.
+        val tvClusterRefresh = view.findViewById<TextView>(R.id.tv_cluster_refresh)
+        val langue = requireContext().resources.configuration.locales[0]
+        fun texteActualisation(ms: Int) = String.format(langue, "%.1f s", ms / 1000f)
+        view.findViewById<Slider>(R.id.slider_cluster_refresh).apply {
+            valueFrom = ClusterModuleSettings.refreshToSlider(ClusterModuleSettings.MIN_REFRESH_MS)
+            valueTo   = ClusterModuleSettings.refreshToSlider(ClusterModuleSettings.MAX_REFRESH_MS)
+            val actuel = ClusterModuleSettings.refreshMs(requireContext())
+            value = ClusterModuleSettings.refreshToSlider(actuel)
+            tvClusterRefresh.text = texteActualisation(actuel)
+            addOnChangeListener { _, v, _ ->
+                val ms = ClusterModuleSettings.refreshFromSlider(v)
+                tvClusterRefresh.text = texteActualisation(ms)
+                ClusterModuleSettings.setRefreshMs(requireContext(), ms)
+            }
+            addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+                override fun onStartTrackingTouch(slider: Slider) {}
+                override fun onStopTrackingTouch(slider: Slider) {
+                    AppLogger.i(ClusterModuleOverlay.TAG,
+                        "Actualisation de la jauge → ${ClusterModuleSettings.refreshFromSlider(slider.value)} ms")
+                }
+            })
+        }
+
         // Dit d'avance si le module pourra s'afficher : l'écran du combiné existe-t-il ?
         view.findViewById<TextView>(R.id.tv_cluster_status).text =
             ClusterModuleOverlay.ecranDuCombine(requireContext())?.let { ecran ->

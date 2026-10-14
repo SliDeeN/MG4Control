@@ -751,6 +751,8 @@
     <string name="settings_cluster_module_desc">Gösterge panelinin ortasında navigasyon, müzik veya telefon yerine bir MG4Control modülü gösterir.</string>
     <string name="settings_cluster_consumption">Tüketim</string>
     <string name="settings_cluster_power">Güç</string>
+    <string name="settings_cluster_refresh">Gösterge yenileme hızı</string>
+    <string name="settings_cluster_refresh_desc">Güç, hız ve gösterge. Daha kısa: daha hızlı tepki, ancak sayı daha çok oynar.</string>
     <string name="settings_cluster_display_found">Gösterge ekranı bulundu: no. %1$d, %2$d × %3$d px</string>
     <string name="settings_cluster_display_missing">Gösterge ekranı bulunamadı: modül gösterilemez.</string>
     <string name="cluster_regen_kw">REJEN. kW</string>

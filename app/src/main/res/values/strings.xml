@@ -768,6 +768,8 @@
     <string name="settings_cluster_module_desc">Affiche un module MG4Control au centre du combiné, à la place de la navigation, de la musique ou du téléphone.</string>
     <string name="settings_cluster_consumption">Consommation</string>
     <string name="settings_cluster_power">Puissance</string>
+    <string name="settings_cluster_refresh">Actualisation de la jauge</string>
+    <string name="settings_cluster_refresh_desc">Puissance, vitesse et jauge. Plus court : plus réactif, mais le chiffre bouge davantage.</string>
     <string name="settings_cluster_display_found">Écran du combiné trouvé : n° %1$d, %2$d × %3$d px</string>
     <string name="settings_cluster_display_missing">Aucun écran de combiné trouvé : le module ne pourra pas s\'afficher.</string>
     <string name="cluster_regen_kw">RÉCUP. kW</string>

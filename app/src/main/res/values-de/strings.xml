@@ -751,6 +751,8 @@
     <string name="settings_cluster_module_desc">Zeigt ein MG4Control-Modul in der Mitte des Kombiinstruments, anstelle von Navigation, Musik oder Telefon.</string>
     <string name="settings_cluster_consumption">Verbrauch</string>
     <string name="settings_cluster_power">Leistung</string>
+    <string name="settings_cluster_refresh">Aktualisierung der Anzeige</string>
+    <string name="settings_cluster_refresh_desc">Leistung, Geschwindigkeit und Anzeige. Kürzer: reaktionsschneller, aber die Zahl schwankt stärker.</string>
     <string name="settings_cluster_display_found">Display des Kombiinstruments gefunden: Nr. %1$d, %2$d × %3$d px</string>
     <string name="settings_cluster_display_missing">Kein Display des Kombiinstruments gefunden: Das Modul kann nicht angezeigt werden.</string>
     <string name="cluster_regen_kw">REKUP. kW</string>
