@@ -219,6 +219,8 @@ class MG4ControlService : Service() {
         com.mg4.control.automation.AutoBrightness.start(applicationContext)
         // Coupure auto du chauffage de la batterie : relit son interrupteur à chaque passage.
         com.mg4.control.automation.BatteryHeatingAutomation.start(applicationContext)
+        // Module sur le combiné : rien tant que l'interrupteur des Réglages est coupé.
+        ClusterModuleOverlay.refresh(applicationContext)
         // Vérification de mise à jour, cinq secondes après le démarrage automatique.
         //
         // Pourquoi attendre du tout : à t=0 la liaison données de la voiture n'est pas encore
@@ -324,6 +326,7 @@ class MG4ControlService : Service() {
         skinChangeReceiver = null
         externalApiReceiver?.let { unregisterReceiver(it) } // issue #79
         externalApiReceiver = null
+        ClusterModuleOverlay.stop()
     }
 
     // POST_NOTIFICATIONS n'existe qu'à partir d'Android 13 ; la voiture est en Android 9.

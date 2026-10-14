@@ -743,4 +743,19 @@
     <string name="stats_complete_end">End (hh:mm)</string>
     <string name="stats_detail_origin_completed">estimated from the battery level, times entered by hand</string>
 
+    <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
+    <string name="settings_cluster">Driver display</string>
+    <string name="settings_cluster_module">Module on the instrument cluster</string>
+    <string name="settings_cluster_module_desc">When READY, shows an MG4Control module in the centre of the instrument cluster, in place of navigation, music or phone.</string>
+    <string name="settings_cluster_consumption">Consumption</string>
+    <string name="settings_cluster_power">Power</string>
+    <string name="settings_cluster_display_found">Cluster display found: no. %1$d, %2$d × %3$d px</string>
+    <string name="settings_cluster_display_missing">No cluster display found: the module can\'t be shown.</string>
+    <string name="cluster_regen_kw">REGEN kW</string>
+    <string name="cluster_stopped_kw">kW stationary</string>
+    <string name="cluster_trip_avg">TRIP AVG</string>
+    <string name="cluster_regen">REGEN</string>
+    <string name="cluster_battery">BATTERY</string>
+    <string name="cluster_regen_word">regenerating</string>
+    <string name="cluster_stopped_word">stationary</string>
 </resources>

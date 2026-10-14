@@ -743,4 +743,19 @@
     <string name="stats_complete_end">Fin (hh:mm)</string>
     <string name="stats_detail_origin_completed">estimada a partir del nivel de batería, horas introducidas a mano</string>
 
+    <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
+    <string name="settings_cluster">Pantalla del conductor</string>
+    <string name="settings_cluster_module">Módulo en el cuadro de instrumentos</string>
+    <string name="settings_cluster_module_desc">En READY, muestra un módulo de MG4Control en el centro del cuadro de instrumentos, en lugar de la navegación, la música o el teléfono.</string>
+    <string name="settings_cluster_consumption">Consumo</string>
+    <string name="settings_cluster_power">Potencia</string>
+    <string name="settings_cluster_display_found">Pantalla del cuadro encontrada: n.º %1$d, %2$d × %3$d px</string>
+    <string name="settings_cluster_display_missing">No se ha encontrado la pantalla del cuadro: el módulo no podrá mostrarse.</string>
+    <string name="cluster_regen_kw">REGEN. kW</string>
+    <string name="cluster_stopped_kw">kW parado</string>
+    <string name="cluster_trip_avg">MEDIA VIAJE</string>
+    <string name="cluster_regen">REGEN.</string>
+    <string name="cluster_battery">BATERÍA</string>
+    <string name="cluster_regen_word">regeneración</string>
+    <string name="cluster_stopped_word">parado</string>
 </resources>

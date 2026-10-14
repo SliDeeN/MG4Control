@@ -760,4 +760,19 @@
     <string name="stats_detail_origin_completed">estimée d’après le niveau de batterie, horaires saisis à la main</string>
     <string name="stats_unit_per100" translatable="false">kWh/100 km</string>
 
+    <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
+    <string name="settings_cluster">Écran conducteur</string>
+    <string name="settings_cluster_module">Module sur le combiné</string>
+    <string name="settings_cluster_module_desc">En READY, affiche un module MG4Control au centre du combiné, à la place de la navigation, de la musique ou du téléphone.</string>
+    <string name="settings_cluster_consumption">Consommation</string>
+    <string name="settings_cluster_power">Puissance</string>
+    <string name="settings_cluster_display_found">Écran du combiné trouvé : n° %1$d, %2$d × %3$d px</string>
+    <string name="settings_cluster_display_missing">Aucun écran de combiné trouvé : le module ne pourra pas s\'afficher.</string>
+    <string name="cluster_regen_kw">RÉCUP. kW</string>
+    <string name="cluster_stopped_kw">kW à l\'arrêt</string>
+    <string name="cluster_trip_avg">MOY. TRAJET</string>
+    <string name="cluster_regen">RÉCUP.</string>
+    <string name="cluster_battery">BATTERIE</string>
+    <string name="cluster_regen_word">récupération</string>
+    <string name="cluster_stopped_word">à l\'arrêt</string>
 </resources>

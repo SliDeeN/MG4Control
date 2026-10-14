@@ -743,4 +743,19 @@
     <string name="stats_complete_end">Ende (hh:mm)</string>
     <string name="stats_detail_origin_completed">aus dem Batteriestand geschätzt, Uhrzeiten von Hand eingetragen</string>
 
+    <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
+    <string name="settings_cluster">Fahrerdisplay</string>
+    <string name="settings_cluster_module">Modul im Kombiinstrument</string>
+    <string name="settings_cluster_module_desc">Zeigt bei READY ein MG4Control-Modul in der Mitte des Kombiinstruments, anstelle von Navigation, Musik oder Telefon.</string>
+    <string name="settings_cluster_consumption">Verbrauch</string>
+    <string name="settings_cluster_power">Leistung</string>
+    <string name="settings_cluster_display_found">Display des Kombiinstruments gefunden: Nr. %1$d, %2$d × %3$d px</string>
+    <string name="settings_cluster_display_missing">Kein Display des Kombiinstruments gefunden: Das Modul kann nicht angezeigt werden.</string>
+    <string name="cluster_regen_kw">REKUP. kW</string>
+    <string name="cluster_stopped_kw">kW im Stand</string>
+    <string name="cluster_trip_avg">Ø FAHRT</string>
+    <string name="cluster_regen">REKUP.</string>
+    <string name="cluster_battery">BATTERIE</string>
+    <string name="cluster_regen_word">Rekuperation</string>
+    <string name="cluster_stopped_word">im Stand</string>
 </resources>

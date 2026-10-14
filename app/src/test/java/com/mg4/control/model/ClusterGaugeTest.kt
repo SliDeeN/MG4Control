@@ -1,0 +1,128 @@
+package com.mg4.control.model
+
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+import java.util.Locale
+
+/**
+ * Les deux modules de la zone centrale du combiné : ce qu'affiche chaque jauge, et où se place
+ * le carré sur l'écran du combiné.
+ */
+class ClusterGaugeTest {
+
+    private val delta = 0.001f
+
+    // ── A : jauge de consommation ────────────────────────────────────────────
+
+    @Test fun `en roulant, la jauge donne des Wh par km`() {
+        val s = ClusterGauge.consumption(kw = 26f, kmh = 130f)
+        assertEquals(GaugeUnit.WH_PER_KM, s.unit)
+        assertEquals(200f, s.value, delta)
+        assertEquals(0.5f, s.fraction, delta)
+        assertEquals(GaugeLevel.WARN, s.level)
+    }
+
+    @Test fun `la couleur suit la consommation`() {
+        assertEquals(GaugeLevel.ECO, ClusterGauge.consumption(6f, 50f).level)        // 120 Wh/km
+        assertEquals(GaugeLevel.WARN, ClusterGauge.consumption(8.5f, 50f).level)     // 170 Wh/km
+        assertEquals(GaugeLevel.DANGER, ClusterGauge.consumption(15f, 50f).level)    // 300 Wh/km
+    }
+
+    @Test fun `une forte acceleration remplit l anneau sans le depasser`() {
+        val s = ClusterGauge.consumption(95f, 60f)
+        assertEquals(1f, s.fraction, delta)
+        assertEquals(GaugeLevel.DANGER, s.level)
+    }
+
+    @Test fun `en recuperation, la jauge donne les kW recuperes`() {
+        val s = ClusterGauge.consumption(-38f, 50f)
+        assertEquals(GaugeUnit.KW_REGEN, s.unit)
+        assertEquals(38f, s.value, delta)
+        assertEquals(38f / 60f, s.fraction, delta)
+        assertEquals(GaugeLevel.ACCENT, s.level)
+    }
+
+    @Test fun `a l arret, des Wh par km n ont pas de sens - on donne des kW`() {
+        val s = ClusterGauge.consumption(1.8f, 0f)
+        assertEquals(GaugeUnit.KW_STOPPED, s.unit)
+        assertEquals(1.8f, s.value, delta)
+        assertEquals(1.8f / 20f, s.fraction, delta)
+        // Vitesse illisible : même chose, plutôt qu'une division par une valeur inconnue.
+        assertEquals(GaugeUnit.KW_STOPPED, ClusterGauge.consumption(1.8f, null).unit)
+        assertEquals(GaugeUnit.KW_STOPPED, ClusterGauge.consumption(1.8f, 4.9f).unit)
+    }
+
+    // ── B : puissance ────────────────────────────────────────────────────────
+
+    @Test fun `la puissance remplit l arc vers la droite`() {
+        assertEquals(0.5f, ClusterGauge.power(75f).fraction, delta)
+        assertEquals(GaugeLevel.WARN, ClusterGauge.power(75f).level)
+        assertEquals(GaugeLevel.ECO, ClusterGauge.power(30f).level)
+        assertEquals(GaugeLevel.DANGER, ClusterGauge.power(120f).level)
+        assertEquals(1f, ClusterGauge.power(200f).fraction, delta)
+        assertEquals(GaugeUnit.KW, ClusterGauge.power(75f).unit)
+    }
+
+    @Test fun `la recuperation remplit l arc vers la gauche`() {
+        val s = ClusterGauge.power(-30f)
+        assertEquals(-0.5f, s.fraction, delta)
+        assertEquals(GaugeLevel.ACCENT, s.level)
+        assertEquals(-30f, s.value, delta)
+        assertEquals(-1f, ClusterGauge.power(-90f).fraction, delta)
+    }
+
+    @Test fun `les Wh par km ne valent qu en roulant et en consommant`() {
+        assertEquals(200f, ClusterGauge.whPerKm(26f, 130f)!!, delta)
+        assertNull(ClusterGauge.whPerKm(26f, 0f))
+        assertNull(ClusterGauge.whPerKm(-10f, 80f))
+        assertNull(ClusterGauge.whPerKm(26f, null))
+    }
+
+    // ── Mise en forme et lissage ─────────────────────────────────────────────
+
+    @Test fun `les kW gardent une decimale sous 10, dans la langue de l appli`() {
+        assertEquals("1,8", ClusterGauge.formatKw(1.84f, Locale.FRANCE))
+        assertEquals("1.8", ClusterGauge.formatKw(1.84f, Locale.US))
+        assertEquals("38", ClusterGauge.formatKw(38.4f, Locale.FRANCE))
+        // Pas de « 10,0 » : passé l'arrondi, c'est déjà un nombre à deux chiffres.
+        assertEquals("10", ClusterGauge.formatKw(9.96f, Locale.FRANCE))
+        // Le signe est l'affaire de l'appelant.
+        assertEquals("38", ClusterGauge.formatKw(-38.4f, Locale.FRANCE))
+    }
+
+    @Test fun `le lissage part de la premiere valeur puis la suit a moitie`() {
+        assertEquals(20f, ClusterGauge.smooth(null, 20f), delta)
+        assertEquals(15f, ClusterGauge.smooth(10f, 20f), delta)
+    }
+
+    // ── Écran et place du module ─────────────────────────────────────────────
+
+    @Test fun `l ecran du combine est le numero 1, celui de SystemUI`() {
+        assertEquals(1, ClusterGauge.clusterDisplay(listOf(0 to 1, 1 to 1)))
+        assertEquals(1, ClusterGauge.clusterDisplay(listOf(0 to 1, 1 to null)))
+    }
+
+    @Test fun `sans ecran 1 physique, le premier autre ecran physique`() {
+        assertEquals(3, ClusterGauge.clusterDisplay(listOf(0 to 1, 2 to 5, 3 to 2)))
+        // Un écran virtuel (projection d'un téléphone, enregistrement) n'est pas le combiné.
+        assertNull(ClusterGauge.clusterDisplay(listOf(0 to 1, 1 to 5)))
+        assertNull(ClusterGauge.clusterDisplay(listOf(0 to 1)))
+    }
+
+    @Test fun `le carre se place comme celui de l appli du combine`() {
+        assertEquals(ClusterGauge.Placement(424, 32, 260), ClusterGauge.placement(1108, 324))
+        assertEquals(ClusterGauge.Placement(424, 32, 260), ClusterGauge.placement(1920, 720))
+    }
+
+    @Test fun `sur un ecran trop petit, le carre se centre et rapetisse au besoin`() {
+        assertEquals(ClusterGauge.Placement(20, 10, 260), ClusterGauge.placement(300, 280))
+        assertEquals(ClusterGauge.Placement(0, 0, 200), ClusterGauge.placement(200, 200))
+    }
+
+    @Test fun `le module se retrouve par sa cle, consommation par defaut`() {
+        assertEquals(ClusterModule.POWER, ClusterModule.fromKey("power"))
+        assertEquals(ClusterModule.CONSUMPTION, ClusterModule.fromKey(null))
+        assertEquals(ClusterModule.CONSUMPTION, ClusterModule.fromKey("inconnu"))
+    }
+}

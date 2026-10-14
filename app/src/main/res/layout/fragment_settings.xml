@@ -623,6 +623,126 @@
                     android:textSize="13sp" />
 
             </LinearLayout>
+
+            <!-- ── Section ECRAN CONDUCTEUR : module sur le combine ──────────────
+                 Desactive par defaut ; activer deplie le choix du module. La ligne d'etat dit
+                 d'avance si l'ecran du combine a ete trouve. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card_rounded"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_cluster"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    android:textAllCaps="true"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="7dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/settings_cluster_module"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <Switch
+                            android:scaleX="1.3"
+                            android:scaleY="1.3"
+                            android:layout_marginHorizontal="8dp"
+                            android:id="@+id/switch_cluster_module"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="false" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/settings_cluster_module_desc"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="13sp" />
+
+                    <LinearLayout
+                        android:id="@+id/row_cluster_choice"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal"
+                        android:visibility="gone">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_cluster_consumption"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:minHeight="52dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="@string/settings_cluster_consumption"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="8dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_cluster_power"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:minHeight="52dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="@string/settings_cluster_power"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="8dp" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tv_cluster_status"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
                 </LinearLayout>
 
                 <!-- ═══════════ REGLAGES AVANCES ═══════════ -->

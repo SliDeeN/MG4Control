@@ -50,6 +50,9 @@ import com.mg4.control.service.OverlayKit
 import com.mg4.control.util.GarageMode
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.PopupDelay
+import com.mg4.control.util.ClusterModuleSettings
+import com.mg4.control.model.ClusterModule
+import com.mg4.control.service.ClusterModuleOverlay
 import com.mg4.control.util.TextSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -230,6 +233,51 @@ class SettingsFragment : Fragment() {
                 }
             })
         }
+
+        // ── Module sur le combiné : interrupteur et choix du module ──────────
+        // Désactivé par défaut ; activer déplie le choix. Le service relit l'interrupteur aussitôt
+        // (ClusterModuleOverlay.refresh), et le module choisi à chaque relevé : rien à redémarrer.
+        val switchCluster = view.findViewById<Switch>(R.id.switch_cluster_module)
+        val rowClusterChoice = view.findViewById<View>(R.id.row_cluster_choice)
+        val clusterBtns = listOf(
+            ClusterModule.CONSUMPTION to view.findViewById<MaterialButton>(R.id.btn_cluster_consumption),
+            ClusterModule.POWER       to view.findViewById(R.id.btn_cluster_power)
+        )
+        fun updateClusterCard() {
+            val ctx = requireContext()
+            rowClusterChoice.visibility = if (ClusterModuleSettings.isEnabled(ctx)) View.VISIBLE else View.GONE
+            val choisi = ClusterModuleSettings.module(ctx)
+            clusterBtns.forEach { (module, btn) ->
+                val active = module == choisi
+                btn.backgroundTintList = ColorStateList.valueOf(if (active) accentDim else inactiveColor)
+                btn.setTextColor(if (active) textActive else textInactive)
+                btn.strokeColor = ColorStateList.valueOf(
+                    if (active) accentColor else ctx.getColor(R.color.dash_border)
+                )
+            }
+        }
+        switchCluster.isChecked = ClusterModuleSettings.isEnabled(requireContext())
+        updateClusterCard()
+        switchCluster.setOnCheckedChangeListener { _, checked ->
+            ClusterModuleSettings.setEnabled(requireContext(), checked)
+            AppLogger.i(ClusterModuleOverlay.TAG, "Module sur le combiné ${if (checked) "activé" else "désactivé"}")
+            ClusterModuleOverlay.refresh(requireContext())
+            updateClusterCard()
+        }
+        clusterBtns.forEach { (module, btn) ->
+            btn.setOnClickListener {
+                if (module == ClusterModuleSettings.module(requireContext())) return@setOnClickListener
+                ClusterModuleSettings.setModule(requireContext(), module)
+                AppLogger.i(ClusterModuleOverlay.TAG, "Module du combiné → ${module.key}")
+                updateClusterCard()
+            }
+        }
+        // Dit d'avance si le module pourra s'afficher : l'écran du combiné existe-t-il ?
+        view.findViewById<TextView>(R.id.tv_cluster_status).text =
+            ClusterModuleOverlay.ecranDuCombine(requireContext())?.let { ecran ->
+                val taille = android.graphics.Point().also { ecran.getRealSize(it) }
+                getString(R.string.settings_cluster_display_found, ecran.displayId, taille.x, taille.y)
+            } ?: getString(R.string.settings_cluster_display_missing)
 
         // ── Canal de mise a jour beta ────────────────────────────────────────
         // Aucun avertissement bloquant : une beta ne donne pas le controle du vehicule a un
@@ -703,6 +751,9 @@ class SettingsFragment : Fragment() {
             // Sonde lumière/position : un relevé instantané, à prendre en plein jour, au crépuscule
             // et dans un parking couvert. Ceux pris automatiquement au READY sont déjà gardés.
             com.mg4.control.hardware.LightProbe.run("diagnostic")
+            // Sonde écrans : un relevé par ouverture, à prendre contact mis, puis avec la
+            // navigation ou Android Auto en marche — c'est la zone centrale du combiné qui est visée.
+            com.mg4.control.hardware.DisplayProbe.run("diagnostic")
             val report = MG4Hardware.buildDiagnosticReport(appVersion)
             withContext(Dispatchers.Main) {
                 if (isAdded) tvReport.text = report

@@ -743,4 +743,19 @@
     <string name="stats_complete_end">Bitiş (ss:dd)</string>
     <string name="stats_detail_origin_completed">batarya düzeyinden tahmin edildi, saatler elle girildi</string>
 
+    <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
+    <string name="settings_cluster">Sürücü ekranı</string>
+    <string name="settings_cluster_module">Gösterge panelinde modül</string>
+    <string name="settings_cluster_module_desc">READY durumunda, gösterge panelinin ortasında navigasyon, müzik veya telefon yerine bir MG4Control modülü gösterir.</string>
+    <string name="settings_cluster_consumption">Tüketim</string>
+    <string name="settings_cluster_power">Güç</string>
+    <string name="settings_cluster_display_found">Gösterge ekranı bulundu: no. %1$d, %2$d × %3$d px</string>
+    <string name="settings_cluster_display_missing">Gösterge ekranı bulunamadı: modül gösterilemez.</string>
+    <string name="cluster_regen_kw">REJEN. kW</string>
+    <string name="cluster_stopped_kw">kW duruşta</string>
+    <string name="cluster_trip_avg">ORT. YOLCULUK</string>
+    <string name="cluster_regen">REJEN.</string>
+    <string name="cluster_battery">BATARYA</string>
+    <string name="cluster_regen_word">rejenerasyon</string>
+    <string name="cluster_stopped_word">duruşta</string>
 </resources>
