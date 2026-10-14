@@ -778,6 +778,8 @@
     <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
     <string name="btn_cluster_tab">Gösterge paneli sekmesi</string>
     <string name="cluster_tab_hint">Sekmeyi direksiyon tuşlarıyla değiştirin: numara anlık olarak güncellenir. Her değişiklik Teşhis günlüğüne yazılır.</string>
+    <string name="cluster_test_ready">A9 testi: “görüntü hazır” gönder</string>
+    <string name="cluster_test_ready_desc">Gösterge paneline, diğer sürümlerdeki orijinal uygulamanın yaptığı gibi navigasyonun gösterecek bir görüntüsü olduğunu söyler ve modülü tüm sekmelerde gösterir. Bir Navigasyon sekmesinin görünüp görünmediğine veya modülün çıkıp çıkmadığına bakın. Pencere kapanınca kapanır. Önce modülü Ayarlar › Arayüz bölümünden açın.</string>
     <string name="cluster_tab_code_name">Orijinal koda göre: %1$s</string>
     <string name="cluster_tab_unknown">Orijinal kodda olmayan değer</string>
     <string name="cluster_tab_unreadable">Okunamıyor</string>

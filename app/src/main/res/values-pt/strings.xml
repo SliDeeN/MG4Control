@@ -778,6 +778,8 @@
     <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
     <string name="btn_cluster_tab">Separador do painel</string>
     <string name="cluster_tab_hint">Muda de separador com os botões do volante: o número acompanha em direto. Cada mudança fica anotada no registo do Diagnóstico.</string>
+    <string name="cluster_test_ready">Teste A9: enviar «imagem pronta»</string>
+    <string name="cluster_test_ready_desc">Diz ao painel de instrumentos que a navegação tem uma imagem para mostrar, como faz a app original noutras versões, e mostra o módulo em todos os separadores. Observa se aparece um separador Navegação ou se o módulo aparece. Desliga-se ao fechar a janela. Ativa primeiro o módulo em Definições › Interface.</string>
     <string name="cluster_tab_code_name">Segundo o código original: %1$s</string>
     <string name="cluster_tab_unknown">Valor ausente do código original</string>
     <string name="cluster_tab_unreadable">Ilegível</string>

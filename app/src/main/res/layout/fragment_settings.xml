@@ -1429,8 +1429,9 @@
                 app:iconTint="@color/dash_text_lo"
                 app:iconGravity="textStart" />
 
-            <!-- ── Bouton ONGLET DU COMBINÉ : outil de relevé, caché et débloqué avec le
-                 Diagnostic (5 appuis sur le logo), juste au-dessus de lui. ── -->
+            <!-- ── Bouton ONGLET DU COMBINÉ : outil de relevé, débloqué avec le Diagnostic
+                 (5 appuis sur le logo), juste au-dessus de lui ; montré d'office sur A9, où il
+                 porte l'essai « image prête ». ── -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_cluster_tab"
                 android:layout_width="match_parent"

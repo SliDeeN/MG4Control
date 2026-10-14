@@ -19,8 +19,11 @@ object ClusterTabReader {
 
     private const val AREA_GLOBAL = 0x1000000
 
-    /** `null` = illisible par cette voie. [vpm] n'est lu que sur SWI133. */
-    data class Lecture(val cpm: Int?, val vpm: Int?, val centre: Int?) {
+    /**
+     * `null` = illisible par cette voie. [vpm] n'est lu que sur SWI133. [pret] : « image prête » de
+     * la navigation ([ClusterReadySignal.PROP_NAVI_READY]), suivi pendant l'essai A9.
+     */
+    data class Lecture(val cpm: Int?, val vpm: Int?, val centre: Int?, val pret: Int? = null) {
         /** Valeur retenue : celle du CarPropertyManager, sinon celle de l'ancien SDK. */
         val valeur: Int? get() = cpm ?: vpm
     }
@@ -31,6 +34,7 @@ object ClusterTabReader {
         vpm = if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133)
             MG4Hardware.vpmIntForProbe(VPM_TAB).takeIf { it >= 0 } else null,
         centre = cpm(PROP_CENTRE),
+        pret = cpm(ClusterReadySignal.PROP_NAVI_READY),
     )
 
     /**

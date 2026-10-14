@@ -54,6 +54,7 @@ import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.service.ClusterModuleOverlay
+import com.mg4.control.hardware.ClusterReadySignal
 import com.mg4.control.util.TextSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -479,9 +480,12 @@ class SettingsFragment : Fragment() {
         // Bouton Diagnostic débloqué via 5 clics sur le logo (cf. MainActivity)
         btnDiagnostic.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
 
-        // Onglet du combiné : outil de relevé, débloqué avec le Diagnostic (même principe).
+        // Onglet du combiné : outil de relevé, débloqué avec le Diagnostic (même principe) — et
+        // montré d'office sur A9, où il porte l'essai « image prête » que les testeurs doivent
+        // trouver sans manipulation (demande du 2026-10-14).
         val btnClusterTab = view.findViewById<MaterialButton>(R.id.btn_cluster_tab)
-        btnClusterTab.visibility = btnDiagnostic.visibility
+        btnClusterTab.visibility =
+            if (MainActivity.diagnosticUnlocked || ClusterReadySignal.applicable()) View.VISIBLE else View.GONE
         btnClusterTab.setOnClickListener { ClusterTabDialog.afficher(requireContext()) }
 
         btnUpdate.setOnClickListener {

@@ -778,6 +778,8 @@
     <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
     <string name="btn_cluster_tab">Pestaña del cuadro</string>
     <string name="cluster_tab_hint">Cambia de pestaña con los botones del volante: el número se actualiza en directo. Cada cambio se anota en el registro del Diagnóstico.</string>
+    <string name="cluster_test_ready">Prueba A9: enviar «imagen lista»</string>
+    <string name="cluster_test_ready_desc">Indica al cuadro de instrumentos que la navegación tiene una imagen que mostrar, como hace la app original en otras versiones, y muestra el módulo en todas las pestañas. Observa si aparece una pestaña Navegación o si se ve el módulo. Se apaga al cerrar la ventana. Activa antes el módulo en Ajustes › Interfaz.</string>
     <string name="cluster_tab_code_name">Según el código original: %1$s</string>
     <string name="cluster_tab_unknown">Valor ausente del código original</string>
     <string name="cluster_tab_unreadable">Ilegible</string>

@@ -63,6 +63,14 @@ internal object ClusterModuleOverlay {
 
     @Volatile private var appContext: Context? = null
 
+    /**
+     * Essai A9 (fenêtre « Onglet du combiné ») : le module est dessiné quel que soit l'onglet —
+     * celui de la navigation, à défaut celui de la musique, à défaut Consommation. Sans ça, un
+     * combiné sans onglet Navigation ni Musique ne le montrerait jamais, et l'essai ne prouverait
+     * rien.
+     */
+    @Volatile var essaiForce = false
+
     // ── Fil principal ──
     private var vue: ClusterGaugeView? = null
     private var fenetres: WindowManager? = null
@@ -266,12 +274,15 @@ internal object ClusterModuleOverlay {
             // Le module suit l'onglet choisi au volant. Les relevés, eux, continuent quel que
             // soit l'onglet : la moyenne du trajet ne doit pas avoir de trou.
             val onglet = runCatching { ClusterTabReader.onglet() }.getOrNull()
-            val module = ClusterModuleSettings.moduleToShow(onglet,
-                ClusterModuleSettings.moduleFor(ctx, ClusterTab.NAVIGATION),
-                ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA))
+            val navigation = ClusterModuleSettings.moduleFor(ctx, ClusterTab.NAVIGATION)
+            val musique = ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA)
+            val force = essaiForce
+            val module = if (force) navigation ?: musique ?: ClusterModule.CONSUMPTION
+                else ClusterModuleSettings.moduleToShow(onglet, navigation, musique)
             if (onglet != dernierOnglet || module != dernierModule) {
                 AppLogger.i(TAG, "onglet ${onglet ?: "illisible"} (${ClusterTab.fromValue(onglet)?.name ?: "?"}) → " +
-                    (module?.let { "module ${it.key}" } ?: "aucun module, page d'origine"))
+                    (module?.let { "module ${it.key}" } ?: "aucun module, page d'origine") +
+                    if (force) " (essai : affichage forcé)" else "")
                 dernierOnglet = onglet
                 dernierModule = module
             }
