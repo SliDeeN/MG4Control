@@ -116,10 +116,13 @@ class ClusterGaugeView(context: Context) : View(context) {
 
     private fun consommation(canvas: Canvas, c: Contenu) {
         val cx = COTE / 2f
-        val cy = 116f
-        arc(canvas, cx, cy, 135f, 270f, cPiste)
+        // Anneau un peu plus petit et plus bas que l'arc du module B : ouvert en bas, il monte
+        // plus haut à gauche, et à 88 de rayon il passait sous la pastille du mode (photo du
+        // 2026-10-14, « NORMAL » et « CUSTOM »). Il reste 5 px d'écart avec la plus large.
+        val cy = 120f
+        arc(canvas, cx, cy, RAYON_A, 135f, 270f, cPiste)
         val e = etat
-        if (e != null) arc(canvas, cx, cy, 135f, 270f * partAffichee, couleur(e.level))
+        if (e != null) arc(canvas, cx, cy, RAYON_A, 135f, 270f * partAffichee, couleur(e.level))
 
         val (chiffre, unite) = when (e?.unit) {
             null -> "–" to ""
@@ -142,13 +145,13 @@ class ClusterGaugeView(context: Context) : View(context) {
     private fun puissance(canvas: Canvas, c: Contenu) {
         val cx = COTE / 2f
         val cy = 122f
-        arc(canvas, cx, cy, 150f, 240f, cPiste)
+        arc(canvas, cx, cy, RAYON_B, 150f, 240f, cPiste)
         val e = etat
         // Zéro en haut ; la récupération remplit vers la gauche (balayage négatif).
-        if (e != null) arc(canvas, cx, cy, 270f, 120f * partAffichee, couleur(e.level))
+        if (e != null) arc(canvas, cx, cy, RAYON_B, 270f, 120f * partAffichee, couleur(e.level))
         trait.color = cTexte2
         trait.strokeWidth = 2f
-        canvas.drawLine(cx, cy - RAYON - 8f, cx, cy - RAYON + 8f, trait)
+        canvas.drawLine(cx, cy - RAYON_B - 8f, cx, cy - RAYON_B + 8f, trait)
         trait.strokeWidth = EPAISSEUR
 
         val gauche = point(cx, cy, 150f)
@@ -175,16 +178,16 @@ class ClusterGaugeView(context: Context) : View(context) {
 
     // ── Pièces communes ──────────────────────────────────────────────────────
 
-    private fun arc(canvas: Canvas, cx: Float, cy: Float, debut: Float, balayage: Float, couleur: Int) {
+    private fun arc(canvas: Canvas, cx: Float, cy: Float, rayon: Float, debut: Float, balayage: Float, couleur: Int) {
         if (kotlin.math.abs(balayage) < 0.5f) return
         trait.color = couleur
-        cadre.set(cx - RAYON, cy - RAYON, cx + RAYON, cy + RAYON)
+        cadre.set(cx - rayon, cy - rayon, cx + rayon, cy + rayon)
         canvas.drawArc(cadre, debut, balayage, false, trait)
     }
 
     private fun point(cx: Float, cy: Float, angle: Float): Pair<Float, Float> {
         val a = Math.toRadians(angle.toDouble())
-        return (cx + RAYON * cos(a)).toFloat() to (cy + RAYON * sin(a)).toFloat()
+        return (cx + RAYON_B * cos(a)).toFloat() to (cy + RAYON_B * sin(a)).toFloat()
     }
 
     private fun grandChiffre(canvas: Canvas, s: String, x: Float, y: Float, couleur: Int) {
@@ -253,7 +256,9 @@ class ClusterGaugeView(context: Context) : View(context) {
          */
         val FOND = Color.rgb(0x0C, 0x0C, 0x0C)
         val COTE = ClusterGauge.SIDE_PX.toFloat()
-        const val RAYON = 88f
+        /** Anneau du module A (consommation) et arc du module B (puissance). */
+        const val RAYON_A = 80f
+        const val RAYON_B = 88f
         const val EPAISSEUR = 13f
         /** Un peu moins que l'intervalle des relevés : l'anneau a fini de glisser quand le suivant arrive. */
         const val ANIMATION_MS = 800L

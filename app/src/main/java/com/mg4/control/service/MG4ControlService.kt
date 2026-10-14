@@ -220,7 +220,7 @@ class MG4ControlService : Service() {
         // Coupure auto du chauffage de la batterie : relit son interrupteur à chaque passage.
         com.mg4.control.automation.BatteryHeatingAutomation.start(applicationContext)
         // Module sur le combiné : rien tant que l'interrupteur des Réglages est coupé.
-        ClusterModuleOverlay.refresh(applicationContext)
+        ClusterModuleOverlay.refresh(applicationContext, "démarrage du service")
         // Vérification de mise à jour, cinq secondes après le démarrage automatique.
         //
         // Pourquoi attendre du tout : à t=0 la liaison données de la voiture n'est pas encore

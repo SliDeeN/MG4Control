@@ -765,7 +765,7 @@
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Écran conducteur</string>
     <string name="settings_cluster_module">Module sur le combiné</string>
-    <string name="settings_cluster_module_desc">En READY, affiche un module MG4Control au centre du combiné, à la place de la navigation, de la musique ou du téléphone.</string>
+    <string name="settings_cluster_module_desc">Affiche un module MG4Control au centre du combiné, à la place de la navigation, de la musique ou du téléphone.</string>
     <string name="settings_cluster_consumption">Consommation</string>
     <string name="settings_cluster_power">Puissance</string>
     <string name="settings_cluster_display_found">Écran du combiné trouvé : n° %1$d, %2$d × %3$d px</string>

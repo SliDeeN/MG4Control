@@ -748,7 +748,7 @@
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Display del conducente</string>
     <string name="settings_cluster_module">Modulo sul quadro strumenti</string>
-    <string name="settings_cluster_module_desc">In READY, mostra un modulo MG4Control al centro del quadro strumenti, al posto di navigazione, musica o telefono.</string>
+    <string name="settings_cluster_module_desc">Mostra un modulo MG4Control al centro del quadro strumenti, al posto di navigazione, musica o telefono.</string>
     <string name="settings_cluster_consumption">Consumo</string>
     <string name="settings_cluster_power">Potenza</string>
     <string name="settings_cluster_display_found">Display del quadro trovato: n. %1$d, %2$d × %3$d px</string>

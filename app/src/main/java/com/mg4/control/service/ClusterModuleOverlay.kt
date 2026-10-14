@@ -30,8 +30,11 @@ import com.mg4.control.util.LocaleHelper
  * Le module est une fenêtre de 260 × 260 px posée sur cet écran, à la place du carré de cette
  * appli : il recouvre sa page (navigation, musique, téléphone) tant qu'il est affiché.
  *
- * Affiché en READY seulement, réglage activé. Lecture seule : puissance batterie et vitesse
- * chaque seconde, mode de conduite et batterie toutes les dix secondes.
+ * Affiché dès le démarrage de l'application, réglage activé — et non plus en READY seulement
+ * (demande du 2026-10-14). Si l'écran du combiné n'existe pas encore à ce moment-là (démarrage du
+ * boîtier), le module s'y pose dès qu'il apparaît. La moyenne du trajet et la récupération, elles,
+ * repartent de zéro à chaque passage en READY. Lecture seule : puissance batterie et vitesse chaque
+ * seconde, mode de conduite et batterie toutes les dix secondes.
  *
  * Vu sur le combiné le 2026-10-14 (SWI133) : la fenêtre s'y affiche bien. La place du carré vient
  * de la mise en page de l'appli SAIC ([ClusterGauge.placement]) ; le journal ([TAG]) donne l'écran
@@ -55,6 +58,8 @@ internal object ClusterModuleOverlay {
     // ── Fil principal ──
     private var vue: ClusterGaugeView? = null
     private var fenetres: WindowManager? = null
+    /** Écran qui porte la fenêtre : s'il disparaît, la fenêtre part avec lui. */
+    private var ecranId: Int? = null
     private var abonne = false
 
     // ── Fil du lecteur ──
@@ -66,28 +71,46 @@ internal object ClusterModuleOverlay {
     private var mode: DriveMode? = null
     private var batterie: Float? = null
 
-    private val readyListener = ReadyWatcher.Listener { ready, _ ->
-        if (ready) afficher("READY") else masquer("sortie de READY")
+    /**
+     * Un passage en READY ouvre un nouveau trajet. Pas le premier état lu : si la voiture est déjà
+     * en READY au démarrage, l'affichage vient de remettre le trajet à zéro.
+     */
+    private val readyListener = ReadyWatcher.Listener { ready, firstRead ->
+        if (ready && !firstRead) lecteur.post {
+            trajet.reset()
+            AppLogger.i(TAG, "passage en READY : moyenne et récupération repartent de zéro")
+        }
     }
 
-    /** Au démarrage du service et à chaque changement du réglage. */
-    fun refresh(context: Context) {
+    /**
+     * Au démarrage du boîtier, l'écran du combiné peut n'apparaître qu'après le service : le module
+     * s'y pose dès qu'il arrive. S'il disparaît, la fenêtre part avec lui.
+     */
+    private val ecouteurEcrans = object : DisplayManager.DisplayListener {
+        override fun onDisplayAdded(displayId: Int) {
+            if (vue == null) afficher("écran $displayId ajouté", signalerAbsence = false)
+        }
+        override fun onDisplayRemoved(displayId: Int) {
+            if (displayId == ecranId) masquer("écran $displayId retiré")
+        }
+        override fun onDisplayChanged(displayId: Int) {}
+    }
+
+    /** Au démarrage du service ([origine] le dit) et à chaque changement du réglage. */
+    fun refresh(context: Context, origine: String = "réglage") {
         val app = context.applicationContext
         appContext = app
         main.post {
             if (ClusterModuleSettings.isEnabled(app)) {
                 if (!abonne) {
                     abonne = true
-                    // Rappelle tout de suite l'écouteur si READY est déjà connu.
                     ReadyWatcher.add(readyListener)
-                } else if (ReadyWatcher.ready == true) {
-                    afficher("réglage")
+                    (app.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)
+                        ?.registerDisplayListener(ecouteurEcrans, main)
                 }
+                afficher(origine)
             } else {
-                if (abonne) {
-                    abonne = false
-                    ReadyWatcher.remove(readyListener)
-                }
+                desabonner()
                 masquer("réglage désactivé")
             }
         }
@@ -96,12 +119,17 @@ internal object ClusterModuleOverlay {
     /** Arrêt du service. */
     fun stop() {
         main.post {
-            if (abonne) {
-                abonne = false
-                ReadyWatcher.remove(readyListener)
-            }
+            desabonner()
             masquer("arrêt du service")
         }
+    }
+
+    private fun desabonner() {
+        if (!abonne) return
+        abonne = false
+        ReadyWatcher.remove(readyListener)
+        (appContext?.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)
+            ?.unregisterDisplayListener(ecouteurEcrans)
     }
 
     /**
@@ -121,12 +149,17 @@ internal object ClusterModuleOverlay {
 
     // ── Fenêtre (fil principal) ──────────────────────────────────────────────
 
-    private fun afficher(origine: String) {
+    /**
+     * Sans effet si le module est déjà là. [signalerAbsence] : faux pour les essais déclenchés par
+     * l'arrivée d'un écran quelconque, qui ne sont pas tous celui du combiné.
+     */
+    private fun afficher(origine: String, signalerAbsence: Boolean = true) {
         val ctx = appContext ?: return
         if (vue != null) return
         val ecran = ecranDuCombine(ctx)
         if (ecran == null) {
-            AppLogger.w(TAG, "$origine : aucun écran de combiné parmi ceux d'Android — module non affiché")
+            if (signalerAbsence) AppLogger.w(TAG, "$origine : aucun écran de combiné parmi ceux d'Android — " +
+                "module non affiché, en attente de son arrivée")
             return
         }
         val taille = Point().also { ecran.getRealSize(it) }
@@ -149,6 +182,7 @@ internal object ClusterModuleOverlay {
             })
             vue = v
             fenetres = wm
+            ecranId = ecran.displayId
             AppLogger.i(TAG, "$origine : module ${ClusterModuleSettings.module(ctx).key} affiché sur l'écran " +
                 "${ecran.displayId} « ${ecran.name} » ${taille.x}×${taille.y} px — carré de ${place.side} px " +
                 "en (${place.x}, ${place.y})")
@@ -166,12 +200,13 @@ internal object ClusterModuleOverlay {
             .onFailure { AppLogger.w(TAG, "$origine : retrait de la fenêtre — ${it.javaClass.simpleName}: ${it.message}") }
         vue = null
         fenetres = null
+        ecranId = null
         AppLogger.i(TAG, "$origine : module retiré du combiné")
     }
 
     // ── Relevés (fil du lecteur) ─────────────────────────────────────────────
 
-    /** Le trajet repart de zéro à chaque affichage : au passage en READY, en pratique. */
+    /** Le trajet repart de zéro à chaque affichage, et à chaque passage en READY ([readyListener]). */
     private fun demarrerReleves() {
         lecteur.post {
             enMarche = true

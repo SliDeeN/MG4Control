@@ -748,7 +748,7 @@
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Driver display</string>
     <string name="settings_cluster_module">Module on the instrument cluster</string>
-    <string name="settings_cluster_module_desc">When READY, shows an MG4Control module in the centre of the instrument cluster, in place of navigation, music or phone.</string>
+    <string name="settings_cluster_module_desc">Shows an MG4Control module in the centre of the instrument cluster, in place of navigation, music or phone.</string>
     <string name="settings_cluster_consumption">Consumption</string>
     <string name="settings_cluster_power">Power</string>
     <string name="settings_cluster_display_found">Cluster display found: no. %1$d, %2$d × %3$d px</string>

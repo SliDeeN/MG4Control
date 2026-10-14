@@ -748,7 +748,7 @@
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Sürücü ekranı</string>
     <string name="settings_cluster_module">Gösterge panelinde modül</string>
-    <string name="settings_cluster_module_desc">READY durumunda, gösterge panelinin ortasında navigasyon, müzik veya telefon yerine bir MG4Control modülü gösterir.</string>
+    <string name="settings_cluster_module_desc">Gösterge panelinin ortasında navigasyon, müzik veya telefon yerine bir MG4Control modülü gösterir.</string>
     <string name="settings_cluster_consumption">Tüketim</string>
     <string name="settings_cluster_power">Güç</string>
     <string name="settings_cluster_display_found">Gösterge ekranı bulundu: no. %1$d, %2$d × %3$d px</string>

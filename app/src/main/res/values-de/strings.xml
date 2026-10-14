@@ -748,7 +748,7 @@
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Fahrerdisplay</string>
     <string name="settings_cluster_module">Modul im Kombiinstrument</string>
-    <string name="settings_cluster_module_desc">Zeigt bei READY ein MG4Control-Modul in der Mitte des Kombiinstruments, anstelle von Navigation, Musik oder Telefon.</string>
+    <string name="settings_cluster_module_desc">Zeigt ein MG4Control-Modul in der Mitte des Kombiinstruments, anstelle von Navigation, Musik oder Telefon.</string>
     <string name="settings_cluster_consumption">Verbrauch</string>
     <string name="settings_cluster_power">Leistung</string>
     <string name="settings_cluster_display_found">Display des Kombiinstruments gefunden: Nr. %1$d, %2$d × %3$d px</string>
