@@ -28,7 +28,8 @@ import kotlin.math.sin
  *
  * Dessiné sur un carré de [ClusterGauge.SIDE_PX] unités mis à l'échelle de la vue : c'est le
  * carré de l'appli du combiné, en px. Toujours sombre — le combiné l'est, quel que soit le thème
- * de l'application. Textes et chiffres dans la langue du contexte reçu ([montrer] le relit).
+ * de l'application —, et sur le fond même de cette appli ([FOND]) : le module se fond dans le
+ * combiné au lieu d'y faire une boîte. Textes et chiffres dans la langue du contexte reçu.
  *
  * L'anneau glisse d'une valeur à la suivante : les relevés arrivent chaque seconde, une jauge qui
  * sauterait de l'une à l'autre se lirait mal du coin de l'œil.
@@ -55,7 +56,6 @@ class ClusterGaugeView(context: Context) : View(context) {
     private val sombre = context.createConfigurationContext(Configuration(context.resources.configuration).apply {
         uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or Configuration.UI_MODE_NIGHT_YES
     })
-    private val cFond = sombre.getColor(R.color.dash_card)
     private val cPiste = sombre.getColor(R.color.dash_border)
     private val cTexte = sombre.getColor(R.color.text_primary)
     private val cTexte2 = sombre.getColor(R.color.text_secondary)
@@ -98,14 +98,14 @@ class ClusterGaugeView(context: Context) : View(context) {
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        // Tout le carré, avant même le premier relevé : rien de la page de l'appli SAIC, dessous,
+        // ne doit transparaître.
+        canvas.drawColor(FOND)
         val c = contenu ?: return
         val echelle = minOf(width, height) / ClusterGauge.SIDE_PX.toFloat()
         canvas.save()
         canvas.scale(echelle, echelle)
 
-        plein.color = cFond
-        cadre.set(0f, 0f, COTE, COTE)
-        canvas.drawRoundRect(cadre, 24f, 24f, plein)
         c.mode?.let { pastille(canvas, it) }
 
         if (c.module == ClusterModule.POWER) puissance(canvas, c) else consommation(canvas, c)
@@ -247,6 +247,11 @@ class ClusterGaugeView(context: Context) : View(context) {
     })
 
     private companion object {
+        /**
+         * Fond de l'appli SAIC du combiné (`screen_background_dark`). Celui de nos cartes, plus
+         * clair, ressortait en rectangle sur le combiné (photo du 2026-10-14).
+         */
+        val FOND = Color.rgb(0x0C, 0x0C, 0x0C)
         val COTE = ClusterGauge.SIDE_PX.toFloat()
         const val RAYON = 88f
         const val EPAISSEUR = 13f

@@ -33,9 +33,9 @@ import com.mg4.control.util.LocaleHelper
  * Affiché en READY seulement, réglage activé. Lecture seule : puissance batterie et vitesse
  * chaque seconde, mode de conduite et batterie toutes les dix secondes.
  *
- * ⚠️ Écrit sans avoir vu l'écran du combiné : sa taille et la place du carré viennent de la mise en
- * page de l'appli SAIC. Le journal ([TAG]) donne l'écran trouvé et la place retenue ; la sonde des
- * écrans du Diagnostic, le reste.
+ * Vu sur le combiné le 2026-10-14 (SWI133) : la fenêtre s'y affiche bien. La place du carré vient
+ * de la mise en page de l'appli SAIC ([ClusterGauge.placement]) ; le journal ([TAG]) donne l'écran
+ * trouvé et la place retenue, la sonde des écrans du Diagnostic le reste.
  */
 internal object ClusterModuleOverlay {
 

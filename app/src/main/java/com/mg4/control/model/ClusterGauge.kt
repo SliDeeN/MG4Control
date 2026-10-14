@@ -134,7 +134,7 @@ object ClusterGauge {
         return displays.firstOrNull { (id, type) -> id != 0 && type in PHYSIQUES }?.first
     }
 
-    /** Côté du carré, et son décalage : ceux de la mise en page de l'appli du combiné, en px. */
+    /** Côté du carré, et ses marges : ceux de la mise en page de l'appli du combiné, en px. */
     const val SIDE_PX = 260
     const val OFFSET_X_PX = 424
     const val OFFSET_Y_PX = 32
@@ -143,13 +143,19 @@ object ClusterGauge {
 
     /**
      * Place du module sur un écran de [width] × [height] px : celle du carré de l'appli du
-     * combiné, qui est la zone que le combiné laisse voir. Sur un écran trop petit pour elle, le
-     * carré se centre — et rapetisse s'il ne tient pas.
+     * combiné, qui est la zone que le combiné laisse voir.
+     *
+     * Ce carré est accroché aux quatre bords de l'écran, avec une marge de [OFFSET_X_PX] à gauche
+     * et de [OFFSET_Y_PX] en haut : il se **centre** dans ce que les marges laissent, il ne s'y
+     * colle pas. Le poser aux marges mêmes (premier essai) le décalait d'environ 56 px à gauche et
+     * 91 px en haut de la zone visible — photo du 2026-10-14 sur SWI133, cohérente avec un écran
+     * de 800 × 480. Sur un écran trop petit pour les marges, le carré se centre sur l'écran, et
+     * rapetisse s'il ne tient pas.
      */
     fun placement(width: Int, height: Int): Placement {
         val cote = minOf(SIDE_PX, width, height).coerceAtLeast(0)
-        val x = if (width >= OFFSET_X_PX + cote) OFFSET_X_PX else (width - cote) / 2
-        val y = if (height >= OFFSET_Y_PX + cote) OFFSET_Y_PX else (height - cote) / 2
+        val x = if (width >= OFFSET_X_PX + cote) OFFSET_X_PX + (width - OFFSET_X_PX - cote) / 2 else (width - cote) / 2
+        val y = if (height >= OFFSET_Y_PX + cote) OFFSET_Y_PX + (height - OFFSET_Y_PX - cote) / 2 else (height - cote) / 2
         return Placement(x, y, cote)
     }
 

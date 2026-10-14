@@ -111,8 +111,16 @@ class ClusterGaugeTest {
     }
 
     @Test fun `le carre se place comme celui de l appli du combine`() {
-        assertEquals(ClusterGauge.Placement(424, 32, 260), ClusterGauge.placement(1108, 324))
-        assertEquals(ClusterGauge.Placement(424, 32, 260), ClusterGauge.placement(1920, 720))
+        // Ses marges (424 et 32 px) ne sont pas sa place : le carré se centre dans ce qu'elles
+        // laissent. Photo du 2026-10-14 sur SWI133 : posé en (424, 32), le module débordait
+        // d'environ 56 px à gauche et 91 px en haut de la zone visible — ce que donne ce
+        // centrage sur un écran de 800 × 480.
+        assertEquals(ClusterGauge.Placement(482, 126, 260), ClusterGauge.placement(800, 480))
+        assertEquals(ClusterGauge.Placement(636, 48, 260), ClusterGauge.placement(1108, 324))
+    }
+
+    @Test fun `juste la place des marges et du carre - il se colle aux marges`() {
+        assertEquals(ClusterGauge.Placement(424, 32, 260), ClusterGauge.placement(684, 292))
     }
 
     @Test fun `sur un ecran trop petit, le carre se centre et rapetisse au besoin`() {
