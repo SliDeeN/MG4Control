@@ -51,6 +51,15 @@
   --dash-text-lo: #8E8E93;
   --dash-accent: #0284C7;
   --dash-accent-dim: #E0F2FE;
+  --hvac-zone-stroke: #0284C7;
+  --hvac-zone-fill: #F0F9FF;
+  --hvac-segment-on: #FFFFFF;
+  --hvac-on-accent: #FFFFFF;
+  --hvac-on-heat: #FFFFFF;
+  --hvac-on-eco: #FFFFFF;
+  --mode-snow: #6366F1;
+  --mode-on-snow: #FFFFFF;
+  --text-active: #FFFFFF;
   --dash-eco: #16A34A;
   --dash-eco-dim: #DCFCE7;
   --dash-warn: #D97706;
@@ -60,7 +69,7 @@
   --text-primary: #1C1C1E;
   --text-secondary: #6C6C70;
   --accent-normal: #1565C0;
-  --logo-bg: linear-gradient(90deg, rgba(28,28,30,.8), rgba(255,255,255,0) 60%);
+  --logo-bg: #1C1C1E;
   --overlay-scrim: rgba(0,0,0,.45);
 
   position: absolute;
@@ -85,6 +94,14 @@
   --dash-text-lo: #52525B;
   --dash-accent: #38BDF8;
   --dash-accent-dim: #0C4A6E;
+  --hvac-zone-stroke: #2A8CC2;
+  --hvac-zone-fill: #0F1A22;
+  --hvac-segment-on: #3F3F46;
+  --hvac-on-accent: #06283D;
+  --hvac-on-heat: #2A1700;
+  --hvac-on-eco: #052E16;
+  --mode-snow: #A5B4FC;
+  --mode-on-snow: #1E1B4B;
   --dash-eco: #22C55E;
   --dash-eco-dim: #14532D;
   --dash-warn: #F59E0B;
@@ -108,15 +125,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px 0 20px;
+  padding: 0 12px;
   background: var(--dash-card);
   box-shadow: 0 2px 4px rgba(0,0,0,.12);
   position: relative;
   z-index: 2;
 }
 .a-logo {
-  flex: 1;
-  height: 36px;
+  flex: 0 0 auto;
+  height: 44px;
   display: flex;
   align-items: center;
   cursor: pointer;
@@ -124,26 +141,30 @@
 .a-logo span.lg {
   display: inline-flex;
   align-items: baseline;
-  height: 36px;
-  padding: 0 14px 0 6px;
+  height: 44px;
+  padding: 0 16px 0 10px;
   background: var(--logo-bg);
-  border-radius: 4px;
+  border-radius: 8px;
   font-family: "Roboto", Arial, sans-serif;
   font-size: calc(27px * var(--ts, 1));
-  line-height: 36px;
+  line-height: 44px;
   letter-spacing: -.5px;
 }
 .a-logo .mg { color: #fff; font-weight: 700; }
 .a-logo .four { color: #E53935; font-weight: 700; }
 .a-logo .ctl { color: #A8A8A8; font-weight: 400; }
 .a-nav {
-  height: 36px;
-  padding: 0 14px;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 44px;
+  padding: 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
   border-radius: 8px;
   border: 1px solid var(--dash-border);
   background: var(--dash-btn);
   color: var(--text-secondary);
-  font-size: calc(11px * var(--ts, 1));
+  font-size: calc(16px * var(--ts, 1));
   font-weight: 500;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -188,6 +209,10 @@
 }
 .a-rail .a-tab.sub { height: 48px; margin-left: 18px; font-size: calc(13px * var(--ts, 1)); }
 .a-rail .a-tab.on { background: var(--dash-accent-dim); color: var(--dash-accent); border-color: var(--dash-accent); }
+/* Catégorie de profil coupée : « OFF » sous le nom, bouton atténué. */
+.a-rail .a-tab.off { opacity: .55; }
+.a-rail .a-tab small { display: block; font-size: inherit; line-height: 1.15; }
+.a-cat-off { padding: 0 4px 10px; }
 .a-vline { flex: 0 0 1px; background: var(--dash-border); }
 .a-scroll {
   flex: 1;
@@ -463,7 +488,23 @@
 .field label { display: block; font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); margin-bottom: 4px; }
 .field .a-input { width: 100%; }
 
-/* ── Overlays (sélecteur de profil, confirmation) et dialogues ─────────── */
+/* Automatisation clim : deux règles côte à côte, mêmes lignes des deux côtés */
+.rules { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.rules .rule + .rule { margin-top: 0; }
+.rule .rule-h.hot { color: var(--dash-warn); }
+.rule .rule-h.cold { color: var(--dash-accent); }
+.rr { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.rr .rl { flex: 0 0 128px; font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); }
+.rr .a-slider { flex: 1; min-width: 0; }
+.rr .a-val { flex: 0 0 62px; text-align: right; font-size: calc(15px * var(--ts, 1)); }
+.rr.dim .a-slider, .rr.dim .a-val { opacity: .4; }
+/* Rangée de boutons : le libellé reste à la hauteur de la première ligne quand elle en fait deux. */
+.rr.top { align-items: flex-start; }
+.rr.top .rl { line-height: 42px; }
+.rg { flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
+.rg .b.sm { padding: 0 4px; }
+
+/* ── Voile des pop-ups et des fenêtres, assistant de calibrage ──────────── */
 .a-scrim {
   position: absolute;
   inset: 0;
@@ -475,6 +516,10 @@
   animation: simfade .15s ease-out;
 }
 @keyframes simfade { from { opacity: 0; } }
+/* Un popup déjà affiché est reconstruit à chaque geste (la maquette redessine tout) : marqué
+   « still » par sim.js, il ne rejoue pas son animation d'entrée, sinon il clignote. La
+   surbrillance pilotée depuis la page (.hl-on) garde la sienne. */
+.a-scrim.still, .a-toast.still, .a-scrim > .still:not(.hl-on) { animation: none; }
 .a-dialog {
   background: var(--dash-card);
   border: 1px solid var(--dash-border);
@@ -503,66 +548,6 @@
 .a-dialog .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
 .a-dialog .actions .b { height: 44px; padding: 0 18px; font-size: calc(14px * var(--ts, 1)); }
 .a-dialog .actions .spacer { flex: 1; }
-.badge-fw {
-  display: inline-block; padding: 4px 10px; border-radius: 8px;
-  background: var(--dash-warn-dim); color: var(--dash-warn); font-weight: 700; font-family: ui-monospace, monospace;
-}
-.opt-list { display: grid; gap: 6px; max-height: 250px; overflow: auto; }
-.opt-list .b { text-transform: none; justify-content: flex-start; text-align: left; }
-
-/* Sélecteur de profil flottant */
-.picker {
-  width: 1180px;
-  height: 440px;
-  background: var(--dash-card);
-  border: 1px solid var(--dash-border);
-  border-radius: 18px;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 20px 50px rgba(0,0,0,.45);
-  animation: simpop .18s ease-out;
-}
-.picker .pk-title { font-size: calc(20px * var(--ts, 1)); font-weight: 700; text-align: center; }
-.pk-bri { display: flex; align-items: center; gap: 12px; }
-.pk-bri .lbl { font-size: calc(15px * var(--ts, 1)); font-weight: 700; color: var(--dash-text-lo); letter-spacing: .08em; text-transform: uppercase; width: 120px; }
-.pk-bri .b { height: 52px; width: 110px; }
-.pk-bri .a-val { width: 70px; }
-.pk-grid { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
-.pk-grid .b {
-  height: 72px; font-size: calc(19px * var(--ts, 1)); text-transform: none;
-  background: var(--dash-accent-dim); color: var(--dash-accent); border-color: var(--dash-accent);
-  border-radius: 10px;
-}
-.pk-foot { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--dash-border); padding-top: 10px; }
-.pk-foot > div { flex: 1; display: flex; align-items: center; gap: 10px; }
-.pk-foot .b { height: 50px; padding: 0 18px; }
-.pk-foot .cd { color: var(--text-secondary); font-size: calc(14px * var(--ts, 1)); }
-.pk-empty { grid-column: 1 / -1; text-align: center; color: var(--text-secondary); padding: 30px 0; }
-
-/* Confirmation OUI / NON */
-.confirm {
-  width: 900px;
-  background: var(--dash-card);
-  border: 1px solid var(--dash-border);
-  border-radius: 18px;
-  padding: 22px;
-  box-shadow: 0 20px 50px rgba(0,0,0,.45);
-  animation: simpop .18s ease-out;
-}
-.confirm .msg {
-  border: 1px solid var(--dash-border);
-  background: var(--dash-section);
-  border-radius: 12px;
-  padding: 16px;
-  font-size: calc(19px * var(--ts, 1));
-  text-align: center;
-  white-space: pre-line;
-}
-.confirm .yn { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
-.confirm .yn .b { height: 90px; font-size: calc(26px * var(--ts, 1)); font-weight: 700; }
-.confirm .cd { margin-top: 10px; color: var(--text-secondary); font-size: calc(14px * var(--ts, 1)); }
 
 /* Toast Android */
 .a-toast {
@@ -617,7 +602,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app *, .a-scrim, .a-dialog, .picker, .confirm { animation: none !important; transition: none !important; }
+  .app *, .a-scrim, .a-dialog { animation: none !important; transition: none !important; }
 }
 
 /* ══════════ 2.6.7 (bêta) ══════════ */
@@ -685,6 +670,352 @@
 .st-badge { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 6px; font-size: calc(11px * var(--ts, 1)); font-weight: 700; background: var(--dash-warn-dim); color: var(--dash-warn); vertical-align: 2px; }
 .st-detail { margin: 4px 6px 0; padding: 6px 12px; border-left: 3px solid var(--dash-accent); background: var(--dash-section); border-radius: 0 10px 10px 0; }
 
-/* Focus du joystick dans le popup de profils */
-.kfocus { outline: 4px solid var(--dash-accent) !important; outline-offset: 3px; border-radius: 12px; }
-.pk-slider.kfocus { outline-offset: 6px; }
+/* ── Statistiques : rappel de la batterie réglée, en haut de l'onglet Recharge ── */
+.st-banner { background: var(--dash-warn-dim); border: 1px solid var(--dash-warn); border-radius: 10px; padding: 6px 12px; }
+.st-banner .a-row { gap: 8px; }
+
+/* ══════════ 2.6.8 : pop-ups et fenêtres « modernes » ══════════
+   Mêmes mises en page que l'application : overlay_*.xml pour ce qui se pose par-dessus l'écran de la
+   voiture, dialog_*.xml pour les fenêtres de l'application. Les dimensions sont celles des fichiers
+   de l'application, en dp. */
+
+/* Pictogrammes repris des drawables de l'application (bloc MW de sim.js) */
+.mw-ico { flex: none; width: 24px; height: 24px; }
+
+/* ── Pop-ups plein cadre (sélecteur de profils, HVAC) ──
+   Carte de base de 1108 × 392 dp : dans la maquette (1280 × 480) elle occupe la même part d'écran
+   que sur la voiture, où l'application l'agrandit d'un bloc. */
+.ov-card {
+  background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 22px; padding: 16px;
+  color: var(--text-primary); line-height: 1.2;
+  box-shadow: 0 20px 50px rgba(0,0,0,.45);
+  animation: simpop .18s ease-out;
+}
+.ov-card button, .a-banner button, .mw button { font: inherit; cursor: pointer; }
+.ov-head { height: 44px; margin-bottom: 10px; position: relative; display: flex; align-items: center; }
+.ov-head > .mw-ico { width: 26px; height: 26px; margin-left: 4px; color: var(--dash-accent); }
+.ov-title { flex: 1; margin-left: 10px; font-size: calc(20px * var(--ts, 1)); font-weight: 700; white-space: nowrap; }
+.ov-cd { margin-right: 12px; font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); white-space: nowrap; }
+.ov-x {
+  position: relative; z-index: 1; flex: none; width: 44px; height: 44px; padding: 0; border-radius: 50%;
+  background: var(--dash-btn); border: 1px solid var(--dash-border); color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center;
+}
+/* Repère du joystick, posé par-dessus l'en-tête */
+.ov-chipbox { position: absolute; top: 0; height: 44px; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.ov-chip {
+  display: inline-flex; align-items: center; gap: 14px; height: 30px; padding: 0 14px 0 12px; border-radius: 15px;
+  background: var(--dash-accent-dim); color: var(--dash-accent); font-size: calc(12px * var(--ts, 1)); font-weight: 700; white-space: nowrap;
+}
+.ov-chip span { display: inline-flex; align-items: center; gap: 4px; color: var(--text-primary); }
+.ov-chip span:first-child { gap: 6px; color: inherit; }
+.ov-chip .mw-ico { width: 16px; height: 16px; color: var(--dash-accent); }
+.ov-chip.off { background: var(--dash-warn-dim); color: var(--dash-warn); }
+.ov-chip.off .mw-ico { color: inherit; }
+.ov-pan { background: var(--dash-section); border: 1px solid var(--dash-border); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; }
+.ov-cap { font-size: calc(12px * var(--ts, 1)); letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); }
+.ov-tile {
+  background: var(--dash-btn); border: 1px solid var(--dash-border); border-radius: 12px; padding: 0;
+  color: var(--text-secondary); display: flex; align-items: center;
+}
+.ov-tile.on { background: var(--dash-accent-dim); border: 2px solid var(--dash-accent); color: var(--text-primary); }
+.ov-tile.on .mw-ico, .ov-tile.on .air-ico { color: var(--dash-accent); }
+/* Choix à segments : un rail, une seule case allumée */
+.ov-seg { padding: 4px; background: var(--dash-btn); border-radius: 12px; display: flex; }
+.ov-seg > button {
+  flex: 1; min-width: 0; padding: 0; border: 0; border-radius: 9px; background: none; color: var(--text-secondary);
+  display: flex; align-items: center; justify-content: center; font-size: calc(13px * var(--ts, 1)); font-weight: 700;
+}
+.ov-seg > button.on { background: var(--hvac-segment-on); color: var(--text-primary); }
+/* Focus du joystick droit */
+.ov-foc { outline: 4px solid var(--dash-accent) !important; outline-offset: -4px; }
+/* Pastille d'un mode de conduite, ou « Actif » */
+.mw-pill { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 10px; font-size: calc(11px * var(--ts, 1)); font-weight: 700; white-space: nowrap; }
+.mw-pill.line { border: 1px solid var(--dash-accent); color: var(--dash-accent); }
+
+/* Sélecteur de profils (overlay_profile_picker.xml) */
+.pkp { width: 1108px; }
+.pkp-cards { width: 1076px; height: 170px; display: flex; justify-content: center; gap: 10px; }
+.pkp-card {
+  flex: none; height: 170px; padding: 12px; border-radius: 14px; text-align: left;
+  display: flex; flex-direction: column; background: var(--dash-btn); border: 1px solid var(--dash-border); color: var(--text-primary);
+}
+.pkp-card.on { background: var(--dash-accent-dim); border: 2px solid var(--dash-accent); }
+.pkp-top { display: flex; align-items: center; height: 22px; }
+.pkp-card i { flex: 1; }
+.pkp-card b { margin-top: 10px; font-size: calc(20px * var(--ts, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pkp-card small { margin-top: 4px; font-size: calc(12px * var(--ts, 1)); color: var(--text-secondary); }
+.pkp-card em { font-style: normal; font-size: calc(12px * var(--ts, 1)); font-weight: 700; color: var(--dash-accent); }
+.pkp-card.on em { color: var(--text-secondary); }
+.pkp-empty { align-self: center; color: var(--text-secondary); }
+.pkp-strip { display: flex; height: 124px; margin-top: 12px; }
+.pkp-bri { flex: 1; margin-right: 12px; }
+.pkp-brirow { height: 50px; display: flex; align-items: center; }
+.pkp-brirow > .mw-ico { width: 26px; height: 26px; color: var(--dash-accent); }
+.pkp-brirow .ov-seg { flex: 1; height: 50px; margin-left: 12px; }
+.pkp-brirow .ov-seg > button { font-size: calc(14px * var(--ts, 1)); }
+.pkp-val { width: 76px; text-align: right; font-size: calc(24px * var(--ts, 1)); font-weight: 700; }
+.pkp-slider { flex: 1; display: flex; align-items: center; border-radius: 12px; padding: 0 14px; }
+.pkp-slider .a-slider { width: 100%; }
+.pkp-acts { flex-direction: row; gap: 10px; }
+.pkp-acts.two { width: 430px; }
+.pkp-acts.one { width: 230px; }
+.pkp-acts.wide { flex: 1; }
+.pkp-act {
+  flex: 1; min-width: 0; padding: 0 8px; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); color: var(--text-primary);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center;
+  font-size: calc(14px * var(--ts, 1)); font-weight: 700;
+}
+.pkp-act .mw-ico { color: var(--dash-accent); }
+.pkp-act.danger { background: var(--dash-danger-dim); border-color: var(--dash-danger); }
+.pkp-act.danger .mw-ico { color: var(--dash-danger); }
+
+/* Pop-up HVAC (overlay_hvac_popup.xml) : chauffages, cadre du joystick, compresseur et recirculation */
+.hvp:not(.heat) .ov-title { visibility: hidden; }
+.hvp-body { display: flex; align-items: stretch; }
+.hvp-heat { width: 232px; margin-right: 12px; }
+.hvp-heat > .ov-cap { margin-bottom: 10px; }
+.hvp-heat > i { flex: 1; }
+.hvp-seat { display: flex; align-items: center; }
+.hvp-seat + .ov-seg + .hvp-seat { margin-top: 12px; }
+.hvp-seat b { flex: 1; font-size: calc(15px * var(--ts, 1)); }
+.hvp-seat span { font-size: calc(12px * var(--ts, 1)); font-weight: 700; color: var(--text-secondary); }
+.hvp-heat .ov-seg { height: 60px; margin-top: 6px; }
+.hvp-wheel { height: 52px; padding: 0 12px; }
+.hvp-wheel .heat-ico { flex: none; width: 24px; height: 24px; }
+.hvp-wheel span { flex: 1; margin-left: 8px; text-align: left; font-size: calc(14px * var(--ts, 1)); }
+/* L'interrupteur ne fait que montrer l'état : c'est la ligne qui se touche. */
+.hvp-wheel em { flex: none; width: 44px; height: 24px; margin-left: 8px; padding: 0 3px; border-radius: 12px; background: var(--dash-border); display: flex; align-items: center; }
+.hvp-wheel em::after { content: ""; width: 18px; height: 18px; border-radius: 50%; background: var(--text-secondary); }
+.hvp-wheel.lit { color: var(--text-primary); }
+.hvp-wheel.lit .heat-ico { color: var(--dash-warn); }
+.hvp-wheel.lit em { background: var(--dash-warn); justify-content: flex-end; }
+.hvp-wheel.lit em::after { background: #fff; }
+.hvp-zone { width: 600px; background: var(--hvac-zone-fill); border: 2px solid var(--hvac-zone-stroke); border-radius: 16px; padding: 14px; }
+.hvp-row { height: 186px; display: flex; align-items: center; }
+.hvp-round {
+  flex: none; width: 64px; height: 64px; padding: 0; border-radius: 50%; background: var(--dash-btn); border: 2px solid;
+  display: flex; align-items: center; justify-content: center;
+}
+.hvp-round .mw-ico { width: 26px; height: 26px; }
+.hvp-round.cold { color: var(--dash-accent); }
+.hvp-round.hot { color: var(--dash-warn); }
+.hvp-gauge { flex: none; width: 196px; height: 186px; margin: 0 8px; position: relative; }
+.hvp-gauge svg { position: absolute; left: 0; top: 0; }
+.hvp-gauge path { fill: none; stroke-width: 10; stroke-linecap: round; }
+.g-track { stroke: var(--dash-border); }
+.g-val { stroke: var(--dash-accent); }
+.g-knob { fill: #fff; }
+.g-ring { fill: none; stroke: var(--dash-accent); stroke-width: 3; }
+.hvp-temp { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.hvp-temp small, .hvp-fan > small { font-size: calc(12px * var(--ts, 1)); color: var(--text-secondary); }
+.hvp-temp b { font-size: calc(50px * var(--ts, 1)); line-height: 1; }
+.hvp-temp span { margin-left: 2px; font-size: calc(18px * var(--ts, 1)); color: var(--text-secondary); }
+.hvp-lim { position: absolute; bottom: 0; width: 44px; text-align: center; font-size: calc(11px * var(--ts, 1)); color: var(--text-secondary); }
+.hvp-fan { flex: 1; min-width: 0; margin-left: 20px; }
+.hvp-fanv { display: flex; align-items: center; margin-top: 2px; }
+.hvp-fanv .mw-ico { width: 26px; height: 26px; color: var(--dash-accent); }
+.hvp-fanv b { margin-left: 8px; font-size: calc(30px * var(--ts, 1)); line-height: 1.1; }
+.hvp-bar { display: flex; gap: 4px; height: 10px; margin-top: 8px; }
+.hvp-bar i { flex: 1; border-radius: 3px; background: var(--dash-border); }
+.hvp-bar i.on { background: var(--dash-accent); }
+.hvp-fanrow { display: flex; height: 58px; margin-top: 14px; }
+.hvp-fanrow .ov-tile { flex: none; width: 60px; justify-content: center; color: var(--text-primary); }
+.hvp-fanrow .ov-tile.auto { flex: 1; margin: 0 8px; color: var(--text-secondary); font-size: calc(15px * var(--ts, 1)); font-weight: 700; text-transform: uppercase; }
+.hvp-fanrow .ov-tile.auto.on { color: var(--text-primary); }
+.hvp-airs { display: flex; gap: 8px; margin-top: 10px; }
+.hvp-air { flex: 1; min-width: 0; height: 82px; flex-direction: column; justify-content: center; gap: 5px; font-size: calc(12px * var(--ts, 1)); }
+.hvp-air .air-ico { flex: none; width: 26px; height: 26px; }
+.hvp-air span { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Retour visuel d'un geste : au volant, c'est le seul signe que la commande est passée. */
+.hvp .hit { box-shadow: inset 0 0 0 3px var(--dash-accent); }
+.hvp-side { width: 220px; margin-left: 12px; }
+.hvp-ac {
+  flex: none; height: 64px; padding: 0 16px; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border);
+  color: var(--text-primary); display: flex; align-items: center;
+}
+.hvp-ac .mw-ico { width: 26px; height: 26px; color: var(--text-secondary); }
+.hvp-ac b { flex: 1; margin-left: 10px; text-align: left; font-size: calc(18px * var(--ts, 1)); }
+.hvp-ac span { font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); }
+.hvp-ac.on { background: var(--dash-accent); border-color: transparent; color: var(--hvac-on-accent); }
+.hvp-ac.on .mw-ico, .hvp-ac.on span { color: inherit; }
+.hvp-side > .ov-cap { margin: 14px 0 8px; }
+.hvp-loop { flex: 1; padding-left: 14px; font-size: calc(15px * var(--ts, 1)); }
+.hvp-loop + .hvp-loop { margin-top: 8px; }
+.hvp-loop .mw-ico { margin-right: 12px; }
+
+/* ── Bandeaux (overlay_profile_confirm.xml, overlay_update.xml, overlay_power_off.xml) ──
+   En bas de l'écran, à leur seule taille : ce qui est touché ailleurs va à l'application du dessous. */
+.a-bannerbox { position: absolute; left: 0; right: 0; bottom: 14px; z-index: 20; display: flex; justify-content: center; pointer-events: none; }
+.a-banner {
+  pointer-events: auto; width: 1108px; height: 80px; padding: 0 12px 0 18px; display: flex; align-items: center;
+  background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 22px; color: var(--text-primary); line-height: 1.2;
+  box-shadow: 0 12px 34px rgba(0,0,0,.5);
+  animation: simpop .18s ease-out;
+}
+.a-banner > .mw-ico, .bn-ico .mw-ico { width: 30px; height: 30px; }
+.a-banner > .mw-ico { color: var(--dash-accent); }
+.bn-ico { flex: none; display: flex; }
+.bn-ico.danger { color: var(--dash-danger); }
+.bn-ico.warn { color: var(--dash-warn); }
+.bn-meas { flex: none; margin-left: 10px; }
+.bn-meas b { font-size: calc(30px * var(--ts, 1)); line-height: 1.1; }
+.bn-meas span { margin-left: 3px; font-size: calc(15px * var(--ts, 1)); color: var(--text-secondary); }
+.a-banner small { display: block; font-size: calc(12px * var(--ts, 1)); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bn-sep { flex: none; width: 1px; align-self: stretch; margin: 14px 16px; background: var(--dash-border); }
+.bn-main { flex: 1; min-width: 0; margin-left: 14px; }
+.bn-sep + .bn-main { margin-left: 0; }
+.bn-line { display: flex; align-items: center; min-height: 30px; margin-top: 2px; }
+.bn-line b { font-size: calc(22px * var(--ts, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bn-line .mw-pill { margin-left: 10px; }
+.bn-line .mw-ico { width: 20px; height: 20px; margin: 0 8px; color: var(--dash-accent); }
+.bn-title { display: block; font-size: calc(21px * var(--ts, 1)); }
+.bn-title + small { font-size: calc(13px * var(--ts, 1)); }
+.bn-link {
+  flex: 1; min-width: 0; margin-left: 14px; padding: 0; border: 0; background: none; text-align: left; text-decoration: underline;
+  color: var(--text-secondary); font-size: calc(12px * var(--ts, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bn-b {
+  flex: none; height: 56px; margin-left: 10px; padding: 0 8px; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border);
+  color: var(--text-primary); display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center;
+}
+.bn-main + .bn-b { margin-left: 14px; }
+.bn-b b { font-size: calc(17px * var(--ts, 1)); line-height: 1.15; }
+.bn-b span { font-size: calc(12px * var(--ts, 1)); color: var(--text-secondary); white-space: nowrap; }
+.bn-b .mw-ico { width: 20px; height: 20px; }
+.bn-b.p { background: var(--dash-accent); border-color: transparent; color: var(--hvac-on-accent); }
+.bn-b.d { background: var(--dash-danger); border-color: transparent; color: #fff; }
+/* Sur le bouton plein, l'anneau du joystick prend la couleur du texte pour rester visible. */
+.bn-b.p.ov-foc { outline-color: var(--text-primary) !important; outline-offset: -3px; }
+
+/* ── Fenêtres de l'application (AppDialog, dialog_*.xml) ──
+   Dessinées aux dimensions de l'application, puis réduites d'un bloc pour tenir dans la maquette :
+   la plus large fait 1320 dp, la plus haute 574 dp, pour un écran de 1280 × 480. */
+.mw {
+  zoom: .8;
+  max-height: 588px;
+  display: flex; flex-direction: column;
+  background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 22px; padding: 20px;
+  color: var(--text-primary); line-height: 1.3;
+  box-shadow: 0 20px 50px rgba(0,0,0,.45);
+  animation: simpop .18s ease-out;
+}
+.mw-head { display: flex; align-items: center; gap: 14px; }
+.mw-ht { flex: 1; min-width: 0; }
+.mw-t { font-size: calc(22px * var(--ts, 1)); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mw-s { font-size: calc(15px * var(--ts, 1)); color: var(--text-secondary); }
+.mw-s.center { margin-top: 2px; text-align: center; }
+.mw-badge {
+  flex: none; width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: var(--dash-accent-dim); color: var(--dash-accent);
+}
+.mw-badge .mw-ico { width: 28px; height: 28px; }
+.mw-badge.mid { width: 60px; height: 60px; }
+.mw-badge.mid .mw-ico { width: 32px; height: 32px; }
+.mw-badge.big { width: 68px; height: 68px; margin-top: 6px; }
+.mw-badge.big .mw-ico { width: 36px; height: 36px; }
+.mw-badge.warn { background: var(--dash-warn-dim); color: var(--dash-warn); }
+.mw-badge.danger { background: var(--dash-danger-dim); color: var(--dash-danger); }
+/* Fenêtre centrée : confirmations, firmware non reconnu, langue */
+.mw.c > .mw-badge { align-self: center; }
+.mw-ct { margin-top: 14px; text-align: center; font-size: calc(23px * var(--ts, 1)); font-weight: 700; }
+.mw-cm { margin-top: 8px; text-align: center; font-size: calc(16px * var(--ts, 1)); color: var(--text-secondary); white-space: pre-line; min-height: 0; overflow: auto; }
+.mw-cm.left { text-align: left; }
+.mw-cm .red { color: var(--dash-danger); }
+.mw-fw { align-self: center; height: 32px; margin-top: 10px; padding: 0 14px; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); display: flex; align-items: center; gap: 8px; font-size: calc(14px * var(--ts, 1)); }
+.mw-fw span { color: var(--text-secondary); }
+.mw-hint { margin-top: 14px; padding: 10px 14px; border-radius: 12px; background: var(--dash-accent-dim); border: 1px solid var(--dash-accent); text-align: center; font-size: calc(14px * var(--ts, 1)); }
+/* Boutons */
+.mw-acts { flex: none; display: flex; gap: 12px; margin-top: 16px; }
+.mw-b {
+  flex: 1; min-width: 0; height: 60px; padding: 0 18px; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border);
+  color: var(--text-primary); display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-size: calc(17px * var(--ts, 1)); font-weight: 700; white-space: nowrap;
+}
+.mw-b span { overflow: hidden; text-overflow: ellipsis; }
+.mw-b .mw-ico { width: 22px; height: 22px; }
+.mw-acts.tall { margin-top: 20px; }
+.mw-acts.tall .mw-b { height: 64px; font-size: calc(18px * var(--ts, 1)); }
+.mw-b.p { background: var(--dash-accent); border-color: transparent; color: var(--hvac-on-accent); }
+.mw-b.w { background: var(--dash-warn); border-color: transparent; color: var(--hvac-on-heat); }
+.mw-b.d { background: var(--dash-danger); border-color: transparent; color: #fff; }
+.mw-col > .mw-b { flex: none; }
+.mw-b.xl { flex: none; height: 68px; }
+.mw-b.sm { flex: none; height: 52px; }
+.mw-link { align-self: center; margin-top: 4px; padding: 14px 12px 6px; border: 0; background: none; color: var(--text-secondary); text-decoration: underline; font-size: calc(14px * var(--ts, 1)); }
+.mw-round { flex: none; width: 52px; height: 52px; padding: 0; border-radius: 50%; background: var(--dash-btn); border: 1px solid var(--dash-border); color: var(--text-primary); display: flex; align-items: center; justify-content: center; }
+.mw-round .mw-ico { width: 22px; height: 22px; }
+.mw-tools { display: flex; gap: 10px; }
+/* Blocs */
+.mw-pan { background: var(--dash-section); border: 1px solid var(--dash-border); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; min-height: 0; }
+.mw-cap { flex: none; margin-bottom: 10px; font-size: calc(12px * var(--ts, 1)); letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); }
+.mw-cols { display: flex; gap: 14px; min-height: 0; }
+.mw-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; }
+.mw .grow { flex: 1; min-width: 0; }
+.mw-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--dash-border) transparent; }
+.mw-text { font-size: calc(15px * var(--ts, 1)); line-height: 1.45; white-space: pre-line; }
+.mw .mt12 { margin-top: 12px; } .mw .mt14 { margin-top: 14px; } .mw .mt16 { margin-top: 16px; } .mw .mb6 { margin-bottom: 6px; }
+.mw-pillv { display: inline-flex; align-items: center; height: 30px; padding: 0 12px; border-radius: 15px; background: var(--dash-btn); color: var(--text-secondary); font-size: calc(15px * var(--ts, 1)); font-weight: 700; white-space: nowrap; }
+.mw-pillv.acc { background: var(--dash-accent-dim); border: 1px solid var(--dash-accent); color: var(--dash-accent); }
+.mw-pillv i { margin-right: 8px; font-style: normal; font-weight: 400; }
+.mw-pills .mw-pillv { color: var(--text-primary); }
+.mw-pills .mw-pillv i { color: var(--text-secondary); }
+.mw-vers { display: inline-flex; align-items: center; gap: 8px; }
+.mw-vers .mw-ico { width: 20px; height: 20px; color: var(--dash-accent); }
+/* Langue */
+.mw-langs { display: flex; gap: 12px; margin-top: 18px; }
+.mw-langs.three { margin-top: 12px; padding: 0 98px; }
+.mw-lang { flex: 1; height: 84px; padding: 0; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); color: var(--text-primary); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.mw-lang b { font-size: calc(21px * var(--ts, 1)); }
+.mw-lang span { font-size: calc(13px * var(--ts, 1)); font-weight: 700; color: var(--dash-accent); }
+/* Mise à jour */
+.mw-warn { flex: none; font-size: calc(13px * var(--ts, 1)); color: var(--dash-warn); }
+.mw-status { font-size: calc(17px * var(--ts, 1)); }
+.mw-prog { height: 8px; margin-top: 14px; border-radius: 4px; background: var(--dash-border); overflow: hidden; }
+.mw-prog i { display: block; height: 100%; background: var(--dash-accent); }
+.mw-qr { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: calc(13px * var(--ts, 1)); font-weight: 700; color: var(--dash-accent); word-break: break-all; }
+/* Restaurer les profils */
+.mw-profs { display: flex; gap: 10px; margin-top: 16px; }
+.mw-prof { flex: 1; min-width: 0; padding: 12px; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); }
+.mw-prof b { display: block; margin-top: 8px; font-size: calc(18px * var(--ts, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Grille de choix (une application, un profil) */
+.mw-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--dash-border) transparent; }
+.mw-grid.long { flex: none; height: 394px; }
+.mw-choice { height: 104px; padding: 0 8px; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); color: var(--text-primary); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.mw-choice.on { background: var(--dash-accent-dim); border: 2px solid var(--dash-accent); }
+.mw-choice b { max-width: 100%; font-size: calc(15px * var(--ts, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mw-appico { width: 44px; height: 44px; border-radius: 11px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 22px; font-weight: 700; }
+/* Modifier un raccourci : deux listes à choix unique */
+.mw-opt { flex: none; width: 100%; height: 52px; margin-bottom: 6px; padding: 0 14px; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); color: var(--text-secondary); text-align: left; font-size: calc(16px * var(--ts, 1)); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mw-opt.on { background: var(--dash-accent-dim); border-color: var(--dash-accent); color: var(--text-primary); }
+/* Saisies des statistiques : boutons − et +, sans clavier */
+.mw-seg { height: 56px; }
+.mw-seg > button { font-size: calc(16px * var(--ts, 1)); }
+.mw-seg.sm { height: 48px; margin-top: 12px; }
+.mw-step { flex: none; width: 52px; height: 52px; padding: 0; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); color: var(--text-primary); display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
+.mw-step.big { width: 64px; height: 64px; }
+.mw-step.big .mw-ico { width: 28px; height: 28px; }
+.mw-timecap { display: flex; align-items: center; height: 28px; }
+.mw-timecap .mw-cap { flex: 1; margin: 0; }
+.mw-clear { width: 28px; height: 28px; padding: 4px; border: 0; background: none; color: var(--text-secondary); display: flex; }
+.mw-clear .mw-ico { width: 20px; height: 20px; }
+.mw-timerow { display: flex; align-items: center; justify-content: center; margin-top: 8px; }
+.mw-timerow b { width: 60px; text-align: center; font-size: calc(28px * var(--ts, 1)); }
+.mw-timerow em { margin: 0 6px; font-style: normal; font-size: calc(24px * var(--ts, 1)); font-weight: 700; }
+.mw-timerow.unset b { color: var(--text-secondary); }
+.mw-price { display: flex; align-items: center; height: 64px; }
+.mw-price > div { flex: 1; text-align: center; }
+.mw-price b { display: block; font-size: calc(32px * var(--ts, 1)); line-height: 1.1; }
+.mw-price span { font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); }
+/* À propos */
+.mw-pills { display: flex; gap: 10px; margin-top: 6px; }
+.mw-credit { margin-top: 6px; font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); }
+.mw-thanks { font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); }
+.mw-qrs { flex: none; flex-direction: row; gap: 18px; align-items: center; margin-left: 6px; }
+/* Diagnostic : le journal */
+.mw-log { flex: none; height: 380px; margin-top: 14px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--dash-border) transparent; }
+.mw-log pre { margin: 0; font-family: ui-monospace, Consolas, monospace; font-size: calc(13px * var(--ts, 1)); line-height: 1.5; color: var(--text-secondary); white-space: pre-wrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ov-card, .a-banner, .mw { animation: none !important; }
+}

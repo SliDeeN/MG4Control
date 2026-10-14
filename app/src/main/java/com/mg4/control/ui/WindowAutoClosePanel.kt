@@ -13,9 +13,9 @@ import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.model.WindowAutoCloseTrigger
 
 /**
- * Carte « Fermeture automatique » de l'onglet Vitres : activation, conditions d'armement
- * (vitesse et/ou durée, combinées « l'une ou l'autre » ou « les deux »), délai après la sortie
- * de READY et avertissement sonore.
+ * Réglages de la carte « Fermeture automatique des vitres électriques » : activation (interrupteur
+ * de la carte), conditions d'armement (vitesse et/ou durée, combinées « l'une ou l'autre » ou
+ * « les deux »), délai après la sortie de READY et avertissement sonore.
  * Chaque modification est enregistrée et appliquée aussitôt au déclencheur ([WindowAutoClose]).
  */
 class WindowAutoClosePanel {
@@ -41,7 +41,8 @@ class WindowAutoClosePanel {
     /** Vrai pendant les mises à jour faites par le code : les écouteurs ne doivent pas réenregistrer. */
     private var updating = false
 
-    fun bind(view: View) {
+    /** [onToggled] : appelé quand l'utilisateur active ou coupe l'option (la carte se déplie / replie). */
+    fun bind(view: View, onToggled: (Boolean) -> Unit = {}) {
         root = view
         speedSwitch = view.findViewById(R.id.switch_win_auto_speed)
         timeSwitch = view.findViewById(R.id.switch_win_auto_time)
@@ -64,6 +65,7 @@ class WindowAutoClosePanel {
             setOnCheckedChangeListener { sw, on ->
                 WindowAutoClose.setEnabled(sw.context, on)
                 render()
+                onToggled(on)
             }
         }
 

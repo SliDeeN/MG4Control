@@ -1,273 +1,252 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Dialog "À propos / Infos" — style dark dashboard
-    Titre + séparateur en haut, contenu 2 colonnes, bouton Fermer en bas
--->
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="wrap_content"
+<!-- « À propos » : deux colonnes — proposition « A » choisie sur maquette le 2026-10-13.
+     L'application et ses crédits à gauche, les deux QR codes des dépôts à droite ; « Fermer » sur
+     toute la largeur. Rempli par SettingsFragment.showInfosDialog.
+
+     Fenêtre de l'application : tailles normales, pas l'agrandissement des pop-ups. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@drawable/bg_card_rounded"
-    android:minWidth="720dp">
+    android:background="@drawable/bg_hvac_modern_card"
+    android:padding="20dp">
 
-    <!-- ── En-tête ─────────────────────────────────────────────────── -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/info_title"
-        android:textColor="@color/dash_text_lo"
-        android:textSize="10sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.12"
-        android:textAllCaps="true"
-        android:paddingStart="24dp"
-        android:paddingEnd="24dp"
-        android:paddingTop="18dp"
-        android:paddingBottom="14dp" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/dash_border" />
-
-    <!-- ── Corps : 2 colonnes ──────────────────────────────────────── -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="24dp">
+        android:baselineAligned="false">
 
-        <!-- Colonne gauche : infos app -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_marginEnd="24dp">
+            android:orientation="vertical">
 
-            <!-- Nom app -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/app_name"
-                android:textColor="@color/text_primary"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:layout_marginBottom="4dp" />
-
-            <!-- Basé sur DriveHub Dort -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/info_based_on"
-                android:textColor="@color/dash_text_lo"
-                android:textSize="12sp"
-                android:layout_marginBottom="16dp" />
-
-            <!-- Version -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:layout_marginBottom="12dp">
+                android:gravity="center_vertical">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/info_version_label"
-                    android:textColor="@color/dash_text_lo"
-                    android:textSize="13sp"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.08"
-                    android:layout_marginEnd="10dp" />
+                <FrameLayout
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:background="@drawable/bg_dialog_icon">
 
-                <TextView
-                    android:id="@+id/tv_app_version"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
-                    android:fontFamily="monospace" />
+                    <ImageView
+                        android:id="@+id/iv_info_icon"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:layout_gravity="center"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_dialog_info" />
 
-            </LinearLayout>
+                </FrameLayout>
 
-            <!-- Séparateur -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/dash_border"
-                android:layout_marginBottom="12dp" />
-
-            <!-- Firmware -->
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/info_firmware_label"
-                android:textColor="@color/dash_text_lo"
-                android:textSize="13sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.08"
-                android:layout_marginBottom="6dp" />
-
-            <TextView
-                android:id="@+id/tv_firmware_info"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/settings_firmware_loading"
-                android:textColor="@color/dash_accent"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:fontFamily="monospace" />
-
-        </LinearLayout>
-
-        <!-- Séparateur vertical -->
-        <View
-            android:layout_width="1dp"
-            android:layout_height="match_parent"
-            android:background="@color/dash_border"
-            android:layout_marginEnd="24dp" />
-
-        <!-- Colonne droite : 2 QR codes côte à côte -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical"
-            android:gravity="center_horizontal">
-
-            <!-- QR codes : GitHub | GitLab -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center"
-                android:layout_marginBottom="12dp">
-
-                <!-- GitHub -->
                 <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center_horizontal"
-                    android:layout_marginEnd="8dp">
-
-                    <ImageView
-                        android:id="@+id/iv_qr_code_github"
-                        android:layout_width="160dp"
-                        android:layout_height="160dp"
-                        android:scaleType="fitCenter"
-                        android:background="#FFFFFFFF"
-                        android:padding="4dp"
-                        android:layout_marginBottom="8dp" />
+                    android:layout_marginStart="14dp"
+                    android:orientation="vertical">
 
                     <TextView
-                        android:id="@+id/tv_github_link"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/info_github_link"
-                        android:textColor="@color/dash_accent"
-                        android:textSize="13sp"
-                        android:textStyle="italic"
-                        android:clickable="true"
-                        android:focusable="true" />
-
-                </LinearLayout>
-
-                <!-- GitLab -->
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:orientation="vertical"
-                    android:gravity="center_horizontal"
-                    android:layout_marginStart="8dp">
-
-                    <ImageView
-                        android:id="@+id/iv_qr_code_gitlab"
-                        android:layout_width="160dp"
-                        android:layout_height="160dp"
-                        android:scaleType="fitCenter"
-                        android:background="#FFFFFFFF"
-                        android:padding="4dp"
-                        android:layout_marginBottom="8dp" />
+                        android:text="@string/app_name"
+                        android:textColor="@color/text_primary"
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
 
                     <TextView
-                        android:id="@+id/tv_gitlab_link"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/info_gitlab_link"
-                        android:textColor="@color/dash_accent"
-                        android:textSize="13sp"
-                        android:textStyle="italic"
-                        android:clickable="true"
-                        android:focusable="true" />
+                        android:text="@string/info_based_on"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="15sp"
+                        android:maxLines="2"
+                        android:ellipsize="end" />
 
                 </LinearLayout>
 
             </LinearLayout>
 
-            <!-- Séparateur -->
-            <View
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/dash_border"
-                android:layout_marginBottom="12dp" />
-
-            <!-- Made with love -->
-            <TextView
-                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="30dp"
+                    android:background="@drawable/bg_dialog_pill"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/info_version_label"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="15sp"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:id="@+id/tv_app_version"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="30dp"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/bg_dialog_pill"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/info_firmware_label"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="15sp"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:id="@+id/tv_firmware_info"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:text="@string/settings_firmware_loading"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:text="@string/info_made_with_love"
-                android:textColor="@color/dash_text_lo"
-                android:textSize="13sp"
-                android:gravity="center" />
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp" />
 
-            <!-- Remerciements spéciaux -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
                 android:text="@string/info_special_thanks"
-                android:textColor="@color/dash_text_lo"
-                android:textSize="12sp"
-                android:gravity="center"
-                android:layout_marginTop="4dp" />
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="20dp"
+            android:background="@drawable/bg_hvac_panel"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <ImageView
+                    android:id="@+id/iv_qr_code_github"
+                    android:layout_width="150dp"
+                    android:layout_height="150dp"
+                    android:background="@drawable/bg_dialog_qr"
+                    android:padding="6dp"
+                    android:scaleType="fitCenter"
+                    android:importantForAccessibility="no" />
+
+                <!-- Ouvre le dépôt dans le navigateur de la voiture -->
+                <TextView
+                    android:id="@+id/tv_github_link"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="6dp"
+                    android:text="GitHub"
+                    android:textColor="@color/dash_accent"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    tools:ignore="HardcodedText" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="18dp"
+                android:orientation="vertical"
+                android:gravity="center_horizontal">
+
+                <ImageView
+                    android:id="@+id/iv_qr_code_gitlab"
+                    android:layout_width="150dp"
+                    android:layout_height="150dp"
+                    android:background="@drawable/bg_dialog_qr"
+                    android:padding="6dp"
+                    android:scaleType="fitCenter"
+                    android:importantForAccessibility="no" />
+
+                <!-- Ouvre le dépôt dans le navigateur de la voiture -->
+                <TextView
+                    android:id="@+id/tv_gitlab_link"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="6dp"
+                    android:text="GitLab"
+                    android:textColor="@color/dash_accent"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    tools:ignore="HardcodedText" />
+
+            </LinearLayout>
 
         </LinearLayout>
 
     </LinearLayout>
 
-    <!-- ── Pied de page : bouton Fermer ───────────────────────────── -->
-    <View
+    <TextView
+        android:id="@+id/btn_info_close"
         android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/dash_border" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="end"
-        android:padding="14dp">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_info_close"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="44dp"
-            android:text="@string/info_close"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp"
-            android:textAllCaps="true"
-            android:backgroundTint="@color/dash_btn"
-            app:strokeColor="@color/dash_border"
-            app:strokeWidth="1dp"
-            app:cornerRadius="8dp" />
-
-    </LinearLayout>
+        android:layout_height="60dp"
+        android:layout_marginTop="16dp"
+        android:background="@drawable/bg_dialog_tile"
+        android:gravity="center"
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp"
+        android:text="@string/nav_close"
+        android:textColor="@color/text_primary"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:maxLines="1" />
 
 </LinearLayout>

@@ -42,6 +42,20 @@ data class EnergySnapshot(
     val speedKmh: Float? = null,
     /** Température extérieure en °C, pour expliquer une consommation. */
     val outsideTempC: Float? = null,
+    /**
+     * Énergie sortie de la batterie depuis le début du trajet, obtenue en intégrant sa puissance
+     * (tension × courant) — et celle qui y est rentrée par récupération. C'est le relais des
+     * compteurs là où le véhicule ne les alimente pas (issue #117) ; `null` tant que rien n'a pu
+     * être intégré. Voir [PowerIntegrator].
+     */
+    val tripConsumedKwh: Float? = null,
+    val tripRegenKwh: Float? = null,
+    /**
+     * « Climatisation et autres » depuis le contact, d'après le compteur de l'écran d'origine.
+     * Il n'avance que par **kWh entier** (mesuré le 2026-10-05) : bon pour un ordre de grandeur
+     * sur un long trajet, pas pour un chiffre au dixième.
+     */
+    val auxSinceStartKwh: Float? = null,
 ) {
     /** Vrai si l'instantané porte assez d'information pour être exploité. */
     val usable: Boolean get() = socPercent != null || odometerKm != null

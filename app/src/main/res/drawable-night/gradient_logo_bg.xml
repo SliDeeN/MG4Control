@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-    Fond transparent pour le logo en thème sombre.
-    Les lettres "MG" blanches sont déjà visibles sur le fond sombre — pas de dégradé nécessaire.
--->
-<shape xmlns:android="http://schemas.android.com/apk/res/android">
-    <solid android:color="#00000000" />
-</shape>

@@ -1,0 +1,173 @@
+package com.mg4.control.model
+
+import com.mg4.control.accessibility.JoystickFocus
+
+/**
+ * Pop-up HVAC (issues #120 et #125) — ce que fait le joystick droit, sans vue ni véhicule.
+ *
+ * Ici le joystick ne déplace aucun focus, contrairement aux popups de profils : chaque direction
+ * agit directement, comme dans la fenêtre clim d'origine de la voiture.
+ *
+ * |          | Action                                   |
+ * |----------|------------------------------------------|
+ * | Haut     | température + 1                          |
+ * | Bas      | température − 1                          |
+ * | Droite   | ventilation + 1                          |
+ * | Gauche   | ventilation − 1                          |
+ * | Clic     | mode AUTO, ou retour au réglage manuel   |
+ *
+ * La fenêtre se ferme au doigt, par le raccourci qui l'a ouverte, ou seule après son délai.
+ *
+ * ## Le mode AUTO
+ *
+ * En AUTO la voiture règle elle-même la ventilation (et le sens de l'air), et n'annonce plus un
+ * cran mais **15** : c'est à ce 15 que les écrans d'origine reconnaissent AUTO et l'affichent
+ * (`HvacControlDialog` et `AcCardView` de SWI133, `HvacView` de SWI165). Ces mêmes écrans ne
+ * « coupent » jamais AUTO : ils en SORTENT en écrivant un niveau de ventilation — le dernier
+ * réglé à la main, plus ou moins un cran. C'est la règle reprise ici, et partagée avec la page
+ * Clim et les raccourcis « ventilation ± ».
+ */
+object HvacPopup {
+
+    sealed class Action {
+        data class Temperature(val cible: Int) : Action()
+
+        /** Un niveau de ventilation écrit à la main — c'est aussi ce qui fait sortir d'AUTO. */
+        data class Ventilation(val cible: Int) : Action()
+
+        /** Passer en mode AUTO : le clic central du joystick, ou le bouton AUTO. */
+        object Auto : Action()
+    }
+
+    /** Ce qui est lu sur la voiture ; les bornes en viennent aussi. null = illisible. */
+    data class Reglages(
+        val temp: Int?, val tempMin: Int, val tempMax: Int,
+        val fan: Int?, val fanMin: Int, val fanMax: Int,
+        /** Mode AUTO annoncé par la voiture ; null = illisible. */
+        val auto: Boolean? = null,
+        /** Dernier niveau de ventilation réglé à la main, retenu avant AUTO ; null = jamais vu. */
+        val dernierNiveau: Int? = null,
+    ) {
+        /**
+         * AUTO actif : la voiture le dit, ou son niveau de ventilation le trahit — au-delà du
+         * maximum ce n'est plus un cran (15), et c'est à cela que les écrans d'origine s'y fient.
+         */
+        val enAuto: Boolean get() = auto == true || (fan != null && fan > fanMax)
+
+        /** Niveau de ventilation à montrer et à régler ; null en AUTO ou s'il est illisible. */
+        val ventilationReelle: Int? get() = fan?.takeIf { !enAuto }
+    }
+
+    /** Action portée par [commande], ou null s'il n'y a rien à écrire (butée, valeur illisible). */
+    fun action(commande: JoystickFocus.Commande, reglages: Reglages): Action? = when (commande) {
+        JoystickFocus.Commande.HAUT    -> pas(reglages.temp, reglages.tempMin, reglages.tempMax, +1)?.let { Action.Temperature(it) }
+        JoystickFocus.Commande.BAS     -> pas(reglages.temp, reglages.tempMin, reglages.tempMax, -1)?.let { Action.Temperature(it) }
+        JoystickFocus.Commande.DROITE  -> pasVentilation(reglages, +1)?.let { Action.Ventilation(it) }
+        JoystickFocus.Commande.GAUCHE  -> pasVentilation(reglages, -1)?.let { Action.Ventilation(it) }
+        JoystickFocus.Commande.VALIDER -> when {
+            // Rendre la main : le dernier niveau, tel quel.
+            reglages.enAuto        -> Action.Ventilation(niveauDeSortie(reglages))
+            reglages.auto == false -> Action.Auto
+            // Sans état lisible on n'appuie pas : sur l'ancien SDK la commande est un APPUI, et
+            // rien ne dit qu'un second ne couperait pas le mode qu'on voulait activer.
+            else                   -> null
+        }
+    }
+
+    /**
+     * Niveau de ventilation à écrire pour un cran de plus ([sens] = +1) ou de moins (−1) ; null
+     * s'il n'y a rien à écrire (butée, niveau illisible).
+     *
+     * En AUTO on repart du dernier niveau réglé à la main — surtout pas du 15 annoncé, d'où un
+     * « moins » écrirait le MAXIMUM — et on écrit MÊME en butée : c'est cette écriture qui rend
+     * la main, et l'utilisateur vient de demander à régler lui-même.
+     */
+    fun pasVentilation(reglages: Reglages, sens: Int): Int? =
+        if (reglages.enAuto) (niveauDeSortie(reglages) + sens).coerceIn(reglages.fanMin, reglages.fanMax)
+        else pas(reglages.fan, reglages.fanMin, reglages.fanMax, sens)
+
+    /**
+     * Niveau à écrire pour quitter AUTO sans rien changer d'autre : le dernier réglé à la main.
+     * Faute de l'avoir jamais vu (application neuve, voiture en AUTO depuis toujours), le milieu
+     * de l'échelle — ni le minimum ni le maximum ne feraient un point de départ raisonnable.
+     */
+    fun niveauDeSortie(reglages: Reglages): Int =
+        (reglages.dernierNiveau ?: ((reglages.fanMin + reglages.fanMax) / 2))
+            .coerceIn(reglages.fanMin, reglages.fanMax)
+
+    // ── Taille de la fenêtre ─────────────────────────────────────────────────
+    const val LARGEUR_DP = 864f      // la carte de overlay_hvac_popup.xml, sans chauffages
+    const val HAUTEUR_DP = 392f
+
+    /** Ce que la colonne des chauffages ajoute à la largeur de la carte, sur les firmwares équipés. */
+    const val CHAUFFAGES_DP = 244f
+    const val PART_LARGEUR = 0.96f
+    const val PART_HAUTEUR = 0.82f
+
+    /**
+     * Agrandissement à appliquer à un pop-up dessiné pour une carte de [largeurDp] × [hauteurDp]
+     * dp, pour qu'il prenne la même part de l'ÉCRAN quelle que soit sa densité : au plus
+     * [partLargeur] de la largeur et [partHauteur] de la hauteur. Par défaut, la carte du pop-up
+     * HVAC sans sa colonne des chauffages ; le sélecteur de profils passe par ici avec la sienne.
+     *
+     * Sur la voiture c'est la hauteur qui limite : 82 % de l'écran, presque toute celle que la
+     * barre d'état laisse (réglé après l'essai du 2026-10-13, pour des commandes plus grandes).
+     * Les 96 % de largeur ne servent que de garde sur un écran étroit.
+     *
+     * On raisonne en part d'écran, pas en dp fixes : la voiture affiche 1920 × 720 px à 1 px par
+     * dp (SWI133, mesuré sur une photo le 2026-10-09 — une première fenêtre de 600 dp n'y
+     * couvrait que 31 % de la largeur), mais la densité des firmwares A9 n'est pas connue.
+     *
+     * ⚠️ L'écran annoncé n'est pas la place réellement accordée à la fenêtre : la barre d'état et
+     * le rail de navigation en prennent une part (voir [reduction]).
+     */
+    fun echelle(
+        largeurPx: Int, hauteurPx: Int, densite: Float,
+        largeurDp: Float = LARGEUR_DP, hauteurDp: Float = HAUTEUR_DP,
+        partLargeur: Float = PART_LARGEUR, partHauteur: Float = PART_HAUTEUR,
+    ): Float {
+        if (largeurPx <= 0 || hauteurPx <= 0 || !(densite > 0f)) return 1f
+        val parLargeur = partLargeur * largeurPx / (largeurDp * densite)
+        val parHauteur = partHauteur * hauteurPx / (hauteurDp * densite)
+        return minOf(parLargeur, parHauteur).coerceIn(0.75f, 2f)
+    }
+
+    /**
+     * Filet : de combien réduire la carte pour qu'elle tienne dans la fenêtre RÉELLEMENT accordée,
+     * marges comprises ; 1 si elle tient, ou sans mesures fiables.
+     *
+     * [echelle] part de l'écran annoncé, mais la fenêtre du pop-up s'arrête à la barre d'état et
+     * au rail de navigation : sur SWI133 elle ne fait qu'environ 1754 × 650 px sur 1920 × 720
+     * (photo du 2026-10-13, le pop-up y est centré à droite et en bas du centre de l'écran). Cette
+     * place n'est connue qu'une fois la fenêtre posée, et rien ne dit qu'elle soit la même sur
+     * les autres firmwares : plutôt qu'une carte coupée, une carte un peu plus petite.
+     */
+    fun reduction(fenetreLargeur: Int, fenetreHauteur: Int, carteLargeur: Int, carteHauteur: Int, marge: Int): Float {
+        if (carteLargeur <= 0 || carteHauteur <= 0) return 1f
+        val placeLargeur = fenetreLargeur - 2 * marge
+        val placeHauteur = fenetreHauteur - 2 * marge
+        if (placeLargeur <= 0 || placeHauteur <= 0) return 1f
+        return minOf(1f, placeLargeur.toFloat() / carteLargeur, placeHauteur.toFloat() / carteHauteur)
+    }
+
+    // ── Jauge (présentation « moderne ») ─────────────────────────────────────
+
+    /**
+     * Où se trouve [valeur] entre [min] et [max], de 0 à 1 : la part de l'arc à remplir. Une
+     * valeur hors bornes reste sur la jauge, à son extrémité ; null — jauge vide — sans valeur
+     * lue ou sans étendue à parcourir.
+     */
+    fun part(valeur: Int?, min: Int, max: Int): Float? {
+        if (valeur == null || max <= min) return null
+        return ((valeur - min).toFloat() / (max - min)).coerceIn(0f, 1f)
+    }
+
+    /**
+     * On CLAMPE, on ne boucle pas : arriver à 32 °C et repartir à 16 en poussant sur le volant
+     * serait une très mauvaise surprise. Une cible égale à la valeur lue ne s'écrit pas.
+     */
+    private fun pas(actuel: Int?, min: Int, max: Int, sens: Int): Int? {
+        actuel ?: return null
+        return (actuel + sens).coerceIn(min, max).takeIf { it != actuel }
+    }
+}

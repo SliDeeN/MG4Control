@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fenêtres de l'application : le fond blanc d'un QR code — blanc dans les deux thèmes, il doit rester lisible par un téléphone. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="10dp" />
+    <solid android:color="@android:color/white" />
+</shape>

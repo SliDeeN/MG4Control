@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fenêtres de l'application, style « moderne » : pastille ronde derrière le pictogramme. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="oval">
+    <solid android:color="@color/dash_accent_dim" />
+</shape>

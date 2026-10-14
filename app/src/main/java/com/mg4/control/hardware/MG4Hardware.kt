@@ -20,9 +20,12 @@ import java.lang.reflect.InvocationHandler
 import java.lang.reflect.Proxy
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.AirFlow
+import com.mg4.control.model.BatteryHeating
 import com.mg4.control.model.CustomDriveScale
 import com.mg4.control.model.DriveMode
+import com.mg4.control.model.HvacPopup
 import com.mg4.control.model.RegenLevel
+import com.mg4.control.model.SeatHeat
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.GarageMode
 import kotlinx.coroutines.CoroutineScope
@@ -328,6 +331,12 @@ object MG4Hardware {
 
     /** Objet `Car` lié, pour obtenir un gestionnaire SAIC par son nom ([EnergyProbe]). */
     internal fun car(): Any? = sCar
+
+    /** Lecture VPM brute (SWI133), -1 si indisponible — pour [LightProbe]. */
+    internal fun vpmIntForProbe(propId: Int): Int = getIntPropertyVpm(propId)
+
+    /** GeneralManager de l'ancien SDK (luminosité, jour/nuit), null ailleurs — pour [LightProbe]. */
+    internal fun generalManager(): Any? = sGeneral
 
     // -------------------------------------------------------------------------
     // Init
@@ -954,6 +963,20 @@ object MG4Hardware {
         }
     }
 
+    private const val PROP_VEH_SIDE_LGHT = 0x21409323
+
+    /**
+     * Feux de position (`VEH_SIDE_LGHT`) : true = allumés, false = éteints, null = illisible.
+     *
+     * Seul signal du véhicule qui suive la lumière, via les feux automatiques : 3 dans un garage
+     * sombre, 0 au jour (sonde SWI133 du 2026-10-01). 3 est aussi la « nuit » des écrans d'origine
+     * (SettingsService SWI68), toute autre valeur y vaut « jour » : on fait pareil.
+     */
+    fun isSideLightOn(): Boolean? {
+        val v = getIntPropertyCPM(PROP_VEH_SIDE_LGHT, AREA_GLOBAL)
+        return if (v < 0) null else v == 3
+    }
+
     /** A9 (SWI132/131/69) : luminosité via CarGeneralClient.setScreenBrightness(mode,day,night). */
     private fun isA9Brightness(): Boolean =
         FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132
@@ -962,27 +985,32 @@ object MG4Hardware {
     fun hasBrightnessControl(): Boolean = FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
 
     /** Lit la luminosité écran en % (0–100), ou -1 si indisponible. */
-    fun getScreenBrightnessPercent(): Int =
-        if (isA9Brightness()) getBrightnessA9() else getBrightnessOldSdk()
+    /**
+     * [journal] faux : sans ligne dans le journal. La luminosité automatique relit l'écran chaque
+     * seconde (réglage à la main ?) et l'écrit par petits pas (fondu) : journalisé, chaque trajet
+     * chasserait du rapport tout le reste.
+     */
+    fun getScreenBrightnessPercent(journal: Boolean = true): Int =
+        if (isA9Brightness()) getBrightnessA9() else getBrightnessOldSdk(journal)
 
     /**
      * Règle la luminosité écran en % (0–100). Plancher de sécurité à BRIGHTNESS_MIN_PERCENT
      * pour ne jamais éteindre l'écran.
      */
-    fun setScreenBrightnessPercent(pct: Int): Boolean {
+    fun setScreenBrightnessPercent(pct: Int, journal: Boolean = true): Boolean {
         val clamped = pct.coerceIn(BRIGHTNESS_MIN_PERCENT, 100)
-        return if (isA9Brightness()) setBrightnessA9(clamped) else setBrightnessOldSdk(clamped)
+        return if (isA9Brightness()) setBrightnessA9(clamped, journal) else setBrightnessOldSdk(clamped, journal)
     }
 
     // ── Ancien SDK (SWI133/68/165) — GeneralManager.setBrightness(Int), plage native 0..255 ──
 
-    private fun getBrightnessOldSdk(): Int {
+    private fun getBrightnessOldSdk(journal: Boolean = true): Int {
         val g = sGeneral ?: return -1
         return try {
             val native = (g.javaClass.getMethod("getBrightness").invoke(g) as? Int) ?: return -1
             if (native < 0) return -1
             val pct = (native * 100 / BRIGHTNESS_NATIVE_MAX).coerceIn(0, 100)
-            AppLogger.d(TAG, "  getBrightness native=$native → $pct%")
+            if (journal) AppLogger.d(TAG, "  getBrightness native=$native → $pct%")
             pct
         } catch (e: Exception) {
             AppLogger.w(TAG, "  getBrightness exc: ${e.message}")
@@ -990,10 +1018,10 @@ object MG4Hardware {
         }
     }
 
-    private fun setBrightnessOldSdk(clampedPct: Int): Boolean {
+    private fun setBrightnessOldSdk(clampedPct: Int, journal: Boolean = true): Boolean {
         val g = sGeneral ?: return false
         val native = (clampedPct * BRIGHTNESS_NATIVE_MAX / 100).coerceIn(0, BRIGHTNESS_NATIVE_MAX)
-        if (logEnabled) AppLogger.i(TAG, "setBrightness → $clampedPct% (native=$native/255)")
+        if (logEnabled && journal) AppLogger.i(TAG, "setBrightness → $clampedPct% (native=$native/255)")
         return try {
             g.javaClass.getMethod("setBrightness", Int::class.javaPrimitiveType).invoke(g, native)
             true
@@ -1022,7 +1050,7 @@ object MG4Hardware {
         return (native * 100 / A9_BRIGHTNESS_NATIVE_MAX).coerceIn(0, 100)
     }
 
-    private fun setBrightnessA9(clampedPct: Int): Boolean {
+    private fun setBrightnessA9(clampedPct: Int, journal: Boolean = true): Boolean {
         val resolver = sAppContext?.contentResolver ?: return false
         val native = (clampedPct.coerceIn(0, 100) * A9_BRIGHTNESS_NATIVE_MAX / 100).coerceIn(1, A9_BRIGHTNESS_NATIVE_MAX)
         return try {
@@ -1032,7 +1060,7 @@ object MG4Hardware {
                 android.provider.Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
             android.provider.Settings.System.putInt(resolver,
                 android.provider.Settings.System.SCREEN_BRIGHTNESS, native)
-            if (logEnabled) AppLogger.i(TAG, "A9 brightness → Settings.System.SCREEN_BRIGHTNESS=$native ($clampedPct%)")
+            if (logEnabled && journal) AppLogger.i(TAG, "A9 brightness → Settings.System.SCREEN_BRIGHTNESS=$native ($clampedPct%)")
             true
         } catch (e: Exception) {
             AppLogger.w(TAG, "  A9 setBrightness Settings.System exc: ${e.message}")
@@ -1652,30 +1680,65 @@ object MG4Hardware {
     }
 
     /**
-     * HVAC toggle — cycles the property by sending value=1 until target is reached.
-     * Timeout: 7 seconds (from original smali: 0x1b58 ms = 7000 ms).
+     * Niveau d'un chauffage à crans (sièges chauffants).
+     *
+     * La voiture ne connaît qu'une commande, « un cran » : écrire 1 dans la propriété est un
+     * appui, comme sur l'écran d'origine, et chaque cran fait DESCENDRE — éteint → 3 → 2 → 1 →
+     * éteint (établi sur SWI133 le 2026-10-09, voir [SeatHeat]). Pour un niveau précis,
+     * [SeatHeat.reach] lit UNE fois, envoie le nombre de crans qui convient, puis vérifie sans
+     * jamais recliquer. Monter d'un niveau coûte donc trois crans, en passant par « éteint ».
+     *
+     * L'ancienne boucle (lire, cliquer, relire, recliquer jusqu'à lire la cible) arrivait au même
+     * résultat sans connaître le sens, mais cliquait à l'aveugle pendant 7 secondes quand le
+     * niveau était illisible, et pouvait recliquer sur une lecture en retard.
+     *
+     * ⚠️ Bloquant (0,6 s par cran, puis jusqu'à 3 s de vérification) → hors du thread principal.
      */
-    fun setHvacLevelWithToggle(propId: Int, areaId: Int, targetLevel: Int): Boolean {
-        val deadline = System.currentTimeMillis() + 7_000L
-        var lastClickMs = 0L
-        while (System.currentTimeMillis() < deadline) {
-            val current = getIntPropertyHvac(propId, areaId)
-            if (current == targetLevel) {
-                if (logEnabled) AppLogger.i(TAG, "HVAC target reached: $targetLevel")
-                return true
-            }
-            val now = System.currentTimeMillis()
-            if (now - lastClickMs >= 500L) {
-                if (logEnabled) AppLogger.i(TAG, "HVAC click → current=$current target=$targetLevel")
-                setIntPropertyHvac(propId, areaId, 1)
-                lastClickMs = now
-                try { Thread.sleep(200) } catch (_: InterruptedException) {}
-            } else {
-                try { Thread.sleep(250) } catch (_: InterruptedException) {}
-            }
+    fun setHvacLevelWithToggle(propId: Int, areaId: Int, targetLevel: Int): Boolean =
+        synchronized(hvacClickLock(propId)) {
+            // Un cran vient peut-être de partir (pop-up, raccourci) : le niveau lu n'est pas
+            // encore le bon, et compter les crans d'après lui en enverrait un de trop.
+            val depuis = android.os.SystemClock.elapsedRealtime() - (sLastHvacClick[propId] ?: 0L)
+            if (depuis < SeatHeat.READBACK_MS) pauseHvac(SeatHeat.READBACK_MS - depuis)
+            var crans = 0
+            val ok = SeatHeat.reach(
+                cible    = targetLevel,
+                lire     = { getIntPropertyHvac(propId, areaId) },
+                cran     = { crans++; clickHvac(propId, areaId) },
+                attendre = { pauseHvac(it) },
+            )
+            if (!ok) AppLogger.w(TAG, "HVAC 0x${Integer.toHexString(propId)} : niveau $targetLevel non confirmé " +
+                "($crans cran(s) envoyé(s), lu=${getIntPropertyHvac(propId, areaId)})")
+            else if (logEnabled) AppLogger.i(TAG, "HVAC 0x${Integer.toHexString(propId)} : niveau $targetLevel atteint " +
+                "en $crans cran(s)")
+            ok
         }
-        AppLogger.e(TAG, "HVAC timeout! prop=0x${Integer.toHexString(propId)}")
-        return false
+
+    /**
+     * UN cran, sans viser de niveau : c'est la commande même de la voiture, et tout ce qu'il faut
+     * pour « niveau suivant » (pop-up HVAC, raccourci siège chauffant). Le niveau obtenu est
+     * [SeatHeat.next] : éteint → 3 → 2 → 1 → éteint.
+     */
+    private fun stepHvacLevel(propId: Int, areaId: Int): Boolean =
+        synchronized(hvacClickLock(propId)) { clickHvac(propId, areaId) }
+
+    /** Dernier cran envoyé, par propriété : sert à les espacer et à savoir quand relire. */
+    private val sLastHvacClick = java.util.concurrent.ConcurrentHashMap<Int, Long>()
+    private val sHvacClickLocks = java.util.concurrent.ConcurrentHashMap<Int, Any>()
+
+    /** Un seul appelant à la fois par propriété : deux séries de crans entremêlées se fausseraient. */
+    private fun hvacClickLock(propId: Int): Any = sHvacClickLocks.getOrPut(propId) { Any() }
+
+    private fun pauseHvac(ms: Long) {
+        try { Thread.sleep(ms) } catch (_: InterruptedException) {}
+    }
+
+    /** Envoie un cran, à [SeatHeat.CLICK_INTERVAL_MS] au moins du précédent. */
+    private fun clickHvac(propId: Int, areaId: Int): Boolean {
+        val depuis = android.os.SystemClock.elapsedRealtime() - (sLastHvacClick[propId] ?: 0L)
+        if (depuis < SeatHeat.CLICK_INTERVAL_MS) pauseHvac(SeatHeat.CLICK_INTERVAL_MS - depuis)
+        sLastHvacClick[propId] = android.os.SystemClock.elapsedRealtime()
+        return setIntPropertyHvac(propId, areaId, 1)
     }
 
     // -------------------------------------------------------------------------
@@ -2015,6 +2078,18 @@ object MG4Hardware {
     fun setSeatHeatRight(level: Int): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setSeatHeatRight → $level")
         return setHvacLevelWithToggle(PROP_SEAT_HEAT_R, AREA_HVAC, level)
+    }
+
+    /** Siège chauffant gauche : niveau suivant (éteint → 3 → 2 → 1 → éteint), en UN cran. */
+    fun stepSeatHeatLeft(): Boolean {
+        if (logEnabled) AppLogger.i(TAG, "stepSeatHeatLeft → un cran")
+        return stepHvacLevel(PROP_SEAT_HEAT_L, AREA_HVAC)
+    }
+
+    /** Siège chauffant droit : niveau suivant, en UN cran. */
+    fun stepSeatHeatRight(): Boolean {
+        if (logEnabled) AppLogger.i(TAG, "stepSeatHeatRight → un cran")
+        return stepHvacLevel(PROP_SEAT_HEAT_R, AREA_HVAC)
     }
 
     fun setSteeringHeat(on: Boolean): Boolean {
@@ -2614,6 +2689,169 @@ object MG4Hardware {
         AppLogger.i(SAFE_TAG, "ESP(0x4020003)             = $esc (0=OFF, 1=ON, 2=OFF) → ${isEscOn()}")
 
         AppLogger.i(SAFE_TAG, "── fin DIAG ──")
+    }
+
+    // -------------------------------------------------------------------------
+    // Feux de route automatiques (« Gestion automatique des feux de route »)
+    //
+    // Une seule propriété véhicule derrière les 6 firmwares : LAMP_AUTO_MAIN_BEAM 0x2140932b
+    // (YFVehicleProperty), permission CAR_VENDOR_EXTENSION comme la régénération. Chaque écran
+    // d'origine l'atteint par sa propre couche, et on emprunte la même :
+    //   • SWI133    : VPM ID_AUTO_MAIN_BEAM 0x605000f, setIntPropertyRecovery (fragment Éclairage) ;
+    //   • SWI68/165 : VehicleSettingManager get/setAutoMainBeamControl (tx 0x35/0x36, les deux) ;
+    //   • A9        : CarLampClient.setHighBeamState → CarAdapterLampManager, qui ne fait QUE
+    //                 setGlobalProperty(0x2140932b) — on écrit donc la propriété directement.
+    // Encodage identique partout, et c'est une vraie consigne (pas une bascule) : l'UI d'origine
+    // écrit l'état VOULU. 1=ON, 0=OFF ; 3=INVALID = réglage absent, l'UI d'origine masque la ligne.
+    // -------------------------------------------------------------------------
+
+    private const val VPM_AUTO_MAIN_BEAM  = 0x605000f
+    private const val PROP_AUTO_MAIN_BEAM = 0x2140932b
+    private const val BEAM_TAG = "MG4_BEAM"
+
+    fun hasAutoHighBeam(): Boolean = FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
+
+    /** Valeur brute, quelle que soit la voie. -1 si illisible. */
+    private fun readAutoHighBeamRaw(): Int = when {
+        isA9Vsm()                 -> getIntPropertyCPM(PROP_AUTO_MAIN_BEAM, AREA_GLOBAL)
+        FirmwareInfo.isVsmBased() -> (callVsm("getAutoMainBeamControl") as? Int) ?: -1
+        else                      -> getIntPropertyVpm(VPM_AUTO_MAIN_BEAM)
+    }
+
+    /** Feux de route automatiques : true=ON, false=OFF, null=illisible ou absent du véhicule. */
+    fun isAutoHighBeamOn(): Boolean? {
+        if (!hasAutoHighBeam()) return null
+        return when (readAutoHighBeamRaw()) {
+            1    -> true
+            0    -> false
+            else -> null
+        }
+    }
+
+    fun setAutoHighBeam(on: Boolean): Boolean {
+        if (!hasAutoHighBeam()) return false
+        val v = if (on) 1 else 0
+        val ok = when {
+            isA9Vsm()                 -> setIntPropertyCPM(PROP_AUTO_MAIN_BEAM, AREA_GLOBAL, v)
+            FirmwareInfo.isVsmBased() -> callVsmVoid("setAutoMainBeamControl", v)
+            else                      -> setIntPropertyVpmRecovery(VPM_AUTO_MAIN_BEAM, v)
+        }
+        AppLogger.i(BEAM_TAG, "setAutoHighBeam(${if (on) "ON" else "OFF"}) écrit $v → $ok")
+        return ok
+    }
+
+    /**
+     * Sonde des feux de route automatiques — **lecture seule**. Relève toutes les voies
+     * joignables sur ce firmware, pas seulement celle retenue : si la voie officielle reste muette
+     * sur un véhicule, le rapport dit d'emblée si la propriété brute, elle, répond.
+     */
+    fun runHighBeamDiag() {
+        AppLogger.i(BEAM_TAG, "── DIAG feux de route automatiques ──")
+        AppLogger.i(BEAM_TAG, "firmware=${FirmwareInfo.getGeneration()} géré=${hasAutoHighBeam()} " +
+            "vpm=${sVpm != null} vsm=${sVsm != null} cpm=${sCarPropertyManager != null}")
+        val voies = mutableListOf<String>()
+        if (sVpm != null) voies += "VPM 0x605000f=${getIntPropertyVpm(VPM_AUTO_MAIN_BEAM)}"
+        if (sVsm != null && FirmwareInfo.isVsmBased() && !isA9Vsm())
+            voies += "getAutoMainBeamControl=${callVsm("getAutoMainBeamControl") ?: "null"}"
+        voies += "CPM 0x2140932b@global=${getIntPropertyCPM(PROP_AUTO_MAIN_BEAM, AREA_GLOBAL)} " +
+            "@0=${getIntPropertyCPM(PROP_AUTO_MAIN_BEAM, 0)}"
+        AppLogger.i(BEAM_TAG, voies.joinToString(" · ") + " (1=ON, 0=OFF, 3=absent) → ${isAutoHighBeamOn()}")
+        AppLogger.i(BEAM_TAG, "── fin DIAG ──")
+    }
+
+    // -------------------------------------------------------------------------
+    // Chauffage intelligent de la batterie (« Intelligent battery heating »)
+    //
+    // Une seule propriété véhicule : DRVNG_PTC_HEAT 0x2140f429, le chauffage PTC de la batterie
+    // en roulant, permission CAR_VENDOR_EXTENSION en lecture comme en écriture. Voies d'origine :
+    //   • SWI133    : VPM ID_DRVNG_PTC_HEAT 0x502001b, setIntPropertyRecovery (SystemUI,
+    //                 BatteryHeatController). Le VPM mémorise le réglage et le réapplique : même
+    //                 voie, pour que notre coupure soit mémorisée elle aussi ;
+    //   • SWI68/165 : VehicleChargingManager.setDrivingBatteryHeat → le service n'écrit que la
+    //                 propriété (CarBMSManager.setGlobalProperty) — on l'écrit donc directement ;
+    //   • A9        : CarEvClient.setDrivingBatteryHeatStatus → CarAdapter, idem, sans traduction.
+    // Consigne identique partout, voir [BatteryHeating] ; la LECTURE, elle, diffère selon la
+    // plateforme — la sonde [runBatteryHeatingDiag] doit le confirmer sur véhicule.
+    // -------------------------------------------------------------------------
+
+    private const val VPM_DRVNG_PTC_HEAT  = 0x502001b
+    private const val PROP_DRVNG_PTC_HEAT = 0x2140f429
+    private const val BATHEAT_TAG = "MG4_BATHEAT"
+
+    fun hasBatteryHeating(): Boolean = FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
+
+    /** Valeur brute, quelle que soit la voie. -1 si illisible. */
+    private fun readBatteryHeatingRaw(): Int =
+        if (FirmwareInfo.isVsmBased()) getIntPropertyCPM(PROP_DRVNG_PTC_HEAT, AREA_GLOBAL)
+        else getIntPropertyVpm(VPM_DRVNG_PTC_HEAT)
+
+    /**
+     * Dernière consigne envoyée, en attente d'être reflétée par le véhicule. Le calculateur
+     * batterie met plusieurs secondes à renvoyer son nouvel état : relu 700 ms après la consigne,
+     * le Dashboard trouvait encore l'ancien et y revenait, jusqu'au relevé suivant (relevé du
+     * 2026-10-02). Tant que l'état lu ne l'a pas rejointe, et au plus [BATHEAT_CONFIRM_MS], c'est
+     * la consigne qui est rendue : écran, raccourci et automatisme voient la même chose, comme
+     * l'UI d'origine qui peint l'état demandé en attendant le changement.
+     */
+    @Volatile private var batHeatConsigne: Boolean? = null
+    @Volatile private var batHeatConsigneMs = 0L
+    private const val BATHEAT_CONFIRM_MS = 15_000L
+
+    /**
+     * Chauffage intelligent de la batterie : true = activé, false = désactivé, null = illisible.
+     * Juste après une consigne, l'état demandé tant que le véhicule ne l'a pas reflété (voir
+     * [batHeatConsigne]).
+     */
+    fun isBatteryHeatingOn(): Boolean? {
+        if (!hasBatteryHeating()) return null
+        val lu = BatteryHeating.stateFromRaw(readBatteryHeatingRaw(), isA9Vsm())
+        val consigne = batHeatConsigne ?: return lu
+        val ecoule = SystemClock.elapsedRealtime() - batHeatConsigneMs
+        if (lu != consigne && ecoule < BATHEAT_CONFIRM_MS) return consigne
+        batHeatConsigne = null
+        if (lu == consigne) {
+            AppLogger.i(BATHEAT_TAG, "consigne ${if (consigne) "ON" else "OFF"} reflétée par le véhicule après $ecoule ms")
+        } else {
+            AppLogger.w(BATHEAT_TAG, "consigne ${if (consigne) "ON" else "OFF"} toujours pas reflétée après " +
+                "${ecoule / 1000} s (lu : $lu) : état lu rendu")
+        }
+        return lu
+    }
+
+    /** Vrai tant qu'une consigne attend d'être reflétée par le véhicule. */
+    fun isBatteryHeatingPending(): Boolean = batHeatConsigne != null
+
+    fun setBatteryHeating(on: Boolean): Boolean {
+        if (!hasBatteryHeating()) return false
+        val v = if (on) BatteryHeating.SET_ON else BatteryHeating.SET_OFF
+        val ok = if (FirmwareInfo.isVsmBased()) setIntPropertyCPM(PROP_DRVNG_PTC_HEAT, AREA_GLOBAL, v)
+                 else setIntPropertyVpmRecovery(VPM_DRVNG_PTC_HEAT, v)
+        AppLogger.i(BATHEAT_TAG, "setBatteryHeating(${if (on) "ON" else "OFF"}) écrit $v → $ok")
+        if (ok) {
+            batHeatConsigneMs = SystemClock.elapsedRealtime()
+            batHeatConsigne = on
+        }
+        return ok
+    }
+
+    /**
+     * Sonde du chauffage de la batterie — **lecture seule**. Relève toutes les voies joignables,
+     * et la valeur lue selon les DEUX lectures d'origine : basculer l'option dans l'écran d'origine
+     * puis relancer le Diagnostic dit laquelle est la bonne sur ce véhicule.
+     */
+    fun runBatteryHeatingDiag() {
+        AppLogger.i(BATHEAT_TAG, "── DIAG chauffage intelligent de la batterie ──")
+        AppLogger.i(BATHEAT_TAG, "firmware=${FirmwareInfo.getGeneration()} géré=${hasBatteryHeating()} " +
+            "vpm=${sVpm != null} cpm=${sCarPropertyManager != null} lectureA9=${isA9Vsm()}")
+        val voies = mutableListOf<String>()
+        if (sVpm != null) voies += "VPM 0x502001b=${getIntPropertyVpm(VPM_DRVNG_PTC_HEAT)}"
+        voies += "CPM 0x2140f429@global=${getIntPropertyCPM(PROP_DRVNG_PTC_HEAT, AREA_GLOBAL)} " +
+            "@0=${getIntPropertyCPM(PROP_DRVNG_PTC_HEAT, 0)}"
+        val brut = readBatteryHeatingRaw()
+        AppLogger.i(BATHEAT_TAG, voies.joinToString(" · ") + " → brut retenu $brut : " +
+            "ancienne plateforme (0=ON) ${BatteryHeating.stateFromRaw(brut, false)}, " +
+            "A9 (1=ON) ${BatteryHeating.stateFromRaw(brut, true)}, affiché ${isBatteryHeatingOn()}")
+        AppLogger.i(BATHEAT_TAG, "── fin DIAG ──")
     }
 
     // -------------------------------------------------------------------------
@@ -3512,6 +3750,23 @@ object MG4Hardware {
             sb.appendLine()
         }
 
+        // Énergie intégrée (tension × courant) contre compteurs, trajet par trajet (issue #117) :
+        // tout l'historique gardé, pour qu'un seul rapport couvre une semaine de trajets.
+        sAppContext?.let { ctx ->
+            val comparaisons = com.mg4.control.stats.StatsStore(ctx).energyChecks()
+            if (comparaisons.isNotEmpty()) {
+                sb.appendLine("── Énergie des trajets : intégrée contre compteurs ──")
+                comparaisons.forEach { sb.appendLine(it) }
+                sb.appendLine()
+            }
+        }
+
+        // Sonde lumière/position : relevés des derniers READY et des ouvertures du Diagnostic.
+        LightProbe.reports.forEach {
+            sb.appendLine(it)
+            sb.appendLine()
+        }
+
         if (gen == FirmwareInfo.Gen.SWI132) {
 
             // ── Binder IVehicleSettingService ─────────────────────────────
@@ -3696,7 +3951,7 @@ object MG4Hardware {
     //
     // Le service vendor `com.saicmotor.caradapter` (descripteur ICarAudioService)
     // n'existe QUE sur la famille A9 (SWI69/131/132). Sur old-SDK (SWI133/68/165)
-    // il est absent → on ne tente même pas le bind (cf. hasAudioControl / initAudio).
+    // il est absent → on ne tente même pas le bind (cf. initAudio).
     // Codes de transaction vérifiés identiques sur les 3 A9 (ICarAudioService$Stub).
 
     /** A9 (SWI69/131/132) : loudness via le service vendor caradapter (ICarAudioService). */
@@ -3708,9 +3963,6 @@ object MG4Hardware {
         val gen = FirmwareInfo.getGeneration()
         return gen == FirmwareInfo.Gen.SWI133 || gen == FirmwareInfo.Gen.SWI68 || gen == FirmwareInfo.Gen.SWI165
     }
-
-    /** Onglet Audio (baisse de volume en quittant la voiture) : partout où le volume est pilotable. */
-    fun hasAudioControl(): Boolean = hasDoorVolumeFeature()
 
     private const val DESCRIPTOR_CARADAPTER = "com.saicmotor.carapi.ICarAdapterService"
     private const val TX_QUERY_AUDIO_CLIENT = 1
@@ -4895,7 +5147,8 @@ object MG4Hardware {
     /**
      * Baisse du volume en quittant la voiture : partout où le volume média est pilotable (ancien SDK
      * et A9). Déclencheur : la porte là où elle est lisible ([hasDoorDetection]), sinon la sortie du
-     * mode READY en P ([ReadyWatcher]), qui correspond sur MG4 à l'ouverture de la porte conducteur.
+     * mode READY en P ([ReadyWatcher]), qui correspond sur MG4 à l'ouverture de la porte conducteur
+     * ceinture détachée.
      */
     fun hasDoorVolumeFeature(): Boolean = isOldSdkSound() || isA9Sound()
 
@@ -5273,8 +5526,17 @@ object MG4Hardware {
         val defrostFront: Boolean?,
         val defrostRear: Boolean?,
         /** Sens de l'air, valeur brute 0–7 ([AirFlow]) ; null si illisible. */
-        val airFlow: Int?
-    )
+        val airFlow: Int?,
+        /** Dernier niveau de ventilation réglé à la main ([lastManualFan]) ; null si jamais vu. */
+        val lastManualFan: Int? = null
+    ) {
+        /**
+         * Température et ventilation vues par la logique commune au pop-up HVAC, à la page Clim
+         * et aux raccourcis — c'est elle qui sait qu'en AUTO le niveau annoncé (15) n'en est pas un.
+         */
+        fun reglages() = HvacPopup.Reglages(
+            tempC, tempMin, tempMax, fanLevel, fanMin, fanMax, autoOn, lastManualFan)
+    }
 
     /**
      * Vrai si le firmware expose le SDK clim SAIC (old-SDK : SWI133/68/165 ; absent sur A9).
@@ -5304,7 +5566,42 @@ object MG4Hardware {
      */
     fun getClimateState(): ClimateState? =
         (if (isClimateA9()) getClimateStateA9() else getClimateStateOldSdk())
+            ?.let { it.copy(lastManualFan = rememberManualFan(it)) }
             ?.also { traceAirFlowChange(it) }
+
+    /**
+     * Vrai quand la climatisation répond. Au démarrage à froid elle arrive APRÈS
+     * CarPropertyManager sur les firmwares A9 (client carapi, obtenu une fois le client de
+     * réglages connecté) : un préréglage envoyé avant serait abandonné (issue #121).
+     */
+    fun isClimateReachable(): Boolean = getClimateState() != null
+
+    // ── Dernier niveau de ventilation réglé à la main ─────────────────────────
+    // En AUTO la voiture n'annonce plus de cran : elle rend 15, que les écrans d'origine affichent
+    // « AUTO ». Pour en sortir, ces écrans écrivent le dernier niveau qu'ils ont vu, ± 1 ; ils le
+    // gardent en mémoire ET en préférences (`mLastVolume` / « air_volume » dans AcCardView du
+    // launcher SWI133 et HvacView de SystemUI SWI165). On fait de même.
+    private const val PREF_LAST_MANUAL_FAN = "clim_last_manual_fan"
+    @Volatile private var sLastManualFan: Int? = null
+
+    /** Retient le niveau lu s'il en est un vrai, et rend le dernier connu. */
+    private fun rememberManualFan(state: ClimateState): Int? {
+        state.reglages().ventilationReelle
+            ?.takeIf { it in state.fanMin..state.fanMax }
+            ?.let { noteManualFan(it) }
+        return lastManualFan()
+    }
+
+    private fun noteManualFan(level: Int) {
+        if (sLastManualFan == level) return
+        sLastManualFan = level
+        sAppContext?.getSharedPreferences("mg4_settings", 0)?.edit()
+            ?.putInt(PREF_LAST_MANUAL_FAN, level)?.apply()
+    }
+
+    private fun lastManualFan(): Int? = sLastManualFan
+        ?: sAppContext?.getSharedPreferences("mg4_settings", 0)
+            ?.getInt(PREF_LAST_MANUAL_FAN, -1)?.takeIf { it >= 0 }?.also { sLastManualFan = it }
 
     private fun getClimateStateOldSdk(): ClimateState? {
         if (sAirCondition == null) sAppContext?.let { initAirCondition(it) }
@@ -5407,11 +5704,13 @@ object MG4Hardware {
         else
             acSet("setDrvTemp", celsius).also { climLog("temp=$celsius", it) }
 
+    /** Écrire un niveau fait aussi SORTIR du mode AUTO (voir [setClimateAuto]). */
     fun setClimateFan(level: Int): Boolean =
-        if (isClimateA9())
+        (if (isClimateA9())
             a9Set("setFanSpeed", level).also { climLog("A9 fan=$level", it) }
         else
-            acSet("setAirVolumeLevel", level).also { climLog("fan=$level", it) }
+            acSet("setAirVolumeLevel", level).also { climLog("fan=$level", it) })
+            .also { if (it) noteManualFan(level) }
 
     /**
      * A/C — bascule, comme la recirculation. L'encodage de lecture (1=ON, 0=OFF) a été mesuré
@@ -5426,11 +5725,37 @@ object MG4Hardware {
                 acSet("setAcStatus", 1)
             }
 
-    fun setClimateAuto(on: Boolean): Boolean =
-        if (isClimateA9())
-            a9CycleTo("auto", "getAutoStatus", if (on) 1 else 0, 2, "switchAutoStatus")
-        else
-            acSet("setAutoStatus", if (on) 1 else 0).also { climLog("auto=$on", it) }
+    /**
+     * Mode AUTO : la voiture règle elle-même la ventilation et le sens de l'air.
+     *
+     * ⚠️ Sur l'ancien SDK ce n'est PAS une affectation mais un APPUI, comme l'A/C : l'écran clim
+     * d'origine (HvacView, SystemUI SWI165) envoie `setAutoStatus(1)` à chaque clic, jamais 0.
+     * Un 0 reste sans effet — c'est pourquoi AUTO ne se coupait pas (constaté sur SWI133 le
+     * 2026-10-09). Et ces écrans ne « coupent » jamais AUTO : ils en SORTENT en écrivant un
+     * niveau de ventilation, le dernier réglé à la main. On fait pareil.
+     *
+     * On n'appuie pas si AUTO est déjà actif : rien ne dit qu'un second appui ne le couperait pas.
+     */
+    fun setClimateAuto(on: Boolean): Boolean {
+        if (isClimateA9()) {
+            // Bascule relue, validée sur SWI131 ; si elle ne suffit pas à couper, même repli.
+            if (a9CycleTo("auto", "getAutoStatus", if (on) 1 else 0, 2, "switchAutoStatus")) return true
+            return !on && quitterAutoParLaVentilation()
+        }
+        val actif = acInt("getAutoStatus")?.takeIf { it >= 0 }?.let { it == 1 }
+        if (actif == on) {
+            climLog("auto=$on (déjà)", true)
+            return true
+        }
+        return if (on) acSet("setAutoStatus", 1).also { climLog("auto=true (appui)", it) }
+               else quitterAutoParLaVentilation()
+    }
+
+    private fun quitterAutoParLaVentilation(): Boolean {
+        val etat = getClimateState() ?: return false
+        val niveau = HvacPopup.niveauDeSortie(etat.reglages())
+        return setClimateFan(niveau).also { climLog("auto=false → ventilation manuelle $niveau", it) }
+    }
 
     /**
      * Recirculation — commande **CYCLIQUE**, pas une affectation.

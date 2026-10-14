@@ -62,6 +62,35 @@ object ChargeTimes {
         return d to f
     }
 
+    /**
+     * Pas des minutes aux boutons − / +. Cinq : à la minute près il faudrait trente appuis pour
+     * une demi-heure, et cinq minutes d'écart sur une charge de plusieurs heures ne changent pas
+     * la puissance moyenne.
+     */
+    const val MINUTE_STEP = 5
+
+    /**
+     * L'heure après un appui sur un bouton − / + : [hours] et [minutes] valent −1, 0 ou +1.
+     *
+     * Chaque compteur tourne sur lui-même, sans retenue : 23 h + 1 donne 0 h, 55 min + 5 donne
+     * 0 min à la même heure — c'est ce qu'on attend d'un réglage à deux compteurs. Une minute qui
+     * n'est pas un multiple de [MINUTE_STEP] (saisie au clavier, du temps où il y en avait un)
+     * rejoint le multiple voisin dans le sens demandé.
+     */
+    fun step(hm: Pair<Int, Int>, hours: Int, minutes: Int): Pair<Int, Int> {
+        val h = Math.floorMod(hm.first + hours, 24)
+        val cran = Math.floorDiv(hm.second, MINUTE_STEP)
+        val min = when {
+            minutes > 0 -> (cran + 1) * MINUTE_STEP
+            minutes < 0 -> (if (hm.second % MINUTE_STEP == 0) cran - 1 else cran) * MINUTE_STEP
+            else -> hm.second
+        }
+        return h to Math.floorMod(min, 60)
+    }
+
+    /** « 06:05 » : l'heure telle que [parse] la relit. */
+    fun text(hm: Pair<Int, Int>): String = "%02d:%02d".format(hm.first, hm.second)
+
     /** Occurrence de l'heure la plus proche de [ancre], à moins de douze heures de part ou d'autre. */
     private fun proche(hm: Pair<Int, Int>, ancre: Long, tz: TimeZone): Long {
         val cal = caler(hm, ancre, tz)

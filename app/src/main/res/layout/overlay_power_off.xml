@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Confirmation « Éteindre le véhicule », demandée depuis le raccourci du volant ou le sélecteur
+     de profils : un BANDEAU en bas de l'écran, le même que les deux autres — proposition « A »
+     choisie sur maquette le 2026-10-13.
+
+     Deux états, posés par VehiclePowerOffOverlay. La question : Annuler — retenu d'office quand
+     le délai s'écoule — puis Éteindre, en rouge. Ou, voiture hors de P, « Extinction impossible »
+     avec le seul bouton de gauche, qui dit alors « Fermer ».
+
+     Rien n'est peint ici hors la carte. Tailles DE BASE, agrandies comme celles des autres pop-ups. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:id="@+id/power_card"
+        android:layout_width="1108dp"
+        android:layout_height="80dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:baselineAligned="false"
+        android:background="@drawable/bg_hvac_modern_card"
+        android:paddingStart="18dp"
+        android:paddingEnd="12dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <ImageView
+            android:id="@+id/power_icon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:importantForAccessibility="no" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="14dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/power_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:textSize="21sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/power_message"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+        </LinearLayout>
+
+        <!-- Annuler (ou Fermer), avec le temps qui reste avant qu'il ne soit retenu d'office -->
+        <LinearLayout
+            android:id="@+id/power_btn_cancel"
+            android:layout_width="190dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="14dp"
+            android:orientation="horizontal"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/power_cancel_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_primary"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/power_countdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="12sp"
+                android:maxLines="1" />
+
+        </LinearLayout>
+
+        <!-- Éteindre : masqué quand l'extinction est impossible -->
+        <LinearLayout
+            android:id="@+id/power_btn_confirm"
+            android:layout_width="190dp"
+            android:layout_height="56dp"
+            android:layout_marginStart="10dp"
+            android:orientation="horizontal"
+            android:gravity="center"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
+
+            <ImageView
+                android:id="@+id/power_confirm_icon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_overlay_power" />
+
+            <TextView
+                android:id="@+id/power_confirm_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="@string/vehicle_power_dialog_confirm"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

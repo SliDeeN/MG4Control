@@ -3,10 +3,16 @@ package com.mg4.control.hardware
 import android.content.Context
 import android.os.Handler
 import android.os.HandlerThread
+import android.os.SystemClock
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.EnergyCheck
+import com.mg4.control.model.EnergySnapshot
 import com.mg4.control.model.LastReading
+import com.mg4.control.model.PowerIntegrator
 import com.mg4.control.model.StatsTracker
+import com.mg4.control.model.Trip
 import com.mg4.control.stats.StatsStore
+import com.mg4.control.util.FirmwareInfo
 
 /**
  * Collecteur de l'onglet Statistiques : relève le véhicule à intervalle régulier, confie les
@@ -35,6 +41,12 @@ object StatsCollector {
      */
     private const val TICK_DRIVING_MS = 10_000L
 
+    /**
+     * Cadence de la puissance batterie pendant un trajet (issue #117). Dix secondes seraient bien
+     * trop lâches pour elle : une accélération ou un freinage ne dure que quelques secondes.
+     */
+    private const val TICK_POWER_MS = 1_000L
+
     private val thread = HandlerThread("mg4-stats").apply { start() }
     private val worker = Handler(thread.looper)
 
@@ -52,10 +64,15 @@ object StatsCollector {
      * boîtier s'apprête à couper l'application. Attendre le tic suivant, trente secondes plus tard,
      * revenait à jouer le trajet à pile ou face : on relève donc **immédiatement** au changement.
      */
-    private val readyListener = ReadyWatcher.Listener { _, _ ->
+    private val readyListener = ReadyWatcher.Listener { ready, _ ->
         worker.post {
             if (running) {
+                worker.removeCallbacks(powerTick)
+                // Départ : on repart de zéro. Arrivée : un dernier point AVANT le relevé qui clôt
+                // le trajet, puisque c'est lui qui consigne la comparaison.
+                if (ready) integrator.reset() else integrer()
                 sample()
+                if (ready) worker.post(powerTick)
                 // La cadence dépend du contact : on la réarme tout de suite au lieu d'attendre
                 // un tic qui peut être à trente secondes.
                 worker.removeCallbacks(tick)
@@ -73,6 +90,45 @@ object StatsCollector {
             sample()
             worker.postDelayed(this, interval())
         }
+    }
+
+    /**
+     * Énergie du trajet en cours par intégration de la puissance batterie, en parallèle des
+     * compteurs du véhicule. Elle prend leur relais là où ils restent à zéro — la décision revient
+     * à [StatsTracker] — et sa comparaison avec eux est consignée en fin de trajet (voir [comparer]).
+     */
+    private val integrator = PowerIntegrator()
+
+    /** Le relevé, complété de l'énergie intégrée depuis le début du trajet quand il y en a une. */
+    private fun avecIntegration(s: EnergySnapshot): EnergySnapshot {
+        val r = integrator.result()
+        if (r.samples == 0) return s
+        return s.copy(tripConsumedKwh = r.consumedKwh, tripRegenKwh = r.regenKwh)
+    }
+
+    /**
+     * Les compteurs d'énergie ne sont alimentés à coup sûr que sur SWI132 et SWI133 (issue #117,
+     * retours du 2026-10-06) : muets sur SWI68, SWI69 et SWI165, jamais mesurés sur SWI131.
+     *
+     * Une erreur dans cette liste est sans gravité : un compteur qui avance fait toujours foi,
+     * seul le seuil [StatsTracker.MUTE_COUNTER_KWH] dépend de la réponse.
+     */
+    private fun compteursAttendus(): Boolean = when (FirmwareInfo.getGeneration()) {
+        FirmwareInfo.Gen.SWI132, FirmwareInfo.Gen.SWI133 -> true
+        else -> false
+    }
+
+    private val powerTick = object : Runnable {
+        override fun run() {
+            if (!running || ReadyWatcher.ready != true) return
+            integrer()
+            worker.postDelayed(this, TICK_POWER_MS)
+        }
+    }
+
+    /** Temps monotone : l'horloge du boîtier peut sauter, voire se réveiller en 2019. */
+    private fun integrer() {
+        runCatching { integrator.add(SystemClock.elapsedRealtime(), EnergyReader.dischargeKw()) }
     }
 
     fun startIfEnabled(context: Context) {
@@ -100,7 +156,7 @@ object StatsCollector {
             running = true
             val s = StatsStore(app)
             store = s
-            val t = StatsTracker(s.settings().capacityKwh)
+            val t = StatsTracker(s.settings().capacityKwh, countersExpected = compteursAttendus())
             tracker = t
             // Ce qui restait ouvert au démarrage précédent se referme ici, avec son dernier relevé
             // connu : c'est ce qui sauve les trajets dont la fin coïncide avec l'extinction.
@@ -115,7 +171,8 @@ object StatsCollector {
             EnergyReader.batteryCapacityKwh()?.let { s.adoptVehicleCapacity(it) }
             ReadyWatcher.add(readyListener)
             worker.post(tick)
-            AppLogger.i(TAG, "collecte active (capacité ${s.settings().capacityKwh} kWh)")
+            AppLogger.i(TAG, "collecte active (capacité ${s.settings().capacityKwh} kWh, " +
+                "compteurs d'énergie ${if (compteursAttendus()) "attendus" else "non alimentés sur ce firmware"})")
         }
     }
 
@@ -124,6 +181,8 @@ object StatsCollector {
             if (!running) return@post
             running = false
             worker.removeCallbacks(tick)
+            worker.removeCallbacks(powerTick)
+            integrator.reset()
             ReadyWatcher.remove(readyListener)
             tracker = null
             store = null
@@ -136,7 +195,7 @@ object StatsCollector {
         val s = store ?: return
         val t = tracker ?: return
         runCatching {
-            val snapshot = EnergyReader.read()
+            val snapshot = avecIntegration(EnergyReader.read())
             // Horloge d'usine au réveil : on n'écrit rien, surtout pas le point de comparaison —
             // daté de 2018, il ferait d'une charge de nuit une session de sept ans.
             if (!StatsTracker.clockPlausible(snapshot.timestampMs)) {
@@ -162,7 +221,33 @@ object StatsCollector {
     }
 
     private fun enregistrer(s: StatsStore, event: StatsTracker.Event) = when (event) {
-        is StatsTracker.Event.TripEnded   -> s.addTrip(event.trip)
-        is StatsTracker.Event.ChargeEnded -> s.addCharge(event.session)
+        is StatsTracker.Event.TripEnded   -> {
+            // Les réglages sont relus à chaque fin de trajet : le filtre a pu changer en route.
+            val reglages = s.settings()
+            if (reglages.records(event.trip)) s.addTrip(event.trip)
+            else AppLogger.i(TAG, "trajet ignoré : ${event.trip.distance} km, " +
+                "sous le minimum de ${reglages.minTripKm} km")
+            // La comparaison reste consignée : c'est un outil de diagnostic, pas de l'historique.
+            comparer(s, event.trip)
+        }
+        // Le suivi garde la capacité de son démarrage : celle du moment fait foi, au cas où la
+        // batterie aurait été corrigée pendant la charge.
+        is StatsTracker.Event.ChargeEnded ->
+            s.addCharge(event.session.withCapacity(s.settings().capacityKwh))
+    }
+
+    /**
+     * Consigne, pour le trajet qui se termine, l'énergie intégrée à côté de celle des compteurs
+     * et du pourcentage de batterie. Sur SWI133 et SWI132, où les compteurs fonctionnent, l'écart
+     * dit ce que vaut l'intégration ; ailleurs, où ils restent à zéro, elle est la seule mesure.
+     *
+     * Un trajet repris au démarrage (application coupée avant sa fin) n'a pas de mesure intégrée :
+     * elle vivait en mémoire. La ligne le dit au lieu d'afficher zéro.
+     */
+    private fun comparer(s: StatsStore, trip: Trip) {
+        val ligne = EnergyCheck(trip, integrator.result(), s.settings().capacityKwh).line()
+        integrator.reset()
+        s.addEnergyCheck(ligne)
+        AppLogger.i(TAG, "énergie · $ligne")
     }
 }

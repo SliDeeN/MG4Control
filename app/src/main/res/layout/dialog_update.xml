@@ -1,416 +1,384 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Dialog mise à jour — style dark dashboard
-    3 groupes commutables :
-      group_info     : infos version + boutons d'action (affiché par défaut)
-      group_progress : barre de progression pendant le téléchargement
-      group_manual   : instructions + QR code pour installation manuelle
--->
-<LinearLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="wrap_content"
+<!-- Mise à jour, dans l'application — proposition « A » choisie sur maquette le 2026-10-13 : deux
+     colonnes, les nouveautés à gauche (elles défilent, les boutons restent en place), les actions
+     empilées à droite.
+
+     Trois états, un seul visible à la fois (UpdateDialogManager) :
+       group_info      les nouveautés et les actions
+       group_progress  le téléchargement
+       group_manual    les instructions et le QR code des versions
+     L'en-tête — titre et versions — reste le même dans les trois.
+
+     Fenêtre de l'application : tailles normales, pas l'agrandissement des pop-ups. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@color/dash_card"
-    android:minWidth="680dp">
+    android:background="@drawable/bg_hvac_modern_card"
+    android:padding="20dp">
 
-    <!-- En-tête -->
-    <TextView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="@string/update_available_title"
-        android:textColor="@color/dash_text_lo"
-        android:textSize="9sp"
-        android:textStyle="bold"
-        android:letterSpacing="0.12"
-        android:textAllCaps="true"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingTop="16dp"
-        android:paddingBottom="14dp" />
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/dash_border" />
-
-    <!-- ══════════════════════════════════════════════════════════ -->
-    <!--  GROUP INFO (affiché par défaut)                          -->
-    <!-- ══════════════════════════════════════════════════════════ -->
     <LinearLayout
-        android:id="@+id/group_info"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="16dp"
-        android:visibility="visible">
-
-        <!-- Versions : vX.X  →  vX.X -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/bg_section_rounded"
-            android:padding="12dp"
-            android:layout_marginBottom="10dp">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/update_current_label"
-                    android:textColor="@color/dash_text_lo"
-                    android:textSize="9sp"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.1" />
-
-                <TextView
-                    android:id="@+id/tv_version_from"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="v?"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:fontFamily="monospace" />
-
-            </LinearLayout>
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="→"
-                android:textColor="@color/dash_accent"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp" />
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical"
-                android:gravity="center">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/update_new_label"
-                    android:textColor="@color/dash_accent"
-                    android:textSize="9sp"
-                    android:textAllCaps="true"
-                    android:letterSpacing="0.1" />
-
-                <TextView
-                    android:id="@+id/tv_version_to"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="v?"
-                    android:textColor="@color/dash_accent"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:fontFamily="monospace" />
-
-            </LinearLayout>
-
-        </LinearLayout>
-
-        <!-- Notes de version -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="@drawable/bg_section_rounded"
-            android:padding="10dp"
-            android:layout_marginBottom="10dp">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/update_release_notes_label"
-                android:textColor="@color/dash_text_lo"
-                android:textSize="9sp"
-                android:textAllCaps="true"
-                android:letterSpacing="0.1"
-                android:paddingBottom="5dp" />
-
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="@color/dash_border"
-                android:layout_marginBottom="6dp" />
-
-            <ScrollView
-                android:layout_width="match_parent"
-                android:layout_height="140dp"
-                android:fadeScrollbars="false"
-                android:overScrollMode="ifContentScrolls">
-
-                <TextView
-                    android:id="@+id/tv_release_notes"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="—"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp" />
-
-            </ScrollView>
-
-        </LinearLayout>
-
-        <!-- Avertissement données mobiles (caché si WiFi) -->
-        <LinearLayout
-            android:id="@+id/row_data_warning"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:background="@drawable/bg_section_rounded"
-            android:padding="10dp"
-            android:layout_marginBottom="10dp"
-            android:visibility="gone">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/update_data_warning"
-                android:textColor="@color/dash_warn"
-                android:textSize="11sp" />
-
-        </LinearLayout>
-
-
-        <!-- Boutons d'action -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="end">
-
-            <!-- Ne plus me rappeler — poussé à gauche via spacer -->
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_update_skip"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="44dp"
-                android:text="@string/update_skip_btn"
-                android:textColor="@color/dash_warn"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:backgroundTint="@color/dash_btn"
-                app:strokeColor="@color/dash_warn"
-                app:strokeWidth="1dp"
-                app:cornerRadius="8dp" />
-
-            <View
-                android:layout_width="0dp"
-                android:layout_height="0dp"
-                android:layout_weight="1" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_update_later"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="44dp"
-                android:layout_marginEnd="8dp"
-                android:text="@string/update_later_btn"
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:backgroundTint="@color/dash_btn"
-                app:strokeColor="@color/dash_border"
-                app:strokeWidth="1dp"
-                app:cornerRadius="8dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_update_manual"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="44dp"
-                android:layout_marginEnd="8dp"
-                android:text="@string/update_manual_btn"
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:backgroundTint="@color/dash_btn"
-                app:strokeColor="@color/dash_border"
-                app:strokeWidth="1dp"
-                app:cornerRadius="8dp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_update_auto"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="44dp"
-                android:text="@string/update_auto_btn"
-                android:textColor="@color/dash_accent"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:backgroundTint="@color/dash_accent_dim"
-                app:strokeColor="@color/dash_accent"
-                app:strokeWidth="1dp"
-                app:cornerRadius="8dp" />
-
-        </LinearLayout>
-
-    </LinearLayout>
-
-    <!-- ══════════════════════════════════════════════════════════ -->
-    <!--  GROUP PROGRESS (téléchargement + installation)           -->
-    <!-- ══════════════════════════════════════════════════════════ -->
-    <LinearLayout
-        android:id="@+id/group_progress"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="20dp"
-        android:gravity="center"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/tv_progress_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="@string/update_downloading"
-            android:textColor="@color/text_secondary"
-            android:textSize="13sp"
-            android:gravity="center"
-            android:layout_marginBottom="12dp" />
-
-        <ProgressBar
-            android:id="@+id/progress_bar"
-            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:max="100"
-            android:progress="0"
-            android:layout_marginBottom="16dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_cancel_download"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="wrap_content"
-            android:layout_height="40dp"
-            android:text="@string/update_cancel"
-            android:textColor="@color/text_secondary"
-            android:textSize="11sp"
-            android:textAllCaps="true"
-            android:backgroundTint="@color/dash_btn"
-            app:strokeColor="@color/dash_border"
-            app:strokeWidth="1dp"
-            app:cornerRadius="8dp" />
-
-    </LinearLayout>
-
-    <!-- ══════════════════════════════════════════════════════════ -->
-    <!--  GROUP MANUEL (QR code + instructions)                    -->
-    <!-- ══════════════════════════════════════════════════════════ -->
-    <LinearLayout
-        android:id="@+id/group_manual"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp"
-        android:visibility="gone">
+        android:gravity="center_vertical">
 
-        <!-- Instructions (colonne gauche) -->
+        <FrameLayout
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_dialog_icon">
+
+            <ImageView
+                android:id="@+id/iv_update_icon"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_dialog_download" />
+
+        </FrameLayout>
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:orientation="vertical"
-            android:layout_marginEnd="16dp">
+            android:layout_marginStart="14dp"
+            android:orientation="vertical">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="@string/update_manual_title"
-                android:textColor="@color/dash_text_lo"
-                android:textSize="9sp"
+                android:text="@string/update_available_title"
+                android:textColor="@color/text_primary"
+                android:textSize="22sp"
                 android:textStyle="bold"
-                android:textAllCaps="true"
-                android:letterSpacing="0.1"
-                android:paddingBottom="10dp" />
+                android:maxLines="1"
+                android:ellipsize="end" />
 
-            <TextView
-                android:id="@+id/tv_manual_instructions"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/update_manual_instructions"
-                android:textColor="@color/text_secondary"
-                android:textSize="12sp"
-                android:lineSpacingExtra="3dp"
-                android:layout_marginBottom="8dp" />
-
-            <!-- Chemin local de l'APK téléchargé (visible uniquement après téléchargement) -->
-            <TextView
-                android:id="@+id/tv_apk_path"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textColor="@color/dash_accent"
-                android:textSize="10sp"
-                android:fontFamily="monospace"
-                android:lineSpacingExtra="2dp"
-                android:layout_marginBottom="14dp"
-                android:visibility="gone" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_close_manual"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="40dp"
-                android:text="@string/update_close"
-                android:textColor="@color/text_secondary"
-                android:textSize="11sp"
-                android:textAllCaps="true"
-                android:backgroundTint="@color/dash_btn"
-                app:strokeColor="@color/dash_border"
-                app:strokeWidth="1dp"
-                app:cornerRadius="8dp" />
 
         </LinearLayout>
 
-        <!-- QR code + lien (colonne droite) -->
-        <LinearLayout
+        <TextView
+            android:id="@+id/tv_version_from"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:gravity="center_horizontal">
+            android:layout_height="30dp"
+            android:background="@drawable/bg_dialog_pill"
+            android:gravity="center"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
 
-            <ImageView
-                android:id="@+id/iv_update_qr"
-                android:layout_width="160dp"
-                android:layout_height="160dp"
-                android:background="#FFFFFF"
-                android:padding="6dp"
-                android:layout_marginBottom="8dp" />
+        <ImageView
+            android:id="@+id/iv_update_arrow"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_overlay_arrow" />
+
+        <TextView
+            android:id="@+id/tv_version_to"
+            android:layout_width="wrap_content"
+            android:layout_height="30dp"
+            android:background="@drawable/bg_dialog_pill_accent"
+            android:gravity="center"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:textColor="@color/dash_accent"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+    </LinearLayout>
+
+    <!-- ══ Les nouveautés et les actions ══
+         Hauteur donnée ET poids : la colonne a sa taille, et la cède si l'écran est trop bas. -->
+    <LinearLayout
+        android:id="@+id/group_info"
+        android:layout_width="match_parent"
+        android:layout_height="320dp"
+        android:layout_weight="1"
+        android:layout_marginTop="16dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:background="@drawable/bg_hvac_panel"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:text="@string/update_release_notes_label"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:maxLines="1" />
+
+                <ScrollView
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:overScrollMode="never">
+
+                    <TextView
+                        android:id="@+id/tv_release_notes"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:lineSpacingMultiplier="1.15"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp" />
+
+                </ScrollView>
+
+            </LinearLayout>
+
+            <!-- Avertissement données mobiles (retiré en Wi-Fi) -->
+            <TextView
+                android:id="@+id/row_data_warning"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/update_data_warning"
+                android:textColor="@color/dash_warn"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="330dp"
+            android:layout_height="match_parent"
+            android:layout_marginStart="14dp"
+            android:orientation="vertical">
 
             <TextView
-                android:id="@+id/tv_update_gh_link"
+                android:id="@+id/btn_update_auto"
+                android:layout_width="match_parent"
+                android:layout_height="68dp"
+                android:background="@drawable/bg_dialog_primary"
+                android:gravity="center"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:text="@string/update_auto_btn"
+                android:textColor="@color/hvac_on_accent"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/btn_update_manual"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_dialog_tile"
+                android:gravity="center"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:text="@string/update_manual_btn"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/btn_update_later"
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_dialog_tile"
+                android:gravity="center"
+                android:paddingStart="18dp"
+                android:paddingEnd="18dp"
+                android:text="@string/update_later_btn"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <!-- Un lien, pas un bouton : on ne le touche pas par mégarde. Souligné par le code. -->
+            <TextView
+                android:id="@+id/btn_update_skip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="@string/update_gh_releases_link"
-                android:textColor="@color/dash_accent"
-                android:textSize="11sp"
-                android:gravity="center" />
+                android:layout_gravity="center_horizontal"
+                android:paddingTop="14dp"
+                android:paddingBottom="6dp"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
+                android:text="@string/update_skip_btn"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                android:maxLines="1" />
 
         </LinearLayout>
 
     </LinearLayout>
 
-    <!-- Padding bas -->
-    <View
+    <!-- ══ Le téléchargement ══ -->
+    <LinearLayout
+        android:id="@+id/group_progress"
         android:layout_width="match_parent"
-        android:layout_height="8dp" />
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_hvac_panel"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:id="@+id/tv_progress_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/update_downloading"
+                android:textColor="@color/text_primary"
+                android:textSize="17sp" />
+
+            <ProgressBar
+                android:id="@+id/progress_bar"
+                style="?android:attr/progressBarStyleHorizontal"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="14dp"
+                android:indeterminate="true"
+                android:max="100"
+                android:progressTint="@color/dash_accent"
+                android:progressBackgroundTint="@color/dash_border"
+                android:indeterminateTint="@color/dash_accent" />
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btn_cancel_download"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:gravity="center"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:text="@string/update_cancel"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+    </LinearLayout>
+
+    <!-- ══ L'installation à la main ══ -->
+    <LinearLayout
+        android:id="@+id/group_manual"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@drawable/bg_hvac_panel"
+                android:orientation="vertical"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:text="@string/update_manual_title"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:maxLines="1" />
+
+                <TextView
+                    android:id="@+id/tv_manual_instructions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:lineSpacingMultiplier="1.15"
+                    android:text="@string/update_manual_instructions"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="240dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="14dp"
+                android:background="@drawable/bg_hvac_panel"
+                android:orientation="vertical"
+                android:gravity="center_horizontal"
+                android:padding="14dp">
+
+                <ImageView
+                    android:id="@+id/iv_update_qr"
+                    android:layout_width="160dp"
+                    android:layout_height="160dp"
+                    android:background="@drawable/bg_dialog_qr"
+                    android:padding="6dp"
+                    android:scaleType="fitCenter"
+                    android:importantForAccessibility="no" />
+
+                <!-- Ouvre la page des versions dans le navigateur de la voiture -->
+                <TextView
+                    android:id="@+id/tv_update_gh_link"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingTop="8dp"
+                    android:gravity="center_horizontal"
+                    android:text="@string/update_gh_releases_link"
+                    android:textColor="@color/dash_accent"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btn_close_manual"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_marginTop="14dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:gravity="center"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:text="@string/update_close"
+            android:textColor="@color/text_primary"
+            android:textSize="17sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+    </LinearLayout>
 
 </LinearLayout>

@@ -33,6 +33,7 @@
     <string name="shortcuts_action_tsr">Levhalar (TSR)</string>
     <string name="shortcuts_action_apply_profile">Bir profil başlat</string>
     <string name="shortcuts_action_profile_picker">Profil seçici (açılır pencere)</string>
+    <string name="shortcuts_action_profile_cycle">Profil döngüsü</string>
     <string name="shortcuts_action_vehicle_power_off">Aracı kapat</string>
         <string name="overlay_brightness_title">Parlaklık</string>
     <string name="overlay_brightness_night">Gece</string>
@@ -40,6 +41,11 @@
     <string name="overlay_brightness_day">Gündüz</string>
 <string name="overlay_profile_title">Sürüş profilleri</string>
     <string name="overlay_open_app">MG4Control\'ü aç</string>
+    <string name="overlay_joy_navigate">Gezin</string>
+    <string name="overlay_joy_validate">Onayla</string>
+    <string name="overlay_profile_active">Etkin</string>
+    <string name="overlay_profile_current">Geçerli profil</string>
+    <string name="overlay_profile_apply">Uygula</string>
     <string name="overlay_countdown">%1$d sn içinde kapanıyor</string>
     <string name="shortcuts_profile_prefix">Profili başlat</string>
     <string name="shortcuts_pick_profile_title">Bir profil seçin</string>
@@ -47,6 +53,8 @@
     <string name="shortcuts_action_open_app">MG4Control\'ü aç</string>
     <string name="shortcuts_action_open_custom_app">Bir uygulama başlat</string>
     <string name="shortcuts_pick_app_title">Bir uygulama seçin</string>
+    <string name="choice_count_apps">Uygulamalar: %1$d</string>
+    <string name="choice_count_profiles">Profiller: %1$d</string>
     <string name="shortcuts_open_custom_prefix">Başlat</string>
     <string name="shortcuts_warning_title">Direksiyon kısayolları</string>
     <string name="shortcuts_warning_message">⚠ Bir düğmeye resmî başlatıcıdan bir işlev atanmışsa, o işlev MG4Control\'ün önüne geçer.\n\nÖrnek: başlatıcıda tek basışa 360° kamera atanmışsa, MG4Control o düğmeyi yakalayamaz ve onun yerine kamera açılır.\n\nÇakışmaları önlemek için resmî başlatıcının kısayollarını kapatmanız önerilir.</string>
@@ -105,12 +113,16 @@
     <string name="profile_set_default">Varsayılan yap</string>
     <string name="profile_set_as_default">Varsayılan profil yap</string>
     <string name="profile_delete">Sil</string>
+    <string name="profile_delete_title">“%1$s” silinsin mi?</string>
     <string name="profile_edit">Düzenle</string>
     <string name="profile_name_hint">Profil adı</string>
     <string name="profile_name_required">Ad zorunludur</string>
     <string name="profile_save">Kaydet</string>
     <string name="profile_cancel">İptal</string>
     <string name="profile_applied">Profil uygulandı: %s</string>
+    <string name="profile_cycle_target">Profil: %s</string>
+    <string name="profile_cycle_applied">%s profili uygulandı</string>
+    <string name="profile_cycle_incomplete">%s profili: tam uygulanamadı</string>
     <string name="profile_max_reached">En fazla %d profile ulaşıldı</string>
     <string name="profile_bt_device_label">Bluetooth cihazı</string>
 
@@ -193,6 +205,8 @@
 
     <!-- Dashboard — card headers -->
     <string name="card_climate">Klima ayarları</string>
+    <string name="card_lighting">Aydınlatma</string>
+    <string name="lighting_auto_high_beam">Otomatik uzun far</string>
     <string name="card_alerts">Uyarılar</string>
 
     <!-- Auto-update -->
@@ -230,6 +244,7 @@
     <string name="fw_unknown_title">⚠ Bilinmeyen firmware</string>
     <string name="fw_unknown_body">Bu firmware MG4 Control tarafından henüz doğrudan desteklenmiyor.\n\nElle bir uyumluluk modu seçerek devam edebilirsiniz, ancak bazı işlevler düzgün çalışmayabilir.</string>
     <string name="fw_unknown_hint">Bu pencereyi kapattıktan sonra uyumluluk modunuzu seçmek için üst çubuktaki SWI133 ya da SWI68 düğmesine dokunun.</string>
+    <string name="fw_unknown_hint_settings">“Devam” %1$s › %2$s bölümünü açar: orada sizinkine en yakın firmware’i seçin.</string>
     <string name="fw_unknown_btn_close">Uygulamayı kapat</string>
     <string name="fw_unknown_btn_continue">Devam</string>
 
@@ -239,6 +254,8 @@
     <string name="settings_auto_apply">Ek ayarlar</string>
     <string name="settings_garage_mode">Garaj modu</string>
     <string name="settings_garage_mode_desc">MG4Control’ü tamamen uyutur: kısayol yok (düğmeler özgün işlevlerine döner), açılışta profil uygulanmaz, otomasyon çalışmaz. Aracı servise bırakırken uygulamayı kaldırmak zorunda kalmamak için kullanışlıdır. Ayarlarınız korunur ve mod kapatılır kapatılmaz geri gelir.</string>
+    <string name="settings_ready_default">Araç her READY konumuna geçtiğinde varsayılan profile dön</string>
+    <string name="settings_ready_default_desc">Varsayılan olarak, elle seçilen profil araç kapatılana kadar geçerli kalır. Bu seçenekle, kısa bir duruştan sonra bile araç her READY konumuna geçtiğinde unutulur ve varsayılan profil yeniden uygulanır. Dış sıcaklığa veya bir Bluetooth telefona bağlı bir profil uygulanacaksa, açılışta olduğu gibi önceliğini korur.</string>
     <string name="notif_service_active">Hizmet çalışıyor</string>
     <string name="notif_garage_mode">Garaj modu — uykuda</string>
     <string name="settings_auto_update_desc">Açılışta güncellemeleri kendiliğinden denetle</string>
@@ -259,11 +276,16 @@
     <string name="vehicle_power_dialog_confirm">Kapat</string>
     <string name="vehicle_power_dialog_cancel">İptal</string>
     <string name="vehicle_power_need_park">Araç durmuş ve vites P konumunda olmalı.</string>
+    <string name="vehicle_power_banner_title">Araç kapatılsın mı?</string>
+    <string name="vehicle_power_banner_msg">Araç kapatılır, ekran açık kalır.</string>
+    <string name="vehicle_power_banner_impossible">Kapatılamıyor</string>
     <string name="settings_theme">Görünüm</string>
     <string name="settings_theme_auto">Otomatik</string>
     <string name="settings_theme_dark">Koyu tema</string>
     <string name="settings_theme_light">Açık tema</string>
     <string name="settings_text_size">Yazı boyutu</string>
+    <string name="settings_popup_delay">Açılır pencerelerin kapanma süresi</string>
+    <string name="settings_popup_delay_desc">Profil seçici, otomasyon onayı ve HVAC açılır penceresi. Her işlem süreyi yeniden başlatır.</string>
     <string name="settings_text_size_standard">Standart</string>
     <string name="settings_text_size_large">Büyük</string>
     <string name="settings_text_size_xlarge">Çok büyük</string>
@@ -281,12 +303,11 @@
 
     <!-- [BT-PROFILES] Bluetooth profiles -->
     <!-- Audio screen (A9 only) -->
-    <string name="nav_audio">Ses</string>
-    <string name="door_volume_title">Kapı açılınca ses düzeyi</string>
+    <string name="door_volume_title">Araçtan inerken sesi kıs</string>
     <string name="door_volume_desc">Ön kapılardan biri açılınca medya sesini kısar</string>
     <string name="door_volume_level_label">Hedef düzey</string>
     <string name="door_volume_restore_title">Kapanınca geri yükle</string>
-    <string name="door_volume_desc_ready">Araç P konumundayken READY durumundan çıkınca (sürücü kapısı açıldığında ya da araç kapatıldığında) medya sesini kısar</string>
+    <string name="door_volume_desc_ready">Araç P konumundayken READY durumundan çıkınca (emniyet kemeri çözülüp sürücü kapısı açıldığında ya da araç kapatıldığında) medya sesini kısar</string>
     <string name="door_volume_restore_ready_title">READY durumuna dönünce geri yükle</string>
     <string name="door_volume_doors_label">Tetikleyen kapılar</string>
     <string name="door_left">Sol</string>
@@ -307,27 +328,84 @@
     <string name="automation_confirm_msg">Dış sıcaklık %1$d°C değerinin altında\n(şu anki sıcaklık %2$s°C)\n“%3$s” profili uygulansın mı?</string>
     <string name="automation_confirm_yes">EVET</string>
     <string name="automation_confirm_no">HAYIR</string>
+    <string name="automation_confirm_below">%1$s eşiğinin altında</string>
+    <string name="automation_confirm_above">%1$s eşiğinin üstünde</string>
+    <string name="automation_confirm_question">Profil uygulansın mı?</string>
     <string name="automation_direction_label">Şu durumda tetikle — dış sıcaklık:</string>
     <string name="automation_dir_below">Altında</string>
     <string name="automation_dir_above">Üstünde</string>
     <string name="automation_confirm_msg_above">Dış sıcaklık %1$d°C değerinin üstünde\n(şu anki sıcaklık %2$s°C)\n“%3$s” profili uygulansın mı?</string>
     <string name="automation_profile_title">Sıcaklığa göre bir profil uygula</string>
+    <string name="battery_auto_title">Bataryaya göre profil uygula</string>
+    <string name="battery_auto_desc">Batarya bir eşiğin altına düştüğünde bir profil uygular</string>
+    <string name="battery_auto_threshold_label">Batarya eşiği</string>
+    <string name="battery_auto_note">Batarya eşiğin altına düştüğünde, açılışta ya da sürüş sırasında bir kez tetiklenir. Her açılışta ya da eşiğin üzerinde bir şarjdan sonra yeniden devreye girer. Sürüş güvenliği bu hızda ayarları engelliyorsa profil bir sonraki duruşu bekler.</string>
+    <string name="battery_auto_confirm_msg">Batarya %1$d %% altına düştü\n(şu an %2$s %%)\n“%3$s” profili uygulansın mı?</string>
+    <string name="autobri_title">Otomatik parlaklık</string>
+    <string name="autobri_desc">READY\'ye geçişte ekran parlaklığını dış ışığa göre ayarla</string>
+    <string name="autobri_desc_offline">READY\'ye geçişte ekran parlaklığını farların durumuna göre ayarla</string>
+    <string name="autobri_follow_desc_offline">Farlar her yandığında veya söndüğünde (tünel, otopark, akşam). Elle yapılan bir ayar, otomasyonu bir sonraki açılışa kadar durdurur.</string>
+    <string name="autobri_level_lights_off">Farlar kapalı (gündüz)</string>
+    <string name="autobri_level_lights_on">Farlar açık (gece, garaj, tünel)</string>
+    <string name="autobri_source_lights_off">farlar kapalı</string>
+    <string name="autobri_status_lights">Son ayar: %1$s · %2$s → %3$d %%</string>
+    <string name="autobri_note_offline">Far kumandası AUTO konumundayken çalışır: karanlığı otomatik farlar algılar. «Sürüş sırasında parlaklığı ayarla» kutusu işaretli değilse ayar açılışta, ardından garajdan çıkarken bir kez yapılır. Her değişiklik bir saniyelik geçişle yapılır.</string>
+    <string name="autobri_follow">Sürüş sırasında parlaklığı ayarla (yalnızca açılışta değil)</string>
+    <string name="autobri_follow_desc">Işık her dakika yeniden hesaplanır; ekran yalnızca fark 10 puana ulaşırsa yeniden ayarlanır. Elle yapılan bir ayar, otomasyonu bir sonraki açılışa kadar durdurur.</string>
+    <string name="autobri_lights">Farların yanıp sönmesini kullan (garajda ve tünelde, gündüz bile parlaklık düşürülür)</string>
+    <string name="autobri_lights_desc">Park lambaları açık: eğrinin Gece noktası; söner sönmez hava durumuna göre ayar. Gündüz farlar açık sürüyorsanız işareti kaldırın.</string>
+    <string name="autobri_sources"><b>Kaynaklar</b> (en az bir kaynak)</string>
+    <string name="autobri_lights_desc_only">Farlar kapalı: «gündüz» seviyesi; farlar açık: «gece» seviyesi, ikisi de aşağıdan ayarlanır.</string>
+    <string name="autobri_lights_desc_off">İşaretsiz: ekran garajda veya tünelde parlak kalabilir.</string>
+    <string name="autobri_forecast">Open-Meteo hava durumunu kullan</string>
+    <string name="autobri_forecast_warning">(biraz mobil veri kullanır)</string>
+    <string name="autobri_forecast_desc">Işık, güneşin yüksekliğinden ve aracın çevresindeki güneşlenme tahmininden hesaplanır: indirme başına yaklaşık 10 KB, en fazla 8 saatte bir veya bölgeden çıkıldığında (~60 km).</string>
+    <string name="autobri_mode_lights">Yalnızca farlar: mobil veri yok, GPS yok</string>
+    <string name="autobri_mode_both">Hava durumu + farlar: indirme başına ~10 KB</string>
+    <string name="autobri_mode_forecast">Yalnızca hava durumu: indirme başına ~10 KB, garaj/tünel koruması yok</string>
+    <string name="autobri_follow_desc_lights">Işık her dakika yeniden hesaplanır; ekran yalnızca fark 10 puana ulaşırsa ve farlar her yandığında veya söndüğünde yeniden ayarlanır. Elle yapılan bir ayar, otomasyonu bir sonraki açılışa kadar durdurur.</string>
+    <string name="autobri_night_lights">Gece veya farlar açık · 10 lx</string>
+    <string name="autobri_status_failed_lights">Ayar yapılamadı: farların durumu okunamıyor.</string>
+    <string name="autobri_status_paused">Bir sonraki açılışa kadar duraklatıldı: parlaklık elle ayarlandı.</string>
+    <string name="autobri_curve_label">Dış ışığa göre ekran parlaklığı</string>
+    <string name="autobri_night">Gece · 10 lx</string>
+    <string name="autobri_twilight">Alacakaranlık · 400 lx</string>
+    <string name="autobri_overcast">Bulutlu · 10.000 lx</string>
+    <string name="autobri_sunny">Tam güneş · 80.000 lx</string>
+    <string name="autobri_test">Şimdi dene</string>
+    <string name="autobri_status">Son ayar: %1$s · %2$s · ≈ %3$s lx → %4$d %%</string>
+    <string name="autobri_status_none">Henüz ayar yok.</string>
+    <string name="autobri_status_failed">Ayar yapılamadı: konum veya saat yok.</string>
+    <string name="autobri_source_lights">farlar açık</string>
+    <string name="autobri_source_forecast">hava tahmini</string>
+    <string name="autobri_source_sun">güneş konumu</string>
+    <string name="autobri_note">Dış ışık, güneşin yüksekliği ve aracın çevresindeki yaklaşık 60 × 60 km\'lik bölge için Open-Meteo güneşlenme tahmininden (CC BY 4.0) tahmin edilir; tahmin 3 günlüğüne indirilir, en fazla 8 saatte bir veya bölgeden çıkıldığında güncellenir, konum yaklaşık 10 km\'ye yuvarlanır. Tahmin yoksa açık gökyüzü varsayılır. Her değişiklik bir saniyelik geçişle yapılır.</string>
 
     <!-- A/C automation -->
     <string name="ac_auto_title">Sıcaklığa göre klimayı tetikle</string>
     <string name="ac_auto_desc">Klimayı dış sıcaklığa göre ayarlar</string>
-    <string name="ac_auto_hot">Sıcaklık şunun üstünde</string>
-    <string name="ac_auto_cold">Sıcaklık şunun altında</string>
-    <string name="ac_auto_threshold_hot_label">Tetikleme eşiği (°C)</string>
-    <string name="ac_auto_threshold_cold_label">Tetikleme eşiği (°C)</string>
-    <string name="ac_auto_threshold_hint">-20–60</string>
-    <string name="ac_auto_target_label">Hedef sıcaklık (°C)</string>
-    <string name="ac_auto_target_hint">15–33</string>
+    <string name="ac_auto_hot">Hava sıcakken</string>
+    <string name="ac_auto_cold">Hava soğukken</string>
+    <string name="ac_auto_threshold_hot_label">Dışarısı, en az</string>
+    <string name="ac_auto_threshold_cold_label">Dışarısı, en çok</string>
+    <string name="ac_auto_target_label">Klima ayarı</string>
     <string name="ac_auto_fan_label">Fan hızı</string>
-    <string name="ac_auto_fan_hint">1–10</string>
+    <string name="ac_auto_fan_manual">Manuel</string>
+    <string name="ac_auto_fan_level">Seviye</string>
+    <string name="ac_auto_defrost">Buz çözme</string>
+    <string name="ac_auto_defrost_front">Ön cam</string>
+    <string name="ac_auto_defrost_rear">Arka cam</string>
+    <string name="ac_auto_rule_off">Kural kapalı</string>
     <string name="ac_auto_def_front">Ön cam buz çözme</string>
     <string name="ac_auto_def_rear">Arka cam buz çözme</string>
     <string name="ac_auto_note">Araç çalıştığında uygulanır: klima ve A/C açılır, ardından yukarıdaki ayarlar gönderilir.</string>
+    <string name="ac_auto_trigger_label">Tetikleme</string>
+    <string name="ac_auto_trigger_start">Yalnızca çalıştırmada</string>
+    <string name="ac_auto_trigger_start_hint">Araç çalıştığında (READY) tek bir kontrol yapılır: eşik o anda aşılmamışsa aracın bir sonraki tam çalıştırılmasına kadar hiçbir şey tetiklenmez.</string>
+    <string name="ac_auto_trigger_once">Her çalıştırmada bir kez</string>
+    <string name="ac_auto_trigger_once_hint">Araç çalıştığında (READY) eşik aşılmamışsa kontrol, araç her yeniden READY konumuna geçtiğinde tekrarlanır. Eşik aşıldığında ayarlar bir kez uygulanır; ardından aracın bir sonraki tam çalıştırılmasına kadar başka bir şey olmaz.</string>
+    <string name="ac_auto_trigger_ready">Araç her READY konumuna geçtiğinde</string>
+    <string name="ac_auto_trigger_ready_hint">Ayarlar her seferinde, kısa bir duraklamadan sonra bile gönderilir: elle yapılanların yerini alır.</string>
     <string name="clim_card_title">Klima</string>
     <string name="clim_temperature">Sıcaklık</string>
     <string name="clim_fan">Fan</string>
@@ -351,6 +429,13 @@
     <string name="profile_cat_drive">Sürüş</string>
     <string name="profile_cat_safety">Güvenlik</string>
     <string name="profile_cat_comfort">Konfor</string>
+    <string name="profile_cat_apply_drive">Sürüş ayarlarını uygula</string>
+    <string name="profile_cat_apply_safety">Güvenlik ayarlarını uygula</string>
+    <string name="profile_cat_apply_comfort">Konfor ayarlarını uygula</string>
+    <string name="profile_cat_off_drive">Bu profil sürüş ayarlarını değiştirmez. Araç mevcut ayarlarını korur.</string>
+    <string name="profile_cat_off_safety">Bu profil güvenlik ayarlarını değiştirmez. Araç mevcut ayarlarını korur.</string>
+    <string name="profile_cat_off_comfort">Bu profil konfor ayarlarını değiştirmez. Araç mevcut ayarlarını korur.</string>
+    <string name="profile_cat_none_enabled">Profili kaydetmek için en az bir kategoriyi açın.</string>
     <string name="climate_seat_heat">Koltuk ısıtma</string>
 
     <!-- Reglages : categories -->
@@ -388,8 +473,6 @@
     <string name="common_off">KAPALI</string>
 
     <!-- Automatisation clim : mode auto + recyclage -->
-    <string name="ac_auto_auto_mode">Otomatik mod</string>
-    <string name="ac_auto_recirc_force">İç hava sirkülasyonunu zorla</string>
     <string name="recirc_inner">İç hava</string>
     <string name="recirc_outside">Dış hava</string>
     <string name="recirc_auto">Oto</string>
@@ -427,6 +510,9 @@
     <string name="shortcuts_cfg_regen_save">Kaydet</string>
     <string name="shortcuts_cfg_regen_saved">Döngü kaydedildi</string>
     <string name="shortcuts_cfg_regen_min">Bir döngü için en az iki mod gerekir.</string>
+    <string name="shortcuts_cat_profile_cycle">Profil döngüsü</string>
+    <string name="shortcuts_cfg_profile_hint">Dolaşmak istediğiniz sırayla profillere dokunun, sonra kaydedin. Her basışta etkin profilden sonraki profil uygulanır.</string>
+    <string name="shortcuts_cfg_profile_min">Bir döngü için en az iki profil gerekir.</string>
     <string name="adv_sc_new">Yeni kısayol</string>
     <string name="adv_sc_step_key">1 · Tuş</string>
     <string name="adv_sc_step_press">2 · Basış türü</string>
@@ -452,6 +538,21 @@
     <string name="shortcuts_action_drowsiness">Yorgunluk (AÇ/KAPA)</string>
     <string name="shortcuts_action_drowsiness_sen">Yorgunluk: hassasiyet</string>
     <string name="shortcuts_action_hvac_toggle">Klima (AÇ/KAPA)</string>
+    <string name="shortcuts_action_hvac_ac_toggle">Klima: A/C (ON/OFF)</string>
+    <string name="shortcuts_action_auto_high_beam">Otomatik uzun far (AÇ/KAPA)</string>
+    <string name="shortcuts_action_battery_heat">Batarya ısıtma (AÇ/KAPA)</string>
+    <string name="batheat_section">Akıllı batarya ısıtma</string>
+    <string name="batheat_hint">Hızlı şarjı iyileştirir ancak menzili azaltır.</string>
+    <string name="batheat_status_off">Kapalı</string>
+    <string name="batheat_status_stays_on">Siz kapatana kadar açık kalır</string>
+    <string name="batheat_status_countdown">%1$d dk sonra otomatik kapanacak</string>
+    <string name="batheat_status_planned">Açılıştan %1$d dk sonra otomatik kapanır</string>
+    <string name="batheat_auto_title">Batarya ısıtmayı kapatma</string>
+    <string name="batheat_auto_desc">Akıllı batarya ısıtmayı bir sürüş süresinden sonra kapat</string>
+    <string name="batheat_auto_minutes_label">Kapatma süresi</string>
+    <string name="batheat_auto_minutes_value">%1$d dk</string>
+    <string name="batheat_auto_note">Geri sayım, ısıtma açıldığı anda başlar; sürüşte veya park halinde (orijinal ekran, «düşük sıcaklık» penceresi, MG4Control veya kısayol), ya da zaten açıksa açılışta. Yalnızca mevcut sürüş için geçerlidir: sürüş sonunda, READY\'den çıkınca iptal edilir. Kapatıldığında bir mesaj gösterilir.</string>
+    <string name="batheat_auto_toast">Batarya ısıtma %1$d dk sonra kapatıldı</string>
     <string name="shortcuts_action_hvac_temp_up">Klima: sıcaklık +</string>
     <string name="shortcuts_action_hvac_temp_down">Klima: sıcaklık -</string>
     <string name="shortcuts_action_hvac_fan_up">Klima: fan +</string>
@@ -465,6 +566,16 @@
     <string name="shortcuts_action_defrost_front">Ön cam buz çözme (AÇ/KAPA)</string>
     <string name="shortcuts_action_defrost_rear">Arka cam buz çözme (AÇ/KAPA)</string>
     <string name="shortcuts_action_hvac_recirc">Sirkülasyon: döngü</string>
+    <string name="shortcuts_action_hvac_popup">HVAC açılır penceresi</string>
+    <string name="hvac_popup_temp_up">Sıcaklık +</string>
+    <string name="hvac_popup_temp_down">Sıcaklık −</string>
+    <string name="hvac_popup_fan_up">Fan +</string>
+    <string name="hvac_popup_fan_down">Fan −</string>
+    <string name="hvac_popup_compressor">Kompresör</string>
+    <string name="hvac_popup_heating">Isıtma</string>
+    <string name="hvac_popup_joystick_title">Sağ joystick</string>
+    <string name="hvac_popup_joystick_off_title">Joystick devre dışı</string>
+    <string name="hvac_popup_joystick_off_text">Erişilebilirliği açın veya ekranı kullanın</string>
     <string name="shortcuts_action_brightness_up">Parlaklık +</string>
     <string name="shortcuts_action_brightness_down">Parlaklık -</string>
 
@@ -495,16 +606,12 @@
     <string name="shortcuts_action_volume_down">Ses -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="win_close_warning">Uygulamanın kendiliğinden kapatmasında sıkışma koruması yoktur (sürücü camı dışında): cama dikkat edin. Sekmeden çıkarsanız durur.</string>
     <string name="win_front_left">Ön sol</string>
     <string name="win_front_right">Ön sağ</string>
     <string name="win_rear_left">Arka sol</string>
     <string name="win_rear_right">Arka sağ</string>
-    <string name="win_all_close">Tümünü kapat</string>
-    <string name="win_all_open">Tümünü aç</string>
-    <string name="win_auto_title">Kendiliğinden kapatma</string>
     <string name="win_auto_label">Araçtan inerken camları kapat</string>
-    <string name="win_auto_desc">Araç P konumundayken ve aşağıdaki koşullarla devreye alınmışsa: araç READY durumundan çıkınca (sürücü kapısı açıldığında ya da araç kapatıldığında) tüm camlar seçilen gecikmenin ardından kapanır. O süre dolmadan READY durumuna dönülürse iptal olur.</string>
+    <string name="win_auto_desc">Araç P konumundayken ve aşağıdaki koşullarla devreye alınmışsa: araç READY durumundan çıkınca (emniyet kemeri çözülüp sürücü kapısı açıldığında ya da araç kapatıldığında) tüm camlar seçilen gecikmenin ardından kapanır. O süre dolmadan READY durumuna dönülürse iptal olur.</string>
     <string name="win_auto_warning">Sürücü camı dışındaki camlarda sıkışma koruması yoktur: inerken camların yakınında kimse olmasın.</string>
     <string name="win_auto_arming_title">Devreye alma: sürüşten sonra</string>
     <string name="win_auto_speed_label">Ulaşılan hız</string>
@@ -525,8 +632,7 @@
     <string name="win_cal_advanced_label">Cam başına kalibrasyon</string>
     <string name="win_cal_advanced_desc">Her camın gerçek hareketini ölçer; genel süreden daha isabetlidir. Seçeneği kapatırsanız ölçümler saklı kalır.</string>
     <string name="win_cal_general">Genel süre</string>
-    <string name="win_automation_title">Elektrikli camlar</string>
-    <string name="win_section_command">Kumandalar</string>
+    <string name="win_automation_title">Elektrikli camların kendiliğinden kapanması</string>
     <string name="win_cal_limits">Uygulama kapı düğmelerini göremez: taklit edilen bir hareket, cam hangi konumda başlarsa başlasın, hep ölçülen süre kadar sürer.</string>
     <string name="shortcuts_action_windows_open">Tüm camları aç</string>
     <string name="shortcuts_action_windows_close">Tüm camları kapat</string>
@@ -586,7 +692,16 @@
     <string name="stats_currency">Para birimi</string>
     <string name="stats_price_ac">Yavaş şarj, evde</string>
     <string name="stats_price_dc">Hızlı şarj, halka açık</string>
-    <string name="stats_capacity">Kullanılabilir kapasite (kWh)</string>
+    <string name="stats_battery_title">Batarya</string>
+    <string name="stats_battery_label">Araç bataryası</string>
+    <string name="stats_battery_option">%1$d kWh · %2$s kWh kullanılabilir (%3$s)</string>
+    <string name="stats_battery_note">Şarj enerjisini batarya yüzdesinden hesaplamak için kullanılır. Bataryayı değiştirmek, kayıtlı şarjları yeniden hesaplar.</string>
+    <string name="stats_battery_banner">Şarj enerjisi seçili bataryaya bağlıdır: %1$s. Aracınızınkiyle aynı olduğunu kontrol edin.</string>
+    <string name="stats_battery_banner_ok">Doğru</string>
+    <string name="stats_battery_banner_change">Değiştir</string>
+    <string name="stats_skip_short_label">Kısa yolculukları yok say</string>
+    <string name="stats_min_trip_label">En az mesafe (km)</string>
+    <string name="stats_skip_short_note">Daha kısa bir yolculuk kaydedilmez: kilometresi ve enerjisi toplamlara dahil edilmez. Daha önce kaydedilen yolculuklar korunur.</string>
     <string name="stats_retention_30d">30 gün</string>
     <string name="stats_retention_3m">3 ay</string>
     <string name="stats_retention_6m">6 ay</string>
@@ -601,14 +716,17 @@
     <string name="stats_charge_reconstructed">yeniden oluşturuldu</string>
     <string name="stats_detail_origin">Kaynak</string>
     <string name="stats_detail_origin_estimated">batarya düzeyinden tahmin edildi — uygulama çalışmıyordu</string>
+    <string name="stats_detail_origin_integrated">batarya gerilimi ve akımından hesaplandı</string>
     <string name="stats_tariff_fixed">tarife düzeltildi</string>
     <string name="stats_tariff_instead">düzeltildi, %1$s yerine</string>
     <string name="stats_tariff_default">Varsayılan tarife</string>
     <string name="stats_detail_motor">Motor</string>
     <string name="stats_detail_consumption">Ortalama tüketim</string>
     <string name="stats_detail_consumption_short">güvenilir bir oran için yolculuk çok kısa</string>
+    <string name="stats_detail_energy_unknown">bu yolculukta enerji ölçülmedi</string>
     <string name="stats_detail_climate">Klima</string>
     <string name="stats_detail_accessories">Aksesuarlar</string>
+    <string name="stats_detail_auxiliary">Klima ve diğerleri</string>
     <string name="stats_detail_regen">Rejeneratif frenleme</string>
     <string name="stats_detail_battery">Batarya</string>
     <string name="stats_detail_temp">Ortalama sıcaklık</string>

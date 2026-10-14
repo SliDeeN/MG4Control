@@ -1,7 +1,10 @@
 package com.mg4.control.automation
 
 import com.mg4.control.automation.ClimateAutomationDecision.Outcome
+import com.mg4.control.automation.ClimateAutomationSettings.Trigger
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ClimateAutomationDecisionTest {
@@ -17,8 +20,11 @@ class ClimateAutomationDecisionTest {
     private fun cfg(
         enabled: Boolean = true,
         hotOn: Boolean = true, hotT: Int = 28,
-        coldOn: Boolean = true, coldT: Int = 5
-    ) = ClimateAutomationSettings.Config(enabled, rule(hotOn, hotT), rule(coldOn, coldT))
+        coldOn: Boolean = true, coldT: Int = 5,
+        trigger: Trigger = Trigger.EVERY_READY
+    ) = ClimateAutomationSettings.Config(
+        enabled, rule(hotOn, hotT), rule(coldOn, coldT), trigger = trigger
+    )
 
     @Test fun `desactive - aucune regle`() {
         assertEquals(Outcome.NONE, ClimateAutomationDecision.evaluate(cfg(enabled = false), 35f))
@@ -60,5 +66,77 @@ class ClimateAutomationDecisionTest {
     @Test fun `seuils qui se chevauchent - chaud gagne de facon deterministe`() {
         // Configuration incohérente (chaud>=10 ET froid<=30) : 20 satisfait les deux.
         assertEquals(Outcome.HOT, ClimateAutomationDecision.evaluate(cfg(hotT = 10, coldT = 30), 20f))
+    }
+
+    // ── Mode de déclenchement (issue #121) ─────────────────────────────────
+    // Deux faits sont suivis depuis le démarrage de l application : « une température lisible a
+    // déjà été évaluée » et « une règle a déjà été appliquée ».
+
+    @Test fun `a chaque READY - toujours autorisee`() {
+        val c = cfg(trigger = Trigger.EVERY_READY)
+        assertTrue(ClimateAutomationDecision.allowed(c, evaluated = true, triggered = true))
+    }
+
+    @Test fun `une fois par demarrage - autorisee tant que rien n a ete applique`() {
+        // Seuil non atteint au démarrage : l occasion reste ouverte pour un contact ultérieur.
+        val c = cfg(trigger = Trigger.ONCE_PER_START)
+        assertTrue(ClimateAutomationDecision.allowed(c, evaluated = true, triggered = false))
+        assertFalse(ClimateAutomationDecision.allowed(c, evaluated = true, triggered = true))
+    }
+
+    @Test fun `au demarrage seulement - une seule decision meme sans declenchement`() {
+        // Le cas de l issue : rien au démarrage, puis le seuil est atteint après un arrêt.
+        val c = cfg(trigger = Trigger.START_ONLY)
+        assertTrue(ClimateAutomationDecision.allowed(c, evaluated = false, triggered = false))
+        assertFalse(ClimateAutomationDecision.allowed(c, evaluated = true, triggered = false))
+    }
+
+    // ── Priorité au profil (issue #121, journal du 2026-10-13) ──────────────
+    // Le profil actif est mémorisé d une session à l autre : au démarrage du service il désigne
+    // encore celui du trajet précédent, qui ne sera peut-être pas appliqué cette fois.
+
+    @Test fun `le profil du trajet precedent n a pas priorite`() {
+        // Aucun profil appliqué depuis le démarrage de l application : personne devant qui s effacer.
+        assertFalse(ClimateAutomationDecision.yieldsToProfile(sessionProfileWritesClimate = null))
+    }
+
+    @Test fun `le profil applique depuis le demarrage a priorite s il regle la climatisation`() {
+        assertTrue(ClimateAutomationDecision.yieldsToProfile(sessionProfileWritesClimate = true))
+        assertFalse(ClimateAutomationDecision.yieldsToProfile(sessionProfileWritesClimate = false))
+    }
+
+    @Test fun `au demarrage on attend le profil s il peut regler la climatisation`() {
+        assertTrue(ClimateAutomationDecision.waitsForStartProfile(anyProfileWritesClimate = true, appliedThisSession = false))
+    }
+
+    @Test fun `rien a attendre quand aucun profil ne regle la climatisation`() {
+        // Aucun profil ne peut avoir priorité : l automatisation décide tout de suite, comme avant.
+        assertFalse(ClimateAutomationDecision.waitsForStartProfile(anyProfileWritesClimate = false, appliedThisSession = false))
+    }
+
+    @Test fun `rien a attendre une fois un profil applique`() {
+        // Réouverture de l application en cours de trajet : le profil de la session est connu.
+        assertFalse(ClimateAutomationDecision.waitsForStartProfile(anyProfileWritesClimate = true, appliedThisSession = true))
+    }
+
+    @Test fun `seule une temperature lisible vaut decision`() {
+        assertTrue(ClimateAutomationDecision.decides(12.5f))
+        assertFalse(ClimateAutomationDecision.decides(null))
+        assertFalse(ClimateAutomationDecision.decides(Float.NaN))
+    }
+
+    @Test fun `mode par defaut - au demarrage seulement`() {
+        assertEquals(Trigger.START_ONLY, Trigger.resolve(stored = null, legacyOnce = null))
+    }
+
+    @Test fun `ancienne case reprise telle quelle`() {
+        // Cochée : une fois par démarrage. Décochée exprès : à chaque READY, comme avant.
+        assertEquals(Trigger.ONCE_PER_START, Trigger.resolve(stored = null, legacyOnce = true))
+        assertEquals(Trigger.EVERY_READY, Trigger.resolve(stored = null, legacyOnce = false))
+    }
+
+    @Test fun `le choix enregistre l emporte sur l ancienne case`() {
+        assertEquals(Trigger.EVERY_READY, Trigger.resolve(stored = "EVERY_READY", legacyOnce = true))
+        assertEquals(Trigger.START_ONLY, Trigger.resolve(stored = "illisible", legacyOnce = null))
     }
 }

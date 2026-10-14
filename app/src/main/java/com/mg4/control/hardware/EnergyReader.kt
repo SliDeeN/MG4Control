@@ -3,6 +3,7 @@ package com.mg4.control.hardware
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.EnergySnapshot
+import com.mg4.control.model.PowerIntegrator
 import com.mg4.control.model.StatsSettings
 
 /**
@@ -35,6 +36,11 @@ object EnergyReader {
     private const val PROP_CLIMATE_SINCE_START = 0x2160a1c2
     private const val PROP_ACCESSORIES_SINCE_START = 0x2160a1be
     private const val PROP_REGEN_SINCE_START = 0x2160a1c0
+    /**
+     * Compteur de l'écran d'origine, « AC and others » depuis le contact. Seul poste disponible là
+     * où les compteurs ci-dessus restent à zéro (issue #117) — et au **kWh entier** seulement.
+     */
+    private const val PROP_STOCK_AUX_SINCE_START = 0x2160a198
     private const val PROP_CHARGE_STATUS = 0x2140f409
     private const val PROP_PLUG_AC = 0x2140f43e
     private const val PROP_PLUG_DC = 0x2140f43f
@@ -77,6 +83,7 @@ object EnergyReader {
             climateSinceStartKwh = energy(PROP_CLIMATE_SINCE_START),
             accessoriesSinceStartKwh = energy(PROP_ACCESSORIES_SINCE_START),
             regenSinceStartKwh = energy(PROP_REGEN_SINCE_START),
+            auxSinceStartKwh = energy(PROP_STOCK_AUX_SINCE_START),
             charging = charging,
             chargeType = chargeType(),
             // Pas de propriété de puissance : c'est le produit, le courant étant négatif en charge.
@@ -87,6 +94,22 @@ object EnergyReader {
             outsideTempC = MG4Hardware.getOutsideTempCelsius(),
         )
     }
+
+    /**
+     * Pourcentage de batterie seul, pour l'automatisation qui le surveille en roulant : une
+     * propriété au lieu de la quinzaine que lit [read]. Mêmes garde-fous — hors de 0..100, c'est
+     * une lecture ratée, pas une valeur.
+     */
+    fun soc(): Float? = float(PROP_SOC)?.takeIf { it in 0f..100f }
+
+    /**
+     * Puissance qui sort de la batterie, en kW : positive en décharge, négative quand elle se
+     * remplit (récupération). Le signe est l'inverse de [EnergySnapshot.powerKw], pensé pour la
+     * charge. Deux lectures seulement, pour pouvoir être appelée chaque seconde en roulant.
+     * Une tension ou un courant hors de sa plage donne `null` : voir [PowerIntegrator.batteryPowerKw].
+     */
+    fun dischargeKw(): Float? =
+        PowerIntegrator.batteryPowerKw(float(PROP_PACK_VOLTAGE), float(PROP_PACK_CURRENT))
 
     /**
      * Capacité de la batterie annoncée par le véhicule, en kWh — `null` si la propriété ne répond

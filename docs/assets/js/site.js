@@ -89,8 +89,10 @@
       const v = (n) => { const i = el.querySelector('[name="' + n + '"]'); return !!(i && i.checked); };
       // Candidats dans l'ordre de MG4ControlService.applyDefaultProfileOnIgnition.
       let winner = 'none', ask = false;
+      // Option « Revenir au profil par défaut à chaque passage en READY » : le choix manuel est oublié.
+      const pre = v('auto') && v('manual') && v('back') ? L('Le choix manuel est oublié. ', 'The manual choice is forgotten. ') : '';
       if (v('auto')) {
-        if (v('manual')) winner = 'manual';
+        if (v('manual') && !v('back')) winner = 'manual';
         else if (v('temp') && !v('tempconfirm')) winner = 'temp';
         else {
           ask = v('temp') && v('tempconfirm');
@@ -114,9 +116,9 @@
         def: L('Le profil par défaut est appliqué.', 'The default profile is applied.')
       };
       if (!v('auto')) out.textContent = L('Mode Garage actif : rien n\'est appliqué au démarrage (ni profil, ni Bluetooth, ni automatisation).', 'Garage mode on: nothing is applied at start-up (no profile, Bluetooth or automation).');
-      else if (ask) out.textContent = L('La popup OUI / NON s\'affiche 8 s. OUI → profil température ; NON ou délai écoulé → on retombe sur Bluetooth puis profil par défaut (', 'The YES / NO popup is shown for 8 s. YES → temperature profile; NO or timeout → falls back to Bluetooth then default profile (') +
+      else if (ask) out.textContent = pre + L('La popup OUI / NON s\'affiche 8 s. OUI → profil température ; NON ou délai écoulé → on retombe sur Bluetooth puis profil par défaut (', 'The YES / NO popup is shown for 8 s. YES → temperature profile; NO or timeout → falls back to Bluetooth then default profile (') +
         (v('bt') ? L('ici : Bluetooth', 'here: Bluetooth') : v('def') ? L('ici : profil par défaut', 'here: default profile') : L('ici : aucun', 'here: none')) + ').';
-      else out.textContent = msg[winner];
+      else out.textContent = pre + msg[winner];
     }
   };
 

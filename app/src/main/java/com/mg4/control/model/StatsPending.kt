@@ -45,6 +45,16 @@ data class PendingTrip(
      * distinguerait pas d'une distance jamais mesurée — et l'écran annoncerait un trajet immobile.
      */
     val integrated: Boolean = false,
+    /**
+     * Énergie intégrée depuis le début du trajet (voir [EnergySnapshot.tripConsumedKwh]), telle
+     * qu'au dernier relevé. Gardée ici pour survivre à une coupure : là où les compteurs du
+     * véhicule sont muets, c'est la seule mesure d'énergie du trajet.
+     */
+    val integratedEnergyKwh: Float? = null,
+    val integratedRegenKwh: Float? = null,
+    /** Compteur d'origine « climatisation et autres », au départ et au dernier relevé. */
+    val auxStart: Float? = null,
+    val auxLast: Float? = null,
 ) {
     val averageTempC: Float? get() = moyenne(tempSum, tempCount, tempC)
 }

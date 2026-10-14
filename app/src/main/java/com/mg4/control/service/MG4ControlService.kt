@@ -1,7 +1,6 @@
 package com.mg4.control.service
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -15,15 +14,15 @@ import android.content.IntentFilter
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
-import android.view.ContextThemeWrapper
-import android.view.WindowManager
 import android.widget.Toast
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.R
 import com.mg4.control.automation.AutomationDecision
 import com.mg4.control.automation.AutomationSettings
 import com.mg4.control.automation.ClimateAutomationDecision
+import com.mg4.control.automation.ClimateAutomationRun
 import com.mg4.control.automation.ClimateAutomationSettings
 import com.mg4.control.api.ExternalApi
 import com.mg4.control.api.ExternalApiReceiver
@@ -36,21 +35,28 @@ import com.mg4.control.hardware.StatsCollector
 import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.hardware.MG4Hardware.AebMode
 import com.mg4.control.hardware.MG4Hardware.Swi68Mode
+import com.mg4.control.model.HvacPopup
 import com.mg4.control.model.RegenLevel
+import com.mg4.control.model.SeatHeat
 import com.mg4.control.model.WindowCommand
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.profile.ReadyProfilePolicy
 import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateNotifier
 import com.mg4.control.shortcut.ShortcutAction
+import com.mg4.control.shortcut.ToggleTracker
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.GarageMode
 import com.mg4.control.util.ThemeHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class MG4ControlService : Service() {
 
@@ -67,6 +73,7 @@ class MG4ControlService : Service() {
         private val DIRECT_VEHICLE_ACTIONS = setOf(
             ShortcutAction.ESC_TOGGLE, ShortcutAction.DROWSINESS_TOGGLE,
             ShortcutAction.DROWSINESS_SEN_CYCLE, ShortcutAction.HVAC_TOGGLE,
+            ShortcutAction.HVAC_AC_TOGGLE,
             ShortcutAction.HVAC_TEMP_UP, ShortcutAction.HVAC_TEMP_DOWN,
             ShortcutAction.HVAC_FAN_UP, ShortcutAction.HVAC_FAN_DOWN,
             ShortcutAction.ADAS_CYCLE,
@@ -75,11 +82,21 @@ class MG4ControlService : Service() {
             ShortcutAction.DEFROST_FRONT_TOGGLE, ShortcutAction.DEFROST_REAR_TOGGLE,
             ShortcutAction.HVAC_RECIRC_CYCLE,
             ShortcutAction.BRIGHTNESS_UP, ShortcutAction.BRIGHTNESS_DOWN,
+            ShortcutAction.AUTO_HIGH_BEAM_TOGGLE, ShortcutAction.BATTERY_HEAT_TOGGLE,
             ShortcutAction.MEDIA_NEXT, ShortcutAction.MEDIA_PREVIOUS,
             ShortcutAction.MEDIA_PLAY_PAUSE,
             ShortcutAction.VOLUME_UP, ShortcutAction.VOLUME_DOWN
         )
 
+        /**
+         * Bascules dont l'état est relu sur le véhicule à chaque appui, avec repli sur la dernière
+         * consigne là où cette lecture ne fait pas foi (voir [ToggleTracker], issue #114).
+         */
+        private val READ_TOGGLES = setOf(
+            ShortcutAction.ONE_PEDAL, ShortcutAction.ENERGY_SAVING_TOGGLE,
+            ShortcutAction.TSR_TOGGLE, ShortcutAction.SOUND_WARNING,
+            ShortcutAction.OVERSPEED_ALARM, ShortcutAction.SPEED_LIMIT_TONE
+        )
 
         /** Pas de luminosité par pression, en % — 10 crans du plancher au maximum. */
         private const val BRIGHTNESS_STEP = 10
@@ -116,11 +133,28 @@ class MG4ControlService : Service() {
          */
         @Volatile private var profileScheduled = false
 
-        /** Dernière exécution de l'automatisation clim — anti-rebond (démarrage service et
-         *  IGNITION_RUN arrivent souvent à quelques secondes d'écart : sans ça, on écraserait
-         *  un réglage que l'utilisateur vient de faire à la main entre les deux). */
-        @Volatile private var climateAutoLastRunMs = 0L
+        /**
+         * Ce que l'automatisation A/C a déjà fait depuis le démarrage de l'application : envoyé
+         * une règle (et quand — c'est l'anti-rebond), ou simplement pris une décision (température
+         * lisible, ou profil prioritaire). Au niveau du processus : survit à une recréation du
+         * service mais repart de zéro au redémarrage de l'application — donc au démarrage de la
+         * voiture, pas à un simple retour en READY. Le mode de déclenchement le consulte.
+         */
+        private val climateRun = ClimateAutomationRun()
+        /** Anti-rebond : démarrage service et IGNITION_RUN arrivent souvent à quelques secondes
+         *  d'écart, et réappliquer écraserait un réglage fait à la main entre les deux. */
         private const val CLIMATE_AUTO_DEBOUNCE_MS = 60_000L
+        /** Attente de la climatisation au démarrage à froid (issue #121) : 20 essais espacés de
+         *  500 ms, soit une dizaine de secondes avant de renoncer à l'envoi. */
+        private const val CLIMATE_READY_ATTEMPTS = 20
+        private const val CLIMATE_READY_PAUSE_MS = 500L
+        /** Attente du profil du démarrage avant d'évaluer l'automatisation A/C (issue #121) : au
+         *  démarrage à froid il arrive par le premier contact, environ 3 s après le service. Une
+         *  dizaine de secondes au plus ; sans profil appliqué d'ici là, elle décide seule. */
+        private const val CLIMATE_START_PROFILE_ATTEMPTS = 20
+        private const val CLIMATE_START_PROFILE_PAUSE_MS = 500L
+        /** Vrai pendant cette attente : [onStartCommand] est rejoué à chaque ouverture de l'application. */
+        @Volatile private var climateStartWaiting = false
 
     }
 
@@ -146,7 +180,13 @@ class MG4ControlService : Service() {
     // États des toggles en mémoire — réinitialisés à chaque démarrage du service (= redémarrage voiture)
     // Évite le bug du 1er appui : si on utilise SharedPrefs, l'état persisté peut ne pas correspondre
     // à l'état réel de la voiture après un redémarrage, causant un toggle dans le mauvais sens.
+    // Ne sert plus qu'au cycle anti-collision A/B : les autres bascules relisent le véhicule.
     private val toggleStates = mutableMapOf<String, Boolean>()
+
+    // Bascules relues sur le véhicule (READ_TOGGLES) : un suivi par action. Appuis et relectures
+    // arrivent de coroutines différentes, d'où le verrou.
+    private val toggleTrackers = mutableMapOf<ShortcutAction, ToggleTracker>()
+    private val toggleMutex = Mutex()
 
     override fun onCreate() {
         super.onCreate()
@@ -170,6 +210,15 @@ class MG4ControlService : Service() {
         WindowAutoClose.startIfEnabled(applicationContext)
         // Statistiques : ne relève rien tant que l'utilisateur n'a pas activé l'enregistrement.
         StatsCollector.startIfEnabled(applicationContext)
+        // Profil selon la batterie (issue #112) : tourne toujours, relit sa config à chaque
+        // vérification — activer l'option suffit, sans redémarrer le service.
+        com.mg4.control.automation.BatteryAutomation.start(applicationContext)
+        // Sonde lumière/position (étude luminosité auto) : lecture seule, un relevé à chaque READY.
+        com.mg4.control.hardware.LightProbe.start(applicationContext)
+        // Luminosité automatique au démarrage : relit son interrupteur à chaque READY.
+        com.mg4.control.automation.AutoBrightness.start(applicationContext)
+        // Coupure auto du chauffage de la batterie : relit son interrupteur à chaque passage.
+        com.mg4.control.automation.BatteryHeatingAutomation.start(applicationContext)
         // Vérification de mise à jour, cinq secondes après le démarrage automatique.
         //
         // Pourquoi attendre du tout : à t=0 la liaison données de la voiture n'est pas encore
@@ -289,9 +338,60 @@ class MG4ControlService : Service() {
         }
         if (handleAdvancedShortcutIntent(intent)) return START_STICKY
         if (handleExternalApiIntent(intent)) return START_STICKY
-        tryClimateAutomation("démarrage service")
+        climateAutomationAtStart()
         scheduleDefaultProfileOnce()
         return START_STICKY
+    }
+
+    /**
+     * Automatisation A/C au démarrage du service — APRÈS le profil du démarrage (issue #121).
+     *
+     * Un profil qui règle lui-même la climatisation a priorité sur elle, et ce profil n'est connu
+     * qu'une fois appliqué : par la chaîne du démarrage ([scheduleDefaultProfileOnce]) ou par le
+     * premier contact, quelques secondes plus tard. Évaluée tout de suite, l'automatisation
+     * jugeait sur le profil du trajet PRÉCÉDENT, encore mémorisé : elle s'effaçait devant un profil
+     * qui n'allait pas être appliqué, ou envoyait sa règle juste avant qu'un profil à bloc clim
+     * n'écrive par-dessus.
+     *
+     * On attend donc qu'un profil ait été appliqué, une dizaine de secondes au plus : au-delà (pas
+     * de profil par défaut, voiture pas encore en marche) elle décide seule. Rien à attendre quand
+     * aucun profil enregistré ne règle la climatisation, ni quand l'automatisation n'a rien à
+     * faire — [tryClimateAutomation] dit alors pourquoi, comme avant.
+     */
+    private fun climateAutomationAtStart() {
+        val ctx = applicationContext
+        val utile = !GarageMode.isOn(ctx) && ClimateAutomationSettings.read(ctx).enabled &&
+            MG4Hardware.hasClimateControl()
+        val attend = utile && ClimateAutomationDecision.waitsForStartProfile(
+            anyProfileWritesClimate = ProfileManager(ctx).getAll().any { it.writesClimate },
+            appliedThisSession = ActiveProfile.sessionId != null)
+        if (!attend) {
+            tryClimateAutomation("démarrage service")
+            return
+        }
+        // onStartCommand est rejoué à chaque ouverture de l'application : une seule attente à la fois.
+        if (climateStartWaiting) {
+            AppLogger.i(TAG, "Auto A/C (démarrage service) : attente du profil du démarrage déjà en cours — skip")
+            return
+        }
+        climateStartWaiting = true
+        AppLogger.i(TAG, "Auto A/C (démarrage service) : un profil enregistré règle la climatisation — " +
+            "attente du profil du démarrage")
+        CoroutineScope(Dispatchers.IO).launch {
+            val debut = System.currentTimeMillis()
+            val applique = ClimateAutomationRun.awaitReady(CLIMATE_START_PROFILE_ATTEMPTS, CLIMATE_START_PROFILE_PAUSE_MS) {
+                ActiveProfile.sessionId != null
+            }
+            val attente = System.currentTimeMillis() - debut
+            // Sur le fil principal, comme les autres déclencheurs.
+            Handler(Looper.getMainLooper()).post {
+                climateStartWaiting = false
+                AppLogger.i(TAG, "Auto A/C (démarrage service) : " +
+                    if (applique) "profil du démarrage appliqué après $attente ms"
+                    else "aucun profil appliqué après ${attente / 1000} s — l'automatisation décide seule")
+                tryClimateAutomation("démarrage service")
+            }
+        }
     }
 
     /**
@@ -444,13 +544,15 @@ class MG4ControlService : Service() {
         return when (key) {
             ExternalApi.SET_HVAC_POWER    -> flip(st.powerOn)
             ExternalApi.SET_HVAC_AC       -> flip(st.acOn)
-            ExternalApi.SET_HVAC_AUTO     -> flip(st.autoOn)
+            ExternalApi.SET_HVAC_AUTO     -> flip(if (st.reglages().enAuto) true else st.autoOn)
             ExternalApi.SET_DEFROST_FRONT -> flip(st.defrostFront)
             ExternalApi.SET_DEFROST_REAR  -> flip(st.defrostRear)
             // Bornes lues sur le véhicule, jamais codées en dur : elles varient d'un firmware
             // à l'autre, et c'est sur elles que le cycle reboucle.
             ExternalApi.SET_HVAC_TEMP     -> st.tempC?.let { step(it, st.tempMin, st.tempMax) }
-            ExternalApi.SET_HVAC_FAN      -> st.fanLevel?.let { step(it, st.fanMin, st.fanMax) }
+            // En AUTO le niveau annoncé (15) n'est pas un cran : on part du dernier réglé à la main.
+            ExternalApi.SET_HVAC_FAN      -> (st.reglages().ventilationReelle ?: st.lastManualFan)
+                ?.let { step(it, st.fanMin, st.fanMax) }
             ExternalApi.SET_HVAC_RECIRC   -> st.loopMode?.let { step(it, 0, 2) }
             else -> null
         }
@@ -781,11 +883,12 @@ class MG4ControlService : Service() {
                     AppLogger.w(TAG, "SHORTCUT siège chauffant — niveau illisible, aucune action")
                     return
                 }
-                val suivant = ExternalApi.cycleStep(actuel, 0, 3, 1)
+                // Un appui = UN cran, la commande même de la voiture. Le niveau suivant est le
+                // sien : éteint → 3 → 2 → 1 → éteint (établi sur véhicule, voir SeatHeat).
                 AppLogger.i(TAG, "SHORTCUT siège chauffant ${if (gauche) "gauche" else "droit"} " +
-                    ": $actuel → $suivant")
-                if (gauche) MG4Hardware.setSeatHeatLeft(suivant)
-                else        MG4Hardware.setSeatHeatRight(suivant)
+                    ": $actuel → ${SeatHeat.next(actuel)} (un cran)")
+                if (gauche) MG4Hardware.stepSeatHeatLeft()
+                else        MG4Hardware.stepSeatHeatRight()
             }
 
             ShortcutAction.STEERING_HEAT_TOGGLE -> {
@@ -796,6 +899,29 @@ class MG4ControlService : Service() {
                 }
                 AppLogger.i(TAG, "SHORTCUT volant chauffant : $actuel → ${!actuel}")
                 MG4Hardware.setSteeringHeat(!actuel)
+            }
+
+            ShortcutAction.AUTO_HIGH_BEAM_TOGGLE -> {
+                val actuel = MG4Hardware.isAutoHighBeamOn()
+                if (actuel == null) {
+                    AppLogger.w(TAG, "SHORTCUT feux de route auto — état illisible, aucune action")
+                    return
+                }
+                AppLogger.i(TAG, "SHORTCUT feux de route auto : $actuel → ${!actuel}")
+                MG4Hardware.setAutoHighBeam(!actuel)
+            }
+
+            ShortcutAction.BATTERY_HEAT_TOGGLE -> {
+                val actuel = MG4Hardware.isBatteryHeatingOn()
+                if (actuel == null) {
+                    AppLogger.w(TAG, "SHORTCUT chauffage batterie — état illisible, aucune action")
+                    return
+                }
+                AppLogger.i(TAG, "SHORTCUT chauffage batterie : $actuel → ${!actuel}")
+                if (MG4Hardware.setBatteryHeating(!actuel)) {
+                    // Le décompte de la coupure automatique part de l'activation même.
+                    com.mg4.control.automation.BatteryHeatingAutomation.onCommand()
+                }
             }
 
             ShortcutAction.BRIGHTNESS_UP, ShortcutAction.BRIGHTNESS_DOWN -> {
@@ -814,7 +940,7 @@ class MG4ControlService : Service() {
                 if (cible != actuel) MG4Hardware.setScreenBrightnessPercent(cible)
             }
 
-            ShortcutAction.HVAC_TOGGLE, ShortcutAction.HVAC_TEMP_UP,
+            ShortcutAction.HVAC_TOGGLE, ShortcutAction.HVAC_AC_TOGGLE, ShortcutAction.HVAC_TEMP_UP,
             ShortcutAction.HVAC_TEMP_DOWN, ShortcutAction.HVAC_FAN_UP,
             ShortcutAction.HVAC_FAN_DOWN, ShortcutAction.DEFROST_FRONT_TOGGLE,
             ShortcutAction.DEFROST_REAR_TOGGLE, ShortcutAction.HVAC_RECIRC_CYCLE -> {
@@ -835,6 +961,19 @@ class MG4ControlService : Service() {
                         AppLogger.i(TAG, "SHORTCUT clim : $actuel → ${!actuel}")
                         MG4Hardware.setClimatePower(!actuel)
                     }
+                    // Compresseur seul : la ventilation continue, sans refroidir. La commande
+                    // d'origine est une BASCULE sur les deux architectures — setClimateAc
+                    // bascule puis relit jusqu'à la cible, c'est la même voie que le bouton A/C
+                    // de la page Clim et du bloc clim des profils.
+                    ShortcutAction.HVAC_AC_TOGGLE -> {
+                        val actuel = etat.acOn
+                        if (actuel == null) {
+                            AppLogger.w(TAG, "SHORTCUT A/C ON/OFF — état illisible")
+                            return
+                        }
+                        AppLogger.i(TAG, "SHORTCUT A/C : $actuel → ${!actuel}")
+                        MG4Hardware.setClimateAc(!actuel)
+                    }
                     ShortcutAction.HVAC_TEMP_UP, ShortcutAction.HVAC_TEMP_DOWN -> {
                         val actuel = etat.tempC
                         if (actuel == null) {
@@ -853,16 +992,22 @@ class MG4ControlService : Service() {
                     // dégivrages et recirculation partagent cette lecture d'état, un `else`
                     // fourre-tout les traiterait comme des commandes de ventilation.
                     ShortcutAction.HVAC_FAN_UP, ShortcutAction.HVAC_FAN_DOWN -> {
-                        val actuel = etat.fanLevel
-                        if (actuel == null) {
-                            AppLogger.w(TAG, "SHORTCUT clim ventilation — niveau illisible")
+                        val pas = if (action == ShortcutAction.HVAC_FAN_UP) 1 else -1
+                        // Même règle que le pop-up HVAC et que l'écran d'origine : en AUTO la
+                        // voiture annonce 15, qui n'est pas un cran. En partir écrivait le MAXIMUM
+                        // même pour un « moins » ; on repart du dernier niveau réglé à la main, et
+                        // cette écriture fait sortir d'AUTO.
+                        val reglages = etat.reglages()
+                        val cible = HvacPopup.pasVentilation(reglages, pas)
+                        if (cible == null) {
+                            AppLogger.w(TAG, "SHORTCUT clim ventilation — rien à écrire " +
+                                "(niveau ${etat.fanLevel}, bornes ${etat.fanMin}..${etat.fanMax})")
                             return
                         }
-                        val pas = if (action == ShortcutAction.HVAC_FAN_UP) 1 else -1
-                        val cible = (actuel + pas).coerceIn(etat.fanMin, etat.fanMax)
-                        AppLogger.i(TAG, "SHORTCUT clim ventilation : $actuel → $cible " +
+                        AppLogger.i(TAG, "SHORTCUT clim ventilation : " +
+                            (if (reglages.enAuto) "AUTO" else etat.fanLevel.toString()) + " → $cible " +
                             "(bornes ${etat.fanMin}..${etat.fanMax})")
-                        if (cible != actuel) MG4Hardware.setClimateFan(cible)
+                        MG4Hardware.setClimateFan(cible)
                     }
                     ShortcutAction.DEFROST_FRONT_TOGGLE, ShortcutAction.DEFROST_REAR_TOGGLE -> {
                         val avant  = action == ShortcutAction.DEFROST_FRONT_TOGGLE
@@ -909,6 +1054,12 @@ class MG4ControlService : Service() {
             return
         }
 
+        // HVAC_POPUP : même famille — un second appui referme la fenêtre.
+        if (action == ShortcutAction.HVAC_POPUP) {
+            HvacPopupOverlay.toggle(this@MG4ControlService)
+            return
+        }
+
         // APPLY_PROFILE : action directe — pas de toggle d'état, chaque pression applique le profil
         if (action == ShortcutAction.APPLY_PROFILE) {
             val profileId = prefs.getString("shortcut_${pressKey}_profile_id", null) ?: return
@@ -922,6 +1073,13 @@ class MG4ControlService : Service() {
                     ProfileApplier.apply(profile)
                 }
             }
+            return
+        }
+
+        // PROFILE_CYCLE : profil suivant du cycle composé dans l'onglet Raccourcis. Annonce,
+        // délai contre les appuis rapprochés et application sont dans [ProfileCycleShortcut].
+        if (action == ShortcutAction.PROFILE_CYCLE) {
+            ProfileCycleShortcut.press(this@MG4ControlService)
             return
         }
 
@@ -944,7 +1102,7 @@ class MG4ControlService : Service() {
 
         // VEHICLE_POWER_OFF : check P → confirmation (overlay) → extinction. Sinon message "en P".
         if (action == ShortcutAction.VEHICLE_POWER_OFF) {
-            showVehiclePowerOffConfirm()
+            VehiclePowerOffOverlay.demander(this@MG4ControlService, "raccourci")
             return
         }
 
@@ -957,7 +1115,13 @@ class MG4ControlService : Service() {
             return
         }
 
-        // Pour tous les autres toggles : état en mémoire (réinitialisé au démarrage du service)
+        // Bascules ON/OFF : l'état à inverser est relu sur le véhicule (issue #114).
+        if (action in READ_TOGGLES) {
+            CoroutineScope(Dispatchers.IO).launch { executeReadToggle(action) }
+            return
+        }
+
+        // Reste le cycle anti-collision A/B : état en mémoire (réinitialisé au démarrage du service).
         // Évite le bug du 1er appui causé par un état SharedPrefs désynchronisé après redémarrage.
         val newState = !(toggleStates[action.name] ?: false)
         toggleStates[action.name] = newState
@@ -966,16 +1130,6 @@ class MG4ControlService : Service() {
 
         CoroutineScope(Dispatchers.IO).launch {
             when (action) {
-                ShortcutAction.ONE_PEDAL -> {
-                    if (newState) {
-                        MG4Hardware.setRegenLevel(RegenLevel.ONE_PEDAL)
-                    } else {
-                        val fallback = RegenLevel.fromValue(
-                            prefs.getInt("shortcut_one_pedal_fallback", RegenLevel.HIGH.value)
-                        )
-                        MG4Hardware.setRegenLevel(fallback)
-                    }
-                }
                 ShortcutAction.AEB_CYCLE -> {
                     val mode = if (newState)
                         prefs.getInt("shortcut_aeb_mode_a", AebMode.ALARM)
@@ -983,11 +1137,6 @@ class MG4ControlService : Service() {
                         prefs.getInt("shortcut_aeb_mode_b", AebMode.ALARM_BRAKE)
                     MG4Hardware.setAebMode(mode)
                 }
-                ShortcutAction.SOUND_WARNING    -> MG4Hardware.setSoundWarning(newState)
-                ShortcutAction.OVERSPEED_ALARM  -> MG4Hardware.setOverspeedAlarm(newState)
-                ShortcutAction.SPEED_LIMIT_TONE -> MG4Hardware.setSpeedLimitTone(newState)
-                ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.setEnergySavingMode(newState)
-                ShortcutAction.TSR_TOGGLE           -> MG4Hardware.setTsrMode(newState)
                 ShortcutAction.OPEN_APP -> {
                     val intent = Intent(this@MG4ControlService, MainActivity::class.java).apply {
                         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -1010,33 +1159,57 @@ class MG4ControlService : Service() {
     }
 
     /**
-     * Raccourci « Éteindre la voiture » : vérifie d'abord la position P (lecture gear), puis affiche
-     * le MÊME dialogue de confirmation que les Réglages, en fenêtre overlay (déclenché depuis le
-     * service). Si pas en P → Toast. `vehiclePowerOff()` re-vérifie le P au moment de l'envoi.
+     * Bascule ON/OFF dont l'état est relu sur le véhicule. Sans cette lecture, le premier appui
+     * réactivait un One Pedal que le profil venait d'activer au démarrage, et seul le second le
+     * coupait (issue #114).
+     *
+     * [ToggleTracker] décide de l'état à inverser : la lecture quand elle fait foi, la dernière
+     * consigne sinon — ce qui redonne l'ancienne alternance sur un firmware où l'état ne se lit
+     * pas. La relecture, [ToggleTracker.SETTLE_MS] plus tard, lui apprend si la lecture suit.
      */
-    private fun showVehiclePowerOffConfirm() {
-        CoroutineScope(Dispatchers.IO).launch {
-            val inPark = MG4Hardware.isVehicleInPark()
-            Handler(Looper.getMainLooper()).post {
-                if (inPark == true) {
-                    val themed = ContextThemeWrapper(LocaleHelper.applyLocale(this@MG4ControlService), R.style.Theme_MG4Control)
-                    val dialog = AlertDialog.Builder(themed)
-                        .setTitle(R.string.vehicle_power_dialog_title)
-                        .setMessage(R.string.vehicle_power_dialog_msg)
-                        .setNegativeButton(R.string.vehicle_power_dialog_cancel, null)
-                        .setPositiveButton(R.string.vehicle_power_dialog_confirm) { _, _ ->
-                            CoroutineScope(Dispatchers.IO).launch {
-                                val ok = MG4Hardware.vehiclePowerOff()
-                                AppLogger.i(TAG, "SHORTCUT VEHICLE_POWER_OFF confirmé → $ok")
-                            }
-                        }
-                        .create()
-                    dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-                    dialog.show()
-                } else {
-                    Toast.makeText(this@MG4ControlService, R.string.vehicle_power_need_park, Toast.LENGTH_LONG).show()
-                }
+    private suspend fun executeReadToggle(action: ShortcutAction) {
+        val jeton = toggleMutex.withLock {
+            val suivi = toggleTrackers.getOrPut(action) { ToggleTracker() }
+            val lu = readToggle(action)
+            val maintenant = SystemClock.elapsedRealtime()
+            val cible = !suivi.current(lu, maintenant)
+            AppLogger.i(TAG, "SHORTCUT ${action.name} : lu=${lu ?: "illisible"} → ${if (cible) "ON" else "OFF"}")
+            writeToggle(action, cible)
+            suivi.onCommand(cible, maintenant)
+        }
+        delay(ToggleTracker.SETTLE_MS)
+        toggleMutex.withLock { toggleTrackers[action]?.onReadBack(jeton, readToggle(action)) }
+    }
+
+    /** État lu sur le véhicule, `null` s'il est illisible (ou si la lecture échoue). */
+    private fun readToggle(action: ShortcutAction): Boolean? = runCatching {
+        when (action) {
+            ShortcutAction.ONE_PEDAL -> MG4Hardware.getRegenLevel()?.let { it == RegenLevel.ONE_PEDAL }
+            ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.isEnergySavingOn()
+            ShortcutAction.TSR_TOGGLE           -> MG4Hardware.isTsrOn()
+            ShortcutAction.SOUND_WARNING        -> MG4Hardware.isSoundWarningOn()
+            ShortcutAction.OVERSPEED_ALARM      -> MG4Hardware.isOverspeedAlarmOn()
+            ShortcutAction.SPEED_LIMIT_TONE     -> MG4Hardware.isSpeedLimitToneOn()
+            else                                -> null
+        }
+    }.getOrNull()
+
+    private fun writeToggle(action: ShortcutAction, on: Boolean) {
+        when (action) {
+            ShortcutAction.ONE_PEDAL -> {
+                // One Pedal coupé : retour au niveau de régénération choisi dans les Raccourcis.
+                val niveau = if (on) RegenLevel.ONE_PEDAL else RegenLevel.fromValue(
+                    getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
+                        .getInt("shortcut_one_pedal_fallback", RegenLevel.HIGH.value)
+                )
+                MG4Hardware.setRegenLevel(niveau)
             }
+            ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.setEnergySavingMode(on)
+            ShortcutAction.TSR_TOGGLE           -> MG4Hardware.setTsrMode(on)
+            ShortcutAction.SOUND_WARNING        -> MG4Hardware.setSoundWarning(on)
+            ShortcutAction.OVERSPEED_ALARM      -> MG4Hardware.setOverspeedAlarm(on)
+            ShortcutAction.SPEED_LIMIT_TONE     -> MG4Hardware.setSpeedLimitTone(on)
+            else -> {}
         }
     }
 
@@ -1278,6 +1451,9 @@ class MG4ControlService : Service() {
      *
      * Anti-rebond [CLIMATE_AUTO_DEBOUNCE_MS] : démarrage service et IGNITION_RUN se suivent de
      * près, et réappliquer écraserait un réglage manuel fait entre les deux.
+     *
+     * Mode de déclenchement ([ClimateAutomationSettings.Trigger]) : le même souci, étendu à tout
+     * le temps où l'application tourne. Par défaut, une seule décision par démarrage de la voiture.
      */
     private fun tryClimateAutomation(origin: String) {
         val ctx = applicationContext
@@ -1296,21 +1472,36 @@ class MG4ControlService : Service() {
             AppLogger.i(TAG, "Auto A/C ($origin) : clim non pilotable sur ce firmware")
             return
         }
+        // Mode de déclenchement : une décision déjà prise depuis le démarrage de l'application
+        // ferme la porte, selon le mode choisi. Avant tout le reste : une fois la porte fermée,
+        // ni le profil ni la température n'ont plus à être consultés.
+        if (!ClimateAutomationDecision.allowed(cfg, climateRun.evaluated, climateRun.triggered)) {
+            AppLogger.i(TAG, "Auto A/C ($origin) : mode ${cfg.trigger}, décision déjà prise depuis le " +
+                "démarrage de l'application (évaluée=${climateRun.evaluated}, appliquée=" +
+                "${climateRun.triggered}) — rien n'est appliqué")
+            return
+        }
         // LE PROFIL EST PRIORITAIRE. S'il porte son propre bloc clim, l'automatisation n'a rien
         // à dire : sans cette règle les deux s'écriraient dessus au contact, dans un ordre que
         // rien ne garantit, et le résultat dépendrait de qui finit en dernier.
         //
-        // Le profil actif est renseigné DÈS L'ENTRÉE de ProfileApplier.apply(), avant même les
-        // écritures véhicule : quand cette vérification a lieu, il désigne bien le profil du
-        // cycle en cours.
-        val profilActif = ActiveProfile.id(ctx)?.let { ProfileManager(ctx).getById(it) }
-        if (profilActif?.hvacEnabled == true) {
+        // Seul compte un profil appliqué DEPUIS le démarrage de l'application
+        // ([ActiveProfile.sessionId]) : le profil actif mémorisé désigne, au démarrage du service,
+        // celui du trajet précédent — qui ne sera peut-être pas appliqué cette fois (issue #121).
+        // Il est renseigné DÈS L'ENTRÉE de ProfileApplier.apply(), avant même les écritures
+        // véhicule : au contact, où le profil est appliqué juste avant, il désigne bien le profil
+        // du cycle en cours ; au démarrage du service, [climateAutomationAtStart] l'attend.
+        val profilActif = ActiveProfile.sessionId?.let { ProfileManager(ctx).getById(it) }
+        // writesClimate et non hvacEnabled : un profil dont la catégorie Confort est coupée
+        // n'écrit pas sa climatisation, il n'a donc rien décidé.
+        if (profilActif != null && ClimateAutomationDecision.yieldsToProfile(profilActif.writesClimate)) {
             AppLogger.i(TAG, "Auto A/C ($origin) : le profil actif '${profilActif.name}' porte " +
                 "sa propre climatisation — priorité au profil")
+            // Le profil a décidé de la climatisation pour ce démarrage : c'est une décision.
+            climateRun.decidedNothing()
             return
         }
-        val since = System.currentTimeMillis() - climateAutoLastRunMs
-        if (climateAutoLastRunMs != 0L && since < CLIMATE_AUTO_DEBOUNCE_MS) {
+        climateRun.debouncedFor(System.currentTimeMillis(), CLIMATE_AUTO_DEBOUNCE_MS)?.let { since ->
             AppLogger.i(TAG, "Auto A/C ($origin) : déjà appliquée il y a ${since / 1000}s — skip")
             return
         }
@@ -1323,20 +1514,52 @@ class MG4ControlService : Service() {
             val rule = when (outcome) {
                 ClimateAutomationDecision.Outcome.HOT  -> cfg.hot
                 ClimateAutomationDecision.Outcome.COLD -> cfg.cold
-                ClimateAutomationDecision.Outcome.NONE -> return@whenKatman1Ready
+                ClimateAutomationDecision.Outcome.NONE -> {
+                    // Température lisible sans seuil atteint : c'est une décision, quel que soit
+                    // le mode (en changer ensuite prend effet tout de suite). Illisible, elle ne
+                    // dit rien : l'occasion du démarrage reste entière.
+                    if (ClimateAutomationDecision.decides(temp)) climateRun.decidedNothing()
+                    return@whenKatman1Ready
+                }
             }
-            climateAutoLastRunMs = System.currentTimeMillis()
-            // applyClimatePreset enchaîne des bascules (plusieurs secondes) → jamais sur le main thread.
+            if (!climateRun.begin()) {
+                AppLogger.i(TAG, "Auto A/C ($origin) : un envoi est déjà en cours — skip")
+                return@whenKatman1Ready
+            }
+            // L'attente puis applyClimatePreset (des bascules, plusieurs secondes) → jamais sur le main thread.
             CoroutineScope(Dispatchers.IO).launch {
-                val ok = MG4Hardware.applyClimatePreset(
-                    targetTemp   = rule.targetTemp,
-                    fanLevel     = rule.fanLevel,
-                    defrostFront = rule.defrostFront,
-                    defrostRear  = rule.defrostRear,
-                    autoMode     = rule.autoMode,
-                    loopMode     = rule.loopMode
-                )
-                AppLogger.i(TAG, "Auto A/C ($origin) : règle $outcome appliquée — ok=$ok")
+                // La décision n'est notée qu'à la fin, et seulement si l'envoi a pu partir : un
+                // envoi abandonné ne doit consommer ni l'occasion du démarrage ni l'anti-rebond.
+                var sent = false
+                try {
+                    // Démarrage à froid : la clim peut n'être joignable qu'un instant après
+                    // CarPropertyManager (voie carapi des firmwares A9). On l'attend.
+                    val debut = System.currentTimeMillis()
+                    val joignable = ClimateAutomationRun.awaitReady(CLIMATE_READY_ATTEMPTS, CLIMATE_READY_PAUSE_MS) {
+                        MG4Hardware.isClimateReachable()
+                    }
+                    val attente = System.currentTimeMillis() - debut
+                    if (!joignable) {
+                        AppLogger.w(TAG, "Auto A/C ($origin) : climatisation injoignable après ${attente / 1000} s — " +
+                            "règle $outcome NON envoyée, nouvel essai au prochain déclenchement")
+                    } else {
+                        if (attente >= CLIMATE_READY_PAUSE_MS) {
+                            AppLogger.i(TAG, "Auto A/C ($origin) : climatisation joignable après $attente ms d'attente")
+                        }
+                        sent = true
+                        val ok = MG4Hardware.applyClimatePreset(
+                            targetTemp   = rule.targetTemp,
+                            fanLevel     = rule.fanLevel,
+                            defrostFront = rule.defrostFront,
+                            defrostRear  = rule.defrostRear,
+                            autoMode     = rule.autoMode,
+                            loopMode     = rule.loopMode
+                        )
+                        AppLogger.i(TAG, "Auto A/C ($origin) : règle $outcome appliquée — ok=$ok")
+                    }
+                } finally {
+                    climateRun.end(sent, System.currentTimeMillis())
+                }
             }
         }
     }
@@ -1354,8 +1577,15 @@ class MG4ControlService : Service() {
         val pm = ProfileManager(applicationContext)
 
         // Choix manuel récent (popup volant / app) → prioritaire sur BT et défaut.
-        // L'utilisateur a explicitement sélectionné un profil depuis le démarrage : on le respecte.
-        val manualId = ProfileApplier.lastManualProfileId
+        // L'utilisateur a explicitement sélectionné un profil depuis le démarrage : on le respecte,
+        // SAUF s'il a demandé à revenir au profil par défaut à chaque passage en READY
+        // ([ReadyProfilePolicy]) : le choix est alors oublié et la chaîne ci-dessous décide.
+        val retourDefaut = ReadyProfilePolicy.isEnabled(this)
+        if (ReadyProfilePolicy.forgetsManual(ProfileApplier.lastManualProfileId, retourDefaut)) {
+            AppLogger.i(TAG, "IGNITION → choix manuel oublié (option « revenir au profil par défaut »)")
+            ProfileApplier.lastManualProfileId = null
+        }
+        val manualId = ReadyProfilePolicy.manualToReapply(ProfileApplier.lastManualProfileId, retourDefaut)
         if (manualId != null) {
             val manualProfile = pm.getById(manualId)
             if (manualProfile != null) {

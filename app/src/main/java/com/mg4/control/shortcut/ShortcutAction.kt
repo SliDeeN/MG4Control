@@ -55,10 +55,33 @@ enum class ShortcutAction(val id: Int) {
     // des quatre vitres. La voiture ne renvoyant rien sur leur position (hors vitre conducteur),
     // une bascule mémorisée n'aurait rien à quoi se raccrocher.
     WINDOWS_OPEN_ALL(36),
-    WINDOWS_CLOSE_ALL(37);
+    WINDOWS_CLOSE_ALL(37),
+    HVAC_AC_TOGGLE(38),
+
+    // Éclairage : famille « lue puis écrite », le réglage se change aussi depuis l'écran d'origine.
+    AUTO_HIGH_BEAM_TOGGLE(39),
+
+    // Batterie : « lue puis écrite » aussi — l'écran d'origine et la fenêtre « température basse »
+    // de SystemUI l'activent sans nous.
+    BATTERY_HEAT_TOGGLE(40),
+
+    // Pop-up HVAC (issues #120 et #125) : réglage rapide de la clim au joystick droit. Comme
+    // PROFILE_PICKER, l'action n'écrit rien elle-même — elle ouvre la fenêtre, ou la referme.
+    HVAC_POPUP(41),
+
+    // Cycle de profils : applique le profil suivant d'une séquence composée par l'utilisateur
+    // (voir ProfileCycle). Le profil visé dépend du profil actif, pas d'un état mémorisé ici.
+    PROFILE_CYCLE(42);
 
     companion object {
-        fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: NONE
+        /**
+         * Identifiants retirés, mais peut-être encore écrits dans les préférences d'une voiture.
+         * 43 : le pop-up HVAC « nouveau design » de l'essai d'octobre 2026, devenu LE pop-up HVAC —
+         * un raccourci qui le porte doit continuer de l'ouvrir. Ne pas réattribuer ces numéros.
+         */
+        private val RETIRES = mapOf(43 to HVAC_POPUP)
+
+        fun fromId(id: Int) = entries.firstOrNull { it.id == id } ?: RETIRES[id] ?: NONE
     }
 }
 

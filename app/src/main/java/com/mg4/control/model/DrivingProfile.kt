@@ -100,6 +100,26 @@ data class DrivingProfile(
      * rend pour un profil enregistré avant l'ajout du champ.
      */
     val hvacAirFlow: Int? = null,
+    /**
+     * Feux de route automatiques. `null` = le profil n'y touche pas : interrupteur de l'éditeur
+     * sur OFF, et c'est aussi ce que Gson rend pour un profil enregistré avant la fonctionnalité.
+     * Un seul champ suffit, contrairement aux chauffages : la valeur n'existe que si elle s'applique.
+     */
+    val autoHighBeam: Boolean? = null,
+    // ── Catégories prises en compte ──────────────────────────────────────────
+    //
+    // Interrupteur général de chaque page de l'éditeur (Conduite, Sécurité, Confort). Coupée,
+    // la catégorie n'est PAS appliquée : le profil n'y écrit rien, ni « éteint » ni autre chose,
+    // et la voiture garde ses réglages. Les valeurs de la page restent enregistrées, pour les
+    // retrouver en la réactivant.
+    //
+    // ⚠️ NULLABLES À DESSEIN, comme les chauffages : Gson n'appelle pas le constructeur Kotlin,
+    // donc un `Boolean = true` rendrait `false` pour tout profil déjà enregistré, qui cesserait
+    // d'un coup de s'appliquer. `null` = profil antérieur à la fonction = catégorie active,
+    // via les accesseurs ci-dessous.
+    val driveEnabled: Boolean? = null,
+    val safetyEnabled: Boolean? = null,
+    val comfortEnabled: Boolean? = null,
     // [BT-PROFILES] MAC de l'appareil Bluetooth associé à ce profil (null = aucun)
     val btDeviceMac: String? = null
 ) {
@@ -116,4 +136,22 @@ data class DrivingProfile(
     val appliesDrowsiness: Boolean get() = drowsinessEnabled ?: true
     /** 2 = Standard. Valeur littérale : le modèle ne doit pas dépendre de la couche matérielle. */
     val appliesDrowsinessSensitivity: Int get() = drowsinessSensitivity ?: 2
+
+    // ── Catégories ───────────────────────────────────────────────────────────
+    /** Page Conduite prise en compte ? (profil d'avant la fonction → oui, comportement inchangé) */
+    val appliesDrive: Boolean get() = driveEnabled ?: true
+    /** Page Sécurité prise en compte ? (idem) */
+    val appliesSafety: Boolean get() = safetyEnabled ?: true
+    /** Page Confort prise en compte ? (idem) */
+    val appliesComfort: Boolean get() = comfortEnabled ?: true
+
+    // Ce qui part RÉELLEMENT vers la voiture pour la page Confort, dont chaque réglage a déjà
+    // son propre interrupteur : il faut la catégorie ET l'interrupteur. Les `applies…` plus
+    // haut restent l'état de l'interrupteur seul — c'est eux que l'éditeur relit, sans quoi
+    // couper la catégorie décocherait tout à l'enregistrement suivant.
+    val writesSteeringHeat: Boolean get() = appliesComfort && appliesSteeringHeat
+    val writesSeatHeat: Boolean get() = appliesComfort && appliesSeatHeat
+    val writesClimate: Boolean get() = appliesComfort && hvacEnabled
+    /** Consigne des feux de route automatiques, ou `null` = le profil n'y touche pas. */
+    val writesAutoHighBeam: Boolean? get() = if (appliesComfort) autoHighBeam else null
 }

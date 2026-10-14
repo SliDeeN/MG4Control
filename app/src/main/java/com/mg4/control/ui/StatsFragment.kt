@@ -1,8 +1,8 @@
 package com.mg4.control.ui
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.res.ColorStateList
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.os.Bundle
 import android.text.InputType
@@ -11,8 +11,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -22,6 +26,7 @@ import com.mg4.control.hardware.StatsCollector
 import com.mg4.control.model.ChargeSession
 import com.mg4.control.model.ChargeTimes
 import com.mg4.control.model.ChargeType
+import com.mg4.control.model.MoneyFormat
 import com.mg4.control.model.StatsHistory
 import com.mg4.control.model.StatsSettings
 import com.mg4.control.model.StatsSummary
@@ -89,6 +94,23 @@ class StatsFragment : Fragment() {
         }
         view.findViewById<MaterialButton>(R.id.btn_stats_clear).setOnClickListener { confirmClear() }
 
+        view.findViewById<Switch>(R.id.switch_stats_skip_short).apply {
+            isChecked = store.settings().skipShortTrips
+            setOnCheckedChangeListener { _, on ->
+                store.saveSettings(store.settings().copy(skipShortTrips = on))
+                render()
+            }
+        }
+        bindBattery(view)
+        // Un menu ne permet pas de « choisir » la valeur déjà sélectionnée : le bandeau offre donc
+        // les deux gestes, confirmer la batterie affichée ou aller la changer.
+        view.findViewById<MaterialButton>(R.id.btn_stats_battery_ok).setOnClickListener {
+            store.markCapacityUserSet()
+            render()
+        }
+        view.findViewById<MaterialButton>(R.id.btn_stats_battery_change)
+            .setOnClickListener { showBatterySetting() }
+
         render()
     }
 
@@ -128,6 +150,12 @@ class StatsFragment : Fragment() {
             if (settings.enabled) View.VISIBLE else View.GONE
         v.findViewById<TextView>(R.id.stats_disabled_note).visibility =
             if (settings.enabled) View.GONE else View.VISIBLE
+        // L'énergie d'une recharge se déduit du pourcentage et de la batterie : tant que celle-ci
+        // n'a été ni choisie ni confirmée, l'onglet Recharge le rappelle.
+        v.findViewById<View>(R.id.stats_battery_banner).visibility =
+            if (settings.enabled && !store.capacityIsUserSet()) View.VISIBLE else View.GONE
+        v.findViewById<TextView>(R.id.stats_battery_banner_text).text =
+            getString(R.string.stats_battery_banner, "${settings.battery.nominalKwh} kWh")
 
         val trips = filtered(history.trips.sortedByDescending { it.endMs }) { it.endMs }
         val charges = filtered(history.charges.sortedByDescending { it.endMs }) { it.endMs }
@@ -136,6 +164,51 @@ class StatsFragment : Fragment() {
         renderGeneral(v, settings, summary, history)
         renderTrips(v, settings, summary, trips)
         renderCharges(v, settings, summary, charges)
+    }
+
+    /** Menu des trois batteries. En choisir une recalcule aussitôt les recharges enregistrées. */
+    private fun bindBattery(view: View) {
+        val batteries = StatsSettings.Battery.entries
+        val menu = view.findViewById<Spinner>(R.id.spinner_stats_battery)
+        menu.adapter = ArrayAdapter(
+            view.context, android.R.layout.simple_spinner_item,
+            batteries.map { getString(R.string.stats_battery_option, it.nominalKwh, fmt(it.usableKwh), it.chemistry) }
+        ).apply { setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
+        menu.setSelection(store.settings().battery.ordinal)
+        menu.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, item: View?, position: Int, id: Long) {
+                val choisie = batteries[position]
+                // Android appelle aussi cet écouteur à la mise en place du menu : seul un vrai
+                // changement compte.
+                if (choisie == store.settings().battery) return
+                store.saveSettings(store.settings().copy(capacityKwh = choisie.usableKwh))
+                store.markCapacityUserSet()
+                store.recalculateCharges(choisie.usableKwh)
+                render()
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+    }
+
+    /** Depuis le bandeau de l'onglet Recharge : mène au réglage, là où il se trouve. */
+    private fun showBatterySetting() {
+        page = PAGE_GENERAL
+        render()
+        val v = view ?: return
+        val scroll = v.findViewById<ScrollView>(R.id.scroll_stats)
+        val carte = v.findViewById<View>(R.id.card_stats_battery)
+        scroll.post {
+            val zone = Rect()
+            carte.getDrawingRect(zone)
+            scroll.offsetDescendantRectToMyCoords(carte, zone)
+            scroll.smoothScrollTo(0, zone.top)
+        }
+    }
+
+    private fun setEnabledDeep(view: View, enabled: Boolean) {
+        view.isEnabled = enabled
+        if (view is ViewGroup) for (i in 0 until view.childCount) setEnabledDeep(view.getChildAt(i), enabled)
     }
 
     private fun <T> filtered(items: List<T>, stamp: (T) -> Long): List<T> {
@@ -160,8 +233,11 @@ class StatsFragment : Fragment() {
                 (conso(sum.consumptionPer100, sum.consumptionApproximate) ?: "—"),
             getString(R.string.stats_tile_speed) to
                 (sum.averageSpeedKmh?.let { "${it.toInt()} km/h" } ?: "—"),
-            getString(R.string.stats_tile_energy) to kwh(sum.energyKwh),
-            getString(R.string.stats_tile_regen) to kwh(sum.regenKwh),
+            // Aucun trajet mesuré sur la période : un tiret, pas un zéro (issue #117).
+            getString(R.string.stats_tile_energy) to
+                (if (sum.energyUnknown) "—" else kwh(sum.energyKwh)),
+            getString(R.string.stats_tile_regen) to
+                (if (sum.energyUnknown) "—" else kwh(sum.regenKwh)),
             getString(R.string.stats_tile_charged) to kwh(sum.chargedKwh),
             getString(R.string.stats_tile_cost) to money(sum.drivingCost, s),
             getString(R.string.stats_tile_cost_per100) to money(sum.costPer100, s),
@@ -182,14 +258,26 @@ class StatsFragment : Fragment() {
                 { fmt3(store.settings().priceDc) }) { value ->
                 store.saveSettings(store.settings().copy(priceDc = StatsSettings.clampPrice(value)))
             })
-            prices.addView(numberRow(ctx, getString(R.string.stats_capacity),
-                { fmt(store.settings().capacityKwh) }) { value ->
-                store.saveSettings(store.settings().copy(capacityKwh = StatsSettings.clampCapacity(value)))
-                store.markCapacityUserSet()
+            v.findViewById<LinearLayout>(R.id.stats_min_trip_row).addView(numberRow(ctx,
+                getString(R.string.stats_min_trip_label), { fmt(store.settings().minTripKm) }) { value ->
+                store.saveSettings(store.settings().copy(minTripKm = StatsSettings.clampMinTrip(value)))
             })
         } else {
             // Un champ en cours de saisie garde ce que l'utilisateur est en train d'écrire.
             priceFields.forEach { (champ, valeur) -> if (!champ.hasFocus()) champ.setText(valeur()) }
+        }
+
+        // Sans le filtre, la distance minimale ne sert à rien : grisée, comme les réglages d'une
+        // automatisation coupée.
+        v.findViewById<Switch>(R.id.switch_stats_skip_short).let { sw ->
+            if (sw.isChecked != s.skipShortTrips) sw.isChecked = s.skipShortTrips
+        }
+        v.findViewById<LinearLayout>(R.id.stats_min_trip_row).let { ligne ->
+            ligne.alpha = if (s.skipShortTrips) 1f else 0.4f
+            setEnabledDeep(ligne, s.skipShortTrips)
+        }
+        v.findViewById<Spinner>(R.id.spinner_stats_battery).let { menu ->
+            if (menu.selectedItemPosition != s.battery.ordinal) menu.setSelection(s.battery.ordinal)
         }
 
         val retention = v.findViewById<LinearLayout>(R.id.stats_retention_row)
@@ -212,8 +300,8 @@ class StatsFragment : Fragment() {
      * l'écran. Sans aucune charge enregistrée, on retombe sur le tarif alternatif, qui est une
      * estimation et non un relevé.
      */
-    private fun tripCost(trip: Trip, sum: StatsSummary, s: StatsSettings): Float =
-        trip.netEnergyKwh * (sum.averagePricePerKwh ?: s.priceAc)
+    private fun tripCost(trip: Trip, sum: StatsSummary, s: StatsSettings): Float? =
+        if (trip.energyKnown) trip.netEnergyKwh * (sum.averagePricePerKwh ?: s.priceAc) else null
 
     private fun renderTrips(v: View, s: StatsSettings, sum: StatsSummary, trips: List<Trip>) {
         val ctx = v.context
@@ -245,7 +333,7 @@ class StatsFragment : Fragment() {
                 value1 = conso(trip.consumptionPer100, trip.consumptionApproximate) ?: "—",
                 value2 = listOfNotNull(
                     trip.averageSpeedKmh?.let { "${it.toInt()} km/h" },
-                    kwh(trip.netEnergyKwh),
+                    kwh(trip.netEnergyKwh).takeIf { trip.energyKnown },
                 ).joinToString(" · "),
                 onClick = { expanded = if (expanded == trip.startMs) null else trip.startMs; render() }))
             if (expanded == trip.startMs) list.addView(tripDetail(ctx, trip))
@@ -305,11 +393,27 @@ class StatsFragment : Fragment() {
     //  Détails
     // ═════════════════════════════════════════════════════════════════════════
 
-    private fun tripDetail(ctx: Context, trip: Trip): View = detailBox(ctx, listOfNotNull(
-        // L'énergie du moteur n'est pas publiée : c'est le total moins les postes annexes.
-        trip.motorKwh?.let { getString(R.string.stats_detail_motor) to kwh(it) },
+    private fun tripDetail(ctx: Context, trip: Trip): View = detailBox(ctx, tripEnergyLines(trip) + listOfNotNull(
+        soc(trip.socStart, trip.socEnd)?.let { getString(R.string.stats_detail_battery) to it },
+        trip.outsideTempC?.let { getString(R.string.stats_detail_temp) to "${fmt(it)} °C" },
+    ))
+
+    private fun tripEnergyLines(trip: Trip): List<Pair<String, String>> = if (!trip.energyKnown) listOf(
+        // Ni total ni poste à détailler : des lignes à 0,0 kWh passeraient pour des mesures.
+        getString(R.string.stats_detail_consumption) to getString(R.string.stats_detail_energy_unknown),
+    ) else listOfNotNull(
+        // Compteurs du véhicule muets (issue #117) : l'énergie est calculée, et l'écran le dit.
+        if (trip.energyIntegrated)
+            getString(R.string.stats_detail_origin) to getString(R.string.stats_detail_origin_integrated)
+        else null,
+        // L'énergie du moteur n'est pas publiée : c'est le total moins les postes annexes. Sur un
+        // trajet calculé, le poste annexe est au kWh entier : le moteur ne peut pas être plus fin.
+        trip.motorKwh?.let {
+            getString(R.string.stats_detail_motor) to (if (trip.energyIntegrated) kwhEntier(it) else kwh(it))
+        },
         trip.climateKwh?.let { getString(R.string.stats_detail_climate) to kwh(it) },
         trip.accessoriesKwh?.let { getString(R.string.stats_detail_accessories) to kwh(it) },
+        trip.auxiliaryKwh?.let { getString(R.string.stats_detail_auxiliary) to kwhEntier(it) },
         // Signe négatif : dans un détail de consommation, la régénération RETRANCHE. Moteur +
         // climatisation + accessoires − récupération donne bien le total affiché sur la ligne.
         trip.regenKwh?.let { getString(R.string.stats_detail_regen) to "− ${kwh(it)}" },
@@ -317,9 +421,7 @@ class StatsFragment : Fragment() {
         getString(R.string.stats_detail_consumption) to
             (conso(trip.consumptionPer100, trip.consumptionApproximate)
                 ?: getString(R.string.stats_detail_consumption_short)),
-        soc(trip.socStart, trip.socEnd)?.let { getString(R.string.stats_detail_battery) to it },
-        trip.outsideTempC?.let { getString(R.string.stats_detail_temp) to "${fmt(it)} °C" },
-    ))
+    )
 
     private fun chargeDetail(ctx: Context, session: ChargeSession, s: StatsSettings): View {
         val box = detailBox(ctx, listOfNotNull(
@@ -392,112 +494,51 @@ class StatsFragment : Fragment() {
      * la bonne.
      */
     private fun askCompletion(session: ChargeSession) {
-        val ctx = requireContext()
-        var type = session.type
-        val boutons = mutableListOf<Pair<MaterialButton, ChargeType?>>()
-
-        fun peindre() = boutons.forEach { (b, valeur) ->
-            val on = valeur == type
-            b.backgroundTintList = ColorStateList.valueOf(
-                ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn))
-            b.setTextColor(ctx.getColor(if (on) R.color.dash_accent else R.color.text_secondary))
-            b.strokeColor = ColorStateList.valueOf(
-                ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border))
+        StatsDialogs.completer(requireContext(), session) { type, debut, fin ->
+            val (d, f) = ChargeTimes.resolve(debut, fin, session.startMs, session.endMs)
+            store.completeCharge(session.startMs, type, d, f)
+            render()
         }
-
-        fun champ(valeur: Long?) = EditText(ctx).apply {
-            inputType = InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME
-            setText(valeur?.let { ChargeTimes.hhmm(it) } ?: "")
-            setTextColor(ctx.getColor(R.color.text_primary))
-        }
-        val debut = champ(session.userStartMs)
-        val fin = champ(session.userEndMs)
-
-        val corps = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(ctx, 20), dp(ctx, 4), dp(ctx, 20), 0)
-            addView(label(ctx, getString(R.string.stats_complete_type), 13f, R.color.text_secondary))
-            addView(LinearLayout(ctx).apply {
-                orientation = LinearLayout.HORIZONTAL
-                listOf(
-                    ChargeType.AC to R.string.stats_charge_ac,
-                    ChargeType.DC to R.string.stats_charge_dc,
-                    null to R.string.stats_charge_unknown,
-                ).forEach { (valeur, libelle) ->
-                    addView(MaterialButton(ctx).apply {
-                        text = getString(libelle)
-                        textSize = 13f
-                        isAllCaps = false
-                        strokeWidth = dp(ctx, 1)
-                        cornerRadius = dp(ctx, 8)
-                        layoutParams = LinearLayout.LayoutParams(0, dp(ctx, 52), 1f)
-                            .also { it.marginEnd = dp(ctx, 6) }
-                        setOnClickListener { type = valeur; peindre() }
-                        boutons += this to valeur
-                    })
-                }
-            })
-            addView(label(ctx, getString(R.string.stats_complete_start), 13f, R.color.text_secondary))
-            addView(debut)
-            addView(label(ctx, getString(R.string.stats_complete_end), 13f, R.color.text_secondary))
-            addView(fin)
-        }
-        peindre()
-
-        AlertDialog.Builder(ctx)
-            .setTitle(R.string.stats_complete_session)
-            .setMessage(getString(R.string.stats_complete_note))
-            .setView(corps)
-            .setPositiveButton(R.string.stats_save) { _, _ ->
-                val (d, f) = ChargeTimes.resolve(
-                    debut.text.toString(), fin.text.toString(), session.startMs, session.endMs
-                )
-                store.completeCharge(session.startMs, type, d, f)
-                render()
-            }
-            .setNegativeButton(R.string.nav_close, null)
-            .show()
     }
 
     private fun askTariff(session: ChargeSession, s: StatsSettings) {
-        val ctx = requireContext()
-        val input = EditText(ctx).apply {
-            inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL
-            setText(fmt3(session.tariffOverride ?: s.priceFor(session.type)))
-            setTextColor(ctx.getColor(R.color.text_primary))
-        }
-        AlertDialog.Builder(ctx)
-            .setTitle(R.string.stats_fix_tariff)
-            .setMessage(getString(R.string.stats_fix_tariff_note))
-            .setView(input)
-            .setPositiveButton(R.string.stats_save) { _, _ ->
-                val value = input.text.toString().replace(',', '.').toFloatOrNull()
-                if (value != null) {
-                    store.overrideTariff(session.startMs, StatsSettings.clampPrice(value))
-                    render()
-                }
-            }
-            .setNeutralButton(R.string.stats_tariff_default) { _, _ ->
+        val defaut = s.priceFor(session.type)
+        val prix = session.tariffOverride ?: defaut
+        StatsDialogs.tarif(
+            requireContext(),
+            prix = prix,
+            // Le plus grand des deux : un tarif par défaut à zéro (charge gratuite) ne doit pas
+            // réduire les pas à ceux d'un prix nul.
+            reference = maxOf(prix, defaut),
+            unite = "${s.currency}/kWh",
+            onEnregistrer = { valeur ->
+                store.overrideTariff(session.startMs, StatsSettings.clampPrice(valeur))
+                render()
+            },
+            onDefaut = {
                 store.overrideTariff(session.startMs, null)
                 render()
-            }
-            .setNegativeButton(R.string.nav_close, null)
-            .show()
+            },
+        )
     }
 
     private fun confirmClear() {
         val ctx = requireContext()
         val h = store.history()
-        AlertDialog.Builder(ctx)
-            .setTitle(R.string.stats_clear)
-            .setMessage(getString(R.string.stats_clear_confirm, h.trips.size, h.charges.size))
-            .setPositiveButton(R.string.stats_clear) { _, _ ->
+        AppDialog.confirmer(
+            ctx,
+            titre = getString(R.string.stats_clear),
+            message = getString(R.string.stats_clear_confirm, h.trips.size, h.charges.size),
+            ton = AppDialog.Ton.DANGER,
+            icone = R.drawable.ic_dialog_trash,
+            oui = getString(R.string.stats_clear),
+            non = getString(R.string.nav_close),
+            onOui = {
                 store.clear()
                 expanded = null
                 render()
-            }
-            .setNegativeButton(R.string.nav_close, null)
-            .show()
+            },
+        )
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -701,7 +742,8 @@ class StatsFragment : Fragment() {
 
     private fun fmt(value: Float): String = String.format(Locale.getDefault(), "%.1f", value)
 
-    private fun fmt3(value: Float): String = String.format(Locale.getDefault(), "%.3f", value)
+    /** Prix d'un kWh, sans séparateur de milliers : il sert aussi à préremplir les champs. */
+    private fun fmt3(value: Float): String = MoneyFormat.price(value, Locale.getDefault())
 
     /**
      * Distance. Le dixième n'est montré que sous cent kilomètres et seulement s'il a été mesuré :
@@ -723,8 +765,16 @@ class StatsFragment : Fragment() {
 
     private fun kwh(value: Float): String = "${fmt(value)} kWh"
 
+    /**
+     * Valeur connue au kWh entier seulement — le compteur de l'écran d'origine, et le moteur qui
+     * s'en déduit : un ordre de grandeur, annoncé comme tel — et « moins d'un » plutôt qu'un zéro
+     * qui passerait pour une mesure.
+     */
+    private fun kwhEntier(value: Float): String =
+        if (value < 1f) "< 1 kWh" else "≈ ${value.roundToInt()} kWh"
+
     private fun money(value: Float?, s: StatsSettings): String =
-        value?.let { "${fmt(it)} ${s.currency}" } ?: "—"
+        value?.let { "${MoneyFormat.amount(it, Locale.getDefault())} ${s.currency}" } ?: "—"
 
     /**
      * Le véhicule publie le pourcentage au dixième (69,4 et non 69) : l'arrondir à l'entier jetait

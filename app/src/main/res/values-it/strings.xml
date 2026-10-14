@@ -33,6 +33,7 @@
     <string name="shortcuts_action_tsr">Segnali (TSR)</string>
     <string name="shortcuts_action_apply_profile">Avvia un profilo</string>
     <string name="shortcuts_action_profile_picker">Selettore profilo (popup)</string>
+    <string name="shortcuts_action_profile_cycle">Ciclo dei profili</string>
     <string name="shortcuts_action_vehicle_power_off">Spegnere l\'auto</string>
         <string name="overlay_brightness_title">Luminosità</string>
     <string name="overlay_brightness_night">Notte</string>
@@ -40,6 +41,11 @@
     <string name="overlay_brightness_day">Giorno</string>
 <string name="overlay_profile_title">Profili di guida</string>
     <string name="overlay_open_app">Apri MG4Control</string>
+    <string name="overlay_joy_navigate">Naviga</string>
+    <string name="overlay_joy_validate">Conferma</string>
+    <string name="overlay_profile_active">Attivo</string>
+    <string name="overlay_profile_current">Profilo attuale</string>
+    <string name="overlay_profile_apply">Applica</string>
     <string name="overlay_countdown">Chiusura tra %1$ds</string>
     <string name="shortcuts_profile_prefix">Avvia profilo</string>
     <string name="shortcuts_pick_profile_title">Scegli un profilo</string>
@@ -47,6 +53,8 @@
     <string name="shortcuts_action_open_app">Apri MG4Control</string>
     <string name="shortcuts_action_open_custom_app">Avvia un\'app</string>
     <string name="shortcuts_pick_app_title">Scegli un\'app</string>
+    <string name="choice_count_apps">Applicazioni: %1$d</string>
+    <string name="choice_count_profiles">Profili: %1$d</string>
     <string name="shortcuts_open_custom_prefix">Avvia</string>
     <string name="shortcuts_warning_title">Scorciatoie al volante</string>
     <string name="shortcuts_warning_message">⚠ Se il launcher ufficiale è configurato su un tasto, avrà la priorità su MG4Control.\n\nEsempio: se la telecamera 360° è assegnata alla pressione singola nel launcher, MG4Control non riuscirà a intercettare quel tasto e la telecamera si attiverà al suo posto.\n\nSi consiglia di disattivare le scorciatoie del launcher ufficiale per evitare conflitti.</string>
@@ -105,12 +113,16 @@
     <string name="profile_set_default">Imposta predefinito</string>
     <string name="profile_set_as_default">Imposta come profilo predefinito</string>
     <string name="profile_delete">Elimina</string>
+    <string name="profile_delete_title">Eliminare «%1$s»?</string>
     <string name="profile_edit">Modifica</string>
     <string name="profile_name_hint">Nome del profilo</string>
     <string name="profile_name_required">Il nome è obbligatorio</string>
     <string name="profile_save">Salva</string>
     <string name="profile_cancel">Annulla</string>
     <string name="profile_applied">Profilo applicato: %s</string>
+    <string name="profile_cycle_target">Profilo: %s</string>
+    <string name="profile_cycle_applied">Profilo %s applicato</string>
+    <string name="profile_cycle_incomplete">Profilo %s: applicazione incompleta</string>
     <string name="profile_max_reached">Massimo %d profili raggiunto</string>
     <string name="profile_bt_device_label">Dispositivo Bluetooth</string>
 
@@ -193,6 +205,8 @@
 
     <!-- Dashboard — intestazioni schede -->
     <string name="card_climate">Impostazioni climatizzazione</string>
+    <string name="card_lighting">Illuminazione</string>
+    <string name="lighting_auto_high_beam">Abbaglianti automatici</string>
     <string name="card_alerts">Avvisi</string>
 
     <!-- Aggiornamento automatico -->
@@ -230,6 +244,7 @@
     <string name="fw_unknown_title">⚠ Firmware sconosciuto</string>
     <string name="fw_unknown_body">Questo firmware non è ancora supportato nativamente da MG4 Control.\n\nPuoi continuare selezionando manualmente una modalità di compatibilità, ma alcune funzioni potrebbero non funzionare correttamente.</string>
     <string name="fw_unknown_hint">Dopo aver chiuso questa finestra, tocca SWI133 o SWI68 nella barra superiore per scegliere la tua modalità di compatibilità.</string>
+    <string name="fw_unknown_hint_settings">«Continua» apre %1$s › %2$s: scegli lì il firmware più vicino al tuo.</string>
     <string name="fw_unknown_btn_close">Chiudi app</string>
     <string name="fw_unknown_btn_continue">Continua</string>
 
@@ -239,6 +254,8 @@
     <string name="settings_auto_apply">Impostazioni aggiuntive</string>
     <string name="settings_garage_mode">Modalità officina</string>
     <string name="settings_garage_mode_desc">Mette MG4Control completamente in pausa: niente scorciatoie (i pulsanti tornano alla loro funzione originale), nessun profilo all\'avvio, nessuna automazione. Utile per lasciare l\'auto in officina senza disinstallare l\'app. Le impostazioni restano e tornano appena la modalità viene disattivata.</string>
+    <string name="settings_ready_default">Tornare al profilo predefinito a ogni passaggio in READY</string>
+    <string name="settings_ready_default_desc">Per impostazione predefinita, un profilo scelto a mano resta attivo fino allo spegnimento dell\'auto. Con questa opzione viene dimenticato a ogni passaggio in READY, anche dopo una sosta breve, e viene riapplicato il profilo predefinito. Se deve applicarsi un profilo legato alla temperatura esterna o a un telefono Bluetooth, mantiene la priorità, come all\'avvio.</string>
     <string name="notif_service_active">Servizio attivo</string>
     <string name="notif_garage_mode">Modalità officina — in pausa</string>
     <string name="settings_auto_update_desc">Controlla aggiornamenti automaticamente all\'avvio</string>
@@ -259,11 +276,16 @@
     <string name="vehicle_power_dialog_confirm">Spegni</string>
     <string name="vehicle_power_dialog_cancel">Annulla</string>
     <string name="vehicle_power_need_park">L\'auto deve essere ferma, con il cambio in P.</string>
+    <string name="vehicle_power_banner_title">Spegnere il veicolo?</string>
+    <string name="vehicle_power_banner_msg">Il veicolo viene spento, lo schermo resta attivo.</string>
+    <string name="vehicle_power_banner_impossible">Spegnimento impossibile</string>
     <string name="settings_theme">Aspetto</string>
     <string name="settings_theme_auto">Auto</string>
     <string name="settings_theme_dark">Modalità scura</string>
     <string name="settings_theme_light">Modalità chiara</string>
     <string name="settings_text_size">Dimensione del testo</string>
+    <string name="settings_popup_delay">Tempo prima della chiusura dei pop-up</string>
+    <string name="settings_popup_delay_desc">Selettore profilo, conferma di automazione e pop-up HVAC. Ogni azione fa ripartire il tempo.</string>
     <string name="settings_text_size_standard">Standard</string>
     <string name="settings_text_size_large">Grande</string>
     <string name="settings_text_size_xlarge">Molto grande</string>
@@ -281,12 +303,11 @@
 
     <!-- [BT-PROFILES] Profili Bluetooth -->
     <!-- Schermata Audio (solo A9) -->
-    <string name="nav_audio">Audio</string>
-    <string name="door_volume_title">Volume all\'apertura della porta</string>
+    <string name="door_volume_title">Abbassa il volume scendendo dall\'auto</string>
     <string name="door_volume_desc">Abbassa il volume multimediale all\'apertura di una porta anteriore</string>
     <string name="door_volume_level_label">Livello target</string>
     <string name="door_volume_restore_title">Ripristina alla chiusura</string>
-    <string name="door_volume_desc_ready">Abbassa il volume multimediale quando l\'auto esce dalla modalità READY in P (porta del conducente aperta o auto spenta)</string>
+    <string name="door_volume_desc_ready">Abbassa il volume multimediale quando l\'auto esce dalla modalità READY in P (cintura slacciata e porta del conducente aperta, o auto spenta)</string>
     <string name="door_volume_restore_ready_title">Ripristina al ritorno in READY</string>
     <string name="door_volume_doors_label">Porte di attivazione</string>
     <string name="door_left">Sinistra</string>
@@ -307,27 +328,84 @@
     <string name="automation_confirm_msg">La temperatura esterna è sotto i %1$d°C\n(%2$s°C temperatura attuale)\nApplicare il profilo «%3$s»?</string>
     <string name="automation_confirm_yes">SÌ</string>
     <string name="automation_confirm_no">NO</string>
+    <string name="automation_confirm_below">sotto la soglia di %1$s</string>
+    <string name="automation_confirm_above">sopra la soglia di %1$s</string>
+    <string name="automation_confirm_question">Applicare il profilo?</string>
     <string name="automation_direction_label">Attiva quando la temperatura esterna è:</string>
     <string name="automation_dir_below">Inferiore a</string>
     <string name="automation_dir_above">Superiore a</string>
     <string name="automation_confirm_msg_above">La temperatura esterna è sopra i %1$d°C\n(%2$s°C temperatura attuale)\nApplicare il profilo «%3$s»?</string>
     <string name="automation_profile_title">Applicare un profilo in base alla temperatura</string>
+    <string name="battery_auto_title">Applica un profilo in base alla batteria</string>
+    <string name="battery_auto_desc">Applica un profilo quando la batteria scende sotto una soglia</string>
+    <string name="battery_auto_threshold_label">Soglia batteria</string>
+    <string name="battery_auto_note">Si attiva una volta quando la batteria scende sotto la soglia, all\'avvio come in marcia. Si riarma a ogni avvio, o dopo una ricarica sopra la soglia. Se la sicurezza di guida blocca le impostazioni a questa velocità, il profilo attende la prossima sosta.</string>
+    <string name="battery_auto_confirm_msg">La batteria è scesa sotto il %1$d %%\n(%2$s %% ora)\nApplicare il profilo «%3$s»?</string>
+    <string name="autobri_title">Luminosità automatica</string>
+    <string name="autobri_desc">Regola la luminosità dello schermo in base alla luce esterna al passaggio in READY</string>
+    <string name="autobri_desc_offline">Regola la luminosità dello schermo in base allo stato delle luci al passaggio in READY</string>
+    <string name="autobri_follow_desc_offline">A ogni accensione o spegnimento delle luci (galleria, parcheggio, tramonto). Una regolazione manuale sospende l\'automatismo fino al prossimo avvio.</string>
+    <string name="autobri_level_lights_off">Luci spente (giorno)</string>
+    <string name="autobri_level_lights_on">Luci accese (notte, garage, galleria)</string>
+    <string name="autobri_source_lights_off">luci spente</string>
+    <string name="autobri_status_lights">Ultima regolazione: %1$s · %2$s → %3$d %%</string>
+    <string name="autobri_note_offline">Funziona con il comando luci su AUTO: sono le luci automatiche a rilevare il buio. Senza la casella «Regolare la luminosità durante la guida», la regolazione avviene all\'avvio e poi una volta all\'uscita dal garage. Ogni cambiamento avviene con una dissolvenza di un secondo.</string>
+    <string name="autobri_follow">Regolare la luminosità durante la guida (non solo all\'avvio)</string>
+    <string name="autobri_follow_desc">La luce viene ricalcolata ogni minuto; lo schermo viene regolato solo se lo scarto raggiunge 10 punti. Una regolazione manuale sospende l\'automatismo fino al prossimo avvio.</string>
+    <string name="autobri_lights">Usare l\'accensione e lo spegnimento delle luci (luminosità ridotta in garage e galleria, anche in pieno giorno)</string>
+    <string name="autobri_lights_desc">Luci di posizione accese: punto Notte della curva; appena si spengono, regolazione in base al meteo. Deselezionare se si guida con le luci accese di giorno.</string>
+    <string name="autobri_sources"><b>Basarsi su</b> (almeno una fonte)</string>
+    <string name="autobri_lights_desc_only">Luci spente: livello «giorno»; luci accese: livello «notte», regolabili più sotto.</string>
+    <string name="autobri_lights_desc_off">Deselezionata: lo schermo può restare luminoso in garage o in galleria.</string>
+    <string name="autobri_forecast">Usare il meteo di Open-Meteo</string>
+    <string name="autobri_forecast_warning">(consuma un po\' di dati mobili)</string>
+    <string name="autobri_forecast_desc">Luce stimata dall\'altezza del sole e dalla previsione di soleggiamento attorno all\'auto: circa 10 KB per download, al massimo ogni 8 ore o uscendo dalla zona (~60 km).</string>
+    <string name="autobri_mode_lights">Solo luci: nessun dato mobile, niente GPS</string>
+    <string name="autobri_mode_both">Meteo + luci: ~10 KB per download</string>
+    <string name="autobri_mode_forecast">Solo meteo: ~10 KB per download, senza protezione garage/galleria</string>
+    <string name="autobri_follow_desc_lights">La luce viene ricalcolata ogni minuto; lo schermo viene regolato solo se lo scarto raggiunge 10 punti, e a ogni accensione o spegnimento delle luci. Una regolazione manuale sospende l\'automatismo fino al prossimo avvio.</string>
+    <string name="autobri_night_lights">Notte o luci accese · 10 lx</string>
+    <string name="autobri_status_failed_lights">Regolazione impossibile: stato delle luci illeggibile.</string>
+    <string name="autobri_status_paused">In pausa fino al prossimo avvio: luminosità regolata a mano.</string>
+    <string name="autobri_curve_label">Luminosità dello schermo in base alla luce esterna</string>
+    <string name="autobri_night">Notte · 10 lx</string>
+    <string name="autobri_twilight">Crepuscolo · 400 lx</string>
+    <string name="autobri_overcast">Nuvoloso · 10.000 lx</string>
+    <string name="autobri_sunny">Pieno sole · 80.000 lx</string>
+    <string name="autobri_test">Prova ora</string>
+    <string name="autobri_status">Ultima regolazione: %1$s · %2$s · ≈ %3$s lx → %4$d %%</string>
+    <string name="autobri_status_none">Nessuna regolazione per ora.</string>
+    <string name="autobri_status_failed">Regolazione impossibile: posizione o ora non disponibili.</string>
+    <string name="autobri_source_lights">luci accese</string>
+    <string name="autobri_source_forecast">previsioni meteo</string>
+    <string name="autobri_source_sun">posizione del sole</string>
+    <string name="autobri_note">La luce esterna è stimata dall\'altezza del sole e dalla previsione di soleggiamento di Open-Meteo (CC BY 4.0) su una zona di circa 60 × 60 km attorno all\'auto, scaricata per 3 giorni e aggiornata al massimo ogni 8 ore o uscendo dalla zona, con una posizione arrotondata a ~10 km. Senza previsione si assume cielo sereno. Ogni cambiamento avviene con una dissolvenza di un secondo.</string>
 
     <!-- Automazione A/C -->
     <string name="ac_auto_title">Attivazione A/C in base alla temperatura</string>
     <string name="ac_auto_desc">Regolare il climatizzatore in base alla temperatura esterna</string>
-    <string name="ac_auto_hot">Temperatura superiore</string>
-    <string name="ac_auto_cold">Temperatura inferiore</string>
-    <string name="ac_auto_threshold_hot_label">Soglia di attivazione (°C)</string>
-    <string name="ac_auto_threshold_cold_label">Soglia di attivazione (°C)</string>
-    <string name="ac_auto_threshold_hint">-20–60</string>
-    <string name="ac_auto_target_label">Temperatura desiderata (°C)</string>
-    <string name="ac_auto_target_hint">15–33</string>
+    <string name="ac_auto_hot">Quando fa caldo</string>
+    <string name="ac_auto_cold">Quando fa freddo</string>
+    <string name="ac_auto_threshold_hot_label">Fuori, da</string>
+    <string name="ac_auto_threshold_cold_label">Fuori, fino a</string>
+    <string name="ac_auto_target_label">Clima impostato su</string>
     <string name="ac_auto_fan_label">Ventilazione</string>
-    <string name="ac_auto_fan_hint">1–10</string>
+    <string name="ac_auto_fan_manual">Manuale</string>
+    <string name="ac_auto_fan_level">Livello</string>
+    <string name="ac_auto_defrost">Sbrinamento</string>
+    <string name="ac_auto_defrost_front">Anteriore</string>
+    <string name="ac_auto_defrost_rear">Posteriore</string>
+    <string name="ac_auto_rule_off">Regola disattivata</string>
     <string name="ac_auto_def_front">Sbrinamento anteriore</string>
     <string name="ac_auto_def_rear">Sbrinamento posteriore</string>
     <string name="ac_auto_note">Applicato all\'avvio del veicolo: il climatizzatore e l\'A/C vengono accesi, poi vengono inviate le impostazioni sopra.</string>
+    <string name="ac_auto_trigger_label">Attivazione</string>
+    <string name="ac_auto_trigger_start">Solo all’avvio</string>
+    <string name="ac_auto_trigger_start_hint">Una sola verifica, all’avvio dell’auto (READY): se la soglia non è raggiunta in quel momento, non si attiva nulla fino al prossimo avvio completo dell’auto.</string>
+    <string name="ac_auto_trigger_once">Una volta per avvio</string>
+    <string name="ac_auto_trigger_once_hint">Se la soglia non è raggiunta all’avvio dell’auto (READY), la verifica viene ripetuta a ogni successivo passaggio in READY. Non appena è raggiunta, le impostazioni vengono applicate una volta, poi più nulla fino al prossimo avvio completo dell’auto.</string>
+    <string name="ac_auto_trigger_ready">A ogni passaggio in READY</string>
+    <string name="ac_auto_trigger_ready_hint">Le impostazioni vengono inviate ogni volta, anche dopo una breve sosta: sostituiscono quelle fatte a mano.</string>
     <string name="clim_card_title">Climatizzazione</string>
     <string name="clim_temperature">Temperatura</string>
     <string name="clim_fan">Ventilazione</string>
@@ -351,6 +429,13 @@
     <string name="profile_cat_drive">Guida</string>
     <string name="profile_cat_safety">Sicurezza</string>
     <string name="profile_cat_comfort">Comfort</string>
+    <string name="profile_cat_apply_drive">Applica le impostazioni di guida</string>
+    <string name="profile_cat_apply_safety">Applica le impostazioni di sicurezza</string>
+    <string name="profile_cat_apply_comfort">Applica le impostazioni di comfort</string>
+    <string name="profile_cat_off_drive">Questo profilo non modifica le impostazioni di guida. La vettura mantiene quelle attuali.</string>
+    <string name="profile_cat_off_safety">Questo profilo non modifica le impostazioni di sicurezza. La vettura mantiene quelle attuali.</string>
+    <string name="profile_cat_off_comfort">Questo profilo non modifica le impostazioni di comfort. La vettura mantiene quelle attuali.</string>
+    <string name="profile_cat_none_enabled">Attiva almeno una categoria per salvare il profilo.</string>
     <string name="climate_seat_heat">Sedili riscaldati</string>
 
     <!-- Reglages : categories -->
@@ -388,8 +473,6 @@
     <string name="common_off">OFF</string>
 
     <!-- Automatisation clim : mode auto + recyclage -->
-    <string name="ac_auto_auto_mode">Modalità automatica</string>
-    <string name="ac_auto_recirc_force">Forza il ricircolo d\'aria</string>
     <string name="recirc_inner">Interno</string>
     <string name="recirc_outside">Esterno</string>
     <string name="recirc_auto">Auto</string>
@@ -427,6 +510,9 @@
     <string name="shortcuts_cfg_regen_save">Salva</string>
     <string name="shortcuts_cfg_regen_saved">Ciclo salvato</string>
     <string name="shortcuts_cfg_regen_min">Un ciclo richiede almeno due modalità.</string>
+    <string name="shortcuts_cat_profile_cycle">Ciclo profili</string>
+    <string name="shortcuts_cfg_profile_hint">Tocca i profili nell\'ordine in cui vuoi scorrerli, poi salva. Ogni pressione applica il profilo che segue quello attivo.</string>
+    <string name="shortcuts_cfg_profile_min">Un ciclo richiede almeno due profili.</string>
     <string name="adv_sc_new">Nuova scorciatoia</string>
     <string name="adv_sc_step_key">1 · Tasto</string>
     <string name="adv_sc_step_press">2 · Tipo di pressione</string>
@@ -452,6 +538,21 @@
     <string name="shortcuts_action_drowsiness">Sonnolenza (ON/OFF)</string>
     <string name="shortcuts_action_drowsiness_sen">Sonnolenza: sensibilità</string>
     <string name="shortcuts_action_hvac_toggle">Clima (ON/OFF)</string>
+    <string name="shortcuts_action_hvac_ac_toggle">Clima: A/C (ON/OFF)</string>
+    <string name="shortcuts_action_auto_high_beam">Abbaglianti automatici (ON/OFF)</string>
+    <string name="shortcuts_action_battery_heat">Riscaldamento della batteria (ON/OFF)</string>
+    <string name="batheat_section">Riscaldamento intelligente della batteria</string>
+    <string name="batheat_hint">Migliora la ricarica rapida, ma riduce l\'autonomia.</string>
+    <string name="batheat_status_off">Disattivato</string>
+    <string name="batheat_status_stays_on">Resta attivo finché non lo spegni</string>
+    <string name="batheat_status_countdown">Spegnimento automatico tra %1$d min</string>
+    <string name="batheat_status_planned">Spegnimento automatico %1$d min dopo l\'avvio</string>
+    <string name="batheat_auto_title">Spegnimento del riscaldamento della batteria</string>
+    <string name="batheat_auto_desc">Spegnere il riscaldamento intelligente della batteria dopo un tempo di guida</string>
+    <string name="batheat_auto_minutes_label">Spegni dopo</string>
+    <string name="batheat_auto_minutes_value">%1$d min</string>
+    <string name="batheat_auto_note">Il conto alla rovescia parte nel momento in cui il riscaldamento viene attivato, in marcia o da fermi (schermata originale, finestra «temperatura bassa», MG4Control o scorciatoia), oppure all\'avvio se era già attivo. Vale solo per il viaggio in corso: viene annullato a fine viaggio, all\'uscita da READY. Allo spegnimento compare un messaggio.</string>
+    <string name="batheat_auto_toast">Riscaldamento della batteria spento dopo %1$d min</string>
     <string name="shortcuts_action_hvac_temp_up">Clima: temperatura +</string>
     <string name="shortcuts_action_hvac_temp_down">Clima: temperatura -</string>
     <string name="shortcuts_action_hvac_fan_up">Clima: ventilazione +</string>
@@ -465,6 +566,16 @@
     <string name="shortcuts_action_defrost_front">Sbrinamento anteriore (ON/OFF)</string>
     <string name="shortcuts_action_defrost_rear">Sbrinamento posteriore (ON/OFF)</string>
     <string name="shortcuts_action_hvac_recirc">Ricircolo: ciclo</string>
+    <string name="shortcuts_action_hvac_popup">Pop-up HVAC</string>
+    <string name="hvac_popup_temp_up">Temp. +</string>
+    <string name="hvac_popup_temp_down">Temp. −</string>
+    <string name="hvac_popup_fan_up">Ventil. +</string>
+    <string name="hvac_popup_fan_down">Ventil. −</string>
+    <string name="hvac_popup_compressor">Compressore</string>
+    <string name="hvac_popup_heating">Riscaldamento</string>
+    <string name="hvac_popup_joystick_title">Joystick destro</string>
+    <string name="hvac_popup_joystick_off_title">Joystick inattivo</string>
+    <string name="hvac_popup_joystick_off_text">Attiva l’accessibilità o usa lo schermo</string>
     <string name="shortcuts_action_brightness_up">Luminosità +</string>
     <string name="shortcuts_action_brightness_down">Luminosità -</string>
 
@@ -495,16 +606,12 @@
     <string name="shortcuts_action_volume_down">Volume -</string>
 
     <!-- Onglet Vitres (V0 de test) -->
-    <string name="win_close_warning">La chiusura automatica dall\'app non ha l\'antischiacciamento (tranne il finestrino del conducente): sorveglia il finestrino. Si ferma se esci dalla scheda.</string>
     <string name="win_front_left">Anteriore sinistro</string>
     <string name="win_front_right">Anteriore destro</string>
     <string name="win_rear_left">Posteriore sinistro</string>
     <string name="win_rear_right">Posteriore destro</string>
-    <string name="win_all_close">Chiudi tutti</string>
-    <string name="win_all_open">Apri tutti</string>
-    <string name="win_auto_title">Chiusura automatica</string>
     <string name="win_auto_label">Chiudi i finestrini scendendo dall\'auto</string>
-    <string name="win_auto_desc">Auto in P, una volta armata secondo le condizioni sotto: quando l\'auto esce dalla modalità READY (porta del conducente aperta o auto spenta), tutti i finestrini si chiudono dopo il ritardo scelto. Tornare in READY prima annulla.</string>
+    <string name="win_auto_desc">Auto in P, una volta armata secondo le condizioni sotto: quando l\'auto esce dalla modalità READY (cintura slacciata e porta del conducente aperta, o auto spenta), tutti i finestrini si chiudono dopo il ritardo scelto. Tornare in READY prima annulla.</string>
     <string name="win_auto_warning">Nessun antischiacciamento sui finestrini tranne quello del conducente: nessuno vicino ai finestrini quando si scende.</string>
     <string name="win_auto_arming_title">Armamento: dopo la guida</string>
     <string name="win_auto_speed_label">Velocità raggiunta</string>
@@ -525,8 +632,7 @@
     <string name="win_cal_advanced_label">Calibrazione per vetro</string>
     <string name="win_cal_advanced_desc">Misura la corsa reale di ogni vetro, più precisa del tempo generale. Le misure restano salvate se disattivi l\'opzione.</string>
     <string name="win_cal_general">Tempo generale</string>
-    <string name="win_automation_title">Alzacristalli elettrici</string>
-    <string name="win_section_command">Comandi</string>
+    <string name="win_automation_title">Chiusura automatica degli alzacristalli elettrici</string>
     <string name="win_cal_limits">L\'app non vede gli interruttori della portiera: una corsa emulata dura sempre il tempo misurato, qualunque sia la posizione di partenza.</string>
     <string name="shortcuts_action_windows_open">Aprire tutti i finestrini</string>
     <string name="shortcuts_action_windows_close">Chiudere tutti i finestrini</string>
@@ -586,7 +692,16 @@
     <string name="stats_currency">Valuta</string>
     <string name="stats_price_ac">Ricarica lenta, a casa</string>
     <string name="stats_price_dc">Ricarica rapida, in colonnina</string>
-    <string name="stats_capacity">Capacità utile (kWh)</string>
+    <string name="stats_battery_title">Batteria</string>
+    <string name="stats_battery_label">Batteria dell’auto</string>
+    <string name="stats_battery_option">%1$d kWh · %2$s kWh utili (%3$s)</string>
+    <string name="stats_battery_note">Serve a calcolare l’energia delle ricariche a partire dalla percentuale di batteria. Cambiare batteria ricalcola le ricariche già registrate.</string>
+    <string name="stats_battery_banner">L’energia delle ricariche dipende dalla batteria impostata: %1$s. Verifica che sia quella della tua auto.</string>
+    <string name="stats_battery_banner_ok">È corretta</string>
+    <string name="stats_battery_banner_change">Cambia</string>
+    <string name="stats_skip_short_label">Ignora i viaggi brevi</string>
+    <string name="stats_min_trip_label">Distanza minima (km)</string>
+    <string name="stats_skip_short_note">Un viaggio più breve non viene registrato: i suoi chilometri e la sua energia non contano più nei totali. I viaggi già registrati vengono conservati.</string>
     <string name="stats_retention_30d">30 giorni</string>
     <string name="stats_retention_3m">3 mesi</string>
     <string name="stats_retention_6m">6 mesi</string>
@@ -601,14 +716,17 @@
     <string name="stats_charge_reconstructed">ricostruita</string>
     <string name="stats_detail_origin">Origine</string>
     <string name="stats_detail_origin_estimated">stimata dal livello della batteria — l’app non era in esecuzione</string>
+    <string name="stats_detail_origin_integrated">calcolata dalla tensione e dalla corrente della batteria</string>
     <string name="stats_tariff_fixed">tariffa corretta</string>
     <string name="stats_tariff_instead">corretta, invece di %1$s</string>
     <string name="stats_tariff_default">Tariffa predefinita</string>
     <string name="stats_detail_motor">Motore</string>
     <string name="stats_detail_consumption">Consumo medio</string>
     <string name="stats_detail_consumption_short">viaggio troppo breve per un dato affidabile</string>
+    <string name="stats_detail_energy_unknown">energia non misurata in questo viaggio</string>
     <string name="stats_detail_climate">Climatizzazione</string>
     <string name="stats_detail_accessories">Accessori</string>
+    <string name="stats_detail_auxiliary">Climatizzazione e altro</string>
     <string name="stats_detail_regen">Frenata rigenerativa</string>
     <string name="stats_detail_battery">Batteria</string>
     <string name="stats_detail_temp">Temperatura media</string>

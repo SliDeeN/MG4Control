@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Une heure à régler sans clavier : les heures et les minutes, chacune entre un − et un +.
+     Inclus deux fois dans « Compléter la session » (dialog_stats_complete.xml), pour le début et
+     pour la fin ; tout est posé par StatsDialogs. La croix remet l'heure à « non renseignée ». -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_hvac_panel"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="28dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/time_caption"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textAllCaps="true"
+            android:letterSpacing="0.08"
+            android:textColor="@color/text_secondary"
+            android:textSize="12sp"
+            android:maxLines="1" />
+
+        <ImageView
+            android:id="@+id/time_clear"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:padding="4dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_hvac_close" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="8dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <ImageView
+            android:id="@+id/time_hours_minus"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:padding="14dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_hvac_minus" />
+
+        <TextView
+            android:id="@+id/time_hours"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+        <ImageView
+            android:id="@+id/time_hours_plus"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:padding="14dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_hvac_plus" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="6dp"
+            android:text=":"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            tools:ignore="HardcodedText" />
+
+        <ImageView
+            android:id="@+id/time_minutes_minus"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:padding="14dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_hvac_minus" />
+
+        <TextView
+            android:id="@+id/time_minutes"
+            android:layout_width="60dp"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+        <ImageView
+            android:id="@+id/time_minutes_plus"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:padding="14dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_hvac_plus" />
+
+    </LinearLayout>
+
+</LinearLayout>

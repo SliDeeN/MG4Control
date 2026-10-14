@@ -1,6 +1,5 @@
 package com.mg4.control.ui
 
-import android.app.AlertDialog
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -9,10 +8,8 @@ import android.content.res.ColorStateList
 import androidx.appcompat.app.AppCompatDelegate
 import com.mg4.control.MainActivity
 import com.mg4.control.util.ThemeHelper
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
@@ -20,10 +17,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
-import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
@@ -31,6 +26,7 @@ import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.slider.Slider
 import com.mg4.control.BuildConfig
 import com.mg4.control.api.ExternalApi
 import com.mg4.control.R
@@ -41,6 +37,7 @@ import com.mg4.control.debug.CrashLogger
 import com.mg4.control.hardware.EnergyProbe
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.VehicleWriteGate
+import com.mg4.control.profile.ReadyProfilePolicy
 import com.mg4.control.update.ApkCleanup
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateNotifier
@@ -49,8 +46,10 @@ import java.io.File
 import com.mg4.control.util.FirmwareHelper
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.service.MG4ControlService
+import com.mg4.control.service.OverlayKit
 import com.mg4.control.util.GarageMode
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.TextSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -65,8 +64,17 @@ class SettingsFragment : Fragment() {
     /** Index, dans le rail, de l'onglet ouvert — sauvegardé pour survivre à un recreate(). */
     private var selectedCategory = 0
 
-    private companion object {
-        const val STATE_CATEGORY = "settings_category"
+    companion object {
+        private const val STATE_CATEGORY = "settings_category"
+
+        /**
+         * Argument : ouvrir l'écran sur le choix du firmware (onglet Infos, pastilles en vue).
+         * Posé par la fenêtre « Firmware non reconnu » de [com.mg4.control.MainActivity].
+         */
+        const val ARG_SHOW_FIRMWARE = "show_firmware"
+
+        /** En-tête du diagnostic quand un crash a été enregistré. */
+        private const val CRASH_DETECTE = "CRASH DÉTECTÉ"
     }
 
     override fun onCreateView(
@@ -199,6 +207,30 @@ class SettingsFragment : Fragment() {
             }
         }
 
+        // ── Délai avant fermeture des pop-ups : 1 à 60 s ─────────────────────
+        // Commun au sélecteur de profils, à la confirmation d'automatisation et au pop-up HVAC,
+        // qui le lisent chacun à leur ouverture : rien à redémarrer.
+        val tvPopupDelay = view.findViewById<TextView>(R.id.tv_popup_delay)
+        view.findViewById<Slider>(R.id.slider_popup_delay).apply {
+            valueFrom = PopupDelay.MIN_SECONDS.toFloat()
+            valueTo   = PopupDelay.MAX_SECONDS.toFloat()
+            // Dans la plage par construction : hors de [valueFrom, valueTo], le curseur lève une exception.
+            value = PopupDelay.seconds(requireContext()).toFloat()
+            tvPopupDelay.text = getString(R.string.win_auto_delay_value, value.toInt())
+            addOnChangeListener { _, v, _ ->
+                val secondes = PopupDelay.fromSlider(v)
+                tvPopupDelay.text = getString(R.string.win_auto_delay_value, secondes)
+                PopupDelay.set(requireContext(), secondes)
+            }
+            // Une ligne au journal par réglage, au relâchement, et non une par cran traversé.
+            addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+                override fun onStartTrackingTouch(slider: Slider) {}
+                override fun onStopTrackingTouch(slider: Slider) {
+                    AppLogger.i("MG4_SETTINGS", "Délai de fermeture des pop-ups → ${PopupDelay.fromSlider(slider.value)} s")
+                }
+            })
+        }
+
         // ── Canal de mise a jour beta ────────────────────────────────────────
         // Aucun avertissement bloquant : une beta ne donne pas le controle du vehicule a un
         // tiers, contrairement a l'API externe. Le texte sous l'interrupteur suffit, et il
@@ -256,6 +288,15 @@ class SettingsFragment : Fragment() {
                         .setAction(MG4ControlService.ACTION_GARAGE_CHANGED)
                 )
             }
+        }
+
+        // Passage en READY : oublier le profil choisi à la main et reprendre la chaîne habituelle
+        // (température, Bluetooth, profil par défaut). Lu par le service à chaque passage en
+        // READY : rien à lui signaler, le réglage vaut dès le prochain.
+        val switchRetour = view.findViewById<Switch>(R.id.switch_ready_default)
+        switchRetour.isChecked = ReadyProfilePolicy.isEnabled(requireContext())
+        switchRetour.setOnCheckedChangeListener { _, checked ->
+            ReadyProfilePolicy.setEnabled(requireContext(), checked)
         }
 
         // ── Sécurité conduite (verrou d'écriture par vitesse) ────────────────
@@ -326,17 +367,21 @@ class SettingsFragment : Fragment() {
                     withContext(Dispatchers.Main) {
                         if (!isAdded) return@withContext
                         if (inPark == true) {
-                            AlertDialog.Builder(requireContext())
-                                .setTitle(R.string.vehicle_power_dialog_title)
-                                .setMessage(R.string.vehicle_power_dialog_msg)
-                                .setNegativeButton(R.string.vehicle_power_dialog_cancel, null)
-                                .setPositiveButton(R.string.vehicle_power_dialog_confirm) { _, _ ->
+                            AppDialog.confirmer(
+                                requireContext(),
+                                titre = getString(R.string.vehicle_power_dialog_title),
+                                message = getString(R.string.vehicle_power_dialog_msg),
+                                ton = AppDialog.Ton.DANGER,
+                                icone = R.drawable.ic_overlay_power,
+                                oui = getString(R.string.vehicle_power_dialog_confirm),
+                                non = getString(R.string.vehicle_power_dialog_cancel),
+                                onOui = {
                                     CoroutineScope(Dispatchers.IO).launch {
                                         val ok = MG4Hardware.vehiclePowerOff()
                                         AppLogger.i("MG4_SETTINGS", "Vehicle power off → $ok")
                                     }
-                                }
-                                .show()
+                                },
+                            )
                         } else {
                             Toast.makeText(requireContext(), R.string.vehicle_power_need_park, Toast.LENGTH_LONG).show()
                         }
@@ -488,7 +533,20 @@ class SettingsFragment : Fragment() {
         usable.forEach { (btn, page) -> btn.setOnClickListener { select(page) } }
         // Un onglet mémorisé peut ne plus être disponible (page vidée entre-temps) : repli sur le premier.
         val restored = savedInstanceState?.getInt(STATE_CATEGORY, -1)?.let { tabs.getOrNull(it) }
-        select((restored?.takeIf { it in usable } ?: usable.first()).second)
+        // Arrivée depuis « Firmware non reconnu » : droit sur l'onglet où il se choisit. À la
+        // première création seulement — après le choix l'activité se recrée, et c'est alors
+        // l'onglet mémorisé qui compte.
+        val versLeFirmware = savedInstanceState == null && arguments?.getBoolean(ARG_SHOW_FIRMWARE) == true
+        val demande = if (versLeFirmware) tabs.firstOrNull { it.second.id == R.id.page_set_info } else restored
+        select((demande?.takeIf { it in usable } ?: usable.first()).second)
+        if (versLeFirmware) scroll?.post {
+            // Les pastilles sont au milieu de la page : on les amène en vue, un peu sous le bord.
+            val pastille = view.findViewById<View>(R.id.chip_swi133) ?: return@post
+            val place = android.graphics.Rect()
+            pastille.getDrawingRect(place)
+            scroll.offsetDescendantRectToMyCoords(pastille, place)
+            scroll.smoothScrollTo(0, (place.top - scroll.height / 3).coerceAtLeast(0))
+        }
     }
 
 
@@ -560,96 +618,47 @@ class SettingsFragment : Fragment() {
         // Sonde somnolence / sensibilité / ESC : lecture seule (elle ne bascule RIEN — un
         // rapport de diagnostic ne doit pas toucher à un organe de sécurité active).
         MG4Hardware.runSafetyDiag()
+        // Sonde feux de route automatiques : lecture seule, toutes les voies du firmware.
+        MG4Hardware.runHighBeamDiag()
+        MG4Hardware.runBatteryHeatingDiag()
 
         val appVersion = try {
             ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"
         } catch (e: Exception) { "?" }
 
-        // ── Layout : crash banner (optionnel) + rapport matériel ──────────────
-        var btnClearCrash: Button? = null
-        val container = LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-            )
-        }
-
-        // Section crash log (si un crash a été enregistré)
+        // ── Le journal : un crash enregistré d'abord, puis le rapport matériel et le journal ──
+        val vue = LayoutInflater.from(ctx).inflate(R.layout.dialog_diagnostic, null)
         val crashLog = CrashLogger.read(ctx)
-        if (crashLog != null) {
-            val tvCrash = TextView(ctx).apply {
-                text = crashLog
-                typeface = Typeface.MONOSPACE
-                textSize = 9f
-                setTextColor(ctx.getColor(R.color.dash_danger))
-                val pad = (12 * resources.displayMetrics.density).toInt()
-                setPadding(pad, pad, pad, pad)
-                setBackgroundColor(ctx.getColor(R.color.dash_danger_dim))
-            }
-            container.addView(tvCrash)
+        val tvReport = vue.findViewById<TextView>(R.id.diag_report)
 
-            // Séparateur
-            val divider = View(ctx).apply {
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    (1 * resources.displayMetrics.density).toInt()
-                ).also { it.topMargin = 0; it.bottomMargin = 0 }
-                setBackgroundColor(ctx.getColor(R.color.dash_border))
-            }
-            container.addView(divider)
+        // AppLogger en temps réel (30 dernières lignes)
+        val tvLogs = vue.findViewById<TextView>(R.id.diag_logs)
+        val entries = AppLogger.entries
+        tvLogs.text = if (entries.isEmpty()) "─── AppLogger vide ───"
+            else "─── AppLogger (${entries.size} entrées) ───\n" +
+                entries.takeLast(30).joinToString("\n") { e ->
+                    "${e.time} [${e.level.name[0]}] ${e.tag}: ${e.msg}"
+                }
 
-            // "Effacer crash" déplacé dans le contenu (le slot neutre sert au Télécharger)
-            btnClearCrash = Button(ctx).apply {
-                text = getString(R.string.diag_clear_crash)
-            }
-            container.addView(btnClearCrash)
+        // Un crash enregistré s'annonce en rouge, dès l'en-tête, et passe devant tout le reste.
+        val crash = crashLog != null
+        OverlayKit.fond(
+            vue.findViewById(R.id.diag_badge),
+            ctx.getColor(if (crash) R.color.dash_danger_dim else R.color.dash_accent_dim), ovale = true)
+        vue.findViewById<ImageView>(R.id.diag_icon).imageTintList = ColorStateList.valueOf(
+            ctx.getColor(if (crash) R.color.dash_danger else R.color.dash_accent))
+        vue.findViewById<ImageView>(R.id.diag_close).imageTintList =
+            ColorStateList.valueOf(ctx.getColor(R.color.text_primary))
+        vue.findViewById<TextView>(R.id.diag_crash_flag).apply {
+            text = CRASH_DETECTE
+            visibility = if (crash) View.VISIBLE else View.GONE
+        }
+        vue.findViewById<TextView>(R.id.diag_crash).apply {
+            text = crashLog
+            visibility = if (crash) View.VISIBLE else View.GONE
         }
 
-        // Section rapport matériel
-        val tvReport = TextView(ctx).apply {
-            text = getString(R.string.diag_loading)
-            typeface = Typeface.MONOSPACE
-            textSize = 10f
-            setTextColor(ctx.getColor(R.color.text_secondary))
-            val pad = (12 * resources.displayMetrics.density).toInt()
-            setPadding(pad, pad, pad, pad)
-        }
-        container.addView(tvReport)
-
-        // Section AppLogger en temps réel (30 dernières lignes)
-        val tvLogs = TextView(ctx).apply {
-            typeface = Typeface.MONOSPACE
-            textSize = 9f
-            setTextColor(ctx.getColor(R.color.dash_text_lo))
-            val pad = (12 * resources.displayMetrics.density).toInt()
-            setPadding(pad, 0, pad, pad)
-            val entries = AppLogger.entries
-            text = if (entries.isEmpty()) "─── AppLogger vide ───"
-                   else "─── AppLogger (${entries.size} entrées) ───\n" +
-                        entries.takeLast(30).joinToString("\n") { e ->
-                            "${e.time} [${e.level.name[0]}] ${e.tag}: ${e.msg}"
-                        }
-        }
-        container.addView(tvLogs)
-
-        val scrollView = ScrollView(ctx).apply {
-            addView(container)
-        }
-
-        val title = if (crashLog != null)
-            "⚠ ${getString(R.string.diag_title)} — CRASH DÉTECTÉ"
-        else
-            getString(R.string.diag_title)
-
-        val dialog = AlertDialog.Builder(ctx)
-            .setTitle(title)
-            .setView(scrollView)
-            .setPositiveButton(getString(R.string.diag_copy), null)
-            .setNeutralButton(getString(R.string.diag_download), null)
-            .setNegativeButton(getString(R.string.nav_close), null)
-            .create()
-        dialog.window?.setBackgroundDrawable(ColorDrawable(ctx.getColor(R.color.dash_card)))
+        val dialog = AppDialog.afficher(ctx, vue, 1320f)
 
         // Rapport court (30 dernières lignes) pour le presse-papier ; rapport complet pour le fichier.
         fun buildReport(fullLog: Boolean) = buildString {
@@ -657,31 +666,32 @@ class SettingsFragment : Fragment() {
             appendLine(tvReport.text)
             appendLine()
             if (fullLog) {
-                val entries = AppLogger.entries
-                appendLine("─── AppLogger (${entries.size} entrées) ───")
-                entries.forEach { e -> appendLine("${e.time} [${e.level.name[0]}] ${e.tag}: ${e.msg}") }
+                val toutes = AppLogger.entries
+                appendLine("─── AppLogger (${toutes.size} entrées) ───")
+                toutes.forEach { e -> appendLine("${e.time} [${e.level.name[0]}] ${e.tag}: ${e.msg}") }
             } else appendLine(tvLogs.text)
         }
 
-        dialog.setOnShowListener {
-            // "Copier" — copie tout sans fermer le dialog
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.setOnClickListener {
-                val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                cm.setPrimaryClip(ClipData.newPlainText("MG4Control Diagnostic", buildReport(false)))
-                dialog.getButton(AlertDialog.BUTTON_POSITIVE)?.text = getString(R.string.diag_copied)
-            }
-            // "Télécharger" — écrit le rapport complet dans le dossier Download de la voiture
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL)?.setOnClickListener {
-                downloadDiagnostic(ctx, buildReport(true))
-            }
-            // "Effacer crash" (dans le contenu) — supprime le fichier et ferme le dialog
-            btnClearCrash?.setOnClickListener {
+        // « Copier » — copie tout sans fermer la fenêtre
+        val btnCopier = vue.findViewById<TextView>(R.id.diag_copy)
+        btnCopier.setOnClickListener {
+            val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            cm.setPrimaryClip(ClipData.newPlainText("MG4Control Diagnostic", buildReport(false)))
+            btnCopier.text = getString(R.string.diag_copied)
+        }
+        // « Télécharger » — écrit le rapport complet dans le dossier Download de la voiture
+        vue.findViewById<View>(R.id.diag_download).setOnClickListener {
+            downloadDiagnostic(ctx, buildReport(true))
+        }
+        // « Effacer le crash » — supprime le fichier et ferme la fenêtre
+        vue.findViewById<View>(R.id.diag_clear_crash).apply {
+            visibility = if (crash) View.VISIBLE else View.GONE
+            setOnClickListener {
                 CrashLogger.clear(ctx)
                 dialog.dismiss()
             }
         }
-
-        dialog.show()
+        vue.findViewById<View>(R.id.diag_close).setOnClickListener { dialog.dismiss() }
 
         // Génération du rapport matériel sur le thread IO
         CoroutineScope(Dispatchers.IO).launch {
@@ -690,6 +700,9 @@ class SettingsFragment : Fragment() {
             // autre manipulation. Sur le fil IO : une trentaine de propriétés, plusieurs voies
             // chacune, ça ne passe pas sur le fil principal.
             EnergyProbe.run("diagnostic")
+            // Sonde lumière/position : un relevé instantané, à prendre en plein jour, au crépuscule
+            // et dans un parking couvert. Ceux pris automatiquement au READY sont déjà gardés.
+            com.mg4.control.hardware.LightProbe.run("diagnostic")
             val report = MG4Hardware.buildDiagnosticReport(appVersion)
             withContext(Dispatchers.Main) {
                 if (isAdded) tvReport.text = report
@@ -741,29 +754,20 @@ class SettingsFragment : Fragment() {
         val ivQrGitlab = dialogView.findViewById<ImageView>(R.id.iv_qr_code_gitlab)
         QrCode.generate(gitlabUrl, 400)?.let { ivQrGitlab.setImageBitmap(it) }
 
-        // Lien GitHub cliquable
+        // Le nom de chaque dépôt, sous son QR code, l'ouvre dans le navigateur de la voiture
         dialogView.findViewById<TextView>(R.id.tv_github_link).setOnClickListener {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl)))
         }
-
-        // Lien GitLab cliquable
         dialogView.findViewById<TextView>(R.id.tv_gitlab_link).setOnClickListener {
             startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(gitlabUrl)))
         }
 
-        // Création du dialog sans chrome Android (fond transparent = layout seul visible)
-        val dialog = AlertDialog.Builder(requireContext())
-            .setView(dialogView)
-            .setCancelable(true)
-            .create()
-        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-
-        // Bouton Fermer intégré dans le layout
-        dialogView.findViewById<MaterialButton>(R.id.btn_info_close).setOnClickListener {
+        dialogView.findViewById<ImageView>(R.id.iv_info_icon).imageTintList =
+            ColorStateList.valueOf(requireContext().getColor(R.color.dash_accent))
+        val dialog = AppDialog.afficher(requireContext(), dialogView, 1000f)
+        dialogView.findViewById<View>(R.id.btn_info_close).setOnClickListener {
             dialog.dismiss()
         }
-
-        dialog.show()
     }
     // ── Indicateur firmware (deplace depuis la barre du haut) ────────────────
     // Les pastilles affichent la generation detectee et, quand la voiture n'est pas reconnue,
@@ -923,14 +927,17 @@ class SettingsFragment : Fragment() {
         text.setSpan(android.text.style.ForegroundColorSpan(danger),
             riskStart, text.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
 
-        var answered = false
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.external_api_confirm_title)
-            .setMessage(text)
-            .setNegativeButton(R.string.profile_cancel) { _, _ -> answered = true; onResult(false) }
-            .setPositiveButton(R.string.external_api_confirm_ok) { _, _ -> answered = true; onResult(true) }
-            .setOnDismissListener { if (!answered) onResult(false) }
-            .show()
+        // Le refus couvre aussi la fenêtre fermée sans répondre (voir AppDialog.confirmer).
+        AppDialog.confirmer(
+            requireContext(),
+            titre = getString(R.string.external_api_confirm_title),
+            message = text,
+            ton = AppDialog.Ton.DANGER,
+            oui = getString(R.string.external_api_confirm_ok),
+            non = getString(R.string.profile_cancel),
+            onOui = { onResult(true) },
+            onNon = { onResult(false) },
+        )
     }
 
 }

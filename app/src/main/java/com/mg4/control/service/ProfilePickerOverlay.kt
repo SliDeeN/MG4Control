@@ -1,27 +1,22 @@
 package com.mg4.control.service
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.PixelFormat
-import android.graphics.Rect
-import android.graphics.drawable.GradientDrawable
-import android.graphics.drawable.InsetDrawable
 import android.os.Handler
 import android.os.Looper
-import android.widget.Toast
-import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
+import android.widget.HorizontalScrollView
+import android.widget.ImageView
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
-import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.MainActivity
 import com.mg4.control.R
@@ -29,13 +24,22 @@ import com.mg4.control.accessibility.JoystickFocus
 import com.mg4.control.accessibility.KeyCaptureService
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.model.DriveMode
 import com.mg4.control.model.DrivingProfile
+import com.mg4.control.model.HvacPopup
+import com.mg4.control.model.ProfilePicker
+import com.mg4.control.model.ProfileSections
+import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.PopupDelay
+import com.mg4.control.util.ThemeHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * Overlay flottant affichant la liste des profils de conduite.
@@ -49,24 +53,42 @@ import kotlinx.coroutines.launch
  * Dans les deux modes, le joystick droit du volant navigue dans le popup (voir [naviguer]) si le
  * service d'accessibilité est actif ; sinon le popup reste purement tactile.
  *
+ * Présentation refaite le 2026-10-13 dans le style du pop-up HVAC « moderne » (proposition « B »
+ * choisie sur maquette) : les profils en une rangée de grandes cartes — celui qui est en cours
+ * s'y reconnaît —, la luminosité et les actions en bandeau dessous. Ce que fait le popup n'a pas
+ * changé.
+ *
  * Toutes les opérations WindowManager se font sur le thread principal.
  */
 object ProfilePickerOverlay {
 
-    private const val TAG             = "MG4_OVERLAY"
-    private const val AUTO_DISMISS_MS = 8_000L
+    private const val TAG = "MG4_OVERLAY"
 
     private val handler = Handler(Looper.getMainLooper())
 
     /** Cran du curseur de luminosité au joystick, en points de pourcentage. */
     private const val PAS_LUMINOSITE = 5
 
+    /** Préréglages de luminosité, en pour cent : Nuit, Moyen, Jour. */
+    private val PREREGLAGES = intArrayOf(15, 50, 100)
+
+    // Carte de base de overlay_profile_picker.xml, et part de l'écran qu'elle peut prendre : les
+    // mêmes que la présentation « moderne » du pop-up HVAC, pour que les deux fenêtres aient la
+    // même taille (voir HvacPopup.echelle).
+    private const val LARGEUR_DP = 1108f
+    private const val HAUTEUR_DP = 392f
+    private const val PART_LARGEUR = 0.96f
+    private const val PART_HAUTEUR = 0.82f
+
+    /** Espace laissé entre la carte et les bords de la fenêtre quand il faut la réduire, en dp. */
+    private const val MARGE_FENETRE_DP = 12f
+
     @Volatile private var overlayView: View? = null
     private var dismissRunnable: Runnable? = null
     private var countdownRunnable: Runnable? = null
 
     /** Focus au joystick du popup affiché ; vit et meurt avec la vue. Thread principal seulement. */
-    private var navigation: Navigation? = null
+    private var navigation: OverlayNavigation? = null
 
     // ── API publique ─────────────────────────────────────────────────────────
 
@@ -103,7 +125,27 @@ object ProfilePickerOverlay {
 
     // ── Implémentation (main thread) ─────────────────────────────────────────
 
+    /**
+     * Sous garde : une mise en page fautive (vue introuvable, mauvais type) lèverait ici, sur le
+     * thread principal du service, et l'emporterait avec elle. Le popup ne s'ouvre pas, le journal
+     * dit pourquoi — et le repli d'un conflit Bluetooth part quand même, sans quoi aucun profil
+     * ne serait appliqué.
+     */
     private fun showOnMainThread(
+        context: Context,
+        profiles: List<DrivingProfile>?,
+        onAutoDismiss: (() -> Unit)?
+    ) {
+        try {
+            construire(context, profiles, onAutoDismiss)
+        } catch (e: Exception) {
+            AppLogger.e(TAG, "Sélecteur de profils non affiché — ${e.javaClass.simpleName} ${e.message}")
+            dismissOnMainThread(context)
+            onAutoDismiss?.invoke()
+        }
+    }
+
+    private fun construire(
         context: Context,
         profiles: List<DrivingProfile>?,
         onAutoDismiss: (() -> Unit)?
@@ -131,92 +173,60 @@ object ProfilePickerOverlay {
         // fraîche → reflète un changement de langue en cours de session).
         val localizedContext = LocaleHelper.applyLocale(context)
 
-        // Le contexte du Service n'a pas de thème Material → on l'enveloppe
-        // avec le thème de l'app pour que MaterialButton puisse s'instancier.
-        val themedContext = ContextThemeWrapper(localizedContext, R.style.Theme_MG4Control)
+        // La mise en page est écrite pour une carte de base ; on la gonfle avec une densité
+        // corrigée pour qu'elle prenne la même part de l'écran partout — dp et sp suivent d'un
+        // bloc, pictos et texte restent nets. Même contexte pour le thème : clair ou sombre comme
+        // l'application, pas comme le système, et Material pour le curseur.
+        val mesures = localizedContext.resources.displayMetrics
+        val echelle = HvacPopup.echelle(
+            mesures.widthPixels, mesures.heightPixels, mesures.density,
+            LARGEUR_DP, HAUTEUR_DP, PART_LARGEUR, PART_HAUTEUR)
+        val auTheme = ThemeHelper.withAppTheme(localizedContext)
+        val agrandi = auTheme.createConfigurationContext(
+            Configuration(auTheme.resources.configuration).apply {
+                densityDpi = (mesures.densityDpi * echelle).roundToInt()
+            })
+        val themedContext = ContextThemeWrapper(agrandi, R.style.Theme_MG4Control)
+        val p = Palette(themedContext)
 
-        // Inflate la vue depuis le layout XML (utilise le contexte thémé)
         val view = LayoutInflater.from(themedContext).inflate(R.layout.overlay_profile_picker, null)
 
-        // ── Grille 2 colonnes de profils ─────────────────────────────────
-        val container      = view.findViewById<LinearLayout>(R.id.overlay_profiles_container)
-        val accentColor    = context.getColor(R.color.dash_accent)
-        val accentDimColor = context.getColor(R.color.dash_accent_dim)
-        val dm             = context.resources.displayMetrics
+        // ── En-tête ───────────────────────────────────────────────────────
+        view.findViewById<ImageView>(R.id.overlay_title_icon).imageTintList = ColorStateList.valueOf(p.accent)
+        val fermer = view.findViewById<ImageView>(R.id.overlay_btn_close)
+        OverlayKit.fond(fermer, p.bouton, p.bordure, p.traitFin, ovale = true)
+        fermer.imageTintList = ColorStateList.valueOf(p.texteSecondaire)
+        fermer.setOnClickListener { dismissOnMainThread(context) }
+        repereJoystick(view, p, localizedContext, utilisable = KeyCaptureService.isEnabled(context))
 
-        fun dp(value: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, dm).toInt()
+        // ── Rangée de cartes de profil ────────────────────────────────────
+        val rangee    = view.findViewById<HorizontalScrollView>(R.id.overlay_profiles_scroll)
+        val container = view.findViewById<LinearLayout>(R.id.overlay_profiles_container)
+        val actifId   = ActiveProfile.id(context)
+        val largeur   = OverlayKit.dp(themedContext, ProfilePicker.largeurCarteDp(profilesToShow.size))
+        val ecart     = OverlayKit.dp(themedContext, ProfilePicker.ECART_DP)
+        val gonfleur  = LayoutInflater.from(themedContext)
 
-        /** Boutons de profil par ligne de la grille, pour la navigation au joystick. */
-        val lignesProfils = mutableListOf<List<View>>()
-
-        fun makeProfileButton(profile: DrivingProfile) =
-            MaterialButton(themedContext).apply {
-                text      = profile.name
-                textSize  = 19f
-                isAllCaps = false
-                setTextColor(accentColor)
-                backgroundTintList = ColorStateList.valueOf(accentDimColor)
-                strokeColor        = ColorStateList.valueOf(accentColor)
-                strokeWidth        = dp(1f)
-                cornerRadius       = dp(10f)
-                setOnClickListener {
-                    AppLogger.i(TAG, "Profil sélectionné : '${profile.name}'")
-                    CoroutineScope(Dispatchers.IO).launch {
-                        ProfileApplier.apply(profile)
-                    }
-                    dismissOnMainThread(context)
+        val cartes = profilesToShow.mapIndexed { rang, profile ->
+            val carte = gonfleur.inflate(R.layout.item_overlay_profile_card, container, false)
+            peindreCarte(carte, profile, actif = profile.id == actifId, p = p, localized = localizedContext)
+            carte.layoutParams = LinearLayout.LayoutParams(largeur, LinearLayout.LayoutParams.MATCH_PARENT)
+                .also { if (rang > 0) it.marginStart = ecart }
+            carte.setOnClickListener {
+                AppLogger.i(TAG, "Profil sélectionné : '${profile.name}'")
+                CoroutineScope(Dispatchers.IO).launch {
+                    ProfileApplier.apply(profile)
                 }
+                dismissOnMainThread(context)
             }
-
-        // Découpe en lignes de 2, chaque ligne = LinearLayout horizontal
-        profilesToShow.chunked(2).forEach { row ->
-            val rowLayout = LinearLayout(themedContext).apply {
-                orientation = LinearLayout.HORIZONTAL
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).also { it.bottomMargin = dp(10f) }
-            }
-
-            val boutons = row.mapIndexed { index, profile ->
-                makeProfileButton(profile).apply {
-                    layoutParams = LinearLayout.LayoutParams(0, dp(90f), 1f).also {
-                        if (index == 0 && row.size == 2) it.marginEnd = dp(10f)
-                    }
-                }
-            }
-            boutons.forEach(rowLayout::addView)
-            lignesProfils += boutons
-
-            // Nombre impair → placeholder invisible pour garder la symétrie
-            if (row.size == 1) {
-                val spacer = View(themedContext).apply {
-                    layoutParams = LinearLayout.LayoutParams(0, dp(90f), 1f)
-                }
-                rowLayout.addView(spacer)
-            }
-
-            container.addView(rowLayout)
+            container.addView(carte)
+            carte
         }
 
-        // ── Fermeture manuelle ────────────────────────────────────────────
-        view.findViewById<View>(R.id.overlay_btn_close)?.setOnClickListener {
-            dismissOnMainThread(context)
-        }
-
-        // ── Bouton « Éteindre la voiture » (centré, gated firmware) ────────
-        val btnPowerOff = view.findViewById<MaterialButton>(R.id.overlay_btn_poweroff)
-        if (!MG4Hardware.hasVehiclePowerOff()) {
-            btnPowerOff?.visibility = View.GONE
-        } else {
-            btnPowerOff?.setOnClickListener {
-                dismissOnMainThread(context)              // ferme le popup profils
-                showVehiclePowerOffConfirm(context)       // P-check + confirmation
-            }
-        }
-
-        // ── Bouton « Ouvrir MG4Control » (bas droite, toujours visible) ────
-        view.findViewById<MaterialButton>(R.id.overlay_btn_open_app)?.setOnClickListener {
+        // ── Bouton « Ouvrir MG4Control » (toujours visible) ───────────────
+        val ouvrir = view.findViewById<TextView>(R.id.overlay_btn_open_app)
+        tuileAction(ouvrir, p, danger = false)
+        ouvrir.setOnClickListener {
             AppLogger.i(TAG, "Ouverture de MG4Control depuis l'overlay")
             runCatching {
                 context.startActivity(
@@ -227,12 +237,46 @@ object ProfilePickerOverlay {
             dismissOnMainThread(context)
         }
 
+        // ── Bouton « Éteindre la voiture » (gated firmware) ───────────────
+        val eteindre = view.findViewById<TextView>(R.id.overlay_btn_poweroff)
+        val actions  = view.findViewById<View>(R.id.overlay_actions)
+        val peutEteindre = MG4Hardware.hasVehiclePowerOff()
+        if (!peutEteindre) {
+            eteindre.visibility = View.GONE
+        } else {
+            tuileAction(eteindre, p, danger = true)
+            eteindre.setOnClickListener {
+                dismissOnMainThread(context)              // ferme le popup profils
+                VehiclePowerOffOverlay.demander(context, "sélecteur de profils")
+            }
+        }
+
+        // ── Luminosité (masquée si le firmware ne sait pas la régler) ─────
+        // Décidé AVANT la pose : la place de la fenêtre se mesure sur la mise en page finale.
+        val briSection = view.findViewById<View>(R.id.overlay_brightness_section)
+        val briVisible = MG4Hardware.hasBrightnessControl()
+        val place = actions.layoutParams as LinearLayout.LayoutParams
+        when {
+            // Sans luminosité, les actions prennent tout le bandeau.
+            !briVisible -> {
+                briSection.visibility = View.GONE
+                place.width = 0
+                place.weight = 1f
+            }
+            // Une seule action : un panneau moitié moins large suffit, la luminosité prend le reste.
+            !peutEteindre -> place.width = OverlayKit.dp(themedContext, 230f)
+        }
+        actions.layoutParams = place
+
         // ── Tap sur le fond → fermeture ───────────────────────────────────
-        view.findViewById<View>(R.id.overlay_backdrop)?.setOnClickListener {
+        view.findViewById<View>(R.id.overlay_backdrop).setOnClickListener {
             dismissOnMainThread(context)
         }
         // La carte intérieure intercepte les appuis sans propager au fond
-        view.findViewById<View>(R.id.overlay_card)?.setOnClickListener { /* consommer */ }
+        view.findViewById<View>(R.id.overlay_card).setOnClickListener { /* consommer */ }
+
+        OverlayKit.tenirDansLaFenetre(
+            view, (MARGE_FENETRE_DP * mesures.density).roundToInt(), "Sélecteur de profils")
 
         // ── Paramètres WindowManager ──────────────────────────────────────
         val params = WindowManager.LayoutParams(
@@ -247,16 +291,20 @@ object ProfilePickerOverlay {
 
         wm.addView(view, params)
         overlayView = view
-        AppLogger.i(TAG, "Overlay affiché — ${profilesToShow.size} profil(s)")
+        AppLogger.i(TAG, "Overlay affiché — ${profilesToShow.size} profil(s), actif=${actifId ?: "aucun"} ; " +
+            "échelle ×${String.format(Locale.US, "%.2f", echelle)} (écran ${mesures.widthPixels}×" +
+            "${mesures.heightPixels} px, ${mesures.densityDpi} dpi)")
 
         // ── Compte à rebours ──────────────────────────────────────────────
+        // Délai réglé dans Réglages › Interface, lu à l'ouverture.
+        val delaiMs = PopupDelay.millis(context)
         val tvCountdown = view.findViewById<TextView>(R.id.overlay_countdown)
-        var remaining = (AUTO_DISMISS_MS / 1_000L).toInt()
+        var remaining = (delaiMs / 1_000L).toInt()
 
         val tick: Runnable = object : Runnable {
             override fun run() {
                 if (overlayView == null) return
-                tvCountdown?.text = localizedContext.getString(R.string.overlay_countdown, remaining)
+                tvCountdown.text = localizedContext.getString(R.string.overlay_countdown, remaining)
                 if (remaining > 0) {
                     remaining--
                     handler.postDelayed(this, 1_000L)
@@ -276,43 +324,59 @@ object ProfilePickerOverlay {
             onAutoDismiss?.invoke()
         }
         dismissRunnable = dr
-        handler.postDelayed(dr, AUTO_DISMISS_MS)
+        handler.postDelayed(dr, delaiMs)
 
         // Ré-arme les deux timers (appelé à chaque interaction luminosité pour
         // ne pas fermer le popup pendant le réglage).
         fun resetTimers() {
             handler.removeCallbacks(dr)
-            handler.postDelayed(dr, AUTO_DISMISS_MS)
+            handler.postDelayed(dr, delaiMs)
             countdownRunnable?.let { handler.removeCallbacks(it) }
-            remaining = (AUTO_DISMISS_MS / 1_000L).toInt()
+            remaining = (delaiMs / 1_000L).toInt()
             handler.post(tick)
         }
 
         // ── Bloc luminosité (ancien SDK SWI133/68/165 ; A9 = phase 2) ─────
         // Posé par le bloc luminosité s'il est affiché : le joystick règle le curseur par crans.
         var reglerLuminosite: ((Int) -> Unit)? = null
-        val briSection = view.findViewById<View>(R.id.overlay_brightness_section)
-        if (!MG4Hardware.hasBrightnessControl()) {
-            briSection?.visibility = View.GONE
-        } else {
+        val prereglages = listOf(
+            view.findViewById<TextView>(R.id.overlay_bri_night),
+            view.findViewById<TextView>(R.id.overlay_bri_mid),
+            view.findViewById<TextView>(R.id.overlay_bri_day),
+        )
+        val ligneCurseur = view.findViewById<View>(R.id.overlay_bri_slider_row)
+        if (briVisible) {
             val slider   = view.findViewById<Slider>(R.id.overlay_bri_slider)
             val briValue = view.findViewById<TextView>(R.id.overlay_bri_value)
+            view.findViewById<ImageView>(R.id.overlay_bri_icon).imageTintList = ColorStateList.valueOf(p.accent)
+            OverlayKit.fond(view.findViewById(R.id.overlay_bri_presets), p.bouton, rayon = p.rayonTuile)
+
+            /** Le préréglage qui correspond au curseur s'allume ; entre deux, aucun. */
+            fun peindrePrereglages(valeur: Int) {
+                prereglages.forEachIndexed { rang, vue ->
+                    val choisi = PREREGLAGES[rang] == valeur
+                    OverlayKit.fond(vue, if (choisi) p.segmentChoisi else Color.TRANSPARENT, rayon = p.rayonSegment)
+                    vue.setTextColor(if (choisi) p.textePrincipal else p.texteSecondaire)
+                }
+            }
+            peindrePrereglages(-1)
 
             fun applyBrightnessAsync(pct: Int) {
                 CoroutineScope(Dispatchers.IO).launch { MG4Hardware.setScreenBrightnessPercent(pct) }
             }
             // Debounce des écritures pendant le glissement (évite de spammer le binder)
-            val pendingApply = Runnable { slider?.let { applyBrightnessAsync(it.value.toInt()) } }
+            val pendingApply = Runnable { applyBrightnessAsync(slider.value.toInt()) }
 
-            slider?.addOnChangeListener { _, value, fromUser ->
-                briValue?.text = "${value.toInt()}%"
+            slider.addOnChangeListener { _, value, fromUser ->
+                briValue.text = "${value.toInt()}%"
+                peindrePrereglages(value.toInt())
                 if (fromUser) {
                     resetTimers()
                     handler.removeCallbacks(pendingApply)
                     handler.postDelayed(pendingApply, 60L)
                 }
             }
-            slider?.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+            slider.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
                 override fun onStartTrackingTouch(s: Slider) { resetTimers() }
                 override fun onStopTrackingTouch(s: Slider) {
                     handler.removeCallbacks(pendingApply)
@@ -323,198 +387,158 @@ object ProfilePickerOverlay {
 
             // Presets — déplacent le curseur (met à jour le label via le listener) puis appliquent
             fun preset(pct: Int) {
-                slider?.value = pct.toFloat()
+                slider.value = pct.toFloat()
                 applyBrightnessAsync(pct)
                 resetTimers()
             }
-            view.findViewById<View>(R.id.overlay_bri_night)?.setOnClickListener { preset(15) }
-            view.findViewById<View>(R.id.overlay_bri_mid)?.setOnClickListener   { preset(50) }
-            view.findViewById<View>(R.id.overlay_bri_day)?.setOnClickListener   { preset(100) }
+            prereglages.forEachIndexed { rang, vue -> vue.setOnClickListener { preset(PREREGLAGES[rang]) } }
 
             // Joystick : même chemin que le glissement (écriture différée), sans quoi une rafale
             // de crans enverrait une écriture binder par appui.
-            reglerLuminosite = { delta ->
-                slider?.let {
-                    it.value = (it.value + delta).coerceIn(it.valueFrom, it.valueTo)  // label via le listener
-                    handler.removeCallbacks(pendingApply)
-                    handler.postDelayed(pendingApply, 60L)
-                    resetTimers()
-                }
+            reglerLuminosite = { sens ->
+                slider.value = (slider.value + sens * PAS_LUMINOSITE).coerceIn(slider.valueFrom, slider.valueTo)  // label via le listener
+                handler.removeCallbacks(pendingApply)
+                handler.postDelayed(pendingApply, 60L)
+                resetTimers()
             }
 
             // Initialisation depuis la valeur courante (lecture binder en arrière-plan)
-            briValue?.text = "…"
+            briValue.text = "…"
             CoroutineScope(Dispatchers.IO).launch {
                 val cur = MG4Hardware.getScreenBrightnessPercent()
                 handler.post {
                     if (overlayView == null) return@post
-                    if (cur >= 0) slider?.value = cur.coerceIn(5, 100).toFloat()  // label via le listener
-                    else briValue?.text = "--%"
+                    if (cur >= 0) slider.value = cur.coerceIn(5, 100).toFloat()  // label via le listener
+                    else briValue.text = "--%"
                 }
             }
         }
 
         // ── Navigation au joystick droit du volant ───────────────────────
-        // Grille de haut en bas : préréglages, curseur, lignes de profils, barre du bas. Seules
-        // les cellules visibles y figurent : un bouton masqué ne doit pas pouvoir prendre le focus.
-        fun visibles(vararg vues: View?) = vues.filterNotNull().filter { it.visibility == View.VISIBLE }
-        val briVisible   = briSection?.visibility == View.VISIBLE
-        val ligneCurseur = if (briVisible) view.findViewById<View>(R.id.overlay_bri_slider)?.parent as? View else null
-        val lignes = buildList {
-            if (briVisible) {
-                add(visibles(view.findViewById<View>(R.id.overlay_bri_night),
-                             view.findViewById<View>(R.id.overlay_bri_mid),
-                             view.findViewById<View>(R.id.overlay_bri_day)))
-                add(listOfNotNull(ligneCurseur))
-            }
-            addAll(lignesProfils)
-            add(visibles(view.findViewById<View>(R.id.overlay_btn_close), btnPowerOff,
-                         view.findViewById<View>(R.id.overlay_btn_open_app)))
+        // Grille de haut en bas : la rangée de profils, puis préréglages et actions, puis le
+        // curseur — sur sa propre ligne, puisque gauche / droite le règlent. Seules les cellules
+        // visibles y figurent : un bouton masqué ne doit pas pouvoir prendre le focus.
+        val lignes = buildList<List<View>> {
+            add(cartes)
+            add((if (briVisible) prereglages else emptyList<View>()) + listOf(ouvrir) +
+                (if (peutEteindre) listOf(eteindre) else emptyList<View>()))
+            if (briVisible) add(listOf(ligneCurseur))
         }
-        val grille = lignes.filter { it.isNotEmpty() }
         // Focus de départ sur le premier profil : c'est ce qu'on vient chercher dans ce popup, et
         // c'est aussi celui qu'applique le délai d'un conflit Bluetooth.
-        val premierProfil = grille.indexOfFirst { it.firstOrNull() === lignesProfils.firstOrNull()?.firstOrNull() }
-        navigation = Navigation(
-            grille           = grille,
-            ligneCurseur     = ligneCurseur,
-            defilement       = container.parent as? ScrollView,
-            reglerLuminosite = reglerLuminosite,
-            surDeplacement   = { resetTimers() },
-            couleur          = accentColor,
-            epaisseur        = dp(4f),
-            arrondi          = dp(12f).toFloat(),
-            depart           = JoystickFocus.Position(premierProfil.coerceAtLeast(0), 0),
-        ).also {
-            // Surligner sans service d'accessibilité promettrait une navigation qui ne viendra pas.
-            if (KeyCaptureService.isEnabled(context)) it.afficher()
-        }
+        navigation = OverlayNavigation(
+            context              = themedContext,
+            grille               = lignes.filter { it.isNotEmpty() },
+            depart               = JoystickFocus.Position(0, 0),
+            surDeplacement       = { resetTimers() },
+            ligneCurseur         = if (briVisible) ligneCurseur else null,
+            reglerCurseur        = reglerLuminosite,
+            defilementHorizontal = rangee,
+        ).also { it.afficher() }
+    }
+
+    // ── Peinture ─────────────────────────────────────────────────────────────
+
+    /** Couleurs et cotes du popup, prises sur son contexte THÉMÉ et agrandi. */
+    private class Palette(private val themed: Context) {
+        val accent          = themed.getColor(R.color.dash_accent)
+        val accentDoux      = themed.getColor(R.color.dash_accent_dim)
+        val alerte          = themed.getColor(R.color.dash_warn)
+        val alerteDoux      = themed.getColor(R.color.dash_warn_dim)
+        val danger          = themed.getColor(R.color.dash_danger)
+        val dangerDoux      = themed.getColor(R.color.dash_danger_dim)
+        val bouton          = themed.getColor(R.color.dash_btn)
+        val bordure         = themed.getColor(R.color.dash_border)
+        val segmentChoisi   = themed.getColor(R.color.hvac_segment_on)
+        val textePrincipal  = themed.getColor(R.color.text_primary)
+        val texteSecondaire = themed.getColor(R.color.text_secondary)
+
+        val traitFin      = OverlayKit.dp(themed, 1f)
+        val traitMoyen    = OverlayKit.dp(themed, 2f)
+        val rayonCarte    = OverlayKit.dp(themed, 14f).toFloat()
+        val rayonTuile    = OverlayKit.dp(themed, 12f).toFloat()
+        val rayonSegment  = OverlayKit.dp(themed, 9f).toFloat()
+        val rayonPastille = OverlayKit.dp(themed, 15f).toFloat()
+
+        /** Fond et texte de la pastille d'un mode de conduite. */
+        fun mode(mode: DriveMode): Pair<Int, Int> = OverlayKit.pastilleMode(themed, mode)
     }
 
     /**
-     * Focus au joystick sur les cellules d'un popup affiché.
-     *
-     * Le choix de la cible est délégué à [JoystickFocus] (testé) ; cette classe ne fait que lire
-     * les positions à l'écran, dessiner l'anneau et agir. Les positions sont relues à CHAQUE appui :
-     * au premier, la mise en page vient à peine d'avoir lieu.
+     * Une carte de profil : son mode de conduite en pastille, son nom, un résumé. Celle du profil
+     * en cours est teintée et le dit — c'est le dernier profil APPLIQUÉ ([ActiveProfile]), pas une
+     * lecture de la voiture.
      */
-    private class Navigation(
-        private val grille: List<List<View>>,
-        private val ligneCurseur: View?,
-        private val defilement: ScrollView?,
-        private val reglerLuminosite: ((Int) -> Unit)?,
-        private val surDeplacement: () -> Unit,
-        private val couleur: Int,
-        private val epaisseur: Int,
-        private val arrondi: Float,
-        depart: JoystickFocus.Position,
-    ) {
-        private var position = depart
-        private var surlignee: View? = null
+    private fun peindreCarte(carte: View, profile: DrivingProfile, actif: Boolean, p: Palette, localized: Context) {
+        if (actif) OverlayKit.fond(carte, p.accentDoux, p.accent, p.traitMoyen, p.rayonCarte)
+        else OverlayKit.fond(carte, p.bouton, p.bordure, p.traitFin, p.rayonCarte)
 
-        fun afficher() = surligner(cellule())
-
-        fun recevoir(commande: JoystickFocus.Commande) {
-            val cellule = cellule()
-            val lateral = commande == JoystickFocus.Commande.GAUCHE || commande == JoystickFocus.Commande.DROITE
-            when {
-                // Clic réel : même chemin que le doigt, donc mêmes garde-fous (verrou de conduite,
-                // confirmation d'extinction…). Le curseur n'a rien à valider.
-                commande == JoystickFocus.Commande.VALIDER -> {
-                    AppLogger.i(TAG, "Joystick — validation de la cellule ${position.ligne}/${position.colonne}")
-                    if (cellule !== ligneCurseur) cellule.performClick()
-                }
-                // Sur le curseur, gauche/droite règlent la luminosité au lieu de déplacer le focus
-                // (la ligne n'a de toute façon qu'une cellule).
-                cellule === ligneCurseur && lateral -> reglerLuminosite?.invoke(
-                    if (commande == JoystickFocus.Commande.GAUCHE) -PAS_LUMINOSITE else PAS_LUMINOSITE
-                )
-                else -> {
-                    position = JoystickFocus.deplacer(centres(), position, commande)
-                    surligner(cellule())
-                    surDeplacement()
-                }
-            }
+        // Rien sur un réglage que le profil n'écrira pas : sans la catégorie Conduite, ni mode
+        // ni régénération, et le résumé nomme les catégories qu'il applique.
+        val mode = carte.findViewById<TextView>(R.id.profile_card_mode)
+        val resume = carte.findViewById<TextView>(R.id.profile_card_summary)
+        if (profile.appliesDrive) {
+            val (fond, texte) = p.mode(profile.driveMode)
+            mode.text = profile.driveMode.label
+            mode.setTextColor(texte)
+            OverlayKit.fond(mode, fond, rayon = p.rayonPastille)
+            resume.text = localized.getString(R.string.drive_section_regen) + " " + profile.regenLevel.label
+        } else {
+            mode.visibility = View.INVISIBLE
+            resume.text = ProfileSections.summary(
+                profile, adasLabel = "",
+                driveName   = localized.getString(R.string.profile_cat_drive),
+                safetyName  = localized.getString(R.string.profile_cat_safety),
+                comfortName = localized.getString(R.string.profile_cat_comfort))
         }
 
-        private fun cellule(): View {
-            val ligne = grille[position.ligne.coerceIn(0, grille.lastIndex)]
-            return ligne[position.colonne.coerceIn(0, ligne.lastIndex)]
-        }
+        carte.findViewById<TextView>(R.id.profile_card_name).text = profile.name
 
-        private fun centres(): List<List<Int>> {
-            val xy = IntArray(2)
-            return grille.map { ligne ->
-                ligne.map { v -> v.getLocationOnScreen(xy); xy[0] + v.width / 2 }
-            }
+        if (actif) {
+            val etiquette = carte.findViewById<TextView>(R.id.profile_card_active)
+            etiquette.visibility = View.VISIBLE
+            etiquette.setTextColor(p.accent)
+            OverlayKit.fond(etiquette, Color.TRANSPARENT, p.accent, p.traitFin, p.rayonPastille)
         }
+        val action = carte.findViewById<TextView>(R.id.profile_card_action)
+        action.text = localized.getString(
+            if (actif) R.string.overlay_profile_current else R.string.overlay_profile_apply)
+        action.setTextColor(if (actif) p.texteSecondaire else p.accent)
+    }
 
-        private fun surligner(v: View) {
-            surlignee?.foreground = null
-            // Les MaterialButton dessinent leur fond en retrait vertical : sans le même retrait,
-            // l'anneau flotterait au-dessus et au-dessous du bouton.
-            val (haut, bas) = if (v is MaterialButton) v.insetTop to v.insetBottom else 0 to 0
-            v.foreground = InsetDrawable(GradientDrawable().apply {
-                cornerRadius = arrondi
-                setColor(Color.TRANSPARENT)
-                setStroke(epaisseur, couleur)
-            }, 0, haut, 0, bas)
-            surlignee = v
-            amenerDansLaVue(v)
-        }
-
-        /** Fait défiler la liste de profils si la cellule surlignée en dépasse. */
-        private fun amenerDansLaVue(v: View) {
-            val sv = defilement ?: return
-            if (sv.height == 0 || !estDans(v, sv)) return
-            val r = Rect()
-            v.getDrawingRect(r)
-            sv.offsetDescendantRectToMyCoords(v, r)
-            when {
-                r.top < sv.scrollY                -> sv.smoothScrollTo(0, r.top)
-                r.bottom > sv.scrollY + sv.height -> sv.smoothScrollTo(0, r.bottom - sv.height)
-            }
-        }
-
-        private fun estDans(v: View, parent: View): Boolean {
-            var p = v.parent
-            while (p != null) {
-                if (p === parent) return true
-                p = p.parent
-            }
-            return false
-        }
+    /** Tuile d'action du bandeau ; [danger] pour celle qui éteint la voiture. */
+    private fun tuileAction(tuile: TextView, p: Palette, danger: Boolean) {
+        if (danger) OverlayKit.fond(tuile, p.dangerDoux, p.danger, p.traitFin, p.rayonTuile)
+        else OverlayKit.fond(tuile, p.bouton, p.bordure, p.traitFin, p.rayonTuile)
+        tuile.setTextColor(p.textePrincipal)
+        tuile.compoundDrawableTintList = ColorStateList.valueOf(if (danger) p.danger else p.accent)
     }
 
     /**
-     * « Éteindre la voiture » depuis l'overlay : vérifie la position P (lecture gear),
-     * puis affiche le MÊME dialogue de confirmation que les Réglages/raccourci, en
-     * fenêtre overlay. Si pas en P → Toast. `vehiclePowerOff()` re-vérifie le P à l'envoi.
+     * Repère de l'en-tête. Joystick utilisable : son nom, puis ce que font ses gestes — pousser
+     * déplace le focus, le clic valide. Sinon l'avertissement, seul, au même endroit : sans service
+     * d'accessibilité le joystick ne nous parvient pas (il règle le volume).
      */
-    private fun showVehiclePowerOffConfirm(context: Context) {
-        CoroutineScope(Dispatchers.IO).launch {
-            val inPark = MG4Hardware.isVehicleInPark()
-            handler.post {
-                if (inPark == true) {
-                    val themed = ContextThemeWrapper(LocaleHelper.applyLocale(context), R.style.Theme_MG4Control)
-                    val dialog = AlertDialog.Builder(themed)
-                        .setTitle(R.string.vehicle_power_dialog_title)
-                        .setMessage(R.string.vehicle_power_dialog_msg)
-                        .setNegativeButton(R.string.vehicle_power_dialog_cancel, null)
-                        .setPositiveButton(R.string.vehicle_power_dialog_confirm) { _, _ ->
-                            CoroutineScope(Dispatchers.IO).launch {
-                                val ok = MG4Hardware.vehiclePowerOff()
-                                AppLogger.i(TAG, "OVERLAY VEHICLE_POWER_OFF confirmé → $ok")
-                            }
-                        }
-                        .create()
-                    dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-                    dialog.show()
-                } else {
-                    Toast.makeText(context, R.string.vehicle_power_need_park, Toast.LENGTH_LONG).show()
-                }
-            }
+    private fun repereJoystick(view: View, p: Palette, localized: Context, utilisable: Boolean) {
+        val couleur = if (utilisable) p.accent else p.alerte
+        val titre = view.findViewById<TextView>(R.id.overlay_joy_title)
+        titre.text =
+            if (utilisable) localized.getString(R.string.hvac_popup_joystick_title)
+            else localized.getString(R.string.hvac_popup_joystick_off_title) + " · " +
+                localized.getString(R.string.hvac_popup_joystick_off_text)
+        titre.setTextColor(couleur)
+        titre.compoundDrawableTintList = ColorStateList.valueOf(couleur)
+        listOf(
+            view.findViewById<TextView>(R.id.overlay_joy_move),
+            view.findViewById<TextView>(R.id.overlay_joy_ok),
+        ).forEach { geste ->
+            geste.visibility = if (utilisable) View.VISIBLE else View.GONE
+            geste.setTextColor(p.textePrincipal)
+            geste.compoundDrawableTintList = ColorStateList.valueOf(p.accent)
         }
+        OverlayKit.fond(
+            view.findViewById(R.id.overlay_joy_chip),
+            if (utilisable) p.accentDoux else p.alerteDoux, rayon = p.rayonPastille)
     }
 
     private fun dismissOnMainThread(context: Context) {

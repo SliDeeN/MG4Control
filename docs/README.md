@@ -29,7 +29,7 @@ assets/css/sim.css      Maquette de l'app : palette et dimensions de res/values*
 assets/js/strings.js    Libellés de l'app en 7 langues, générés depuis res/values*/strings.xml
 assets/js/sim.js        Simulateur : écrans, règles par firmware, raccourcis, automatisations, API
 assets/js/site.js       Lien de langue, thème, liens fonctionnalités → maquette, widgets
-assets/js/explorer.js   Maquette épinglée, barre de thèmes, filtre 2.6.7, retour aux explications
+assets/js/explorer.js   Maquette épinglée, barre de thèmes, filtre des nouveautés, retour aux explications
 assets/img/             Icônes (dérivées de ic_launcher-playstore.png) et images d'aperçu og-fr / og-en
 tools/strings2js.ps1    Régénère strings.js depuis les ressources de l'app
 .nojekyll               Désactive Jekyll sur GitHub Pages
@@ -122,13 +122,15 @@ langue mène à un dossier et non à sa page.
 
 ## Version documentée
 
-Le site et le simulateur décrivent la **2.6.7** (code de la branche `beta` au 30/09/2026, commit
-`4127f65`, refonte de l'écran des vitres). Ils sont prévus pour être publiés en même temps que la release 2.6.7 : le bouton
-« Télécharger la dernière version » pointe vers `releases/latest`.
+Le site et le simulateur décrivent la **2.6.8** (code de la branche `beta` au 08/10/2026, commit
+`8e591e5`, option « une seule fois » de l'automatisation A/C). Ils sont prévus pour être publiés en
+même temps que la release 2.6.8 : le bouton « Télécharger la dernière version » pointe vers
+`releases/latest`, et publier plus tôt annoncerait des fonctions que la version stable n'a pas.
 
-Les nouveautés portent le badge `<span class="badge-new">` (« Nouveau · 2.6.7 ») ; le filtre
-« ★ 2.6.7 » et l'encadré de l'accueil s'appuient dessus. À la version suivante, retirer ces badges
-et réécrire l'encadré des nouveautés.
+Les nouveautés portent le badge `<span class="badge-new">` (« Nouveau · 2.6.8 ») et leur carte la
+classe `is-new` ; le filtre « ★ 2.6.8 », le lien « Nouveautés » de l'en-tête et l'encadré de
+l'accueil s'appuient dessus. À la version suivante, retirer ces badges et ces classes, réécrire
+l'encadré des nouveautés et changer la pastille `vX.Y.Z` de l'accueil.
 
 ## Ajouter ou modifier une fonctionnalité
 
@@ -157,3 +159,18 @@ powershell -ExecutionPolicy Bypass -File site-src/build.ps1
 Les règles par firmware sont regroupées dans la fonction `caps()` de `sim.js`, et la liste des
 actions de raccourci dans `availableActions()`. Ce sont les deux endroits à relire lorsqu'une
 fonctionnalité change.
+
+Les pop-ups et les fenêtres reprennent les mises en page de l'application, avec leurs dimensions :
+
+- `overlayHtml()` et `bannerHtml()` : ce qui se pose par-dessus l'écran de la voiture (sélecteur de
+  profils, pop-up HVAC, bandeaux), d'après `res/layout/overlay_*.xml`. La carte de base de
+  1108 × 392 dp occupe dans la maquette la même part d'écran que sur la voiture ;
+- `dialogHtml()` : les fenêtres de l'application, d'après `res/layout/dialog_*.xml`. Elles sont
+  dessinées à leurs dimensions puis réduites d'un bloc par la classe `.mw` (`zoom` dans `sim.css`),
+  la plus large faisant 1320 dp pour un écran de maquette de 1280 ;
+- le bloc `MW` : les pictogrammes, dont les tracés sont recopiés des drawables de l'application
+  (`ic_hvac_*`, `ic_overlay_*`, `ic_dialog_*`, `ic_heat_level_*`). Un pictogramme qui change dans
+  l'application est à recopier ici.
+
+Le rendu est groupé en fin de tâche (`commit()`, micro-tâche) : un essai qui lit la maquette juste
+après une action doit attendre un tour avant de regarder.

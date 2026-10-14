@@ -16,6 +16,8 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.R
+import com.mg4.control.automation.BatteryHeatingAutomation
+import com.mg4.control.automation.BatteryHeatingSettings
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.MG4Hardware.AebMode
@@ -108,6 +110,20 @@ class DashboardFragment : Fragment() {
     private var btnDmsSenLow: Button? = null
     private var btnDmsSenMedium: Button? = null
     private var btnDmsSenHigh: Button? = null
+    // Feux de route automatiques (page Confort, les 6 firmwares).
+    private var btnHighBeamOn: Button? = null
+    private var btnHighBeamOff: Button? = null
+    // Chauffage intelligent de la batterie (page Conduite, les 6 firmwares).
+    private var btnBatteryHeatOn: Button? = null
+    private var btnBatteryHeatOff: Button? = null
+    private var batteryHeatStatus: TextView? = null
+    /** Relecture périodique écran visible : l'option s'active aussi depuis l'écran d'origine. */
+    private val batteryHeatPoll = object : Runnable {
+        override fun run() {
+            refreshBatteryHeating()
+            view?.postDelayed(this, BATTERY_HEAT_POLL_MS)
+        }
+    }
 
     private var btnAebSenLow: Button? = null
     private var btnAebSenStandard: Button? = null
@@ -173,11 +189,20 @@ class DashboardFragment : Fragment() {
         }
         refreshElk()  // SWI133 — sVsm133 indépendant de Katman4
         MG4Hardware.whenKatman4Ready { if (isAdded) refreshSafetyDmsEsc() }
+        MG4Hardware.whenKatman4Ready { if (isAdded) refreshHighBeam() }
+        if (MG4Hardware.hasBatteryHeating()) {
+            view?.removeCallbacks(batteryHeatPoll)
+            // Voie VPM liée de façon asynchrone sur SWI133 : premier relevé une fois prête.
+            MG4Hardware.whenKatman4Ready {
+                if (isAdded) view?.run { removeCallbacks(batteryHeatPoll); post(batteryHeatPoll) }
+            }
+        }
     }
 
     override fun onPause() {
         super.onPause()
         stopClimatePolling()   // pas de sondage binder quand l'écran n'est plus visible
+        view?.removeCallbacks(batteryHeatPoll)
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -189,6 +214,10 @@ class DashboardFragment : Fragment() {
         const val TAB_COMFORT = 2
         /** Tag des appuis « Sens de l'air » : le même que le filtre de la sonde MG4_AIR. */
         const val CLIM_UI_TAG = "MG4_AIR"
+        /** Relecture du chauffage de la batterie et de son décompte, écran visible. */
+        const val BATTERY_HEAT_POLL_MS = 15_000L
+        /** Relectures (une par seconde) au plus après une consigne : au-delà de la fenêtre de 15 s. */
+        const val BATTERY_HEAT_CONFIRM_TRIES = 16
     }
 
     /**
@@ -210,6 +239,8 @@ class DashboardFragment : Fragment() {
         root.findViewById<View>(R.id.climate_page_section)?.visibility =
             if (hasClim) View.VISIBLE else View.GONE
         if (hasClim) bindClimatePage(root)
+        bindLighting(root)
+        bindBatteryHeating(root)
 
         bindCategoryRail(root)
     }
@@ -446,11 +477,20 @@ class DashboardFragment : Fragment() {
                 if (!isRefreshing)
                     CoroutineScope(Dispatchers.IO).launch { MG4Hardware.setSteeringHeat(checked) }
             }
+            // Au clic la rangée montre le niveau DEMANDÉ ; une fois la commande terminée on la
+            // repeint d'après la voiture. Sans ça elle n'était relue qu'à l'ouverture de l'onglet,
+            // et restait fausse dès que le siège n'était pas là où on l'attendait.
             seatLeftButtons?.let { setupSeatButtons(it) { level ->
-                CoroutineScope(Dispatchers.IO).launch { MG4Hardware.setSeatHeatLeft(level) }
+                CoroutineScope(Dispatchers.IO).launch {
+                    MG4Hardware.setSeatHeatLeft(level)
+                    repeindreSieges()
+                }
             } }
             seatRightButtons?.let { setupSeatButtons(it) { level ->
-                CoroutineScope(Dispatchers.IO).launch { MG4Hardware.setSeatHeatRight(level) }
+                CoroutineScope(Dispatchers.IO).launch {
+                    MG4Hardware.setSeatHeatRight(level)
+                    repeindreSieges()
+                }
             } }
         }
 
@@ -1065,6 +1105,22 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    /**
+     * Repeint les deux rangées de sièges d'après la voiture. À appeler hors du thread principal,
+     * une fois la commande terminée : [MG4Hardware.setSeatHeatLeft] ne rend la main qu'après
+     * avoir vu la voiture annoncer le niveau (ou y avoir renoncé), la lecture est donc à jour.
+     * Un niveau illisible laisse la rangée telle quelle.
+     */
+    private suspend fun repeindreSieges() {
+        val gauche = MG4Hardware.getSeatHeatLeftOrNull()
+        val droit  = MG4Hardware.getSeatHeatRightOrNull()
+        withContext(Dispatchers.Main) {
+            if (!isAdded) return@withContext
+            gauche?.let { niveau -> seatLeftButtons?.let { applySeatUI(it, niveau) } }
+            droit?.let { niveau -> seatRightButtons?.let { applySeatUI(it, niveau) } }
+        }
+    }
+
     private fun setupSeatButtons(buttons: List<Button>, onLevel: (Int) -> Unit) {
         buttons.forEachIndexed { index, btn ->
             btn.setOnClickListener {
@@ -1131,7 +1187,7 @@ class DashboardFragment : Fragment() {
      * et l'ESC est une bascule dont l'effet doit être constaté. Afficher l'état demandé plutôt
      * que l'état obtenu ferait mentir l'écran.
      */
-    private fun writeSafety(action: () -> Unit) {
+    private fun writeSafety(refresh: () -> Unit = { refreshSafetyDmsEsc() }, action: () -> Unit) {
         CoroutineScope(Dispatchers.IO).launch {
             action()
             // ⚠️ Relire IMMÉDIATEMENT après l'écriture rend l'ancienne valeur : le calculateur
@@ -1140,7 +1196,7 @@ class DashboardFragment : Fragment() {
             // non plus — elle peint l'état demandé et attend le callback de changement.
             // Ici : peinture optimiste au clic (déjà faite), puis relecture qui fait autorité.
             delay(700)
-            withContext(Dispatchers.Main) { if (isAdded) refreshSafetyDmsEsc() }
+            withContext(Dispatchers.Main) { if (isAdded) refresh() }
         }
     }
 
@@ -1161,6 +1217,115 @@ class DashboardFragment : Fragment() {
                     sen - 1
                 )
             }
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Éclairage — feux de route automatiques (page Confort)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Mêmes boutons ON/OFF que la somnolence : l'écriture est une vraie consigne, mais l'état
+     * affiché reste celui RELU, qui seul dit si le véhicule l'a prise.
+     */
+    private fun bindLighting(root: View) {
+        if (!MG4Hardware.hasAutoHighBeam()) return
+        root.findViewById<View>(R.id.lighting_card).visibility = View.VISIBLE
+        btnHighBeamOn  = root.findViewById(R.id.btn_high_beam_on)
+        btnHighBeamOff = root.findViewById(R.id.btn_high_beam_off)
+        btnHighBeamOn?.setOnClickListener {
+            applyPairUI(btnHighBeamOn, btnHighBeamOff, true)
+            writeSafety({ refreshHighBeam() }) { MG4Hardware.setAutoHighBeam(true) }
+        }
+        btnHighBeamOff?.setOnClickListener {
+            applyPairUI(btnHighBeamOn, btnHighBeamOff, false)
+            writeSafety({ refreshHighBeam() }) { MG4Hardware.setAutoHighBeam(false) }
+        }
+        // Voies VPM/VSM liées de façon asynchrone : voir refreshSafetyDmsEsc.
+        MG4Hardware.whenKatman4Ready { if (isAdded) refreshHighBeam() }
+    }
+
+    private fun refreshHighBeam() {
+        if (!MG4Hardware.hasAutoHighBeam()) return
+        CoroutineScope(Dispatchers.IO).launch {
+            val on = MG4Hardware.isAutoHighBeamOn()
+            withContext(Dispatchers.Main) {
+                if (isAdded) applyPairUI(btnHighBeamOn, btnHighBeamOff, on)
+            }
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Chauffage intelligent de la batterie (page Conduite)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Consigne au clic, état affiché RELU — la consigne tenant lieu d'état tant que le véhicule ne
+     * l'a pas reflétée (voir [writeBatteryHeating]). Sous les boutons, le temps restant avant la
+     * coupure automatique quand elle est en cours.
+     */
+    private fun bindBatteryHeating(root: View) {
+        if (!MG4Hardware.hasBatteryHeating()) return
+        root.findViewById<View>(R.id.section_battery_heat).visibility = View.VISIBLE
+        btnBatteryHeatOn  = root.findViewById(R.id.btn_battery_heat_on)
+        btnBatteryHeatOff = root.findViewById(R.id.btn_battery_heat_off)
+        batteryHeatStatus = root.findViewById(R.id.battery_heat_status)
+        btnBatteryHeatOn?.setOnClickListener { writeBatteryHeating(true) }
+        btnBatteryHeatOff?.setOnClickListener { writeBatteryHeating(false) }
+    }
+
+    /**
+     * Pas [writeSafety] ici : sa relecture à 700 ms tombait avant que le calculateur batterie ait
+     * reflété la consigne, et l'affichage revenait à l'ancien état. [MG4Hardware.isBatteryHeatingOn]
+     * rend désormais la consigne en attendant ; on relit chaque seconde jusqu'à ce que le véhicule
+     * la confirme (ou qu'elle soit abandonnée), et le délai réel s'inscrit dans le journal MG4_BATHEAT.
+     */
+    private fun writeBatteryHeating(on: Boolean) {
+        applyPairUI(btnBatteryHeatOn, btnBatteryHeatOff, on)
+        CoroutineScope(Dispatchers.IO).launch {
+            if (MG4Hardware.setBatteryHeating(on)) {
+                // Le décompte de la coupure automatique part de l'activation : l'automatisme relit
+                // tout de suite, et la ligne d'état l'affiche sans attendre la confirmation.
+                BatteryHeatingAutomation.onCommand()
+                delay(300)
+                withContext(Dispatchers.Main) { if (isAdded) refreshBatteryHeating() }
+                var essais = 0
+                while (MG4Hardware.isBatteryHeatingPending() && essais++ < BATTERY_HEAT_CONFIRM_TRIES) {
+                    delay(1_000)
+                    MG4Hardware.isBatteryHeatingOn()
+                }
+            }
+            withContext(Dispatchers.Main) { if (isAdded) refreshBatteryHeating() }
+        }
+    }
+
+    private fun refreshBatteryHeating() {
+        if (!MG4Hardware.hasBatteryHeating()) return
+        CoroutineScope(Dispatchers.IO).launch {
+            val on = MG4Hardware.isBatteryHeatingOn()
+            withContext(Dispatchers.Main) {
+                if (!isAdded) return@withContext
+                applyPairUI(btnBatteryHeatOn, btnBatteryHeatOff, on)
+                val texte = batteryHeatingStatusText(on)
+                batteryHeatStatus?.text = texte
+                batteryHeatStatus?.visibility = if (texte == null) View.GONE else View.VISIBLE
+            }
+        }
+    }
+
+    /**
+     * Activé : temps restant si un décompte tourne ; sinon, sans l'automatisme, il reste activé ;
+     * avec l'automatisme mais hors trajet, la durée réglée. Illisible : rien.
+     */
+    private fun batteryHeatingStatusText(on: Boolean?): String? {
+        if (on == null) return null
+        if (!on) return getString(R.string.batheat_status_off)
+        val cfg = BatteryHeatingSettings.read(requireContext())
+        val reste = BatteryHeatingAutomation.remainingMinutes()
+        return when {
+            !cfg.enabled  -> getString(R.string.batheat_status_stays_on)
+            reste != null -> getString(R.string.batheat_status_countdown, reste)
+            else          -> getString(R.string.batheat_status_planned, cfg.minutes)
         }
     }
 
@@ -1353,7 +1518,11 @@ class DashboardFragment : Fragment() {
             climLastState?.acOn?.let { cur -> climateWrite { MG4Hardware.setClimateAc(!cur) } }
         }
         climBtnAuto?.setOnClickListener {
-            climLastState?.autoOn?.let { cur -> climateWrite { MG4Hardware.setClimateAuto(!cur) } }
+            // « Actif » au sens des écrans d'origine : le drapeau, ou le niveau 15 qui le trahit.
+            climLastState?.let { s ->
+                val actif = s.reglages().enAuto
+                climateWrite { MG4Hardware.setClimateAuto(!actif) }
+            }
         }
         climLoopButtons.forEach { (mode, btn) ->
             btn?.setOnClickListener { climateWrite { MG4Hardware.setClimateLoopMode(mode) } }
@@ -1362,14 +1531,9 @@ class DashboardFragment : Fragment() {
         // ── Sens de l'air : boutons CUMULABLES ──
         // Chaque appui recompose la combinaison à partir du dernier état LU sur la voiture, pas
         // d'un état gardé à l'écran : l'écran d'origine peut l'avoir changé entre-temps.
-        fun basculerAir(face: Boolean = false, feet: Boolean = false, windshield: Boolean = false) {
+        fun basculerAir(part: Int) {
             val lu = climLastState?.airFlow ?: return
-            val actuel = AirFlow.partsOf(lu) ?: AirFlow.Parts(face = false, feet = false, windshield = false)
-            val cible = AirFlow.directionFor(
-                face       = actuel.face xor face,
-                feet       = actuel.feet xor feet,
-                windshield = actuel.windshield xor windshield
-            )
+            val cible = AirFlow.toggled(lu, part)
             // L'air doit bien sortir quelque part : le dernier bouton allumé ne s'éteint pas.
             if (cible == null) {
                 AppLogger.i(CLIM_UI_TAG, "Sens de l'air : dernier bouton actif, appui ignoré (valeur lue=$lu)")
@@ -1382,9 +1546,9 @@ class DashboardFragment : Fragment() {
             climLastState = climLastState?.copy(airFlow = cible)
             climateWrite { MG4Hardware.setClimateAirFlow(cible) }
         }
-        climBtnAirFace?.setOnClickListener       { basculerAir(face = true) }
-        climBtnAirFeet?.setOnClickListener       { basculerAir(feet = true) }
-        climBtnAirWindshield?.setOnClickListener { basculerAir(windshield = true) }
+        climBtnAirFace?.setOnClickListener       { basculerAir(AirFlow.FACE) }
+        climBtnAirFeet?.setOnClickListener       { basculerAir(AirFlow.FEET) }
+        climBtnAirWindshield?.setOnClickListener { basculerAir(AirFlow.WINDSHIELD) }
         // Lunette arrière : hors de l'échelle du sens de l'air, c'est le dégivrage arrière.
         climBtnAirRear?.setOnClickListener {
             climLastState?.defrostRear?.let { cur ->
@@ -1417,18 +1581,26 @@ class DashboardFragment : Fragment() {
                 }
                 climTempValue?.text = s.tempC?.let { "$it°" } ?: "--°"
 
+                // En AUTO la voiture annonce 15, qui n'est pas un cran : on écrit « AUTO », et le
+                // curseur reste sur le dernier niveau réglé à la main — celui d'où l'on repartira
+                // en le déplaçant, ce qui fait sortir d'AUTO.
+                val reglages = s.reglages()
                 climFanSlider?.apply {
                     valueFrom = s.fanMin.toFloat()
                     valueTo   = s.fanMax.toFloat()
-                    s.fanLevel?.let { value = it.coerceIn(s.fanMin, s.fanMax).toFloat() }
+                    (reglages.ventilationReelle ?: s.lastManualFan)
+                        ?.let { value = it.coerceIn(s.fanMin, s.fanMax).toFloat() }
                     isEnabled = s.fanLevel != null
                 }
-                climFanValue?.text = s.fanLevel?.toString() ?: "--"
+                climFanValue?.text = when {
+                    reglages.enAuto -> getString(R.string.clim_auto).uppercase(resources.configuration.locales[0])
+                    else            -> reglages.ventilationReelle?.toString() ?: "--"
+                }
 
                 climLastState = s
                 bindClimToggle(climBtnPower, s.powerOn)
                 bindClimToggle(climBtnAc, s.acOn)
-                bindClimToggle(climBtnAuto, s.autoOn)
+                bindClimToggle(climBtnAuto, if (reglages.enAuto) true else s.autoOn)
 
                 // Valeur illisible → boutons grisés. Valeur lue mais hors échelle (7 « aucun »)
                 // → boutons actifs, aucun allumé : l'utilisateur peut choisir un sens.

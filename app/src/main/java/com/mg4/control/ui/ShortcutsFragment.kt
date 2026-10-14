@@ -1,11 +1,9 @@
 package com.mg4.control.ui
 
-import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.provider.Settings
-import android.content.pm.ResolveInfo
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -16,6 +14,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Spinner
 import android.widget.Switch
+import android.widget.ImageView
 import android.widget.Toast
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -25,9 +24,12 @@ import com.mg4.control.R
 import com.mg4.control.accessibility.AdvancedShortcuts
 import com.mg4.control.accessibility.KeyCaptureService
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.service.OverlayKit
 import com.mg4.control.shortcut.PressType
+import com.mg4.control.shortcut.ProfileCycle
 import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.hardware.MG4Hardware
@@ -77,6 +79,16 @@ class ShortcutsFragment : Fragment() {
 
     /** Repart de la séquence ENREGISTRÉE, en jetant une composition non sauvegardée. */
     private var rechargerCycleRegen: (() -> Unit)? = null
+
+    /**
+     * Cycle de profils en cours d'édition : des IDENTIFIANTS de profil, dans l'ordre des appuis.
+     * Même principe que [regenCycleSel], la position vaut rang.
+     */
+    private val profileCycleSel = mutableListOf<String>()
+
+    /** Pendants de [majCycleRegen] et [rechargerCycleRegen] pour la page du cycle de profils. */
+    private var majCycleProfils: (() -> Unit)? = null
+    private var rechargerCycleProfils: (() -> Unit)? = null
 
     // ── Par-spinner : label list mutable + adapter + vue ─────────────────
     private val spinnerLabelLists = mutableMapOf<String, MutableList<String>>()
@@ -142,6 +154,7 @@ class ShortcutsFragment : Fragment() {
             add(ActionItem(getString(R.string.shortcuts_action_steering_heat),   ShortcutAction.STEERING_HEAT_TOGGLE))
             if (MG4Hardware.hasClimateControl()) {
                 add(ActionItem(getString(R.string.shortcuts_action_hvac_toggle),     ShortcutAction.HVAC_TOGGLE))
+                add(ActionItem(getString(R.string.shortcuts_action_hvac_ac_toggle),  ShortcutAction.HVAC_AC_TOGGLE))
                 add(ActionItem(getString(R.string.shortcuts_action_hvac_temp_up),    ShortcutAction.HVAC_TEMP_UP))
                 add(ActionItem(getString(R.string.shortcuts_action_hvac_temp_down),  ShortcutAction.HVAC_TEMP_DOWN))
                 add(ActionItem(getString(R.string.shortcuts_action_hvac_fan_up),     ShortcutAction.HVAC_FAN_UP))
@@ -149,6 +162,15 @@ class ShortcutsFragment : Fragment() {
                 add(ActionItem(getString(R.string.shortcuts_action_defrost_front),   ShortcutAction.DEFROST_FRONT_TOGGLE))
                 add(ActionItem(getString(R.string.shortcuts_action_defrost_rear),    ShortcutAction.DEFROST_REAR_TOGGLE))
                 add(ActionItem(getString(R.string.shortcuts_action_hvac_recirc),     ShortcutAction.HVAC_RECIRC_CYCLE))
+                add(ActionItem(getString(R.string.shortcuts_action_hvac_popup),      ShortcutAction.HVAC_POPUP))
+            }
+            // Feux de route automatiques : même condition que la carte Éclairage du Dashboard.
+            if (MG4Hardware.hasAutoHighBeam()) {
+                add(ActionItem(getString(R.string.shortcuts_action_auto_high_beam),  ShortcutAction.AUTO_HIGH_BEAM_TOGGLE))
+            }
+            // Chauffage de la batterie : même condition que sa carte du Dashboard.
+            if (MG4Hardware.hasBatteryHeating()) {
+                add(ActionItem(getString(R.string.shortcuts_action_battery_heat),    ShortcutAction.BATTERY_HEAT_TOGGLE))
             }
             if (MG4Hardware.hasBrightnessControl()) {
                 add(ActionItem(getString(R.string.shortcuts_action_brightness_up),   ShortcutAction.BRIGHTNESS_UP))
@@ -169,6 +191,7 @@ class ShortcutsFragment : Fragment() {
             add(ActionItem(getString(R.string.shortcuts_action_windows_close),   ShortcutAction.WINDOWS_CLOSE_ALL))
             add(ActionItem(getString(R.string.shortcuts_action_apply_profile),   ShortcutAction.APPLY_PROFILE))
             add(ActionItem(getString(R.string.shortcuts_action_profile_picker), ShortcutAction.PROFILE_PICKER))
+            add(ActionItem(getString(R.string.shortcuts_action_profile_cycle),  ShortcutAction.PROFILE_CYCLE))
             add(ActionItem(getString(R.string.shortcuts_action_open_app),       ShortcutAction.OPEN_APP))
             add(ActionItem(getString(R.string.shortcuts_action_open_custom_app),ShortcutAction.OPEN_CUSTOM_APP))
             if (MG4Hardware.hasVehiclePowerOff()) {
@@ -190,6 +213,7 @@ class ShortcutsFragment : Fragment() {
         setupSpinners(view)
         setupConfigListeners(view)
         setupRegenCycle(view)
+        setupProfileCycle(view)
         restoreState()
 
         // En dernier : le rail décide quelles pages existent, il lui faut l'état final.
@@ -237,6 +261,8 @@ class ShortcutsFragment : Fragment() {
         reselectTabs = null
         majCycleRegen = null
         rechargerCycleRegen = null
+        majCycleProfils = null
+        rechargerCycleProfils = null
         rootView = null
         super.onDestroyView()
     }
@@ -326,16 +352,19 @@ class ShortcutsFragment : Fragment() {
             // Rien n'est enregistré tant que l'utilisateur n'a pas confirmé : annuler, ou fermer
             // la boîte de dialogue, remet l'interrupteur sur off — ce qui repasse par ce même
             // écouteur avec `checked = false`, donc par la désactivation propre ci-dessus.
-            AlertDialog.Builder(requireContext())
-                .setTitle(R.string.adv_sc_enable_warn_title)
-                .setMessage(R.string.adv_sc_enable_warn_msg)
-                .setPositiveButton(R.string.adv_sc_enable_warn_ok) { _, _ ->
+            AppDialog.confirmer(
+                requireContext(),
+                titre = getString(R.string.adv_sc_enable_warn_title),
+                message = getString(R.string.adv_sc_enable_warn_msg),
+                ton = AppDialog.Ton.ALERTE,
+                oui = getString(R.string.adv_sc_enable_warn_ok),
+                non = getString(R.string.profile_cancel),
+                onOui = {
                     AdvancedShortcuts.setEnabled(requireContext(), true)
                     majEtat()
-                }
-                .setNegativeButton(android.R.string.cancel) { _, _ -> sw.isChecked = false }
-                .setOnCancelListener { _ -> sw.isChecked = false }
-                .show()
+                },
+                onNon = { sw.isChecked = false },
+            )
         }
 
         btnAcc.setOnClickListener {
@@ -471,17 +500,20 @@ class ShortcutsFragment : Fragment() {
                 poursuivre()
                 return@setOnClickListener
             }
-            AlertDialog.Builder(requireContext())
-                .setTitle(R.string.adv_sc_replace_title)
-                .setMessage(getString(R.string.adv_sc_replace_msg,
+            AppDialog.confirmer(
+                requireContext(),
+                titre = getString(R.string.adv_sc_replace_title),
+                message = getString(R.string.adv_sc_replace_msg,
                     libelleTouche(touche),
                     // Le profil est accolé au type d'appui plutôt que de multiplier les
                     // variantes de message : « Appui court · Sport » se lit sans explication.
                     getString(libellePress(typeAppui)) + " · " + libelleProfil(profil),
-                    libelleAction(AdvancedShortcuts.Mapping(touche, typeAppui, existante, profil))))
-                .setPositiveButton(R.string.adv_sc_replace_ok) { _, _ -> poursuivre() }
-                .setNegativeButton(android.R.string.cancel, null)
-                .show()
+                    libelleAction(AdvancedShortcuts.Mapping(touche, typeAppui, existante, profil))),
+                icone = R.drawable.ic_dialog_swap,
+                oui = getString(R.string.adv_sc_replace_ok),
+                non = getString(R.string.profile_cancel),
+                onOui = { poursuivre() },
+            )
         }
 
         majAppui()
@@ -497,22 +529,11 @@ class ShortcutsFragment : Fragment() {
      * cas d'annulation. Les réutiliser ici aurait modifié les raccourcis classiques au passage.
      */
     private fun choisirAppAvancee(slot: String, apres: () -> Unit) {
-        val pm = requireContext().packageManager
-        val apps = pm.queryIntentActivities(
-            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0
-        ).sortedBy { it.loadLabel(pm).toString().lowercase() }
-        val libelles = apps.map { it.loadLabel(pm).toString() }.toTypedArray()
-
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.shortcuts_pick_app_title)
-            .setItems(libelles) { _, i ->
-                prefs.edit()
-                    .putString("shortcut_${slot}_custom_app", apps[i].activityInfo.packageName)
-                    .apply()
-                apres()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        val cle = "shortcut_${slot}_custom_app"
+        choisirUneApp(dejaChoisie = prefs.getString(cle, null)) { paquet, _ ->
+            prefs.edit().putString(cle, paquet).apply()
+            apres()
+        }
     }
 
     private fun choisirProfilAvance(slot: String, apres: () -> Unit) {
@@ -521,14 +542,69 @@ class ShortcutsFragment : Fragment() {
             Toast.makeText(requireContext(), R.string.shortcuts_no_profiles, Toast.LENGTH_SHORT).show()
             return
         }
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.shortcuts_pick_profile_title)
-            .setItems(profils.map { it.name }.toTypedArray()) { _, i ->
-                prefs.edit().putString("shortcut_${slot}_profile_id", profils[i].id).apply()
-                apres()
-            }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        val cle = "shortcut_${slot}_profile_id"
+        choisirUnProfil(profils, dejaChoisi = prefs.getString(cle, null)) { profil ->
+            prefs.edit().putString(cle, profil.id).apply()
+            apres()
+        }
+    }
+
+    /**
+     * La grille des applications lançables, triées par nom, chacune avec son icône.
+     *
+     * @param dejaChoisie paquet de l'application en cours : sa tuile est marquée
+     * @param onAnnule    la grille fermée sans choisir
+     */
+    private fun choisirUneApp(
+        dejaChoisie: String?,
+        onAnnule: () -> Unit = {},
+        onChoix: (paquet: String, nom: String) -> Unit,
+    ) {
+        val pm = requireContext().packageManager
+        val apps = pm.queryIntentActivities(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0
+        ).map { it to it.loadLabel(pm).toString() }.sortedBy { it.second.lowercase() }
+
+        AppDialog.choisir(
+            requireContext(),
+            titre = getString(R.string.shortcuts_pick_app_title),
+            sousTitre = getString(R.string.choice_count_apps, apps.size),
+            // Une icône illisible ne doit pas empêcher de choisir l'application : sa tuile reste,
+            // avec son seul nom.
+            choix = apps.map { (info, nom) ->
+                AppDialog.Choix(nom, icone = runCatching { info.loadIcon(pm) }.getOrNull())
+            },
+            annuler = getString(R.string.profile_cancel),
+            choisi = apps.indexOfFirst { it.first.activityInfo.packageName == dejaChoisie },
+            onAnnule = onAnnule,
+        ) { rang -> onChoix(apps[rang].first.activityInfo.packageName, apps[rang].second) }
+    }
+
+    /** La grille des profils, chacun avec la pastille de son mode de conduite. */
+    private fun choisirUnProfil(
+        profils: List<DrivingProfile>,
+        dejaChoisi: String?,
+        onAnnule: () -> Unit = {},
+        onChoix: (DrivingProfile) -> Unit,
+    ) {
+        val ctx = requireContext()
+        AppDialog.choisir(
+            ctx,
+            titre = getString(R.string.shortcuts_pick_profile_title),
+            sousTitre = getString(R.string.choice_count_profiles, profils.size),
+            choix = profils.map { profil ->
+                // Rien sur un réglage que le profil n'écrira pas : sans la catégorie Conduite, pas
+                // de mode — la pastille garde sa place, vide, pour que les noms restent alignés.
+                if (!profil.appliesDrive) AppDialog.Choix(profil.name, pastille = "") else {
+                    val (fond, texte) = OverlayKit.pastilleMode(ctx, profil.driveMode)
+                    AppDialog.Choix(profil.name, pastille = profil.driveMode.label,
+                        fondPastille = fond, textePastille = texte)
+                }
+            },
+            annuler = getString(R.string.profile_cancel),
+            choisi = profils.indexOfFirst { it.id == dejaChoisi },
+            onAnnule = onAnnule,
+        ) { rang -> onChoix(profils[rang]) }
     }
 
     /**
@@ -608,58 +684,68 @@ class ShortcutsFragment : Fragment() {
         val choixProfils = itemsProfils()
 
         val contenu = layoutInflater.inflate(R.layout.dialog_edit_shortcut, null)
-        val spAction = contenu.findViewById<Spinner>(R.id.spinner_edit_action)
-        val spProfil = contenu.findViewById<Spinner>(R.id.spinner_edit_profile)
-        spAction.adapter = ArrayAdapter(requireContext(),
-            android.R.layout.simple_spinner_dropdown_item, choixActions.map { it.label })
-        spProfil.adapter = ArrayAdapter(requireContext(),
-            android.R.layout.simple_spinner_dropdown_item, choixProfils.map { it.first })
-        choixActions.indexOfFirst { it.action == m.action }
-            .takeIf { it >= 0 }?.let { spAction.setSelection(it) }
-        choixProfils.indexOfFirst { it.second == m.profileId }
-            .takeIf { it >= 0 }?.let { spProfil.setSelection(it) }
+        contenu.findViewById<ImageView>(R.id.edit_shortcut_icon).imageTintList =
+            ColorStateList.valueOf(requireContext().getColor(R.color.dash_accent))
+        contenu.findViewById<TextView>(R.id.edit_shortcut_key).text = getString(
+            R.string.adv_sc_group_title, libelleTouche(m.keyCode), getString(libellePress(m.press)))
+        // Les libellés du formulaire portent leur numéro d'étape (« 3 · Fonction ») : ici il n'y
+        // a pas d'étapes, on ne garde que le mot.
+        contenu.findViewById<TextView>(R.id.edit_caption_action).text =
+            getString(R.string.adv_sc_step_action).substringAfter("·").trim()
+        contenu.findViewById<TextView>(R.id.edit_caption_profile).text =
+            getString(R.string.adv_sc_step_profile).substringAfter("·").trim()
 
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.adv_sc_edit_title)
-            .setView(contenu)
-            .setPositiveButton(android.R.string.ok) { _, _ ->
-                val action = choixActions.getOrNull(spAction.selectedItemPosition)?.action
-                    ?: return@setPositiveButton
-                val profil = choixProfils.getOrNull(spProfil.selectedItemPosition)?.second
+        // Une fonction ou un profil qui n'est plus dans la liste : la première ligne, comme le
+        // faisait la liste déroulante — il faut bien que quelque chose soit choisi.
+        val rangAction = AppDialog.options(
+            contenu.findViewById(R.id.edit_list_action), contenu.findViewById(R.id.edit_scroll_action),
+            choixActions.map { it.label },
+            choixActions.indexOfFirst { it.action == m.action }.coerceAtLeast(0))
+        val rangProfil = AppDialog.options(
+            contenu.findViewById(R.id.edit_list_profile), contenu.findViewById(R.id.edit_scroll_profile),
+            choixProfils.map { it.first },
+            choixProfils.indexOfFirst { it.second == m.profileId }.coerceAtLeast(0))
 
-                // Changer de profil DÉPLACE le raccourci, sa clé de stockage en dépendant. Si la
-                // destination est déjà occupée on refuse : écraser en silence ferait disparaître
-                // un raccourci que l'utilisateur ne regardait même pas.
-                if (profil != m.profileId &&
-                    AdvancedShortcuts.actionFor(requireContext(), m.keyCode, m.press, profil) != null) {
-                    Toast.makeText(requireContext(), R.string.adv_sc_edit_conflict,
-                        Toast.LENGTH_LONG).show()
-                    return@setPositiveButton
-                }
+        val dialog = AppDialog.afficher(requireContext(), contenu, 1040f)
+        contenu.findViewById<View>(R.id.edit_cancel).setOnClickListener { dialog.dismiss() }
+        contenu.findViewById<View>(R.id.edit_save).setOnClickListener {
+            val action = choixActions.getOrNull(rangAction())?.action
+                ?: return@setOnClickListener
+            val profil = choixProfils.getOrNull(rangProfil())?.second
 
-                val enregistrer = {
-                    // L'ancienne entrée d'abord : sans ça un changement de profil laisserait
-                    // deux raccourcis là où l'utilisateur croit n'en avoir déplacé qu'un.
-                    if (profil != m.profileId) {
-                        AdvancedShortcuts.remove(requireContext(), m.keyCode, m.press, m.profileId)
-                    }
-                    AdvancedShortcuts.set(requireContext(), m.keyCode, m.press, action, profil)
-                    AppLogger.i("MG4_KEYCAP", "raccourci avancé modifié : touche=${m.keyCode} " +
-                        "${m.press.key} → ${action.name} (profil ${profil ?: "tous"})")
-                    Toast.makeText(requireContext(), R.string.adv_sc_updated, Toast.LENGTH_SHORT).show()
-                    refreshAdvancedList(vue)
-                }
-                // Mêmes cibles à choisir que dans le formulaire : basculer sur « ouvrir une
-                // app » sans désigner laquelle donnerait un raccourci qui n'ouvre rien.
-                val slot = AdvancedShortcuts.slotKey(m.keyCode, m.press, profil)
-                when (action) {
-                    ShortcutAction.OPEN_CUSTOM_APP -> choisirAppAvancee(slot, enregistrer)
-                    ShortcutAction.APPLY_PROFILE   -> choisirProfilAvance(slot, enregistrer)
-                    else -> enregistrer()
-                }
+            // Changer de profil DÉPLACE le raccourci, sa clé de stockage en dépendant. Si la
+            // destination est déjà occupée on refuse : écraser en silence ferait disparaître
+            // un raccourci que l'utilisateur ne regardait même pas. La fenêtre reste ouverte :
+            // il suffit de choisir un autre profil.
+            if (profil != m.profileId &&
+                AdvancedShortcuts.actionFor(requireContext(), m.keyCode, m.press, profil) != null) {
+                Toast.makeText(requireContext(), R.string.adv_sc_edit_conflict,
+                    Toast.LENGTH_LONG).show()
+                return@setOnClickListener
             }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+            dialog.dismiss()
+
+            val enregistrer = {
+                // L'ancienne entrée d'abord : sans ça un changement de profil laisserait
+                // deux raccourcis là où l'utilisateur croit n'en avoir déplacé qu'un.
+                if (profil != m.profileId) {
+                    AdvancedShortcuts.remove(requireContext(), m.keyCode, m.press, m.profileId)
+                }
+                AdvancedShortcuts.set(requireContext(), m.keyCode, m.press, action, profil)
+                AppLogger.i("MG4_KEYCAP", "raccourci avancé modifié : touche=${m.keyCode} " +
+                    "${m.press.key} → ${action.name} (profil ${profil ?: "tous"})")
+                Toast.makeText(requireContext(), R.string.adv_sc_updated, Toast.LENGTH_SHORT).show()
+                refreshAdvancedList(vue)
+            }
+            // Mêmes cibles à choisir que dans le formulaire : basculer sur « ouvrir une
+            // app » sans désigner laquelle donnerait un raccourci qui n'ouvre rien.
+            val slot = AdvancedShortcuts.slotKey(m.keyCode, m.press, profil)
+            when (action) {
+                ShortcutAction.OPEN_CUSTOM_APP -> choisirAppAvancee(slot, enregistrer)
+                ShortcutAction.APPLY_PROFILE   -> choisirProfilAvance(slot, enregistrer)
+                else -> enregistrer()
+            }
+        }
     }
 
     /**
@@ -825,12 +911,98 @@ class ShortcutsFragment : Fragment() {
     })
 
     /**
+     * Composition du cycle parcouru par le raccourci « Cycle de profils ».
+     *
+     * Même écran et même geste que [setupRegenCycle] — l'ordre des appuis EST l'ordre du cycle,
+     * rien n'est enregistré avant « Sauvegarder » — à une différence près : les boutons ne sont
+     * pas fixes. Les profils se créent, se renomment et se suppriment dans un autre onglet ; ils
+     * sont donc RELUS à chaque arrivée sur la page, et le cycle affiché est celui que le
+     * raccourci parcourrait à cet instant (profils supprimés déjà retirés).
+     */
+    private fun setupProfileCycle(view: View) {
+        // Cinq boutons pour cinq profils au plus (ProfileManager.MAX_PROFILES).
+        val boutons = listOf(
+            R.id.sc_profile_cycle_1, R.id.sc_profile_cycle_2, R.id.sc_profile_cycle_3,
+            R.id.sc_profile_cycle_4, R.id.sc_profile_cycle_5
+        ).mapNotNull { view.findViewById<MaterialButton>(it) }
+        val rangee = view.findViewById<View>(R.id.row_profile_cycle)
+        val vide   = view.findViewById<TextView>(R.id.tv_profile_cycle_empty)
+        val resume = view.findViewById<TextView>(R.id.tv_profile_cycle_summary)
+        val save   = view.findViewById<MaterialButton>(R.id.btn_profile_cycle_save)
+
+        val texteActif   = requireContext().getColor(R.color.text_active)
+        val texteInactif = requireContext().getColor(R.color.text_secondary)
+
+        var profils = emptyList<DrivingProfile>()
+
+        fun maj() {
+            boutons.forEachIndexed { i, btn ->
+                val profil = profils.getOrNull(i)
+                // INVISIBLE et non GONE : avec deux profils, deux boutons de la largeur de la
+                // page se liraient comme deux bandeaux, plus comme des choix.
+                btn.visibility = if (profil != null) View.VISIBLE else View.INVISIBLE
+                if (profil == null) return@forEachIndexed
+                val rang = profileCycleSel.indexOf(profil.id)
+                val on   = rang >= 0
+                btn.text = ProfileCycle.label(profil.name) + "\n" + (if (on) "${rang + 1}" else "\u00A0")
+                btn.backgroundTintList = ColorStateList.valueOf(if (on) accentColor else defColor)
+                btn.setTextColor(if (on) texteActif else texteInactif)
+            }
+            val aucun = profils.isEmpty()
+            vide?.visibility   = if (aucun) View.VISIBLE else View.GONE
+            rangee?.visibility = if (aucun) View.GONE else View.VISIBLE
+
+            val assez = profileCycleSel.size >= ProfileCycle.MIN_PROFILES
+            // Le résumé porte les noms ENTIERS : ceux des boutons sont raccourcis.
+            resume?.text = when {
+                aucun -> ""
+                assez -> getString(
+                    R.string.shortcuts_cfg_regen_summary,
+                    profileCycleSel.mapNotNull { id -> profils.firstOrNull { it.id == id }?.name }
+                        .joinToString(" → "))
+                else  -> getString(R.string.shortcuts_cfg_profile_min)
+            }
+            save?.isEnabled = assez
+            save?.alpha     = if (assez) 1f else 0.4f
+        }
+
+        boutons.forEachIndexed { i, btn ->
+            btn.setOnClickListener {
+                val id = profils.getOrNull(i)?.id ?: return@setOnClickListener
+                if (!profileCycleSel.remove(id)) profileCycleSel.add(id)
+                maj()
+            }
+        }
+
+        view.findViewById<MaterialButton>(R.id.btn_profile_cycle_clear)?.setOnClickListener {
+            profileCycleSel.clear()
+            maj()
+        }
+
+        save?.setOnClickListener {
+            if (profileCycleSel.size < ProfileCycle.MIN_PROFILES) return@setOnClickListener
+            ProfileCycle.save(requireContext(), profileCycleSel)
+            Toast.makeText(requireContext(), R.string.shortcuts_cfg_regen_saved,
+                Toast.LENGTH_SHORT).show()
+        }
+
+        majCycleProfils = { maj() }
+        rechargerCycleProfils = {
+            profils = ProfileManager(requireContext()).getAll().take(boutons.size)
+            profileCycleSel.clear()
+            profileCycleSel.addAll(ProfileCycle.order(requireContext(), profils.map { it.id }))
+            maj()
+        }
+        rechargerCycleProfils?.invoke()
+    }
+
+    /**
      * Rail de gauche — même motif que l'éditeur de profil et les Réglages, à ceci près que
      * plusieurs entrées vont et viennent selon ce que l'utilisateur a attribué.
      *
      * Deux familles d'entrées, deux règles :
      *  • les onglets « Raccourcis » et « Avancés » existent tant que leur page a du contenu ;
-     *  • les trois pages de RÉGLAGE (1 Pédale, ADAS, cycle de régénération) existent quand leur
+     *  • les quatre pages de RÉGLAGE (1 Pédale, ADAS, cycles de régénération et de profils) existent quand leur
      *    fonction est attribuée à un bouton, quelle que soit la voie — c'est [actionEnJeu] qui
      *    tranche, et rien d'autre.
      */
@@ -844,9 +1016,11 @@ class ShortcutsFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_onepedal) to view.findViewById<ViewGroup>(R.id.page_sc_onepedal),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_adas)     to view.findViewById<ViewGroup>(R.id.page_sc_adas),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_regen)    to view.findViewById<ViewGroup>(R.id.page_sc_regen),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_profiles) to view.findViewById<ViewGroup>(R.id.page_sc_profiles),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_list)     to view.findViewById<ViewGroup>(R.id.page_sc_list)
         )
-        val pageCycle = tabs[4].second
+        val pageCycle   = tabs[4].second
+        val pageProfils = tabs[5].second
 
         // Chaque page de réglage est adossée à une fonction : elle n'existe que si un bouton la
         // déclenche. C'est la règle qui manquait aux deux premières, dont les réglages ne
@@ -854,7 +1028,8 @@ class ShortcutsFragment : Fragment() {
         val pagesReglage = mapOf(
             tabs[2].second to ShortcutAction.ONE_PEDAL,
             tabs[3].second to ShortcutAction.ADAS_CYCLE,
-            tabs[4].second to ShortcutAction.REGEN_CYCLE
+            tabs[4].second to ShortcutAction.REGEN_CYCLE,
+            tabs[5].second to ShortcutAction.PROFILE_CYCLE
         )
         setupAdvancedShortcuts(view)
         val scroll = view.findViewById<ScrollView>(R.id.scroll_shortcuts)
@@ -912,6 +1087,8 @@ class ShortcutsFragment : Fragment() {
                 // abandonnée sans « Sauvegarder » ne doit pas se faire passer pour le réglage
                 // en vigueur.
                 if (page === pageCycle) rechargerCycleRegen?.invoke()
+                // Idem pour le cycle de profils, qui relit en plus la liste des profils.
+                if (page === pageProfils) rechargerCycleProfils?.invoke()
                 scroll?.scrollTo(0, 0)
                 apply()
             }
@@ -1013,35 +1190,22 @@ class ShortcutsFragment : Fragment() {
     // ── Dialog de sélection d'application ────────────────────────────────
 
     private fun showAppPickerDialog(slotKey: String) {
-        val pm = requireContext().packageManager
-
-        // Récupérer toutes les apps launchables, triées par label
-        val launchIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        val resolveList: List<ResolveInfo> = pm.queryIntentActivities(launchIntent, 0)
-            .sortedBy { it.loadLabel(pm).toString().lowercase() }
-
-        val labels   = resolveList.map { it.loadLabel(pm).toString() }.toTypedArray()
-        val packages = resolveList.map { it.activityInfo.packageName }
-
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.shortcuts_pick_app_title)
-            .setItems(labels) { _, which ->
-                val pkg      = packages[which]
-                val appName  = labels[which]
-                val newLabel = getString(R.string.shortcuts_open_custom_prefix) + " " + appName
-
-                prefs.edit().putString("shortcut_${slotKey}_custom_app", pkg).apply()
-                updateCustomAppLabel(slotKey, newLabel)
-            }
-            .setNegativeButton(android.R.string.cancel) { _, _ ->
+        val cle = "shortcut_${slotKey}_custom_app"
+        choisirUneApp(
+            dejaChoisie = prefs.getString(cle, null),
+            onAnnule = {
                 // Si aucune app n'était sauvegardée → revenir à NONE
-                if (prefs.getString("shortcut_${slotKey}_custom_app", null) == null) {
-                    val spinner = spinnerViews[slotKey] ?: return@setNegativeButton
-                    spinner.setSelection(0)
-                    saveInt("shortcut_$slotKey", ShortcutAction.NONE.id)
+                if (prefs.getString(cle, null) == null) {
+                    spinnerViews[slotKey]?.let { spinner ->
+                        spinner.setSelection(0)
+                        saveInt("shortcut_$slotKey", ShortcutAction.NONE.id)
+                    }
                 }
-            }
-            .show()
+            },
+        ) { paquet, nom ->
+            prefs.edit().putString(cle, paquet).apply()
+            updateCustomAppLabel(slotKey, getString(R.string.shortcuts_open_custom_prefix) + " " + nom)
+        }
     }
 
     // ── Dialog de sélection de profil ────────────────────────────────────────
@@ -1054,32 +1218,32 @@ class ShortcutsFragment : Fragment() {
             val spinner = spinnerViews[slotKey] ?: return
             spinner.setSelection(0)
             saveInt("shortcut_$slotKey", ShortcutAction.NONE.id)
-            AlertDialog.Builder(requireContext())
-                .setMessage(R.string.shortcuts_no_profiles)
-                .setPositiveButton(android.R.string.ok, null)
-                .show()
+            AppDialog.confirmer(
+                requireContext(),
+                titre = getString(R.string.shortcuts_no_profiles),
+                ton = AppDialog.Ton.ALERTE,
+                oui = getString(R.string.nav_close),
+            )
             return
         }
 
-        val labels = profiles.map { it.name }.toTypedArray()
-
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.shortcuts_pick_profile_title)
-            .setItems(labels) { _, which ->
-                val profile  = profiles[which]
-                val newLabel = getString(R.string.shortcuts_profile_prefix) + " " + profile.name
-                prefs.edit().putString("shortcut_${slotKey}_profile_id", profile.id).apply()
-                updateProfileLabel(slotKey, newLabel)
-            }
-            .setNegativeButton(android.R.string.cancel) { _, _ ->
+        val cle = "shortcut_${slotKey}_profile_id"
+        choisirUnProfil(
+            profiles,
+            dejaChoisi = prefs.getString(cle, null),
+            onAnnule = {
                 // Annulation sans profil préalablement sauvegardé → revenir à NONE
-                if (prefs.getString("shortcut_${slotKey}_profile_id", null) == null) {
-                    val spinner = spinnerViews[slotKey] ?: return@setNegativeButton
-                    spinner.setSelection(0)
-                    saveInt("shortcut_$slotKey", ShortcutAction.NONE.id)
+                if (prefs.getString(cle, null) == null) {
+                    spinnerViews[slotKey]?.let { spinner ->
+                        spinner.setSelection(0)
+                        saveInt("shortcut_$slotKey", ShortcutAction.NONE.id)
+                    }
                 }
-            }
-            .show()
+            },
+        ) { profile ->
+            prefs.edit().putString(cle, profile.id).apply()
+            updateProfileLabel(slotKey, getString(R.string.shortcuts_profile_prefix) + " " + profile.name)
+        }
     }
 
     /** Met à jour le label APPLY_PROFILE dans l'adapter du spinner concerné. */
@@ -1176,7 +1340,10 @@ class ShortcutsFragment : Fragment() {
         setChildrenEnabled(shortcutsContent, enabled)
         // setChildrenEnabled réactive TOUT, « Sauvegarder » compris. Or son état ne dépend pas
         // de l'interrupteur global mais du nombre de modes choisis : il faut le lui rendre.
-        if (enabled) majCycleRegen?.invoke()
+        if (enabled) {
+            majCycleRegen?.invoke()
+            majCycleProfils?.invoke()
+        }
     }
 
     private fun setChildrenEnabled(v: View?, enabled: Boolean) {
@@ -1198,11 +1365,13 @@ class ShortcutsFragment : Fragment() {
     }
 
     private fun showShortcutWarning() {
-        AlertDialog.Builder(requireContext())
-            .setTitle(R.string.shortcuts_warning_title)
-            .setMessage(R.string.shortcuts_warning_message)
-            .setPositiveButton(R.string.shortcuts_warning_ok, null)
-            .show()
+        AppDialog.confirmer(
+            requireContext(),
+            titre = getString(R.string.shortcuts_warning_title),
+            message = getString(R.string.shortcuts_warning_message),
+            ton = AppDialog.Ton.ALERTE,
+            oui = getString(R.string.shortcuts_warning_ok),
+        )
     }
 
     // ── Prefs helpers ────────────────────────────────────────────────────

@@ -41,12 +41,6 @@
         android:name="com.mg4.control.ui.ShortcutsFragment"
         android:label="@string/nav_shortcuts" />
 
-    <!-- Audio (bouton AUDIO dans la top-bar — A9 uniquement) -->
-    <fragment
-        android:id="@+id/audioFragment"
-        android:name="com.mg4.control.ui.AudioFragment"
-        android:label="@string/nav_audio" />
-
     <!-- Automatisation (bouton AUTOMATISATION dans la top-bar) -->
     <fragment
         android:id="@+id/automationFragment"

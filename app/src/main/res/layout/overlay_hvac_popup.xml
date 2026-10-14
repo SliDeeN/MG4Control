@@ -1,0 +1,813 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pop-up HVAC (issues #120 et #125) : réglage rapide de la clim par-dessus n'importe quel écran.
+     Trois panneaux — chauffages, zone du joystick, compresseur et recirculation —, la température
+     sur une jauge en arc, la ventilation sur une barre à segments, les sièges au niveau choisi.
+     Présentation reprise de la maquette d'un utilisateur (2026-10-12) ; elle a remplacé la
+     première, à croix de boutons, après essai en voiture.
+
+     Presque rien n'est peint ici : fonds, teintes et états sont posés par HvacPopupSkin, qui suit
+     le thème de l'application. Seuls les fonds fixes (carte, panneaux) sont des drawables.
+
+     Tailles DE BASE, pour une carte de 864 × 392 dp (1108 dp de large avec les chauffages) :
+     HvacPopupOverlay gonfle la mise en page avec une densité corrigée (HvacPopup.echelle). Changer
+     la largeur ou la hauteur de la carte demande d'y reporter les constantes de HvacPopup.
+
+     Le repère du joystick est dans l'en-tête, au-dessus du cadre bleu et centré sur lui : ce que
+     fait chaque geste du joystick droit.
+
+     Hauteur : le panneau central (wrap_content) la donne, les deux autres s'y alignent
+     (match_parent) — leur contenu doit donc tenir dans 306 dp. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/hvac_backdrop"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#99000000"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:background="@drawable/bg_hvac_modern_card"
+        android:padding="16dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <!-- ── En-tête : titre, décompte en texte (pas de barre qui se vide), fermeture — et,
+             par-dessus, le repère du joystick. La ligne du titre n'a pas été réindentée. ── -->
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginBottom="10dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/hvac_title_icon"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="4dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_hvac_fan" />
+
+            <TextView
+                android:id="@+id/hvac_title"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:text="@string/clim_card_title"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/hvac_countdown"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="12dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="13sp"
+                android:maxLines="1" />
+
+            <ImageView
+                android:id="@+id/hvac_close"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:contentDescription="@string/nav_close"
+                android:scaleType="center"
+                android:src="@drawable/ic_hvac_close" />
+
+        </LinearLayout>
+
+            <!-- Repère du joystick, AU-DESSUS du cadre bleu et centré sur lui : ce que fait chaque
+                 geste du joystick droit. Le code cale ce bloc sur le cadre (il est à gauche quand
+                 la colonne des chauffages est absente, et le titre s'efface alors devant lui) ;
+                 sans service d'accessibilité, il y met l'avertissement à la place. -->
+            <FrameLayout
+                android:id="@+id/hvac_joy_holder"
+                android:layout_width="600dp"
+                android:layout_height="match_parent">
+
+                <LinearLayout
+                    android:id="@+id/hvac_joy_chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="30dp"
+                    android:layout_gravity="center"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="14dp">
+
+                    <TextView
+                        android:id="@+id/hvac_joy_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:drawableStart="@drawable/ic_hvac_target"
+                        android:drawablePadding="6dp"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:id="@+id/hvac_joy_temp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:drawableStart="@drawable/ic_hvac_stick_vertical"
+                        android:drawablePadding="3dp"
+                        android:text="@string/clim_temperature"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:id="@+id/hvac_joy_fan"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:drawableStart="@drawable/ic_hvac_stick_horizontal"
+                        android:drawablePadding="3dp"
+                        android:text="@string/clim_fan"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:id="@+id/hvac_joy_auto"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="14dp"
+                        android:drawableStart="@drawable/ic_hvac_stick_click"
+                        android:drawablePadding="3dp"
+                        android:text="@string/clim_auto"
+                        android:textAllCaps="true"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:maxLines="1" />
+
+                </LinearLayout>
+
+            </FrameLayout>
+
+        </FrameLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <!-- ── Chauffages : sièges et volant, sur les firmwares équipés seulement
+                 (FirmwareInfo.hasHeatFeatures — le code rend la colonne visible). ── -->
+            <LinearLayout
+                android:id="@+id/hvac_heat_column"
+                android:layout_width="232dp"
+                android:layout_height="match_parent"
+                android:layout_marginEnd="12dp"
+                android:orientation="vertical"
+                android:background="@drawable/bg_hvac_panel"
+                android:padding="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp"
+                    android:text="@string/hvac_popup_heating"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:maxLines="1" />
+
+                <!-- Siège gauche : nom, niveau en clair, puis le sélecteur — éteint, 1, 2, 3 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/climate_seat_left"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:id="@+id/hvac_seat_left_state"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:textSize="12sp"
+                        android:maxLines="1" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/hvac_seat_left_levels"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false"
+                    android:padding="4dp">
+
+                    <TextView
+                        android:id="@+id/hvac_seat_left_0"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="@string/climate_off"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:maxLines="1" />
+
+                    <ImageView
+                        android:id="@+id/hvac_seat_left_1"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:contentDescription="@string/climate_level_1"
+                        android:scaleType="center"
+                        android:src="@drawable/ic_heat_level_1" />
+
+                    <ImageView
+                        android:id="@+id/hvac_seat_left_2"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:contentDescription="@string/climate_level_2"
+                        android:scaleType="center"
+                        android:src="@drawable/ic_heat_level_2" />
+
+                    <ImageView
+                        android:id="@+id/hvac_seat_left_3"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:contentDescription="@string/climate_level_3"
+                        android:scaleType="center"
+                        android:src="@drawable/ic_heat_level_3" />
+
+                </LinearLayout>
+
+                <!-- Siège droit -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/climate_seat_right"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:id="@+id/hvac_seat_right_state"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:textSize="12sp"
+                        android:maxLines="1" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/hvac_seat_right_levels"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false"
+                    android:padding="4dp">
+
+                    <TextView
+                        android:id="@+id/hvac_seat_right_0"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:gravity="center"
+                        android:text="@string/climate_off"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        android:maxLines="1" />
+
+                    <ImageView
+                        android:id="@+id/hvac_seat_right_1"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:contentDescription="@string/climate_level_1"
+                        android:scaleType="center"
+                        android:src="@drawable/ic_heat_level_1" />
+
+                    <ImageView
+                        android:id="@+id/hvac_seat_right_2"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:contentDescription="@string/climate_level_2"
+                        android:scaleType="center"
+                        android:src="@drawable/ic_heat_level_2" />
+
+                    <ImageView
+                        android:id="@+id/hvac_seat_right_3"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:contentDescription="@string/climate_level_3"
+                        android:scaleType="center"
+                        android:src="@drawable/ic_heat_level_3" />
+
+                </LinearLayout>
+
+                <!-- Pousse le volant en bas du panneau -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <!-- Volant chauffant : toute la ligne se touche, l'interrupteur ne fait que montrer -->
+                <LinearLayout
+                    android:id="@+id/hvac_wheel"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp">
+
+                    <ImageView
+                        android:id="@+id/hvac_wheel_icon"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_steering_wheel_heat" />
+
+                    <TextView
+                        android:id="@+id/hvac_wheel_label"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:gravity="center_vertical"
+                        android:text="@string/climate_steering_heat"
+                        android:textSize="14sp"
+                        android:maxLines="1"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="9sp"
+                        android:autoSizeMaxTextSize="14sp" />
+
+                    <FrameLayout
+                        android:id="@+id/hvac_wheel_switch"
+                        android:layout_width="44dp"
+                        android:layout_height="24dp"
+                        android:layout_marginStart="8dp">
+
+                        <View
+                            android:id="@+id/hvac_wheel_knob"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:layout_gravity="center_vertical|start"
+                            android:layout_marginStart="3dp"
+                            android:layout_marginEnd="3dp" />
+
+                    </FrameLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- ── Zone du joystick : température (haut / bas), ventilation (gauche / droite),
+                 AUTO (clic), et le sens de l'air au doigt. Largeur fixe : c'est elle, avec les
+                 panneaux, qui donne sa largeur à la carte. ── -->
+            <LinearLayout
+                android:id="@+id/hvac_joy_zone"
+                android:layout_width="600dp"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_hvac_panel_joystick"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="186dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:baselineAligned="false">
+
+                    <!-- Température : − à gauche, + à droite, la valeur dans la jauge -->
+                    <ImageView
+                        android:id="@+id/hvac_temp_down"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:contentDescription="@string/hvac_popup_temp_down"
+                        android:scaleType="center"
+                        android:src="@drawable/ic_hvac_minus" />
+
+                    <FrameLayout
+                        android:layout_width="196dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp">
+
+                        <com.mg4.control.ui.widget.ArcGaugeView
+                            android:id="@+id/hvac_temp_gauge"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="center"
+                            android:orientation="vertical"
+                            android:gravity="center_horizontal">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/clim_temperature"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="12sp"
+                                android:maxLines="1" />
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <TextView
+                                    android:id="@+id/hvac_temp_value"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:includeFontPadding="false"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="50sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/hvac_temp_unit"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="2dp"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="18sp" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                        <!-- Bornes lues sur la voiture, sous les deux extrémités de l'arc -->
+                        <TextView
+                            android:id="@+id/hvac_temp_min"
+                            android:layout_width="44dp"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom|start"
+                            android:layout_marginStart="15dp"
+                            android:gravity="center"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+
+                        <TextView
+                            android:id="@+id/hvac_temp_max"
+                            android:layout_width="44dp"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="bottom|end"
+                            android:layout_marginEnd="15dp"
+                            android:gravity="center"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="11sp" />
+
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/hvac_temp_up"
+                        android:layout_width="64dp"
+                        android:layout_height="64dp"
+                        android:contentDescription="@string/hvac_popup_temp_up"
+                        android:scaleType="center"
+                        android:src="@drawable/ic_hvac_plus" />
+
+                    <!-- Ventilation : un niveau, ou « AUTO » — en AUTO la voiture n'annonce pas de cran -->
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="20dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/clim_fan"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            android:maxLines="1" />
+
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <ImageView
+                                android:id="@+id/hvac_fan_icon"
+                                android:layout_width="26dp"
+                                android:layout_height="26dp"
+                                android:importantForAccessibility="no"
+                                android:src="@drawable/ic_hvac_fan" />
+
+                            <TextView
+                                android:id="@+id/hvac_fan_value"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:includeFontPadding="false"
+                                android:textColor="@color/text_primary"
+                                android:textSize="30sp"
+                                android:textStyle="bold"
+                                android:maxLines="1" />
+
+                        </LinearLayout>
+
+                        <com.mg4.control.ui.widget.SegmentBarView
+                            android:id="@+id/hvac_fan_bar"
+                            android:layout_width="match_parent"
+                            android:layout_height="10dp"
+                            android:layout_marginTop="8dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="58dp"
+                            android:layout_marginTop="14dp"
+                            android:orientation="horizontal"
+                            android:baselineAligned="false">
+
+                            <ImageView
+                                android:id="@+id/hvac_fan_down"
+                                android:layout_width="60dp"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@string/hvac_popup_fan_down"
+                                android:scaleType="center"
+                                android:src="@drawable/ic_hvac_minus" />
+
+                            <TextView
+                                android:id="@+id/hvac_auto"
+                                android:layout_width="0dp"
+                                android:layout_height="match_parent"
+                                android:layout_weight="1"
+                                android:layout_marginStart="8dp"
+                                android:layout_marginEnd="8dp"
+                                android:gravity="center"
+                                android:text="@string/clim_auto"
+                                android:textAllCaps="true"
+                                android:textSize="15sp"
+                                android:textStyle="bold"
+                                android:maxLines="1" />
+
+                            <ImageView
+                                android:id="@+id/hvac_fan_up"
+                                android:layout_width="60dp"
+                                android:layout_height="match_parent"
+                                android:contentDescription="@string/hvac_popup_fan_up"
+                                android:scaleType="center"
+                                android:src="@drawable/ic_hvac_plus" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Sens de l'air : mêmes boutons cumulables et mêmes pictos que la page Clim -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="82dp"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal"
+                    android:baselineAligned="false">
+
+                    <TextView
+                        android:id="@+id/hvac_air_face"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:gravity="center"
+                        android:paddingTop="17dp"
+                        android:paddingBottom="13dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:drawableTop="@drawable/ic_air_face"
+                        android:drawablePadding="2dp"
+                        android:text="@string/clim_air_face"
+                        android:textSize="12sp"
+                        android:maxLines="1"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="9sp"
+                        android:autoSizeMaxTextSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/hvac_air_feet"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:gravity="center"
+                        android:paddingTop="17dp"
+                        android:paddingBottom="13dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:drawableTop="@drawable/ic_air_feet"
+                        android:drawablePadding="2dp"
+                        android:text="@string/clim_air_feet"
+                        android:textSize="12sp"
+                        android:maxLines="1"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="9sp"
+                        android:autoSizeMaxTextSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/hvac_air_windshield_front"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
+                        android:gravity="center"
+                        android:paddingTop="17dp"
+                        android:paddingBottom="13dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:drawableTop="@drawable/ic_air_windshield_front"
+                        android:drawablePadding="2dp"
+                        android:text="@string/clim_air_windshield_front"
+                        android:textSize="12sp"
+                        android:maxLines="1"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="9sp"
+                        android:autoSizeMaxTextSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/hvac_air_windshield_rear"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:gravity="center"
+                        android:paddingTop="17dp"
+                        android:paddingBottom="13dp"
+                        android:paddingStart="4dp"
+                        android:paddingEnd="4dp"
+                        android:drawableTop="@drawable/ic_air_windshield_rear"
+                        android:drawablePadding="2dp"
+                        android:text="@string/clim_air_windshield_rear"
+                        android:textSize="12sp"
+                        android:maxLines="1"
+                        android:autoSizeTextType="uniform"
+                        android:autoSizeMinTextSize="9sp"
+                        android:autoSizeMaxTextSize="12sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- ── Panneau tactile : compresseur et recirculation ── -->
+            <LinearLayout
+                android:layout_width="220dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical"
+                android:background="@drawable/bg_hvac_panel"
+                android:padding="12dp">
+
+                <!-- Compresseur : plein quand il tourne, son état écrit à droite -->
+                <LinearLayout
+                    android:id="@+id/hvac_ac"
+                    android:layout_width="match_parent"
+                    android:layout_height="64dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp">
+
+                    <ImageView
+                        android:id="@+id/hvac_ac_icon"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_hvac_ac" />
+
+                    <TextView
+                        android:id="@+id/hvac_ac_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:text="@string/clim_ac"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:id="@+id/hvac_ac_state"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textSize="13sp"
+                        android:maxLines="1" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/clim_section_loop"
+                    android:textAllCaps="true"
+                    android:letterSpacing="0.08"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    android:maxLines="1" />
+
+                <!-- Recirculation : choix direct du mode ; les trois tuiles se partagent la hauteur -->
+                <TextView
+                    android:id="@+id/hvac_loop_inner"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="8dp"
+                    android:drawableStart="@drawable/ic_hvac_loop_inner"
+                    android:drawablePadding="12dp"
+                    android:text="@string/clim_loop_inner"
+                    android:textSize="15sp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/hvac_loop_outside"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_vertical"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="8dp"
+                    android:drawableStart="@drawable/ic_hvac_loop_outside"
+                    android:drawablePadding="12dp"
+                    android:text="@string/clim_loop_outside"
+                    android:textSize="15sp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/hvac_loop_auto"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_vertical"
+                    android:paddingStart="14dp"
+                    android:paddingEnd="8dp"
+                    android:drawableStart="@drawable/ic_hvac_loop_auto"
+                    android:drawablePadding="12dp"
+                    android:text="@string/clim_loop_auto"
+                    android:textSize="15sp"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

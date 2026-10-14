@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fenêtres de l'application : le rail d'un choix à segments. La case choisie est peinte par
+     AppDialog.segments. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="12dp" />
+    <solid android:color="@color/dash_btn" />
+</shape>

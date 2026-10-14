@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pop-up HVAC « moderne » — siège chauffant, niveau 2 : 2 barre(s) pleine(s) sur trois, les autres
+     estompées. Blanc : c'est la vue qui colore le pictogramme. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M5,14h3v5h-3z"/>
+  <path
+      android:fillColor="@android:color/white"
+      android:pathData="M10.5,10h3v9h-3z"/>
+  <path
+      android:fillColor="@android:color/white"
+      android:fillAlpha="0.3"
+      android:pathData="M16,6h3v13h-3z"/>
+</vector>

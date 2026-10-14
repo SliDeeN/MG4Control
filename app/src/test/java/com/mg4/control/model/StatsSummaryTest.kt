@@ -115,4 +115,38 @@ class StatsSummaryTest {
         assertEquals(4f, sum.drivingCost!!, 0.01f)
         assertNull(sum.averagePricePerKwh)
     }
+
+    @Test
+    fun `un trajet sans energie relevee ne dilue pas la consommation`() {
+        // Issue #117 : les trajets d'avant le relais, à 0,0 kWh, restent dans l'historique.
+        val sum = StatsSummary.of(listOf(trip(100, 15f), trip(100, 0f)), emptyList(), settings)
+        assertEquals("toute la distance reste comptée", 200f, sum.distanceKm, 0.01f)
+        assertEquals("ratio sur le seul trajet mesuré", 15f, sum.consumptionPer100!!, 0.01f)
+        assertEquals("15 kWh à 0,20 sur 100 km", 3f, sum.costPer100!!, 0.01f)
+        assertFalse(sum.energyUnknown)
+    }
+
+    @Test
+    fun `aucun trajet mesure, ni energie ni cout a afficher`() {
+        val sum = StatsSummary.of(listOf(trip(100, 0f), trip(40, 0f)), emptyList(), settings)
+        assertTrue(sum.energyUnknown)
+        assertNull(sum.consumptionPer100)
+        assertNull(sum.drivingCost)
+        assertNull(sum.costPer100)
+        assertEquals(140f, sum.distanceKm, 0.01f)
+    }
+
+    @Test
+    fun `une periode sans trajet n'est pas une energie inconnue`() {
+        assertFalse(StatsSummary.of(emptyList(), emptyList(), settings).energyUnknown)
+    }
+
+    @Test
+    fun `l'energie integree porte son incertitude relative`() {
+        // 7 % d'énergie + un demi-dixième de kilomètre sur 100 : sous le seuil du « ≈ ».
+        val t = trip(100, 15f).copy(integratedKm = 100f, energyIntegrated = true)
+        val sum = StatsSummary.of(listOf(t), emptyList(), settings)
+        assertEquals(0.0705f, sum.consumptionUncertainty!!, 0.001f)
+        assertFalse(sum.consumptionApproximate)
+    }
 }

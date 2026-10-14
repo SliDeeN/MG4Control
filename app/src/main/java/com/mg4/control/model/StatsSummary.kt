@@ -13,6 +13,14 @@ package com.mg4.control.model
 data class StatsSummary(
     val tripCount: Int,
     val distanceKm: Float,
+    /**
+     * Distance des seuls trajets dont l'énergie est connue ([Trip.energyKnown]). C'est elle, et
+     * non [distanceKm], que divisent la consommation et le coût aux 100 km : un trajet enregistré
+     * à 0,0 kWh par des compteurs muets (issue #117) ferait sinon baisser la moyenne.
+     */
+    val measuredDistanceKm: Float,
+    /** Vrai quand la période a des trajets mais qu'aucun n'a d'énergie connue : rien à annoncer. */
+    val energyUnknown: Boolean,
     val energyKwh: Float,
     val regenKwh: Float,
     val longestTripKm: Float,
@@ -51,7 +59,7 @@ data class StatsSummary(
 
     /** kWh/100 km sur la période, null en dessous de la distance plancher. */
     val consumptionPer100: Float?
-        get() = if (distanceKm >= floor) energyKwh * 100f / distanceKm else null
+        get() = if (measuredDistanceKm >= floor) energyKwh * 100f / measuredDistanceKm else null
 
     val averageSpeedKmh: Float?
         get() = if (distanceKm >= floor && drivingMs > 0L)
@@ -61,7 +69,7 @@ data class StatsSummary(
     val costPer100: Float?
         get() {
             val cout = drivingCost ?: return null
-            return if (distanceKm >= floor) cout * 100f / distanceKm else null
+            return if (measuredDistanceKm >= floor) cout * 100f / measuredDistanceKm else null
         }
 
     companion object {
@@ -73,21 +81,30 @@ data class StatsSummary(
             val prixMoyen = if (chargedKwh > 0f) chargeCost / chargedKwh else null
             // Net, comme l'affichage d'origine : le compteur du véhicule est brut, régénération
             // comprise. Voir [Trip.energyKwh].
-            val energie = trips.sumOf { it.netEnergyKwh.toDouble() }.toFloat()
+            // Seuls les trajets dont l'énergie est connue entrent dans l'énergie, les ratios et
+            // le coût. La distance, la durée et le nombre de trajets, eux, restent entiers.
+            val mesures = trips.filter { it.energyKnown }
+            val inconnue = trips.isNotEmpty() && mesures.isEmpty()
+            val energie = mesures.sumOf { it.netEnergyKwh.toDouble() }.toFloat()
             val distance = trips.sumOf { it.distance.toDouble() }.toFloat().roundTenth()
+            val distanceMesuree = mesures.sumOf { it.distance.toDouble() }.toFloat().roundTenth()
             // Chaque trajet apporte son propre arrondi : sur une période, ils se diluent dans des
             // totaux plus gros, ce qui fait justement disparaître le « ≈ » au bout de quelques
             // trajets.
-            val uEnergie = trips.sumOf {
-                (Resolution.ENERGY_KWH * if (it.regenKwh != null) 2f else 1f).toDouble()
+            // Une énergie intégrée n'a pas le pas des compteurs : son erreur est proportionnelle.
+            val uEnergie = mesures.sumOf {
+                (if (it.energyIntegrated) Resolution.INTEGRATED_ENERGY_RELATIVE * it.netEnergyKwh
+                 else Resolution.ENERGY_KWH * if (it.regenKwh != null) 2f else 1f).toDouble()
             }.toFloat()
-            val uDistance = trips.sumOf {
+            val uDistance = mesures.sumOf {
                 (if (it.distancePrecise) Resolution.DISTANCE_PRECISE_KM
                  else Resolution.DISTANCE_ODOMETER_KM).toDouble()
             }.toFloat()
             return StatsSummary(
                 tripCount = trips.size,
                 distanceKm = distance,
+                measuredDistanceKm = distanceMesuree,
+                energyUnknown = inconnue,
                 energyKwh = energie.roundTenth(),
                 regenKwh = trips.sumOf { (it.regenKwh ?: 0f).toDouble() }.toFloat().roundTenth(),
                 longestTripKm = trips.maxOfOrNull { it.distance } ?: 0f,
@@ -100,10 +117,10 @@ data class StatsSummary(
                 averagePricePerKwh = prixMoyen,
                 // Faute de charge sur la période, on retombe sur le tarif alternatif : c'est une
                 // estimation, et l'écran l'annonce comme telle.
-                drivingCost = energie * (prixMoyen ?: settings.priceAc),
+                drivingCost = if (inconnue) null else energie * (prixMoyen ?: settings.priceAc),
                 precise = trips.isNotEmpty() && trips.all { it.distancePrecise },
-                consumptionUncertainty = if (energie > 0f && distance > 0f)
-                    uEnergie / energie + uDistance / distance else null,
+                consumptionUncertainty = if (energie > 0f && distanceMesuree > 0f)
+                    uEnergie / energie + uDistance / distanceMesuree else null,
             )
         }
     }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Une option d'une liste à choix unique (AppDialog.options) : son fond et la couleur de son texte
+     disent si elle est choisie, et sont peints par le code. -->
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="52dp"
+    android:layout_marginBottom="6dp"
+    android:gravity="center_vertical"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:textSize="16sp"
+    android:textStyle="bold"
+    android:maxLines="1"
+    android:ellipsize="end" />

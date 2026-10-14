@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Confirmation de l'application, style « A » choisi sur maquette le 2026-10-13 : tout centré —
+     le pictogramme dans une pastille, le titre, l'explication, puis les boutons sur toute la
+     largeur. La couleur dit la nature de l'action (bleu : normale ; orange : avertissement ;
+     rouge : efface ou éteint) : pastille et bouton d'action sont peints par AppDialog.confirmer.
+
+     Sert à toutes les confirmations simples : un titre, un texte, un ou deux boutons. Un texte
+     long défile au lieu de pousser les boutons hors de l'écran.
+
+     Fenêtre de l'application : tailles normales, pas l'agrandissement des pop-ups. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_hvac_modern_card"
+    android:padding="20dp">
+
+    <FrameLayout
+        android:id="@+id/confirm_dialog_badge"
+        android:layout_width="68dp"
+        android:layout_height="68dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="6dp">
+
+        <ImageView
+            android:id="@+id/confirm_dialog_icon"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no" />
+
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/confirm_dialog_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:gravity="center_horizontal"
+        android:textColor="@color/text_primary"
+        android:textSize="23sp"
+        android:textStyle="bold" />
+
+    <!-- Poids : c'est ce qui laisse le texte rétrécir — et défiler — quand il ne tient pas. -->
+    <ScrollView
+        android:id="@+id/confirm_dialog_scroll"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginTop="8dp"
+        android:overScrollMode="never">
+
+        <TextView
+            android:id="@+id/confirm_dialog_message"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:textColor="@color/text_secondary"
+            android:textSize="16sp" />
+
+    </ScrollView>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
+        <TextView
+            android:id="@+id/confirm_dialog_no"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:gravity="center"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/confirm_dialog_yes"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+    </LinearLayout>
+
+</LinearLayout>
