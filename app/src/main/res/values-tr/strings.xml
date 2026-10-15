@@ -762,6 +762,9 @@
     <string name="settings_cluster_tab_media">Müzik sekmesi</string>
     <string name="settings_cluster_none">Hiçbiri</string>
     <string name="settings_cluster_tabs_note">Yol bilgisayarı, lastik basıncı ve ayarlar gösterge panelinin kendisi tarafından çizilir: orada modül görünemez.</string>
+    <string name="settings_cluster_unit">Tüketim birimi</string>
+    <string name="cluster_unit_wh_km">Wh/km</string>
+    <string name="cluster_unit_kwh_100km">kWh/100 km</string>
     <string name="settings_cluster_consumption">Tüketim</string>
     <string name="settings_cluster_power">Güç</string>
     <string name="settings_cluster_refresh">Gösterge yenileme hızı</string>

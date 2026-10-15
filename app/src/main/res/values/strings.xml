@@ -779,6 +779,9 @@
     <string name="settings_cluster_tab_media">Onglet Musique</string>
     <string name="settings_cluster_none">Aucun</string>
     <string name="settings_cluster_tabs_note">Ordinateur de bord, pression des pneus et réglages sont dessinés par le combiné lui-même : un module ne peut pas s\'y afficher.</string>
+    <string name="settings_cluster_unit">Unité de consommation</string>
+    <string name="cluster_unit_wh_km">Wh/km</string>
+    <string name="cluster_unit_kwh_100km">kWh/100 km</string>
     <string name="settings_cluster_consumption">Consommation</string>
     <string name="settings_cluster_power">Puissance</string>
     <string name="settings_cluster_refresh">Actualisation de la jauge</string>

@@ -762,6 +762,9 @@
     <string name="settings_cluster_tab_media">Scheda Musica</string>
     <string name="settings_cluster_none">Nessuno</string>
     <string name="settings_cluster_tabs_note">Computer di bordo, pressione pneumatici e impostazioni sono disegnati dal quadro stesso: lì non può comparire alcun modulo.</string>
+    <string name="settings_cluster_unit">Unità di consumo</string>
+    <string name="cluster_unit_wh_km">Wh/km</string>
+    <string name="cluster_unit_kwh_100km">kWh/100 km</string>
     <string name="settings_cluster_consumption">Consumo</string>
     <string name="settings_cluster_power">Potenza</string>
     <string name="settings_cluster_refresh">Aggiornamento dell\'indicatore</string>

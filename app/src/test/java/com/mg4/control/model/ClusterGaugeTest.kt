@@ -88,10 +88,27 @@ class ClusterGaugeTest {
 
     @Test fun `la puissance remplit l arc vers la droite, jusqu a 320 kW`() {
         // 320 kW : la XPower (2026-10-14). À 150, l'arc restait plein en accélération franche.
-        assertEquals(0.5f, ClusterGauge.power(160f).fraction, delta)
         assertEquals(1f, ClusterGauge.power(320f).fraction, delta)
         assertEquals(1f, ClusterGauge.power(400f).fraction, delta)
+        assertEquals(0f, ClusterGauge.power(0f).fraction, delta)
         assertEquals(GaugeUnit.KW, ClusterGauge.power(75f).unit)
+    }
+
+    @Test fun `en roulant, l arc de puissance bouge visiblement`() {
+        // Échelle resserrée (retour du 2026-10-15) : linéaire jusqu'à 320 kW, 20 kW n'en
+        // faisaient que 6 % et l'arc ne bougeait presque pas en roulant.
+        assertEquals(0.245f, ClusterGauge.power(20f).fraction, 0.005f)
+        assertTrue(ClusterGauge.power(50f).fraction in 0.42f..0.46f)
+        assertTrue(ClusterGauge.power(100f).fraction in 0.61f..0.65f)
+    }
+
+    @Test fun `l arc de puissance monte toujours avec la puissance`() {
+        var avant = -1f
+        for (kw in 0..320 step 10) {
+            val f = ClusterGauge.power(kw.toFloat()).fraction
+            assertTrue("$kw kW", f > avant)
+            avant = f
+        }
     }
 
     @Test fun `la puissance consommee garde une seule couleur`() {
@@ -101,10 +118,36 @@ class ClusterGaugeTest {
 
     @Test fun `la recuperation remplit l arc vers la gauche`() {
         val s = ClusterGauge.power(-30f)
-        assertEquals(-0.5f, s.fraction, delta)
+        assertEquals(-0.712f, s.fraction, 0.005f)
         assertEquals(GaugeLevel.REGEN, s.level)
         assertEquals(-30f, s.value, delta)
+        // Une récupération légère se voit, elle aussi : 10 kW font plus d'un tiers du côté gauche.
+        assertEquals(-0.356f, ClusterGauge.power(-10f).fraction, 0.005f)
+        assertEquals(-1f, ClusterGauge.power(-60f).fraction, delta)
         assertEquals(-1f, ClusterGauge.power(-90f).fraction, delta)
+    }
+
+    // ── Unité de la consommation (2026-10-15) ────────────────────────────────
+
+    @Test fun `la consommation s ecrit en Wh par km ou en kWh aux 100 km`() {
+        assertEquals("184", ClusterGauge.formatConsumption(184.4f, ConsumptionUnit.WH_PER_KM, Locale.FRANCE))
+        assertEquals("18,4", ClusterGauge.formatConsumption(184.4f, ConsumptionUnit.KWH_PER_100KM, Locale.FRANCE))
+        assertEquals("18.4", ClusterGauge.formatConsumption(184.4f, ConsumptionUnit.KWH_PER_100KM, Locale.US))
+        // Au-delà de 100 kWh/100 km, la décimale ne dit plus rien : un entier.
+        assertEquals("250", ClusterGauge.formatConsumption(2500f, ConsumptionUnit.KWH_PER_100KM, Locale.FRANCE))
+    }
+
+    @Test fun `les graduations suivent l unite choisie`() {
+        val wh = ClusterGauge.CONSUMPTION_TICKS_WH.map { ClusterGauge.consumptionTickLabel(it, ConsumptionUnit.WH_PER_KM) }
+        val kwh = ClusterGauge.CONSUMPTION_TICKS_WH.map { ClusterGauge.consumptionTickLabel(it, ConsumptionUnit.KWH_PER_100KM) }
+        assertEquals(listOf("0", "100", "200", "500", "1k", "3k"), wh)
+        assertEquals(listOf("0", "10", "20", "50", "100", "300"), kwh)
+    }
+
+    @Test fun `l unite se retrouve par sa cle, Wh par km par defaut`() {
+        assertEquals(ConsumptionUnit.KWH_PER_100KM, ConsumptionUnit.fromKey("kwh_100km"))
+        assertEquals(ConsumptionUnit.WH_PER_KM, ConsumptionUnit.fromKey(null))
+        assertEquals(ConsumptionUnit.WH_PER_KM, ConsumptionUnit.fromKey("inconnue"))
     }
 
     @Test fun `les Wh par km ne valent qu en roulant et en consommant`() {

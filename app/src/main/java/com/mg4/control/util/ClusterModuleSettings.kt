@@ -3,6 +3,7 @@ package com.mg4.control.util
 import android.content.Context
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterTab
+import com.mg4.control.model.ConsumptionUnit
 import kotlin.math.roundToInt
 
 /**
@@ -35,6 +36,8 @@ object ClusterModuleSettings {
 
     fun isSupported(): Boolean = supportedOn(FirmwareInfo.getGeneration())
     const val KEY_REFRESH = "cluster_refresh_ms"
+    /** Unité de la consommation (2026-10-15), Wh/km par défaut. */
+    const val KEY_UNIT = "cluster_consumption_unit"
 
     /**
      * Actualisation de la puissance, de la vitesse et de la jauge, en ms : 0,1 à 1 s par pas de
@@ -63,6 +66,14 @@ object ClusterModuleSettings {
 
     fun setEnabled(ctx: Context, on: Boolean) {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, on).apply()
+    }
+
+    /** Relue à chaque relevé, comme le reste. */
+    fun consumptionUnit(ctx: Context?): ConsumptionUnit =
+        ConsumptionUnit.fromKey(ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_UNIT, null))
+
+    fun setConsumptionUnit(ctx: Context, unit: ConsumptionUnit) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_UNIT, unit.key).apply()
     }
 
     /** Relu à chaque relevé : changer le curseur vaut tout de suite. */

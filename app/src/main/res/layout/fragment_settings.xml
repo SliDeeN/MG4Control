@@ -836,6 +836,55 @@
                             android:textColor="@color/dash_text_lo"
                             android:textSize="13sp" />
 
+                        <!-- Unité de la consommation (2026-10-15) : Wh/km ou kWh/100 km. -->
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="@string/settings_cluster_unit"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_cluster_unit_wh"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="52dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="4dp"
+                                android:text="@string/cluster_unit_wh_km"
+                                android:textAllCaps="false"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                app:backgroundTint="@color/dash_btn"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_cluster_unit_kwh"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="52dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="4dp"
+                                android:text="@string/cluster_unit_kwh_100km"
+                                android:textAllCaps="false"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                app:backgroundTint="@color/dash_btn"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
                     </LinearLayout>
 
                     <!-- Actualisation de la jauge, 0,1 à 1 s : déplié avec le choix du module.

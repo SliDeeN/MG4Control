@@ -366,13 +366,20 @@ dessine tout lui-même : rien ne peut s'y afficher, et la carte n'apparaît pas 
 
 | Module | Jauge | Grand chiffre | Pied |
 |---|---|---|---|
-| **Consommation** | Anneau, échelle logarithmique jusqu'à 3 000 Wh/km | Wh/km en roulant ; kW consommés à l'arrêt (sous 5 km/h) ; kW récupérés en récupération | Moyenne du trajet · énergie récupérée |
-| **Puissance** | Arc de 60 kW récupérés (à gauche) à 320 kW (à droite) | kW, négatifs en récupération | Batterie · moyenne du trajet |
+| **Consommation** | Anneau gradué, échelle logarithmique jusqu'à 3 000 Wh/km (300 kWh/100 km) | Wh/km ou kWh/100 km en roulant ; kW consommés à l'arrêt (sous 5 km/h) ; kW récupérés en récupération | Moyenne du trajet · énergie récupérée |
+| **Puissance** | Arc gradué de 60 kW récupérés (à gauche) à 320 kW (à droite), échelle logarithmique | kW, écrit sous le chiffre ; négatifs en récupération | Batterie · moyenne du trajet |
 
 - **Un module par onglet** : Aucun, Consommation ou Puissance pour l'onglet Navigation, de même pour
   l'onglet Musique. Le module suit l'onglet affiché sur le combiné (`IPK_CLUSTER_TAB_BTN_STS`) ;
   ordinateur de bord, pression des pneus et réglages sont dessinés par le combiné lui-même et
   gardent leur page
+- **Unité de la consommation** : Wh/km (par défaut) ou kWh/100 km, avec une décimale sous 100. L'anneau
+  ne bouge pas d'une unité à l'autre ; ses graduations (0 · 100 · 200 · 500 · 1k · 3k Wh/km, ou 0 · 10 ·
+  20 · 50 · 100 · 300 kWh/100 km) et la moyenne du trajet suivent l'unité
+- **Échelle de puissance resserrée** : logarithmique, pour que l'arc bouge en roulant — 20 kW en
+  remplissent un quart, 50 kW 44 %, 100 kW 63 % ; côté récupération, 10 kW font 36 %. Graduations
+  20 · 50 · 100 · 200 · 320 et 10 · 30 · 60. Le remplissage s'arrête net au zéro, sans déborder de
+  l'autre côté
 - **Couleurs** : orange pour la consommation, bleu pour la récupération, quelle que soit la valeur ;
   le mode de conduite s'affiche en pastille, en haut à gauche
 - **Actualisation** de la puissance, de la vitesse et de la jauge : curseur de 0,1 à 1 s (1 s par
@@ -1516,12 +1523,18 @@ there, and the card does not appear in the settings.
 
 | Module | Gauge | Large figure | Footer |
 |---|---|---|---|
-| **Consumption** | Ring, logarithmic scale up to 3,000 Wh/km | Wh/km while driving; kW drawn when stationary (below 5 km/h); kW recovered when regenerating | Trip average · energy recovered |
-| **Power** | Arc from 60 kW recovered (left) to 320 kW (right) | kW, negative when regenerating | Battery · trip average |
+| **Consumption** | Graduated ring, logarithmic scale up to 3,000 Wh/km (300 kWh/100 km) | Wh/km or kWh/100 km while driving; kW drawn when stationary (below 5 km/h); kW recovered when regenerating | Trip average · energy recovered |
+| **Power** | Graduated arc from 60 kW recovered (left) to 320 kW (right), logarithmic scale | kW, written under the figure; negative when regenerating | Battery · trip average |
 
 - **One module per tab**: None, Consumption or Power for the Navigation tab, and likewise for the
   Music tab. The module follows the tab shown on the cluster (`IPK_CLUSTER_TAB_BTN_STS`); trip
   computer, tyre pressure and settings are drawn by the cluster itself and keep their page
+- **Consumption unit**: Wh/km (default) or kWh/100 km, with one decimal below 100. The ring does not
+  move from one unit to the other; its graduations (0 · 100 · 200 · 500 · 1k · 3k Wh/km, or 0 · 10 · 20 ·
+  50 · 100 · 300 kWh/100 km) and the trip average follow the unit
+- **Tightened power scale**: logarithmic, so the arc moves while driving — 20 kW fill a quarter of it,
+  50 kW 44%, 100 kW 63%; on the regeneration side, 10 kW make 36%. Graduations 20 · 50 · 100 · 200 · 320
+  and 10 · 30 · 60. The fill stops cleanly at zero, without spilling over to the other side
 - **Colours**: orange for consumption, blue for regeneration, whatever the value; the drive mode
   shows as a pill at the top left
 - **Refresh rate** of power, speed and gauge: a slider from 0.1 to 1 s (1 s by default). The drive

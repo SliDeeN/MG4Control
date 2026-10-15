@@ -13,6 +13,7 @@ import android.view.animation.DecelerateInterpolator
 import com.mg4.control.R
 import com.mg4.control.model.ClusterGauge
 import com.mg4.control.model.ClusterModule
+import com.mg4.control.model.ConsumptionUnit
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.GaugeLevel
 import com.mg4.control.model.GaugeState
@@ -46,6 +47,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         val moyenneWhKm: Float?,
         val recupWh: Float?,
         val batterie: Float?,
+        /** Unité de la consommation (Réglages › Interface) : chiffre, graduations et moyenne du trajet. */
+        val unite: ConsumptionUnit = ConsumptionUnit.WH_PER_KM,
     )
 
     private var contenu: Contenu? = null
@@ -134,6 +137,11 @@ class ClusterGaugeView(context: Context) : View(context) {
         // plus haut à gauche, et à 88 de rayon il passait sous la pastille du mode (photo du
         // 2026-10-14, « NORMAL » et « CUSTOM »). Il reste 5 px d'écart avec la plus large.
         val cy = 120f
+        // Graduations en Wh/km, libellées dans l'unité choisie : l'anneau, lui, ne change pas.
+        ClusterGauge.CONSUMPTION_TICKS_WH.forEach { wh ->
+            graduation(canvas, cx, cy, RAYON_A, 135f + 270f * ClusterGauge.consumptionFraction(wh),
+                ClusterGauge.consumptionTickLabel(wh, c.unite))
+        }
         arc(canvas, cx, cy, RAYON_A, 135f, 270f, cPiste)
         val e = etat
         if (e != null) arc(canvas, cx, cy, RAYON_A, 135f, 270f * partAffichee, couleur(e.level))
@@ -141,7 +149,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         val v = valeurAffichee ?: e?.value ?: 0f
         val (chiffre, unite) = when (e?.unit) {
             null -> "–" to ""
-            GaugeUnit.WH_PER_KM -> v.roundToInt().toString() to "Wh/km"
+            GaugeUnit.WH_PER_KM -> ClusterGauge.formatConsumption(v, c.unite, locale) to c.unite.label
             GaugeUnit.KW_REGEN -> "↓" + ClusterGauge.formatKw(v, locale) to context.getString(R.string.cluster_regen_kw)
             GaugeUnit.KW_STOPPED -> ClusterGauge.formatKw(v, locale) to context.getString(R.string.cluster_stopped_kw)
             GaugeUnit.KW -> ClusterGauge.formatKw(v, locale) to "kW"
@@ -151,8 +159,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         petit(canvas, unite, cx, cy + 40f, 13f, if (recup) cAccent else cTexte2)
 
         pied(canvas,
-            context.getString(R.string.cluster_trip_avg), whKm(c.moyenneWhKm), cTexte,
-            context.getString(R.string.cluster_regen), c.recupWh?.let { "+${it.roundToInt()} Wh" } ?: "–", cAccent)
+            context.getString(R.string.cluster_trip_avg), conso(c.moyenneWhKm, c.unite), cTexte,
+            context.getString(R.string.cluster_regen), c.recupWh?.let { "+${it.roundToInt()}" to "Wh" } ?: ("–" to null), cAccent)
     }
 
     // ── B : arc de puissance ─────────────────────────────────────────────────
@@ -160,36 +168,54 @@ class ClusterGaugeView(context: Context) : View(context) {
     private fun puissance(canvas: Canvas, c: Contenu) {
         val cx = COTE / 2f
         val cy = 122f
+        // Graduations sur l'échelle resserrée : la puissance à droite, la récupération à gauche.
+        ClusterGauge.POWER_TICKS_KW.forEach { kw ->
+            graduation(canvas, cx, cy, RAYON_B, 270f + 120f * ClusterGauge.powerFraction(kw), "${kw.roundToInt()}")
+        }
+        ClusterGauge.REGEN_TICKS_KW.forEach { kw ->
+            graduation(canvas, cx, cy, RAYON_B, 270f - 120f * ClusterGauge.regenFraction(kw), "${kw.roundToInt()}")
+        }
         arc(canvas, cx, cy, RAYON_B, 150f, 240f, cPiste)
         val e = etat
-        // Zéro en haut ; la récupération remplit vers la gauche (balayage négatif).
-        if (e != null) arc(canvas, cx, cy, RAYON_B, 270f, 120f * partAffichee, couleur(e.level))
+        // Zéro en haut ; la récupération remplit vers la gauche (balayage négatif). Le remplissage
+        // est coupé net au zéro : son bout arrondi passait de l'autre côté (retour du 2026-10-15).
+        if (e != null) {
+            canvas.save()
+            if (partAffichee >= 0f) canvas.clipRect(cx, 0f, COTE, COTE) else canvas.clipRect(0f, 0f, cx, COTE)
+            arc(canvas, cx, cy, RAYON_B, 270f, 120f * partAffichee, couleur(e.level))
+            canvas.restore()
+        }
         trait.color = cTexte2
         trait.strokeWidth = 2f
         canvas.drawLine(cx, cy - RAYON_B - 8f, cx, cy - RAYON_B + 8f, trait)
         trait.strokeWidth = EPAISSEUR
-
-        val gauche = point(cx, cy, 150f)
-        val droite = point(cx, cy, 30f)
-        petit(canvas, context.getString(R.string.cluster_regen), gauche.first + 4f, gauche.second + 24f, 11f, cAccent)
-        petit(canvas, "kW", droite.first - 4f, droite.second + 24f, 11f, cTexte2)
+        petit(canvas, "0", cx, cy - RAYON_B - 12f, 11f, cTexte2)
 
         val v = valeurAffichee ?: e?.value
         val recup = e != null && v != null && v < 0f
         val chiffre = if (e == null || v == null) "–" else (if (recup) "−" else "") + ClusterGauge.formatKw(v, locale)
-        grandChiffre(canvas, chiffre, cx, cy + 14f, if (recup) cAccent else cTexte)
+        grandChiffre(canvas, chiffre, cx, cy + 12f, if (recup) cAccent else cTexte)
+        // L'unité sous le chiffre (2026-10-15) : seul au centre, le chiffre ne disait pas ce qu'il comptait.
+        if (e != null) {
+            texte.typeface = moyen
+            texte.textSize = 13f
+            texte.letterSpacing = 0.04f
+            texte.color = if (recup) cAccent else cTexte2
+            canvas.drawText("kW", cx, cy + 32f, texte)
+        }
         val sous = when {
             e == null -> ""
             recup -> context.getString(R.string.cluster_regen_word)
-            else -> c.kw?.let { ClusterGauge.whPerKm(it, c.kmh) }?.let { whKm(it) }
+            else -> c.kw?.let { ClusterGauge.whPerKm(it, c.kmh) }
+                ?.let { "${ClusterGauge.formatConsumption(it, c.unite, locale)} ${c.unite.label}" }
                 ?: context.getString(R.string.cluster_stopped_word)
         }
-        petit(canvas, sous, cx, cy + 38f, 13f, cTexte2)
+        petit(canvas, sous, cx, cy + 50f, 13f, cTexte2)
 
         pied(canvas,
             context.getString(R.string.cluster_battery),
-            c.batterie?.let { context.getString(R.string.autobri_percent, it.roundToInt()) } ?: "–", cTexte,
-            context.getString(R.string.cluster_trip_avg), whKm(c.moyenneWhKm), cTexte)
+            (c.batterie?.let { context.getString(R.string.autobri_percent, it.roundToInt()) } ?: "–") to null, cTexte,
+            context.getString(R.string.cluster_trip_avg), conso(c.moyenneWhKm, c.unite), cTexte)
     }
 
     // ── Pièces communes ──────────────────────────────────────────────────────
@@ -201,9 +227,18 @@ class ClusterGaugeView(context: Context) : View(context) {
         canvas.drawArc(cadre, debut, balayage, false, trait)
     }
 
-    private fun point(cx: Float, cy: Float, angle: Float): Pair<Float, Float> {
+    /** Graduation à l'extérieur de la piste : un trait, et son libellé un peu plus loin. */
+    private fun graduation(canvas: Canvas, cx: Float, cy: Float, rayon: Float, angle: Float, libelle: String) {
         val a = Math.toRadians(angle.toDouble())
-        return (cx + RAYON_B * cos(a)).toFloat() to (cy + RAYON_B * sin(a)).toFloat()
+        val dx = cos(a).toFloat()
+        val dy = sin(a).toFloat()
+        trait.color = cTexte2
+        trait.strokeWidth = 1.5f
+        trait.strokeCap = Paint.Cap.BUTT
+        canvas.drawLine(cx + (rayon + 8f) * dx, cy + (rayon + 8f) * dy, cx + (rayon + 13f) * dx, cy + (rayon + 13f) * dy, trait)
+        trait.strokeCap = Paint.Cap.ROUND
+        trait.strokeWidth = EPAISSEUR
+        petit(canvas, libelle, cx + (rayon + 22f) * dx, cy + (rayon + 22f) * dy + 4f, 11f, cTexte2)
     }
 
     private fun grandChiffre(canvas: Canvas, s: String, x: Float, y: Float, couleur: Int) {
@@ -223,18 +258,44 @@ class ClusterGaugeView(context: Context) : View(context) {
         canvas.drawText(s, x, y, texte)
     }
 
-    /** Deux colonnes sous la jauge, séparées d'un filet : intitulé en petit, valeur dessous. */
-    private fun pied(canvas: Canvas, l1: String, v1: String, c1: Int, l2: String, v2: String, c2: Int) {
+    /**
+     * Deux colonnes sous la jauge, séparées d'un filet : intitulé en petit, valeur dessous — son
+     * unité, s'il y en a une, en petit et en gris à la suite.
+     */
+    private fun pied(
+        canvas: Canvas,
+        l1: String, v1: Pair<String, String?>, c1: Int,
+        l2: String, v2: Pair<String, String?>, c2: Int,
+    ) {
         plein.color = cPiste
         canvas.drawRect(COTE / 2f - 0.5f, 206f, COTE / 2f + 0.5f, 244f, plein)
         listOf(Triple(70f, l1, v1 to c1), Triple(190f, l2, v2 to c2)).forEach { (x, l, v) ->
             petit(canvas, l, x, 220f, 11f, cTexte2)
-            texte.typeface = moyen
-            texte.textSize = 16f
-            texte.color = v.second
-            texte.letterSpacing = 0f
-            canvas.drawText(v.first, x, 241f, texte)
+            valeurEtUnite(canvas, v.first.first, v.first.second, x, 241f, v.second)
         }
+    }
+
+    /** « 172 Wh/km » centré en [x] : la valeur en 16, l'unité en 11 et en gris. */
+    private fun valeurEtUnite(canvas: Canvas, valeur: String, unite: String?, x: Float, y: Float, couleur: Int) {
+        val suite = unite?.let { " $it" }
+        texte.letterSpacing = 0f
+        texte.typeface = Typeface.DEFAULT
+        texte.textSize = 11f
+        val largeurUnite = suite?.let { texte.measureText(it) } ?: 0f
+        texte.typeface = moyen
+        texte.textSize = 16f
+        val largeurValeur = texte.measureText(valeur)
+        val debut = x - (largeurValeur + largeurUnite) / 2f
+        texte.textAlign = Paint.Align.LEFT
+        texte.color = couleur
+        canvas.drawText(valeur, debut, y, texte)
+        if (suite != null) {
+            texte.typeface = Typeface.DEFAULT
+            texte.textSize = 11f
+            texte.color = cTexte2
+            canvas.drawText(suite, debut + largeurValeur, y, texte)
+        }
+        texte.textAlign = Paint.Align.CENTER
     }
 
     /** Pastille du mode de conduite, en haut à gauche : la teinte du mode, sur un fond atténué. */
@@ -256,7 +317,9 @@ class ClusterGaugeView(context: Context) : View(context) {
         texte.textAlign = Paint.Align.CENTER
     }
 
-    private fun whKm(v: Float?): String = v?.let { "${it.roundToInt()} Wh/km" } ?: "–"
+    /** Moyenne du trajet dans l'unité choisie, ou un tiret tant qu'elle n'a pas de sens. */
+    private fun conso(wh: Float?, unite: ConsumptionUnit): Pair<String, String?> =
+        wh?.let { ClusterGauge.formatConsumption(it, unite, locale) to unite.label } ?: ("–" to null)
 
     private fun couleur(niveau: GaugeLevel): Int = sombre.getColor(when (niveau) {
         GaugeLevel.CONSUMPTION -> R.color.dash_warn

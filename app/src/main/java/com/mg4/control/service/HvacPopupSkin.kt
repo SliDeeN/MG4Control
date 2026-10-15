@@ -272,6 +272,9 @@ internal class HvacPopupSkin(
         // et aucun segment ne s'allume — il n'y a pas de cran à montrer.
         val niveau = r.ventilationReelle
         ventilation.text = when {
+            // Clim éteinte (issue #147) : « OFF », aucun segment.
+            r.eteinte -> localized.getString(R.string.climate_off)
+                .uppercase(localized.resources.configuration.locales[0])
             r.enAuto -> localized.getString(R.string.clim_auto)
                 .uppercase(localized.resources.configuration.locales[0])
             else -> niveau?.toString() ?: "--"

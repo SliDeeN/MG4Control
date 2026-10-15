@@ -288,6 +288,7 @@ internal object ClusterModuleOverlay {
                     moyenneWhKm = trajet.averageWhPerKm(),
                     recupWh = trajet.regenWh(),
                     batterie = batterie,
+                    unite = ClusterModuleSettings.consumptionUnit(ctx),
                 )
             }
             main.post {

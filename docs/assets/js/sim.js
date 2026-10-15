@@ -146,7 +146,7 @@
       settings: { defaultScreen: 'dashboard', theme: 'auto', api: false, autoUpdate: true, beta: false, gate: false, gateMax: 30,
                   garage: false, textSize: 'standard', updOverlay: true, readyDefault: false, popupDelay: 10,
                   // Écran conducteur (ClusterModuleSettings) : module par onglet, actualisation en ms.
-                  cluster: false, clusterNav: 'consumption', clusterMedia: 'none', clusterRefresh: 1000 },
+                  cluster: false, clusterNav: 'consumption', clusterMedia: 'none', clusterRefresh: 1000, clusterUnit: 'wh' },
       sc: {
         enabled: true,
         map: { btn1_single: 'PROFILE_PICKER', btn1_long: 'ONE_PEDAL', btn2_single: 'NONE', btn2_long: 'ADAS_CYCLE' },
@@ -1538,7 +1538,10 @@
       if (s.cluster) h +=
         '<div data-hl="s-cluster-tabs" style="margin-top:8px"><div class="a-sub">' + esc(S('settings_cluster_tab_nav')) + '</div><div class="a-grid g3">' + mod('nav', s.clusterNav) + '</div>' +
         '<div class="a-sub" style="margin-top:8px">' + esc(S('settings_cluster_tab_media')) + '</div><div class="a-grid g3">' + mod('media', s.clusterMedia) + '</div>' +
-        '<div class="a-desc" style="margin-top:6px">' + esc(S('settings_cluster_tabs_note')) + '</div></div>' +
+        '<div class="a-desc" style="margin-top:6px">' + esc(S('settings_cluster_tabs_note')) + '</div>' +
+        // Unité de la consommation (ClusterModuleSettings.consumptionUnit) : Wh/km par défaut.
+        '<div class="a-sub" style="margin-top:8px">' + esc(S('settings_cluster_unit')) + '</div><div class="a-grid g2" data-hl="s-cluster-unit">' +
+          [['wh', 'cluster_unit_wh_km'], ['kwh', 'cluster_unit_kwh_100km']].map(([v, key]) => '<button class="b nc' + (s.clusterUnit === v ? ' on' : '') + '" data-a="clusterUnit" data-v="' + v + '">' + esc(S(key)) + '</button>').join('') + '</div></div>' +
         '<div data-hl="s-cluster-refresh" style="margin-top:10px"><div class="a-sub">' + esc(S('settings_cluster_refresh')) + '</div>' +
         '<div class="a-row"><div style="flex:1">' + range('clusterRefresh', 1, 10, ref) + '</div><span class="a-val" data-out="clusterRefresh">' + outText('clusterRefresh', ref) + '</span></div>' +
         '<div class="a-desc">' + esc(S('settings_cluster_refresh_desc')) + '</div></div>';
@@ -2776,6 +2779,7 @@
         case 'garage': s.garage = !s.garage; return r();
         case 'readyDefault': s.readyDefault = !s.readyDefault; return r();
         case 'cluster': s.cluster = !s.cluster; return r();
+        case 'clusterUnit': s.clusterUnit = v; return r();
         case 'clusterMod': s[el && el.getAttribute('data-x') === 'media' ? 'clusterMedia' : 'clusterNav'] = v; return r();
         case 'updOverlay': s.updOverlay = !s.updOverlay; return r();
         case 'textSize': s.textSize = v; return r();
@@ -3392,7 +3396,10 @@
 
   // ── Écran conducteur : aperçu du module (ClusterGauge + ClusterGaugeView) ──
   /** Bornes de ClusterGauge, les mêmes que l'app. */
-  const CG = { STOP_KMH: 5, WH_KM_FULL: 3000, WH_KM_CURVE: 100, REGEN_FULL_KW: 60, STOPPED_FULL_KW: 20, POWER_FULL_KW: 320, SMOOTHING: 0.5 };
+  const CG = { STOP_KMH: 5, WH_KM_FULL: 3000, WH_KM_CURVE: 100, REGEN_FULL_KW: 60, STOPPED_FULL_KW: 20, POWER_FULL_KW: 320,
+                POWER_CURVE_KW: 20, REGEN_CURVE_KW: 10, SMOOTHING: 0.5 };
+  /** Graduations (ClusterGauge) : consommation en Wh/km, puissance et récupération en kW. */
+  const CG_TICKS = { cons: [0, 100, 200, 500, 1000, 3000], power: [20, 50, 100, 200, 320], regen: [10, 30, 60] };
   const part01 = (f) => clamp(f, 0, 1);
   function whPerKm(kw, kmh) { return kmh == null || kmh < CG.STOP_KMH || kw < 0 ? null : kw * 1000 / kmh; }
   /** Module A : Wh/km sur une échelle logarithmique jusqu'à 3 000, kW à l'arrêt et en récupération. */
@@ -3400,12 +3407,16 @@
     if (kw < 0) return { fraction: part01(-kw / CG.REGEN_FULL_KW), regen: true, value: -kw, unit: 'KW_REGEN' };
     const wh = whPerKm(kw, kmh);
     if (wh == null) return { fraction: part01(kw / CG.STOPPED_FULL_KW), regen: false, value: kw, unit: 'KW_STOPPED' };
-    return { fraction: part01(Math.log(1 + wh / CG.WH_KM_CURVE) / Math.log(1 + CG.WH_KM_FULL / CG.WH_KM_CURVE)), regen: false, value: wh, unit: 'WH_PER_KM' };
+    return { fraction: consFraction(wh), regen: false, value: wh, unit: 'WH_PER_KM' };
   }
+  const consFraction = (wh) => part01(Math.log(1 + Math.max(0, wh) / CG.WH_KM_CURVE) / Math.log(1 + CG.WH_KM_FULL / CG.WH_KM_CURVE));
+  /** Échelle resserrée du module B (ClusterGauge.powerFraction / regenFraction, 2026-10-15). */
+  const powerFraction = (kw) => part01(Math.log(1 + Math.max(0, kw) / CG.POWER_CURVE_KW) / Math.log(1 + CG.POWER_FULL_KW / CG.POWER_CURVE_KW));
+  const regenFraction = (kw) => part01(Math.log(1 + Math.max(0, kw) / CG.REGEN_CURVE_KW) / Math.log(1 + CG.REGEN_FULL_KW / CG.REGEN_CURVE_KW));
   /** Module B : puissance signée, de −60 kW (récupération, à gauche) à 320 kW (à droite). */
   function gaugePower(kw) {
-    if (kw < 0) return { fraction: -part01(-kw / CG.REGEN_FULL_KW), regen: true, value: kw, unit: 'KW' };
-    return { fraction: part01(kw / CG.POWER_FULL_KW), regen: false, value: kw, unit: 'KW' };
+    if (kw < 0) return { fraction: -regenFraction(-kw), regen: true, value: kw, unit: 'KW' };
+    return { fraction: powerFraction(kw), regen: false, value: kw, unit: 'KW' };
   }
   /** Module montré sur l'onglet du combiné (ClusterModuleSettings.moduleToShow) : Navigation et Musique seulement. */
   function clusterModuleFor(tab) {
@@ -3442,7 +3453,13 @@
     const trip = { kwh: 0, regenKwh: 0, km: 0 };
     const loc = () => (appLang() === 'en' ? 'en-GB' : appLang());
     const fmtKw = (v) => { const a = Math.abs(v); return a < 9.95 ? a.toLocaleString(loc(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : String(Math.round(a)); };
-    const avg = () => (trip.km < 0.2 ? '–' : Math.round(trip.kwh * 1000 / trip.km) + ' Wh/km');
+    /** Consommation dans l'unité choisie (ClusterGauge.formatConsumption) : [chiffre, unité]. */
+    const cons = (wh) => {
+      if (state.settings.clusterUnit !== 'kwh') return [String(Math.round(wh)), 'Wh/km'];
+      const k = wh / 10;
+      return [k < 99.95 ? k.toLocaleString(loc(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : String(Math.round(k)), 'kWh/100 km'];
+    };
+    const avg = () => (trip.km < 0.2 ? ['–', null] : cons(trip.kwh * 1000 / trip.km));
     /** Croisière : 125 Wh/km plus la traînée ; à l'arrêt, la clim et les accessoires. */
     const cruiseKw = (v) => (v < CG.STOP_KMH ? 1.8 : (125 + 0.0075 * v * v) * v / 1000);
 
@@ -3452,9 +3469,17 @@
       return '<path d="M' + p(start) + 'A' + r + ' ' + r + ' 0 ' + (Math.abs(sweep) > 180 ? 1 : 0) + ' ' + (sweep > 0 ? 1 : 0) + ' ' + p(start + sweep) + '" fill="none" stroke="' + col + '" stroke-width="13" stroke-linecap="round"/>';
     }
     const txt = (t, x, y, size, col, weight, anchor) => (t ? '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" font-size="' + size + '" fill="' + col + '" text-anchor="' + (anchor || 'middle') + '"' + (weight ? ' font-weight="' + weight + '"' : ' letter-spacing="0.5"') + '>' + esc(t) + '</text>' : '');
-    /** Deux colonnes sous la jauge, séparées d'un filet : intitulé en petit, valeur dessous. */
+    /** Deux colonnes sous la jauge, séparées d'un filet : intitulé en petit, valeur dessous et son unité en petit. */
+    const valeur = (x, v, col) => '<text x="' + x + '" y="241" text-anchor="middle" font-size="16" font-weight="500" fill="' + col + '">' + esc(v[0]) +
+      (v[1] ? '<tspan font-size="11" font-weight="400" fill="' + COL.text2 + '"> ' + esc(v[1]) + '</tspan>' : '') + '</text>';
     const foot = (l1, v1, c1, l2, v2, c2) => '<rect x="129.5" y="206" width="1" height="38" fill="' + COL.track + '"/>' +
-      txt(l1, 70, 220, 11, COL.text2) + txt(v1, 70, 241, 16, c1, 500) + txt(l2, 190, 220, 11, COL.text2) + txt(v2, 190, 241, 16, c2, 500);
+      txt(l1, 70, 220, 11, COL.text2) + valeur(70, v1, c1) + txt(l2, 190, 220, 11, COL.text2) + valeur(190, v2, c2);
+    /** Graduation à l'extérieur de la piste : un trait, et son libellé un peu plus loin. */
+    const grad = (cx, cy, r, a, lab) => {
+      const dx = Math.cos(a * Math.PI / 180), dy = Math.sin(a * Math.PI / 180);
+      return '<line x1="' + (cx + (r + 8) * dx).toFixed(1) + '" y1="' + (cy + (r + 8) * dy).toFixed(1) + '" x2="' + (cx + (r + 13) * dx).toFixed(1) + '" y2="' + (cy + (r + 13) * dy).toFixed(1) + '" stroke="' + COL.text2 + '" stroke-width="1.5"/>' +
+        txt(lab, cx + (r + 22) * dx, cy + (r + 22) * dy + 4, 11, COL.text2);
+    };
     function pill() {
       const mode = car().driveMode, mc = MODE_COL[mode] || MODE_COL.NORMAL, name = (DRIVE_LABEL[mode] || mode).toUpperCase();
       return '<rect x="14" y="14" width="' + (name.length * 7.7 + 30).toFixed(1) + '" height="22" rx="11" fill="' + mc + '" fill-opacity=".25"/><circle cx="26" cy="25" r="3.5" fill="' + mc + '"/>' +
@@ -3475,32 +3500,37 @@
       h += pill();
       if (mod === 'power') {
         const cx = 130, cy = 122, R = 88;
+        CG_TICKS.power.forEach((k) => { h += grad(cx, cy, R, 270 + 120 * powerFraction(k), String(k)); });
+        CG_TICKS.regen.forEach((k) => { h += grad(cx, cy, R, 270 - 120 * regenFraction(k), String(k)); });
         h += arc(cx, cy, R, 150, 240, COL.track);
-        if (st) h += arc(cx, cy, R, 270, 120 * shown.part, st.regen ? COL.accent : COL.warn);
-        h += '<line x1="130" y1="' + (cy - R - 8) + '" x2="130" y2="' + (cy - R + 8) + '" stroke="' + COL.text2 + '" stroke-width="2"/>';
-        const pt = (a) => [cx + R * Math.cos(a * Math.PI / 180), cy + R * Math.sin(a * Math.PI / 180)];
-        const g = pt(150), d = pt(30);
-        h += txt(S('cluster_regen'), g[0] + 4, g[1] + 24, 11, COL.accent) + txt('kW', d[0] - 4, d[1] + 24, 11, COL.text2);
+        // Le remplissage s'arrête net au zéro : son bout arrondi ne passe pas de l'autre côté.
+        if (st) h += '<defs><clipPath id="clPow"><rect x="130" y="0" width="130" height="260"/></clipPath><clipPath id="clReg"><rect x="0" y="0" width="130" height="260"/></clipPath></defs>' +
+          '<g clip-path="url(#' + (shown.part >= 0 ? 'clPow' : 'clReg') + ')">' + arc(cx, cy, R, 270, 120 * shown.part, st.regen ? COL.accent : COL.warn) + '</g>';
+        h += '<line x1="130" y1="' + (cy - R - 8) + '" x2="130" y2="' + (cy - R + 8) + '" stroke="' + COL.text2 + '" stroke-width="2"/>' + txt('0', 130, cy - R - 12, 11, COL.text2);
         const v = shown.value != null ? shown.value : st && st.value;
         const recup = !!st && v != null && v < 0;
         const big = !st || v == null ? '–' : (recup ? '−' : '') + fmtKw(v);
-        h += txt(big, cx, cy + 14, big.length > 3 ? 46 : 54, recup ? COL.accent : COL.text, 500);
+        h += txt(big, cx, cy + 12, big.length > 3 ? 46 : 54, recup ? COL.accent : COL.text, 500);
+        if (st) h += txt('kW', cx, cy + 32, 13, recup ? COL.accent : COL.text2, 500);
         const wh = smoothed == null ? null : whPerKm(smoothed, c.speed);
-        h += txt(!st ? '' : recup ? S('cluster_regen_word') : wh != null ? Math.round(wh) + ' Wh/km' : S('cluster_stopped_word'), cx, cy + 38, 13, COL.text2);
-        h += foot(S('cluster_battery'), S('autobri_percent', c.soc), COL.text, S('cluster_trip_avg'), avg(), COL.text);
+        h += txt(!st ? '' : recup ? S('cluster_regen_word') : wh != null ? cons(wh).join(' ') : S('cluster_stopped_word'), cx, cy + 50, 13, COL.text2);
+        h += foot(S('cluster_battery'), [S('autobri_percent', c.soc), null], COL.text, S('cluster_trip_avg'), avg(), COL.text);
       } else {
         const cx = 130, cy = 120;
+        // Graduations en Wh/km, libellées dans l'unité choisie : l'anneau, lui, ne change pas.
+        const kwh = state.settings.clusterUnit === 'kwh';
+        CG_TICKS.cons.forEach((w) => { h += grad(cx, cy, 80, 135 + 270 * consFraction(w), kwh ? String(w / 10) : w >= 1000 ? (w / 1000) + 'k' : String(w)); });
         h += arc(cx, cy, 80, 135, 270, COL.track);
         if (st) h += arc(cx, cy, 80, 135, 270 * shown.part, st.regen ? COL.accent : COL.warn);
         const v = shown.value != null ? shown.value : st ? st.value : 0;
         let big = '–', unit = '';
-        if (st && st.unit === 'WH_PER_KM') { big = String(Math.round(v)); unit = 'Wh/km'; }
+        if (st && st.unit === 'WH_PER_KM') { [big, unit] = cons(v); }
         else if (st && st.unit === 'KW_REGEN') { big = '↓' + fmtKw(v); unit = S('cluster_regen_kw'); }
         else if (st) { big = fmtKw(v); unit = S('cluster_stopped_kw'); }
         const recup = !!st && st.unit === 'KW_REGEN';
         h += txt(big, cx, cy + 16, big.length > 3 ? 46 : 54, recup ? COL.accent : COL.text, 500);
         h += txt(unit, cx, cy + 40, 13, recup ? COL.accent : COL.text2);
-        h += foot(S('cluster_trip_avg'), avg(), COL.text, S('cluster_regen'), '+' + Math.round(trip.regenKwh * 1000) + ' Wh', COL.accent);
+        h += foot(S('cluster_trip_avg'), avg(), COL.text, S('cluster_regen'), ['+' + Math.round(trip.regenKwh * 1000), 'Wh'], COL.accent);
       }
       svg.innerHTML = h;
     }

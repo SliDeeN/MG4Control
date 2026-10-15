@@ -307,9 +307,18 @@ object HvacPopupOverlay {
             is HvacPopup.Action.Ventilation -> {
                 val depuis = if (s.reglages().enAuto) "AUTO" else s.fanLevel.toString()
                 AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : ventilation $depuis → ${action.cible}")
-                etat = s.copy(fanLevel = action.cible, autoOn = s.autoOn?.let { false })
+                // Écrire un cran rallume aussi une clim éteinte.
+                etat = s.copy(fanLevel = action.cible, autoOn = s.autoOn?.let { false }, powerOn = s.powerOn?.let { true })
                 afficher()
                 ecrireDiffere("ventilation") { MG4Hardware.setClimateFan(action.cible) }
+            }
+            // Gauche au cran le plus bas (issue #147). Même file que la ventilation : un cran
+            // encore en attente ne doit pas rallumer la clim après coup, ni l'inverse.
+            HvacPopup.Action.Arret -> {
+                AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : ventilation ${s.fanLevel} → climatisation éteinte")
+                etat = s.copy(powerOn = false, fanLevel = 0)
+                afficher()
+                ecrireDiffere("ventilation") { MG4Hardware.setClimatePower(false) }
             }
             // Clic central hors AUTO. En AUTO, il rend la main : c'est alors une [Ventilation].
             HvacPopup.Action.Auto -> {

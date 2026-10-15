@@ -3,6 +3,7 @@ package com.mg4.control.model
 import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.ln
+import kotlin.math.roundToInt
 
 /**
  * Module affiché dans la zone centrale du combiné (Réglages › Interface, 2026-10-14). Deux au
@@ -16,6 +17,21 @@ enum class ClusterModule(val key: String) {
 
     companion object {
         fun fromKey(key: String?): ClusterModule = entries.firstOrNull { it.key == key } ?: CONSUMPTION
+    }
+}
+
+/**
+ * Unité de la consommation sur le combiné (Réglages › Interface, 2026-10-15) : des Wh/km bougent
+ * beaucoup, des kWh/100 km se lisent avec un chiffre de moins. L'anneau, lui, ne change pas : 3 000
+ * Wh/km et 300 kWh/100 km sont la même chose, seules les graduations changent de libellé.
+ */
+enum class ConsumptionUnit(val key: String, val label: String) {
+    WH_PER_KM("wh_km", "Wh/km"),
+    KWH_PER_100KM("kwh_100km", "kWh/100 km");
+
+    companion object {
+        /** Wh/km par défaut : l'affichage d'avant le choix, pour qui utilisait déjà le module. */
+        fun fromKey(key: String?): ConsumptionUnit = entries.firstOrNull { it.key == key } ?: WH_PER_KM
     }
 }
 
@@ -73,6 +89,18 @@ object ClusterGauge {
      * 150 kW, où l'arc d'une XPower restait plein en accélération franche (2026-10-14).
      */
     const val POWER_FULL_KW = 320f
+    /**
+     * Courbure de l'échelle logarithmique du module B ([powerFraction], [regenFraction]). Linéaire
+     * jusqu'à 320 kW, l'arc ne bougeait presque pas en roulant (retour du 2026-10-15) : 20 kW n'en
+     * faisaient que 6 %. Ici : 20 kW → un quart, 50 → 44 %, 100 → 63 % ; récupération 10 kW → 36 %.
+     */
+    const val POWER_CURVE_KW = 20f
+    const val REGEN_CURVE_KW = 10f
+
+    /** Graduations : consommation en Wh/km (libellées selon l'unité), puissance et récupération en kW. */
+    val CONSUMPTION_TICKS_WH = listOf(0f, 100f, 200f, 500f, 1000f, 3000f)
+    val POWER_TICKS_KW = listOf(20f, 50f, 100f, 200f, 320f)
+    val REGEN_TICKS_KW = listOf(10f, 30f, 60f)
 
     /** Poids de la nouvelle valeur dans le lissage : assez vif pour suivre un freinage. */
     const val SMOOTHING = 0.5f
@@ -99,9 +127,17 @@ object ClusterGauge {
     // ── Module B ─────────────────────────────────────────────────────────────
 
     fun power(kw: Float): GaugeState {
-        if (kw < 0f) return GaugeState(-part(-kw / REGEN_FULL_KW), GaugeLevel.REGEN, kw, GaugeUnit.KW)
-        return GaugeState(part(kw / POWER_FULL_KW), GaugeLevel.CONSUMPTION, kw, GaugeUnit.KW)
+        if (kw < 0f) return GaugeState(-regenFraction(-kw), GaugeLevel.REGEN, kw, GaugeUnit.KW)
+        return GaugeState(powerFraction(kw), GaugeLevel.CONSUMPTION, kw, GaugeUnit.KW)
     }
+
+    /** Part du côté droit de l'arc pour [kw] consommés, échelle logarithmique jusqu'à [POWER_FULL_KW]. */
+    fun powerFraction(kw: Float): Float =
+        part((ln(1.0 + kw.coerceAtLeast(0f) / POWER_CURVE_KW) / ln(1.0 + POWER_FULL_KW / POWER_CURVE_KW)).toFloat())
+
+    /** Part du côté gauche pour [kw] récupérés (positifs), jusqu'à [REGEN_FULL_KW]. */
+    fun regenFraction(kw: Float): Float =
+        part((ln(1.0 + kw.coerceAtLeast(0f) / REGEN_CURVE_KW) / ln(1.0 + REGEN_FULL_KW / REGEN_CURVE_KW)).toFloat())
 
     /** Consommation instantanée, ou `null` à l'arrêt, en récupération ou vitesse illisible. */
     fun whPerKm(kw: Float, kmh: Float?): Float? {
@@ -118,6 +154,24 @@ object ClusterGauge {
     fun formatKw(kw: Float, locale: Locale): String {
         val v = abs(kw)
         return if (v < 9.95f) String.format(locale, "%.1f", v) else String.format(locale, "%d", Math.round(v))
+    }
+
+    /**
+     * Consommation [whPerKm] écrite dans [unit] : Wh/km entiers, ou kWh/100 km avec une décimale
+     * sous 100 (« 18,4 ») et entiers au-delà. [locale] : celle de l'application, jamais Locale.ROOT.
+     */
+    fun formatConsumption(whPerKm: Float, unit: ConsumptionUnit, locale: Locale): String = when (unit) {
+        ConsumptionUnit.WH_PER_KM -> String.format(locale, "%d", Math.round(whPerKm))
+        ConsumptionUnit.KWH_PER_100KM -> {
+            val v = whPerKm / 10f
+            if (v < 99.95f) String.format(locale, "%.1f", v) else String.format(locale, "%d", Math.round(v))
+        }
+    }
+
+    /** Libellé d'une graduation de consommation [wh] (Wh/km) : « 1k » plutôt que 1000, ou des kWh/100 km. */
+    fun consumptionTickLabel(wh: Float, unit: ConsumptionUnit): String = when (unit) {
+        ConsumptionUnit.WH_PER_KM -> if (wh >= 1000f) "${(wh / 1000f).roundToInt()}k" else "${wh.roundToInt()}"
+        ConsumptionUnit.KWH_PER_100KM -> "${(wh / 10f).roundToInt()}"
     }
 
     /**

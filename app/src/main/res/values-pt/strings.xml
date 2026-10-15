@@ -762,6 +762,9 @@
     <string name="settings_cluster_tab_media">Separador Música</string>
     <string name="settings_cluster_none">Nenhum</string>
     <string name="settings_cluster_tabs_note">O computador de bordo, a pressão dos pneus e as definições são desenhados pelo próprio painel: aí não pode aparecer nenhum módulo.</string>
+    <string name="settings_cluster_unit">Unidade de consumo</string>
+    <string name="cluster_unit_wh_km">Wh/km</string>
+    <string name="cluster_unit_kwh_100km">kWh/100 km</string>
     <string name="settings_cluster_consumption">Consumo</string>
     <string name="settings_cluster_power">Potência</string>
     <string name="settings_cluster_refresh">Atualização do indicador</string>

@@ -53,6 +53,7 @@ import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterTab
+import com.mg4.control.model.ConsumptionUnit
 import com.mg4.control.service.ClusterModuleOverlay
 import com.mg4.control.util.TextSize
 import kotlinx.coroutines.CoroutineScope
@@ -253,19 +254,28 @@ class SettingsFragment : Fragment() {
             Triple(ClusterTab.MEDIA, ClusterModule.CONSUMPTION, view.findViewById(R.id.btn_cluster_media_consumption)),
             Triple(ClusterTab.MEDIA, ClusterModule.POWER, view.findViewById(R.id.btn_cluster_media_power)),
         )
+        // Unité de la consommation : Wh/km ou kWh/100 km (2026-10-15).
+        val unitBtns: List<Pair<ConsumptionUnit, MaterialButton>> = listOf(
+            ConsumptionUnit.WH_PER_KM to view.findViewById(R.id.btn_cluster_unit_wh),
+            ConsumptionUnit.KWH_PER_100KM to view.findViewById(R.id.btn_cluster_unit_kwh),
+        )
         fun updateClusterCard() {
             val ctx = requireContext()
             val deplie = if (ClusterModuleSettings.isEnabled(ctx)) View.VISIBLE else View.GONE
             rowClusterChoice.visibility = deplie
             rowClusterRefresh.visibility = deplie
-            clusterBtns.forEach { (onglet, module, btn) ->
-                val active = module == ClusterModuleSettings.moduleFor(ctx, onglet)
+            fun peindre(btn: MaterialButton, active: Boolean) {
                 btn.backgroundTintList = ColorStateList.valueOf(if (active) accentDim else inactiveColor)
                 btn.setTextColor(if (active) textActive else textInactive)
                 btn.strokeColor = ColorStateList.valueOf(
                     if (active) accentColor else ctx.getColor(R.color.dash_border)
                 )
             }
+            clusterBtns.forEach { (onglet, module, btn) ->
+                peindre(btn, module == ClusterModuleSettings.moduleFor(ctx, onglet))
+            }
+            val unite = ClusterModuleSettings.consumptionUnit(ctx)
+            unitBtns.forEach { (u, btn) -> peindre(btn, u == unite) }
         }
         switchCluster.isChecked = ClusterModuleSettings.isEnabled(requireContext())
         updateClusterCard()
@@ -280,6 +290,14 @@ class SettingsFragment : Fragment() {
                 if (module == ClusterModuleSettings.moduleFor(requireContext(), onglet)) return@setOnClickListener
                 ClusterModuleSettings.setModuleFor(requireContext(), onglet, module)
                 AppLogger.i(ClusterModuleOverlay.TAG, "Module du combiné, onglet ${onglet.name} → ${module?.key ?: "aucun"}")
+                updateClusterCard()
+            }
+        }
+        unitBtns.forEach { (u, btn) ->
+            btn.setOnClickListener {
+                if (u == ClusterModuleSettings.consumptionUnit(requireContext())) return@setOnClickListener
+                ClusterModuleSettings.setConsumptionUnit(requireContext(), u)
+                AppLogger.i(ClusterModuleOverlay.TAG, "Unité de consommation du combiné → ${u.label}")
                 updateClusterCard()
             }
         }

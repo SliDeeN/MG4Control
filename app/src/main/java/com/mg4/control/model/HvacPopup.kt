@@ -12,8 +12,8 @@ import com.mg4.control.accessibility.JoystickFocus
  * |----------|------------------------------------------|
  * | Haut     | température + 1                          |
  * | Bas      | température − 1                          |
- * | Droite   | ventilation + 1                          |
- * | Gauche   | ventilation − 1                          |
+ * | Droite   | ventilation + 1 (rallume la clim éteinte) |
+ * | Gauche   | ventilation − 1 (au cran 1 : clim éteinte) |
  * | Clic     | mode AUTO, ou retour au réglage manuel   |
  *
  * La fenêtre se ferme au doigt, par le raccourci qui l'a ouverte, ou seule après son délai.
@@ -26,6 +26,14 @@ import com.mg4.control.accessibility.JoystickFocus
  * « coupent » jamais AUTO : ils en SORTENT en écrivant un niveau de ventilation — le dernier
  * réglé à la main, plus ou moins un cran. C'est la règle reprise ici, et partagée avec la page
  * Clim et les raccourcis « ventilation ± ».
+ *
+ * ## Clim éteinte (issue #147)
+ *
+ * La MG4 n'a pas de cran 0 : « éteint », c'est l'arrêt de la climatisation, un bouton à part
+ * sur l'écran d'origine (`btn_power`), dont le « ventilation − » s'arrête au cran 1. Le pop-up
+ * n'a pas ce bouton : au cran 1, gauche ÉTEINT la clim, et droite la rallume au cran 1. Éteinte,
+ * la voiture annonce une ventilation à 0 ; gauche ne fait alors plus rien — avant, 0 − 1 ramené
+ * au minimum écrivait le cran 1, et rallumait la clim.
  */
 object HvacPopup {
 
@@ -37,6 +45,9 @@ object HvacPopup {
 
         /** Passer en mode AUTO : le clic central du joystick, ou le bouton AUTO. */
         object Auto : Action()
+
+        /** Éteindre la climatisation : gauche au cran le plus bas (issue #147). */
+        object Arret : Action()
     }
 
     /** Ce qui est lu sur la voiture ; les bornes en viennent aussi. null = illisible. */
@@ -47,15 +58,23 @@ object HvacPopup {
         val auto: Boolean? = null,
         /** Dernier niveau de ventilation réglé à la main, retenu avant AUTO ; null = jamais vu. */
         val dernierNiveau: Int? = null,
+        /** Clim en marche, d'après la voiture ; null = illisible. */
+        val allumee: Boolean? = null,
     ) {
+        /**
+         * Clim éteinte : la voiture le dit, ou sa ventilation annoncée est sous le premier cran
+         * (0, constaté sur SWI68 — issue #147).
+         */
+        val eteinte: Boolean get() = allumee == false || (fan != null && fan < fanMin)
+
         /**
          * AUTO actif : la voiture le dit, ou son niveau de ventilation le trahit — au-delà du
          * maximum ce n'est plus un cran (15), et c'est à cela que les écrans d'origine s'y fient.
          */
         val enAuto: Boolean get() = auto == true || (fan != null && fan > fanMax)
 
-        /** Niveau de ventilation à montrer et à régler ; null en AUTO ou s'il est illisible. */
-        val ventilationReelle: Int? get() = fan?.takeIf { !enAuto }
+        /** Niveau de ventilation à montrer et à régler ; null en AUTO, clim éteinte, ou s'il est illisible. */
+        val ventilationReelle: Int? get() = fan?.takeIf { !enAuto && !eteinte }
     }
 
     /** Action portée par [commande], ou null s'il n'y a rien à écrire (butée, valeur illisible). */
@@ -63,7 +82,12 @@ object HvacPopup {
         JoystickFocus.Commande.HAUT    -> pas(reglages.temp, reglages.tempMin, reglages.tempMax, +1)?.let { Action.Temperature(it) }
         JoystickFocus.Commande.BAS     -> pas(reglages.temp, reglages.tempMin, reglages.tempMax, -1)?.let { Action.Temperature(it) }
         JoystickFocus.Commande.DROITE  -> pasVentilation(reglages, +1)?.let { Action.Ventilation(it) }
-        JoystickFocus.Commande.GAUCHE  -> pasVentilation(reglages, -1)?.let { Action.Ventilation(it) }
+        JoystickFocus.Commande.GAUCHE  -> when {
+            // Au cran le plus bas, réglé à la main : on éteint (issue #147). Jamais depuis AUTO,
+            // qui sort d'abord au dernier cran moins un.
+            !reglages.eteinte && !reglages.enAuto && reglages.fan == reglages.fanMin -> Action.Arret
+            else -> pasVentilation(reglages, -1)?.let { Action.Ventilation(it) }
+        }
         JoystickFocus.Commande.VALIDER -> when {
             // Rendre la main : le dernier niveau, tel quel.
             reglages.enAuto        -> Action.Ventilation(niveauDeSortie(reglages))
@@ -82,9 +106,12 @@ object HvacPopup {
      * « moins » écrirait le MAXIMUM — et on écrit MÊME en butée : c'est cette écriture qui rend
      * la main, et l'utilisateur vient de demander à régler lui-même.
      */
-    fun pasVentilation(reglages: Reglages, sens: Int): Int? =
-        if (reglages.enAuto) (niveauDeSortie(reglages) + sens).coerceIn(reglages.fanMin, reglages.fanMax)
-        else pas(reglages.fan, reglages.fanMin, reglages.fanMax, sens)
+    fun pasVentilation(reglages: Reglages, sens: Int): Int? = when {
+        // Éteinte : « plus » rallume au premier cran, « moins » n'a rien à faire (issue #147).
+        reglages.eteinte -> if (sens > 0) reglages.fanMin else null
+        reglages.enAuto  -> (niveauDeSortie(reglages) + sens).coerceIn(reglages.fanMin, reglages.fanMax)
+        else             -> pas(reglages.fan, reglages.fanMin, reglages.fanMax, sens)
+    }
 
     /**
      * Niveau à écrire pour quitter AUTO sans rien changer d'autre : le dernier réglé à la main.

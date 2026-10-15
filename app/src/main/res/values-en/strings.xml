@@ -762,6 +762,9 @@
     <string name="settings_cluster_tab_media">Music tab</string>
     <string name="settings_cluster_none">None</string>
     <string name="settings_cluster_tabs_note">Trip computer, tyre pressure and settings are drawn by the cluster itself: a module can\'t appear there.</string>
+    <string name="settings_cluster_unit">Consumption unit</string>
+    <string name="cluster_unit_wh_km">Wh/km</string>
+    <string name="cluster_unit_kwh_100km">kWh/100 km</string>
     <string name="settings_cluster_consumption">Consumption</string>
     <string name="settings_cluster_power">Power</string>
     <string name="settings_cluster_refresh">Gauge refresh rate</string>

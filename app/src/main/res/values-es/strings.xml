@@ -762,6 +762,9 @@
     <string name="settings_cluster_tab_media">Pestaña Música</string>
     <string name="settings_cluster_none">Ninguno</string>
     <string name="settings_cluster_tabs_note">El ordenador de a bordo, la presión de los neumáticos y los ajustes los dibuja el propio cuadro: ahí no puede aparecer ningún módulo.</string>
+    <string name="settings_cluster_unit">Unidad de consumo</string>
+    <string name="cluster_unit_wh_km">Wh/km</string>
+    <string name="cluster_unit_kwh_100km">kWh/100 km</string>
     <string name="settings_cluster_consumption">Consumo</string>
     <string name="settings_cluster_power">Potencia</string>
     <string name="settings_cluster_refresh">Actualización del indicador</string>

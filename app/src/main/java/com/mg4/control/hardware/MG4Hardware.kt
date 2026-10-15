@@ -5535,7 +5535,7 @@ object MG4Hardware {
          * et aux raccourcis — c'est elle qui sait qu'en AUTO le niveau annoncé (15) n'en est pas un.
          */
         fun reglages() = HvacPopup.Reglages(
-            tempC, tempMin, tempMax, fanLevel, fanMin, fanMax, autoOn, lastManualFan)
+            tempC, tempMin, tempMax, fanLevel, fanMin, fanMax, autoOn, lastManualFan, powerOn)
     }
 
     /**
