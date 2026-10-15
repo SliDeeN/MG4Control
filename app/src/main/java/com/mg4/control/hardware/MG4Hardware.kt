@@ -4163,16 +4163,19 @@ object MG4Hardware {
      * Valeurs rendues par `getCurrentMediaSource`.
      *
      * ⚠️ L'espace de valeurs est HYBRIDE, et ça ne se devine pas : le SDK y mélange ses
-     * `MEDIA_TYPE_*` (petits entiers) et ses `*_SOURCE_CODE` (0x12, 0x32, 0x46). Seules quatre
-     * valeurs sont CERTAINES — les trois constantes du SDK, et le 3 relevé sur véhicule en
-     * radio. Les autres restent des candidats, d'où l'identification de secours plus bas :
-     * quand le code est inconnu, on demande aux lecteurs lequel joue au lieu de parier.
+     * `MEDIA_TYPE_*` (petits entiers) et ses `*_SOURCE_CODE` (0x12, 0x32, 0x46). Il ne suit même
+     * pas `MEDIA_TYPE_*` : la voiture annonce 6 pour l'USB, que le SDK appelle ONLINE_MUSIC.
+     * Toutes les valeurs ci-dessous sont maintenant relevées ou tirées du SDK ; pour un code
+     * inconnu, l'identification de secours plus bas demande aux lecteurs lequel joue.
      */
     private const val SRC_RADIO_MIN = 1       // 1 radio, 2 FM, 3 AM, 4 DAB
     private const val SRC_RADIO_MAX = 4
     private const val SRC_BT        = 5       // certain (relevé véhicule 2026-08-26)
-    private const val SRC_ONLINE    = 6       // candidat
-    private const val SRC_USB       = 7       // candidat
+    // Relevés sur SWI133 le 2026-10-15 (cycle de sources, écran conforme) : 6 et 7 étaient
+    // inversés en « candidats » — avec l'USB en lecture, les raccourcis média s'adressaient
+    // alors au lecteur EN LIGNE.
+    private const val SRC_USB       = 6       // certain (relevé véhicule 2026-10-15)
+    private const val SRC_ONLINE    = 0xe     // certain (relevé véhicule 2026-10-15)
     private const val SRC_USB_VIDEO = 0x12    // certain (USB_VIDEO_SOURCE_CODE)
     private const val SRC_CARPLAY   = 0x32    // certain (CP_MEDIA_SOURCE_CODE)
     private const val SRC_AA        = 0x46    // certain (AA_MEDIA_SOURCE_CODE)
