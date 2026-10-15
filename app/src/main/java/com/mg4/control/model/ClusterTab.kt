@@ -5,8 +5,8 @@ package com.mg4.control.model
  * du combiné (`ClstrTabReq`, dump SWI68), décodées le 2026-10-14.
  *
  * Le code les prévoit pour tous les modèles et tous les marchés : une voiture n'en montre qu'une
- * partie. Sur SWI133 : ordinateur de bord, navigation, musique et radio, pression des pneus,
- * réglages — l'onglet des pneus n'a pas de nom dans le code, sa valeur reste à relever.
+ * partie. Relevé en voiture le 2026-10-14 : SWI133 a 0, 1, 2, 4 (pression des pneus, rangée par le
+ * code sous [WARNING_CENTRE]) et 5 ; SWI69 n'a que 0, 4 et 5.
  */
 enum class ClusterTab(val value: Int) {
     TRIP_COMPUTER(0),
@@ -17,13 +17,6 @@ enum class ClusterTab(val value: Int) {
     SETTINGS(5),
     ACTIVE_SAFETY(6),
     RESERVED(7);
-
-    /**
-     * L'appli SAIC y montre sa page — elle signale au combiné « image prête » pour ces trois-là
-     * seulement : c'est là que l'écran central, donc notre module, peut se voir. Ailleurs, le
-     * combiné dessine lui-même.
-     */
-    val showsHeadUnit: Boolean get() = this == NAVIGATION || this == MEDIA || this == CALL
 
     companion object {
         fun fromValue(value: Int?): ClusterTab? = entries.firstOrNull { it.value == value }

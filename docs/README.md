@@ -122,15 +122,21 @@ langue mène à un dossier et non à sa page.
 
 ## Version documentée
 
-Le site et le simulateur décrivent la **2.6.8** (code de la branche `beta` au 08/10/2026, commit
-`8e591e5`, option « une seule fois » de l'automatisation A/C). Ils sont prévus pour être publiés en
-même temps que la release 2.6.8 : le bouton « Télécharger la dernière version » pointe vers
+Le site et le simulateur décrivent la **2.6.9** (code de la branche `beta` au 15/10/2026, après le
+commit `1f00eee` : module sur l'écran conducteur réservé à SWI133, SWI68 et SWI165, chiffre qui
+compte d'une valeur à l'autre, actualisation de 1 s par défaut). Ils sont prévus pour être publiés en
+même temps que la release 2.6.9 : le bouton « Télécharger la dernière version » pointe vers
 `releases/latest`, et publier plus tôt annoncerait des fonctions que la version stable n'a pas.
 
-Les nouveautés portent le badge `<span class="badge-new">` (« Nouveau · 2.6.8 ») et leur carte la
-classe `is-new` ; le filtre « ★ 2.6.8 », le lien « Nouveautés » de l'en-tête et l'encadré de
-l'accueil s'appuient dessus. À la version suivante, retirer ces badges et ces classes, réécrire
-l'encadré des nouveautés et changer la pastille `vX.Y.Z` de l'accueil.
+Les nouveautés portent le badge `<span class="badge-new">` (« Nouveau · 2.6.9 ») et leur carte la
+classe `is-new` ; le filtre « ★ 2.6.9 », le lien « Nouveautés » de l'en-tête et l'encadré de
+l'accueil s'appuient dessus. À la version suivante, retirer ces badges et ces classes (cartes et
+tableau de compatibilité), réécrire l'encadré des nouveautés et changer la pastille `vX.Y.Z` de
+l'accueil, la puce « ★ » et les deux liens « Nouveautés X.Y.Z » de l'en-tête.
+
+L'aperçu du combiné (rubrique « Écran conducteur », `<div class="cl" data-cluster>`) est monté par
+`MG4Sim.mountCluster` : il redessine en SVG le module de `ClusterGaugeView`, avec les bornes de
+`ClusterGauge` recopiées dans `sim.js` (`CG`). Une échelle changée dans l'app doit l'être là aussi.
 
 ## Ajouter ou modifier une fonctionnalité
 

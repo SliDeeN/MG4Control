@@ -25,16 +25,26 @@ object ClusterModuleSettings {
 
     /** Onglets qui montrent l'écran central ; les autres sont dessinés par le combiné lui-même. */
     val TABS = listOf(ClusterTab.NAVIGATION, ClusterTab.MEDIA)
+
+    /**
+     * Firmwares où le combiné montre l'image de l'écran central : SWI133 (vu en voiture le
+     * 2026-10-14), SWI68 et SWI165 (même appli SAIC du combiné, lancée par SystemUI). Pas les A9 :
+     * essai SWI69 du 2026-10-14, rien ne s'affiche, même en annonçant au combiné une image prête.
+     */
+    val SUPPORTED = setOf(FirmwareInfo.Gen.SWI133, FirmwareInfo.Gen.SWI68, FirmwareInfo.Gen.SWI165)
+
+    fun isSupported(): Boolean = supportedOn(FirmwareInfo.getGeneration())
     const val KEY_REFRESH = "cluster_refresh_ms"
 
     /**
      * Actualisation de la puissance, de la vitesse et de la jauge, en ms : 0,1 à 1 s par pas de
-     * 0,1 s. Une demi-seconde par défaut — la seconde du premier essai paraissait lente (2026-10-14).
+     * 0,1 s. Une seconde par défaut (2026-10-15) : le chiffre défile maintenant d'une valeur à
+     * l'autre pendant 80 % de l'intervalle, et à 1 s on le suit bien (0,5 s du 2026-10-14 au 15).
      */
     const val MIN_REFRESH_MS = 100
     const val MAX_REFRESH_MS = 1000
     const val STEP_REFRESH_MS = 100
-    const val DEFAULT_REFRESH_MS = 500
+    const val DEFAULT_REFRESH_MS = 1000
 
     fun isEnabled(ctx: Context?): Boolean =
         ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getBoolean(KEY_ENABLED, false) ?: false
@@ -64,6 +74,8 @@ object ClusterModuleSettings {
     }
 
     // ── Sans Android ─────────────────────────────────────────────────────────
+
+    fun supportedOn(gen: FirmwareInfo.Gen): Boolean = gen in SUPPORTED
 
     private fun keyFor(tab: ClusterTab): String? = when (tab) {
         ClusterTab.NAVIGATION -> KEY_TAB_NAVIGATION

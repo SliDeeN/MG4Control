@@ -1,5 +1,7 @@
 package com.mg4.control.ui
 
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -7,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
@@ -78,10 +81,57 @@ class ProfileFragment : Fragment() {
             }
         )
 
-        view.findViewById<RecyclerView>(R.id.recycler_profiles).apply {
+        val liste = view.findViewById<RecyclerView>(R.id.recycler_profiles).apply {
             layoutManager = LinearLayoutManager(context)
             adapter = this@ProfileFragment.adapter
         }
+
+        // Ordre des profils (maquette A, 2026-10-15) : appui long sur une carte, puis glisser.
+        // La carte soulevée prend un anneau d'accent, un bandeau dit où elle sera posée, la liste
+        // défile seule près de ses bords, et l'ordre est enregistré au relâcher.
+        val bandeau = view.findViewById<TextView>(R.id.tv_profile_drag_hint)
+        fun majBandeau(position: Int) {
+            bandeau.text = getString(R.string.profile_drag_hint, adapter.nomA(position) ?: "", position + 1)
+        }
+        val densite = resources.displayMetrics.density
+        fun anneau() = GradientDrawable().apply {
+            cornerRadius = 14f * densite            // celui de bg_card_rounded
+            setColor(Color.TRANSPARENT)
+            setStroke((2f * densite).toInt(), requireContext().getColor(R.color.dash_accent))
+        }
+        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0) {
+            private var ordreAvant: List<String>? = null
+
+            override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, cible: RecyclerView.ViewHolder): Boolean {
+                adapter.move(vh.bindingAdapterPosition, cible.bindingAdapterPosition)
+                majBandeau(cible.bindingAdapterPosition)
+                return true
+            }
+
+            override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) = Unit
+
+            override fun onSelectedChanged(vh: RecyclerView.ViewHolder?, actionState: Int) {
+                super.onSelectedChanged(vh, actionState)
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && vh != null) {
+                    ordreAvant = adapter.ids()
+                    adapter.clicsBloques = true
+                    vh.itemView.foreground = anneau()
+                    majBandeau(vh.bindingAdapterPosition)
+                    bandeau.visibility = View.VISIBLE
+                }
+            }
+
+            override fun clearView(rv: RecyclerView, vh: RecyclerView.ViewHolder) {
+                super.clearView(rv, vh)
+                vh.itemView.foreground = null
+                bandeau.visibility = View.GONE
+                val apres = adapter.ids()
+                if (ordreAvant != null && apres != ordreAvant) manager.reorder(apres)
+                ordreAvant = null
+                // Après le relâcher : le bouton qui le reçoit doit encore trouver les clics bloqués.
+                rv.post { adapter.clicsBloques = false }
+            }
+        }).attachToRecyclerView(liste)
 
         // ── Bouton Fermer ─────────────────────────────────────────────────────
         view.findViewById<MaterialButton>(R.id.btn_close_profiles).setOnClickListener {

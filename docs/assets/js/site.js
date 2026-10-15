@@ -180,6 +180,7 @@
     document.querySelectorAll('[data-open-dock]').forEach((b) => b.addEventListener('click', () => dockApi && dockApi.open()));
     document.querySelectorAll('[data-presslab]').forEach((el) => Sim.mountPressLab(el));
     document.querySelectorAll('[data-api-console]').forEach((el) => Sim.mountApi(el));
+    document.querySelectorAll('[data-cluster]').forEach((el) => Sim.mountCluster(el));
 
     // Sélecteur de firmware (hero)
     document.querySelectorAll('.fw-pick').forEach((box) => box.addEventListener('click', (e) => {

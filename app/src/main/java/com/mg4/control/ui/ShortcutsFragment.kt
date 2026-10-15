@@ -920,12 +920,16 @@ class ShortcutsFragment : Fragment() {
      * raccourci parcourrait à cet instant (profils supprimés déjà retirés).
      */
     private fun setupProfileCycle(view: View) {
-        // Cinq boutons pour cinq profils au plus (ProfileManager.MAX_PROFILES).
+        // Dix boutons pour dix profils au plus (ProfileManager.MAX_PROFILES), en deux rangées
+        // de cinq : la seconde ne se montre qu'à partir du sixième profil.
         val boutons = listOf(
             R.id.sc_profile_cycle_1, R.id.sc_profile_cycle_2, R.id.sc_profile_cycle_3,
-            R.id.sc_profile_cycle_4, R.id.sc_profile_cycle_5
+            R.id.sc_profile_cycle_4, R.id.sc_profile_cycle_5, R.id.sc_profile_cycle_6,
+            R.id.sc_profile_cycle_7, R.id.sc_profile_cycle_8, R.id.sc_profile_cycle_9,
+            R.id.sc_profile_cycle_10
         ).mapNotNull { view.findViewById<MaterialButton>(it) }
-        val rangee = view.findViewById<View>(R.id.row_profile_cycle)
+        val rangee  = view.findViewById<View>(R.id.row_profile_cycle)
+        val rangee2 = view.findViewById<View>(R.id.row_profile_cycle_2)
         val vide   = view.findViewById<TextView>(R.id.tv_profile_cycle_empty)
         val resume = view.findViewById<TextView>(R.id.tv_profile_cycle_summary)
         val save   = view.findViewById<MaterialButton>(R.id.btn_profile_cycle_save)
@@ -949,8 +953,9 @@ class ShortcutsFragment : Fragment() {
                 btn.setTextColor(if (on) texteActif else texteInactif)
             }
             val aucun = profils.isEmpty()
-            vide?.visibility   = if (aucun) View.VISIBLE else View.GONE
-            rangee?.visibility = if (aucun) View.GONE else View.VISIBLE
+            vide?.visibility    = if (aucun) View.VISIBLE else View.GONE
+            rangee?.visibility  = if (aucun) View.GONE else View.VISIBLE
+            rangee2?.visibility = if (ProfileCycle.rows(profils.size) > 1) View.VISIBLE else View.GONE
 
             val assez = profileCycleSel.size >= ProfileCycle.MIN_PROFILES
             // Le résumé porte les noms ENTIERS : ceux des boutons sont raccourcis.

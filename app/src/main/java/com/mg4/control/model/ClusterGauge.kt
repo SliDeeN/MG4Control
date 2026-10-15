@@ -120,6 +120,17 @@ object ClusterGauge {
         return if (v < 9.95f) String.format(locale, "%.1f", v) else String.format(locale, "%d", Math.round(v))
     }
 
+    /**
+     * Chiffre affiché à l'instant [t] (0 à 1) du passage de [from] à [to] : il glisse d'une valeur à
+     * l'autre (100, 101… 300) au lieu de sauter — demande du 2026-10-15. Seulement dans la même
+     * unité : de 200 Wh/km à 1,8 kW à l'arrêt, compter n'aurait pas de sens, on saute.
+     */
+    fun shownValue(from: Float?, fromUnit: GaugeUnit?, to: GaugeState?, t: Float): Float? {
+        to ?: return null
+        if (from == null || fromUnit != to.unit) return to.value
+        return from + (to.value - from) * t.coerceIn(0f, 1f)
+    }
+
     /** Moyenne glissante d'un relevé par seconde ; la première valeur est prise telle quelle. */
     fun smooth(previous: Float?, value: Float): Float =
         if (previous == null) value else previous + SMOOTHING * (value - previous)

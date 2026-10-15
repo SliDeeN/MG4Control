@@ -3,7 +3,9 @@ package com.mg4.control.util
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterTab
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -12,8 +14,8 @@ import org.junit.Test
  */
 class ClusterModuleSettingsTest {
 
-    @Test fun `sans reglage enregistre, une demi-seconde`() {
-        assertEquals(500, ClusterModuleSettings.sanitizeRefresh(null))
+    @Test fun `sans reglage enregistre, une seconde`() {
+        assertEquals(1000, ClusterModuleSettings.sanitizeRefresh(null))
     }
 
     @Test fun `une valeur aberrante revient dans la plage`() {
@@ -26,6 +28,17 @@ class ClusterModuleSettingsTest {
         assertEquals(100, ClusterModuleSettings.sanitizeRefresh(149))
         assertEquals(500, ClusterModuleSettings.sanitizeRefresh(450))
         assertEquals(300, ClusterModuleSettings.sanitizeRefresh(300))
+    }
+
+    @Test fun `la fonction n existe que la ou le combine montre l ecran central`() {
+        assertTrue(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.SWI133))
+        assertTrue(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.SWI68))
+        assertTrue(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.SWI165))
+        // A9 : essai SWI69 du 2026-10-14, rien ne s'affiche.
+        assertFalse(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.SWI69))
+        assertFalse(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.SWI131))
+        assertFalse(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.SWI132))
+        assertFalse(ClusterModuleSettings.supportedOn(FirmwareInfo.Gen.UNKNOWN))
     }
 
     // ── Un module par onglet (2026-10-14) ────────────────────────────────────

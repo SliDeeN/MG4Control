@@ -49,6 +49,53 @@ class ProfilePickerTest {
         }
     }
 
+    // ── Ouverture sur le profil actif (2026-10-15) ───────────────────────────
+
+    @Test
+    fun `le joystick part du profil actif`() {
+        assertEquals(7, ProfilePicker.carteDeDepart(rangActif = 7, nombre = 10, restreint = false))
+        assertEquals(2, ProfilePicker.carteDeDepart(rangActif = 2, nombre = 3, restreint = false))
+    }
+
+    @Test
+    fun `en conflit Bluetooth le joystick part de la carte qu applique le delai`() {
+        assertEquals(0, ProfilePicker.carteDeDepart(rangActif = 1, nombre = 2, restreint = true))
+    }
+
+    @Test
+    fun `sans profil actif dans la liste on part du premier`() {
+        assertEquals(0, ProfilePicker.carteDeDepart(rangActif = -1, nombre = 10, restreint = false))
+        assertEquals(0, ProfilePicker.carteDeDepart(rangActif = 12, nombre = 10, restreint = false))
+    }
+
+    @Test
+    fun `une carte deja visible ne fait pas defiler la rangee`() {
+        // Jusqu'à cinq profils rien ne défile ; au-delà, les cinq premières cartes tiennent.
+        assertEquals(0f, ProfilePicker.defilementInitialDp(rang = 3, nombre = 5), 0f)
+        for (rang in 0..4) assertEquals("carte $rang", 0f, ProfilePicker.defilementInitialDp(rang, 10), 0f)
+    }
+
+    @Test
+    fun `le profil actif au dela du cinquieme est amene entier a l ecran avec sa voisine`() {
+        val carte = ProfilePicker.largeurCarteDp(10)
+        for (rang in 5..8) {
+            val defile = ProfilePicker.defilementInitialDp(rang, 10)
+            val gauche = rang * (carte + ProfilePicker.ECART_DP) - defile
+            val droite = gauche + carte
+            assertTrue("carte $rang coupée à gauche", gauche >= 0f)
+            assertTrue("carte $rang coupée à droite", droite <= ProfilePicker.RANGEE_DP + 0.01f)
+            // Un quart de la suivante se devine.
+            assertEquals("carte $rang", ProfilePicker.RANGEE_DP - carte / 4f, droite, 0.01f)
+        }
+    }
+
+    @Test
+    fun `la derniere carte colle au bord sans defiler dans le vide`() {
+        val carte = ProfilePicker.largeurCarteDp(10)
+        val total = 10 * carte + 9 * ProfilePicker.ECART_DP
+        assertEquals(total - ProfilePicker.RANGEE_DP, ProfilePicker.defilementInitialDp(9, 10), 0.01f)
+    }
+
     @Test
     fun `un nombre absurde ne casse rien`() {
         assertEquals(ProfilePicker.CARTE_MAX_DP, ProfilePicker.largeurCarteDp(0), 0f)

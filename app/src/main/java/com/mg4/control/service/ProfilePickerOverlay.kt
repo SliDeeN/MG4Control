@@ -14,6 +14,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.HorizontalScrollView
+import androidx.core.view.doOnLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -263,6 +264,16 @@ object ProfilePickerOverlay {
             carte
         }
 
+        // Ouverture sur le profil actif (2026-10-15) : le joystick part de sa carte, et la rangée
+        // défile pour la montrer s'il est au-delà du cinquième. Sauf en conflit Bluetooth
+        // (liste restreinte), où le délai applique la première carte.
+        val carteDepart = ProfilePicker.carteDeDepart(
+            profilesToShow.indexOfFirst { it.id == actifId }, profilesToShow.size, restreint = profiles != null)
+        val decalage = OverlayKit.dp(themedContext,
+            ProfilePicker.defilementInitialDp(carteDepart, profilesToShow.size))
+        // Après la mise en page : avant, la rangée n'a pas de largeur et ramène tout défilement à 0.
+        if (decalage > 0) rangee.doOnLayout { rangee.scrollTo(decalage, 0) }
+
         // ── Bouton « Ouvrir MG4Control » (toujours visible) ───────────────
         val ouvrir = view.findViewById<TextView>(R.id.overlay_btn_open_app)
         tuileAction(ouvrir, p, danger = false)
@@ -464,12 +475,12 @@ object ProfilePickerOverlay {
                 (if (peutEteindre) listOf(eteindre) else emptyList<View>()))
             if (briVisible) add(listOf(ligneCurseur))
         }
-        // Focus de départ sur le premier profil : c'est ce qu'on vient chercher dans ce popup, et
-        // c'est aussi celui qu'applique le délai d'un conflit Bluetooth.
+        // Focus de départ sur la carte du profil actif (voir carteDepart) : un appui à droite
+        // vise le profil suivant. En conflit Bluetooth, la première — celle qu'applique le délai.
         navigation = OverlayNavigation(
             context              = themedContext,
             grille               = lignes.filter { it.isNotEmpty() },
-            depart               = JoystickFocus.Position(0, 0),
+            depart               = JoystickFocus.Position(0, carteDepart),
             surDeplacement       = { resetTimers() },
             ligneCurseur         = if (briVisible) ligneCurseur else null,
             reglerCurseur        = reglerLuminosite,

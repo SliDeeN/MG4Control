@@ -30,7 +30,9 @@ import com.mg4.control.util.LocaleHelper
  * Module MG4Control sur le combiné (Réglages › Interface, 2026-10-14).
  *
  * Le combiné est un calculateur à part ; seule sa zone centrale vient de l'écran central, par un
- * écran Android à lui (le n° 1 sur SWI68 et SWI165), où SystemUI lance l'appli SAIC du combiné.
+ * écran Android à lui (le n° 1, 800 × 480 px), où SystemUI lance l'appli SAIC du combiné. Réservé à
+ * SWI133, SWI68 et SWI165 ([ClusterModuleSettings.SUPPORTED]) : sur A9, le combiné ne montre pas
+ * cet écran.
  * Le module est une fenêtre de 260 × 260 px posée sur cet écran, à la place du carré de cette
  * appli. Il suit l'onglet choisi au volant : sur Navigation et Musique, le module réglé pour
  * l'onglet, ou rien — la fenêtre devient alors transparente et la page d'origine reparaît.
@@ -44,7 +46,7 @@ import com.mg4.control.util.LocaleHelper
  *
  * Vu sur le combiné le 2026-10-14 (SWI133) : la fenêtre s'y affiche bien. La place du carré vient
  * de la mise en page de l'appli SAIC ([ClusterGauge.placement]) ; le journal ([TAG]) donne l'écran
- * trouvé et la place retenue, la sonde des écrans du Diagnostic le reste.
+ * trouvé, la place retenue et chaque changement d'onglet.
  */
 internal object ClusterModuleOverlay {
 
@@ -62,14 +64,6 @@ internal object ClusterModuleOverlay {
     private val lecteur: Handler by lazy { Handler(HandlerThread("mg4-cluster").also { it.start() }.looper) }
 
     @Volatile private var appContext: Context? = null
-
-    /**
-     * Essai A9 (fenêtre « Onglet du combiné ») : le module est dessiné quel que soit l'onglet —
-     * celui de la navigation, à défaut celui de la musique, à défaut Consommation. Sans ça, un
-     * combiné sans onglet Navigation ni Musique ne le montrerait jamais, et l'essai ne prouverait
-     * rien.
-     */
-    @Volatile var essaiForce = false
 
     // ── Fil principal ──
     private var vue: ClusterGaugeView? = null
@@ -120,7 +114,9 @@ internal object ClusterModuleOverlay {
         val app = context.applicationContext
         appContext = app
         main.post {
-            if (ClusterModuleSettings.isEnabled(app)) {
+            // Hors des firmwares pris en charge, rien — même si le réglage a été activé pendant les
+            // essais sur A9 : sans ça, une fenêtre invisible resterait posée sur l'écran du combiné.
+            if (ClusterModuleSettings.isEnabled(app) && ClusterModuleSettings.isSupported()) {
                 if (!abonne) {
                     abonne = true
                     ReadyWatcher.add(readyListener)
@@ -276,13 +272,10 @@ internal object ClusterModuleOverlay {
             val onglet = runCatching { ClusterTabReader.onglet() }.getOrNull()
             val navigation = ClusterModuleSettings.moduleFor(ctx, ClusterTab.NAVIGATION)
             val musique = ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA)
-            val force = essaiForce
-            val module = if (force) navigation ?: musique ?: ClusterModule.CONSUMPTION
-                else ClusterModuleSettings.moduleToShow(onglet, navigation, musique)
+            val module = ClusterModuleSettings.moduleToShow(onglet, navigation, musique)
             if (onglet != dernierOnglet || module != dernierModule) {
                 AppLogger.i(TAG, "onglet ${onglet ?: "illisible"} (${ClusterTab.fromValue(onglet)?.name ?: "?"}) → " +
-                    (module?.let { "module ${it.key}" } ?: "aucun module, page d'origine") +
-                    if (force) " (essai : affichage forcé)" else "")
+                    (module?.let { "module ${it.key}" } ?: "aucun module, page d'origine"))
                 dernierOnglet = onglet
                 dernierModule = module
             }

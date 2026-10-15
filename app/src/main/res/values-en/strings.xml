@@ -129,6 +129,7 @@
     <string name="profile_cycle_applied">Profile %s applied</string>
     <string name="profile_cycle_incomplete">Profile %s: not fully applied</string>
     <string name="profile_max_reached">Maximum %d profiles reached</string>
+    <string name="profile_drag_hint">Release: “%1$s” to position %2$d</string>
     <string name="profile_bt_device_label">Bluetooth device</string>
 
     <!-- Bloc climatisation du profil (onglet Confort) -->
@@ -774,21 +775,4 @@
     <string name="cluster_battery">BATTERY</string>
     <string name="cluster_regen_word">regenerating</string>
     <string name="cluster_stopped_word">stationary</string>
-
-    <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
-    <string name="btn_cluster_tab">Cluster tab</string>
-    <string name="cluster_tab_hint">Switch tabs with the steering wheel buttons: the number follows live. Each change is written to the Diagnostic log.</string>
-    <string name="cluster_test_ready">A9 test: send “image ready”</string>
-    <string name="cluster_test_ready_desc">Tells the driver display that navigation has an image to show, as the stock app does on other versions, and shows the module on every tab. Watch whether a Navigation tab appears or the module shows up. Turned off when this window closes. Turn the module on first in Settings › Interface.</string>
-    <string name="cluster_tab_code_name">According to the original code: %1$s</string>
-    <string name="cluster_tab_unknown">Value not in the original code</string>
-    <string name="cluster_tab_unreadable">Unreadable</string>
-    <string name="cluster_tab_0">Trip computer</string>
-    <string name="cluster_tab_1">Navigation</string>
-    <string name="cluster_tab_2">Music and radio</string>
-    <string name="cluster_tab_3">Phone</string>
-    <string name="cluster_tab_4">Warning centre</string>
-    <string name="cluster_tab_5">Settings</string>
-    <string name="cluster_tab_6">Driving assistance</string>
-    <string name="cluster_tab_7">Reserved</string>
 </resources>

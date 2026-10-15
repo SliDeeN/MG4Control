@@ -130,6 +130,7 @@
     <string name="profile_cycle_applied">Profil %s appliqué</string>
     <string name="profile_cycle_incomplete">Profil %s : application incomplète</string>
     <string name="profile_max_reached">Maximum %d profils atteint</string>
+    <string name="profile_drag_hint">Relâchez : « %1$s » en position %2$d</string>
     <!-- [BT-PROFILES] -->
     <string name="profile_bt_device_label">Appareil Bluetooth</string>
 
@@ -791,21 +792,4 @@
     <string name="cluster_battery">BATTERIE</string>
     <string name="cluster_regen_word">récupération</string>
     <string name="cluster_stopped_word">à l\'arrêt</string>
-
-    <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
-    <string name="btn_cluster_tab">Onglet du combiné</string>
-    <string name="cluster_tab_hint">Change d\'onglet avec les boutons du volant : le numéro suit en direct. Chaque changement est noté dans le journal du Diagnostic.</string>
-    <string name="cluster_test_ready">Essai A9 : envoyer « image prête »</string>
-    <string name="cluster_test_ready_desc">Dit au combiné que la navigation a une image à montrer, comme l\'appli d\'origine des autres versions, et affiche le module sur tous les onglets. Regarde si un onglet Navigation apparaît ou si le module se montre. Coupé à la fermeture de la fenêtre. Active d\'abord le module dans Réglages › Interface.</string>
-    <string name="cluster_tab_code_name">D\'après le code d\'origine : %1$s</string>
-    <string name="cluster_tab_unknown">Valeur absente du code d\'origine</string>
-    <string name="cluster_tab_unreadable">Illisible</string>
-    <string name="cluster_tab_0">Ordinateur de bord</string>
-    <string name="cluster_tab_1">Navigation</string>
-    <string name="cluster_tab_2">Musique et radio</string>
-    <string name="cluster_tab_3">Téléphone</string>
-    <string name="cluster_tab_4">Centre d\'alertes</string>
-    <string name="cluster_tab_5">Réglages</string>
-    <string name="cluster_tab_6">Aides à la conduite</string>
-    <string name="cluster_tab_7">Réservé</string>
 </resources>

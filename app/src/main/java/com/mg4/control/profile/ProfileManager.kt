@@ -16,7 +16,18 @@ class ProfileManager(private val context: Context) {
         private const val PREFS_NAME = "mg4_profiles"
         private const val KEY_PROFILES = "profiles_json"
         private const val KEY_DEFAULT_ID = "default_profile_id"
-        const val MAX_PROFILES = 5
+        /** Dix depuis la 2.6.9 (cinq avant) : la page « Cycle profils » en a deux rangées de cinq. */
+        const val MAX_PROFILES = 10
+
+        /**
+         * [profils] rangés dans l'ordre de [ids] (glisser-déposer de la liste). Ceux qui n'y
+         * figurent pas gardent leur place relative, en fin de liste (tri stable) : un profil créé
+         * pendant le glisser n'est pas perdu. Un identifiant inconnu est ignoré.
+         */
+        fun ordonner(profils: List<DrivingProfile>, ids: List<String>): List<DrivingProfile> {
+            val rang = ids.withIndex().associate { it.value to it.index }
+            return profils.sortedBy { rang[it.id] ?: Int.MAX_VALUE }
+        }
 
         /**
          * Verrou de processus, PAS d'instance : l'UI et le service construisent chacun leur
@@ -91,6 +102,18 @@ class ProfileManager(private val context: Context) {
             // résoudre les raccourcis qui lui sont associés sur un identifiant fantôme — ils
             // ne se déclencheraient jamais, sans que rien ne l'explique.
             ActiveProfile.forgetIfMissing(context, list.map { it.id })
+        }
+        triggerBackup()
+    }
+
+    /**
+     * Range les profils dans l'ordre de [ids] (glisser-déposer de la liste, 2026-10-15). Cet ordre
+     * est celui du sélecteur, du cycle par défaut et, en conflit Bluetooth, la priorité. Un profil
+     * absent de [ids] garde sa place relative, en fin de liste (tri stable).
+     */
+    fun reorder(ids: List<String>) {
+        synchronized(MUTATION_LOCK) {
+            persist(ordonner(getAll(), ids))
         }
         triggerBackup()
     }

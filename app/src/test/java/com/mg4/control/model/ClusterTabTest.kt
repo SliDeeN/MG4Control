@@ -1,9 +1,7 @@
 package com.mg4.control.model
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Onglets du combiné, valeurs de l'appli SAIC du combiné. */
@@ -21,14 +19,5 @@ class ClusterTabTest {
         assertNull(ClusterTab.fromValue(8))
         assertNull(ClusterTab.fromValue(-1))
         assertNull(ClusterTab.fromValue(null))
-    }
-
-    @Test fun `seuls navigation, musique et telephone montrent l ecran central`() {
-        assertTrue(ClusterTab.NAVIGATION.showsHeadUnit)
-        assertTrue(ClusterTab.MEDIA.showsHeadUnit)
-        assertTrue(ClusterTab.CALL.showsHeadUnit)
-        assertFalse(ClusterTab.TRIP_COMPUTER.showsHeadUnit)
-        assertFalse(ClusterTab.SETTINGS.showsHeadUnit)
-        assertFalse(ClusterTab.WARNING_CENTRE.showsHeadUnit)
     }
 }

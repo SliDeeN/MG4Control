@@ -3767,12 +3767,6 @@ object MG4Hardware {
             sb.appendLine()
         }
 
-        // Sonde écrans (étude du combiné) : relevés des dernières ouvertures du Diagnostic.
-        DisplayProbe.reports.forEach {
-            sb.appendLine(it)
-            sb.appendLine()
-        }
-
         if (gen == FirmwareInfo.Gen.SWI132) {
 
             // ── Binder IVehicleSettingService ─────────────────────────────

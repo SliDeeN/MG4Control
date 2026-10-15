@@ -19,6 +19,14 @@
         android:gravity="center_vertical"
         android:layout_marginBottom="12dp">
 
+        <!-- Poignée : un appui long sur la carte la déplace (ordre des profils). -->
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_marginEnd="8dp"
+            android:src="@drawable/ic_drag_indicator"
+            android:importantForAccessibility="no" />
+
         <TextView
             android:id="@+id/tv_profile_name"
             android:layout_width="wrap_content"

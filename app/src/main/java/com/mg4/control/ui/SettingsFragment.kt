@@ -54,7 +54,6 @@ import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.service.ClusterModuleOverlay
-import com.mg4.control.hardware.ClusterReadySignal
 import com.mg4.control.util.TextSize
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -239,6 +238,9 @@ class SettingsFragment : Fragment() {
         // ── Module sur le combiné : interrupteur et un module par onglet ──────
         // Désactivé par défaut ; activer déplie le choix. Le service relit l'interrupteur aussitôt
         // (ClusterModuleOverlay.refresh), et les modules à chaque relevé : rien à redémarrer.
+        // Réservé aux firmwares où le combiné montre l'écran central : SWI133, SWI68, SWI165.
+        view.findViewById<View>(R.id.card_cluster_module).visibility =
+            if (ClusterModuleSettings.isSupported()) View.VISIBLE else View.GONE
         val switchCluster = view.findViewById<Switch>(R.id.switch_cluster_module)
         val rowClusterChoice = view.findViewById<View>(R.id.row_cluster_choice)
         val rowClusterRefresh = view.findViewById<View>(R.id.row_cluster_refresh)
@@ -479,14 +481,6 @@ class SettingsFragment : Fragment() {
 
         // Bouton Diagnostic débloqué via 5 clics sur le logo (cf. MainActivity)
         btnDiagnostic.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
-
-        // Onglet du combiné : outil de relevé, débloqué avec le Diagnostic (même principe) — et
-        // montré d'office sur A9, où il porte l'essai « image prête » que les testeurs doivent
-        // trouver sans manipulation (demande du 2026-10-14).
-        val btnClusterTab = view.findViewById<MaterialButton>(R.id.btn_cluster_tab)
-        btnClusterTab.visibility =
-            if (MainActivity.diagnosticUnlocked || ClusterReadySignal.applicable()) View.VISIBLE else View.GONE
-        btnClusterTab.setOnClickListener { ClusterTabDialog.afficher(requireContext()) }
 
         btnUpdate.setOnClickListener {
             btnUpdate.isEnabled = false
@@ -793,9 +787,6 @@ class SettingsFragment : Fragment() {
             // Sonde lumière/position : un relevé instantané, à prendre en plein jour, au crépuscule
             // et dans un parking couvert. Ceux pris automatiquement au READY sont déjà gardés.
             com.mg4.control.hardware.LightProbe.run("diagnostic")
-            // Sonde écrans : un relevé par ouverture, à prendre contact mis, puis avec la
-            // navigation ou Android Auto en marche — c'est la zone centrale du combiné qui est visée.
-            com.mg4.control.hardware.DisplayProbe.run("diagnostic")
             val report = MG4Hardware.buildDiagnosticReport(appVersion)
             withContext(Dispatchers.Main) {
                 if (isAdded) tvReport.text = report

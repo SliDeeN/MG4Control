@@ -864,8 +864,9 @@
 
                 <!-- ═══ Cycle de profils — séquence composée par l'utilisateur ═══ -->
                 <!-- Même écran que le cycle de régénération, avec les profils pour boutons. Il y
-                     a cinq boutons parce qu'il y a cinq profils au plus ; le code masque ceux
-                     qui n'ont pas de profil et écrit le nom et le rang des autres. -->
+                     a dix boutons parce qu'il y a dix profils au plus, en deux rangées de cinq ;
+                     le code masque ceux qui n'ont pas de profil, la seconde rangée tant qu'il y
+                     en a cinq ou moins, et écrit le nom et le rang des autres. -->
                 <LinearLayout
                     android:id="@+id/page_sc_profiles"
                     android:layout_width="match_parent"
@@ -937,6 +938,26 @@
                             <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_3" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
                             <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_4" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
                             <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_5" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                        <!-- Profils 6 à 10 : même rangée, cachée tant qu'il y a cinq profils ou moins. -->
+                        <LinearLayout
+                            android:id="@+id/row_profile_cycle_2"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:baselineAligned="false"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="5dp"
+                            android:visibility="gone">
+
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_6" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_7" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_8" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_9" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_10" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
 
                         </LinearLayout>
 

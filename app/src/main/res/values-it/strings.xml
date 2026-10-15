@@ -129,6 +129,7 @@
     <string name="profile_cycle_applied">Profilo %s applicato</string>
     <string name="profile_cycle_incomplete">Profilo %s: applicazione incompleta</string>
     <string name="profile_max_reached">Massimo %d profili raggiunto</string>
+    <string name="profile_drag_hint">Rilascia: «%1$s» in posizione %2$d</string>
     <string name="profile_bt_device_label">Dispositivo Bluetooth</string>
 
     <!-- Bloc climatisation du profil (onglet Confort) -->
@@ -774,21 +775,4 @@
     <string name="cluster_battery">BATTERIA</string>
     <string name="cluster_regen_word">rigenerazione</string>
     <string name="cluster_stopped_word">da fermo</string>
-
-    <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
-    <string name="btn_cluster_tab">Scheda del quadro strumenti</string>
-    <string name="cluster_tab_hint">Cambia scheda con i tasti del volante: il numero segue in diretta. Ogni cambio viene annotato nel registro della Diagnostica.</string>
-    <string name="cluster_test_ready">Prova A9: invia «immagine pronta»</string>
-    <string name="cluster_test_ready_desc">Dice al quadro strumenti che la navigazione ha un\'immagine da mostrare, come fa l\'app originale su altre versioni, e mostra il modulo su tutte le schede. Guarda se compare una scheda Navigazione o se appare il modulo. Si spegne alla chiusura della finestra. Attiva prima il modulo in Impostazioni › Interfaccia.</string>
-    <string name="cluster_tab_code_name">Secondo il codice originale: %1$s</string>
-    <string name="cluster_tab_unknown">Valore assente dal codice originale</string>
-    <string name="cluster_tab_unreadable">Illeggibile</string>
-    <string name="cluster_tab_0">Computer di bordo</string>
-    <string name="cluster_tab_1">Navigazione</string>
-    <string name="cluster_tab_2">Musica e radio</string>
-    <string name="cluster_tab_3">Telefono</string>
-    <string name="cluster_tab_4">Centro avvisi</string>
-    <string name="cluster_tab_5">Impostazioni</string>
-    <string name="cluster_tab_6">Assistenza alla guida</string>
-    <string name="cluster_tab_7">Riservato</string>
 </resources>

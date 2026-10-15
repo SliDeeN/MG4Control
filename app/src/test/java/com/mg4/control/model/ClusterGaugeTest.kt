@@ -114,6 +114,33 @@ class ClusterGaugeTest {
         assertNull(ClusterGauge.whPerKm(26f, null))
     }
 
+    // ── Chiffre qui glisse d'une valeur à l'autre (demande du 2026-10-15) ────
+
+    @Test fun `le chiffre passe par les valeurs intermediaires`() {
+        val vers = ClusterGauge.consumption(15f, 50f)   // 300 Wh/km
+        assertEquals(100f, ClusterGauge.shownValue(100f, GaugeUnit.WH_PER_KM, vers, 0f)!!, delta)
+        assertEquals(200f, ClusterGauge.shownValue(100f, GaugeUnit.WH_PER_KM, vers, 0.5f)!!, delta)
+        assertEquals(300f, ClusterGauge.shownValue(100f, GaugeUnit.WH_PER_KM, vers, 1f)!!, delta)
+    }
+
+    @Test fun `changer d unite saute directement a la nouvelle valeur`() {
+        // De 200 Wh/km à 1,8 kW à l'arrêt : compter de 200 à 1,8 ne voudrait rien dire.
+        val arret = ClusterGauge.consumption(1.8f, 0f)
+        assertEquals(1.8f, ClusterGauge.shownValue(200f, GaugeUnit.WH_PER_KM, arret, 0.3f)!!, delta)
+    }
+
+    @Test fun `sans valeur de depart ou d arrivee, pas de glissement`() {
+        val vers = ClusterGauge.consumption(15f, 50f)
+        assertEquals(300f, ClusterGauge.shownValue(null, null, vers, 0.2f)!!, delta)
+        assertNull(ClusterGauge.shownValue(100f, GaugeUnit.WH_PER_KM, null, 0.5f))
+    }
+
+    @Test fun `la puissance glisse aussi d un signe a l autre`() {
+        // De 20 kW consommés à 30 kW récupérés : même unité, le chiffre passe par zéro.
+        val vers = ClusterGauge.power(-30f)
+        assertEquals(-5f, ClusterGauge.shownValue(20f, GaugeUnit.KW, vers, 0.5f)!!, delta)
+    }
+
     // ── Mise en forme et lissage ─────────────────────────────────────────────
 
     @Test fun `les kW gardent une decimale sous 10, dans la langue de l appli`() {

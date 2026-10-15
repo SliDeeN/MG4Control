@@ -31,8 +31,9 @@ import kotlin.math.sin
  * de l'application —, et sur le fond même de cette appli ([FOND]) : le module se fond dans le
  * combiné au lieu d'y faire une boîte. Textes et chiffres dans la langue du contexte reçu.
  *
- * L'anneau glisse d'une valeur à la suivante : les relevés arrivent chaque seconde, une jauge qui
- * sauterait de l'une à l'autre se lirait mal du coin de l'œil.
+ * L'anneau et le grand chiffre glissent d'une valeur à la suivante : une jauge qui sauterait de
+ * l'une à l'autre se lirait mal du coin de l'œil, et le chiffre compte (100, 101… 300) au lieu de
+ * changer d'un coup (demande du 2026-10-15).
  */
 class ClusterGaugeView(context: Context) : View(context) {
 
@@ -50,6 +51,9 @@ class ClusterGaugeView(context: Context) : View(context) {
     private var contenu: Contenu? = null
     private var etat: GaugeState? = null
     private var partAffichee = 0f
+    /** Chiffre en cours d'affichage, et son unité : point de départ du glissement suivant. */
+    private var valeurAffichee: Float? = null
+    private var uniteAffichee: GaugeUnit? = null
     private var animation: ValueAnimator? = null
 
     // Palette sombre, quel que soit le mode de l'application.
@@ -81,11 +85,20 @@ class ClusterGaugeView(context: Context) : View(context) {
         }
         etat = nouveau
         animation?.cancel()
-        animation = ValueAnimator.ofFloat(partAffichee, nouveau?.fraction ?: 0f).apply {
+        // Départ : ce qui est à l'écran à cet instant — un relevé qui arrive en plein glissement
+        // repart de là, sans à-coup.
+        val partDepart = partAffichee
+        val partArrivee = nouveau?.fraction ?: 0f
+        val valeurDepart = valeurAffichee
+        val uniteDepart = uniteAffichee
+        uniteAffichee = nouveau?.unit
+        animation = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = (intervalleMs * 8 / 10).coerceIn(ANIMATION_MIN_MS, ANIMATION_MAX_MS)
             interpolator = DecelerateInterpolator()
             addUpdateListener {
-                partAffichee = it.animatedValue as Float
+                val t = it.animatedValue as Float
+                partAffichee = partDepart + (partArrivee - partDepart) * t
+                valeurAffichee = ClusterGauge.shownValue(valeurDepart, uniteDepart, nouveau, t)
                 invalidate()
             }
             start()
@@ -125,12 +138,13 @@ class ClusterGaugeView(context: Context) : View(context) {
         val e = etat
         if (e != null) arc(canvas, cx, cy, RAYON_A, 135f, 270f * partAffichee, couleur(e.level))
 
+        val v = valeurAffichee ?: e?.value ?: 0f
         val (chiffre, unite) = when (e?.unit) {
             null -> "–" to ""
-            GaugeUnit.WH_PER_KM -> e.value.roundToInt().toString() to "Wh/km"
-            GaugeUnit.KW_REGEN -> "↓" + ClusterGauge.formatKw(e.value, locale) to context.getString(R.string.cluster_regen_kw)
-            GaugeUnit.KW_STOPPED -> ClusterGauge.formatKw(e.value, locale) to context.getString(R.string.cluster_stopped_kw)
-            GaugeUnit.KW -> ClusterGauge.formatKw(e.value, locale) to "kW"
+            GaugeUnit.WH_PER_KM -> v.roundToInt().toString() to "Wh/km"
+            GaugeUnit.KW_REGEN -> "↓" + ClusterGauge.formatKw(v, locale) to context.getString(R.string.cluster_regen_kw)
+            GaugeUnit.KW_STOPPED -> ClusterGauge.formatKw(v, locale) to context.getString(R.string.cluster_stopped_kw)
+            GaugeUnit.KW -> ClusterGauge.formatKw(v, locale) to "kW"
         }
         val recup = e?.unit == GaugeUnit.KW_REGEN
         grandChiffre(canvas, chiffre, cx, cy + 16f, if (recup) cAccent else cTexte)
@@ -160,8 +174,9 @@ class ClusterGaugeView(context: Context) : View(context) {
         petit(canvas, context.getString(R.string.cluster_regen), gauche.first + 4f, gauche.second + 24f, 11f, cAccent)
         petit(canvas, "kW", droite.first - 4f, droite.second + 24f, 11f, cTexte2)
 
-        val recup = e != null && e.value < 0f
-        val chiffre = e?.let { (if (recup) "−" else "") + ClusterGauge.formatKw(it.value, locale) } ?: "–"
+        val v = valeurAffichee ?: e?.value
+        val recup = e != null && v != null && v < 0f
+        val chiffre = if (e == null || v == null) "–" else (if (recup) "−" else "") + ClusterGauge.formatKw(v, locale)
         grandChiffre(canvas, chiffre, cx, cy + 14f, if (recup) cAccent else cTexte)
         val sous = when {
             e == null -> ""

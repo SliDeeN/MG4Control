@@ -8,14 +8,34 @@
     android:background="@color/dash_bg"
     android:padding="12dp">
 
-    <!-- Liste des profils -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/recycler_profiles"
+    <!-- Liste des profils, et par-dessus le bandeau du glisser-déposer (ordre des profils). -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layout_marginBottom="10dp"
-        android:clipToPadding="false" />
+        android:layout_marginBottom="10dp">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_profiles"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false" />
+
+        <TextView
+            android:id="@+id/tv_profile_drag_hint"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_margin="8dp"
+            android:background="@drawable/bg_chip_active"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="6dp"
+            android:textColor="@color/dash_accent"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+    </FrameLayout>
 
     <!-- Bouton Nouveau profil -->
     <com.google.android.material.button.MaterialButton

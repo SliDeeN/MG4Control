@@ -418,6 +418,10 @@
 }
 .p-item + .p-item { margin-top: 8px; }
 .p-top { display: flex; align-items: baseline; gap: 6px; }
+/* Ordre des profils : poignée, carte soulevée, bandeau de position (ProfileFragment). */
+.p-grip { flex: none; width: 22px; height: 22px; align-self: center; color: var(--dash-text-lo); }
+.p-item.p-lift { box-shadow: 0 0 0 2px var(--dash-accent); position: relative; z-index: 1; }
+.p-drag-hint { position: absolute; top: 22px; right: 26px; z-index: 2; background: var(--dash-accent-dim); color: var(--dash-accent); border-radius: 5px; padding: 6px 14px; font-size: calc(16px * var(--ts, 1)); font-weight: 700; pointer-events: none; }
 .p-name { font-size: calc(18px * var(--ts, 1)); font-weight: 700; color: var(--text-primary); }
 .p-name.def { color: var(--accent-normal); }
 .p-sum { flex: 1; font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -673,6 +677,9 @@
 /* ── Statistiques : rappel de la batterie réglée, en haut de l'onglet Recharge ── */
 .st-banner { background: var(--dash-warn-dim); border: 1px solid var(--dash-warn); border-radius: 10px; padding: 6px 12px; }
 .st-banner .a-row { gap: 8px; }
+/* État de santé de la batterie : − valeur + (StatsFragment.bindStateOfHealth) */
+.st-soh { min-width: 96px; text-align: center; color: var(--dash-accent); font-size: calc(20px * var(--ts, 1)); }
+.st-soh-eff { color: var(--dash-accent); }
 
 /* ══════════ 2.6.8 : pop-ups et fenêtres « modernes » ══════════
    Mêmes mises en page que l'application : overlay_*.xml pour ce qui se pose par-dessus l'écran de la
@@ -741,6 +748,8 @@
   display: flex; flex-direction: column; background: var(--dash-btn); border: 1px solid var(--dash-border); color: var(--text-primary);
 }
 .pkp-card.on { background: var(--dash-accent-dim); border: 2px solid var(--dash-accent); }
+.pkp-cards.scroll { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
+.pkp-cards.scroll::-webkit-scrollbar { display: none; }
 .pkp-top { display: flex; align-items: center; height: 22px; }
 .pkp-card i { flex: 1; }
 .pkp-card b { margin-top: 10px; font-size: calc(20px * var(--ts, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
