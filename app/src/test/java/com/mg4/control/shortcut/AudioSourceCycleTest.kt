@@ -60,4 +60,20 @@ class AudioSourceCycleTest {
         val cycle = listOf(RADIO, BLUETOOTH, PROJECTION)
         assertEquals(PROJECTION, AudioSourceCycle.target(cycle, derniere = RADIO, enAttente = BLUETOOTH))
     }
+
+    @Test
+    fun `pas de musique en ligne sur A9`() {
+        assertEquals(listOf(RADIO, BLUETOOTH, USB, PROJECTION), AudioSourceCycle.offertes(a9 = true))
+        assertEquals(listOf(RADIO, BLUETOOTH, USB, ONLINE, PROJECTION), AudioSourceCycle.offertes(a9 = false))
+    }
+
+    @Test
+    fun `une source enregistree mais absente du firmware est ignoree`() {
+        val a9 = AudioSourceCycle.offertes(a9 = true)
+        assertEquals(listOf(RADIO, USB), AudioSourceCycle.resolve("radio,online,usb", a9))
+        // Reste moins de deux sources : on retombe sur le défaut.
+        assertEquals(listOf(RADIO, BLUETOOTH), AudioSourceCycle.resolve("online,usb", a9))
+        // Hors A9, rien ne change.
+        assertEquals(listOf(ONLINE, USB), AudioSourceCycle.resolve("online,usb"))
+    }
 }

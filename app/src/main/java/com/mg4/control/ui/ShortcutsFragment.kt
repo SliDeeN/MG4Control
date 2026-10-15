@@ -1016,9 +1016,11 @@ class ShortcutsFragment : Fragment() {
      * Composition du cycle de sources audio (2026-10-15) — même geste que les cycles de
      * régénération et de profils : l'ordre des appuis EST l'ordre du cycle, rien n'est enregistré
      * avant « Sauvegarder ». Présentation en tuiles (maquette B) : pictogramme, nom, et le rang en
-     * pastille. Aucune source n'est filtrée : leur disponibilité n'est pas vérifiée, par choix.
+     * pastille. Leur disponibilité n'est pas vérifiée, par choix ; seule la musique en ligne est
+     * retirée des A9, où elle n'existe pas ([AudioSourceCycle.offertes]).
      */
     private fun setupSourceCycle(view: View) {
+        val offertes = AudioSourceCycle.offertes(FirmwareInfo.isA9())
         val tuiles = listOf(
             Triple(AudioSource.RADIO,      R.id.sc_audio_radio,      R.id.sc_audio_radio_rank),
             Triple(AudioSource.BLUETOOTH,  R.id.sc_audio_bluetooth,  R.id.sc_audio_bluetooth_rank),
@@ -1027,6 +1029,11 @@ class ShortcutsFragment : Fragment() {
             Triple(AudioSource.PROJECTION, R.id.sc_audio_projection, R.id.sc_audio_projection_rank),
         ).mapNotNull { (source, bouton, rang) ->
             val btn = view.findViewById<MaterialButton>(bouton) ?: return@mapNotNull null
+            if (source !in offertes) {
+                // La tuile ET son cadre : les autres se partagent la rangée.
+                (btn.parent as? View)?.visibility = View.GONE
+                return@mapNotNull null
+            }
             Triple(source, btn, view.findViewById<TextView>(rang))
         }
         val resume = view.findViewById<TextView>(R.id.tv_audio_cycle_summary)

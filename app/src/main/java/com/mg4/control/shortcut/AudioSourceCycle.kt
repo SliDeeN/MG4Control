@@ -3,6 +3,7 @@ package com.mg4.control.shortcut
 import android.content.Context
 import androidx.annotation.StringRes
 import com.mg4.control.R
+import com.mg4.control.util.FirmwareInfo
 
 /** Sources audio que parcourt le raccourci « Cycle de sources audio » (2026-10-15). */
 enum class AudioSource(val key: String, @StringRes val label: Int) {
@@ -49,10 +50,22 @@ object AudioSourceCycle {
 
     // ── La règle, sans Android ───────────────────────────────────────────────
 
-    /** Cycle enregistré, ou [DEFAULT] s'il n'y en a pas — ou s'il ne compte pas deux sources connues. */
-    fun resolve(enregistre: String?): List<AudioSource> {
+    /**
+     * Sources proposées sur le firmware. La musique en ligne n'existe pas sur les A9 (SWI69, 131,
+     * 132 — constat de l'utilisateur, 2026-10-15) : elle n'y est ni proposée ni visée. C'est la
+     * seule exception au principe de ne pas vérifier la disponibilité : là, la source n'existe pas.
+     */
+    fun offertes(a9: Boolean): List<AudioSource> =
+        if (a9) AudioSource.entries - AudioSource.ONLINE else AudioSource.entries
+
+    /**
+     * Cycle enregistré, ou [DEFAULT] s'il n'y en a pas — ou s'il ne compte pas deux sources connues
+     * et [offertes]. Une source enregistrée mais absente du firmware est ignorée.
+     */
+    fun resolve(enregistre: String?, offertes: List<AudioSource> = AudioSource.entries): List<AudioSource> {
         val choisies = enregistre.orEmpty().split(',')
             .mapNotNull { AudioSource.fromKey(it.trim()) }
+            .filter { it in offertes }
             .distinct()
         return if (choisies.size >= MIN_SOURCES) choisies else DEFAULT
     }
@@ -75,7 +88,8 @@ object AudioSourceCycle {
 
     // ── Le réglage enregistré ────────────────────────────────────────────────
 
-    fun order(ctx: Context): List<AudioSource> = resolve(prefs(ctx).getString(KEY, null))
+    fun order(ctx: Context): List<AudioSource> =
+        resolve(prefs(ctx).getString(KEY, null), offertes(FirmwareInfo.isA9()))
 
     fun save(ctx: Context, ordre: List<AudioSource>) {
         prefs(ctx).edit().putString(KEY, encode(ordre)).apply()
