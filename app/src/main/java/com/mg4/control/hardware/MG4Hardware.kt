@@ -30,6 +30,7 @@ import com.mg4.control.model.SeatHeat
 import com.mg4.control.shortcut.AudioSource
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.GarageMode
+import com.saicmotor.common.CommandParcelable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -4304,10 +4305,11 @@ object MG4Hardware {
             data.writeInt(valeur)
             binder.transact(TX_RUI_MEDIA_KEY, data, reply, 0)
             reply.readException()
-            // La méthode rend un entier : on le journalise sans l'interpréter. Sa signification
-            // est inconnue, mais il distinguera un refus d'un acquittement le jour où il faudra.
+            // La méthode rend -1 quand aucun téléphone n'est en projection, 0 sinon (décompilé,
+            // `RemoteUIService`, SWI69) — sans dire si le téléphone a obéi.
             val retour = if (reply.dataAvail() > 0) reply.readInt() else 0
-            AppLogger.i(MEDIA_TAG, "projection : sendMediaPlayControlKey($valeur) → $retour")
+            AppLogger.i(MEDIA_TAG, "projection : sendMediaPlayControlKey($valeur) → $retour" +
+                if (retour == -1) " (aucun téléphone en projection)" else "")
             true
         } catch (e: Exception) {
             AppLogger.w(MEDIA_TAG, "projection : commande $valeur refusée — ${(e.cause ?: e).message}")
@@ -5017,8 +5019,15 @@ object MG4Hardware {
      */
     fun switchAudioSource(source: AudioSource): Boolean {
         AppLogger.i(MEDIA_TAG, "changement de source → ${source.name}")
+        Handler(Looper.getMainLooper()).postDelayed({
+            CoroutineScope(Dispatchers.IO).launch { controleSource(source) }
+        }, CONTROLE_SOURCE_MS)
         // Service média SAIC muet : firmwares A9, où chaque source publie son lecteur Android.
-        if (mediaSourceCourante() < 0) return sourceParLecteur(source)
+        if (mediaSourceCourante() < 0) {
+            // Le Bluetooth passe par l'appli Média, comme sur le launcher : voir [sourceParAppliMedia].
+            if (source == AudioSource.BLUETOOTH && sourceParAppliMedia(MEDIA_A9_TYPE_BT, source)) return true
+            return sourceParLecteur(source)
+        }
         return when (source) {
             AudioSource.RADIO      -> mediaTransact(RADIO_ACT, DESC_RADIO, RADIO_PLAY, RADIO_PKG, null)
             AudioSource.BLUETOOTH  -> mediaTransact(ACT_BT, DESC_BT, 2)            // play
@@ -5037,6 +5046,65 @@ object MG4Hardware {
         AudioSource.USB        -> ComponentName("com.saicmotor.media", "com.saicmotor.media.mbs.Usb1MediaBrowserService")
         AudioSource.ONLINE     -> ComponentName("com.saicmotor.media", "com.saicmotor.media.mbs.OnlineMediaBrowserService")
         AudioSource.PROJECTION -> null
+    }
+
+    // ── A9 : appli Média SAIC, commandée comme le fait le launcher (identique SWI69/131/132) ──
+    private const val MEDIA_A9_PKG     = "com.saicmotor.media"
+    private const val MEDIA_A9_SERVICE = "com.saicmotor.media.service.MediaService"
+    private const val MEDIA_A9_SWITCH  = 0x8001   // passer sur une source et la lancer
+    private const val MEDIA_A9_TYPE_BT = 2        // types : 0 USB1, 1 USB2, 2 Bluetooth, 3 en ligne
+    /** Expéditeur inscrit dans la commande : celui du launcher, la seule valeur vue en service. */
+    private const val MEDIA_A9_SENDER  = "com.saicmotor.launcher"
+
+    /**
+     * A9 : demande à l'appli Média SAIC de passer sur une de ses sources, exactement comme le
+     * launcher d'origine (`ModeManager.switchSource` → commande 0x8001 à son `MediaService`).
+     *
+     * ⚠️ Indispensable pour le Bluetooth, constaté sur SWI69 le 2026-10-15 : « lecture » envoyée
+     * au lecteur du système part bien, mais elle ne fait que réveiller le téléphone — la radio
+     * garde la sortie. Ce qui fait passer la VOITURE en Bluetooth, c'est le focus audio que
+     * l'appli Média prend au nom du Bluetooth (étiquette SAIC `key_car_source_type = 5`) avant
+     * de lancer la lecture. Si un appel est en cours, elle refuse le focus et rien ne se passe,
+     * comme avec les commandes d'origine.
+     *
+     * Rend faux si le service est introuvable ou refuse l'envoi : l'appelant se replie alors
+     * sur le lecteur.
+     */
+    private fun sourceParAppliMedia(type: Int, source: AudioSource): Boolean {
+        val ctx = sAppContext ?: return false
+        val intent = Intent()
+            .setComponent(ComponentName(MEDIA_A9_PKG, MEDIA_A9_SERVICE))
+            .putExtra(CommandParcelable.EXTRA,
+                CommandParcelable(MEDIA_A9_SWITCH, type, MEDIA_A9_SENDER))
+        return try {
+            val parti = ctx.startService(intent) != null
+            AppLogger.i(MEDIA_TAG, "source ${source.name} : " + if (parti)
+                "commande 0x${Integer.toHexString(MEDIA_A9_SWITCH)} (type $type) envoyée à l'appli Média SAIC"
+            else "service de l'appli Média SAIC introuvable — repli sur le lecteur")
+            parti
+        } catch (e: Exception) {
+            AppLogger.w(MEDIA_TAG, "source ${source.name} : appli Média SAIC injoignable " +
+                "(${(e.cause ?: e).message}) — repli sur le lecteur")
+            false
+        }
+    }
+
+    /** Délai du journal de contrôle : le temps qu'une source démarre ou qu'une autre s'arrête. */
+    private const val CONTROLE_SOURCE_MS = 3_000L
+
+    /**
+     * Journal de contrôle, [CONTROLE_SOURCE_MS] après un changement de source : ce qui joue
+     * VRAIMENT, que la commande ne dit pas. Les sessions servent sur A9 (3 = lecture,
+     * 2 = pause) ; la source courante SAIC sur l'ancien SDK.
+     */
+    private fun controleSource(source: AudioSource) {
+        val ctx = sAppContext ?: return
+        val msm = ctx.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
+        val sessions = runCatching { msm?.getActiveSessions(null) }.getOrNull()
+            ?.joinToString { "${it.packageName}=${it.playbackState?.state ?: "?"}" }
+        AppLogger.i(MEDIA_TAG, "contrôle ${source.name} à +${CONTROLE_SOURCE_MS / 1000} s : " +
+            "sessions [${sessions ?: "illisibles"}] (3 = lecture, 2 = pause)")
+        mediaSourceCourante()
     }
 
     /** Lecteurs en cours de connexion : gardés en vie le temps que « lecture » parte. */
