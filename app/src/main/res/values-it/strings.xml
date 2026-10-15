@@ -519,6 +519,16 @@
     <string name="shortcuts_cat_profile_cycle">Ciclo profili</string>
     <string name="shortcuts_cfg_profile_hint">Tocca i profili nell\'ordine in cui vuoi scorrerli, poi salva. Ogni pressione applica il profilo che segue quello attivo.</string>
     <string name="shortcuts_cfg_profile_min">Un ciclo richiede almeno due profili.</string>
+    <string name="shortcuts_action_audio_cycle">Ciclo delle sorgenti audio</string>
+    <string name="shortcuts_cat_audio_cycle">Ciclo sorgenti</string>
+    <string name="shortcuts_cfg_audio_hint">Tocca le sorgenti nell\'ordine in cui vuoi scorrerle, poi salva. Una sorgente non disponibile (nessuna chiavetta USB, nessun telefono) viene comunque scelta: un\'altra pressione passa alla successiva.</string>
+    <string name="shortcuts_cfg_audio_min">Un ciclo richiede almeno due sorgenti.</string>
+    <string name="audio_cycle_target">Sorgente: %s</string>
+    <string name="audio_source_radio">Radio</string>
+    <string name="audio_source_bluetooth">Bluetooth</string>
+    <string name="audio_source_usb">USB</string>
+    <string name="audio_source_online">Online</string>
+    <string name="audio_source_projection">CarPlay / Android Auto</string>
     <string name="adv_sc_new">Nuova scorciatoia</string>
     <string name="adv_sc_step_key">1 · Tasto</string>
     <string name="adv_sc_step_press">2 · Tipo di pressione</string>

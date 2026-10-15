@@ -524,6 +524,16 @@
     <string name="shortcuts_cat_profile_cycle">Cycle profils</string>
     <string name="shortcuts_cfg_profile_hint">Touchez les profils dans l\'ordre où vous voulez les parcourir, puis enregistrez. À chaque appui, le raccourci applique le profil qui suit le profil actif.</string>
     <string name="shortcuts_cfg_profile_min">Un cycle demande au moins deux profils.</string>
+    <string name="shortcuts_action_audio_cycle">Cycle de sources audio</string>
+    <string name="shortcuts_cat_audio_cycle">Cycle sources</string>
+    <string name="shortcuts_cfg_audio_hint">Touchez les sources dans l\'ordre où vous voulez les parcourir, puis enregistrez. Une source indisponible (pas de clé USB, pas de téléphone) est quand même visée : un appui de plus passe à la suivante.</string>
+    <string name="shortcuts_cfg_audio_min">Un cycle demande au moins deux sources.</string>
+    <string name="audio_cycle_target">Source : %s</string>
+    <string name="audio_source_radio">Radio</string>
+    <string name="audio_source_bluetooth">Bluetooth</string>
+    <string name="audio_source_usb">USB</string>
+    <string name="audio_source_online">En ligne</string>
+    <string name="audio_source_projection">CarPlay / Android Auto</string>
     <string name="adv_sc_new">Nouveau raccourci</string>
     <string name="adv_sc_step_key">1 · Touche</string>
     <string name="adv_sc_step_press">2 · Type d\'appui</string>

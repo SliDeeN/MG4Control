@@ -519,6 +519,16 @@
     <string name="shortcuts_cat_profile_cycle">Profil döngüsü</string>
     <string name="shortcuts_cfg_profile_hint">Dolaşmak istediğiniz sırayla profillere dokunun, sonra kaydedin. Her basışta etkin profilden sonraki profil uygulanır.</string>
     <string name="shortcuts_cfg_profile_min">Bir döngü için en az iki profil gerekir.</string>
+    <string name="shortcuts_action_audio_cycle">Ses kaynağı döngüsü</string>
+    <string name="shortcuts_cat_audio_cycle">Kaynak döngüsü</string>
+    <string name="shortcuts_cfg_audio_hint">Dolaşmak istediğiniz sırayla kaynaklara dokunun, sonra kaydedin. Kullanılamayan bir kaynak (USB bellek yok, telefon yok) yine de seçilir: bir basış daha sonrakine geçer.</string>
+    <string name="shortcuts_cfg_audio_min">Bir döngü en az iki kaynak gerektirir.</string>
+    <string name="audio_cycle_target">Kaynak: %s</string>
+    <string name="audio_source_radio">Radyo</string>
+    <string name="audio_source_bluetooth">Bluetooth</string>
+    <string name="audio_source_usb">USB</string>
+    <string name="audio_source_online">Çevrimiçi</string>
+    <string name="audio_source_projection">CarPlay / Android Auto</string>
     <string name="adv_sc_new">Yeni kısayol</string>
     <string name="adv_sc_step_key">1 · Tuş</string>
     <string name="adv_sc_step_press">2 · Basış türü</string>

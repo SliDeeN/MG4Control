@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.media.AudioManager
+import android.media.browse.MediaBrowser
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
@@ -26,6 +27,7 @@ import com.mg4.control.model.DriveMode
 import com.mg4.control.model.HvacPopup
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.model.SeatHeat
+import com.mg4.control.shortcut.AudioSource
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.GarageMode
 import kotlinx.coroutines.CoroutineScope
@@ -4998,6 +5000,92 @@ object MG4Hardware {
     fun mediaPrevious(): Boolean = commandeMedia(CmdMedia.PRECEDENT)
 
     fun mediaPlayPause(): Boolean = commandeMedia(CmdMedia.LECTURE_PAUSE)
+
+    /**
+     * Fait passer l'audio sur [source] (raccourci « Cycle de sources audio », 2026-10-15).
+     *
+     * Il n'existe pas de commande « changer de source » : on demande à la source visée de JOUER,
+     * ce qui la met au premier plan — constaté en août 2026, un « suivant » envoyé par erreur au
+     * Bluetooth pendant la radio faisait changer de source. Pas de vérification de disponibilité
+     * (choix de l'utilisateur) : une source sans rien à jouer reste sans effet audible, l'appui
+     * suivant passe à la suivante. Rend vrai si la commande est PARTIE ; le journal dit le reste.
+     *
+     * Ne pas appeler depuis le thread principal : les liaisons au service média y attendent.
+     */
+    fun switchAudioSource(source: AudioSource): Boolean {
+        AppLogger.i(MEDIA_TAG, "changement de source → ${source.name}")
+        // Service média SAIC muet : firmwares A9, où chaque source publie son lecteur Android.
+        if (mediaSourceCourante() < 0) return sourceParLecteur(source)
+        return when (source) {
+            AudioSource.RADIO      -> mediaTransact(RADIO_ACT, DESC_RADIO, RADIO_PLAY, RADIO_PKG, null)
+            AudioSource.BLUETOOTH  -> mediaTransact(ACT_BT, DESC_BT, 2)            // play
+            AudioSource.USB        -> mediaTransact(ACT_USB, DESC_USB, 0xe)        // play
+            AudioSource.ONLINE     -> mediaTransact(ACT_ONLINE, DESC_ONLINE, 2)    // play
+            // SWI133 par le SDK SAIC, SWI68/165 par le service allgo : celle qui est absente
+            // échoue sans effet, comme pour Lecture/Pause.
+            AudioSource.PROJECTION -> mediaTransact(ACT_CPAA, DESC_CPAA, 1) || ruiEnvoyer(RUI_PLAY)
+        }
+    }
+
+    /** Lecteur Android de chaque source sur A9 (dump SWI69) ; la projection passe par allgo. */
+    private fun lecteurA9(source: AudioSource): ComponentName? = when (source) {
+        AudioSource.RADIO      -> ComponentName("com.saicmotor.radio", "com.saicmotor.radio.service.RadioMBService")
+        AudioSource.BLUETOOTH  -> ComponentName("com.android.bluetooth", "com.android.bluetooth.a2dpsink.mbs.A2dpMediaBrowserService")
+        AudioSource.USB        -> ComponentName("com.saicmotor.media", "com.saicmotor.media.mbs.Usb1MediaBrowserService")
+        AudioSource.ONLINE     -> ComponentName("com.saicmotor.media", "com.saicmotor.media.mbs.OnlineMediaBrowserService")
+        AudioSource.PROJECTION -> null
+    }
+
+    /** Lecteurs en cours de connexion : gardés en vie le temps que « lecture » parte. */
+    private val sLecteursSource = ConcurrentHashMap<String, MediaBrowser>()
+
+    /**
+     * A9 : se connecter au lecteur de la source crée sa session, et « lecture » la met au premier
+     * plan — le chemin du launcher A9 (`MediaModel`). Asynchrone : rend vrai si la connexion est
+     * lancée, le journal dit si le lecteur l'a acceptée et si la lecture est partie.
+     */
+    private fun sourceParLecteur(source: AudioSource): Boolean {
+        val composant = lecteurA9(source) ?: return ruiEnvoyer(RUI_PLAY)
+        val ctx = sAppContext ?: return false
+        val cle = composant.className
+        Handler(Looper.getMainLooper()).post {
+            sLecteursSource.remove(cle)?.let { runCatching { it.disconnect() } }
+            var lecteur: MediaBrowser? = null
+            val rappels = object : MediaBrowser.ConnectionCallback() {
+                override fun onConnected() {
+                    val b = lecteur ?: return
+                    try {
+                        MediaController(ctx, b.sessionToken).transportControls.play()
+                        AppLogger.i(MEDIA_TAG, "source ${source.name} : lecteur ${cle.substringAfterLast('.')} connecté, lecture demandée")
+                    } catch (e: Exception) {
+                        AppLogger.w(MEDIA_TAG, "source ${source.name} : lecture refusée — ${(e.cause ?: e).message}")
+                    }
+                    // Libéré un peu plus tard : couper tout de suite pourrait arrêter un lecteur
+                    // qui n'a pas encore démarré sa lecture.
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        if (sLecteursSource.remove(cle, b)) runCatching { b.disconnect() }
+                    }, 5_000L)
+                }
+                override fun onConnectionFailed() {
+                    sLecteursSource.remove(cle)
+                    AppLogger.w(MEDIA_TAG, "source ${source.name} : le lecteur ${cle.substringAfterLast('.')} refuse la connexion")
+                }
+                override fun onConnectionSuspended() {
+                    sLecteursSource.remove(cle)
+                }
+            }
+            try {
+                lecteur = MediaBrowser(ctx, composant, rappels, null).also {
+                    sLecteursSource[cle] = it
+                    it.connect()
+                }
+            } catch (e: Exception) {
+                sLecteursSource.remove(cle)
+                AppLogger.w(MEDIA_TAG, "source ${source.name} : connexion impossible — ${(e.cause ?: e).message}")
+            }
+        }
+        return true
+    }
 
     /**
      * Monte ou descend le volume média d'un cran.

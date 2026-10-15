@@ -519,6 +519,16 @@
     <string name="shortcuts_cat_profile_cycle">Profilzyklus</string>
     <string name="shortcuts_cfg_profile_hint">Tippen Sie die Profile in der gewünschten Reihenfolge an, dann speichern. Jeder Tastendruck wendet das Profil an, das auf das aktive folgt.</string>
     <string name="shortcuts_cfg_profile_min">Ein Zyklus braucht mindestens zwei Profile.</string>
+    <string name="shortcuts_action_audio_cycle">Audioquellen-Zyklus</string>
+    <string name="shortcuts_cat_audio_cycle">Quellen-Zyklus</string>
+    <string name="shortcuts_cfg_audio_hint">Tippen Sie die Quellen in der gewünschten Reihenfolge an, dann speichern. Eine nicht verfügbare Quelle (kein USB-Stick, kein Telefon) wird trotzdem angesteuert: Ein weiterer Druck wechselt zur nächsten.</string>
+    <string name="shortcuts_cfg_audio_min">Ein Zyklus braucht mindestens zwei Quellen.</string>
+    <string name="audio_cycle_target">Quelle: %s</string>
+    <string name="audio_source_radio">Radio</string>
+    <string name="audio_source_bluetooth">Bluetooth</string>
+    <string name="audio_source_usb">USB</string>
+    <string name="audio_source_online">Online</string>
+    <string name="audio_source_projection">CarPlay / Android Auto</string>
     <string name="adv_sc_new">Neues Kürzel</string>
     <string name="adv_sc_step_key">1 · Taste</string>
     <string name="adv_sc_step_press">2 · Druckart</string>

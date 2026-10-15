@@ -519,6 +519,16 @@
     <string name="shortcuts_cat_profile_cycle">Profile cycle</string>
     <string name="shortcuts_cfg_profile_hint">Tap the profiles in the order you want to cycle through them, then save. Each press applies the profile that follows the active one.</string>
     <string name="shortcuts_cfg_profile_min">A cycle needs at least two profiles.</string>
+    <string name="shortcuts_action_audio_cycle">Audio source cycle</string>
+    <string name="shortcuts_cat_audio_cycle">Source cycle</string>
+    <string name="shortcuts_cfg_audio_hint">Tap the sources in the order you want to step through them, then save. An unavailable source (no USB stick, no phone) is still targeted: one more press moves on to the next.</string>
+    <string name="shortcuts_cfg_audio_min">A cycle needs at least two sources.</string>
+    <string name="audio_cycle_target">Source: %s</string>
+    <string name="audio_source_radio">Radio</string>
+    <string name="audio_source_bluetooth">Bluetooth</string>
+    <string name="audio_source_usb">USB</string>
+    <string name="audio_source_online">Online</string>
+    <string name="audio_source_projection">CarPlay / Android Auto</string>
     <string name="adv_sc_new">New shortcut</string>
     <string name="adv_sc_step_key">1 · Key</string>
     <string name="adv_sc_step_press">2 · Press type</string>

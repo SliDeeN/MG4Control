@@ -519,6 +519,16 @@
     <string name="shortcuts_cat_profile_cycle">Ciclo perfis</string>
     <string name="shortcuts_cfg_profile_hint">Toque nos perfis pela ordem por que os quer percorrer e depois guarde. Cada pressão aplica o perfil que se segue ao perfil ativo.</string>
     <string name="shortcuts_cfg_profile_min">Um ciclo precisa de pelo menos dois perfis.</string>
+    <string name="shortcuts_action_audio_cycle">Ciclo de fontes de áudio</string>
+    <string name="shortcuts_cat_audio_cycle">Ciclo fontes</string>
+    <string name="shortcuts_cfg_audio_hint">Toque nas fontes pela ordem por que as quer percorrer e depois guarde. Uma fonte indisponível (sem pen USB, sem telemóvel) é selecionada na mesma: mais uma pressão passa à seguinte.</string>
+    <string name="shortcuts_cfg_audio_min">Um ciclo precisa de pelo menos duas fontes.</string>
+    <string name="audio_cycle_target">Fonte: %s</string>
+    <string name="audio_source_radio">Rádio</string>
+    <string name="audio_source_bluetooth">Bluetooth</string>
+    <string name="audio_source_usb">USB</string>
+    <string name="audio_source_online">Online</string>
+    <string name="audio_source_projection">CarPlay / Android Auto</string>
     <string name="adv_sc_new">Novo atalho</string>
     <string name="adv_sc_step_key">1 · Tecla</string>
     <string name="adv_sc_step_press">2 · Tipo de pressão</string>

@@ -1085,6 +1085,13 @@ class MG4ControlService : Service() {
             return
         }
 
+        // AUDIO_SOURCE_CYCLE : source suivante du cycle composé dans l'onglet Raccourcis. Même
+        // mécanique que le cycle de profils, dans [AudioSourceCycleShortcut].
+        if (action == ShortcutAction.AUDIO_SOURCE_CYCLE) {
+            AudioSourceCycleShortcut.press(this@MG4ControlService)
+            return
+        }
+
         // Vitres : action directe, aucune bascule — une pression = une course complète.
         // La FERMETURE emprunte le chemin de la fermeture automatique, le seul qui aille au bout
         // sans personne devant l'écran : au volant, l'utilisateur ne regarde pas l'application.

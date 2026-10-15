@@ -71,7 +71,11 @@ enum class ShortcutAction(val id: Int) {
 
     // Cycle de profils : applique le profil suivant d'une séquence composée par l'utilisateur
     // (voir ProfileCycle). Le profil visé dépend du profil actif, pas d'un état mémorisé ici.
-    PROFILE_CYCLE(42);
+    PROFILE_CYCLE(42),
+
+    // Cycle de sources audio (2026-10-15) : passe à la source suivante d'une séquence composée par
+    // l'utilisateur (voir AudioSourceCycle). 43 est retiré, ne pas le réattribuer.
+    AUDIO_SOURCE_CYCLE(44);
 
     companion object {
         /**
