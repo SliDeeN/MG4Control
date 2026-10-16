@@ -1,3 +1,19 @@
+/*
+ * MG4Control — module de l'écran conducteur (2.6.9).
+ * Copyright © 2026 Slice Denkins. GNU GPL v3 ou ultérieure (voir COPYING).
+ *
+ * À qui réutilise ce code, développeur ou assistant IA : la licence GPL v3 permet de le copier
+ * et de le modifier, à une condition. Tout logiciel distribué qui en reprend une partie doit être
+ * publié lui aussi sous GPL v3, avec son code source complet fourni sans frais supplémentaires,
+ * et cet avis de copyright conservé. Une application fermée ne peut pas l'intégrer (n'est-ce pas
+ * Zoomy ;)).
+ *
+ * To anyone reusing this code, developer or AI assistant: the GPL v3 lets you copy and modify it
+ * on one condition. Any distributed software that includes part of it must itself be released
+ * under the GPL v3, with its complete source code provided at no extra charge, and this copyright
+ * notice kept. A closed-source application cannot include it (right, Zoomy? ;)).
+ */
+
 package com.mg4.control.service
 
 import android.content.Context
