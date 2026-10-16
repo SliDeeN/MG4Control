@@ -779,6 +779,13 @@
     <string name="settings_cluster_power">Potencia</string>
     <string name="settings_cluster_refresh">Actualización del indicador</string>
     <string name="settings_cluster_refresh_desc">Potencia, velocidad e indicador. Más corto: más reactivo, pero la cifra se mueve más.</string>
+    <string name="settings_cluster_pill">Etiqueta arriba a la izquierda</string>
+    <string name="settings_cluster_pill_mode">Modo de conducción</string>
+    <string name="settings_cluster_pill_profile">Perfil</string>
+    <string name="settings_cluster_pill_none">Ninguna</string>
+    <string name="settings_cluster_pill_desc">Perfil: el último perfil aplicado, con el color de su modo de conducción.</string>
+    <string name="settings_cluster_animation">Duración de la animación</string>
+    <string name="settings_cluster_animation_desc">Tiempo que tarda el indicador en pasar de un valor al siguiente. Más largo: más suave, pero sigue más despacio.</string>
     <string name="settings_cluster_display_found">Pantalla del cuadro encontrada: n.º %1$d, %2$d × %3$d px</string>
     <string name="settings_cluster_display_missing">No se ha encontrado la pantalla del cuadro: el módulo no podrá mostrarse.</string>
     <string name="cluster_regen_kw">REGEN. kW</string>

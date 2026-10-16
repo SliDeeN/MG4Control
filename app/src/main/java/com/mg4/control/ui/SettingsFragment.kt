@@ -52,6 +52,7 @@ import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.model.ClusterModule
+import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ConsumptionUnit
 import com.mg4.control.service.ClusterModuleOverlay
@@ -259,6 +260,12 @@ class SettingsFragment : Fragment() {
             ConsumptionUnit.WH_PER_KM to view.findViewById(R.id.btn_cluster_unit_wh),
             ConsumptionUnit.KWH_PER_100KM to view.findViewById(R.id.btn_cluster_unit_kwh),
         )
+        // Pastille en haut à gauche : mode de conduite, profil actif ou rien (issue #152).
+        val pillBtns: List<Pair<ClusterPill, MaterialButton>> = listOf(
+            ClusterPill.DRIVE_MODE to view.findViewById(R.id.btn_cluster_pill_mode),
+            ClusterPill.PROFILE to view.findViewById(R.id.btn_cluster_pill_profile),
+            ClusterPill.NONE to view.findViewById(R.id.btn_cluster_pill_none),
+        )
         fun updateClusterCard() {
             val ctx = requireContext()
             val deplie = if (ClusterModuleSettings.isEnabled(ctx)) View.VISIBLE else View.GONE
@@ -276,6 +283,8 @@ class SettingsFragment : Fragment() {
             }
             val unite = ClusterModuleSettings.consumptionUnit(ctx)
             unitBtns.forEach { (u, btn) -> peindre(btn, u == unite) }
+            val pastille = ClusterModuleSettings.pill(ctx)
+            pillBtns.forEach { (p, btn) -> peindre(btn, p == pastille) }
         }
         switchCluster.isChecked = ClusterModuleSettings.isEnabled(requireContext())
         updateClusterCard()
@@ -301,6 +310,14 @@ class SettingsFragment : Fragment() {
                 updateClusterCard()
             }
         }
+        pillBtns.forEach { (p, btn) ->
+            btn.setOnClickListener {
+                if (p == ClusterModuleSettings.pill(requireContext())) return@setOnClickListener
+                ClusterModuleSettings.setPill(requireContext(), p)
+                AppLogger.i(ClusterModuleOverlay.TAG, "Pastille du combiné → ${p.key}")
+                updateClusterCard()
+            }
+        }
         // Actualisation de la jauge, 0,1 à 1 s : relue à chaque relevé, rien à redémarrer. Le
         // nombre est écrit dans la langue de l'application (0,5 s / 0.5 s), jamais Locale.ROOT.
         val tvClusterRefresh = view.findViewById<TextView>(R.id.tv_cluster_refresh)
@@ -322,6 +339,28 @@ class SettingsFragment : Fragment() {
                 override fun onStopTrackingTouch(slider: Slider) {
                     AppLogger.i(ClusterModuleOverlay.TAG,
                         "Actualisation de la jauge → ${ClusterModuleSettings.refreshFromSlider(slider.value)} ms")
+                }
+            })
+        }
+        // Durée de l'animation, 0,2 à 2 s, à part de l'actualisation (issue #152) : relue à chaque
+        // relevé, comme elle.
+        val tvClusterAnimation = view.findViewById<TextView>(R.id.tv_cluster_animation)
+        view.findViewById<Slider>(R.id.slider_cluster_animation).apply {
+            valueFrom = ClusterModuleSettings.animationToSlider(ClusterModuleSettings.MIN_ANIMATION_MS)
+            valueTo   = ClusterModuleSettings.animationToSlider(ClusterModuleSettings.MAX_ANIMATION_MS)
+            val actuel = ClusterModuleSettings.animationMs(requireContext())
+            value = ClusterModuleSettings.animationToSlider(actuel)
+            tvClusterAnimation.text = texteActualisation(actuel)
+            addOnChangeListener { _, v, _ ->
+                val ms = ClusterModuleSettings.animationFromSlider(v)
+                tvClusterAnimation.text = texteActualisation(ms)
+                ClusterModuleSettings.setAnimationMs(requireContext(), ms)
+            }
+            addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+                override fun onStartTrackingTouch(slider: Slider) {}
+                override fun onStopTrackingTouch(slider: Slider) {
+                    AppLogger.i(ClusterModuleOverlay.TAG,
+                        "Animation de la jauge → ${ClusterModuleSettings.animationFromSlider(slider.value)} ms")
                 }
             })
         }

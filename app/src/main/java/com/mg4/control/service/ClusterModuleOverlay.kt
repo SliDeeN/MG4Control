@@ -38,10 +38,14 @@ import com.mg4.control.model.ChargeDisplay
 import com.mg4.control.model.ChargeEnCours
 import com.mg4.control.model.ClusterGauge
 import com.mg4.control.model.ClusterModule
+import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ClusterTrip
 import com.mg4.control.model.DriveMode
+import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.StatsTracker
+import com.mg4.control.profile.ActiveProfile
+import com.mg4.control.profile.ProfileManager
 import com.mg4.control.ui.widget.ClusterGaugeView
 import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.util.LocaleHelper
@@ -118,6 +122,13 @@ internal object ClusterModuleOverlay {
     private var dernierOnglet: Int? = -1
     private var dernierModule: ClusterModule? = null
     private var mode: DriveMode? = null
+    /**
+     * Profil de la pastille (issue #152) : relu quand le profil actif change, et avec les valeurs
+     * lentes — un nom ou un mode modifié dans l'éditeur apparaît au plus dix secondes après.
+     */
+    private var profilId: String? = null
+    private var profil: DrivingProfile? = null
+    /** Batterie : relue pour le module « charge » seulement. */
     private var batterie: Float? = null
     // Charge : la session, les derniers signaux bruts (relus avec les valeurs lentes), et l'état
     // « terminée » — la charge s'est arrêtée mais la prise est encore signalée.
@@ -297,6 +308,7 @@ internal object ClusterModuleOverlay {
             if (!enMarche) return
             val ctx = appContext ?: return
             val intervalle = ClusterModuleSettings.refreshMs(ctx).toLong()
+            val animation = ClusterModuleSettings.animationMs(ctx).toLong()
             val maintenant = SystemClock.elapsedRealtime()
             val kw = runCatching { EnergyReader.dischargeKw() }.getOrNull()
             val kmh = runCatching { MG4Hardware.getVehicleSpeedKmh() }.getOrNull()?.takeIf { it in 0f..300f }
@@ -317,12 +329,19 @@ internal object ClusterModuleOverlay {
                 dernierLentMs = 0L   // temps restant, cible et type tout de suite
                 AppLogger.i(TAG, "charge détectée : le module de charge remplace les jauges")
             }
-            if (dernierLentMs == 0L || maintenant - dernierLentMs >= LENT_MS) {
+            val choixPastille = ClusterModuleSettings.pill(ctx)
+            val idActif = if (choixPastille == ClusterPill.PROFILE) ActiveProfile.id(ctx) else null
+            val lent = dernierLentMs == 0L || maintenant - dernierLentMs >= LENT_MS
+            if (idActif != profilId || (lent && idActif != null)) {
+                profilId = idActif
+                profil = idActif?.let { id -> runCatching { ProfileManager(ctx).getById(id) }.getOrNull() }
+            }
+            if (lent) {
                 dernierLentMs = maintenant
                 dernierSocMs = maintenant
                 mode = runCatching { MG4Hardware.getDriveMode() }.getOrNull()
-                batterie = runCatching { EnergyReader.soc() }.getOrNull()
                 if (session.active) {
+                    batterie = runCatching { EnergyReader.soc() }.getOrNull()
                     if (batterieDebut == null) batterieDebut = batterie
                     chargeBrute = runCatching { EnergyReader.chargeRaw() }.getOrNull()
                     chargeBrute?.let { ChargeProbe.observer(it, kw?.let { k -> -k }) }
@@ -365,10 +384,11 @@ internal object ClusterModuleOverlay {
                     module = it,
                     kw = kwLisse,
                     kmh = kmh,
-                    mode = mode,
+                    pastille = ClusterGauge.pill(choixPastille, mode, profil?.name,
+                        // Couleur du mode du profil s'il règle la conduite, sinon celle de la voiture.
+                        profil?.takeIf { p -> p.appliesDrive }?.driveMode, langue(ctx)),
                     moyenneWhKm = trajet.averageWhPerKm(),
                     recupWh = trajet.regenWh(),
-                    batterie = batterie,
                     unite = ClusterModuleSettings.consumptionUnit(ctx),
                     // À la place de la jauge réglée pour l'onglet, jamais sur un onglet sans module.
                     charge = if (session.active) vueCharge(maintenant) else null,
@@ -381,12 +401,15 @@ internal object ClusterModuleOverlay {
                     v.visibility = View.INVISIBLE
                 } else {
                     v.visibility = View.VISIBLE
-                    v.montrer(contenu, intervalle)
+                    v.montrer(contenu, animation)
                 }
             }
             lecteur.postDelayed(this, intervalle)
         }
     }
+
+    /** Langue choisie dans l'application (comme la vue) : le nom du profil s'écrit en capitales dans celle-ci. */
+    private fun langue(ctx: Context): java.util.Locale = java.util.Locale.forLanguageTag(LocaleHelper.getLanguage(ctx))
 
     /** Ce que montre le module « charge » à cet instant (fil du lecteur). */
     private fun vueCharge(maintenant: Long): ClusterGaugeView.Charge {

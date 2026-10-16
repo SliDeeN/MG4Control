@@ -885,6 +885,79 @@
 
                         </LinearLayout>
 
+                        <!-- Pastille en haut à gauche (issue #152) : mode de conduite, profil ou rien. -->
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="@string/settings_cluster_pill"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:orientation="horizontal">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_cluster_pill_mode"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="52dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="4dp"
+                                android:text="@string/settings_cluster_pill_mode"
+                                android:textAllCaps="false"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                app:backgroundTint="@color/dash_btn"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_cluster_pill_profile"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="52dp"
+                                android:layout_weight="1"
+                                android:layout_marginHorizontal="4dp"
+                                android:text="@string/settings_cluster_pill_profile"
+                                android:textAllCaps="false"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                app:backgroundTint="@color/dash_btn"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_cluster_pill_none"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:minHeight="52dp"
+                                android:layout_weight="1"
+                                android:layout_marginStart="4dp"
+                                android:text="@string/settings_cluster_pill_none"
+                                android:textAllCaps="false"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                app:backgroundTint="@color/dash_btn"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="@string/settings_cluster_pill_desc"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp" />
+
                     </LinearLayout>
 
                     <!-- Actualisation de la jauge, 0,1 à 1 s : déplié avec le choix du module.
@@ -945,6 +1018,60 @@
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:text="@string/settings_cluster_refresh_desc"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp" />
+
+                        <!-- Durée de l'animation, 0,2 à 2 s, à part de l'actualisation (issue #152).
+                             Le curseur compte en dixièmes de seconde (2 à 20). -->
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:text="@string/settings_cluster_animation"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="52dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:baselineAligned="false"
+                            android:paddingTop="6dp">
+
+                            <com.google.android.material.slider.Slider
+                                android:id="@+id/slider_cluster_animation"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:valueFrom="2"
+                                android:valueTo="20"
+                                android:value="8"
+                                android:stepSize="1"
+                                app:labelBehavior="gone"
+                                app:thumbRadius="14dp"
+                                app:trackHeight="10dp"
+                                app:thumbColor="@color/dash_accent"
+                                app:trackColorActive="@color/dash_accent"
+                                app:trackColorInactive="@color/dash_border" />
+
+                            <TextView
+                                android:id="@+id/tv_cluster_animation"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:minWidth="64dp"
+                                android:gravity="end"
+                                android:textColor="@color/dash_accent"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_cluster_animation_desc"
                             android:textColor="@color/dash_text_lo"
                             android:textSize="13sp" />
 

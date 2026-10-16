@@ -779,6 +779,13 @@
     <string name="settings_cluster_power">Potenza</string>
     <string name="settings_cluster_refresh">Aggiornamento dell\'indicatore</string>
     <string name="settings_cluster_refresh_desc">Potenza, velocità e indicatore. Più breve: più reattivo, ma la cifra si muove di più.</string>
+    <string name="settings_cluster_pill">Etichetta in alto a sinistra</string>
+    <string name="settings_cluster_pill_mode">Modalità di guida</string>
+    <string name="settings_cluster_pill_profile">Profilo</string>
+    <string name="settings_cluster_pill_none">Nessuna</string>
+    <string name="settings_cluster_pill_desc">Profilo: l\'ultimo profilo applicato, nel colore della sua modalità di guida.</string>
+    <string name="settings_cluster_animation">Durata dell\'animazione</string>
+    <string name="settings_cluster_animation_desc">Tempo che l\'indicatore impiega per passare da un valore al successivo. Più lungo: più fluido, ma segue più lentamente.</string>
     <string name="settings_cluster_display_found">Display del quadro trovato: n. %1$d, %2$d × %3$d px</string>
     <string name="settings_cluster_display_missing">Nessun display del quadro trovato: il modulo non potrà essere mostrato.</string>
     <string name="cluster_regen_kw">RIGEN. kW</string>

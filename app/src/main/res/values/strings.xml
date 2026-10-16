@@ -796,6 +796,13 @@
     <string name="settings_cluster_power">Puissance</string>
     <string name="settings_cluster_refresh">Actualisation de la jauge</string>
     <string name="settings_cluster_refresh_desc">Puissance, vitesse et jauge. Plus court : plus réactif, mais le chiffre bouge davantage.</string>
+    <string name="settings_cluster_pill">Pastille en haut à gauche</string>
+    <string name="settings_cluster_pill_mode">Mode de conduite</string>
+    <string name="settings_cluster_pill_profile">Profil</string>
+    <string name="settings_cluster_pill_none">Aucune</string>
+    <string name="settings_cluster_pill_desc">Profil : le dernier profil appliqué, dans la couleur de son mode de conduite.</string>
+    <string name="settings_cluster_animation">Durée de l\'animation</string>
+    <string name="settings_cluster_animation_desc">Temps que met la jauge pour glisser d\'une valeur à la suivante. Plus long : plus doux, mais elle suit moins vite.</string>
     <string name="settings_cluster_display_found">Écran du combiné trouvé : n° %1$d, %2$d × %3$d px</string>
     <string name="settings_cluster_display_missing">Aucun écran de combiné trouvé : le module ne pourra pas s\'afficher.</string>
     <string name="cluster_regen_kw">RÉCUP. kW</string>

@@ -2,6 +2,7 @@ package com.mg4.control.util
 
 import android.content.Context
 import com.mg4.control.model.ClusterModule
+import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ConsumptionUnit
 import kotlin.math.roundToInt
@@ -49,6 +50,22 @@ object ClusterModuleSettings {
     const val STEP_REFRESH_MS = 100
     const val DEFAULT_REFRESH_MS = 1000
 
+    /** Pastille en haut à gauche (issue #152) : mode de conduite par défaut, l'affichage d'avant. */
+    const val KEY_PILL = "cluster_pill"
+
+    /**
+     * Durée du glissement de la jauge d'une valeur à la suivante (issue #152), en ms : 0,2 à 2 s
+     * par pas de 0,1 s, à part de l'actualisation. Avant, elle valait 80 % de celle-ci (50 à
+     * 800 ms) : une actualisation rapide imposait une animation sèche. 0,8 s par défaut, ce que
+     * donnait l'actualisation par défaut (1 s). Plus longue que l'actualisation, la jauge lisse :
+     * chaque relevé repart de ce qui est à l'écran.
+     */
+    const val KEY_ANIMATION = "cluster_animation_ms"
+    const val MIN_ANIMATION_MS = 200
+    const val MAX_ANIMATION_MS = 2000
+    const val STEP_ANIMATION_MS = 100
+    const val DEFAULT_ANIMATION_MS = 800
+
     fun isEnabled(ctx: Context?): Boolean =
         ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getBoolean(KEY_ENABLED, false) ?: false
 
@@ -82,6 +99,22 @@ object ClusterModuleSettings {
 
     fun setRefreshMs(ctx: Context, ms: Int) {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_REFRESH, sanitizeRefresh(ms)).apply()
+    }
+
+    /** Relu à chaque relevé, comme le reste. */
+    fun pill(ctx: Context?): ClusterPill =
+        ClusterPill.fromKey(ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_PILL, null))
+
+    fun setPill(ctx: Context, pill: ClusterPill) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_PILL, pill.key).apply()
+    }
+
+    /** Relue à chaque relevé : changer le curseur vaut au relevé suivant. */
+    fun animationMs(ctx: Context?): Int =
+        sanitizeAnimation(ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getInt(KEY_ANIMATION, DEFAULT_ANIMATION_MS))
+
+    fun setAnimationMs(ctx: Context, ms: Int) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_ANIMATION, sanitizeAnimation(ms)).apply()
     }
 
     // ── Sans Android ─────────────────────────────────────────────────────────
@@ -131,4 +164,16 @@ object ClusterModuleSettings {
     fun refreshFromSlider(value: Float): Int = sanitizeRefresh((value * STEP_REFRESH_MS).roundToInt())
 
     fun refreshToSlider(ms: Int): Float = (sanitizeRefresh(ms) / STEP_REFRESH_MS).toFloat()
+
+    /** Comme [sanitizeRefresh], pour la durée de l'animation. */
+    fun sanitizeAnimation(stored: Int?): Int {
+        val ms = stored ?: DEFAULT_ANIMATION_MS
+        val cale = Math.floorDiv(ms + STEP_ANIMATION_MS / 2, STEP_ANIMATION_MS) * STEP_ANIMATION_MS
+        return cale.coerceIn(MIN_ANIMATION_MS, MAX_ANIMATION_MS)
+    }
+
+    /** Le curseur compte en dixièmes de seconde (2 à 20). */
+    fun animationFromSlider(value: Float): Int = sanitizeAnimation((value * STEP_ANIMATION_MS).roundToInt())
+
+    fun animationToSlider(ms: Int): Float = (sanitizeAnimation(ms) / STEP_ANIMATION_MS).toFloat()
 }

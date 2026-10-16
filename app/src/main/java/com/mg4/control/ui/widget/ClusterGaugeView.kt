@@ -25,6 +25,8 @@ import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.SystemClock
+import android.text.TextPaint
+import android.text.TextUtils
 import android.text.format.DateFormat
 import android.view.View
 import android.view.animation.DecelerateInterpolator
@@ -39,6 +41,7 @@ import com.mg4.control.model.DriveMode
 import com.mg4.control.model.GaugeLevel
 import com.mg4.control.model.GaugeState
 import com.mg4.control.model.GaugeUnit
+import com.mg4.control.model.PillContent
 import com.mg4.control.service.OverlayKit
 import java.text.NumberFormat
 import java.util.Date
@@ -58,7 +61,8 @@ import kotlin.math.sin
  *
  * L'anneau et le grand chiffre glissent d'une valeur à la suivante : une jauge qui sauterait de
  * l'une à l'autre se lirait mal du coin de l'œil, et le chiffre compte (100, 101… 300) au lieu de
- * changer d'un coup (demande du 2026-10-15).
+ * changer d'un coup (demande du 2026-10-15). La durée du glissement se règle à part de
+ * l'actualisation (issue #152).
  *
  * Pendant une charge, le module « charge » prend la place de la jauge ([Charge], 2026-10-16,
  * maquette B choisie par l'utilisateur) : en gros le temps restant jusqu'à la cible, dessous le
@@ -90,10 +94,10 @@ class ClusterGaugeView(context: Context) : View(context) {
         val module: ClusterModule,
         val kw: Float?,
         val kmh: Float?,
-        val mode: DriveMode?,
+        /** Pastille en haut à gauche (mode de conduite ou profil, Réglages › Interface) ; `null` = aucune. */
+        val pastille: PillContent?,
         val moyenneWhKm: Float?,
         val recupWh: Float?,
-        val batterie: Float?,
         /** Unité de la consommation (Réglages › Interface) : chiffre, graduations et moyenne du trajet. */
         val unite: ConsumptionUnit = ConsumptionUnit.WH_PER_KM,
         /** Pendant une charge : le module « charge » remplace la jauge. */
@@ -129,11 +133,22 @@ class ClusterGaugeView(context: Context) : View(context) {
     }
     private val plein = Paint(Paint.ANTI_ALIAS_FLAG)
     private val texte = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
+    private val textePastille = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        textAlign = Paint.Align.LEFT
+        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        textSize = 11f
+        letterSpacing = 0.09f
+    }
+    /** Texte de la pastille du mode le plus long (« NORMAL », « CUSTOM ») : la place qu'ont les jauges. */
+    private val largeurPastilleMax = DriveMode.entries.maxOf { textePastille.measureText(it.label.uppercase(Locale.ROOT)) }
     private val moyen = Typeface.create("sans-serif-medium", Typeface.NORMAL)
     private val cadre = RectF()
 
-    /** [intervalleMs] : cadence des relevés — l'anneau doit avoir fini de glisser au suivant. */
-    fun montrer(c: Contenu, intervalleMs: Long) {
+    /**
+     * [animationMs] : durée du glissement vers ces valeurs (Réglages › Interface). Un relevé qui
+     * arrive avant la fin repart de ce qui est à l'écran.
+     */
+    fun montrer(c: Contenu, animationMs: Long) {
         contenu = c
         if (c.charge != null) {
             // Rien à faire glisser : les valeurs de la charge bougent lentement, l'animation est
@@ -155,7 +170,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         val uniteDepart = uniteAffichee
         uniteAffichee = nouveau?.unit
         animation = ValueAnimator.ofFloat(0f, 1f).apply {
-            duration = (intervalleMs * 8 / 10).coerceIn(ANIMATION_MIN_MS, ANIMATION_MAX_MS)
+            duration = animationMs
             interpolator = DecelerateInterpolator()
             addUpdateListener {
                 val t = it.animatedValue as Float
@@ -191,7 +206,7 @@ class ClusterGaugeView(context: Context) : View(context) {
             return
         }
 
-        c.mode?.let { pastille(canvas, it) }
+        c.pastille?.let { pastille(canvas, it) }
 
         if (c.module == ClusterModule.POWER) puissance(canvas, c) else consommation(canvas, c)
         canvas.restore()
@@ -261,29 +276,32 @@ class ClusterGaugeView(context: Context) : View(context) {
 
         val v = valeurAffichee ?: e?.value
         val recup = e != null && v != null && v < 0f
-        val chiffre = if (e == null || v == null) "–" else (if (recup) "−" else "") + ClusterGauge.formatKw(v, locale)
+        // Entier en roulant, une décimale à l'arrêt (issue #152).
+        val chiffre = if (e == null || v == null) "–" else (if (recup) "−" else "") + ClusterGauge.formatPowerKw(v, c.kmh, locale)
         grandChiffre(canvas, chiffre, cx, cy + 12f, if (recup) cAccent else cTexte)
-        // L'unité sous le chiffre (2026-10-15) : seul au centre, le chiffre ne disait pas ce qu'il comptait.
+        // L'unité sous le chiffre (2026-10-15) : seul au centre, le chiffre ne disait pas ce qu'il
+        // comptait. Remontée de 4 px pour laisser la place à la consommation (issue #152).
         if (e != null) {
             texte.typeface = moyen
             texte.textSize = 13f
             texte.letterSpacing = 0.04f
             texte.color = if (recup) cAccent else cTexte2
-            canvas.drawText("kW", cx, cy + 32f, texte)
+            canvas.drawText("kW", cx, cy + 28f, texte)
         }
-        val sous = when {
-            e == null -> ""
-            recup -> context.getString(R.string.cluster_regen_word)
-            else -> c.kw?.let { ClusterGauge.whPerKm(it, c.kmh) }
-                ?.let { "${ClusterGauge.formatConsumption(it, c.unite, locale)} ${c.unite.label}" }
-                ?: context.getString(R.string.cluster_stopped_word)
+        // Consommation instantanée en grand (28, en blanc) et son unité en petit et en gris
+        // (issue #152) ; en récupération et à l'arrêt, le mot qui en tient lieu, en petit.
+        val wh = if (e == null || recup) null else c.kw?.let { ClusterGauge.whPerKm(it, c.kmh) }
+        when {
+            e == null -> Unit
+            wh != null -> valeurEtUnite(canvas, ClusterGauge.formatConsumption(wh, c.unite, locale), c.unite.label,
+                cx, cy + 64f, cTexte, tailleValeur = 28f, tailleUnite = 12f)
+            recup -> petit(canvas, context.getString(R.string.cluster_regen_word), cx, cy + 58f, 13f, cAccent)
+            else -> petit(canvas, context.getString(R.string.cluster_stopped_word), cx, cy + 58f, 13f, cTexte2)
         }
-        petit(canvas, sous, cx, cy + 50f, 13f, cTexte2)
 
-        pied(canvas,
-            context.getString(R.string.cluster_battery),
-            (c.batterie?.let { context.getString(R.string.autobri_percent, it.roundToInt()) } ?: "–") to null, cTexte,
-            context.getString(R.string.cluster_trip_avg), conso(c.moyenneWhKm, c.unite), cTexte)
+        // Le pourcentage de batterie est déjà sur le combiné : seule reste la moyenne du trajet,
+        // centrée, sans filet (issue #152).
+        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), conso(c.moyenneWhKm, c.unite), cTexte)
     }
 
     // ── Module « charge » (maquette B) ──────────────────────────────────────
@@ -491,15 +509,24 @@ class ClusterGaugeView(context: Context) : View(context) {
         }
     }
 
-    /** « 172 Wh/km » centré en [x] : la valeur en 16, l'unité en 11 et en gris. */
-    private fun valeurEtUnite(canvas: Canvas, valeur: String, unite: String?, x: Float, y: Float, couleur: Int) {
+    /** Une seule colonne, centrée : intitulé en petit, valeur dessous. */
+    private fun piedCentre(canvas: Canvas, libelle: String, valeur: Pair<String, String?>, couleur: Int) {
+        petit(canvas, libelle, COTE / 2f, 220f, 11f, cTexte2)
+        valeurEtUnite(canvas, valeur.first, valeur.second, COTE / 2f, 241f, couleur)
+    }
+
+    /** « 172 Wh/km » centré en [x] : la valeur en [tailleValeur], l'unité en [tailleUnite] et en gris. */
+    private fun valeurEtUnite(
+        canvas: Canvas, valeur: String, unite: String?, x: Float, y: Float, couleur: Int,
+        tailleValeur: Float = 16f, tailleUnite: Float = 11f,
+    ) {
         val suite = unite?.let { " $it" }
         texte.letterSpacing = 0f
         texte.typeface = Typeface.DEFAULT
-        texte.textSize = 11f
+        texte.textSize = tailleUnite
         val largeurUnite = suite?.let { texte.measureText(it) } ?: 0f
         texte.typeface = moyen
-        texte.textSize = 16f
+        texte.textSize = tailleValeur
         val largeurValeur = texte.measureText(valeur)
         val debut = x - (largeurValeur + largeurUnite) / 2f
         texte.textAlign = Paint.Align.LEFT
@@ -507,30 +534,30 @@ class ClusterGaugeView(context: Context) : View(context) {
         canvas.drawText(valeur, debut, y, texte)
         if (suite != null) {
             texte.typeface = Typeface.DEFAULT
-            texte.textSize = 11f
+            texte.textSize = tailleUnite
             texte.color = cTexte2
             canvas.drawText(suite, debut + largeurValeur, y, texte)
         }
         texte.textAlign = Paint.Align.CENTER
     }
 
-    /** Pastille du mode de conduite, en haut à gauche : la teinte du mode, sur un fond atténué. */
-    private fun pastille(canvas: Canvas, mode: DriveMode) {
-        val teinte = OverlayKit.pastilleMode(sombre, mode).first
-        val nom = mode.label.uppercase(Locale.ROOT)
-        texte.typeface = moyen
-        texte.textSize = 11f
-        texte.letterSpacing = 0.09f
-        val largeur = texte.measureText(nom) + 30f
+    /**
+     * Pastille en haut à gauche : mode de conduite ou nom du profil, dans la teinte du mode qui
+     * l'accompagne sur un fond atténué — grise sans mode. Jamais plus large que celle du mode le
+     * plus long : les jauges ont été placées pour elle (photo du 2026-10-14), un nom de profil (30
+     * caractères au plus) est coupé d'une ellipse.
+     */
+    private fun pastille(canvas: Canvas, p: PillContent) {
+        val teinte = p.mode?.let { OverlayKit.pastilleMode(sombre, it).first } ?: cTexte2
+        val nom = TextUtils.ellipsize(p.text, textePastille, largeurPastilleMax, TextUtils.TruncateAt.END).toString()
+        val largeur = textePastille.measureText(nom) + 30f
         plein.color = Color.argb(64, Color.red(teinte), Color.green(teinte), Color.blue(teinte))
         cadre.set(14f, 14f, 14f + largeur, 36f)
         canvas.drawRoundRect(cadre, 11f, 11f, plein)
         plein.color = teinte
         canvas.drawCircle(26f, 25f, 3.5f, plein)
-        texte.color = teinte
-        texte.textAlign = Paint.Align.LEFT
-        canvas.drawText(nom, 35f, 29.5f, texte)
-        texte.textAlign = Paint.Align.CENTER
+        textePastille.color = teinte
+        canvas.drawText(nom, 35f, 29.5f, textePastille)
     }
 
     /** Moyenne du trajet dans l'unité choisie, ou un tiret tant qu'elle n'a pas de sens. */
@@ -553,9 +580,6 @@ class ClusterGaugeView(context: Context) : View(context) {
         const val RAYON_A = 80f
         const val RAYON_B = 88f
         const val EPAISSEUR = 13f
-        /** Glissement de l'anneau : 80 % de l'intervalle des relevés, dans ces bornes. */
-        const val ANIMATION_MIN_MS = 50L
-        const val ANIMATION_MAX_MS = 800L
         /** Module « charge » : une image toutes les 50 ms ; éclair et reflet sur ces périodes. */
         const val IMAGE_CHARGE_MS = 50L
         const val PULSATION_MS = 1_400L

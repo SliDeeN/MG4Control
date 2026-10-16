@@ -52,6 +52,26 @@ enum class ConsumptionUnit(val key: String, val label: String) {
 }
 
 /**
+ * Pastille en haut à gauche du combiné (Réglages › Interface, issue #152, 2026-10-16) : le mode de
+ * conduite (l'affichage d'avant, par défaut), le profil MG4Control actif, ou rien.
+ */
+enum class ClusterPill(val key: String) {
+    DRIVE_MODE("mode"),
+    PROFILE("profile"),
+    NONE("none");
+
+    companion object {
+        fun fromKey(key: String?): ClusterPill = entries.firstOrNull { it.key == key } ?: DRIVE_MODE
+    }
+}
+
+/**
+ * Ce que montre la pastille : son texte, et le mode de conduite qui lui donne sa couleur — `null`
+ * pour une pastille neutre (grise).
+ */
+data class PillContent(val text: String, val mode: DriveMode?)
+
+/**
  * Couleur d'une jauge : orange pour la consommation, bleu pour la récupération. Plus de vert ni de
  * rouge selon la valeur (demande du 2026-10-14) — le chiffre dit déjà combien.
  */
@@ -171,6 +191,28 @@ object ClusterGauge {
         val v = abs(kw)
         return if (v < 9.95f) String.format(locale, "%.1f", v) else String.format(locale, "%d", Math.round(v))
     }
+
+    /**
+     * Grand chiffre du module B (issue #152) : des kW entiers en roulant — la décimale sautait d'un
+     * relevé à l'autre sous 10 kW — et, sous [STOP_KMH] ou vitesse illisible, la décimale de
+     * [formatKw], qui a du sens pour la clim à l'arrêt.
+     */
+    fun formatPowerKw(kw: Float, kmh: Float?, locale: Locale): String =
+        if (kmh != null && kmh >= STOP_KMH) String.format(locale, "%d", Math.round(abs(kw))) else formatKw(kw, locale)
+
+    /**
+     * Contenu de la pastille selon [choix]. Mode de conduite : celui lu sur la voiture ([mode]).
+     * Profil : son nom, dans la couleur du mode de conduite DU PROFIL (« PAUL » en Normal → bleu,
+     * demande du 2026-10-16) ; un profil qui ne règle pas la conduite prend celle de la voiture.
+     * `null` : rien à montrer (aucun choix, mode illisible, aucun profil actif).
+     */
+    fun pill(choix: ClusterPill, mode: DriveMode?, profilNom: String?, profilMode: DriveMode?, locale: Locale): PillContent? =
+        when (choix) {
+            ClusterPill.NONE -> null
+            ClusterPill.DRIVE_MODE -> mode?.let { PillContent(it.label.uppercase(Locale.ROOT), it) }
+            ClusterPill.PROFILE -> profilNom?.trim()?.takeIf { it.isNotEmpty() }
+                ?.let { PillContent(it.uppercase(locale), profilMode ?: mode) }
+        }
 
     /**
      * Consommation [whPerKm] écrite dans [unit] : Wh/km entiers, ou kWh/100 km avec une décimale
