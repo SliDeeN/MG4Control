@@ -271,10 +271,10 @@ class ClusterGaugeTest {
         assertNull(ClusterGauge.pill(ClusterPill.PROFILE, DriveMode.ECO, "  ", null, Locale.FRANCE))
     }
 
-    @Test fun `pastille aucune, et le choix par defaut est le mode`() {
+    @Test fun `pastille aucune, et le choix par defaut est le profil`() {
         assertNull(ClusterGauge.pill(ClusterPill.NONE, DriveMode.NORMAL, "Paul", DriveMode.NORMAL, Locale.FRANCE))
-        assertEquals(ClusterPill.DRIVE_MODE, ClusterPill.fromKey(null))
-        assertEquals(ClusterPill.PROFILE, ClusterPill.fromKey("profile"))
-        assertEquals(ClusterPill.DRIVE_MODE, ClusterPill.fromKey("inconnu"))
+        assertEquals(ClusterPill.PROFILE, ClusterPill.fromKey(null))
+        assertEquals(ClusterPill.DRIVE_MODE, ClusterPill.fromKey("mode"))
+        assertEquals(ClusterPill.PROFILE, ClusterPill.fromKey("inconnu"))
     }
 }

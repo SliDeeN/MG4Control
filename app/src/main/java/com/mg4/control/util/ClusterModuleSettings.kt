@@ -50,7 +50,7 @@ object ClusterModuleSettings {
     const val STEP_REFRESH_MS = 100
     const val DEFAULT_REFRESH_MS = 1000
 
-    /** Pastille en haut à gauche (issue #152) : mode de conduite par défaut, l'affichage d'avant. */
+    /** Pastille en haut à gauche (issue #152) : profil actif par défaut. */
     const val KEY_PILL = "cluster_pill"
 
     /**

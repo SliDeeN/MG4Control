@@ -53,7 +53,8 @@ enum class ConsumptionUnit(val key: String, val label: String) {
 
 /**
  * Pastille en haut à gauche du combiné (Réglages › Interface, issue #152, 2026-10-16) : le mode de
- * conduite (l'affichage d'avant, par défaut), le profil MG4Control actif, ou rien.
+ * conduite (l'affichage d'avant), le profil MG4Control actif — par défaut, choix de l'utilisateur —,
+ * ou rien. Le combiné affiche déjà le mode de conduite.
  */
 enum class ClusterPill(val key: String) {
     DRIVE_MODE("mode"),
@@ -61,7 +62,7 @@ enum class ClusterPill(val key: String) {
     NONE("none");
 
     companion object {
-        fun fromKey(key: String?): ClusterPill = entries.firstOrNull { it.key == key } ?: DRIVE_MODE
+        fun fromKey(key: String?): ClusterPill = entries.firstOrNull { it.key == key } ?: PROFILE
     }
 }
 
