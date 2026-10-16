@@ -80,9 +80,9 @@ object EnergyReader {
 
         val volts = float(PROP_PACK_VOLTAGE)
         val amperes = float(PROP_PACK_CURRENT)
-        val charging = int(PROP_CHARGE_STATUS)?.let { it == 1 }
+        val charging = ChargeDisplay.enCharge(int(PROP_CHARGE_STATUS))
         // Les statistiques relèvent la voiture même sans module combiné : la sonde y voit aussi le
-        // type de borne (le continu n'a jamais été relevé).
+        // type de borne.
         ChargeProbe.observer(chargeRaw(), if (volts != null && amperes != null) -volts * amperes / 1000f else null)
 
         return EnergySnapshot(
@@ -130,8 +130,8 @@ object EnergyReader {
         dcInvalide = int(PROP_PLUG_DC_INVALID),
     )
 
-    /** La voiture charge-t-elle (`BMS_CHRG_STS` = 1) ? `null` si illisible. Une seule lecture. */
-    fun charging(): Boolean? = int(PROP_CHARGE_STATUS)?.let { it == 1 }
+    /** La voiture charge-t-elle ([ChargeDisplay.enCharge]) ? `null` si illisible. Une seule lecture. */
+    fun charging(): Boolean? = ChargeDisplay.enCharge(int(PROP_CHARGE_STATUS))
 
     /**
      * Pourcentage de batterie seul, pour l'automatisation qui le surveille en roulant : une
@@ -170,10 +170,7 @@ object EnergyReader {
         return kwh.takeIf { it in StatsSettings.MIN_CAPACITY_KWH..StatsSettings.MAX_CAPACITY_KWH }
     }
 
-    /**
-     * Type de prise : celle qui vaut 2 (relevé sur charge alternative). Plus un simple non-zéro —
-     * trappe ouverte sans charge, SWI133 a donné alternatif = 4 et continu = 1 (2026-10-16).
-     */
+    /** Type de prise : voir [ChargeDisplay.type] (alternatif 2 / continu 0 en AC, 4 / 1 en DC). */
     private fun chargeType(): ChargeType? = ChargeDisplay.type(int(PROP_PLUG_AC), int(PROP_PLUG_DC))
 
     /** Compteur d'énergie : négatif impossible, sentinelle exclue. */

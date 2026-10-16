@@ -7,9 +7,9 @@ import com.mg4.control.model.ChargeDisplay
 /**
  * Sonde de la charge (2026-10-16) : de quoi vérifier sur la voiture ce que le module « charge » du
  * combiné suppose.
- *  - le TYPE de borne : le continu (`CCU_OFFBD`) n'a jamais été relevé en charge — doute de
- *    l'utilisateur ; trappe ouverte sans charge, alternatif = 4 et continu = 1 (2026-10-16), d'où
- *    la trappe et la validité du continu relevées avec ;
+ *  - le TYPE de borne : doute de l'utilisateur sur le continu. Levé le 2026-10-16 sur borne
+ *    rapide : état 10 (et non 1), alternatif = 4, continu = 1 ; la trappe et la validité du continu
+ *    restent relevées avec ;
  *  - l'unité du temps restant (minutes ?) et le codage de la cible (1..7 → 40..100 % ?).
  *
  * Peu bavarde à dessein : une ligne quand un signal d'état change (statut, prise, alternatif,
@@ -33,7 +33,7 @@ object ChargeProbe {
             avant.ac != r.ac || avant.dc != r.dc || avant.cible != r.cible ||
             avant.trappe != r.trappe || avant.dcInvalide != r.dcInvalide
         val maintenant = SystemClock.elapsedRealtime()
-        val enCharge = r.statut == 1
+        val enCharge = ChargeDisplay.enCharge(r.statut) == true
         if (etatChange) {
             AppLogger.i(TAG, "état : statut=${r.statut} prise=${r.prise} alternatif(CCU_ONBD)=${r.ac} " +
                 "continu(CCU_OFFBD)=${r.dc} (V=${r.dcInvalide}) trappe=${r.trappe} → type ${ChargeDisplay.type(r.ac, r.dc)?.name ?: "aucun"} ; " +

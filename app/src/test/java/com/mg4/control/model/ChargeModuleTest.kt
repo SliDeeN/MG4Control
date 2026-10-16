@@ -40,11 +40,21 @@ class ChargeModuleTest {
     }
 
     @Test
-    fun `trappe ouverte sans charge n est pas du continu`() {
-        // Diagnostic SWI133 du 2026-10-16 : statut 5, alternatif 4, continu 1, aucun courant.
-        assertNull(ChargeDisplay.type(ac = 4, dc = 1))
-        // …mais la jauge ne revient pas tant que la prise ou la trappe est signalée.
+    fun `borne rapide releve sur SWI133`() {
+        // Diagnostics du 2026-10-16 : alternatif 4 et continu 1, avant (état 5) comme pendant la
+        // charge (état 10, 108 kW). L'alternatif n'est pas à zéro : le continu doit passer devant.
+        assertEquals(ChargeType.DC, ChargeDisplay.type(ac = 4, dc = 1))
         assertTrue(ChargeDisplay.priseSignalee(4, 1))
+    }
+
+    @Test
+    fun `les etats en charge sont ceux de SAIC`() {
+        assertEquals(true, ChargeDisplay.enCharge(1))    // alternatif, 2026-09-19
+        assertEquals(true, ChargeDisplay.enCharge(10))   // continu, 2026-10-16
+        for (e in listOf(2, 3, 11, 12)) assertEquals(true, ChargeDisplay.enCharge(e))
+        assertEquals(false, ChargeDisplay.enCharge(0))
+        assertEquals(false, ChargeDisplay.enCharge(5))   // branché sur borne rapide, pas encore lancée
+        assertNull(ChargeDisplay.enCharge(null))
     }
 
     @Test

@@ -23,27 +23,32 @@ object ChargeDisplay {
     /** Temps restant en minutes, ou `null` : sentinelle, valeur négative ou illisible. */
     fun minutesRestantes(brut: Int?): Int? = brut?.takeIf { it in 0 until SENTINELLE }
 
-    /** Valeur des signaux de prise pendant une charge (alternatif relevé le 2026-09-19). */
-    const val PRISE_EN_CHARGE = 2
+    /**
+     * États de `BMS_CHRG_STS` que SAIC compte comme « en charge » (`EnergyManager.isCharging` de
+     * SaicAdapterService, identique sur SWI133 et A9). Relevés SWI133 : 1 en alternatif
+     * (2026-09-19), **10 en continu** (2026-10-16, 108 kW) ; 5 = branché sur une borne rapide, charge
+     * pas encore lancée.
+     */
+    private val ETATS_EN_CHARGE = setOf(1, 2, 3, 10, 11, 12)
+
+    /** La voiture charge-t-elle ? `null` si l'état est illisible. */
+    fun enCharge(statut: Int?): Boolean? = statut?.let { it in ETATS_EN_CHARGE }
 
     /**
      * Type de borne d'après les deux signaux de prise (`CCU_ONBD` alternatif, `CCU_OFFBD` continu) :
-     * la prise qui charge vaut [PRISE_EN_CHARGE]. Pas un simple non-zéro : trappe ouverte sans
-     * charge, SWI133 a donné alternatif = 4 et continu = 1 (2026-10-16), d'où un faux « DC ». Le
-     * continu d'abord. `null` si aucun ne le dit.
+     * la prise branchée n'est plus à zéro. Relevés SWI133 : charge alternative → alternatif 2,
+     * continu 0 (2026-09-19) ; borne rapide, avant comme pendant la charge → alternatif 4, continu 1
+     * (2026-10-16). Le continu d'abord, puisque l'alternatif n'est pas à zéro sur une borne rapide.
+     * `null` si aucun ne le dit.
      */
     fun type(ac: Int?, dc: Int?): ChargeType? = when {
-        dc == PRISE_EN_CHARGE -> ChargeType.DC
-        ac == PRISE_EN_CHARGE -> ChargeType.AC
+        dc != null && dc != 0 && dc != SENTINELLE -> ChargeType.DC
+        ac != null && ac != 0 && ac != SENTINELLE -> ChargeType.AC
         else -> null
     }
 
-    /**
-     * Quelque chose est-il encore signalé côté prise (charge finie, câble ou trappe encore là) ?
-     * Toute valeur hors zéro et hors sentinelle : la jauge ne revient qu'une fois tout à zéro.
-     */
-    fun priseSignalee(ac: Int?, dc: Int?): Boolean =
-        listOf(ac, dc).any { it != null && it != 0 && it != SENTINELLE }
+    /** Une prise est-elle encore signalée (charge terminée mais câble toujours branché) ? */
+    fun priseSignalee(ac: Int?, dc: Int?): Boolean = type(ac, dc) != null
 
     /** Durée en minutes → (heures, minutes). */
     fun heuresMinutes(minutes: Int): Pair<Int, Int> = (minutes.coerceAtLeast(0) / 60) to (minutes.coerceAtLeast(0) % 60)
