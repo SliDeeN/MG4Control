@@ -75,7 +75,11 @@ enum class ShortcutAction(val id: Int) {
 
     // Cycle de sources audio (2026-10-15) : passe à la source suivante d'une séquence composée par
     // l'utilisateur (voir AudioSourceCycle). 43 est retiré, ne pas le réattribuer.
-    AUDIO_SOURCE_CYCLE(44);
+    AUDIO_SOURCE_CYCLE(44),
+
+    // Pop-up de charge (2026-10-16) : le rouvre s'il a été fermé pendant une charge, ou le referme.
+    // Comme HVAC_POPUP, l'action n'écrit rien elle-même. Proposé seulement si l'option est active.
+    CHARGE_POPUP(45);
 
     companion object {
         /**

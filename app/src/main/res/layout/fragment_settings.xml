@@ -624,6 +624,80 @@
 
             </LinearLayout>
 
+            <!-- ── Section POP-UP DE CHARGE (2026-10-16) ─────────────────────────
+                 Cachee tant que l'utilisateur ne l'a pas fait apparaitre (5 appuis sur le logo) ;
+                 desactivee par defaut. Une fois apparue, elle reste visible. -->
+            <LinearLayout
+                android:id="@+id/card_charge_popup"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card_rounded"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_charge_popup"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    android:textAllCaps="true"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="7dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/settings_charge_popup_switch"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <Switch
+                            android:scaleX="1.3"
+                            android:scaleY="1.3"
+                            android:layout_marginHorizontal="8dp"
+                            android:id="@+id/switch_charge_popup"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="false" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/settings_charge_popup_desc"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
             <!-- ── Section ECRAN CONDUCTEUR : module sur le combine ──────────────
                  Desactive par defaut ; activer deplie le choix du module. La ligne d'etat dit
                  d'avance si l'ecran du combine a ete trouve. Masquee hors SWI133, SWI68 et

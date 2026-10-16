@@ -809,4 +809,45 @@
     <string name="cluster_charge_duration">Süre</string>
     <string name="cluster_duration_hm">%1$d sa %2$02d dk</string>
     <string name="cluster_duration_min">%1$d dk</string>
+    <!-- Pop-up de charge (2026-10-16) -->
+    <string name="charge_popup_title">Şarj ediliyor</string>
+    <string name="charge_popup_title_done">Şarj tamamlandı</string>
+    <string name="charge_popup_type_ac">AC şarj</string>
+    <string name="charge_popup_type_dc">DC hızlı şarj</string>
+    <string name="charge_popup_type_unknown">Şarj</string>
+    <string name="charge_popup_battery">Batarya</string>
+    <string name="charge_popup_hint">Şarj sınırını değiştirmek için kaydırıcıyı sürükleyin</string>
+    <string name="charge_popup_hint_release">Şarj sınırını %%%1$d olarak ayarlamak için bırakın</string>
+    <string name="charge_popup_hint_below">%%%1$d: mevcut seviyenin altında, şarj duracak</string>
+    <string name="charge_popup_hint_sending">%%%1$d sınırı araca gönderiliyor…</string>
+    <string name="charge_popup_hint_refused">Araç %%%1$d sınırını kabul etmedi</string>
+    <string name="charge_popup_hint_unknown">Şarj sınırı okunamıyor</string>
+    <string name="charge_popup_until">%1$s · hedef %%%2$d</string>
+    <string name="charge_popup_until_unknown">Hedef %%%1$d</string>
+    <string name="charge_popup_end_at">bitiş yaklaşık %1$s</string>
+    <string name="charge_popup_done_at">%1$s itibarıyla tamamlandı</string>
+    <string name="charge_popup_legend_power">Güç (kW)</string>
+    <string name="charge_popup_legend_battery" formatted="false">Batarya (%)</string>
+    <string name="charge_popup_since">şarjın başından beri (%1$s)</string>
+    <string name="charge_popup_since_plain">şarjın başından beri</string>
+    <string name="charge_popup_target">hedef %%%1$d</string>
+    <string name="charge_popup_end_estimate">tahmini bitiş %1$s</string>
+    <string name="charge_popup_power">Güç</string>
+    <string name="charge_popup_power_max">maks. %1$s kW</string>
+    <string name="charge_popup_energy">Eklenen enerji</string>
+    <string name="charge_popup_range">Kazanılan menzil</string>
+    <string name="charge_popup_cost">Tahmini maliyet</string>
+    <string name="charge_popup_tariff_default">%1$s %2$s/kWh · %3$s tarifesi</string>
+    <string name="charge_popup_tariff_fixed">%1$s %2$s/kWh · düzeltildi</string>
+    <string name="charge_popup_duration">Süre</string>
+    <string name="charge_popup_since_time">%1$s itibarıyla</string>
+    <string name="charge_popup_price_title">kWh fiyatı</string>
+    <string name="charge_popup_price_note">Yalnızca bu şarjı değiştirir.</string>
+    <string name="charge_popup_price_ok">Onayla</string>
+    <string name="charge_popup_none">Devam eden şarj yok</string>
+    <string name="charge_popup_unlocked">«Şarj açılır penceresi» seçeneği Ayarlar › Arayüz bölümünde gösteriliyor</string>
+    <string name="settings_charge_popup">Şarj açılır penceresi</string>
+    <string name="settings_charge_popup_switch">Şarj sırasında pencereyi göster</string>
+    <string name="settings_charge_popup_desc">Her şarj başladığında açılır: başlangıçtan itibaren eğri, ayarlanabilir şarj sınırı, maliyet. İstendiğinde veya READY durumuna geçildiğinde kapanır; «Şarj açılır penceresi» kısayolu yeniden açar.</string>
+    <string name="shortcuts_action_charge_popup">Şarj açılır penceresi</string>
 </resources>

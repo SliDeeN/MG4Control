@@ -826,4 +826,45 @@
     <string name="cluster_charge_duration">Durée</string>
     <string name="cluster_duration_hm">%1$d h %2$02d</string>
     <string name="cluster_duration_min">%1$d min</string>
+    <!-- Pop-up de charge (2026-10-16) -->
+    <string name="charge_popup_title">Charge en cours</string>
+    <string name="charge_popup_title_done">Charge terminée</string>
+    <string name="charge_popup_type_ac">Charge AC</string>
+    <string name="charge_popup_type_dc">Charge rapide DC</string>
+    <string name="charge_popup_type_unknown">Charge</string>
+    <string name="charge_popup_battery">Batterie</string>
+    <string name="charge_popup_hint">Glissez le curseur pour changer la limite de charge</string>
+    <string name="charge_popup_hint_release">Relâchez pour régler la limite de charge à %1$d %%</string>
+    <string name="charge_popup_hint_below">%1$d %% : sous le niveau actuel, la charge s\'arrêtera</string>
+    <string name="charge_popup_hint_sending">Envoi de la limite de %1$d %% à la voiture…</string>
+    <string name="charge_popup_hint_refused">La voiture n\'a pas pris la limite de %1$d %%</string>
+    <string name="charge_popup_hint_unknown">Limite de charge illisible</string>
+    <string name="charge_popup_until">%1$s jusqu\'à %2$d %%</string>
+    <string name="charge_popup_until_unknown">Jusqu\'à %1$d %%</string>
+    <string name="charge_popup_end_at">fin vers %1$s</string>
+    <string name="charge_popup_done_at">terminée à %1$s</string>
+    <string name="charge_popup_legend_power">Puissance (kW)</string>
+    <string name="charge_popup_legend_battery" formatted="false">Batterie (%)</string>
+    <string name="charge_popup_since">depuis le début de la charge (%1$s)</string>
+    <string name="charge_popup_since_plain">depuis le début de la charge</string>
+    <string name="charge_popup_target">cible %1$d %%</string>
+    <string name="charge_popup_end_estimate">fin estimée %1$s</string>
+    <string name="charge_popup_power">Puissance</string>
+    <string name="charge_popup_power_max">max %1$s kW</string>
+    <string name="charge_popup_energy">Énergie ajoutée</string>
+    <string name="charge_popup_range">Autonomie gagnée</string>
+    <string name="charge_popup_cost">Coût estimé</string>
+    <string name="charge_popup_tariff_default">%1$s %2$s/kWh · tarif %3$s</string>
+    <string name="charge_popup_tariff_fixed">%1$s %2$s/kWh · corrigé</string>
+    <string name="charge_popup_duration">Durée</string>
+    <string name="charge_popup_since_time">depuis %1$s</string>
+    <string name="charge_popup_price_title">Prix du kWh</string>
+    <string name="charge_popup_price_note">Ne change que cette charge.</string>
+    <string name="charge_popup_price_ok">Valider</string>
+    <string name="charge_popup_none">Aucune charge en cours</string>
+    <string name="charge_popup_unlocked">Option « Pop-up de charge » affichée dans Réglages › Interface</string>
+    <string name="settings_charge_popup">Pop-up de charge</string>
+    <string name="settings_charge_popup_switch">Afficher le pop-up pendant la charge</string>
+    <string name="settings_charge_popup_desc">S\'ouvre à chaque début de charge : courbe depuis le début, limite de charge réglable, coût. Se ferme à la demande ou au passage en READY ; le raccourci « Pop-up de charge » le rouvre.</string>
+    <string name="shortcuts_action_charge_popup">Pop-up de charge</string>
 </resources>

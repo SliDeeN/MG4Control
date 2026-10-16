@@ -221,6 +221,8 @@ class MG4ControlService : Service() {
         com.mg4.control.automation.BatteryHeatingAutomation.start(applicationContext)
         // Module sur le combiné : rien tant que l'interrupteur des Réglages est coupé.
         ClusterModuleOverlay.refresh(applicationContext, "démarrage du service")
+        // Pop-up de charge : suit la charge si l'option (cachée par défaut) est active.
+        ChargeMonitor.refresh(applicationContext)
         // Vérification de mise à jour, cinq secondes après le démarrage automatique.
         //
         // Pourquoi attendre du tout : à t=0 la liaison données de la voiture n'est pas encore
@@ -1059,6 +1061,12 @@ class MG4ControlService : Service() {
         // HVAC_POPUP : même famille — un second appui referme la fenêtre.
         if (action == ShortcutAction.HVAC_POPUP) {
             HvacPopupOverlay.toggle(this@MG4ControlService)
+            return
+        }
+
+        // CHARGE_POPUP : même famille — rouvre le pop-up de charge, ou le referme.
+        if (action == ShortcutAction.CHARGE_POPUP) {
+            ChargePopupOverlay.toggle(this@MG4ControlService)
             return
         }
 

@@ -2,6 +2,7 @@ package com.mg4.control.hardware
 
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.ChargeDisplay
+import com.mg4.control.model.ChargeLimit
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.EnergySnapshot
 import com.mg4.control.model.PowerIntegrator
@@ -62,6 +63,8 @@ object EnergyReader {
     /** Valeur rendue par les mesures batterie non publiées (relevé du 2026-09-19). */
     private const val SENTINEL_MEASURE = 82.3f
     private const val SENTINEL_HALF = 511.5f
+    /** Journal de la charge : celui de la sonde [ChargeProbe] et du pop-up de charge. */
+    private const val CHARGE_TAG = "MG4_CHARGE"
 
     @Volatile
     private var warnedNoCpm = false
@@ -132,6 +135,48 @@ object EnergyReader {
 
     /** La voiture charge-t-elle ([ChargeDisplay.enCharge]) ? `null` si illisible. Une seule lecture. */
     fun charging(): Boolean? = ChargeDisplay.enCharge(int(PROP_CHARGE_STATUS))
+
+    /** Autonomie annoncée par la batterie, en km ; `null` hors de 1..1500. Une seule lecture. */
+    fun rangeKm(): Int? = int(PROP_RANGE)?.takeIf { it in 1..1500 }
+
+    /**
+     * Limite de charge ([ChargeLimit], pop-up de charge, 2026-10-16). Voie d'origine sur SWI133
+     * comme sur A9 : `CarBMSManager.setGlobalProperty(Integer, 0x2140f40c, code)` (service SAIC
+     * `VehicleChargingBinder`, appli `EvCharge` des A9). Repli : la même propriété par le
+     * CarPropertyManager, zone globale puis zone 0. Passe par [VehicleWriteGate] comme toute
+     * écriture. Vrai si une voie a accepté — la voiture, elle, peut encore refuser : relire.
+     */
+    fun setChargeLimitPercent(pct: Int): Boolean {
+        val code = ChargeLimit.code(pct)
+        if (!VehicleWriteGate.allow("limite de charge $pct %")) return false
+        val bms = MG4Hardware.car()?.let { car ->
+            runCatching { car.javaClass.getMethod("getCarManager", String::class.java).invoke(car, "bms") }.getOrNull()
+        }
+        if (bms != null) {
+            val ok = runCatching {
+                bms.javaClass.getMethod("setGlobalProperty", Class::class.java, Int::class.javaPrimitiveType, Any::class.java)
+                    .invoke(bms, Integer::class.java, PROP_CHARGE_TARGET, code)
+            }
+            if (ok.isSuccess) {
+                AppLogger.i(CHARGE_TAG, "limite de charge → $pct % (code $code) par le gestionnaire bms")
+                return true
+            }
+            AppLogger.w(CHARGE_TAG, "limite de charge par le gestionnaire bms : ${ok.exceptionOrNull()?.let { (it.cause ?: it).javaClass.simpleName + " " + (it.cause ?: it).message }}")
+        }
+        val cpm = MG4Hardware.carPropertyManager() ?: return false
+        for (zone in intArrayOf(AREA_GLOBAL, 0)) {
+            val ok = runCatching {
+                cpm.javaClass.getMethod("setIntProperty", Int::class.java, Int::class.java, Int::class.java)
+                    .invoke(cpm, PROP_CHARGE_TARGET, zone, code)
+            }
+            if (ok.isSuccess) {
+                AppLogger.i(CHARGE_TAG, "limite de charge → $pct % (code $code) par le CPM, zone 0x${Integer.toHexString(zone)}")
+                return true
+            }
+        }
+        AppLogger.w(CHARGE_TAG, "limite de charge $pct % : aucune voie n'a accepté l'écriture")
+        return false
+    }
 
     /**
      * Pourcentage de batterie seul, pour l'automatisation qui le surveille en roulant : une

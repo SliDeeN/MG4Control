@@ -50,11 +50,13 @@ import com.mg4.control.service.OverlayKit
 import com.mg4.control.util.GarageMode
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.PopupDelay
+import com.mg4.control.util.ChargePopupSettings
 import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ConsumptionUnit
+import com.mg4.control.service.ChargeMonitor
 import com.mg4.control.service.ClusterModuleOverlay
 import com.mg4.control.util.TextSize
 import kotlinx.coroutines.CoroutineScope
@@ -235,6 +237,19 @@ class SettingsFragment : Fragment() {
                     AppLogger.i("MG4_SETTINGS", "Délai de fermeture des pop-ups → ${PopupDelay.fromSlider(slider.value)} s")
                 }
             })
+        }
+
+        // ── Pop-up de charge (2026-10-16) : caché tant que 5 appuis sur le logo ne l'ont pas fait
+        // apparaître (MainActivity), désactivé par défaut. Le suivi démarre ou s'arrête aussitôt.
+        view.findViewById<View>(R.id.card_charge_popup).visibility =
+            if (ChargePopupSettings.isUnlocked(requireContext())) View.VISIBLE else View.GONE
+        view.findViewById<Switch>(R.id.switch_charge_popup).apply {
+            isChecked = ChargePopupSettings.isEnabled(requireContext())
+            setOnCheckedChangeListener { _, checked ->
+                ChargePopupSettings.setEnabled(requireContext(), checked)
+                AppLogger.i(ChargeMonitor.TAG, "Pop-up de charge ${if (checked) "activé" else "désactivé"}")
+                ChargeMonitor.refresh(requireContext())
+            }
         }
 
         // ── Module sur le combiné : interrupteur et un module par onglet ──────

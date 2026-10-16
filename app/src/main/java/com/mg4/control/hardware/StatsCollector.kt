@@ -11,6 +11,7 @@ import com.mg4.control.model.LastReading
 import com.mg4.control.model.PowerIntegrator
 import com.mg4.control.model.StatsTracker
 import com.mg4.control.model.Trip
+import com.mg4.control.service.ChargeMonitor
 import com.mg4.control.stats.StatsStore
 import com.mg4.control.util.FirmwareInfo
 
@@ -233,8 +234,9 @@ object StatsCollector {
         }
         // Le suivi garde la capacité de son démarrage : celle du moment fait foi, au cas où la
         // batterie aurait été corrigée pendant la charge.
+        // Le prix du kWh corrigé dans le pop-up de charge vaut pour CETTE charge : il suit la session.
         is StatsTracker.Event.ChargeEnded ->
-            s.addCharge(event.session.withCapacity(s.settings().effectiveCapacityKwh))
+            s.addCharge(ChargeMonitor.avecTarif(event.session.withCapacity(s.settings().effectiveCapacityKwh)))
     }
 
     /**
