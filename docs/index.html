@@ -35,9 +35,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/site.css?v=0cf565ab">
+  <link rel="stylesheet" href="assets/css/site.css?v=1d26e151">
   <link rel="stylesheet" href="assets/css/sim.css?v=58126668">
-  <link rel="stylesheet" href="assets/css/explorer.css?v=cd546543">
+  <link rel="stylesheet" href="assets/css/explorer.css?v=f9d0452c">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
        langue a sa page, et seul un choix EXPLICITE y renvoie — ancien lien ?lang= (prioritaire,
@@ -138,12 +138,11 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span>
-        <b><span data-l="fr">8 nouveautés dans cette version</span></b>
+        <b><span data-l="fr">7 nouveautés dans cette version</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span></button>
       </div>
       <div class="wn-list">
-        <a href="#f-cluster" data-feature="f-cluster"><span data-l="fr">🖥️ Un module sur l'écran conducteur</span></a>
-        <a href="#f-cluster-modules" data-feature="f-cluster-modules"><span data-l="fr">📈 Consommation ou puissance, par onglet</span></a>
+        <a href="#apercu-module" data-feature="f-cluster" data-scroll="apercu-module"><span data-l="fr">🖥️ Écran conducteur : consommation ou puissance</span></a>
         <a href="#f-audiocycle" data-feature="f-audiocycle"><span data-l="fr">🎵 Cycle de sources audio</span></a>
         <a href="#f-profiles10" data-feature="f-profiles10"><span data-l="fr">👥 Jusqu'à 10 profils</span></a>
         <a href="#f-profileorder" data-feature="f-profileorder"><span data-l="fr">↕️ Ordre des profils au doigt</span></a>
@@ -881,7 +880,7 @@
       </details>
     </div>
   </div>
-  <div class="widget">
+  <div class="widget is-new" id="apercu-module">
     <h3><span data-l="fr">Aperçu du module</span></h3>
     <p class="sub" data-l="fr">Le module tel qu'il s'affiche dans le carré central du combiné, avec l'unité et l'actualisation réglées dans la maquette. La conduite est simulée : choisissez le module, accélérez, freinez.</p>
     <div class="cl" data-cluster></div>
@@ -1275,10 +1274,11 @@
 </footer>
 
 <div class="dock" aria-label="Véhicule virtuel"></div>
+<button type="button" class="to-top" aria-label="Revenir en haut de la page" title="Revenir en haut de la page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
 <script src="assets/js/strings.js?v=ce7bbf76"></script>
 <script src="assets/js/sim.js?v=7e1009b1"></script>
-<script src="assets/js/site.js?v=1db09f2f"></script>
-<script src="assets/js/explorer.js?v=ffc271c4"></script>
+<script src="assets/js/site.js?v=eae0ab3a"></script>
+<script src="assets/js/explorer.js?v=cfdef38a"></script>
 </body>
 </html>

@@ -182,6 +182,20 @@
     document.querySelectorAll('[data-api-console]').forEach((el) => Sim.mountApi(el));
     document.querySelectorAll('[data-cluster]').forEach((el) => Sim.mountCluster(el));
 
+    // Revenir en haut : visible une fois l'accueil dépassé ; défilement doux, sauf si le système
+    // demande moins d'animations.
+    const toTop = document.querySelector('.to-top');
+    if (toTop) {
+      const sync = () => toTop.classList.toggle('on', window.scrollY > window.innerHeight * 0.8);
+      window.addEventListener('scroll', sync, { passive: true });
+      window.addEventListener('resize', sync);
+      sync();
+      toTop.addEventListener('click', () => {
+        const calme = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        window.scrollTo({ top: 0, behavior: calme ? 'auto' : 'smooth' });
+      });
+    }
+
     // Sélecteur de firmware (hero)
     document.querySelectorAll('.fw-pick').forEach((box) => box.addEventListener('click', (e) => {
       const b = e.target.closest('[data-fw]'); if (b) Sim.setFirmware(b.getAttribute('data-fw'));

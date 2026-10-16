@@ -131,12 +131,11 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.6.9</span>
-        <b><span data-l="fr">8 nouveautés dans cette version</span><span data-l="en">8 new things in this release</span></b>
+        <b><span data-l="fr">7 nouveautés dans cette version</span><span data-l="en">7 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
-        <a href="#f-cluster" data-feature="f-cluster"><span data-l="fr">🖥️ Un module sur l'écran conducteur</span><span data-l="en">🖥️ A module on the driver display</span></a>
-        <a href="#f-cluster-modules" data-feature="f-cluster-modules"><span data-l="fr">📈 Consommation ou puissance, par onglet</span><span data-l="en">📈 Consumption or power, per tab</span></a>
+        <a href="#apercu-module" data-feature="f-cluster" data-scroll="apercu-module"><span data-l="fr">🖥️ Écran conducteur : consommation ou puissance</span><span data-l="en">🖥️ Driver display: consumption or power</span></a>
         <a href="#f-audiocycle" data-feature="f-audiocycle"><span data-l="fr">🎵 Cycle de sources audio</span><span data-l="en">🎵 Audio source cycle</span></a>
         <a href="#f-profiles10" data-feature="f-profiles10"><span data-l="fr">👥 Jusqu'à 10 profils</span><span data-l="en">👥 Up to 10 profiles</span></a>
         <a href="#f-profileorder" data-feature="f-profileorder"><span data-l="fr">↕️ Ordre des profils au doigt</span><span data-l="en">↕️ Reorder profiles by touch</span></a>
@@ -1022,7 +1021,7 @@
       </details>
     </div>
   </div>
-  <div class="widget">
+  <div class="widget is-new" id="apercu-module">
     <h3><span data-l="fr">Aperçu du module</span><span data-l="en">Module preview</span></h3>
     <p class="sub" data-l="fr">Le module tel qu'il s'affiche dans le carré central du combiné, avec l'unité et l'actualisation réglées dans la maquette. La conduite est simulée : choisissez le module, accélérez, freinez.</p>
     <p class="sub" data-l="en">The module as it shows in the cluster's central square, with the unit and refresh rate set in the mockup. Driving is simulated: pick the module, accelerate, brake.</p>
@@ -1498,6 +1497,7 @@
 </footer>
 
 <div class="dock" data-aria-fr="Véhicule virtuel" data-aria-en="Virtual vehicle" aria-label="Véhicule virtuel"></div>
+<button type="button" class="to-top" data-aria-fr="Revenir en haut de la page" data-aria-en="Back to the top of the page" aria-label="Revenir en haut de la page" title="Revenir en haut de la page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
 <script src="assets/js/strings.js"></script>
 <script src="assets/js/sim.js"></script>

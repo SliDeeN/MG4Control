@@ -129,7 +129,7 @@ même temps que la release 2.6.9 : le bouton « Télécharger la dernière versi
 `releases/latest`, et publier plus tôt annoncerait des fonctions que la version stable n'a pas.
 
 Les nouveautés portent le badge `<span class="badge-new">` (« Nouveau · 2.6.9 ») et leur carte la
-classe `is-new` ; le filtre « ★ 2.6.9 », le lien « Nouveautés » de l'en-tête et l'encadré de
+classe `is-new` (l'aperçu d'une nouveauté aussi, pour rester visible avec le filtre) ; le filtre « ★ 2.6.9 », le lien « Nouveautés » de l'en-tête et l'encadré de
 l'accueil s'appuient dessus. À la version suivante, retirer ces badges et ces classes (cartes et
 tableau de compatibilité), réécrire l'encadré des nouveautés et changer la pastille `vX.Y.Z` de
 l'accueil, la puce « ★ » et les deux liens « Nouveautés X.Y.Z » de l'en-tête.

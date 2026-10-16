@@ -483,13 +483,31 @@ pre.code {
 .reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
 .reveal.in { opacity: 1; transform: none; }
 
+/* Revenir en haut : en bas à GAUCHE, le véhicule virtuel tient le coin droit. Sous lui (z 58 < 60) :
+   son panneau ouvert le recouvre. Masqué tant que l'accueil est à l'écran (classe « on » posée par site.js). */
+.to-top {
+  position: fixed; left: 16px; bottom: 16px; z-index: 58;
+  width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; padding: 0;
+  border: 1px solid var(--line-2); background: var(--surface); color: var(--ink); box-shadow: var(--shadow); cursor: pointer;
+  opacity: 0; visibility: hidden; transform: translateY(8px);
+  transition: opacity .2s ease, transform .2s ease, visibility 0s linear .2s, border-color .15s, color .15s;
+}
+.to-top.on { opacity: 1; visibility: visible; transform: none; transition: opacity .2s ease, transform .2s ease, visibility 0s, border-color .15s, color .15s; }
+.to-top:hover { border-color: var(--accent); color: var(--accent-ink); }
+.to-top:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+html[data-sim-full] .to-top { display: none; }
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
+  .to-top, .to-top.on { transition: none; }
   .reveal { opacity: 1; transform: none; transition: none; }
   .dock.moving .dock-car { animation: none; }
 }
 @media (max-width: 560px) {
   .dock { right: 10px; left: 10px; bottom: 10px; }
+  /* Replié, le véhicule virtuel laisse la place du bouton « revenir en haut » (10 + 44 + 10 px). */
+  .dock:not(.open) { left: 64px; }
+  .to-top { left: 10px; bottom: 10px; }
   .dock-panel { width: auto; max-height: 58vh; }
   .dock-grid { grid-template-columns: 1fr; }
   .head-in { gap: 8px; }
