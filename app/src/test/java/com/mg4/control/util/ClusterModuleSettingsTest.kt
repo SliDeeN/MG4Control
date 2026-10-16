@@ -87,4 +87,20 @@ class ClusterModuleSettingsTest {
         assertEquals(300, ClusterModuleSettings.refreshFromSlider(2.9999f))
         assertEquals(3f, ClusterModuleSettings.refreshToSlider(300), 0f)
     }
+
+    // ── Durée de l'animation (issue #152) : 0,2 à 2 s, 0,8 s par défaut ──────
+
+    @Test fun `animation - 0,8 s sans reglage, ramenee dans la plage`() {
+        assertEquals(800, ClusterModuleSettings.sanitizeAnimation(null))
+        assertEquals(200, ClusterModuleSettings.sanitizeAnimation(50))
+        assertEquals(2000, ClusterModuleSettings.sanitizeAnimation(5000))
+        assertEquals(1300, ClusterModuleSettings.sanitizeAnimation(1270))
+    }
+
+    @Test fun `le curseur d animation va de 2 a 20 dixiemes de seconde`() {
+        assertEquals(200, ClusterModuleSettings.animationFromSlider(2f))
+        assertEquals(2000, ClusterModuleSettings.animationFromSlider(20f))
+        assertEquals(600, ClusterModuleSettings.animationFromSlider(5.9999f))
+        assertEquals(8f, ClusterModuleSettings.animationToSlider(800), 0f)
+    }
 }

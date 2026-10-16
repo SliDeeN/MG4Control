@@ -65,8 +65,9 @@ import com.mg4.control.util.LocaleHelper
  * (demande du 2026-10-14). Si l'écran du combiné n'existe pas encore à ce moment-là (démarrage du
  * boîtier), le module s'y pose dès qu'il apparaît. La moyenne du trajet et la récupération, elles,
  * repartent de zéro à chaque passage en READY. Lecture seule : puissance batterie et vitesse à la
- * cadence réglée (0,1 à 1 s, [ClusterModuleSettings.refreshMs]), mode de conduite et batterie
- * toutes les dix secondes.
+ * cadence réglée (0,1 à 1 s, [ClusterModuleSettings.refreshMs]), mode de conduite et profil de
+ * la pastille toutes les dix secondes ; la jauge glisse d'un relevé au suivant pendant la durée
+ * réglée à part ([ClusterModuleSettings.animationMs], issue #152).
  *
  * Pendant une charge (2026-10-16), le module « charge » prend la place de la jauge des onglets qui
  * en ont une : détectée à chaque relevé (`BMS_CHRG_STS`), la charge garde le module jusqu'à ce que
@@ -84,7 +85,7 @@ internal object ClusterModuleOverlay {
 
     const val TAG = "MG4_CLUSTER"
 
-    /** Mode de conduite et batterie bougent peu : relus toutes les dix secondes, quelle que soit la cadence. */
+    /** Mode de conduite et profil bougent peu : relus toutes les dix secondes, quelle que soit la cadence. */
     private const val LENT_MS = 10_000L
     /**
      * Module « charge » à la place de la jauge : coupé partout (voir plus haut). À `false`, aucune

@@ -238,4 +238,43 @@ class ClusterGaugeTest {
         assertEquals(ClusterModule.CONSUMPTION, ClusterModule.fromKey(null))
         assertEquals(ClusterModule.CONSUMPTION, ClusterModule.fromKey("inconnu"))
     }
+
+    // ── Issue #152 : kW du module B, pastille ────────────────────────────────
+
+    @Test fun `en roulant, des kW entiers - a l arret, la decimale`() {
+        assertEquals("5", ClusterGauge.formatPowerKw(4.6f, 30f, Locale.FRANCE))
+        assertEquals("35", ClusterGauge.formatPowerKw(35.4f, 82f, Locale.FRANCE))
+        assertEquals("18", ClusterGauge.formatPowerKw(-18.2f, 60f, Locale.FRANCE))
+        // Au seuil STOP_KMH, on roule déjà.
+        assertEquals("1", ClusterGauge.formatPowerKw(1.2f, ClusterGauge.STOP_KMH, Locale.FRANCE))
+        assertEquals("1,2", ClusterGauge.formatPowerKw(1.2f, 3f, Locale.FRANCE))
+        assertEquals("1,2", ClusterGauge.formatPowerKw(1.2f, null, Locale.FRANCE))
+    }
+
+    @Test fun `pastille du mode de conduite, l affichage d avant`() {
+        assertEquals(PillContent("NORMAL", DriveMode.NORMAL),
+            ClusterGauge.pill(ClusterPill.DRIVE_MODE, DriveMode.NORMAL, "Paul", DriveMode.SPORT, Locale.FRANCE))
+        assertNull(ClusterGauge.pill(ClusterPill.DRIVE_MODE, null, "Paul", DriveMode.SPORT, Locale.FRANCE))
+    }
+
+    @Test fun `pastille du profil, dans la couleur du mode du profil`() {
+        // « PAUL » en Normal → bleu, même si la voiture est passée en Sport à la main.
+        assertEquals(PillContent("PAUL", DriveMode.NORMAL),
+            ClusterGauge.pill(ClusterPill.PROFILE, DriveMode.SPORT, "Paul", DriveMode.NORMAL, Locale.FRANCE))
+        // Un profil qui ne règle pas la conduite prend la couleur de la voiture, sinon gris.
+        assertEquals(PillContent("PAUL", DriveMode.ECO),
+            ClusterGauge.pill(ClusterPill.PROFILE, DriveMode.ECO, "Paul", null, Locale.FRANCE))
+        assertEquals(PillContent("PAUL", null),
+            ClusterGauge.pill(ClusterPill.PROFILE, null, "Paul", null, Locale.FRANCE))
+        // Aucun profil actif (ou un nom vide) : pas de pastille.
+        assertNull(ClusterGauge.pill(ClusterPill.PROFILE, DriveMode.ECO, null, null, Locale.FRANCE))
+        assertNull(ClusterGauge.pill(ClusterPill.PROFILE, DriveMode.ECO, "  ", null, Locale.FRANCE))
+    }
+
+    @Test fun `pastille aucune, et le choix par defaut est le mode`() {
+        assertNull(ClusterGauge.pill(ClusterPill.NONE, DriveMode.NORMAL, "Paul", DriveMode.NORMAL, Locale.FRANCE))
+        assertEquals(ClusterPill.DRIVE_MODE, ClusterPill.fromKey(null))
+        assertEquals(ClusterPill.PROFILE, ClusterPill.fromKey("profile"))
+        assertEquals(ClusterPill.DRIVE_MODE, ClusterPill.fromKey("inconnu"))
+    }
 }
