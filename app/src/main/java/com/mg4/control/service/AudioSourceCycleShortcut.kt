@@ -20,9 +20,10 @@ import kotlinx.coroutines.launch
  * cycle composé dans l'onglet Raccourcis, l'annonce à l'écran, et y passe après un court délai
  * sans nouvel appui — deux appuis rapprochés sautent une source. Calqué sur [ProfileCycleShortcut].
  *
- * Depuis le 2026-10-16, le cycle repart de la source qui joue ([MG4Hardware.currentAudioSource]),
- * sauf quand notre dernière bascule n'a pas pris : chaque bascule est vérifiée
- * [AudioSourceCycle.CONFIRM_MS] plus tard. La règle est dans [AudioSourceCycle.depart].
+ * Depuis le 2026-10-16, le cycle repart de la source qui joue ([MG4Hardware.currentAudioSource],
+ * lue à chaque appui), sauf quand notre dernière bascule n'a encore rien changé : la source qui
+ * jouait avant elle est retenue jusqu'à ce qu'une autre joue. La règle est dans
+ * [AudioSourceCycle.depart].
  *
  * Pas de verrou de vitesse : changer de source n'est pas un réglage de conduite.
  */
@@ -38,10 +39,13 @@ object AudioSourceCycleShortcut {
     private var cible: AudioSource? = null
     private var application: Runnable? = null
     private var message: Toast? = null
-    /** Vrai de la bascule à sa vérification : la source active n'a pas encore eu le temps de changer. */
-    private var enVerification = false
-    /** Source qui jouait encore à la vérification de notre dernière bascule, si ce n'était pas la visée. */
-    private var echecDepuis: AudioSource? = null
+    /** Source qui jouait à l'appui qui a choisi [cible] : celle d'avant la bascule. */
+    private var actifAuChoix: AudioSource? = null
+    /**
+     * Source qui jouait avant notre dernière bascule, tant qu'elle joue encore : la bascule n'a
+     * rien changé (elle démarre, ou elle n'a pas pris). `null` dès qu'une autre source a joué.
+     */
+    private var avant: AudioSource? = null
     /** Numéro de la dernière bascule : seule sa vérification compte. */
     private var bascules = 0
 
@@ -58,18 +62,19 @@ object AudioSourceCycleShortcut {
     private fun appui(app: Context, actif: AudioSource?) {
         val cycle = AudioSourceCycle.order(app)
         val derniere = AudioSourceCycle.last(app)
-        val depart = AudioSourceCycle.depart(actif, derniere, cible, echecDepuis, enVerification)
+        val depart = AudioSourceCycle.depart(actif, derniere, cible, avant)
         val visee = AudioSourceCycle.next(cycle, depart) ?: return
         val pourquoi = when {
             cible != null -> "source en attente"
-            enVerification -> "bascule en vérification"
             actif == null -> "source active illisible"
-            depart != actif -> "la dernière bascule n'a pas pris"
+            depart != actif -> "notre dernière bascule n'a encore rien changé"
             else -> "source active"
         }
         AppLogger.i(TAG, "SHORTCUT cycle de sources → ${visee.name} (${cycle.indexOf(visee) + 1}/${cycle.size}) — " +
             "départ ${depart?.name ?: "aucun"} ($pourquoi ; active ${actif?.name ?: "illisible"}, " +
-            "dernière choisie ${derniere?.name ?: "aucune"})")
+            "dernière choisie ${derniere?.name ?: "aucune"}, avant la bascule ${avant?.name ?: "—"})")
+        // Un appui en attente garde la source d'avant de la série : aucune bascule n'a eu lieu entre-temps.
+        if (cible == null) actifAuChoix = actif
         cible = visee
         annoncer(app, visee)
 
@@ -85,7 +90,7 @@ object AudioSourceCycleShortcut {
         // quand la bascule n'a pas pris.
         AudioSourceCycle.setLast(app, source)
         val numero = ++bascules
-        enVerification = true
+        avant = actifAuChoix?.takeIf { it != source }
         CoroutineScope(Dispatchers.IO).launch {
             val ok = MG4Hardware.switchAudioSource(source)
             AppLogger.i(TAG, "SHORTCUT cycle de sources — ${source.name} : commande ${if (ok) "envoyée" else "sans voie"}")
@@ -93,13 +98,15 @@ object AudioSourceCycleShortcut {
             val actif = MG4Hardware.currentAudioSource()
             main.post {
                 if (numero != bascules) return@post   // une bascule plus récente vérifiera la sienne
-                enVerification = false
-                // Illisible : rien à conclure, l'appui suivant repartira de la dernière choisie.
-                echecDepuis = actif?.takeIf { it != source }
+                val avantBascule = avant
+                // Une autre source que celle d'avant joue : la bascule a pris, ou la source a été
+                // changée ailleurs — dans les deux cas, plus rien à retenir. Illisible : on garde.
+                if (actif != null && actif != avantBascule) avant = null
                 AppLogger.i(TAG, "SHORTCUT cycle de sources — vérification : " + when {
                     actif == null -> "source active illisible"
                     actif == source -> "${source.name} joue"
-                    else -> "${actif.name} joue toujours, ${source.name} n'a pas pris"
+                    actif == avantBascule -> "${actif.name} joue toujours, ${source.name} n'a pas pris"
+                    else -> "${actif.name} joue (changée ailleurs)"
                 })
             }
         }

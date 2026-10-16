@@ -106,26 +106,28 @@ object AudioSourceCycle {
     fun target(cycle: List<AudioSource>, derniere: AudioSource?, enAttente: AudioSource?): AudioSource? =
         next(cycle, enAttente ?: derniere)
 
-    /** Délai après une bascule avant de regarder si elle a pris (la source met un moment à démarrer). */
+    /** Délai après une bascule avant de regarder si elle a changé quelque chose (la source met un moment à démarrer). */
     const val CONFIRM_MS = 3_000L
 
     /**
      * Source d'où repart un appui, dans cet ordre :
      *  1. la source [enAttente] d'être appliquée (deux appuis rapprochés) ;
-     *  2. la [derniere] choisie si notre bascule est [enVerification] (la source active n'a pas
-     *     encore eu le temps de changer) ou si la source active est illisible — le fonctionnement
-     *     d'avant le 2026-10-16 ;
-     *  3. la [derniere] choisie si la source active est restée celle d'où notre dernière bascule a
-     *     échoué ([echecDepuis]) : la source visée n'a pas pris, on la saute ;
-     *  4. sinon la source [actif] — elle-même ou un changement fait ailleurs.
+     *  2. la [derniere] choisie si la source active est illisible — le fonctionnement d'avant le
+     *     2026-10-16 ;
+     *  3. la [derniere] choisie si la source active est encore celle qui jouait [avant] notre
+     *     dernière bascule : rien n'a changé depuis — la source visée démarre encore, ou elle n'a
+     *     pas pris (pas de clé USB…) et on la saute ;
+     *  4. sinon la source [actif] : celle que notre bascule a mise, ou un changement fait ailleurs.
+     *
+     * [avant] est oublié dès qu'on voit une AUTRE source jouer après la bascule ([CONFIRM_MS]) :
+     * une source changée à la main n'est jamais prise pour un échec (journal SWI133 du 2026-10-16,
+     * où la vérification lisait le Bluetooth choisi à l'écran et concluait à tort que la radio
+     * n'avait pas pris).
      */
-    fun depart(
-        actif: AudioSource?, derniere: AudioSource?, enAttente: AudioSource?,
-        echecDepuis: AudioSource?, enVerification: Boolean,
-    ): AudioSource? = when {
+    fun depart(actif: AudioSource?, derniere: AudioSource?, enAttente: AudioSource?, avant: AudioSource?): AudioSource? = when {
         enAttente != null -> enAttente
-        enVerification || actif == null -> derniere
-        echecDepuis != null && actif == echecDepuis -> derniere
+        actif == null -> derniere
+        avant != null && actif == avant -> derniere
         else -> actif
     }
 

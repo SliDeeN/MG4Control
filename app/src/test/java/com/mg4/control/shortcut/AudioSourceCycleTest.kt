@@ -79,27 +79,34 @@ class AudioSourceCycleTest {
     @Test
     fun `le cycle repart de la source qui joue`() {
         // Passé sur la radio à l'écran après avoir choisi l'USB : le cycle suit la radio.
-        val d = AudioSourceCycle.depart(actif = RADIO, derniere = USB, enAttente = null, echecDepuis = null, enVerification = false)
+        val d = AudioSourceCycle.depart(actif = RADIO, derniere = USB, enAttente = null, avant = null)
         assertEquals(RADIO, d)
         assertEquals(BLUETOOTH, AudioSourceCycle.next(listOf(RADIO, BLUETOOTH, USB), d))
     }
 
     @Test
-    fun `une bascule qui n a pas pris ne coince pas le cycle`() {
-        // Pas de clé : l'USB n'a pas pris, la radio joue toujours → on repart de l'USB, on le saute.
-        val d = AudioSourceCycle.depart(actif = RADIO, derniere = USB, enAttente = null, echecDepuis = RADIO, enVerification = false)
+    fun `une bascule qui n a rien change ne coince pas le cycle`() {
+        // Pas de clé : l'USB n'a pas pris, la radio d'avant joue toujours → on repart de l'USB, on le saute.
+        val d = AudioSourceCycle.depart(actif = RADIO, derniere = USB, enAttente = null, avant = RADIO)
         assertEquals(USB, d)
         assertEquals(BLUETOOTH, AudioSourceCycle.next(listOf(RADIO, USB, BLUETOOTH), d))
-        // Changé de source à l'écran depuis l'échec : c'est elle qui compte.
-        assertEquals(ONLINE, AudioSourceCycle.depart(ONLINE, USB, null, echecDepuis = RADIO, enVerification = false))
+        // Même règle quand on réappuie pendant que la source visée démarre encore.
     }
 
     @Test
-    fun `source illisible, bascule en cours ou appui en attente gardent les regles d avant`() {
-        assertEquals(USB, AudioSourceCycle.depart(actif = null, derniere = USB, enAttente = null, echecDepuis = null, enVerification = false))
-        // Juste après une bascule, la source active n'a pas encore changé : on repart de la visée.
-        assertEquals(USB, AudioSourceCycle.depart(actif = RADIO, derniere = USB, enAttente = null, echecDepuis = null, enVerification = true))
-        assertEquals(BLUETOOTH, AudioSourceCycle.depart(actif = RADIO, derniere = USB, enAttente = BLUETOOTH, echecDepuis = null, enVerification = false))
+    fun `une source changee a la main n est pas prise pour un echec`() {
+        // Journal SWI133 du 2026-10-16 : USB → radio (prise), puis Bluetooth choisi à l'écran.
+        // La source d'avant (USB) ne joue plus : le cycle part du Bluetooth, il vise l'USB.
+        val cycle = listOf(RADIO, BLUETOOTH, USB)
+        val d = AudioSourceCycle.depart(actif = BLUETOOTH, derniere = RADIO, enAttente = null, avant = USB)
+        assertEquals(BLUETOOTH, d)
+        assertEquals(USB, AudioSourceCycle.next(cycle, d))
+    }
+
+    @Test
+    fun `source illisible ou appui en attente gardent les regles d avant`() {
+        assertEquals(USB, AudioSourceCycle.depart(actif = null, derniere = USB, enAttente = null, avant = RADIO))
+        assertEquals(BLUETOOTH, AudioSourceCycle.depart(actif = RADIO, derniere = USB, enAttente = BLUETOOTH, avant = RADIO))
     }
 
     @Test
