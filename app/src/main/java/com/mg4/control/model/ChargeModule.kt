@@ -23,19 +23,27 @@ object ChargeDisplay {
     /** Temps restant en minutes, ou `null` : sentinelle, valeur négative ou illisible. */
     fun minutesRestantes(brut: Int?): Int? = brut?.takeIf { it in 0 until SENTINELLE }
 
+    /** Valeur des signaux de prise pendant une charge (alternatif relevé le 2026-09-19). */
+    const val PRISE_EN_CHARGE = 2
+
     /**
      * Type de borne d'après les deux signaux de prise (`CCU_ONBD` alternatif, `CCU_OFFBD` continu) :
-     * la prise active n'est plus à zéro (2 relevé en alternatif). Le continu d'abord, comme l'onglet
-     * Statistiques. `null` si aucun ne le dit.
+     * la prise qui charge vaut [PRISE_EN_CHARGE]. Pas un simple non-zéro : trappe ouverte sans
+     * charge, SWI133 a donné alternatif = 4 et continu = 1 (2026-10-16), d'où un faux « DC ». Le
+     * continu d'abord. `null` si aucun ne le dit.
      */
     fun type(ac: Int?, dc: Int?): ChargeType? = when {
-        dc != null && dc != 0 && dc != SENTINELLE -> ChargeType.DC
-        ac != null && ac != 0 && ac != SENTINELLE -> ChargeType.AC
+        dc == PRISE_EN_CHARGE -> ChargeType.DC
+        ac == PRISE_EN_CHARGE -> ChargeType.AC
         else -> null
     }
 
-    /** Une prise est-elle encore signalée (charge terminée mais câble toujours branché) ? */
-    fun priseSignalee(ac: Int?, dc: Int?): Boolean = type(ac, dc) != null
+    /**
+     * Quelque chose est-il encore signalé côté prise (charge finie, câble ou trappe encore là) ?
+     * Toute valeur hors zéro et hors sentinelle : la jauge ne revient qu'une fois tout à zéro.
+     */
+    fun priseSignalee(ac: Int?, dc: Int?): Boolean =
+        listOf(ac, dc).any { it != null && it != 0 && it != SENTINELLE }
 
     /** Durée en minutes → (heures, minutes). */
     fun heuresMinutes(minutes: Int): Pair<Int, Int> = (minutes.coerceAtLeast(0) / 60) to (minutes.coerceAtLeast(0) % 60)

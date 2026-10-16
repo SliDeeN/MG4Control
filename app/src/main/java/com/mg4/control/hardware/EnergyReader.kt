@@ -1,6 +1,7 @@
 package com.mg4.control.hardware
 
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.ChargeDisplay
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.EnergySnapshot
 import com.mg4.control.model.PowerIntegrator
@@ -48,6 +49,10 @@ object EnergyReader {
     private const val PROP_CHARGE_PLUG = 0x2140f408
     private const val PROP_CHARGE_TIME = 0x2140f417
     private const val PROP_CHARGE_TARGET = 0x2140f40c
+    // Sonde seulement (2026-10-16) : position de la trappe et validité du signal continu
+    // (`CCU_OFFBD_CHRG_PLUG_ON_V`, true = invalide comme les autres drapeaux « V »).
+    private const val PROP_CHARGE_DOOR = 0x2140f43b
+    private const val PROP_PLUG_DC_INVALID = 0x2140f456
     private const val PROP_PACK_VOLTAGE = 0x2160f406
     private const val PROP_PACK_CURRENT = 0x2160f407
     private const val PROP_RANGE = 0x2140f41c
@@ -57,7 +62,6 @@ object EnergyReader {
     /** Valeur rendue par les mesures batterie non publiées (relevé du 2026-09-19). */
     private const val SENTINEL_MEASURE = 82.3f
     private const val SENTINEL_HALF = 511.5f
-    private const val SENTINEL_INT = 1023
 
     @Volatile
     private var warnedNoCpm = false
@@ -110,9 +114,11 @@ object EnergyReader {
         val dc: Int?,
         val restant: Int?,
         val cible: Int?,
+        val trappe: Int? = null,
+        val dcInvalide: Int? = null,
     )
 
-    /** Six lectures. Appeler hors du fil principal. */
+    /** Huit lectures. Appeler hors du fil principal. */
     fun chargeRaw(): ChargeRaw = ChargeRaw(
         statut = int(PROP_CHARGE_STATUS),
         prise = int(PROP_CHARGE_PLUG),
@@ -120,6 +126,8 @@ object EnergyReader {
         dc = int(PROP_PLUG_DC),
         restant = int(PROP_CHARGE_TIME),
         cible = int(PROP_CHARGE_TARGET),
+        trappe = int(PROP_CHARGE_DOOR),
+        dcInvalide = int(PROP_PLUG_DC_INVALID),
     )
 
     /** La voiture charge-t-elle (`BMS_CHRG_STS` = 1) ? `null` si illisible. Une seule lecture. */
@@ -163,14 +171,10 @@ object EnergyReader {
     }
 
     /**
-     * Type de prise. Les deux propriétés valent 0 hors charge et la prise active passe à 2
-     * (relevé sur charge alternative) : on ne teste donc pas une valeur précise mais un non-zéro.
+     * Type de prise : celle qui vaut 2 (relevé sur charge alternative). Plus un simple non-zéro —
+     * trappe ouverte sans charge, SWI133 a donné alternatif = 4 et continu = 1 (2026-10-16).
      */
-    private fun chargeType(): ChargeType? = when {
-        int(PROP_PLUG_DC)?.takeIf { it != 0 && it != SENTINEL_INT } != null -> ChargeType.DC
-        int(PROP_PLUG_AC)?.takeIf { it != 0 && it != SENTINEL_INT } != null -> ChargeType.AC
-        else -> null
-    }
+    private fun chargeType(): ChargeType? = ChargeDisplay.type(int(PROP_PLUG_AC), int(PROP_PLUG_DC))
 
     /** Compteur d'énergie : négatif impossible, sentinelle exclue. */
     private fun energy(prop: Int): Float? = float(prop)?.takeIf { it >= 0f }

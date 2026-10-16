@@ -36,6 +36,15 @@ class ChargeModuleTest {
         assertNull(ChargeDisplay.type(ac = 1023, dc = null))
         assertTrue(ChargeDisplay.priseSignalee(2, 0))
         assertFalse(ChargeDisplay.priseSignalee(0, 0))
+        assertFalse(ChargeDisplay.priseSignalee(1023, null))
+    }
+
+    @Test
+    fun `trappe ouverte sans charge n est pas du continu`() {
+        // Diagnostic SWI133 du 2026-10-16 : statut 5, alternatif 4, continu 1, aucun courant.
+        assertNull(ChargeDisplay.type(ac = 4, dc = 1))
+        // …mais la jauge ne revient pas tant que la prise ou la trappe est signalée.
+        assertTrue(ChargeDisplay.priseSignalee(4, 1))
     }
 
     @Test

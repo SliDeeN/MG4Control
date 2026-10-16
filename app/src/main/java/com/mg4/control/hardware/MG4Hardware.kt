@@ -3642,10 +3642,7 @@ object MG4Hardware {
                     val bean = args[0] ?: return@newProxyInstance null
                     try {
                         val ignition = bean.javaClass.getMethod("getVehicleIgnition").invoke(bean) as? Int
-                        if (ignition != null) {
-                            AppLogger.i(TAG, "  Katman5 event: ignition=$ignition (${carIgnitionName(ignition)})")
-                            dispatchVehicleConditionIgnition(ignition)
-                        }
+                        if (ignition != null) dispatchVehicleConditionIgnition(ignition)
                     } catch (e: Exception) {
                         AppLogger.w(TAG, "  Katman5: onChangeEvent parse error: ${e.message}")
                     }
@@ -3683,8 +3680,11 @@ object MG4Hardware {
         // Ne dispatcher que si l'état change réellement — évite les faux RUN répétés
         // que VehicleConditionManager envoie à chaque changement de condition véhicule
         // (changement de rapport D/N/R, etc.) alors que la voiture est déjà en RUN.
+        // Au journal aussi, seulement au changement : en roulant, l'événement arrive toutes les
+        // 100 ms (plus de 200 lignes identiques sur les 30 dernières secondes d'un trajet, SWI133).
         if (state == sLastVcmIgnitionState) return
         sLastVcmIgnitionState = state
+        AppLogger.i(TAG, "  Katman5 event: ignition=$state (${carIgnitionName(state)})")
         val toNotify = vehicleConditionCallbacks.toList()
         if (toNotify.isEmpty()) return
         Handler(Looper.getMainLooper()).post { toNotify.forEach { it(state) } }
