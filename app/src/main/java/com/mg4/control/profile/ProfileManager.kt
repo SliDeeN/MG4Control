@@ -30,6 +30,15 @@ class ProfileManager(private val context: Context) {
         }
 
         /**
+         * Profil par défaut après la suppression de [supprime] : si c'était lui, le premier des
+         * [restants] (ordre de la liste) prend le relais (2026-10-16). Sans relais, la liste
+         * n'affichait plus aucun « Par défaut » et le démarrage n'appliquait plus aucun profil.
+         * Sinon le défaut ne change pas. `null` quand il ne reste aucun profil.
+         */
+        fun defautApresSuppression(defaut: String?, supprime: String, restants: List<String>): String? =
+            if (defaut == supprime) restants.firstOrNull() else defaut
+
+        /**
          * Verrou de processus, PAS d'instance : l'UI et le service construisent chacun leur
          * ProfileManager sur le même fichier de préférences. Chaque mutation est un
          * lire-modifier-écrire sur un blob JSON — sans ce verrou, deux sauvegardes
@@ -94,9 +103,13 @@ class ProfileManager(private val context: Context) {
             val list = getAll().toMutableList()
             list.removeAll { it.id == profileId }
             persist(list)
-            // Clear default if it was this profile
-            if (prefs.getString(KEY_DEFAULT_ID, null) == profileId) {
-                prefs.edit().remove(KEY_DEFAULT_ID).apply()
+            // Profil par défaut supprimé : le premier de la liste le remplace (defautApresSuppression).
+            val defaut = prefs.getString(KEY_DEFAULT_ID, null)
+            val relais = defautApresSuppression(defaut, profileId, list.map { it.id })
+            if (relais != defaut) {
+                prefs.edit().apply {
+                    if (relais != null) putString(KEY_DEFAULT_ID, relais) else remove(KEY_DEFAULT_ID)
+                }.apply()
             }
             // Idem pour le profil ACTIF : le laisser pointer sur un profil disparu ferait
             // résoudre les raccourcis qui lui sont associés sur un identifiant fantôme — ils

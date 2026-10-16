@@ -79,6 +79,37 @@ class ProfileManagerTest {
     }
 
     @Test
+    fun `delete du profil par defaut donne le defaut au premier profil restant`() {
+        val a = profile("A"); val b = profile("B"); val c = profile("C")
+        listOf(a, b, c).forEach { manager.save(it) }
+        manager.setDefault(b.id)
+        manager.delete(b.id)
+        assertEquals(a.id, manager.getDefaultId())
+        assertEquals("A", manager.getDefaultProfile()?.name)
+    }
+
+    @Test
+    fun `delete du profil actif laisse le selecteur sans profil actif`() {
+        // A, B, C ; C appliqué puis supprimé : le sélecteur ne doit plus montrer de profil en cours.
+        val a = profile("A"); val b = profile("B"); val c = profile("C")
+        listOf(a, b, c).forEach { manager.save(it) }
+        val ctx = ApplicationProvider.getApplicationContext<android.content.Context>()
+        ActiveProfile.set(ctx, c.id)
+        manager.delete(c.id)
+        assertNull(ActiveProfile.id(ctx))
+        assertNull(ActiveProfile.sessionId)
+    }
+
+    @Test
+    fun `delete d un autre profil ne change pas le defaut`() {
+        val a = profile("A"); val b = profile("B")
+        listOf(a, b).forEach { manager.save(it) }
+        manager.setDefault(b.id)
+        manager.delete(a.id)
+        assertEquals(b.id, manager.getDefaultId())
+    }
+
+    @Test
     fun `migration aebMode zero force AEB actif en alerte plus freinage`() {
         // Profil créé avant l'ajout de l'AEB : aebMode=0 (défaut JVM), aebEnabled=false.
         manager.save(profile("Legacy", aebMode = 0).copy(aebEnabled = false))
