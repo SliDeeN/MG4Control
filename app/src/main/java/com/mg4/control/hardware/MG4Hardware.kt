@@ -5199,6 +5199,47 @@ object MG4Hardware {
         }
     }
 
+    /**
+     * Source audio qui joue (point de départ du cycle de sources, 2026-10-16), ou `null` si
+     * illisible ou hors de nos sources.
+     *
+     * Ancien SDK (SWI133/68/165) : `getCurrentMediaSource` du service média SAIC — relevé sur
+     * SWI133 et SWI68, et c'est ce que lit leur launcher. A9 (SWI69/131/132) : la source que le
+     * SYSTÈME tient lui-même ([sourceSysteme]), ce que lit leur launcher. Même espace de codes
+     * ([AudioSource.fromCarCode]).
+     *
+     * Ne pas appeler depuis le thread principal : le service média peut attendre sa liaison.
+     */
+    fun currentAudioSource(): AudioSource? {
+        val sdk = mediaSourceCourante()
+        val parSdk = AudioSource.fromCarCode(sdk)
+        if (parSdk != null) return parSdk
+        val systeme = sourceSysteme()
+        val parSysteme = systeme?.let { AudioSource.fromCarCode(it) }
+        AppLogger.i(MEDIA_TAG, "source active (système) = ${systeme ?: "illisible"} → ${parSysteme?.name ?: "inconnue"}")
+        return parSysteme
+    }
+
+    /**
+     * Code de la dernière source multimédia retenue par le système, ou `null`.
+     *
+     * Décompilé (services.vdex, identique SWI69/131/132/133) : `MediaFocusControl.setLastSourceLock`,
+     * appelé à CHAQUE octroi de focus d'usage MEDIA portant l'étiquette `key_car_source_type`, la
+     * garde dans `mLastSource` et dans le réglage `audio_setting_last_source`. Les annonces GPS et
+     * les appels ne la changent pas. On lit `AudioManager.getLastSource()` (ajout SAIC, comme le
+     * launcher A9 à son démarrage) ; à défaut le réglage, écrit pour l'utilisateur courant.
+     */
+    private fun sourceSysteme(): Int? {
+        val ctx = sAppContext ?: return null
+        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        val parApi = runCatching { am?.javaClass?.getMethod("getLastSource")?.invoke(am) as? Int }.getOrNull()
+        if (parApi != null && parApi > 0) return parApi
+        val parReglage = runCatching {
+            android.provider.Settings.System.getInt(ctx.contentResolver, "audio_setting_last_source", -1)
+        }.getOrNull()
+        return parReglage?.takeIf { it > 0 }
+    }
+
     /** Délai du journal de contrôle : le temps qu'une source démarre ou qu'une autre s'arrête. */
     private const val CONTROLE_SOURCE_MS = 3_000L
 

@@ -16,6 +16,22 @@ enum class AudioSource(val key: String, @StringRes val label: Int) {
 
     companion object {
         fun fromKey(key: String?): AudioSource? = entries.firstOrNull { it.key == key }
+
+        /**
+         * Source d'un code de source voiture, ou `null` s'il n'est pas une de nos sources.
+         * Même espace de codes sur tous les firmwares : `getCurrentMediaSource` du service média
+         * SAIC (ancien SDK, relevés SWI133 et SWI68) et `AudioManager.getLastSource()` du système
+         * (A9, décompilé) — 1 FM, 2 AM, 3 DAB (4 tenu pour radio), 5 Bluetooth, 6 et 7 USB
+         * (port 1 et 2), 14 en ligne, 50 CarPlay, 70 Android Auto (DiAuto-MG4 compris).
+         */
+        fun fromCarCode(code: Int): AudioSource? = when (code) {
+            in 1..4 -> RADIO
+            5 -> BLUETOOTH
+            6, 7 -> USB
+            0xe -> ONLINE
+            0x32, 0x46 -> PROJECTION
+            else -> null
+        }
     }
 }
 
@@ -25,9 +41,13 @@ enum class AudioSource(val key: String, @StringRes val label: Int) {
  *
  * Choix de l'utilisateur (2026-10-15) : on NE VÉRIFIE PAS qu'une source est disponible. Une source
  * sans rien à jouer (pas de clé USB, pas de téléphone) est visée quand même ; l'appui suivant
- * passe à la suivante. C'est aussi pourquoi on repart de la DERNIÈRE SOURCE CHOISIE par le
- * raccourci, et non de celle qui joue : partir de la source audible coincerait le cycle sur une
- * source indisponible (elle ne prend pas la main, on repartirait toujours d'avant elle).
+ * passe à la suivante.
+ *
+ * Point de départ (2026-10-16, à sa demande) : la source qui JOUE, pour qu'un changement fait
+ * ailleurs (écran, touche d'origine) soit suivi. Sauf quand notre dernière bascule n'a pas pris :
+ * partir de la source audible coincerait alors le cycle sur la source indisponible (elle ne prend
+ * pas la main, on repartirait toujours d'avant elle) — on repart de la DERNIÈRE SOURCE CHOISIE,
+ * comme avant. Voir [depart].
  */
 object AudioSourceCycle {
 
@@ -85,6 +105,29 @@ object AudioSourceCycle {
     /** Source visée par un appui : tant qu'une source attend d'être appliquée, on repart d'elle. */
     fun target(cycle: List<AudioSource>, derniere: AudioSource?, enAttente: AudioSource?): AudioSource? =
         next(cycle, enAttente ?: derniere)
+
+    /** Délai après une bascule avant de regarder si elle a pris (la source met un moment à démarrer). */
+    const val CONFIRM_MS = 3_000L
+
+    /**
+     * Source d'où repart un appui, dans cet ordre :
+     *  1. la source [enAttente] d'être appliquée (deux appuis rapprochés) ;
+     *  2. la [derniere] choisie si notre bascule est [enVerification] (la source active n'a pas
+     *     encore eu le temps de changer) ou si la source active est illisible — le fonctionnement
+     *     d'avant le 2026-10-16 ;
+     *  3. la [derniere] choisie si la source active est restée celle d'où notre dernière bascule a
+     *     échoué ([echecDepuis]) : la source visée n'a pas pris, on la saute ;
+     *  4. sinon la source [actif] — elle-même ou un changement fait ailleurs.
+     */
+    fun depart(
+        actif: AudioSource?, derniere: AudioSource?, enAttente: AudioSource?,
+        echecDepuis: AudioSource?, enVerification: Boolean,
+    ): AudioSource? = when {
+        enAttente != null -> enAttente
+        enVerification || actif == null -> derniere
+        echecDepuis != null && actif == echecDepuis -> derniere
+        else -> actif
+    }
 
     // ── Le réglage enregistré ────────────────────────────────────────────────
 

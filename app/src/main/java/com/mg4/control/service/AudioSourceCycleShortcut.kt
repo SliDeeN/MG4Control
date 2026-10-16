@@ -12,6 +12,7 @@ import com.mg4.control.shortcut.AudioSourceCycle
 import com.mg4.control.util.LocaleHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -19,8 +20,11 @@ import kotlinx.coroutines.launch
  * cycle composé dans l'onglet Raccourcis, l'annonce à l'écran, et y passe après un court délai
  * sans nouvel appui — deux appuis rapprochés sautent une source. Calqué sur [ProfileCycleShortcut].
  *
+ * Depuis le 2026-10-16, le cycle repart de la source qui joue ([MG4Hardware.currentAudioSource]),
+ * sauf quand notre dernière bascule n'a pas pris : chaque bascule est vérifiée
+ * [AudioSourceCycle.CONFIRM_MS] plus tard. La règle est dans [AudioSourceCycle.depart].
+ *
  * Pas de verrou de vitesse : changer de source n'est pas un réglage de conduite.
- * La règle — quelle source vient ensuite — est dans [AudioSourceCycle], sans Android.
  */
 object AudioSourceCycleShortcut {
 
@@ -28,22 +32,44 @@ object AudioSourceCycleShortcut {
 
     private val main = Handler(Looper.getMainLooper())
 
-    // Ces trois champs ne se lisent et ne s'écrivent que sur le thread principal.
+    // Ces champs ne se lisent et ne s'écrivent que sur le thread principal.
 
     /** Source visée, tant qu'elle attend d'être appliquée. */
     private var cible: AudioSource? = null
     private var application: Runnable? = null
     private var message: Toast? = null
+    /** Vrai de la bascule à sa vérification : la source active n'a pas encore eu le temps de changer. */
+    private var enVerification = false
+    /** Source qui jouait encore à la vérification de notre dernière bascule, si ce n'était pas la visée. */
+    private var echecDepuis: AudioSource? = null
+    /** Numéro de la dernière bascule : seule sa vérification compte. */
+    private var bascules = 0
 
     fun press(context: Context) {
         val app = context.applicationContext
-        main.post { appui(app) }
+        // La source active se lit hors du thread principal : sur l'ancien SDK, c'est un appel au
+        // service média SAIC, qui peut attendre sa liaison au premier appui.
+        CoroutineScope(Dispatchers.IO).launch {
+            val actif = MG4Hardware.currentAudioSource()
+            main.post { appui(app, actif) }
+        }
     }
 
-    private fun appui(app: Context) {
+    private fun appui(app: Context, actif: AudioSource?) {
         val cycle = AudioSourceCycle.order(app)
-        val visee = AudioSourceCycle.target(cycle, AudioSourceCycle.last(app), cible) ?: return
-        AppLogger.i(TAG, "SHORTCUT cycle de sources → ${visee.name} (${cycle.indexOf(visee) + 1}/${cycle.size})")
+        val derniere = AudioSourceCycle.last(app)
+        val depart = AudioSourceCycle.depart(actif, derniere, cible, echecDepuis, enVerification)
+        val visee = AudioSourceCycle.next(cycle, depart) ?: return
+        val pourquoi = when {
+            cible != null -> "source en attente"
+            enVerification -> "bascule en vérification"
+            actif == null -> "source active illisible"
+            depart != actif -> "la dernière bascule n'a pas pris"
+            else -> "source active"
+        }
+        AppLogger.i(TAG, "SHORTCUT cycle de sources → ${visee.name} (${cycle.indexOf(visee) + 1}/${cycle.size}) — " +
+            "départ ${depart?.name ?: "aucun"} ($pourquoi ; active ${actif?.name ?: "illisible"}, " +
+            "dernière choisie ${derniere?.name ?: "aucune"})")
         cible = visee
         annoncer(app, visee)
 
@@ -55,11 +81,27 @@ object AudioSourceCycleShortcut {
     private fun appliquer(app: Context, source: AudioSource) {
         cible = null
         application = null
-        // Retenue même si la source n'a rien à jouer : c'est d'elle que repart l'appui suivant.
+        // Retenue même si la source n'a rien à jouer : c'est d'elle que repart l'appui suivant
+        // quand la bascule n'a pas pris.
         AudioSourceCycle.setLast(app, source)
+        val numero = ++bascules
+        enVerification = true
         CoroutineScope(Dispatchers.IO).launch {
             val ok = MG4Hardware.switchAudioSource(source)
             AppLogger.i(TAG, "SHORTCUT cycle de sources — ${source.name} : commande ${if (ok) "envoyée" else "sans voie"}")
+            delay(AudioSourceCycle.CONFIRM_MS)
+            val actif = MG4Hardware.currentAudioSource()
+            main.post {
+                if (numero != bascules) return@post   // une bascule plus récente vérifiera la sienne
+                enVerification = false
+                // Illisible : rien à conclure, l'appui suivant repartira de la dernière choisie.
+                echecDepuis = actif?.takeIf { it != source }
+                AppLogger.i(TAG, "SHORTCUT cycle de sources — vérification : " + when {
+                    actif == null -> "source active illisible"
+                    actif == source -> "${source.name} joue"
+                    else -> "${actif.name} joue toujours, ${source.name} n'a pas pris"
+                })
+            }
         }
     }
 
