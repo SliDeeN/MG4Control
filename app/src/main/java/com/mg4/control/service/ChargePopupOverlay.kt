@@ -93,10 +93,7 @@ object ChargePopupOverlay {
         if (vue != null) return
         val c = OverlayKit.contextes(context, LARGEUR_DP, HAUTEUR_DP)
         val (racine, v) = try {
-            val gonflee = LayoutInflater.from(c.themed).inflate(R.layout.overlay_charge_popup, null)
-            val liees = Vues(gonflee, c.localized)
-            brancher(liees)
-            ChargeMonitor.etat?.let { peindre(liees, it) }
+            val (gonflee, liees) = preparer(c.themed, c.localized, ChargeMonitor.etat)
             OverlayKit.tenirDansLaFenetre(gonflee, (MARGE_FENETRE_DP * c.mesures.density).roundToInt(), "Pop-up de charge")
             gonflee to liees
         } catch (e: Exception) {
@@ -125,6 +122,18 @@ object ChargePopupOverlay {
         AppLogger.i(TAG, "Pop-up de charge affiché ($raison) — échelle ×${String.format(Locale.US, "%.2f", c.echelle)}")
     }
 
+    /**
+     * Gonfle, branche et peint le pop-up sans le poser à l'écran. Séparé pour les tests : une
+     * erreur ici passe la compilation et ne se voit qu'en voiture (texte mal formé, vue absente).
+     */
+    internal fun preparer(themed: Context, localized: Context, etat: ChargeMonitor.Etat?): Pair<View, Vues> {
+        val gonflee = LayoutInflater.from(themed).inflate(R.layout.overlay_charge_popup, null)
+        val liees = Vues(gonflee, localized)
+        brancher(liees)
+        etat?.let { peindre(liees, it) }
+        return gonflee to liees
+    }
+
     /** Ferme le pop-up s'il est ouvert. Appelable de n'importe quel fil. */
     fun fermer(raison: String) {
         handler.post {
@@ -143,7 +152,7 @@ object ChargePopupOverlay {
     // ── Vues ─────────────────────────────────────────────────────────────────
 
     /** Une ligne de droite (item_charge_row). */
-    private class Ligne(racine: View) {
+    internal class Ligne(racine: View) {
         val libelle: TextView = racine.findViewById(R.id.row_label)
         val sous: TextView = racine.findViewById(R.id.row_sub)
         val valeur: TextView = racine.findViewById(R.id.row_value)
@@ -152,7 +161,7 @@ object ChargePopupOverlay {
         val vue: View = racine
     }
 
-    private class Vues(val racine: View, val loc: Context) {
+    internal class Vues(val racine: View, val loc: Context) {
         val themed: Context = racine.context
         val locale: Locale = loc.resources.configuration.locales[0]
         val icone: ImageView = racine.findViewById(R.id.charge_title_icon)
@@ -193,7 +202,11 @@ object ChargePopupOverlay {
         val cTexteBas = themed.getColor(R.color.dash_text_lo)
         val cTexte = themed.getColor(R.color.text_primary)
 
-        fun s(id: Int, vararg args: Any): String = loc.getString(id, *args)
+        /**
+         * Sans argument, PAS de mise en forme : « Batterie (%) » la ferait lever
+         * (UnknownFormatConversionException, pop-up jamais affiché — diag SWI133 du 2026-10-16).
+         */
+        fun s(id: Int, vararg args: Any): String = if (args.isEmpty()) loc.getString(id) else loc.getString(id, *args)
     }
 
     private fun brancher(v: Vues) {

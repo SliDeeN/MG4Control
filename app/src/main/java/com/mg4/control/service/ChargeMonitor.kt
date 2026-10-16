@@ -44,7 +44,12 @@ object ChargeMonitor {
     private const val VISIBLE_MS = 1_000L
     /** Temps restant, limite, type de borne et autonomie : bougent peu. */
     private const val LENT_MS = 10_000L
-    private const val REPRISE_MS = 120_000L
+    /**
+     * Une charge qui reprend dans ce délai reste la même session. Deux minutes ne suffisaient pas :
+     * en charge AC, SWI133 est passé par l'état 8 (pas en charge) pendant exactement deux minutes
+     * avant de reprendre (diag du 2026-10-16), et la courbe repartait de zéro.
+     */
+    private const val REPRISE_MS = 10 * 60_000L
     /** Délai laissé à la voiture pour refléter une nouvelle limite avant de la dire refusée. */
     private const val CONSIGNE_MS = 20_000L
     /** Durée d'affichage du refus d'une limite. */
