@@ -32,12 +32,16 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.ClusterTabReader
 import com.mg4.control.hardware.EnergyReader
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.hardware.ChargeProbe
 import com.mg4.control.hardware.ReadyWatcher
+import com.mg4.control.model.ChargeDisplay
+import com.mg4.control.model.ChargeEnCours
 import com.mg4.control.model.ClusterGauge
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ClusterTrip
 import com.mg4.control.model.DriveMode
+import com.mg4.control.model.StatsTracker
 import com.mg4.control.ui.widget.ClusterGaugeView
 import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.util.LocaleHelper
@@ -60,6 +64,12 @@ import com.mg4.control.util.LocaleHelper
  * cadence réglée (0,1 à 1 s, [ClusterModuleSettings.refreshMs]), mode de conduite et batterie
  * toutes les dix secondes.
  *
+ * Pendant une charge (2026-10-16), le module « charge » prend la place de la jauge des onglets qui
+ * en ont une : détectée à chaque relevé (`BMS_CHRG_STS`), la charge garde le module jusqu'à ce que
+ * la prise ne soit plus signalée — « Charge terminée » entre les deux — ou jusqu'au READY. Temps
+ * restant, cible et type de borne relus toutes les dix secondes ; la sonde [ChargeProbe] en garde
+ * trace.
+ *
  * Vu sur le combiné le 2026-10-14 (SWI133) : la fenêtre s'y affiche bien. La place du carré vient
  * de la mise en page de l'appli SAIC ([ClusterGauge.placement]) ; le journal ([TAG]) donne l'écran
  * trouvé, la place retenue et chaque changement d'onglet.
@@ -70,6 +80,8 @@ internal object ClusterModuleOverlay {
 
     /** Mode de conduite et batterie bougent peu : relus toutes les dix secondes, quelle que soit la cadence. */
     private const val LENT_MS = 10_000L
+    /** En charge, la batterie s'affiche au dixième : relue chaque seconde pour que le chiffre défile. */
+    private const val BATTERIE_CHARGE_MS = 1_000L
     /**
      * Puissance illisible depuis plus longtemps : « – » plutôt que la dernière valeur. En temps et
      * non en relevés manqués : à 0,1 s, trois relevés ne feraient que 0,3 s.
@@ -94,11 +106,18 @@ internal object ClusterModuleOverlay {
     private var kwLisse: Float? = null
     private var dernierKwMs = 0L
     private var dernierLentMs = 0L
+    private var dernierSocMs = 0L
     /** Dernier onglet et dernier module annoncés au journal : un mot par changement, pas par relevé. */
     private var dernierOnglet: Int? = -1
     private var dernierModule: ClusterModule? = null
     private var mode: DriveMode? = null
     private var batterie: Float? = null
+    // Charge : la session, les derniers signaux bruts (relus avec les valeurs lentes), et l'état
+    // « terminée » — la charge s'est arrêtée mais la prise est encore signalée.
+    private val session = ChargeEnCours()
+    private var chargeBrute: EnergyReader.ChargeRaw? = null
+    private var chargeFinie = false
+    private var batterieDebut: Float? = null
 
     /**
      * Un passage en READY ouvre un nouveau trajet. Pas le premier état lu : si la voiture est déjà
@@ -108,6 +127,8 @@ internal object ClusterModuleOverlay {
         if (ready && !firstRead) lecteur.post {
             trajet.reset()
             AppLogger.i(TAG, "passage en READY : moyenne et récupération repartent de zéro")
+            // On repart : la charge, finie ou non, rend la place à la jauge.
+            if (session.active) finirCharge(SystemClock.elapsedRealtime(), "passage en READY")
         }
     }
 
@@ -249,6 +270,9 @@ internal object ClusterModuleOverlay {
             dernierLentMs = 0L
             dernierOnglet = -1
             dernierModule = null
+            session.terminer()
+            chargeBrute = null
+            chargeFinie = false
             lecteur.removeCallbacks(tic)
             lecteur.post(tic)
         }
@@ -278,10 +302,44 @@ internal object ClusterModuleOverlay {
             } else if (maintenant - dernierKwMs > MANQUE_TOLERE_MS) {
                 kwLisse = null
             }
+            // La charge se détecte à chaque relevé : le module doit changer dès le branchement.
+            val enCharge = runCatching { EnergyReader.charging() }.getOrNull() == true
+            if (enCharge && !session.active) {
+                session.commencer(maintenant)
+                chargeFinie = false
+                dernierLentMs = 0L   // temps restant, cible et type tout de suite
+                AppLogger.i(TAG, "charge détectée : le module de charge remplace les jauges")
+            }
             if (dernierLentMs == 0L || maintenant - dernierLentMs >= LENT_MS) {
                 dernierLentMs = maintenant
+                dernierSocMs = maintenant
                 mode = runCatching { MG4Hardware.getDriveMode() }.getOrNull()
                 batterie = runCatching { EnergyReader.soc() }.getOrNull()
+                if (session.active) {
+                    if (batterieDebut == null) batterieDebut = batterie
+                    chargeBrute = runCatching { EnergyReader.chargeRaw() }.getOrNull()
+                    chargeBrute?.let { ChargeProbe.observer(it, kw?.let { k -> -k }) }
+                }
+            } else if (session.active && maintenant - dernierSocMs >= BATTERIE_CHARGE_MS) {
+                dernierSocMs = maintenant
+                runCatching { EnergyReader.soc() }.getOrNull()?.let { batterie = it }
+            }
+            if (session.active) {
+                // Puissance qui entre dans la batterie : l'inverse de celle qui en sort.
+                session.ajouter(maintenant, kw?.let { -it })
+                if (enCharge) {
+                    chargeFinie = false
+                } else {
+                    val brut = chargeBrute
+                    if (brut != null && ChargeDisplay.priseSignalee(brut.ac, brut.dc)) {
+                        if (!chargeFinie) {
+                            chargeFinie = true
+                            AppLogger.i(TAG, "charge arrêtée, prise encore signalée : « charge terminée »")
+                        }
+                    } else {
+                        finirCharge(maintenant, "prise débranchée")
+                    }
+                }
             }
             // Le module suit l'onglet choisi au volant. Les relevés, eux, continuent quel que
             // soit l'onglet : la moyenne du trajet ne doit pas avoir de trou.
@@ -305,6 +363,8 @@ internal object ClusterModuleOverlay {
                     recupWh = trajet.regenWh(),
                     batterie = batterie,
                     unite = ClusterModuleSettings.consumptionUnit(ctx),
+                    // À la place de la jauge réglée pour l'onglet, jamais sur un onglet sans module.
+                    charge = if (session.active) vueCharge(maintenant) else null,
                 )
             }
             main.post {
@@ -319,5 +379,36 @@ internal object ClusterModuleOverlay {
             }
             lecteur.postDelayed(this, intervalle)
         }
+    }
+
+    /** Ce que montre le module « charge » à cet instant (fil du lecteur). */
+    private fun vueCharge(maintenant: Long): ClusterGaugeView.Charge {
+        val brut = chargeBrute
+        val restant = if (chargeFinie) null else brut?.let { ChargeDisplay.minutesRestantes(it.restant) }
+        val horloge = System.currentTimeMillis()
+        return ClusterGaugeView.Charge(
+            type = brut?.let { ChargeDisplay.type(it.ac, it.dc) },
+            kw = kwLisse?.let { -it },
+            energieKwh = session.energieKwh,
+            dureeMin = session.dureeMinutes(maintenant),
+            restantMin = restant,
+            ciblePct = brut?.let { ChargeDisplay.ciblePourcent(it.cible) },
+            batterie = batterie,
+            finie = chargeFinie,
+            // L'heure de fin seulement sur une horloge fiable : au réveil, le boîtier peut se
+            // croire en 2019.
+            finVersMs = restant?.takeIf { StatsTracker.clockPlausible(horloge) }?.let { horloge + it * 60_000L },
+        )
+    }
+
+    /** Fin de la session de charge (fil du lecteur) : un bilan au journal, et la jauge revient. */
+    private fun finirCharge(maintenant: Long, raison: String) {
+        AppLogger.i(TAG, "fin de charge ($raison) : +${"%.1f".format(java.util.Locale.US, session.energieKwh)} kWh en " +
+            "${session.dureeMinutes(maintenant)} min, batterie ${batterieDebut?.let { "%.1f".format(java.util.Locale.US, it) } ?: "?"} → " +
+            "${batterie?.let { "%.1f".format(java.util.Locale.US, it) } ?: "?"} % — la jauge revient")
+        session.terminer()
+        chargeBrute = null
+        chargeFinie = false
+        batterieDebut = null
     }
 }

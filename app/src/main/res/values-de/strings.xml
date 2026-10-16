@@ -788,4 +788,18 @@
     <string name="cluster_battery">BATTERIE</string>
     <string name="cluster_regen_word">Rekuperation</string>
     <string name="cluster_stopped_word">im Stand</string>
+    <!-- Module « charge » de l'écran conducteur (2026-10-16) -->
+    <string name="cluster_charge">Laden</string>
+    <string name="cluster_charge_ac">AC-Laden</string>
+    <string name="cluster_charge_dc">DC-Laden</string>
+    <string name="cluster_charge_done">Laden abgeschlossen</string>
+    <string name="cluster_charge_until">Bis %1$d %%</string>
+    <string name="cluster_charge_remaining">Restzeit</string>
+    <string name="cluster_charge_level">Batterie</string>
+    <string name="cluster_charge_end_at">fertig um %1$s</string>
+    <string name="cluster_charge_power">Leistung</string>
+    <string name="cluster_charge_energy">Energie</string>
+    <string name="cluster_charge_duration">Dauer</string>
+    <string name="cluster_duration_hm">%1$d h %2$02d</string>
+    <string name="cluster_duration_min">%1$d min</string>
 </resources>

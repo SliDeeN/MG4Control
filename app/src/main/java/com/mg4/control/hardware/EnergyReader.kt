@@ -44,6 +44,10 @@ object EnergyReader {
     private const val PROP_CHARGE_STATUS = 0x2140f409
     private const val PROP_PLUG_AC = 0x2140f43e
     private const val PROP_PLUG_DC = 0x2140f43f
+    // Module « charge » du combiné (2026-10-16) — `VehicleChargingBinder` du service SAIC (SWI133).
+    private const val PROP_CHARGE_PLUG = 0x2140f408
+    private const val PROP_CHARGE_TIME = 0x2140f417
+    private const val PROP_CHARGE_TARGET = 0x2140f40c
     private const val PROP_PACK_VOLTAGE = 0x2160f406
     private const val PROP_PACK_CURRENT = 0x2160f407
     private const val PROP_RANGE = 0x2140f41c
@@ -73,6 +77,9 @@ object EnergyReader {
         val volts = float(PROP_PACK_VOLTAGE)
         val amperes = float(PROP_PACK_CURRENT)
         val charging = int(PROP_CHARGE_STATUS)?.let { it == 1 }
+        // Les statistiques relèvent la voiture même sans module combiné : la sonde y voit aussi le
+        // type de borne (le continu n'a jamais été relevé).
+        ChargeProbe.observer(chargeRaw(), if (volts != null && amperes != null) -volts * amperes / 1000f else null)
 
         return EnergySnapshot(
             timestampMs = now,
@@ -94,6 +101,29 @@ object EnergyReader {
             outsideTempC = MG4Hardware.getOutsideTempCelsius(),
         )
     }
+
+    /** Valeurs BRUTES des signaux de charge, pour le module du combiné et la sonde `MG4_CHARGE`. */
+    data class ChargeRaw(
+        val statut: Int?,
+        val prise: Int?,
+        val ac: Int?,
+        val dc: Int?,
+        val restant: Int?,
+        val cible: Int?,
+    )
+
+    /** Six lectures. Appeler hors du fil principal. */
+    fun chargeRaw(): ChargeRaw = ChargeRaw(
+        statut = int(PROP_CHARGE_STATUS),
+        prise = int(PROP_CHARGE_PLUG),
+        ac = int(PROP_PLUG_AC),
+        dc = int(PROP_PLUG_DC),
+        restant = int(PROP_CHARGE_TIME),
+        cible = int(PROP_CHARGE_TARGET),
+    )
+
+    /** La voiture charge-t-elle (`BMS_CHRG_STS` = 1) ? `null` si illisible. Une seule lecture. */
+    fun charging(): Boolean? = int(PROP_CHARGE_STATUS)?.let { it == 1 }
 
     /**
      * Pourcentage de batterie seul, pour l'automatisation qui le surveille en roulant : une

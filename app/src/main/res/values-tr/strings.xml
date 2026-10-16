@@ -788,4 +788,18 @@
     <string name="cluster_battery">BATARYA</string>
     <string name="cluster_regen_word">rejenerasyon</string>
     <string name="cluster_stopped_word">duruşta</string>
+    <!-- Module « charge » de l'écran conducteur (2026-10-16) -->
+    <string name="cluster_charge">Şarj</string>
+    <string name="cluster_charge_ac">AC şarj</string>
+    <string name="cluster_charge_dc">DC şarj</string>
+    <string name="cluster_charge_done">Şarj tamamlandı</string>
+    <string name="cluster_charge_until">Hedef %%%1$d</string>
+    <string name="cluster_charge_remaining">Kalan süre</string>
+    <string name="cluster_charge_level">Batarya</string>
+    <string name="cluster_charge_end_at">bitiş %1$s</string>
+    <string name="cluster_charge_power">Güç</string>
+    <string name="cluster_charge_energy">Enerji</string>
+    <string name="cluster_charge_duration">Süre</string>
+    <string name="cluster_duration_hm">%1$d sa %2$02d dk</string>
+    <string name="cluster_duration_min">%1$d dk</string>
 </resources>

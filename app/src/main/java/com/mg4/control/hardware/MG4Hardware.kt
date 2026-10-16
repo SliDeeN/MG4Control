@@ -2193,7 +2193,6 @@ object MG4Hardware {
     fun getAccTjaMode(): Int {
         val useNewApi = FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132
         val method = if (useNewApi) "getAccTjaState" else "getAccTjaMode"
-        if (logEnabled) AppLogger.i(TAG, "$method →")
         return (callVsm(method) as? Int) ?: -1
     }
 
@@ -2219,7 +2218,6 @@ object MG4Hardware {
     /** Lit le mode du limiteur de vitesse. Retourne 0/2/3, ou -1 si indisponible. */
     fun getSpeedLimiterMode(): Int {
         val method = if (useSasApi()) "getSasMode" else "getSpeedAsstMode"
-        if (logEnabled) AppLogger.i(TAG, "$method →")
         return (callVsm(method) as? Int) ?: -1
     }
 
@@ -2355,9 +2353,7 @@ object MG4Hardware {
      */
     fun getAebSensitivity(): Int {
         return if (FirmwareInfo.isVsmBased()) {
-            (callVsm("getFcwSensitivity") as? Int)?.takeIf { it > 0 }?.also {
-                AppLogger.d(TAG, "  AEB GET sensitivity=$it via VSM ✓")
-            } ?: -1
+            (callVsm("getFcwSensitivity") as? Int)?.takeIf { it > 0 } ?: -1
         } else {
             val raw = getIntPropertyVpm(PROP_AEB_SENSITIVITY)
             if (raw < 1) -1 else raw
@@ -2873,21 +2869,16 @@ object MG4Hardware {
         !FirmwareInfo.isVsmBased() -> {
             val vsm = callVsm133("getLaneKeepingAsstMode")
             if (vsm is Int && vsm > 0) {
-                AppLogger.d(TAG, "  ELK GET mode=$vsm via VSM133 ✓")
                 vsm
             } else elkBinderGet(TX_ELK_GET_MODE)
         }
         FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 -> {
             // SWI69/SWI131/SWI132 — CarVehicleSettingClient
-            (callVsm("getLasMode") as? Int)?.takeIf { it > 0 }?.also {
-                AppLogger.d(TAG, "  ELK GET mode=$it via VSM (Las) ✓")
-            } ?: -1
+            (callVsm("getLasMode") as? Int)?.takeIf { it > 0 } ?: -1
         }
         else -> {
             // SWI68/SWI165 — VehicleSettingManager
-            (callVsm("getLaneKeepingAsstMode") as? Int)?.takeIf { it > 0 }?.also {
-                AppLogger.d(TAG, "  ELK GET mode=$it via VSM ✓")
-            } ?: -1
+            (callVsm("getLaneKeepingAsstMode") as? Int)?.takeIf { it > 0 } ?: -1
         }
     }
 
@@ -2929,21 +2920,16 @@ object MG4Hardware {
         !FirmwareInfo.isVsmBased() -> {
             val vsm = callVsm133("getLaneKeepingAsstSen")
             if (vsm is Int && vsm > 0) {
-                AppLogger.d(TAG, "  ELK GET sen=$vsm via VSM133 ✓")
                 vsm
             } else elkBinderGet(TX_ELK_GET_SEN)
         }
         FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 -> {
             // SWI69/SWI131/SWI132 — CarVehicleSettingClient
-            (callVsm("getLasSensitivity") as? Int)?.takeIf { it > 0 }?.also {
-                AppLogger.d(TAG, "  ELK GET sen=$it via VSM (Las) ✓")
-            } ?: -1
+            (callVsm("getLasSensitivity") as? Int)?.takeIf { it > 0 } ?: -1
         }
         else -> {
             // SWI68/SWI165 — VehicleSettingManager
-            (callVsm("getLaneKeepingAsstSen") as? Int)?.takeIf { it > 0 }?.also {
-                AppLogger.d(TAG, "  ELK GET sen=$it via VSM ✓")
-            } ?: -1
+            (callVsm("getLaneKeepingAsstSen") as? Int)?.takeIf { it > 0 } ?: -1
         }
     }
 
@@ -3035,7 +3021,6 @@ object MG4Hardware {
             }
             reply.readException()
             val result = reply.readInt()
-            AppLogger.d(TAG, "  ELK GET TX=0x${txCode.toString(16)} = $result")
             result
         } catch (e: Exception) {
             AppLogger.d(TAG, "  ELK GET TX=0x${txCode.toString(16)} exc: ${e.message}")
@@ -4603,10 +4588,16 @@ object MG4Hardware {
         }
     }
 
+    /** Dernière source courante écrite au journal : une ligne par changement, pas par lecture. */
+    @Volatile private var sSourceCouranteLoguee: Int? = null
+
     /** Source audio réellement active, ou -1 si le service SAIC ne répond pas. */
     private fun mediaSourceCourante(): Int {
         val v = mediaLireInt(ACT_STATUS, DESC_STATUS, 0x9) ?: return -1   // getCurrentMediaSource
-        AppLogger.i(MEDIA_TAG, "source courante = $v (${nomSource(v)})")
+        if (v != sSourceCouranteLoguee) {
+            sSourceCouranteLoguee = v
+            AppLogger.i(MEDIA_TAG, "source courante = $v (${nomSource(v)})")
+        }
         return v
     }
 
@@ -5025,14 +5016,8 @@ object MG4Hardware {
      */
     fun switchAudioSource(source: AudioSource): Boolean {
         AppLogger.i(MEDIA_TAG, "changement de source → ${source.name}")
-        val changement = sChangementsSource.incrementAndGet()
-        val depuis = System.currentTimeMillis()
         // Service média SAIC muet : firmwares A9, où chaque source publie son lecteur Android.
-        val a9 = mediaSourceCourante() < 0
-        Handler(Looper.getMainLooper()).postDelayed({
-            CoroutineScope(Dispatchers.IO).launch { controleSource(source, a9, changement, depuis) }
-        }, CONTROLE_SOURCE_MS)
-        if (a9) {
+        if (mediaSourceCourante() < 0) {
             // Le Bluetooth passe par l'appli Média, comme sur le launcher : voir [sourceParAppliMedia].
             if (source == AudioSource.BLUETOOTH && sourceParAppliMedia(MEDIA_A9_TYPE_BT, source)) return true
             return sourceParLecteur(source)
@@ -5238,109 +5223,6 @@ object MG4Hardware {
             android.provider.Settings.System.getInt(ctx.contentResolver, "audio_setting_last_source", -1)
         }.getOrNull()
         return parReglage?.takeIf { it > 0 }
-    }
-
-    /** Délai du journal de contrôle : le temps qu'une source démarre ou qu'une autre s'arrête. */
-    private const val CONTROLE_SOURCE_MS = 3_000L
-
-    /** Numéro du dernier changement de source : un contrôle dépassé se tait. */
-    private val sChangementsSource = java.util.concurrent.atomic.AtomicInteger()
-
-    /**
-     * Journal de contrôle, [CONTROLE_SOURCE_MS] après un changement de source : ce qui joue
-     * VRAIMENT, que la commande ne dit pas. Sur A9, la source que la voiture a retenue
-     * ([sourceVoitureA9]) et les sessions (3 = lecture, 2 = pause) ; sur l'ancien SDK, la
-     * source courante SAIC.
-     *
-     * Si une autre source a été demandée entre-temps, le contrôle le dit et s'arrête : il
-     * décrirait l'effet de l'appui suivant (journal SWI69 du 2026-10-15, appuis toutes les 2 s).
-     */
-    private fun controleSource(source: AudioSource, a9: Boolean, changement: Int, depuis: Long) {
-        val entete = "contrôle ${source.name} à +${CONTROLE_SOURCE_MS / 1000} s"
-        if (changement != sChangementsSource.get()) {
-            AppLogger.i(MEDIA_TAG, "$entete : dépassé (autre source demandée depuis)")
-            return
-        }
-        val ctx = sAppContext ?: return
-        val msm = ctx.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
-        val sessions = runCatching { msm?.getActiveSessions(null) }.getOrNull()
-            ?.joinToString { "${it.packageName}=${it.playbackState?.state ?: "?"}" }
-        val voiture = if (a9) sourceVoitureA9() else null
-        AppLogger.i(MEDIA_TAG, "$entete : " +
-            (voiture?.let { "source voiture = $it (${nomSourceVoiture(it)}) ; " } ?: "") +
-            "sessions [${sessions ?: "illisibles"}] (3 = lecture, 2 = pause)")
-        if (!a9) mediaSourceCourante()
-        else if (source == AudioSource.USB) journalAppliMedia(depuis)
-    }
-
-    /**
-     * A9 : source audio que la voiture a retenue — l'étiquette `key_car_source_type` du focus
-     * en cours, rendue par `AudioManager.getCurrentSource()` (ajout SAIC, trouvé dans le code de
-     * DiAuto-MG4). `null` si la fonction manque ou ne rend rien.
-     */
-    private fun sourceVoitureA9(): Int? {
-        val am = sAppContext?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager ?: return null
-        return try {
-            val attrs = am.javaClass.getMethod("getCurrentSource").invoke(am) ?: return null
-            val bundle = attrs.javaClass.getMethod("getBundle").invoke(attrs) as? android.os.Bundle
-            bundle?.takeIf { it.containsKey("key_car_source_type") }?.getInt("key_car_source_type")
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    /**
-     * Codes `key_car_source_type` (code de l'appli Média SWI69 et de DiAuto-MG4). Radio supposée
-     * de 1 à 4 comme sur l'ancien SDK : l'appli radio calcule le sien, non relevé.
-     */
-    private fun nomSourceVoiture(v: Int): String = when (v) {
-        in 1..4 -> "radio"
-        5 -> "Bluetooth"
-        6 -> "USB port 1"
-        7 -> "USB port 2"
-        50 -> "CarPlay"
-        70 -> "Android Auto"
-        else -> "?"
-    }
-
-    /** Mots des lignes utiles de l'appli Média : pourquoi son lecteur USB joue ou non. */
-    private val MOTS_APPLI_MEDIA = listOf("onPlay", "handle_CMD_PLAY", "isAvailableState",
-        "isUsb1Mounted", "setMusic", "requestAudioFocus", "Failed to acquire audio focus",
-        "handleStartCommand")
-
-    /**
-     * Recopie, depuis [depuis], les lignes du journal système de l'appli Média SAIC qui disent
-     * pourquoi son lecteur USB démarre ou non : lecteur prêt (`isAvailableState`), clé sur quel
-     * port (`isUsb1Mounted`), morceau choisi (`setMusic`), sortie audio obtenue. Elle seule le
-     * sait. Lisible parce que nous tournons sous l'uid système ; filtré sur son processus et sur
-     * [MOTS_APPLI_MEDIA] — rien d'autre du journal n'est recopié.
-     */
-    private fun journalAppliMedia(depuis: Long) {
-        val ctx = sAppContext ?: return
-        val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager ?: return
-        val pid = runCatching { am.runningAppProcesses }.getOrNull()
-            ?.firstOrNull { it.processName == MEDIA_A9_PKG }?.pid
-        if (pid == null) {
-            AppLogger.i(MEDIA_TAG, "  appli Média SAIC : processus introuvable")
-            return
-        }
-        // Format de `logcat -v time` : « MM-jj HH:mm:ss.SSS », 18 caractères en tête de ligne.
-        val debut = java.text.SimpleDateFormat("MM-dd HH:mm:ss.SSS", java.util.Locale.US)
-            .format(java.util.Date(depuis))
-        try {
-            val p = ProcessBuilder("logcat", "-d", "-v", "time", "--pid=$pid")
-                .redirectErrorStream(true).start()
-            val lignes = p.inputStream.bufferedReader().useLines { seq ->
-                seq.filter { it.length > 18 && it.substring(0, 18) >= debut }
-                    .filter { l -> MOTS_APPLI_MEDIA.any { it in l } }
-                    .toList()
-            }
-            p.waitFor()
-            if (lignes.isEmpty()) AppLogger.i(MEDIA_TAG, "  appli Média SAIC : aucune ligne utile")
-            lignes.takeLast(20).forEach { AppLogger.i(MEDIA_TAG, "  SAIC ${it.take(180)}") }
-        } catch (e: Exception) {
-            AppLogger.w(MEDIA_TAG, "  journal de l'appli Média illisible : ${(e.cause ?: e).message}")
-        }
     }
 
     /** Lecteurs en cours de connexion : gardés en vie le temps que « lecture » parte. */

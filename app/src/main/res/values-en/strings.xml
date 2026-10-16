@@ -788,4 +788,18 @@
     <string name="cluster_battery">BATTERY</string>
     <string name="cluster_regen_word">regenerating</string>
     <string name="cluster_stopped_word">stationary</string>
+    <!-- Module « charge » de l'écran conducteur (2026-10-16) -->
+    <string name="cluster_charge">Charging</string>
+    <string name="cluster_charge_ac">AC charging</string>
+    <string name="cluster_charge_dc">DC charging</string>
+    <string name="cluster_charge_done">Charging complete</string>
+    <string name="cluster_charge_until">Until %1$d %%</string>
+    <string name="cluster_charge_remaining">Time remaining</string>
+    <string name="cluster_charge_level">Battery</string>
+    <string name="cluster_charge_end_at">done at %1$s</string>
+    <string name="cluster_charge_power">Power</string>
+    <string name="cluster_charge_energy">Energy</string>
+    <string name="cluster_charge_duration">Duration</string>
+    <string name="cluster_duration_hm">%1$d h %2$02d</string>
+    <string name="cluster_duration_min">%1$d min</string>
 </resources>
