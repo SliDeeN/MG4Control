@@ -122,9 +122,9 @@ langue mène à un dossier et non à sa page.
 
 ## Version documentée
 
-Le site et le simulateur décrivent la **2.6.9** (code de la branche `beta` au 15/10/2026, après le
-commit `1f00eee` : module sur l'écran conducteur réservé à SWI133, SWI68 et SWI165, chiffre qui
-compte d'une valeur à l'autre, actualisation de 1 s par défaut). Ils sont prévus pour être publiés en
+Le site et le simulateur décrivent la **2.6.9** (code de la branche `beta` au 16/10/2026, après le
+commit `cfba533` : cycle de sources audio avec ses correctifs A9, ventilation éteinte au cran 1 du
+pop-up HVAC, module sur l'écran conducteur réservé à SWI133, SWI68 et SWI165). Ils sont prévus pour être publiés en
 même temps que la release 2.6.9 : le bouton « Télécharger la dernière version » pointe vers
 `releases/latest`, et publier plus tôt annoncerait des fonctions que la version stable n'a pas.
 
@@ -134,9 +134,11 @@ l'accueil s'appuient dessus. À la version suivante, retirer ces badges et ces c
 tableau de compatibilité), réécrire l'encadré des nouveautés et changer la pastille `vX.Y.Z` de
 l'accueil, la puce « ★ » et les deux liens « Nouveautés X.Y.Z » de l'en-tête.
 
-L'aperçu du combiné (rubrique « Écran conducteur », `<div class="cl" data-cluster>`) est monté par
-`MG4Sim.mountCluster` : il redessine en SVG le module de `ClusterGaugeView`, avec les bornes de
-`ClusterGauge` recopiées dans `sim.js` (`CG`). Une échelle changée dans l'app doit l'être là aussi.
+L'aperçu du module (rubrique « Écran conducteur », `<div class="cl" data-cluster>`) est monté par
+`MG4Sim.mountCluster` : il redessine en SVG le module de `ClusterGaugeView`, SEUL — le reste du
+combiné (vitesse, batterie, onglets) n'est volontairement pas reproduit. Les bornes de
+`ClusterGauge` sont recopiées dans `sim.js` (`CG`) : une échelle changée dans l'app doit l'être là
+aussi. La conduite (vitesse, puissance) y est simulée localement, sans toucher au véhicule virtuel.
 
 ## Ajouter ou modifier une fonctionnalité
 

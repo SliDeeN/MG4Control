@@ -35,8 +35,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/site.css?v=364c35da">
-  <link rel="stylesheet" href="assets/css/sim.css?v=911a482c">
+  <link rel="stylesheet" href="assets/css/site.css?v=0cf565ab">
+  <link rel="stylesheet" href="assets/css/sim.css?v=58126668">
   <link rel="stylesheet" href="assets/css/explorer.css?v=cd546543">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,12 +138,13 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span>
-        <b><span data-l="fr">7 nouveautés dans cette version</span></b>
+        <b><span data-l="fr">8 nouveautés dans cette version</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span></button>
       </div>
       <div class="wn-list">
         <a href="#f-cluster" data-feature="f-cluster"><span data-l="fr">🖥️ Un module sur l'écran conducteur</span></a>
         <a href="#f-cluster-modules" data-feature="f-cluster-modules"><span data-l="fr">📈 Consommation ou puissance, par onglet</span></a>
+        <a href="#f-audiocycle" data-feature="f-audiocycle"><span data-l="fr">🎵 Cycle de sources audio</span></a>
         <a href="#f-profiles10" data-feature="f-profiles10"><span data-l="fr">👥 Jusqu'à 10 profils</span></a>
         <a href="#f-profileorder" data-feature="f-profileorder"><span data-l="fr">↕️ Ordre des profils au doigt</span></a>
         <a href="#f-regenkeep" data-feature="f-regenkeep"><span data-l="fr">♻️ Profils : régénération inchangée</span></a>
@@ -572,7 +573,7 @@
       <h3><span data-l="fr">Pop-up HVAC</span></h3>
       <p data-l="fr">La clim en un geste, par-dessus l'écran en cours : le joystick droit règle la température et la ventilation.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Une action de raccourci ouvre la fenêtre, y compris quand Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim. Ici le joystick ne déplace pas de focus : haut/bas changent la température, gauche/droite la ventilation, le centre bascule le mode AUTO (régler la ventilation en fait sortir). Un repère en haut de la fenêtre rappelle ces gestes, et une jauge montre la température entre ses deux bornes. L'A/C, la recirculation et le sens de l'air (visage, pieds, pare-brise avant et arrière) se choisissent au doigt ; sur les firmwares équipés (SWI133, SWI68, SWI165), une colonne ajoute le volant chauffant et les sièges, dont le niveau se choisit d'un toucher — une couleur par niveau : vert, orange, rouge. La fenêtre se referme seule après le délai réglé (10 s par défaut) sans action, d'un second appui sur le raccourci ou par sa croix. Le joystick nécessite le service d'accessibilité ; sans lui, la fenêtre reste utilisable au doigt. Dans la maquette, la ★ droite du véhicule virtuel l'ouvre et la referme.</p>
+        <p data-l="fr">Une action de raccourci ouvre la fenêtre, y compris quand Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim. Ici le joystick ne déplace pas de focus : haut/bas changent la température, gauche/droite la ventilation, le centre bascule le mode AUTO (régler la ventilation en fait sortir). Au cran 1, un appui à gauche éteint la clim (la ventilation affiche « OFF ») ; éteinte, gauche ne la rallume pas, droite la remet au cran 1. Un repère en haut de la fenêtre rappelle ces gestes, et une jauge montre la température entre ses deux bornes. L'A/C, la recirculation et le sens de l'air (visage, pieds, pare-brise avant et arrière) se choisissent au doigt ; sur les firmwares équipés (SWI133, SWI68, SWI165), une colonne ajoute le volant chauffant et les sièges, dont le niveau se choisit d'un toucher — une couleur par niveau : vert, orange, rouge. La fenêtre se referme seule après le délai réglé (10 s par défaut) sans action, d'un second appui sur le raccourci ou par sa croix. Le joystick nécessite le service d'accessibilité ; sans lui, la fenêtre reste utilisable au doigt. Dans la maquette, la ★ droite du véhicule virtuel l'ouvre et la referme.</p>
       </details>
     </div>
     <div class="pt" id="f-profilecycle" data-hl-key="sc-profiles" data-demo="profileCycle">
@@ -580,6 +581,13 @@
       <p data-l="fr">Un bouton fait défiler vos profils, dans l'ordre que vous avez composé.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <p data-l="fr">Touchez les profils dans l'ordre voulu, re-touchez pour retirer, puis <b>Sauvegarder</b> (au moins deux profils). Réglage global, pour tous les boutons. Sans réglage : tous les profils, dans l'ordre de leur liste. À chaque appui, le raccourci vise le profil qui suit le profil actif (le premier du cycle si le profil actif n'en fait pas partie) et affiche son nom ; il l'applique une seconde plus tard, puis le confirme à l'écran. Deux appuis rapprochés sautent donc un profil sans l'appliquer. Un profil supprimé sort du cycle. Les profils y forment des rangées de cinq : la seconde n'apparaît qu'à partir du sixième profil. Si la sécurité conduite refuse l'écriture, rien ne change. Dans la maquette, la ★ droite du véhicule virtuel fait défiler les profils.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-audiocycle" data-hl-key="sc-sources" data-demo="audioCycle">
+      <h3><span data-l="fr">Cycle de sources audio</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span></h3>
+      <p data-l="fr">Un bouton passe à la source audio suivante, dans l'ordre que vous avez composé : radio, Bluetooth, USB, en ligne, CarPlay / Android Auto.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Dans l'onglet Raccourcis, page « Cycle sources », touchez les tuiles dans l'ordre voulu (le rang s'affiche sur chacune), re-touchez pour retirer, puis <b>Sauvegarder</b> (au moins deux sources). Sans réglage : radio puis Bluetooth. À chaque appui, « Source : … » s'affiche et la voiture y passe une seconde plus tard ; deux appuis rapprochés sautent donc une source. Il n'existe pas de commande « changer de source » : l'application demande à la source visée de jouer, ce qui la met au premier plan, sans rien mettre en pause. La disponibilité n'est pas vérifiée : une source sans rien à jouer (pas de clé USB, pas de téléphone) reste muette, et l'appui suivant passe à la suivante, car le cycle repart de la dernière source choisie, pas de celle qui joue. CarPlay et Android Auto passent par le récepteur d'origine ; s'il n'a pas de téléphone, l'application essaie Android Auto sans fil par DiAuto-MG4. Sur SWI69, SWI131 et SWI132, l'USB vise le port où la clé est branchée, et « En ligne » n'est pas proposé : cette source n'y existe pas. Dans la maquette, la ★ droite du véhicule virtuel fait défiler les sources, et le véhicule virtuel affiche la source en cours.</p>
       </details>
     </div>
   </div>
@@ -593,7 +601,7 @@
           <tr><td><span data-l="fr">Vitres</span></td><td data-l="fr">Ouvrir toutes les vitres · Fermer toutes les vitres</td></tr>
           <tr><td><span data-l="fr">Sécurité</span></td><td data-l="fr">ESC · Somnolence · Somnolence : sensibilité · Système anticollision (alternance de mode) · ADAS (alternance) · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son</td></tr>
           <tr><td><span data-l="fr">Confort</span></td><td data-l="fr">Siège chauffant gauche / droit (cycle) · Volant chauffant · Clim ON/OFF · Clim : A/C · Clim : température ± · Clim : ventilation ± · Dégivrage avant / arrière · Recirculation (cycle) · Luminosité ± (pas de 10 %) · Feux de route automatiques · Pop-up HVAC</td></tr>
-          <tr><td><span data-l="fr">Média</span></td><td data-l="fr">Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume −</td></tr>
+          <tr><td><span data-l="fr">Média</span></td><td data-l="fr">Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume − · Cycle de sources audio</td></tr>
           <tr><td><span data-l="fr">Application et véhicule</span></td><td data-l="fr">Lancer un profil · Sélecteur de profil (popup) · Cycle de profils · Ouvrir MG4Control · Lancer une application · Éteindre la voiture</td></tr>
         </tbody>
       </table>
@@ -874,8 +882,8 @@
     </div>
   </div>
   <div class="widget">
-    <h3><span data-l="fr">Aperçu du combiné</span></h3>
-    <p class="sub" data-l="fr">Le carré central du combiné, avec les réglages de la maquette et la vitesse du véhicule virtuel. La puissance est simulée : roulez, accélérez, freinez, et changez d'onglet.</p>
+    <h3><span data-l="fr">Aperçu du module</span></h3>
+    <p class="sub" data-l="fr">Le module tel qu'il s'affiche dans le carré central du combiné, avec l'unité et l'actualisation réglées dans la maquette. La conduite est simulée : choisissez le module, accélérez, freinez.</p>
     <div class="cl" data-cluster></div>
   </div>
 </section>
@@ -1268,8 +1276,8 @@
 
 <div class="dock" aria-label="Véhicule virtuel"></div>
 
-<script src="assets/js/strings.js?v=f01b89b2"></script>
-<script src="assets/js/sim.js?v=b7b5e9ba"></script>
+<script src="assets/js/strings.js?v=ce7bbf76"></script>
+<script src="assets/js/sim.js?v=7e1009b1"></script>
 <script src="assets/js/site.js?v=1db09f2f"></script>
 <script src="assets/js/explorer.js?v=ffc271c4"></script>
 </body>

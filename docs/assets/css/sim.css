@@ -642,6 +642,13 @@
   border-radius: 50%; background: var(--dash-accent); color: var(--dash-card); font-size: 12px; font-weight: 700;
 }
 
+/* Cycle de sources : tuiles (pictogramme, nom, rang en pastille), verte une fois choisie — accent_eco de l'app */
+.b.src { position: relative; height: 64px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-transform: none; font-size: calc(15px * var(--ts, 1)); }
+.b.src svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
+.b.src > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.b.src.on { background: #2E7D32; border-color: #2E7D32; color: #fff; }
+.src-n { position: absolute; top: 5px; right: 5px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fff; color: #2E7D32; font-size: 13px; font-weight: 700; }
+
 /* Liste des raccourcis groupée (touche + type d'appui) */
 .sc-group { border: 1px solid var(--dash-border); border-radius: 12px; padding: 8px; }
 .sc-group + .sc-group { margin-top: 8px; }

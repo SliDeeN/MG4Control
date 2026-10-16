@@ -35,8 +35,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/css/site.css?v=364c35da">
-  <link rel="stylesheet" href="../assets/css/sim.css?v=911a482c">
+  <link rel="stylesheet" href="../assets/css/site.css?v=0cf565ab">
+  <link rel="stylesheet" href="../assets/css/sim.css?v=58126668">
   <link rel="stylesheet" href="../assets/css/explorer.css?v=cd546543">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,12 +138,13 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="en">New</span> · 2.6.9</span>
-        <b><span data-l="en">7 new things in this release</span></b>
+        <b><span data-l="en">8 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
         <a href="#f-cluster" data-feature="f-cluster"><span data-l="en">🖥️ A module on the driver display</span></a>
         <a href="#f-cluster-modules" data-feature="f-cluster-modules"><span data-l="en">📈 Consumption or power, per tab</span></a>
+        <a href="#f-audiocycle" data-feature="f-audiocycle"><span data-l="en">🎵 Audio source cycle</span></a>
         <a href="#f-profiles10" data-feature="f-profiles10"><span data-l="en">👥 Up to 10 profiles</span></a>
         <a href="#f-profileorder" data-feature="f-profileorder"><span data-l="en">↕️ Reorder profiles by touch</span></a>
         <a href="#f-regenkeep" data-feature="f-regenkeep"><span data-l="en">♻️ Profiles: regeneration unchanged</span></a>
@@ -572,7 +573,7 @@
       <h3><span data-l="en">HVAC pop-up</span></h3>
       <p data-l="en">Climate in one move, on top of the current screen: the right joystick sets temperature and fan speed.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">A shortcut action opens the window, including when Android Auto or CarPlay fills the screen and hides the climate bar. Here the joystick moves no focus: up/down change the temperature, left/right the fan speed, the centre toggles AUTO mode (adjusting the fan speed leaves it). A hint at the top of the window recalls these gestures, and a gauge shows the temperature between its two limits. A/C, recirculation and the air direction (face, feet, front and rear screen) are chosen by touch; on equipped firmwares (SWI133, SWI68, SWI165), a column adds the heated steering wheel and the seats, whose level is picked with one tap, one colour per level: green, orange, red. The window closes by itself after the set delay (10 s by default) without action, on a second press of the shortcut or with its cross. The joystick needs the accessibility service; without it, the window still works by touch. In the mockup, the right ★ of the virtual vehicle opens and closes it.</p>
+        <p data-l="en">A shortcut action opens the window, including when Android Auto or CarPlay fills the screen and hides the climate bar. Here the joystick moves no focus: up/down change the temperature, left/right the fan speed, the centre toggles AUTO mode (adjusting the fan speed leaves it). At fan level 1, pressing left turns the climate off (the fan shows “OFF”); while it is off, left does nothing and right sets it back to level 1. A hint at the top of the window recalls these gestures, and a gauge shows the temperature between its two limits. A/C, recirculation and the air direction (face, feet, front and rear screen) are chosen by touch; on equipped firmwares (SWI133, SWI68, SWI165), a column adds the heated steering wheel and the seats, whose level is picked with one tap, one colour per level: green, orange, red. The window closes by itself after the set delay (10 s by default) without action, on a second press of the shortcut or with its cross. The joystick needs the accessibility service; without it, the window still works by touch. In the mockup, the right ★ of the virtual vehicle opens and closes it.</p>
       </details>
     </div>
     <div class="pt" id="f-profilecycle" data-hl-key="sc-profiles" data-demo="profileCycle">
@@ -580,6 +581,13 @@
       <p data-l="en">One button steps through your profiles, in the order you composed.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
         <p data-l="en">Tap the profiles in the wanted order, tap again to remove, then <b>Save</b> (at least two profiles). A global setting, for every button. Without it: every profile, in the order of their list. On each press, the shortcut targets the profile that follows the active one (the first of the cycle if the active profile is not part of it) and shows its name; it applies it one second later, then confirms it on screen. Two quick presses therefore skip a profile without applying it. A deleted profile leaves the cycle. The profiles sit in rows of five: the second row only appears from the sixth profile. If the driving safety lock refuses the write, nothing changes. In the mockup, the right ★ of the virtual vehicle steps through the profiles.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-audiocycle" data-hl-key="sc-sources" data-demo="audioCycle">
+      <h3><span data-l="en">Audio source cycle</span><span class="badge-new"><span data-l="en">New</span> · 2.6.9</span></h3>
+      <p data-l="en">One button switches to the next audio source, in the order you composed: radio, Bluetooth, USB, online, CarPlay / Android Auto.</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">In the Shortcuts tab, “Source cycle” page, tap the tiles in the wanted order (each one shows its rank), tap again to remove, then <b>Save</b> (at least two sources). Without it: radio then Bluetooth. On each press, “Source: …” shows and the car switches to it one second later; two quick presses therefore skip a source. There is no “change source” command: the app asks the target source to play, which brings it to the front, without pausing anything. Availability is not checked: a source with nothing to play (no USB stick, no phone) stays silent, and the next press moves on, because the cycle starts again from the last source chosen, not from the one playing. CarPlay and Android Auto go through the original receiver; if it has no phone, the app tries wireless Android Auto through DiAuto-MG4. On SWI69, SWI131 and SWI132, USB targets the port the stick is plugged into, and “Online” is not offered: that source does not exist there. In the mockup, the right ★ of the virtual vehicle steps through the sources, and the virtual vehicle shows the current source.</p>
       </details>
     </div>
   </div>
@@ -593,7 +601,7 @@
           <tr><td><span data-l="en">Windows</span></td><td data-l="en">Open all windows · Close all windows</td></tr>
           <tr><td><span data-l="en">Safety</span></td><td data-l="en">ESC · Drowsiness · Drowsiness: sensitivity · Collision system (mode alternation) · ADAS (alternation) · Traffic signs (TSR) · Overspeed alert · Speed-limit change alert · Sound</td></tr>
           <tr><td><span data-l="en">Comfort</span></td><td data-l="en">Left / right heated seat (cycle) · Heated wheel · Climate ON/OFF · Climate: A/C · Climate: temperature ± · Climate: fan ± · Front / rear defrost · Recirculation (cycle) · Brightness ± (10% steps) · Automatic high beam · HVAC pop-up</td></tr>
-          <tr><td><span data-l="en">Media</span></td><td data-l="en">Play / Pause · Next track · Previous track · Volume + · Volume −</td></tr>
+          <tr><td><span data-l="en">Media</span></td><td data-l="en">Play / Pause · Next track · Previous track · Volume + · Volume − · Audio source cycle</td></tr>
           <tr><td><span data-l="en">App and vehicle</span></td><td data-l="en">Apply a profile · Profile picker (popup) · Profile cycle · Open MG4Control · Launch an app · Power the car off</td></tr>
         </tbody>
       </table>
@@ -874,8 +882,8 @@
     </div>
   </div>
   <div class="widget">
-    <h3><span data-l="en">Cluster preview</span></h3>
-    <p class="sub" data-l="en">The cluster's central square, with the mockup's settings and the virtual vehicle's speed. Power is simulated: drive, accelerate, brake, and switch tabs.</p>
+    <h3><span data-l="en">Module preview</span></h3>
+    <p class="sub" data-l="en">The module as it shows in the cluster's central square, with the unit and refresh rate set in the mockup. Driving is simulated: pick the module, accelerate, brake.</p>
     <div class="cl" data-cluster></div>
   </div>
 </section>
@@ -1268,8 +1276,8 @@
 
 <div class="dock" aria-label="Virtual vehicle"></div>
 
-<script src="../assets/js/strings.js?v=f01b89b2"></script>
-<script src="../assets/js/sim.js?v=b7b5e9ba"></script>
+<script src="../assets/js/strings.js?v=ce7bbf76"></script>
+<script src="../assets/js/sim.js?v=7e1009b1"></script>
 <script src="../assets/js/site.js?v=1db09f2f"></script>
 <script src="../assets/js/explorer.js?v=ffc271c4"></script>
 </body>

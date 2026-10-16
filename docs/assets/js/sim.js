@@ -138,7 +138,7 @@
         brightness: 70, volume: 14, volMax: 30, prevVolume: null,
         soc: 64, lights: false, batHeat: false, highBeam: true,
         doors: { L: false, R: false },
-        media: { playing: false, track: 3 }
+        media: { playing: false, track: 3, source: 'RADIO' }
       },
       profiles: [daily, road, winter],
       defaultId: daily.id,
@@ -154,6 +154,8 @@
         fallback: 'HIGH', adasA: 3, adasB: 0, aebA: 1, aebB: 2,
         regenCycle: null,          // séquence composée (null = ordre d'origine)
         profileCycle: null,        // cycle de profils composé (null = tous les profils, dans l'ordre de la liste)
+        audioCycle: null,          // cycle de sources audio composé (null = radio puis Bluetooth)
+        audioLast: null,           // dernière source choisie par le raccourci, d'où repart l'appui suivant
         toggles: {},
         advOn: false, advService: false,
         adv: []                    // { key, press, action, scope (profil ; null = tous), app?, profileId? (cible) }
@@ -203,6 +205,7 @@
       counters: g === 'SWI132' || g === 'SWI133',      // compteurs d'énergie du véhicule ; sinon l'énergie est calculée
       doorSensor: g === 'SWI132' || g === 'SWI133',    // portes lisibles ; sinon sortie de READY
       cluster: ['SWI133', 'SWI68', 'SWI165'].includes(g), // module sur l'écran conducteur (ClusterModuleSettings.SUPPORTED)
+      a9: ['SWI69', 'SWI131', 'SWI132'].includes(g),       // FirmwareInfo.isA9 : pas de musique en ligne
       fifth: (!vsm || s132) ? 'adas_ica' : 'adas_tja'
     };
   }
@@ -588,11 +591,19 @@
     MEDIA_NEXT: 'shortcuts_action_media_next', MEDIA_PREVIOUS: 'shortcuts_action_media_prev', MEDIA_PLAY_PAUSE: 'shortcuts_action_media_play_pause',
     VOLUME_UP: 'shortcuts_action_volume_up', VOLUME_DOWN: 'shortcuts_action_volume_down',
     APPLY_PROFILE: 'shortcuts_action_apply_profile', PROFILE_PICKER: 'shortcuts_action_profile_picker',
-    PROFILE_CYCLE: 'shortcuts_action_profile_cycle',
+    PROFILE_CYCLE: 'shortcuts_action_profile_cycle', AUDIO_SOURCE_CYCLE: 'shortcuts_action_audio_cycle',
     OPEN_APP: 'shortcuts_action_open_app', OPEN_CUSTOM_APP: 'shortcuts_action_open_custom_app', VEHICLE_POWER_OFF: 'shortcuts_action_vehicle_power_off',
     WINDOWS_OPEN_ALL: 'shortcuts_action_windows_open', WINDOWS_CLOSE_ALL: 'shortcuts_action_windows_close'
   };
   const REGEN_SELECTABLE = ['LOW', 'MEDIUM', 'HIGH', 'ADAPTIVE', 'ONE_PEDAL'];
+  /** Pictogrammes des tuiles « Cycle sources » (ic_source_*.xml). */
+  const SRC_ICON = Object.fromEntries(Object.entries({
+    RADIO: 'M3.24,6.15C2.51,6.43 2,7.17 2,8v12c0,1.1 0.89,2 2,2h16c1.11,0 2,-0.9 2,-2V8c0,-1.11 -0.89,-2 -2,-2H8.3l8.26,-3.34L15.88,1 3.24,6.15zM7,20c-1.66,0 -3,-1.34 -3,-3s1.34,-3 3,-3 3,1.34 3,3 -1.34,3 -3,3zM20,12h-2v-2h-2v2H4V8h16v4z',
+    BLUETOOTH: 'M17.71,7.71L12,2h-1v7.59L6.41,5 5,6.41 10.59,12 5,17.59 6.41,19 11,14.41V22h1l5.71,-5.71 -4.3,-4.29 4.3,-4.29zM13,5.83l1.88,1.88L13,9.59V5.83zM14.88,16.29L13,18.17v-3.76l1.88,1.88z',
+    USB: 'M15,7v4h1v2h-3V5h2l-3,-4 -3,4h2v8H8v-2.07c0.7,-0.37 1.2,-1.08 1.2,-1.93 0,-1.21 -0.99,-2.2 -2.2,-2.2 -1.21,0 -2.2,0.99 -2.2,2.2 0,0.85 0.5,1.56 1.2,1.93V13c0,1.11 0.89,2 2,2h3v3.05c-0.71,0.37 -1.2,1.1 -1.2,1.95 0,1.22 0.99,2.2 2.2,2.2 1.21,0 2.2,-0.98 2.2,-2.2 0,-0.85 -0.49,-1.58 -1.2,-1.95V15h3c1.11,0 2,-0.89 2,-2v-2h1V7h-4z',
+    ONLINE: 'M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10 10,-4.48 10,-10S17.52,2 12,2zM11,19.93c-3.95,-0.49 -7,-3.85 -7,-7.93 0,-0.62 0.08,-1.21 0.21,-1.79L9,15v1c0,1.1 0.9,2 2,2v1.93zM17.9,17.39c-0.26,-0.81 -1,-1.39 -1.9,-1.39h-1v-3c0,-0.55 -0.45,-1 -1,-1L8,12v-2h2c0.55,0 1,-0.45 1,-1L11,7h2c1.1,0 2,-0.9 2,-2v-0.41c2.93,1.19 5,4.06 5,7.41 0,2.08 -0.8,3.97 -2.1,5.39z',
+    PROJECTION: 'M16,1L8,1C6.34,1 5,2.34 5,4v16c0,1.66 1.34,3 3,3h8c1.66,0 3,-1.34 3,-3L19,4c0,-1.66 -1.34,-3 -3,-3zM14,21h-4v-1h4v1zM17.25,18L6.75,18L6.75,4h10.5v14z'
+  }).map(([k, d]) => [k, '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="' + d + '"/></svg>']));
   const regenOrder = () => (state.sc.regenCycle && state.sc.regenCycle.length >= 2 ? state.sc.regenCycle : REGEN_CYCLE);
   /** Cycle de profils en vigueur (ProfileCycle.resolve) : profils supprimés retirés ; sans réglage, tous les profils. */
   const profileOrder = () => {
@@ -602,6 +613,18 @@
   };
   // Profil visé par le raccourci « Cycle de profils », tant qu'il attend d'être appliqué (ProfileCycleShortcut).
   let cycleTarget = null, cycleTimer = null;
+  // ── Cycle de sources audio (AudioSourceCycle) ──
+  const AUDIO_SOURCES = ['RADIO', 'BLUETOOTH', 'USB', 'ONLINE', 'PROJECTION'];
+  const AUDIO_LABEL = { RADIO: 'audio_source_radio', BLUETOOTH: 'audio_source_bluetooth', USB: 'audio_source_usb', ONLINE: 'audio_source_online', PROJECTION: 'audio_source_projection' };
+  /** Sources proposées (AudioSourceCycle.offertes) : la musique en ligne n'existe pas sur les A9. */
+  const audioOffered = () => (caps().a9 ? AUDIO_SOURCES.filter((x) => x !== 'ONLINE') : AUDIO_SOURCES);
+  /** Cycle en vigueur (AudioSourceCycle.resolve) : moins de deux sources proposées → radio puis Bluetooth. */
+  const audioOrder = () => {
+    const kept = (state.sc.audioCycle || []).filter((x) => audioOffered().includes(x));
+    return kept.length >= 2 ? kept : ['RADIO', 'BLUETOOTH'];
+  };
+  // Source visée par le raccourci, tant qu'elle attend (AudioSourceCycleShortcut).
+  let audioTarget = null, audioTimer = null;
   /** Liste des actions proposées, filtrée par firmware (ShortcutsFragment.baseActionItems). */
   function availableActions() {
     const k = caps();
@@ -617,7 +640,7 @@
     if (k.beam) a.push('AUTO_HIGH_BEAM_TOGGLE');
     if (k.batHeat) a.push('BATTERY_HEAT_TOGGLE');
     a.push('MEDIA_NEXT', 'MEDIA_PREVIOUS', 'MEDIA_PLAY_PAUSE', 'VOLUME_UP', 'VOLUME_DOWN',
-      'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_PICKER', 'PROFILE_CYCLE', 'OPEN_APP', 'OPEN_CUSTOM_APP');
+      'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_PICKER', 'PROFILE_CYCLE', 'AUDIO_SOURCE_CYCLE', 'OPEN_APP', 'OPEN_CUSTOM_APP');
     if (k.power) a.push('VEHICLE_POWER_OFF');
     return a;
   }
@@ -714,6 +737,19 @@
           if (p) applyProfile(p, { manual: true, cycle: true });
         }, 1000);
         return 'profile';
+      }
+      case 'AUDIO_SOURCE_CYCLE': {
+        // Repart de la source VISÉE tant qu'elle attend, sinon de la DERNIÈRE CHOISIE par le raccourci
+        // (jamais de celle qui joue) ; hors cycle → la première. Disponibilité non vérifiée, par choix.
+        const order = audioOrder();
+        const i = order.indexOf(audioTarget || sc.audioLast);
+        const src = i < 0 ? order[0] : order[(i + 1) % order.length];
+        audioTarget = src;
+        toastActive(S('audio_cycle_target', S(AUDIO_LABEL[src])));
+        // Une seconde après le DERNIER appui : « lecture » à la source visée, rien n'est mis en pause.
+        clearTimeout(audioTimer);
+        audioTimer = setTimeout(() => { audioTarget = null; sc.audioLast = src; c.media.source = src; c.media.playing = true; commit(); }, 1000);
+        return 'audio';
       }
       case 'PROFILE_PICKER': { const s = activeSim(); if (s) s.togglePicker(); return 'picker'; }
       case 'HVAC_POPUP': { const s = activeSim(); if (s) s.toggleHvacPopup(); return 'hvac'; }
@@ -1609,6 +1645,7 @@
         { id: 'adas', label: S('shortcuts_cat_adas'), page: this.assigned('ADAS_CYCLE') && caps().known ? this.scAdasCfg() : '', sub: true, hl: 'sc-sub-adas' },
         { id: 'regen', label: S('shortcuts_cat_regen_cycle'), page: this.assigned('REGEN_CYCLE') ? this.scRegen() : '', sub: true, hl: 'sc-sub-regen' },
         { id: 'profiles', label: S('shortcuts_cat_profile_cycle'), page: this.assigned('PROFILE_CYCLE') ? this.scProfiles() : '', sub: true, hl: 'sc-sub-profiles' },
+        { id: 'sources', label: S('shortcuts_cat_audio_cycle'), page: this.assigned('AUDIO_SOURCE_CYCLE') ? this.scSources() : '', sub: true, hl: 'sc-sub-sources' },
         { id: 'list', label: S('adv_sc_list_title'), page: this.scList(), sub: true, hidden: !inAdv }
       ]);
       return '<div class="a-page">' + head + body + '<button class="b close" data-a="close">' + esc(S('nav_close')) + '</button></div>';
@@ -1664,6 +1701,21 @@
         '<div class="a-row"><span class="lbl">' + (ok ? esc(S('shortcuts_cfg_regen_summary', d.map(name).join(' → '))) :
         '<span style="color:var(--dash-warn)">' + esc(S('shortcuts_cfg_profile_min')) + '</span>') + '</span></div>' +
         '<div class="a-grid g2"><button class="b" data-a="pcClear">' + esc(S('shortcuts_cfg_regen_clear')) + '</button><button class="b green' + (ok ? '' : ' dis') + '" data-a="pcSave"' + (ok ? '' : ' disabled') + '>' + esc(S('shortcuts_cfg_regen_save')) + '</button></div></div>';
+    }
+    /** Cycle de sources : tuiles (pictogramme, nom, rang en pastille) — maquette B de l'app. */
+    scSources() {
+      const u = this.ui, offered = audioOffered();
+      if (!u.audioDraft) u.audioDraft = audioOrder().slice();
+      const d = u.audioDraft = u.audioDraft.filter((x) => offered.includes(x));
+      const tile = (x) => { const i = d.indexOf(x); return '<button class="b src' + (i >= 0 ? ' on' : '') + '" data-a="acToggle" data-v="' + x + '">' +
+        (i >= 0 ? '<span class="src-n">' + (i + 1) + '</span>' : '') + SRC_ICON[x] + '<span>' + esc(S(AUDIO_LABEL[x])) + '</span></button>'; };
+      const ok = d.length >= 2;
+      return '<div class="a-sec" data-hl="sc-sources"><div class="a-h">' + esc(S('shortcuts_action_audio_cycle')) + '</div>' +
+        '<div class="a-desc">' + esc(S('shortcuts_cfg_audio_hint')) + '</div>' +
+        '<div class="a-grid g' + offered.length + '" style="margin-top:8px">' + offered.map(tile).join('') + '</div>' +
+        '<div class="a-row"><span class="lbl">' + (ok ? esc(S('shortcuts_cfg_regen_summary', d.map((x) => S(AUDIO_LABEL[x])).join(' → '))) :
+        '<span style="color:var(--dash-warn)">' + esc(S('shortcuts_cfg_audio_min')) + '</span>') + '</span></div>' +
+        '<div class="a-grid g2"><button class="b" data-a="acClear">' + esc(S('shortcuts_cfg_regen_clear')) + '</button><button class="b green' + (ok ? '' : ' dis') + '" data-a="acSave"' + (ok ? '' : ' disabled') + '>' + esc(S('shortcuts_cfg_regen_save')) + '</button></div></div>';
     }
     scClassic() {
       const sc = state.sc;
@@ -2104,6 +2156,10 @@
       else if (dir === 'up' || dir === 'down') cl.temp = clamp(cl.temp + (dir === 'up' ? 1 : -1), cl.tMin, cl.tMax);
       // Régler la ventilation fait sortir d'AUTO, comme sur l'écran d'origine : on repart du
       // dernier niveau réglé à la main (celui que la maquette garde dans clim.fan).
+      // Issue #147 : au cran 1, gauche ÉTEINT la clim ; éteinte, gauche ne la rallume pas et
+      // droite la remet au cran 1 (HvacPopup.pasVentilation).
+      else if (!cl.power) { if (dir === 'right') { cl.power = true; cl.auto = false; cl.fan = cl.fMin; } }
+      else if (dir === 'left' && !cl.auto && cl.fan <= cl.fMin) cl.power = false;
       else { cl.auto = false; cl.fan = clamp(cl.fan + (dir === 'right' ? 1 : -1), cl.fMin, cl.fMax); }
       o.left = o.total; o.flash = dir;
       clearTimeout(this._hvFlash);
@@ -2235,11 +2291,12 @@
           '<small class="hvp-lim" style="left:' + Math.round(cx - e - 22) + 'px">' + cl.tMin + '°</small><small class="hvp-lim" style="left:' + Math.round(cx + e - 22) + 'px">' + cl.tMax + '°</small></div>';
         const round = (dir, cls, ico) => '<button class="hvp-round ' + cls + hit(dir) + '" data-a="hpKey" data-v="' + dir + '">' + ico + '</button>';
         // En AUTO la voiture n'annonce pas de cran de ventilation : on écrit « AUTO », aucun segment allumé.
-        const bar = '<div class="hvp-bar">' + Array.from({ length: cl.fMax }, (_, i) => '<i' + (!cl.auto && i < cl.fan ? ' class="on"' : '') + '></i>').join('') + '</div>';
+        // Clim éteinte (issue #147) : « OFF », aucun segment non plus.
+        const bar = '<div class="hvp-bar">' + Array.from({ length: cl.fMax }, (_, i) => '<i' + (cl.power && !cl.auto && i < cl.fan ? ' class="on"' : '') + '></i>').join('') + '</div>';
         const air = (f, on, key) => '<button class="ov-tile hvp-air' + (on ? ' on' : '') + '" data-a="hpAir" data-v="' + f + '">' + AIR_ICON[f] + '<span>' + esc(S(key)) + '</span></button>';
         const loop = (nb, key, ico) => '<button class="ov-tile hvp-loop' + (cl.loop === nb ? ' on' : '') + '" data-a="hpLoop" data-v="' + nb + '">' + ico + '<span>' + esc(S(key)) + '</span></button>';
         const zone = '<div class="hvp-zone"><div class="hvp-row">' + round('down', 'cold', MW.minus) + gauge + round('up', 'hot', MW.plus) +
-          '<div class="hvp-fan"><small>' + esc(S('clim_fan')) + '</small><div class="hvp-fanv">' + MW.fan + '<b>' + (cl.auto ? esc(S('clim_auto').toUpperCase()) : cl.fan) + '</b></div>' + bar +
+          '<div class="hvp-fan"><small>' + esc(S('clim_fan')) + '</small><div class="hvp-fanv">' + MW.fan + '<b>' + (!cl.power ? esc(S('climate_off').toUpperCase()) : cl.auto ? esc(S('clim_auto').toUpperCase()) : cl.fan) + '</b></div>' + bar +
           '<div class="hvp-fanrow"><button class="ov-tile' + hit('left') + '" data-a="hpKey" data-v="left">' + MW.minus + '</button>' +
           '<button class="ov-tile auto' + (cl.auto ? ' on' : '') + hit('ok') + '" data-a="hpKey" data-v="ok">' + esc(S('clim_auto')) + '</button>' +
           '<button class="ov-tile' + hit('right') + '" data-a="hpKey" data-v="right">' + MW.plus + '</button></div></div></div>' +
@@ -2800,6 +2857,16 @@
           u.profileDraft = d; return this.render();
         }
         case 'pcClear': u.profileDraft = []; return this.render();
+        case 'acToggle': {
+          const d = u.audioDraft || audioOrder().slice();
+          const i = d.indexOf(v);
+          if (i >= 0) d.splice(i, 1); else d.push(v);
+          u.audioDraft = d; return this.render();
+        }
+        case 'acClear': u.audioDraft = []; return this.render();
+        case 'acSave':
+          if (!u.audioDraft || u.audioDraft.length < 2) return this.toast(S('shortcuts_cfg_audio_min'));
+          sc.audioCycle = u.audioDraft.slice(); r(); return this.toast(S('shortcuts_cfg_regen_saved'));
         case 'pcSave':
           if (!u.profileDraft || u.profileDraft.length < 2) return this.toast(S('shortcuts_cfg_profile_min'));
           sc.profileCycle = u.profileDraft.slice(); r(); return this.toast(S('shortcuts_cfg_regen_saved'));
@@ -3039,6 +3106,11 @@
           // Révèle la page « Cycle regen » : la fonction doit être attribuée quelque part.
           if (!this.assigned('REGEN_CYCLE')) { state.sc.map.btn2_single = 'REGEN_CYCLE'; delete state.sc.extra.btn2_single; }
           u.screen = 'shortcuts'; u.tabs.sc = 'regen'; return commit();
+        case 'audioCycle':
+          // Révèle la page « Cycle sources » et met le raccourci sur la ★ droite du véhicule virtuel.
+          if (!this.assigned('AUDIO_SOURCE_CYCLE')) { state.sc.map.btn2_single = 'AUDIO_SOURCE_CYCLE'; delete state.sc.extra.btn2_single; }
+          u.audioDraft = null;
+          u.screen = 'shortcuts'; u.tabs.sc = 'sources'; return commit();
         case 'profileCycle':
           // Révèle la page « Cycle profils » et met le raccourci sur la ★ droite du véhicule virtuel.
           if (!this.assigned('PROFILE_CYCLE')) { state.sc.map.btn2_single = 'PROFILE_CYCLE'; delete state.sc.extra.btn2_single; }
@@ -3383,7 +3455,7 @@
         b.textContent = (s === 'L' ? L('Gauche', 'Left') : L('Droite', 'Right')) + ' : ' + (c.doors[s] ? L('ouverte', 'open') : L('fermée', 'closed'));
         b.classList.toggle('on', c.doors[s]);
       });
-      q('[data-o=vol]').textContent = c.volume + ' / ' + c.volMax + (c.media.playing ? '  ▶ ' : '  ⏸ ') + L('piste ', 'track ') + c.media.track;
+      q('[data-o=vol]').textContent = S(AUDIO_LABEL[c.media.source] || 'audio_source_radio') + ' · ' + c.volume + ' / ' + c.volMax + (c.media.playing ? '  ▶ ' : '  ⏸ ') + L('piste ', 'track ') + c.media.track;
       q('[data-d=ignition]').textContent = '⏻ ' + (!c.on ? L('Démarrer le véhicule', 'Start the vehicle') : c.ready ? L('Simuler un démarrage', 'Simulate a start-up') : L('Revenir en READY', 'Back to READY'));
       q('[data-d=reset]').textContent = L('Réinitialiser', 'Reset');
       el.classList.toggle('moving', c.speed > 0);
@@ -3418,36 +3490,28 @@
     if (kw < 0) return { fraction: -regenFraction(-kw), regen: true, value: kw, unit: 'KW' };
     return { fraction: powerFraction(kw), regen: false, value: kw, unit: 'KW' };
   }
-  /** Module montré sur l'onglet du combiné (ClusterModuleSettings.moduleToShow) : Navigation et Musique seulement. */
-  function clusterModuleFor(tab) {
-    const s = state.settings;
-    if (!caps().cluster || !s.cluster) return null;
-    const m = tab === 1 ? s.clusterNav : tab === 2 ? s.clusterMedia : 'none';
-    return m === 'none' ? null : m;
-  }
-
   /**
-   * Aperçu du combiné : le carré de 260 px que l'appli du combiné laisse à l'écran central, dessiné
-   * comme ClusterGaugeView avec les réglages de la maquette et la vitesse du véhicule virtuel. La
-   * puissance est simulée (croisière selon la vitesse, accélération, freinage) ; le chiffre et la
-   * jauge glissent d'un relevé au suivant, comme dans l'app.
+   * Aperçu du module : le carré de 260 px dessiné comme ClusterGaugeView, SEUL — le reste du
+   * combiné n'est pas reproduit (demande du 2026-10-16 : pas de vitesse ni de batterie autour).
+   * Unité et actualisation viennent des réglages de la maquette ; la puissance et la vitesse sont
+   * simulées (croisière, accélération, freinage), et le chiffre et la jauge glissent d'un relevé
+   * au suivant, comme dans l'app.
    */
   function mountCluster(el) {
-    const TABS = [[0, 'Ordinateur de bord', 'Trip computer'], [1, 'Navigation', 'Navigation'], [2, 'Musique', 'Media'], [4, 'Pression des pneus', 'Tyre pressure'], [5, 'Réglages', 'Settings']];
     const COL = { bg: '#0C0C0C', track: '#2A2A2E', text: '#FFFFFF', text2: '#B0B0B0', lo: '#52525B', accent: '#38BDF8', warn: '#F59E0B' };
     const MODE_COL = { ECO: '#22C55E', NORMAL: '#38BDF8', SPORT: '#F43F5E', SNOW: '#A5B4FC', CUSTOM: '#F59E0B' };
     el.innerHTML =
-      '<div class="cl-screen"><div class="cl-side"><b data-o="kmh"></b><small>km/h</small></div>' +
-      '<svg class="cl-sq" viewBox="0 0 260 260" role="img"></svg>' +
-      '<div class="cl-side"><b data-o="soc"></b><small data-o="socl"></small></div></div>' +
+      '<div class="cl-screen"><svg class="cl-sq" viewBox="0 0 260 260" role="img"></svg></div>' +
       '<div class="cl-ctl">' +
-        '<div class="dock-f"><span data-o="tabsl"></span><div class="dock-row">' + TABS.map(([v]) => '<button type="button" class="dock-btn" data-cltab="' + v + '"></button>').join('') + '</div></div>' +
-        '<label class="dock-f"><span><span data-o="speedl"></span> <b data-o="speed"></b></span><input type="range" min="0" max="130" step="5" data-d="speed"></label>' +
+        '<div class="dock-f"><span data-o="modl"></span><div class="dock-row"><button type="button" class="dock-btn" data-clmod="consumption"></button><button type="button" class="dock-btn" data-clmod="power"></button></div></div>' +
+        '<div class="dock-f"><span data-o="unitl"></span><div class="dock-row"><button type="button" class="dock-btn" data-clunit="wh"></button><button type="button" class="dock-btn" data-clunit="kwh"></button></div></div>' +
         '<div class="dock-row"><button type="button" class="dock-btn" data-run="accel"></button><button type="button" class="dock-btn" data-run="brake"></button></div>' +
         '<p class="cl-msg"></p>' +
       '</div>';
     const q = (sel) => el.querySelector(sel), svg = q('.cl-sq');
-    let tab = 1, smoothed = null, boost = null, anim = 0, timer = null, period = 0, lastT = null, lastMod, visible = true;
+    // Module montré : celui de l'onglet Navigation dans les réglages de la maquette, puis au choix.
+    let mod = state.settings.clusterNav === 'power' ? 'power' : 'consumption';
+    let speed = 50, smoothed = null, boost = null, anim = 0, timer = null, period = 0, lastT = null, visible = true, lastUnit;
     const shown = { part: 0, value: null, unit: null };
     let target = null;
     const trip = { kwh: 0, regenKwh: 0, km: 0 };
@@ -3489,14 +3553,6 @@
     function draw(mod) {
       let h = '<rect width="260" height="260" fill="' + COL.bg + '"/>';
       const st = target, c = car();
-      if (!mod) {
-        // Sans module : la page d'origine — celle de l'appli du combiné, ou du combiné lui-même
-        // (les autres onglets, et tous sur les firmwares A9, où cette appli n'existe pas).
-        const own = !caps().cluster || (tab !== 1 && tab !== 2);
-        h += txt(own ? '◎' : tab === 1 ? '↱' : '♪', 130, 128, 72, COL.lo, 400);
-        h += txt(own ? L('Page du combiné', 'Cluster page') : L('Page d\u2019origine', 'Original page'), 130, 178, 13, COL.text2);
-        svg.innerHTML = h; return;
-      }
       h += pill();
       if (mod === 'power') {
         const cx = 130, cy = 122, R = 88;
@@ -3512,7 +3568,7 @@
         const big = !st || v == null ? '–' : (recup ? '−' : '') + fmtKw(v);
         h += txt(big, cx, cy + 12, big.length > 3 ? 46 : 54, recup ? COL.accent : COL.text, 500);
         if (st) h += txt('kW', cx, cy + 32, 13, recup ? COL.accent : COL.text2, 500);
-        const wh = smoothed == null ? null : whPerKm(smoothed, c.speed);
+        const wh = smoothed == null ? null : whPerKm(smoothed, speed);
         h += txt(!st ? '' : recup ? S('cluster_regen_word') : wh != null ? cons(wh).join(' ') : S('cluster_stopped_word'), cx, cy + 50, 13, COL.text2);
         h += foot(S('cluster_battery'), [S('autobri_percent', c.soc), null], COL.text, S('cluster_trip_avg'), avg(), COL.text);
       } else {
@@ -3537,10 +3593,9 @@
 
     /** Nouveau relevé : l'anneau et le chiffre partent de ce qui est à l'écran (ClusterGaugeView.montrer). */
     function show() {
-      const mod = clusterModuleFor(tab);
       cancelAnimationFrame(anim);
-      if (!mod || smoothed == null) { target = null; shown.value = null; shown.unit = null; shown.part = 0; draw(mod); return; }
-      const next = mod === 'power' ? gaugePower(smoothed) : gaugeConsumption(smoothed, car().speed);
+      if (smoothed == null) { target = null; shown.value = null; shown.unit = null; shown.part = 0; draw(mod); return; }
+      const next = mod === 'power' ? gaugePower(smoothed) : gaugeConsumption(smoothed, speed);
       const from = { part: shown.part, value: shown.value, unit: shown.unit };
       shown.unit = next.unit; target = next;
       const dur = clamp(state.settings.clusterRefresh * 0.8, 50, 800), t0 = performance.now();
@@ -3557,25 +3612,23 @@
 
     function tick() {
       if (!visible) return;
-      const c = car(), now = performance.now();
-      let raw, moved = false;
+      const now = performance.now();
+      let raw;
       if (boost) {
         const p = Math.min(1, (now - boost.t0) / boost.dur);
-        const v = Math.round(boost.from + (boost.to - boost.from) * p);
-        if (v !== c.speed) { c.speed = v; c.maxSpeed = Math.max(c.maxSpeed || 0, v); moved = true; }
+        speed = Math.round(boost.from + (boost.to - boost.from) * p);
         raw = boost.kw * (1 - 0.35 * p);
-        if (p >= 1) boost = null;
-      } else raw = cruiseKw(c.speed);
+        if (p >= 1) { boost = null; paint(); }
+      } else raw = cruiseKw(speed);
       raw *= 1 + (Math.random() - 0.5) * 0.06;
       smoothed = smoothed == null ? raw : smoothed + CG.SMOOTHING * (raw - smoothed);
       if (lastT != null) {
         const dt = now - lastT;
-        trip.kwh += smoothed * dt / 3.6e6; trip.km += c.speed * dt / 3.6e6;
+        trip.kwh += smoothed * dt / 3.6e6; trip.km += speed * dt / 3.6e6;
         if (smoothed < 0) trip.regenKwh += -smoothed * dt / 3.6e6;
       }
       lastT = now;
       show();
-      if (moved) commit();
     }
     function schedule() {
       const p = state.settings.clusterRefresh;
@@ -3584,43 +3637,43 @@
     }
 
     el.addEventListener('click', (e) => {
-      const b = e.target.closest('[data-cltab]');
-      if (b) { tab = +b.getAttribute('data-cltab'); paint(); show(); return; }
+      const m = e.target.closest('[data-clmod]');
+      if (m) { mod = m.getAttribute('data-clmod'); paint(); show(); return; }
+      const u = e.target.closest('[data-clunit]');
+      // L'unité est celle des réglages de la maquette : la changer ici la change là-bas aussi.
+      if (u) { state.settings.clusterUnit = u.getAttribute('data-clunit'); commit(); return; }
       const r = e.target.closest('[data-run]');
       if (!r) return;
-      const v = car().speed, now = performance.now();
+      const now = performance.now();
       boost = r.getAttribute('data-run') === 'accel'
-        ? { t0: now, dur: 3000, from: v, to: Math.min(130, v + 40), kw: 150 }
-        : { t0: now, dur: 3500, from: v, to: Math.max(0, v - 50), kw: -45 };
+        ? { t0: now, dur: 3000, from: speed, to: Math.min(130, speed + 40), kw: 150 }
+        : { t0: now, dur: 3500, from: speed, to: Math.max(0, speed - 50), kw: -45 };
       paint();
     });
-    q('[data-d=speed]').addEventListener('input', (e) => { const c = car(); boost = null; c.speed = +e.target.value; c.maxSpeed = Math.max(c.maxSpeed || 0, c.speed); commit(); });
     if ('IntersectionObserver' in window) new IntersectionObserver((en) => { visible = en.some((x) => x.isIntersecting); }).observe(el);
 
     function paint() {
-      const c = car(), k = caps(), s = state.settings, mod = clusterModuleFor(tab);
-      q('[data-o=kmh]').textContent = c.speed;
-      q('[data-o=soc]').textContent = c.soc + ' %';
-      q('[data-o=socl]').textContent = L('batterie', 'battery');
-      q('[data-o=tabsl]').textContent = L('Onglet affiché sur le combiné', 'Tab shown on the cluster');
-      q('[data-o=speedl]').textContent = L('Vitesse', 'Speed');
-      q('[data-d=speed]').value = c.speed; q('[data-o=speed]').textContent = c.speed + ' km/h';
-      el.querySelectorAll('[data-cltab]').forEach((b) => {
-        const t = TABS.find((x) => x[0] === +b.getAttribute('data-cltab'));
-        b.textContent = L(t[1], t[2]); b.classList.toggle('on', t[0] === tab);
+      const k = caps(), s = state.settings;
+      q('[data-o=modl]').textContent = L('Module', 'Module');
+      q('[data-o=unitl]').textContent = S('settings_cluster_unit');
+      el.querySelectorAll('[data-clmod]').forEach((b) => {
+        const v = b.getAttribute('data-clmod');
+        b.textContent = S(v === 'power' ? 'settings_cluster_power' : 'settings_cluster_consumption'); b.classList.toggle('on', v === mod);
+      });
+      el.querySelectorAll('[data-clunit]').forEach((b) => {
+        const v = b.getAttribute('data-clunit');
+        b.textContent = S(v === 'kwh' ? 'cluster_unit_kwh_100km' : 'cluster_unit_wh_km'); b.classList.toggle('on', v === (s.clusterUnit === 'kwh' ? 'kwh' : 'wh'));
       });
       q('[data-run=accel]').textContent = L('Accélérer', 'Accelerate');
       q('[data-run=brake]').textContent = L('Freiner', 'Brake');
-      q('[data-run=brake]').disabled = c.speed < 10 && !boost;
-      let msg;
-      if (!k.cluster) msg = L('Sur ' + k.g + ', rien ne s\u2019affiche : le combiné dessine tout lui-même, et la carte « Écran conducteur » n\u2019apparaît pas dans les réglages. Choisissez SWI133, SWI68 ou SWI165.', 'On ' + k.g + ', nothing shows: the cluster draws everything itself, and the “Driver display” card does not appear in the settings. Pick SWI133, SWI68 or SWI165.');
-      else if (!s.cluster) msg = L('Module désactivé : activez « Module sur le combiné » dans Réglages › Interface de la maquette.', 'Module off: turn on “Module on the instrument cluster” in the mockup\u2019s Settings › Interface.');
-      else if (tab !== 1 && tab !== 2) msg = L('Cet onglet est dessiné par le combiné lui-même : aucun module ne peut s\u2019y afficher.', 'This tab is drawn by the cluster itself: no module can show there.');
-      else if (!mod) msg = L('Aucun module choisi pour cet onglet : le combiné garde sa page d\u2019origine.', 'No module chosen for this tab: the cluster keeps its original page.');
-      else msg = L('Relevé toutes les ' + fmtS(s.clusterRefresh) + ' s : la jauge et le chiffre glissent d\u2019une valeur à la suivante.', 'Reading every ' + fmtS(s.clusterRefresh) + ' s: the gauge and the number glide from one value to the next.');
-      q('.cl-msg').textContent = msg;
+      q('[data-run=accel]').disabled = speed >= 130 && !boost;
+      q('[data-run=brake]').disabled = speed < 10 && !boost;
+      q('.cl-msg').textContent = k.cluster
+        ? L('Relevé toutes les ' + fmtS(s.clusterRefresh) + ' s : la jauge et le chiffre glissent d\u2019une valeur à la suivante.', 'Reading every ' + fmtS(s.clusterRefresh) + ' s: the gauge and the number glide from one value to the next.')
+        : L('Sur ' + k.g + ', ce module ne peut pas s\u2019afficher : le combiné dessine tout lui-même. Il existe sur SWI133, SWI68 et SWI165.', 'On ' + k.g + ', this module cannot show: the cluster draws everything itself. It exists on SWI133, SWI68 and SWI165.');
       schedule();
-      if (mod !== lastMod) { lastMod = mod; show(); }
+      // Un autre réglage de la maquette ne relance pas la jauge ; l'unité, si.
+      if (s.clusterUnit !== lastUnit) { lastUnit = s.clusterUnit; show(); }
     }
     listeners.add(paint);
     paint();
@@ -3665,7 +3718,7 @@
   function mountApi(el) {
     const EXEC = ['REGEN_CYCLE', 'SEAT_HEAT_LEFT_CYCLE', 'SEAT_HEAT_RIGHT_CYCLE', 'STEERING_HEAT_TOGGLE', 'HVAC_TOGGLE', 'HVAC_TEMP_UP', 'HVAC_TEMP_DOWN', 'HVAC_FAN_UP', 'HVAC_FAN_DOWN',
       'DEFROST_FRONT_TOGGLE', 'DEFROST_REAR_TOGGLE', 'HVAC_RECIRC_CYCLE', 'BRIGHTNESS_UP', 'BRIGHTNESS_DOWN', 'ESC_TOGGLE', 'DROWSINESS_TOGGLE', 'DROWSINESS_SEN_CYCLE',
-      'MEDIA_PLAY_PAUSE', 'MEDIA_NEXT', 'MEDIA_PREVIOUS', 'VOLUME_UP', 'VOLUME_DOWN', 'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_CYCLE', 'OPEN_CUSTOM_APP', 'ONE_PEDAL', 'ENERGY_SAVING_TOGGLE', 'PROFILE_PICKER', 'OPEN_APP',
+      'MEDIA_PLAY_PAUSE', 'MEDIA_NEXT', 'MEDIA_PREVIOUS', 'VOLUME_UP', 'VOLUME_DOWN', 'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_CYCLE', 'AUDIO_SOURCE_CYCLE', 'OPEN_CUSTOM_APP', 'ONE_PEDAL', 'ENERGY_SAVING_TOGGLE', 'PROFILE_PICKER', 'OPEN_APP',
       'ADAS_CYCLE', 'TSR_TOGGLE', 'VEHICLE_POWER_OFF'];
     const KEYS = { drive_mode: ['ECO', 'NORMAL', 'SPORT', 'SNOW', 'CUSTOM'], regen: ['OFF', 'LOW', 'MEDIUM', 'HIGH', 'ADAPTIVE', 'ONE_PEDAL'], seat_heat_left: ['0', '1', '2', '3', 'NEXT', 'PREV'],
       seat_heat_right: ['0', '1', '2', '3', 'NEXT', 'PREV'], steering_heat: ['1', '0', 'TOGGLE'], profile: null, hvac_power: ['1', '0', 'TOGGLE'], ac: ['1', '0', 'TOGGLE'], hvac_auto: ['1', '0', 'TOGGLE'],

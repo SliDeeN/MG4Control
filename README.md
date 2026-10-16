@@ -148,7 +148,7 @@ Actions disponibles — celles qui dépendent du firmware n'apparaissent pas sur
 | Sécurité | ESC · Somnolence · Somnolence : sensibilité · Système Anticollision · ADAS · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son |
 | Confort | Siège chauffant gauche · Siège chauffant droit · Volant chauffant · Clim ON/OFF · Clim : A/C ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant · Dégivrage arrière · Recirculation · Feux de route automatiques ON/OFF · Luminosité ± · Pop-up HVAC |
 | Vitres | Ouvrir toutes les vitres · Fermer toutes les vitres |
-| Média | Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume - |
+| Média | Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume - · Cycle de sources audio |
 | Application et véhicule | Lancer un profil · Sélecteur de profils · Cycle de profils · Ouvrir MG4Control · Lancer une application · Éteindre la voiture |
 
 Les actions de confort et de sécurité **relisent l'état sur le véhicule à chaque pression** au lieu
@@ -212,7 +212,9 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
 L'action **Pop-up HVAC** ouvre la climatisation par-dessus l'écran en cours — y compris quand
 Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim d'origine. Le joystick droit
 du volant n'y déplace aucun focus : haut/bas règlent la température, gauche/droite la ventilation,
-le clic central bascule le mode AUTO (régler la ventilation en fait sortir). Un repère dans
+le clic central bascule le mode AUTO (régler la ventilation en fait sortir). Au cran 1, un appui
+à gauche éteint la clim (« OFF ») ; éteinte, gauche ne la rallume pas et droite la remet au
+cran 1. Un repère dans
 l'en-tête rappelle ces gestes, ou prévient que le joystick est inactif tant que le service
 d'accessibilité n'est pas activé — la fenêtre reste alors utilisable au doigt. Se choisissent au
 doigt : l'A/C, la recirculation, le sens de l'air et, sur les firmwares équipés (SWI133, SWI68,
@@ -226,6 +228,24 @@ moins deux profils ; sans réglage, tous les profils dans l'ordre de leur liste)
 raccourci vise le profil qui suit le profil actif et affiche son nom ; il l'applique une seconde
 plus tard, puis le confirme à l'écran. Deux appuis rapprochés sautent donc un profil sans
 l'appliquer. Si le verrou de vitesse refuse l'écriture, rien ne change.
+
+#### Cycle de sources audio
+L'action **Cycle de sources audio** passe à la source suivante d'un cycle composé sur la page
+*Cycle sources*, en tuiles : radio, Bluetooth, USB, en ligne, CarPlay / Android Auto (au moins
+deux sources ; sans réglage, radio puis Bluetooth). À chaque appui, *Source : …* s'affiche et la
+voiture y passe une seconde plus tard ; deux appuis rapprochés sautent donc une source. Il
+n'existe pas de commande « changer de source » : l'application demande à la source visée de
+jouer, ce qui la met au premier plan, sans rien mettre en pause. La disponibilité n'est pas
+vérifiée : une source sans rien à jouer reste muette, et l'appui suivant passe à la suivante,
+car le cycle repart de la dernière source choisie, pas de celle qui joue.
+
+- **SWI133, SWI68, SWI165** : par le service média SAIC, source par source.
+- **SWI69, SWI131, SWI132** : le Bluetooth passe par l'appli Média SAIC, comme la touche de
+  source d'origine — c'est elle qui fait passer la sortie audio de la voiture en Bluetooth avant
+  de lancer la lecture. L'USB vise le lecteur du port où la clé est branchée (un lecteur par
+  port). « En ligne » n'est pas proposé : cette source n'existe pas sur ces firmwares.
+- **CarPlay / Android Auto** : par le récepteur d'origine AllGo ; s'il n'a pas de téléphone,
+  l'application essaie Android Auto sans fil par DiAuto-MG4.
 
 ### Automatisation
 - **Application d'un profil selon la température extérieure** : seuil, sens
@@ -1315,7 +1335,7 @@ Available actions — those depending on the firmware do not show up on the othe
 | Safety | ESC · Drowsiness · Drowsiness: sensitivity · Forward collision · ADAS · Traffic signs (TSR) · Overspeed alert · Speed limit change alert · Sound |
 | Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: A/C ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Automatic high beam ON/OFF · Brightness ± · HVAC pop-up |
 | Windows | Open all windows · Close all windows |
-| Media | Play / Pause · Next track · Previous track · Volume + · Volume - |
+| Media | Play / Pause · Next track · Previous track · Volume + · Volume - · Audio source cycle |
 | App and vehicle | Apply a profile · Profile picker · Profile cycle · Open MG4Control · Launch an app · Power the car off |
 
 Comfort and safety actions **re-read the state from the vehicle on every press** instead of
@@ -1377,7 +1397,9 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
 The **HVAC pop-up** action opens the climate controls on top of the current screen — including
 when Android Auto or CarPlay fills the screen and hides the stock climate bar. The steering
 wheel's right joystick moves no focus there: up/down set the temperature, left/right the fan
-speed, the centre click toggles AUTO mode (adjusting the fan speed leaves it). A hint in the header
+speed, the centre click toggles AUTO mode (adjusting the fan speed leaves it). At fan level 1,
+pressing left turns the climate off ("OFF"); while it is off, left does nothing and right sets it
+back to level 1. A hint in the header
 recalls these gestures, or warns that the joystick is inactive until the accessibility service is
 enabled — the window then still works by touch. Chosen by touch: A/C, recirculation, air direction
 and, on equipped firmwares (SWI133, SWI68, SWI165), the heated steering wheel and each seat's
@@ -1390,6 +1412,24 @@ least two profiles; without it, every profile in the order of their list). On ea
 shortcut targets the profile that follows the active one and shows its name; it applies it one
 second later, then confirms it on screen. Two quick presses therefore skip a profile without
 applying it. If the speed lock refuses the write, nothing changes.
+
+#### Audio source cycle
+The **Audio source cycle** action switches to the next source of a cycle composed on the
+*Source cycle* page, as tiles: radio, Bluetooth, USB, online, CarPlay / Android Auto (at least
+two sources; without it, radio then Bluetooth). On each press, *Source: …* shows and the car
+switches to it one second later; two quick presses therefore skip a source. There is no "change
+source" command: the app asks the target source to play, which brings it to the front, without
+pausing anything. Availability is not checked: a source with nothing to play stays silent, and
+the next press moves on, because the cycle starts again from the last source chosen, not from
+the one playing.
+
+- **SWI133, SWI68, SWI165**: through the SAIC media service, source by source.
+- **SWI69, SWI131, SWI132**: Bluetooth goes through the SAIC Media app, like the original source
+  key — that app switches the car's audio output to Bluetooth before starting playback. USB
+  targets the player of the port the stick is plugged into (one player per port). "Online" is
+  not offered: that source does not exist on these firmwares.
+- **CarPlay / Android Auto**: through the original AllGo receiver; if it has no phone, the app
+  tries wireless Android Auto through DiAuto-MG4.
 
 ### Automation
 - **Apply a profile from the outside temperature**: threshold, direction (below/above), profile to
