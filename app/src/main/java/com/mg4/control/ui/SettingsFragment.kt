@@ -857,6 +857,9 @@ class SettingsFragment : Fragment() {
         // Sonde feux de route automatiques : lecture seule, toutes les voies du firmware.
         MG4Hardware.runHighBeamDiag()
         MG4Hardware.runBatteryHeatingDiag()
+        // Sonde accessibilité : service connecté ou non, et la liste brute des Réglages — sa
+        // forme courte faisait dire « inactif » à tort après une MAJ ou un redémarrage.
+        com.mg4.control.accessibility.KeyCaptureService.journaliserEtat(ctx)
 
         val appVersion = try {
             ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"

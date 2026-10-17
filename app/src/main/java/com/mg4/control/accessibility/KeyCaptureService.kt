@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Instrumentation
 import android.content.Context
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -47,6 +48,7 @@ class KeyCaptureService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        connecte = true
         // Le XML déclare la CAPACITÉ (canRequestFilterKeyEvents) ; le drapeau, lui, doit être
         // posé ici. Déclarer la capacité sans demander le drapeau ne filtre rien du tout.
         serviceInfo = serviceInfo?.apply {
@@ -417,7 +419,14 @@ class KeyCaptureService : AccessibilityService() {
 
     override fun onInterrupt() { /* inutilisé */ }
 
+    override fun onUnbind(intent: Intent?): Boolean {
+        // Le système nous délie : service coupé dans les Réglages, ou appli mise à jour.
+        connecte = false
+        return super.onUnbind(intent)
+    }
+
     override fun onDestroy() {
+        connecte = false
         // Le service peut être coupé pendant qu'une minuterie court : sans ça, elle déclencherait
         // une action alors que la fonctionnalité vient d'être désactivée.
         handler.removeCallbacksAndMessages(null)
@@ -449,20 +458,41 @@ class KeyCaptureService : AccessibilityService() {
         var listener: ((Int) -> Unit)? = null
 
         /**
-         * Vrai si l'utilisateur a activé notre service dans les réglages d'accessibilité.
-         *
-         * Lu dans Settings.Secure plutôt que via AccessibilityManager : on veut savoir si NOTRE
-         * composant précis est dans la liste, pas si un service quelconque tourne.
+         * Vrai entre [onServiceConnected] et [onUnbind] / [onDestroy] : le service TOURNE, dans le
+         * processus de l'appli (elle n'en a qu'un), donc les touches et le joystick nous parviennent.
+         * C'est la réponse la plus sûre ; la liste des Réglages ne sert plus que de repli, le temps
+         * que le système relie le service après un (re)démarrage de l'appli.
          */
-        fun isEnabled(context: Context): Boolean = try {
-            val actifs = Settings.Secure.getString(
-                context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-            ).orEmpty()
-            val nous = "${context.packageName}/${KeyCaptureService::class.java.name}"
-            actifs.split(':').any { it.equals(nous, ignoreCase = true) }
+        @Volatile
+        var connecte = false
+            private set
+
+        /**
+         * Vrai si notre service est actif : connecté, ou à défaut inscrit dans la liste des
+         * services d'accessibilité activés, sous sa forme longue OU courte
+         * ([AccessibilityServiceList]). Ne lire que la forme longue faisait dire « inactif » après
+         * une MAJ ou un redémarrage de la voiture, alors que le joystick naviguait (2026-10-17).
+         */
+        fun isEnabled(context: Context): Boolean =
+            connecte || AccessibilityServiceList.contient(liste(context), context.packageName, KeyCaptureService::class.java.name)
+
+        /**
+         * Sonde du diagnostic : l'état vu par chaque source et la liste BRUTE, pour savoir sous
+         * quelle forme le système l'a laissée (une trace de la voiture vaut mieux qu'une hypothèse).
+         */
+        fun journaliserEtat(context: Context) {
+            val brute = liste(context)
+            val forme = AccessibilityServiceList.forme(brute, context.packageName, KeyCaptureService::class.java.name)
+            AppLogger.i(TAG, "diag accessibilité — connecté=$connecte, dans la liste=${forme.name.lowercase()}, " +
+                "raccourcis avancés=${AdvancedShortcuts.isEnabled(context)}, liste brute=« ${brute ?: ""} »")
+        }
+
+        /** La valeur brute du réglage, `null` s'il est vide ou illisible. */
+        private fun liste(context: Context): String? = try {
+            Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
         } catch (e: Exception) {
             AppLogger.w(TAG, "état du service illisible : ${e.message}")
-            false
+            null
         }
     }
 }
