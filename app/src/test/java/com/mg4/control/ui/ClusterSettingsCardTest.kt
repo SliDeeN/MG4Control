@@ -56,7 +56,6 @@ class ClusterSettingsCardTest {
         assertNotNull(v.findViewById<View>(R.id.row_cluster_refresh))
         assertNotNull(v.findViewById<Slider>(R.id.slider_cluster_refresh))
         assertNotNull(v.findViewById<Slider>(R.id.slider_cluster_animation))
-        assertNotNull(v.findViewById<TextView>(R.id.tv_cluster_status))
     }
 
     @Test

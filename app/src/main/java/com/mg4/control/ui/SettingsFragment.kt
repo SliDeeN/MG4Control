@@ -451,13 +451,6 @@ class SettingsFragment : Fragment() {
             })
         }
 
-        // Dit d'avance si le module pourra s'afficher : l'écran du combiné existe-t-il ?
-        view.findViewById<TextView>(R.id.tv_cluster_status).text =
-            ClusterModuleOverlay.ecranDuCombine(requireContext())?.let { ecran ->
-                val taille = android.graphics.Point().also { ecran.getRealSize(it) }
-                getString(R.string.settings_cluster_display_found, ecran.displayId, taille.x, taille.y)
-            } ?: getString(R.string.settings_cluster_display_missing)
-
         // ── Canal de mise a jour beta ────────────────────────────────────────
         // Aucun avertissement bloquant : une beta ne donne pas le controle du vehicule a un
         // tiers, contrairement a l'API externe. Le texte sous l'interrupteur suffit, et il

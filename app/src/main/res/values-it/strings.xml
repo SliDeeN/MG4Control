@@ -798,8 +798,6 @@
     <string name="settings_cluster_pill_desc">Profilo: l\'ultimo profilo applicato, nel colore della sua modalità di guida.</string>
     <string name="settings_cluster_animation">Durata dell\'animazione</string>
     <string name="settings_cluster_animation_desc">Tempo che l\'indicatore impiega per passare da un valore al successivo. Più lungo: più fluido, ma segue più lentamente.</string>
-    <string name="settings_cluster_display_found">Display del quadro trovato: n. %1$d, %2$d × %3$d px</string>
-    <string name="settings_cluster_display_missing">Nessun display del quadro trovato: il modulo non potrà essere mostrato.</string>
     <string name="cluster_regen_kw">RIGEN. kW</string>
     <string name="cluster_stopped_kw">kW da fermo</string>
     <string name="cluster_trip_avg">MEDIA VIAGGIO</string>

@@ -798,8 +798,6 @@
     <string name="settings_cluster_pill_desc">Profile: the last applied profile, in the colour of its drive mode.</string>
     <string name="settings_cluster_animation">Animation duration</string>
     <string name="settings_cluster_animation_desc">Time the gauge takes to slide from one value to the next. Longer: smoother, but it follows more slowly.</string>
-    <string name="settings_cluster_display_found">Cluster display found: no. %1$d, %2$d × %3$d px</string>
-    <string name="settings_cluster_display_missing">No cluster display found: the module can\'t be shown.</string>
     <string name="cluster_regen_kw">REGEN kW</string>
     <string name="cluster_stopped_kw">kW stationary</string>
     <string name="cluster_trip_avg">TRIP AVG</string>

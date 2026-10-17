@@ -798,8 +798,6 @@
     <string name="settings_cluster_pill_desc">Profil: das zuletzt angewendete Profil, in der Farbe seines Fahrmodus.</string>
     <string name="settings_cluster_animation">Animationsdauer</string>
     <string name="settings_cluster_animation_desc">Zeit, die die Anzeige braucht, um von einem Wert zum nächsten zu gleiten. Länger: weicher, folgt aber langsamer.</string>
-    <string name="settings_cluster_display_found">Display des Kombiinstruments gefunden: Nr. %1$d, %2$d × %3$d px</string>
-    <string name="settings_cluster_display_missing">Kein Display des Kombiinstruments gefunden: Das Modul kann nicht angezeigt werden.</string>
     <string name="cluster_regen_kw">REKUP. kW</string>
     <string name="cluster_stopped_kw">kW im Stand</string>
     <string name="cluster_trip_avg">Ø FAHRT</string>

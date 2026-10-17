@@ -831,6 +831,13 @@
                                 android:textAllCaps="false"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="16sp"
+                                android:maxLines="1"
+                                android:paddingStart="6dp"
+                                android:paddingEnd="6dp"
+                                app:autoSizeTextType="uniform"
+                                app:autoSizeMinTextSize="11sp"
+                                app:autoSizeMaxTextSize="16sp"
+                                app:autoSizeStepGranularity="1sp"
                                 app:backgroundTint="@color/dash_btn"
                                 app:strokeWidth="1dp"
                                 app:strokeColor="@color/dash_border"
@@ -847,6 +854,13 @@
                                 android:textAllCaps="false"
                                 android:textColor="@color/text_secondary"
                                 android:textSize="16sp"
+                                android:maxLines="1"
+                                android:paddingStart="6dp"
+                                android:paddingEnd="6dp"
+                                app:autoSizeTextType="uniform"
+                                app:autoSizeMinTextSize="11sp"
+                                app:autoSizeMaxTextSize="16sp"
+                                app:autoSizeStepGranularity="1sp"
                                 app:backgroundTint="@color/dash_btn"
                                 app:strokeWidth="1dp"
                                 app:strokeColor="@color/dash_border"
@@ -854,13 +868,6 @@
 
                         </LinearLayout>
 
-                        <TextView
-                            android:id="@+id/tv_cluster_status"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:textColor="@color/dash_text_lo"
-                            android:textSize="13sp" />
 
                     </LinearLayout>
 
