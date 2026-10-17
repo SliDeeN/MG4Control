@@ -172,7 +172,7 @@ object ChargePopupOverlay {
         val icone: ImageView = racine.findViewById(R.id.charge_title_icon)
         val titre: TextView = racine.findViewById(R.id.charge_title)
         val pastille: TextView = racine.findViewById(R.id.charge_pill)
-        val fermer: View = racine.findViewById(R.id.charge_close)
+        val fermer: ImageView = racine.findViewById(R.id.charge_close)
         val soc: TextView = racine.findViewById(R.id.charge_soc)
         val curseur: ChargeLimitSliderView = racine.findViewById(R.id.charge_slider)
         val aide: TextView = racine.findViewById(R.id.charge_hint)
@@ -190,7 +190,7 @@ object ChargePopupOverlay {
         val duree = Ligne(racine.findViewById(R.id.row_duration))
         val editeur: View = racine.findViewById(R.id.charge_price_editor)
         val prixType: TextView = racine.findViewById(R.id.price_type)
-        val prixAnnuler: View = racine.findViewById(R.id.price_cancel)
+        val prixAnnuler: ImageView = racine.findViewById(R.id.price_cancel)
         val prixMoins: ImageView = racine.findViewById(R.id.price_minus)
         val prixPlus: ImageView = racine.findViewById(R.id.price_plus)
         val prixValeur: TextView = racine.findViewById(R.id.price_value)
@@ -206,6 +206,7 @@ object ChargePopupOverlay {
         val cWarn = themed.getColor(R.color.dash_warn)
         val cTexteBas = themed.getColor(R.color.dash_text_lo)
         val cTexte = themed.getColor(R.color.text_primary)
+        val cTexte2 = themed.getColor(R.color.text_secondary)
 
         /**
          * Sans argument, PAS de mise en forme : « Batterie (%) » la ferait lever
@@ -255,6 +256,11 @@ object ChargePopupOverlay {
         val teinte = android.content.res.ColorStateList.valueOf(v.cTexte)
         v.prixMoins.imageTintList = teinte
         v.prixPlus.imageTintList = teinte
+        // Les croix : l'icône est blanche, invisible sur la carte du thème clair — teintées comme
+        // celle du pop-up HVAC (HvacPopupSkin), au gris des textes secondaires.
+        val gris = android.content.res.ColorStateList.valueOf(v.cTexte2)
+        v.fermer.imageTintList = gris
+        v.prixAnnuler.imageTintList = gris
     }
 
     /** Légende : un carré de la couleur de la courbe, puis le texte. */
@@ -327,8 +333,9 @@ object ChargePopupOverlay {
         )
 
         // Chiffres.
-        ligne(v.puissance, e.kw?.takeIf { e.enCharge }?.let { entier(it) } ?: "–", "kW",
-            e.kwMax?.let { v.s(R.string.charge_popup_power_max, entier(it)) })
+        // Une décimale (demande du 2026-10-17) : en AC, « 7 kW » ne bougeait jamais.
+        ligne(v.puissance, e.kw?.takeIf { e.enCharge }?.let { decimale(v.locale).format(it) } ?: "–", "kW",
+            e.kwMax?.let { v.s(R.string.charge_popup_power_max, decimale(v.locale).format(it)) })
         ligne(v.energie, "+" + decimale(v.locale).format(e.energieKwh), "kWh", null)
         ligne(v.autonomie, e.autonomieGagneeKm?.let { "+$it" } ?: "–", if (e.autonomieGagneeKm != null) "km" else "", null)
         val prixTexte = prix(v.locale, e.prix)
@@ -433,8 +440,6 @@ object ChargePopupOverlay {
         minimumFractionDigits = 1
         maximumFractionDigits = 1
     }
-
-    private fun entier(v: Float): String = v.roundToInt().toString()
 
     /** Prix du kWh : trois décimales sous 10, comme l'onglet Statistiques. */
     private fun prix(locale: Locale, v: Float): String = com.mg4.control.model.MoneyFormat.price(v, locale)
