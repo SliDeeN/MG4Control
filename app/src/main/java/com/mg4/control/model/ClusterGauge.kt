@@ -260,27 +260,35 @@ object ClusterGauge {
 
     // ── Style discret : une barre fine graduée (issue #153, variante A) ────────
 
-    /** Récupération à gauche du zéro, jusqu'à [DISCREET_REGEN_KW] ; puissance à droite, jusqu'à [DISCREET_POWER_KW]. */
-    const val DISCREET_REGEN_KW = 60f
-    const val DISCREET_POWER_KW = 120f
+    // Mêmes bornes et mêmes échelles LOGARITHMIQUES que les jauges dynamiques (demande du
+    // 2026-10-17) : 60 kW de récupération, 320 kW, 3 000 Wh/km (300 kWh/100 km). Linéaires et
+    // bornées à 120 kW / 40 kWh/100 km, les barres bougeaient à peine aux allures courantes.
+
     /** Place du zéro sur la barre de puissance : la récupération en occupe les 30 premiers %. */
     const val DISCREET_ZERO = 0.3f
-    val DISCREET_POWER_TICKS = listOf(-60f, -30f, 0f, 30f, 60f, 90f, 120f)
-    /** Barre de consommation : 0 à 400 Wh/km (40 kWh/100 km), graduée tous les 100. */
-    const val DISCREET_WH_MAX = 400f
-    val DISCREET_CONSUMPTION_TICKS_WH = listOf(0f, 100f, 200f, 300f, 400f)
+    /** Crans de la barre de puissance (kW, négatifs = récupération). */
+    val DISCREET_POWER_TICKS = listOf(-60f, -20f, 0f, 20f, 50f, 100f, 200f, 320f)
+    /**
+     * Ceux qui portent un chiffre : sur l'échelle logarithmique, 200 et 320 (comme −30 et −60)
+     * tombent trop près l'un de l'autre pour deux chiffres — 200 garde son trait seul.
+     */
+    val DISCREET_POWER_LABELS = setOf(-60f, -20f, 0f, 20f, 50f, 100f, 320f)
+    /** Crans de la barre de consommation (Wh/km), ceux de l'anneau dynamique. */
+    val DISCREET_CONSUMPTION_TICKS_WH = CONSUMPTION_TICKS_WH
+    /** Ceux qui portent un chiffre : 100 et 200 sont trop proches, 200 garde son trait seul. */
+    val DISCREET_CONSUMPTION_LABELS_WH = setOf(0f, 100f, 500f, 1000f, 3000f)
 
     /** Position de [kw] (signé, négatif en récupération) sur la barre de puissance, de 0 à 1. */
     fun discreetPowerFraction(kw: Float): Float = if (kw < 0f)
-        DISCREET_ZERO * (1f - part(-kw / DISCREET_REGEN_KW))
+        DISCREET_ZERO * (1f - regenFraction(-kw))
     else
-        DISCREET_ZERO + (1f - DISCREET_ZERO) * part(kw / DISCREET_POWER_KW)
+        DISCREET_ZERO + (1f - DISCREET_ZERO) * powerFraction(kw)
 
     /** Position d'une consommation [whPerKm] sur la barre de consommation, de 0 à 1. */
-    fun discreetConsumptionFraction(whPerKm: Float): Float = part(whPerKm / DISCREET_WH_MAX)
+    fun discreetConsumptionFraction(whPerKm: Float): Float = consumptionFraction(whPerKm)
 
     /** Part de la zone de récupération remplie pour [kwRecuperes] (positifs). */
-    fun discreetRegenFraction(kwRecuperes: Float): Float = part(kwRecuperes / DISCREET_REGEN_KW)
+    fun discreetRegenFraction(kwRecuperes: Float): Float = regenFraction(kwRecuperes)
 
     /** Constante de temps du style discret : la barre suit en deux secondes, sans trembler. */
     const val DISCREET_TAU_MS = 2_000L

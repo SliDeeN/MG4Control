@@ -337,14 +337,15 @@ class ClusterGaugeView(context: Context) : View(context) {
         trait.strokeWidth = EPAISSEUR
     }
 
-    /** Un cran : un petit trait sous la barre et son chiffre, fixe. */
-    private fun cranDiscret(canvas: Canvas, x: Float, libelle: String, principal: Boolean) {
+    /** Un cran : un petit trait sous la barre et son chiffre, fixe ([libelle] `null` : le trait seul). */
+    private fun cranDiscret(canvas: Canvas, x: Float, libelle: String?, principal: Boolean) {
         trait.strokeCap = Paint.Cap.BUTT
         trait.color = if (principal) cTexte else C_CRAN
         trait.strokeWidth = if (principal) 2f else 1f
         canvas.drawLine(x, Y_BARRE + 7f, x, Y_BARRE + 12f, trait)
         trait.strokeCap = Paint.Cap.ROUND
         trait.strokeWidth = EPAISSEUR
+        libelle ?: return
         texte.typeface = if (principal) moyen else Typeface.DEFAULT
         texte.textSize = 13f
         texte.letterSpacing = 0f
@@ -365,7 +366,8 @@ class ClusterGaugeView(context: Context) : View(context) {
             else if (v > 0.5f) barreDiscrete(canvas, zero, xv, C_CLAIR)
         }
         ClusterGauge.DISCREET_POWER_TICKS.forEach { k ->
-            cranDiscret(canvas, xBarre(ClusterGauge.discreetPowerFraction(k)), k.roundToInt().toString(), k == 0f)
+            cranDiscret(canvas, xBarre(ClusterGauge.discreetPowerFraction(k)),
+                k.roundToInt().toString().takeIf { k in ClusterGauge.DISCREET_POWER_LABELS }, k == 0f)
         }
         // Le zéro, repère de toute la barre.
         trait.strokeCap = Paint.Cap.BUTT
@@ -401,7 +403,8 @@ class ClusterGaugeView(context: Context) : View(context) {
             else -> Unit
         }
         ClusterGauge.DISCREET_CONSUMPTION_TICKS_WH.forEach { wh ->
-            cranDiscret(canvas, xConso(wh), ClusterGauge.consumptionTickLabel(wh, c.unite), false)
+            cranDiscret(canvas, xConso(wh),
+                ClusterGauge.consumptionTickLabel(wh, c.unite).takeIf { wh in ClusterGauge.DISCREET_CONSUMPTION_LABELS_WH }, false)
         }
         texte.typeface = Typeface.DEFAULT
         texte.letterSpacing = 0f

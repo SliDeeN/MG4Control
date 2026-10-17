@@ -291,15 +291,22 @@ class ClusterGaugeTest {
         assertEquals(ClusterGaugeStyle.DISCREET, ClusterGaugeStyle.fromKey("discreet"))
     }
 
-    @Test fun `barre discrete de puissance - zero a 30 pour cent, bornes tenues`() {
+    @Test fun `barres discretes - memes bornes et echelles que les jauges dynamiques`() {
         assertEquals(0.3f, ClusterGauge.discreetPowerFraction(0f), delta)
         assertEquals(0f, ClusterGauge.discreetPowerFraction(-60f), delta)
         assertEquals(0f, ClusterGauge.discreetPowerFraction(-200f), delta)
-        assertEquals(0.15f, ClusterGauge.discreetPowerFraction(-30f), delta)
-        assertEquals(0.65f, ClusterGauge.discreetPowerFraction(60f), delta)
-        assertEquals(1f, ClusterGauge.discreetPowerFraction(300f), delta)
-        assertEquals(0.42f, ClusterGauge.discreetConsumptionFraction(168f), delta)
-        assertEquals(1f, ClusterGauge.discreetConsumptionFraction(900f), delta)
+        assertEquals(1f, ClusterGauge.discreetPowerFraction(320f), delta)
+        assertEquals(1f, ClusterGauge.discreetPowerFraction(500f), delta)
+        assertEquals(1f, ClusterGauge.discreetConsumptionFraction(3000f), delta)
+        // Échelle logarithmique : 20 kW prennent déjà le quart de la puissance, 168 Wh/km plus du quart de la barre.
+        assertEquals(0.3f + 0.7f * ClusterGauge.powerFraction(20f), ClusterGauge.discreetPowerFraction(20f), delta)
+        assertTrue(ClusterGauge.powerFraction(20f) > 0.24f)
+        assertEquals(ClusterGauge.consumptionFraction(168f), ClusterGauge.discreetConsumptionFraction(168f), delta)
+        assertTrue(ClusterGauge.discreetConsumptionFraction(168f) > 0.28f)
+        assertEquals(ClusterGauge.regenFraction(20f), ClusterGauge.discreetRegenFraction(20f), delta)
+        // Chaque chiffre a son cran.
+        assertTrue(ClusterGauge.DISCREET_POWER_TICKS.containsAll(ClusterGauge.DISCREET_POWER_LABELS))
+        assertTrue(ClusterGauge.DISCREET_CONSUMPTION_TICKS_WH.containsAll(ClusterGauge.DISCREET_CONSUMPTION_LABELS_WH))
     }
 
     @Test fun `le lissage discret prend le meme temps quelle que soit la cadence`() {
