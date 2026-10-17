@@ -271,6 +271,48 @@ class ClusterGaugeTest {
         assertNull(ClusterGauge.pill(ClusterPill.PROFILE, DriveMode.ECO, "  ", null, Locale.FRANCE))
     }
 
+    // ── Issue #153 : style discret, unité de la moyenne ──────────────────────
+
+    @Test fun `la moyenne suit l unite de la jauge tant qu on n a rien choisi`() {
+        assertEquals(AverageUnit.KWH_PER_100KM, AverageUnit.resolve(null, ConsumptionUnit.KWH_PER_100KM))
+        assertEquals(AverageUnit.WH_PER_KM, AverageUnit.resolve("inconnue", ConsumptionUnit.WH_PER_KM))
+        assertEquals(AverageUnit.KM_PER_KWH, AverageUnit.resolve("km_kwh", ConsumptionUnit.WH_PER_KM))
+    }
+
+    @Test fun `la moyenne s ecrit aussi en km par kWh`() {
+        assertEquals("6,0", ClusterGauge.formatAverage(168f, AverageUnit.KM_PER_KWH, Locale.FRANCE))
+        assertEquals("16,8", ClusterGauge.formatAverage(168f, AverageUnit.KWH_PER_100KM, Locale.FRANCE))
+        assertEquals("168", ClusterGauge.formatAverage(168f, AverageUnit.WH_PER_KM, Locale.FRANCE))
+        assertNull(ClusterGauge.formatAverage(0f, AverageUnit.KM_PER_KWH, Locale.FRANCE))
+    }
+
+    @Test fun `style dynamique par defaut`() {
+        assertEquals(ClusterGaugeStyle.DYNAMIC, ClusterGaugeStyle.fromKey(null))
+        assertEquals(ClusterGaugeStyle.DISCREET, ClusterGaugeStyle.fromKey("discreet"))
+    }
+
+    @Test fun `barre discrete de puissance - zero a 30 pour cent, bornes tenues`() {
+        assertEquals(0.3f, ClusterGauge.discreetPowerFraction(0f), delta)
+        assertEquals(0f, ClusterGauge.discreetPowerFraction(-60f), delta)
+        assertEquals(0f, ClusterGauge.discreetPowerFraction(-200f), delta)
+        assertEquals(0.15f, ClusterGauge.discreetPowerFraction(-30f), delta)
+        assertEquals(0.65f, ClusterGauge.discreetPowerFraction(60f), delta)
+        assertEquals(1f, ClusterGauge.discreetPowerFraction(300f), delta)
+        assertEquals(0.42f, ClusterGauge.discreetConsumptionFraction(168f), delta)
+        assertEquals(1f, ClusterGauge.discreetConsumptionFraction(900f), delta)
+    }
+
+    @Test fun `le lissage discret prend le meme temps quelle que soit la cadence`() {
+        assertEquals(10f, ClusterGauge.smoothTime(null, 10f, 1_000L), delta)
+        // Une seconde sur une constante de deux : la moitié de l'écart.
+        assertEquals(5f, ClusterGauge.smoothTime(0f, 10f, 1_000L), delta)
+        var v = 0f
+        repeat(10) { v = ClusterGauge.smoothTime(v, 10f, 100L) }
+        assertEquals(4.01f, v, 0.01f)
+        // Après un long trou, on rejoint la valeur.
+        assertEquals(10f, ClusterGauge.smoothTime(0f, 10f, 60_000L), delta)
+    }
+
     @Test fun `pastille aucune, et le choix par defaut est le profil`() {
         assertNull(ClusterGauge.pill(ClusterPill.NONE, DriveMode.NORMAL, "Paul", DriveMode.NORMAL, Locale.FRANCE))
         assertEquals(ClusterPill.PROFILE, ClusterPill.fromKey(null))

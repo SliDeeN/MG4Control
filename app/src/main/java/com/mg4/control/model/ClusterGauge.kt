@@ -52,6 +52,39 @@ enum class ConsumptionUnit(val key: String, val label: String) {
 }
 
 /**
+ * Unité de la moyenne du trajet, en bas des modules (2026-10-17) : réglée à part de celle de la
+ * jauge ([ConsumptionUnit]), avec en plus les km/kWh — qui ne touchent jamais la jauge elle-même
+ * (décision de l'utilisateur). Sans choix : celle de la jauge, l'affichage d'avant.
+ */
+enum class AverageUnit(val key: String, val label: String) {
+    WH_PER_KM("wh_km", "Wh/km"),
+    KWH_PER_100KM("kwh_100km", "kWh/100 km"),
+    KM_PER_KWH("km_kwh", "km/kWh");
+
+    companion object {
+        fun of(gauge: ConsumptionUnit): AverageUnit = when (gauge) {
+            ConsumptionUnit.WH_PER_KM -> WH_PER_KM
+            ConsumptionUnit.KWH_PER_100KM -> KWH_PER_100KM
+        }
+
+        fun resolve(key: String?, gauge: ConsumptionUnit): AverageUnit = entries.firstOrNull { it.key == key } ?: of(gauge)
+    }
+}
+
+/**
+ * Style des modules du combiné (issue #153, 2026-10-17) : les jauges dynamiques d'origine, ou une
+ * barre fine graduée qui bouge lentement, sans chiffre qui défile (variante A choisie).
+ */
+enum class ClusterGaugeStyle(val key: String) {
+    DYNAMIC("dynamic"),
+    DISCREET("discreet");
+
+    companion object {
+        fun fromKey(key: String?): ClusterGaugeStyle = entries.firstOrNull { it.key == key } ?: DYNAMIC
+    }
+}
+
+/**
  * Pastille en haut à gauche du combiné (Réglages › Interface, issue #152, 2026-10-16) : le mode de
  * conduite (l'affichage d'avant), le profil MG4Control actif — par défaut, choix de l'utilisateur —,
  * ou rien. Le combiné affiche déjà le mode de conduite.
@@ -214,6 +247,52 @@ object ClusterGauge {
             ClusterPill.PROFILE -> profilNom?.trim()?.takeIf { it.isNotEmpty() }
                 ?.let { PillContent(it.uppercase(locale), profilMode ?: mode) }
         }
+
+    /**
+     * Moyenne du trajet [whPerKm] dans [unit] : comme [formatConsumption], ou des km/kWh à une
+     * décimale. `null` sans consommation positive (les km/kWh y seraient infinis).
+     */
+    fun formatAverage(whPerKm: Float, unit: AverageUnit, locale: Locale): String? = when (unit) {
+        AverageUnit.WH_PER_KM -> formatConsumption(whPerKm, ConsumptionUnit.WH_PER_KM, locale)
+        AverageUnit.KWH_PER_100KM -> formatConsumption(whPerKm, ConsumptionUnit.KWH_PER_100KM, locale)
+        AverageUnit.KM_PER_KWH -> whPerKm.takeIf { it > 0f }?.let { String.format(locale, "%.1f", 1000f / it) }
+    }
+
+    // ── Style discret : une barre fine graduée (issue #153, variante A) ────────
+
+    /** Récupération à gauche du zéro, jusqu'à [DISCREET_REGEN_KW] ; puissance à droite, jusqu'à [DISCREET_POWER_KW]. */
+    const val DISCREET_REGEN_KW = 60f
+    const val DISCREET_POWER_KW = 120f
+    /** Place du zéro sur la barre de puissance : la récupération en occupe les 30 premiers %. */
+    const val DISCREET_ZERO = 0.3f
+    val DISCREET_POWER_TICKS = listOf(-60f, -30f, 0f, 30f, 60f, 90f, 120f)
+    /** Barre de consommation : 0 à 400 Wh/km (40 kWh/100 km), graduée tous les 100. */
+    const val DISCREET_WH_MAX = 400f
+    val DISCREET_CONSUMPTION_TICKS_WH = listOf(0f, 100f, 200f, 300f, 400f)
+
+    /** Position de [kw] (signé, négatif en récupération) sur la barre de puissance, de 0 à 1. */
+    fun discreetPowerFraction(kw: Float): Float = if (kw < 0f)
+        DISCREET_ZERO * (1f - part(-kw / DISCREET_REGEN_KW))
+    else
+        DISCREET_ZERO + (1f - DISCREET_ZERO) * part(kw / DISCREET_POWER_KW)
+
+    /** Position d'une consommation [whPerKm] sur la barre de consommation, de 0 à 1. */
+    fun discreetConsumptionFraction(whPerKm: Float): Float = part(whPerKm / DISCREET_WH_MAX)
+
+    /** Part de la zone de récupération remplie pour [kwRecuperes] (positifs). */
+    fun discreetRegenFraction(kwRecuperes: Float): Float = part(kwRecuperes / DISCREET_REGEN_KW)
+
+    /** Constante de temps du style discret : la barre suit en deux secondes, sans trembler. */
+    const val DISCREET_TAU_MS = 2_000L
+
+    /**
+     * Lissage dans le temps (style discret) : la part de l'écart rattrapée dépend de l'intervalle
+     * [dtMs] — à 0,1 s comme à 1 s d'actualisation, la barre met le même temps à suivre.
+     */
+    fun smoothTime(previous: Float?, value: Float, dtMs: Long, tauMs: Long = DISCREET_TAU_MS): Float {
+        if (previous == null || dtMs <= 0L) return previous ?: value
+        return previous + (value - previous) * (dtMs.toFloat() / tauMs).coerceAtMost(1f)
+    }
 
     /**
      * Consommation [whPerKm] écrite dans [unit] : Wh/km entiers, ou kWh/100 km avec une décimale

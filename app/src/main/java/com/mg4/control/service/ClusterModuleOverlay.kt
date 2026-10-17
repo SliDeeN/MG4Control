@@ -37,6 +37,7 @@ import com.mg4.control.hardware.ReadyWatcher
 import com.mg4.control.model.ChargeDisplay
 import com.mg4.control.model.ChargeEnCours
 import com.mg4.control.model.ClusterGauge
+import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
@@ -188,6 +189,19 @@ internal object ClusterModuleOverlay {
         }
     }
 
+    /**
+     * Un réglage du module vient de changer (unité, unité de la moyenne, style, pastille, module) :
+     * un relevé tout de suite. Ils sont relus à chaque relevé, mais à une seconde d'actualisation,
+     * le changement pouvait tarder jusqu'au suivant.
+     */
+    fun relire() {
+        lecteur.post {
+            if (!enMarche) return@post
+            lecteur.removeCallbacks(tic)
+            lecteur.post(tic)
+        }
+    }
+
     /** Arrêt du service. */
     fun stop() {
         main.post {
@@ -316,9 +330,13 @@ internal object ClusterModuleOverlay {
             val kmh = runCatching { MG4Hardware.getVehicleSpeedKmh() }.getOrNull()?.takeIf { it in 0f..300f }
             trajet.add(maintenant, kw, kmh)
             // Lissage par relevé : plus la cadence est rapide, plus la jauge suit vite. C'est ce
-            // qu'on demande au curseur — le chiffre bouge aussi davantage.
+            // qu'on demande au curseur — le chiffre bouge aussi davantage. Style discret (issue
+            // #153) : lissage dans le temps, deux secondes quelle que soit la cadence.
+            val style = ClusterModuleSettings.style(ctx)
             if (kw != null) {
-                kwLisse = ClusterGauge.smooth(kwLisse, kw)
+                kwLisse = if (style == ClusterGaugeStyle.DISCREET)
+                    ClusterGauge.smoothTime(kwLisse, kw, maintenant - dernierKwMs)
+                else ClusterGauge.smooth(kwLisse, kw)
                 dernierKwMs = maintenant
             } else if (maintenant - dernierKwMs > MANQUE_TOLERE_MS) {
                 kwLisse = null
@@ -394,6 +412,8 @@ internal object ClusterModuleOverlay {
                     moyenneWhKm = trajet.averageWhPerKm(),
                     recupWh = trajet.regenWh(),
                     unite = ClusterModuleSettings.consumptionUnit(ctx),
+                    uniteMoyenne = ClusterModuleSettings.averageUnit(ctx),
+                    style = style,
                     // À la place de la jauge réglée pour l'onglet, jamais sur un onglet sans module.
                     charge = if (session.active) vueCharge(maintenant) else null,
                 )

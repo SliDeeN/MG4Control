@@ -1,6 +1,8 @@
 package com.mg4.control.util
 
 import android.content.Context
+import com.mg4.control.model.AverageUnit
+import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
@@ -49,6 +51,11 @@ object ClusterModuleSettings {
     const val MAX_REFRESH_MS = 1000
     const val STEP_REFRESH_MS = 100
     const val DEFAULT_REFRESH_MS = 1000
+
+    /** Style des modules (issue #153) : dynamique par défaut, l'affichage d'avant. */
+    const val KEY_STYLE = "cluster_gauge_style"
+    /** Unité de la moyenne du trajet (2026-10-17) : sans choix, celle de la jauge. */
+    const val KEY_AVG_UNIT = "cluster_average_unit"
 
     /** Pastille en haut à gauche (issue #152) : profil actif par défaut. */
     const val KEY_PILL = "cluster_pill"
@@ -99,6 +106,22 @@ object ClusterModuleSettings {
 
     fun setRefreshMs(ctx: Context, ms: Int) {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_REFRESH, sanitizeRefresh(ms)).apply()
+    }
+
+    /** Relu à chaque relevé : changer de style vaut tout de suite. */
+    fun style(ctx: Context?): ClusterGaugeStyle =
+        ClusterGaugeStyle.fromKey(ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_STYLE, null))
+
+    fun setStyle(ctx: Context, style: ClusterGaugeStyle) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_STYLE, style.key).apply()
+    }
+
+    /** Relue à chaque relevé ; sans choix, l'unité de la jauge. */
+    fun averageUnit(ctx: Context?): AverageUnit = AverageUnit.resolve(
+        ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_AVG_UNIT, null), consumptionUnit(ctx))
+
+    fun setAverageUnit(ctx: Context, unit: AverageUnit) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_AVG_UNIT, unit.key).apply()
     }
 
     /** Relu à chaque relevé, comme le reste. */

@@ -33,8 +33,10 @@ import android.view.animation.DecelerateInterpolator
 import androidx.core.content.ContextCompat
 import com.mg4.control.R
 import com.mg4.control.model.ChargeDisplay
+import com.mg4.control.model.AverageUnit
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.ClusterGauge
+import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ConsumptionUnit
 import com.mg4.control.model.DriveMode
@@ -63,6 +65,10 @@ import kotlin.math.sin
  * l'une à l'autre se lirait mal du coin de l'œil, et le chiffre compte (100, 101… 300) au lieu de
  * changer d'un coup (demande du 2026-10-15). La durée du glissement se règle à part de
  * l'actualisation (issue #152).
+ *
+ * Style discret (issue #153, 2026-10-17, variante A) : à la place de l'anneau et de l'arc, une
+ * barre fine graduée — chiffres fixes sous chaque cran, aucun chiffre qui défile. Même pastille,
+ * même moyenne du trajet en bas.
  *
  * Pendant une charge, le module « charge » prend la place de la jauge ([Charge], 2026-10-16,
  * maquette B choisie par l'utilisateur) : en gros le temps restant jusqu'à la cible, dessous le
@@ -98,8 +104,11 @@ class ClusterGaugeView(context: Context) : View(context) {
         val pastille: PillContent?,
         val moyenneWhKm: Float?,
         val recupWh: Float?,
-        /** Unité de la consommation (Réglages › Interface) : chiffre, graduations et moyenne du trajet. */
+        /** Unité de la jauge (Réglages › Interface) : chiffre et graduations. */
         val unite: ConsumptionUnit = ConsumptionUnit.WH_PER_KM,
+        /** Unité de la moyenne du trajet, en bas : réglée à part, km/kWh compris. */
+        val uniteMoyenne: AverageUnit = AverageUnit.of(unite),
+        val style: ClusterGaugeStyle = ClusterGaugeStyle.DYNAMIC,
         /** Pendant une charge : le module « charge » remplace la jauge. */
         val charge: Charge? = null,
     )
@@ -208,7 +217,12 @@ class ClusterGaugeView(context: Context) : View(context) {
 
         c.pastille?.let { pastille(canvas, it) }
 
-        if (c.module == ClusterModule.POWER) puissance(canvas, c) else consommation(canvas, c)
+        when {
+            c.style == ClusterGaugeStyle.DISCREET && c.module == ClusterModule.POWER -> discretPuissance(canvas, c)
+            c.style == ClusterGaugeStyle.DISCREET -> discretConsommation(canvas, c)
+            c.module == ClusterModule.POWER -> puissance(canvas, c)
+            else -> consommation(canvas, c)
+        }
         canvas.restore()
     }
 
@@ -242,7 +256,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         petit(canvas, unite, cx, cy + 40f, 13f, if (recup) cAccent else cTexte2)
 
         pied(canvas,
-            context.getString(R.string.cluster_trip_avg), conso(c.moyenneWhKm, c.unite), cTexte,
+            context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne), cTexte,
             context.getString(R.string.cluster_regen), c.recupWh?.let { "+${it.roundToInt()}" to "Wh" } ?: ("–" to null), cAccent)
     }
 
@@ -301,7 +315,115 @@ class ClusterGaugeView(context: Context) : View(context) {
 
         // Le pourcentage de batterie est déjà sur le combiné : seule reste la moyenne du trajet,
         // centrée, sans filet (issue #152).
-        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), conso(c.moyenneWhKm, c.unite), cTexte)
+        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne), cTexte)
+    }
+
+    // ── Style discret : barre fine graduée (issue #153, variante A) ───────────
+
+    /** Titre du module, en petites capitales espacées. */
+    private fun titreDiscret(canvas: Canvas, titre: String) {
+        texte.typeface = Typeface.DEFAULT
+        texte.textSize = 11f
+        texte.color = C_DISCRET
+        texte.letterSpacing = 0.14f
+        canvas.drawText(titre.uppercase(locale), COTE / 2f, 70f, texte)
+    }
+
+    private fun barreDiscrete(canvas: Canvas, x0: Float, x1: Float, couleur: Int) {
+        if (x1 - x0 < 0.5f) return
+        trait.color = couleur
+        trait.strokeWidth = BARRE_EPAISSEUR
+        canvas.drawLine(x0, Y_BARRE, x1, Y_BARRE, trait)
+        trait.strokeWidth = EPAISSEUR
+    }
+
+    /** Un cran : un petit trait sous la barre et son chiffre, fixe. */
+    private fun cranDiscret(canvas: Canvas, x: Float, libelle: String, principal: Boolean) {
+        trait.strokeCap = Paint.Cap.BUTT
+        trait.color = if (principal) cTexte else C_CRAN
+        trait.strokeWidth = if (principal) 2f else 1f
+        canvas.drawLine(x, Y_BARRE + 7f, x, Y_BARRE + 12f, trait)
+        trait.strokeCap = Paint.Cap.ROUND
+        trait.strokeWidth = EPAISSEUR
+        texte.typeface = if (principal) moyen else Typeface.DEFAULT
+        texte.textSize = 13f
+        texte.letterSpacing = 0f
+        texte.color = if (principal) cTexte2 else C_DISCRET
+        canvas.drawText(libelle, x, Y_BARRE + 28f, texte)
+    }
+
+    private fun xBarre(fraction: Float) = BARRE_G + (BARRE_D - BARRE_G) * fraction
+
+    private fun discretPuissance(canvas: Canvas, c: Contenu) {
+        titreDiscret(canvas, context.getString(R.string.settings_cluster_power))
+        barreDiscrete(canvas, BARRE_G, BARRE_D, cPiste)
+        val zero = xBarre(ClusterGauge.DISCREET_ZERO)
+        val v = valeurAffichee ?: etat?.value
+        if (etat != null && v != null) {
+            val xv = xBarre(ClusterGauge.discreetPowerFraction(v))
+            if (v < -0.5f) barreDiscrete(canvas, xv, zero, cAccent)
+            else if (v > 0.5f) barreDiscrete(canvas, zero, xv, C_CLAIR)
+        }
+        ClusterGauge.DISCREET_POWER_TICKS.forEach { k ->
+            cranDiscret(canvas, xBarre(ClusterGauge.discreetPowerFraction(k)), k.roundToInt().toString(), k == 0f)
+        }
+        // Le zéro, repère de toute la barre.
+        trait.strokeCap = Paint.Cap.BUTT
+        trait.color = cTexte
+        trait.strokeWidth = 2f
+        canvas.drawLine(zero, Y_BARRE - 11f, zero, Y_BARRE + 11f, trait)
+        trait.strokeCap = Paint.Cap.ROUND
+        trait.strokeWidth = EPAISSEUR
+        texte.typeface = Typeface.DEFAULT
+        texte.textSize = 11f
+        texte.letterSpacing = 0f
+        texte.color = C_DISCRET
+        texte.textAlign = Paint.Align.RIGHT
+        canvas.drawText("kW", BARRE_D, Y_BARRE - 14f, texte)
+        texte.textAlign = Paint.Align.CENTER
+        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne), cTexte)
+    }
+
+    private fun discretConsommation(canvas: Canvas, c: Contenu) {
+        titreDiscret(canvas, context.getString(R.string.settings_cluster_consumption))
+        // À gauche, une courte zone pour la récupération ; puis l'échelle de consommation.
+        barreDiscrete(canvas, BARRE_G, RECUP_D, cPiste)
+        barreDiscrete(canvas, CONSO_G, BARRE_D, cPiste)
+        fun xConso(wh: Float) = CONSO_G + (BARRE_D - CONSO_G) * ClusterGauge.discreetConsumptionFraction(wh)
+        val e = etat
+        val v = valeurAffichee ?: e?.value
+        val moy = c.moyenneWhKm
+        if (e != null && v != null) when (e.unit) {
+            GaugeUnit.KW_REGEN -> barreDiscrete(canvas,
+                RECUP_D - (RECUP_D - BARRE_G) * ClusterGauge.discreetRegenFraction(v), RECUP_D, cAccent)
+            GaugeUnit.WH_PER_KM -> barreDiscrete(canvas, CONSO_G, xConso(v),
+                if (moy != null && v > moy) couleur(GaugeLevel.CONSUMPTION) else cVert)
+            else -> Unit
+        }
+        ClusterGauge.DISCREET_CONSUMPTION_TICKS_WH.forEach { wh ->
+            cranDiscret(canvas, xConso(wh), ClusterGauge.consumptionTickLabel(wh, c.unite), false)
+        }
+        texte.typeface = Typeface.DEFAULT
+        texte.letterSpacing = 0f
+        texte.textSize = 11f
+        texte.color = cAccent
+        canvas.drawText(context.getString(R.string.cluster_regen), (BARRE_G + RECUP_D) / 2f, Y_BARRE + 28f, texte)
+        texte.color = C_DISCRET
+        texte.textAlign = Paint.Align.RIGHT
+        canvas.drawText(c.unite.label, BARRE_D, Y_BARRE + 44f, texte)
+        texte.textAlign = Paint.Align.CENTER
+        // La moyenne du trajet : un triangle au-dessus de la barre, et son mot.
+        moy?.let {
+            val xm = xConso(it)
+            plein.color = cTexte
+            val pointe = android.graphics.Path().apply {
+                moveTo(xm - 5f, Y_BARRE - 16f); lineTo(xm + 5f, Y_BARRE - 16f); lineTo(xm, Y_BARRE - 8f); close()
+            }
+            canvas.drawPath(pointe, plein)
+            texte.color = cTexte2
+            canvas.drawText(context.getString(R.string.cluster_avg_short), xm, Y_BARRE - 21f, texte)
+        }
+        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne), cTexte)
     }
 
     // ── Module « charge » (maquette B) ──────────────────────────────────────
@@ -560,9 +682,9 @@ class ClusterGaugeView(context: Context) : View(context) {
         canvas.drawText(nom, 35f, 29.5f, textePastille)
     }
 
-    /** Moyenne du trajet dans l'unité choisie, ou un tiret tant qu'elle n'a pas de sens. */
-    private fun conso(wh: Float?, unite: ConsumptionUnit): Pair<String, String?> =
-        wh?.let { ClusterGauge.formatConsumption(it, unite, locale) to unite.label } ?: ("–" to null)
+    /** Moyenne du trajet dans son unité (réglée à part), ou un tiret tant qu'elle n'a pas de sens. */
+    private fun moyenne(wh: Float?, unite: AverageUnit): Pair<String, String?> =
+        wh?.let { ClusterGauge.formatAverage(it, unite, locale) }?.let { it to unite.label } ?: ("–" to null)
 
     private fun couleur(niveau: GaugeLevel): Int = sombre.getColor(when (niveau) {
         GaugeLevel.CONSUMPTION -> R.color.dash_warn
@@ -580,6 +702,18 @@ class ClusterGaugeView(context: Context) : View(context) {
         const val RAYON_A = 80f
         const val RAYON_B = 88f
         const val EPAISSEUR = 13f
+        /** Style discret : la barre, ses bornes, et la zone de récupération de la consommation. */
+        const val Y_BARRE = 124f
+        const val BARRE_G = 30f
+        const val BARRE_D = 230f
+        const val RECUP_D = 66f
+        const val CONSO_G = 72f
+        const val BARRE_EPAISSEUR = 6f
+        /** Textes discrets et crans secondaires, plus sourds que le gris des valeurs. */
+        val C_DISCRET = Color.rgb(0x8A, 0x8A, 0x90)
+        val C_CRAN = Color.rgb(0x4A, 0x4A, 0x52)
+        /** La puissance consommée : un gris clair, pour ne pas attirer l'œil comme l'orange. */
+        val C_CLAIR = Color.rgb(0xD4, 0xD4, 0xD8)
         /** Module « charge » : une image toutes les 50 ms ; éclair et reflet sur ces périodes. */
         const val IMAGE_CHARGE_MS = 50L
         const val PULSATION_MS = 1_400L
