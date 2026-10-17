@@ -1,5 +1,6 @@
 package com.mg4.control.model
 
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -32,6 +33,31 @@ object ChargeLimit {
 
 /** Un point de la courbe : [tMs] depuis le début de la charge, puissance qui entre (kW) et niveau (%). */
 data class ChargePoint(val tMs: Long, val kw: Float?, val soc: Float?)
+
+/**
+ * Axe des kW de la courbe du pop-up (demande du 2026-10-17) : son haut est la puissance maximale
+ * atteinte depuis le début de la charge — le pic touche le haut du graphique, et le chiffre du
+ * haut est celui de « max … kW ». Avant, l'axe montait au palier suivant (10, 20, 50, 100…) et
+ * une charge à 90 kW plafonnait aux neuf dixièmes.
+ */
+object ChargeCurveScale {
+
+    /** Sans puissance relevée (tout début de charge) : l'axe 0-10 kW d'avant. */
+    const val VIDE_KW = 10f
+
+    /**
+     * Haut de l'axe : le maximum relevé ([kwMax], pris à CHAQUE relevé) ou, s'il manque, celui des
+     * [points] — un point toutes les 5 s, le pic peut tomber entre deux.
+     */
+    fun hautKw(kwMax: Float?, points: List<ChargePoint>): Float {
+        val max = maxOf(kwMax ?: 0f, points.maxOfOrNull { it.kw ?: 0f } ?: 0f)
+        return if (max >= 1f) max else VIDE_KW
+    }
+
+    /** Graduation : entière, ou une décimale sous 10 kW (« 7,2 / 3,6 » plutôt que « 7 / 4 »). */
+    fun libelle(kw: Float, hautKw: Float, locale: Locale): String =
+        if (hautKw < 10f && kw > 0f) String.format(locale, "%.1f", kw) else kw.roundToInt().toString()
+}
 
 /**
  * Une charge vue par le pop-up de charge, depuis son début : la courbe (un point toutes les

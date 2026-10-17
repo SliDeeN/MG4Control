@@ -312,6 +312,7 @@ object ChargePopupOverlay {
             ecouleMs = e.ecouleMs,
             restantMs = restantMs,
             socActuel = e.soc,
+            kwMax = e.kwMax,
             limitePct = e.limitePct,
             finie = e.finie,
             libelleCible = e.limitePct?.let { v.s(R.string.charge_popup_target, it) },
@@ -322,6 +323,7 @@ object ChargePopupOverlay {
                 debut != null -> heure(v, debut + totalMs)
                 else -> duree(v, (totalMs / 60_000L).toInt())
             },
+            locale = v.locale,
         )
 
         // Chiffres.

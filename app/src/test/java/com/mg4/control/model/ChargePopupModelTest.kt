@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.Locale
 
 /** Pop-up de charge (2026-10-16) : limite de charge et journal de la session, sans Android. */
 class ChargePopupModelTest {
@@ -64,6 +65,23 @@ class ChargePopupModelTest {
         assertEquals(pts.first(), r.first())
         assertEquals(pts.last(), r.last())
         assertEquals(pts.take(50), ChargeLog.echantillonner(pts.take(50), 100))
+    }
+
+    @Test
+    fun `axe des kW - le haut est la puissance max atteinte`() {
+        val pts = listOf(ChargePoint(0L, 12f, 20f), ChargePoint(5_000L, 88.4f, 21f), ChargePoint(10_000L, null, 22f))
+        // Le maximum relevé entre deux points l'emporte : c'est le chiffre « max … kW » du pop-up.
+        assertEquals(90f, ChargeCurveScale.hautKw(90f, pts), 0.001f)
+        assertEquals(88.4f, ChargeCurveScale.hautKw(null, pts), 0.001f)
+        assertEquals(ChargeCurveScale.VIDE_KW, ChargeCurveScale.hautKw(null, emptyList()), 0f)
+        assertEquals(ChargeCurveScale.VIDE_KW, ChargeCurveScale.hautKw(0f, listOf(ChargePoint(0L, null, 50f))), 0f)
+        assertEquals("90", ChargeCurveScale.libelle(90f, 90f, Locale.FRENCH))
+        assertEquals("45", ChargeCurveScale.libelle(45f, 90f, Locale.FRENCH))
+        assertEquals("0", ChargeCurveScale.libelle(0f, 90f, Locale.FRENCH))
+        // Sous 10 kW (AC), une décimale dans la langue du pop-up ; le zéro reste « 0 ».
+        assertEquals("7,2", ChargeCurveScale.libelle(7.2f, 7.2f, Locale.FRENCH))
+        assertEquals("3.6", ChargeCurveScale.libelle(3.6f, 7.2f, Locale.US))
+        assertEquals("0", ChargeCurveScale.libelle(0f, 7.2f, Locale.FRENCH))
     }
 
     @Test

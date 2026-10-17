@@ -10,14 +10,17 @@ import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.View
 import com.mg4.control.R
+import com.mg4.control.model.ChargeCurveScale
 import com.mg4.control.model.ChargePoint
+import java.util.Locale
 
 /**
  * Courbe du pop-up de charge (maquette A, 2026-10-16) : la puissance (aire bleue, axe de gauche
- * en kW) et le niveau de batterie (ligne verte, axe de droite en %) depuis le DÉBUT de la charge,
- * la limite en pointillé, et — tant que la voiture donne un temps restant — un pointillé du niveau
- * actuel jusqu'à la limite à l'heure de fin estimée. Ce n'est pas une prévision de la courbe : la
- * droite que dessine le temps restant de la voiture.
+ * en kW, son haut = la puissance max atteinte, voir [ChargeCurveScale]) et le niveau de batterie
+ * (ligne verte, axe de droite en %) depuis le DÉBUT de la charge, la limite en pointillé GRIS, et —
+ * tant que la voiture donne un temps restant — un pointillé vert du niveau actuel jusqu'à la limite
+ * à l'heure de fin estimée. Ce n'est pas une prévision de la courbe : la droite que dessine le
+ * temps restant de la voiture.
  */
 class ChargeCurveView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null,
@@ -31,6 +34,8 @@ class ChargeCurveView @JvmOverloads constructor(
         /** Temps restant donné par la voiture, `null` s'il est inconnu (ou charge finie). */
         val restantMs: Long?,
         val socActuel: Float?,
+        /** Puissance max relevée depuis le début de la charge : le haut de l'axe des kW. */
+        val kwMax: Float?,
         val limitePct: Int?,
         val finie: Boolean,
         val libelleCible: String?,
@@ -38,6 +43,8 @@ class ChargeCurveView @JvmOverloads constructor(
         val heureDebut: String,
         val heureMilieu: String?,
         val heureFin: String?,
+        /** Langue du pop-up, pour les graduations décimales (« 3,6 »). */
+        val locale: Locale,
     )
 
     var donnees: Donnees? = null
@@ -70,7 +77,7 @@ class ChargeCurveView @JvmOverloads constructor(
         if (l <= 0f || h <= 0f) return
 
         val totalMs = (d.ecouleMs + (d.restantMs ?: 0L)).coerceAtLeast(60_000L)
-        val kwMax = echelleKw(d.points.maxOfOrNull { it.kw ?: 0f } ?: 0f)
+        val kwMax = ChargeCurveScale.hautKw(d.kwMax, d.points)
         fun x(t: Long) = gauche + l * (t.toFloat() / totalMs).coerceIn(0f, 1f)
         fun yKw(k: Float) = bas - h * (k / kwMax).coerceIn(0f, 1f)
         fun ySoc(s: Float) = bas - h * (s / 100f).coerceIn(0f, 1f)
@@ -89,7 +96,7 @@ class ChargeCurveView @JvmOverloads constructor(
         texte.color = cTexte2
         texte.textAlign = Paint.Align.RIGHT
         listOf(0f, kwMax / 2f, kwMax).forEach { k ->
-            canvas.drawText(entier(k), gauche - dp(6f), yKw(k) + sp(4f), texte)
+            canvas.drawText(ChargeCurveScale.libelle(k, kwMax, d.locale), gauche - dp(6f), yKw(k) + sp(4f), texte)
         }
         texte.textAlign = Paint.Align.LEFT
         listOf(0f, 50f, 100f).forEach { s -> canvas.drawText(entier(s), droite + dp(6f), ySoc(s) + sp(4f), texte) }
@@ -103,16 +110,15 @@ class ChargeCurveView @JvmOverloads constructor(
             canvas.drawText(it, droite, height - dp(4f), texte)
         }
 
-        // Limite : pointillé vert et son libellé, à droite.
+        // Limite : pointillé gris et son libellé, à droite — pas vert, pour ne pas se confondre avec
+        // la batterie et son estimation (demande du 2026-10-17).
         d.limitePct?.let { lim ->
-            trait.color = cVert
-            trait.alpha = 170
+            trait.color = cTexte2
             trait.strokeWidth = dp(1.5f)
             trait.pathEffect = DashPathEffect(floatArrayOf(dp(6f), dp(5f)), 0f)
             canvas.drawLine(gauche, ySoc(lim.toFloat()), droite, ySoc(lim.toFloat()), trait)
-            trait.alpha = 255
             d.libelleCible?.let {
-                texte.color = cVert
+                texte.color = cTexte2
                 texte.textAlign = Paint.Align.RIGHT
                 canvas.drawText(it, droite - dp(4f), ySoc(lim.toFloat()) - dp(6f), texte)
             }
@@ -177,11 +183,4 @@ class ChargeCurveView @JvmOverloads constructor(
     }
 
     private fun entier(v: Float) = Math.round(v).toString()
-
-    private companion object {
-        val ECHELLES = floatArrayOf(10f, 20f, 50f, 100f, 150f, 200f, 250f, 300f, 400f)
-
-        /** Haut de l'axe des kW : le premier palier au-dessus du maximum, avec un peu d'air. */
-        fun echelleKw(max: Float): Float = ECHELLES.firstOrNull { it >= max * 1.08f } ?: ECHELLES.last()
-    }
 }
