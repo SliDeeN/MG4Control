@@ -73,9 +73,10 @@ import com.mg4.control.util.LocaleHelper
  * en ont une : détectée à chaque relevé (`BMS_CHRG_STS`), la charge garde le module jusqu'à ce que
  * la prise ne soit plus signalée — « Charge terminée » entre les deux — ou jusqu'au READY. Temps
  * restant, cible et type de borne relus toutes les dix secondes ; la sonde [ChargeProbe] en garde
- * trace. ⚠️ DÉSACTIVÉ ([MODULE_CHARGE]) : sur SWI133, trappe ouverte et pendant toute la charge, le
- * combiné affiche son propre avertissement à la place du carré et bloque les onglets — le module
- * n'y serait jamais vu (essai du 2026-10-16). Code gardé à la demande de l'utilisateur.
+ * trace. Sur SWI133, trappe ouverte et pendant toute la charge, le combiné affiche par défaut son
+ * propre avertissement à la place du carré et bloque les onglets (essai du 2026-10-16) ; coupé
+ * pour cela, le module a été remis en service le 2026-10-17 : l'utilisateur a trouvé comment faire
+ * revenir l'affichage du combiné ([MODULE_CHARGE]).
  *
  * Vu sur le combiné le 2026-10-14 (SWI133) : la fenêtre s'y affiche bien. La place du carré vient
  * de la mise en page de l'appli SAIC ([ClusterGauge.placement]) ; le journal ([TAG]) donne l'écran
@@ -88,10 +89,10 @@ internal object ClusterModuleOverlay {
     /** Mode de conduite et profil bougent peu : relus toutes les dix secondes, quelle que soit la cadence. */
     private const val LENT_MS = 10_000L
     /**
-     * Module « charge » à la place de la jauge : coupé partout (voir plus haut). À `false`, aucune
-     * session ne démarre, donc rien de la charge n'est lu ni dessiné ici.
+     * Module « charge » à la place de la jauge (voir plus haut). À `false`, aucune session ne
+     * démarre, donc rien de la charge n'est lu ni dessiné ici. Remis à `true` le 2026-10-17.
      */
-    private const val MODULE_CHARGE = false
+    private const val MODULE_CHARGE = true
     /** En charge, la batterie s'affiche au dixième : relue chaque seconde pour que le chiffre défile. */
     private const val BATTERIE_CHARGE_MS = 1_000L
     /**
@@ -323,7 +324,9 @@ internal object ClusterModuleOverlay {
                 kwLisse = null
             }
             // La charge se détecte à chaque relevé : le module doit changer dès le branchement.
-            val enCharge = MODULE_CHARGE && runCatching { EnergyReader.charging() }.getOrNull() == true
+            // Lecture ratée : l'état d'avant, plutôt qu'un « Charge terminée » d'un relevé.
+            val enCharge = MODULE_CHARGE &&
+                (runCatching { EnergyReader.charging() }.getOrNull() ?: (session.active && !chargeFinie))
             if (enCharge && !session.active) {
                 session.commencer(maintenant)
                 chargeFinie = false
