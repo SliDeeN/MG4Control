@@ -9,6 +9,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.mg4.control.R
 import com.mg4.control.model.ChargePoint
 import com.mg4.control.model.ChargeType
+import com.mg4.control.model.MoneyFormat
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -61,9 +62,13 @@ class ChargePopupLayoutTest {
         val (vue, vues) = ChargePopupOverlay.preparer(ContextThemeWrapper(loc, R.style.Theme_MG4Control), loc, etat())
         vues.cout.vue.performClick()
         assertEquals(View.VISIBLE, vue.findViewById<View>(R.id.charge_price_editor).visibility)
-        assertEquals("0,490", vue.findViewById<TextView>(R.id.price_value).text.toString())
+        // Attendu écrit dans la langue que le pop-up a réellement reçue : sous Robolectric, un
+        // contexte « fr » créé par createConfigurationContext peut garder la langue par défaut
+        // (« 0.490 » au lieu de « 0,490 », CI rouge du 16 au 17/10). Ce qu'on teste ici, c'est
+        // l'éditeur : il s'ouvre sur le prix, et « + » ajoute un centime.
+        assertEquals(MoneyFormat.price(0.49f, vues.locale), vue.findViewById<TextView>(R.id.price_value).text.toString())
         vue.findViewById<View>(R.id.price_plus).performClick()
-        assertEquals("0,500", vue.findViewById<TextView>(R.id.price_value).text.toString())
+        assertEquals(MoneyFormat.price(0.50f, vues.locale), vue.findViewById<TextView>(R.id.price_value).text.toString())
         vue.findViewById<View>(R.id.price_cancel).performClick()
         assertEquals(View.GONE, vue.findViewById<View>(R.id.charge_price_editor).visibility)
     }
