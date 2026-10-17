@@ -96,6 +96,9 @@
     <!-- Versions courtes pour le dialog profil (6 boutons en ligne) -->
     <string name="regen_adaptive_short">Adapt.</string>
     <string name="regen_one_pedal_short">1 Péd.</string>
+    <string name="regen_unchanged">inchangée</string>
+    <string name="regen_unchanged_short">Régén. inchangée</string>
+    <string name="regen_unchanged_note">Inchangée : le profil ne touche ni au niveau de régénération ni à la conduite à une pédale.</string>
 
     <!-- Climate -->
     <string name="climate_steering_heat">Volant chauffant</string>
@@ -121,10 +124,13 @@
     <string name="profile_save">Enregistrer</string>
     <string name="profile_cancel">Annuler</string>
     <string name="profile_applied">Profil appliqué : %s</string>
+    <string name="profile_applied_check_logs">Profil appliqué (vérifier les logs)</string>
+    <string name="profile_default_set">Profil par défaut : %1$s</string>
     <string name="profile_cycle_target">Profil : %s</string>
     <string name="profile_cycle_applied">Profil %s appliqué</string>
     <string name="profile_cycle_incomplete">Profil %s : application incomplète</string>
     <string name="profile_max_reached">Maximum %d profils atteint</string>
+    <string name="profile_drag_hint">Relâchez : « %1$s » en position %2$d</string>
     <!-- [BT-PROFILES] -->
     <string name="profile_bt_device_label">Appareil Bluetooth</string>
 
@@ -518,6 +524,16 @@
     <string name="shortcuts_cat_profile_cycle">Cycle profils</string>
     <string name="shortcuts_cfg_profile_hint">Touchez les profils dans l\'ordre où vous voulez les parcourir, puis enregistrez. À chaque appui, le raccourci applique le profil qui suit le profil actif.</string>
     <string name="shortcuts_cfg_profile_min">Un cycle demande au moins deux profils.</string>
+    <string name="shortcuts_action_audio_cycle">Cycle de sources audio</string>
+    <string name="shortcuts_cat_audio_cycle">Cycle sources</string>
+    <string name="shortcuts_cfg_audio_hint">Touchez les sources dans l\'ordre où vous voulez les parcourir, puis enregistrez. Une source indisponible (pas de clé USB, pas de téléphone) est quand même visée : un appui de plus passe à la suivante.</string>
+    <string name="shortcuts_cfg_audio_min">Un cycle demande au moins deux sources.</string>
+    <string name="audio_cycle_target">Source : %s</string>
+    <string name="audio_source_radio">Radio</string>
+    <string name="audio_source_bluetooth">Bluetooth</string>
+    <string name="audio_source_usb">USB</string>
+    <string name="audio_source_online">En ligne</string>
+    <string name="audio_source_projection">CarPlay / Android Auto</string>
     <string name="adv_sc_new">Nouveau raccourci</string>
     <string name="adv_sc_step_key">1 · Touche</string>
     <string name="adv_sc_step_press">2 · Type d\'appui</string>
@@ -711,7 +727,12 @@
     <string name="stats_battery_title">Batterie</string>
     <string name="stats_battery_label">Batterie de la voiture</string>
     <string name="stats_battery_option">%1$d kWh · %2$s kWh utiles (%3$s)</string>
-    <string name="stats_battery_note">Sert à calculer l’énergie des recharges à partir du pourcentage de batterie. Changer de batterie recalcule les recharges déjà enregistrées.</string>
+    <string name="stats_battery_note">Sert, avec l\'état de santé, à calculer l\'énergie des recharges à partir du pourcentage de batterie. Laisse 100 % si tu ne connais pas l\'état de santé : un concessionnaire ou une appli OBD peuvent le mesurer. Les modifier recalcule les recharges déjà enregistrées.</string>
+    <string name="stats_soh_label">État de santé (SOH)</string>
+    <string name="stats_soh_value">%1$s %%</string>
+    <string name="stats_soh_effective">Capacité utile retenue : %1$s kWh (%2$s × %3$s %%)</string>
+    <string name="stats_soh_less">Diminuer l\'état de santé</string>
+    <string name="stats_soh_more">Augmenter l\'état de santé</string>
     <string name="stats_battery_banner">L’énergie des recharges dépend de la batterie réglée : %1$s. Vérifiez que c’est bien la vôtre.</string>
     <string name="stats_battery_banner_ok">C’est la bonne</string>
     <string name="stats_battery_banner_change">Changer</string>
@@ -760,4 +781,100 @@
     <string name="stats_detail_origin_completed">estimée d’après le niveau de batterie, horaires saisis à la main</string>
     <string name="stats_unit_per100" translatable="false">kWh/100 km</string>
 
+    <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
+    <string name="settings_cluster">Écran conducteur</string>
+    <string name="settings_cluster_module">Module sur le combiné</string>
+    <string name="settings_cluster_module_desc">Affiche un module MG4Control au centre du combiné, sur les onglets choisis, à la place de leur page d\'origine.</string>
+    <string name="settings_cluster_preview">Aperçu · trajet simulé</string>
+    <string name="settings_cluster_preview_none">Page d\'origine de l\'onglet (aucun module)</string>
+    <string name="settings_cluster_sec_modules">Modules</string>
+    <string name="settings_cluster_sec_appearance">Apparence</string>
+    <string name="settings_cluster_sec_units">Unités</string>
+    <string name="settings_cluster_row_nav">Navigation</string>
+    <string name="settings_cluster_row_media">Musique</string>
+    <string name="settings_cluster_row_style">Style</string>
+    <string name="settings_cluster_row_pill">Pastille</string>
+    <string name="settings_cluster_row_gauge">Jauge</string>
+    <string name="settings_cluster_row_average">Moyenne</string>
+    <string name="settings_cluster_advanced">Avancé · actualisation %1$s · animation %2$s</string>
+    <string name="settings_cluster_none">Aucun</string>
+    <string name="settings_cluster_tabs_note">Ordinateur de bord, pression des pneus et réglages sont dessinés par le combiné lui-même : un module ne peut pas s\'y afficher.</string>
+    <string name="cluster_unit_wh_km">Wh/km</string>
+    <string name="cluster_unit_kwh_100km">kWh/100 km</string>
+    <string name="settings_cluster_style_dynamic">Dynamique</string>
+    <string name="settings_cluster_style_discreet">Discret</string>
+    <string name="cluster_unit_km_kwh">km/kWh</string>
+    <string name="cluster_avg_short">moy.</string>
+    <string name="settings_cluster_consumption">Consommation</string>
+    <string name="settings_cluster_power">Puissance</string>
+    <string name="settings_cluster_refresh">Actualisation de la jauge</string>
+    <string name="settings_cluster_refresh_desc">Puissance, vitesse et jauge. Plus court : plus réactif, mais le chiffre bouge davantage.</string>
+    <string name="settings_cluster_pill_mode">Mode de conduite</string>
+    <string name="settings_cluster_pill_profile">Profil</string>
+    <string name="settings_cluster_pill_none">Aucune</string>
+    <string name="settings_cluster_pill_desc">Profil : le dernier profil appliqué, dans la couleur de son mode de conduite.</string>
+    <string name="settings_cluster_animation">Durée de l\'animation</string>
+    <string name="settings_cluster_animation_desc">Temps que met la jauge pour glisser d\'une valeur à la suivante. Plus long : plus doux, mais elle suit moins vite.</string>
+    <string name="cluster_regen_kw">RÉCUP. kW</string>
+    <string name="cluster_stopped_kw">kW à l\'arrêt</string>
+    <string name="cluster_trip_avg">MOY. TRAJET</string>
+    <string name="cluster_regen">RÉCUP.</string>
+    <string name="cluster_battery">BATTERIE</string>
+    <string name="cluster_regen_word">récupération</string>
+    <string name="cluster_stopped_word">à l\'arrêt</string>
+    <!-- Module « charge » de l'écran conducteur (2026-10-16) -->
+    <string name="cluster_charge">Charge</string>
+    <string name="cluster_charge_ac">Charge AC</string>
+    <string name="cluster_charge_dc">Charge DC</string>
+    <string name="cluster_charge_done">Charge terminée</string>
+    <string name="cluster_charge_until">Jusqu\'à %1$d %%</string>
+    <string name="cluster_charge_remaining">Temps restant</string>
+    <string name="cluster_charge_level">Batterie</string>
+    <string name="cluster_charge_end_at">fin vers %1$s</string>
+    <string name="cluster_charge_power">Puissance</string>
+    <string name="cluster_charge_energy">Énergie</string>
+    <string name="cluster_charge_duration">Durée</string>
+    <string name="cluster_duration_hm">%1$d h %2$02d</string>
+    <string name="cluster_duration_min">%1$d min</string>
+    <!-- Pop-up de charge (2026-10-16) -->
+    <string name="charge_popup_title">Charge en cours</string>
+    <string name="charge_popup_title_done">Charge terminée</string>
+    <string name="charge_popup_type_ac">Charge AC</string>
+    <string name="charge_popup_type_dc">Charge rapide DC</string>
+    <string name="charge_popup_type_unknown">Charge</string>
+    <string name="charge_popup_battery">Batterie</string>
+    <string name="charge_popup_hint">Glissez le curseur pour changer la limite de charge</string>
+    <string name="charge_popup_hint_release">Relâchez pour régler la limite de charge à %1$d %%</string>
+    <string name="charge_popup_hint_below">%1$d %% : sous le niveau actuel, la charge s\'arrêtera</string>
+    <string name="charge_popup_hint_sending">Envoi de la limite de %1$d %% à la voiture…</string>
+    <string name="charge_popup_hint_refused">La voiture n\'a pas pris la limite de %1$d %%</string>
+    <string name="charge_popup_hint_unknown">Limite de charge illisible</string>
+    <string name="charge_popup_until">%1$s jusqu\'à %2$d %%</string>
+    <string name="charge_popup_until_unknown">Jusqu\'à %1$d %%</string>
+    <string name="charge_popup_end_at">fin vers %1$s</string>
+    <string name="charge_popup_done_at">terminée à %1$s</string>
+    <string name="charge_popup_legend_power">Puissance (kW)</string>
+    <string name="charge_popup_legend_battery" formatted="false">Batterie (%)</string>
+    <string name="charge_popup_since">depuis le début de la charge (%1$s)</string>
+    <string name="charge_popup_since_plain">depuis le début de la charge</string>
+    <string name="charge_popup_target">cible %1$d %%</string>
+    <string name="charge_popup_end_estimate">fin estimée %1$s</string>
+    <string name="charge_popup_power">Puissance</string>
+    <string name="charge_popup_power_max">max %1$s kW</string>
+    <string name="charge_popup_energy">Énergie ajoutée</string>
+    <string name="charge_popup_range">Autonomie gagnée</string>
+    <string name="charge_popup_cost">Coût estimé</string>
+    <string name="charge_popup_tariff_default">%1$s %2$s/kWh · tarif %3$s</string>
+    <string name="charge_popup_tariff_fixed">%1$s %2$s/kWh · corrigé</string>
+    <string name="charge_popup_duration">Durée</string>
+    <string name="charge_popup_since_time">depuis %1$s</string>
+    <string name="charge_popup_price_title">Prix du kWh</string>
+    <string name="charge_popup_price_note">Ne change que cette charge.</string>
+    <string name="charge_popup_price_ok">Valider</string>
+    <string name="charge_popup_none">Aucune charge en cours</string>
+    <string name="charge_popup_disabled">Activez « Pop-up de charge » dans Réglages › Interface</string>
+    <string name="settings_charge_popup">Pop-up de charge</string>
+    <string name="settings_charge_popup_switch">Afficher le pop-up pendant la charge</string>
+    <string name="settings_charge_popup_desc">S\'ouvre à chaque début de charge : courbe depuis le début, limite de charge réglable, coût. Se ferme à la demande ou au passage en READY ; le raccourci « Pop-up de charge » le rouvre.</string>
+    <string name="shortcuts_action_charge_popup">Pop-up de charge</string>
 </resources>

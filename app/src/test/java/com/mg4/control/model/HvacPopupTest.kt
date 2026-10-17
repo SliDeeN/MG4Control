@@ -46,7 +46,54 @@ class HvacPopupTest {
         assertNull(HvacPopup.action(Commande.DROITE, haut))
         val bas = milieu.copy(temp = 16, fan = 1)
         assertNull(HvacPopup.action(Commande.BAS, bas))
-        assertNull(HvacPopup.action(Commande.GAUCHE, bas))
+    }
+
+    // ── Clim éteinte (issue #147) ────────────────────────────────────────────
+    // Pas de cran 0 sur la MG4 : « éteint » est l'arrêt de la clim. Éteinte, la voiture annonce
+    // une ventilation à 0 (SWI68).
+
+    private val eteinte = milieu.copy(fan = 0, allumee = false)
+
+    @Test
+    fun `gauche au cran 1 eteint la clim`() {
+        assertEquals(Action.Arret, HvacPopup.action(Commande.GAUCHE, milieu.copy(fan = 1)))
+        // Avec ou sans état de marche lisible.
+        assertEquals(Action.Arret, HvacPopup.action(Commande.GAUCHE, milieu.copy(fan = 1, allumee = true)))
+    }
+
+    @Test
+    fun `clim eteinte, gauche ne fait rien`() {
+        // Avant : 0 − 1 ramené au minimum écrivait le cran 1, et rallumait la clim.
+        assertNull(HvacPopup.action(Commande.GAUCHE, eteinte))
+        assertNull(HvacPopup.action(Commande.GAUCHE, milieu.copy(fan = 0)))
+    }
+
+    @Test
+    fun `clim eteinte, droite la rallume au premier cran`() {
+        assertEquals(Action.Ventilation(1), HvacPopup.action(Commande.DROITE, eteinte))
+        // Éteinte d'après la voiture, même si elle annonce encore son dernier cran.
+        assertEquals(Action.Ventilation(1), HvacPopup.action(Commande.DROITE, milieu.copy(fan = 4, allumee = false)))
+    }
+
+    @Test
+    fun `en AUTO gauche ne coupe jamais la clim`() {
+        // Le dernier niveau réglé était 1 : on sort d'AUTO à 1, sans éteindre.
+        assertEquals(Action.Ventilation(1), HvacPopup.action(Commande.GAUCHE, enAuto.copy(dernierNiveau = 1)))
+    }
+
+    @Test
+    fun `clim eteinte, pas de niveau a montrer`() {
+        assertEquals(true, eteinte.eteinte)
+        assertNull(eteinte.ventilationReelle)
+        assertEquals(false, milieu.eteinte)
+    }
+
+    @Test
+    fun `le raccourci ventilation moins ne rallume plus la clim eteinte`() {
+        // Il ne l'éteint pas non plus au cran 1 : l'action « Clim ON/OFF » existe pour ça.
+        assertNull(HvacPopup.pasVentilation(eteinte, -1))
+        assertNull(HvacPopup.pasVentilation(milieu.copy(fan = 1), -1))
+        assertEquals(1, HvacPopup.pasVentilation(eteinte, +1))
     }
 
     @Test

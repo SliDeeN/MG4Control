@@ -11,6 +11,7 @@ import com.mg4.control.model.LastReading
 import com.mg4.control.model.PowerIntegrator
 import com.mg4.control.model.StatsTracker
 import com.mg4.control.model.Trip
+import com.mg4.control.service.ChargeMonitor
 import com.mg4.control.stats.StatsStore
 import com.mg4.control.util.FirmwareInfo
 
@@ -156,7 +157,7 @@ object StatsCollector {
             running = true
             val s = StatsStore(app)
             store = s
-            val t = StatsTracker(s.settings().capacityKwh, countersExpected = compteursAttendus())
+            val t = StatsTracker(s.settings().effectiveCapacityKwh, countersExpected = compteursAttendus())
             tracker = t
             // Ce qui restait ouvert au démarrage précédent se referme ici, avec son dernier relevé
             // connu : c'est ce qui sauve les trajets dont la fin coïncide avec l'extinction.
@@ -171,7 +172,8 @@ object StatsCollector {
             EnergyReader.batteryCapacityKwh()?.let { s.adoptVehicleCapacity(it) }
             ReadyWatcher.add(readyListener)
             worker.post(tick)
-            AppLogger.i(TAG, "collecte active (capacité ${s.settings().capacityKwh} kWh, " +
+            AppLogger.i(TAG, "collecte active (capacité ${s.settings().capacityKwh} kWh × état de santé " +
+                "${s.settings().stateOfHealthPercent} %, " +
                 "compteurs d'énergie ${if (compteursAttendus()) "attendus" else "non alimentés sur ce firmware"})")
         }
     }
@@ -232,8 +234,9 @@ object StatsCollector {
         }
         // Le suivi garde la capacité de son démarrage : celle du moment fait foi, au cas où la
         // batterie aurait été corrigée pendant la charge.
+        // Le prix du kWh corrigé dans le pop-up de charge vaut pour CETTE charge : il suit la session.
         is StatsTracker.Event.ChargeEnded ->
-            s.addCharge(event.session.withCapacity(s.settings().capacityKwh))
+            s.addCharge(ChargeMonitor.avecTarif(event.session.withCapacity(s.settings().effectiveCapacityKwh)))
     }
 
     /**
@@ -245,7 +248,7 @@ object StatsCollector {
      * elle vivait en mémoire. La ligne le dit au lieu d'afficher zéro.
      */
     private fun comparer(s: StatsStore, trip: Trip) {
-        val ligne = EnergyCheck(trip, integrator.result(), s.settings().capacityKwh).line()
+        val ligne = EnergyCheck(trip, integrator.result(), s.settings().effectiveCapacityKwh).line()
         integrator.reset()
         s.addEnergyCheck(ligne)
         AppLogger.i(TAG, "énergie · $ligne")

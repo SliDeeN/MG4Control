@@ -1,6 +1,8 @@
 package com.mg4.control.hardware
 
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.ChargeDisplay
+import com.mg4.control.model.ChargeLimit
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.EnergySnapshot
 import com.mg4.control.model.PowerIntegrator
@@ -44,6 +46,14 @@ object EnergyReader {
     private const val PROP_CHARGE_STATUS = 0x2140f409
     private const val PROP_PLUG_AC = 0x2140f43e
     private const val PROP_PLUG_DC = 0x2140f43f
+    // Module « charge » du combiné (2026-10-16) — `VehicleChargingBinder` du service SAIC (SWI133).
+    private const val PROP_CHARGE_PLUG = 0x2140f408
+    private const val PROP_CHARGE_TIME = 0x2140f417
+    private const val PROP_CHARGE_TARGET = 0x2140f40c
+    // Sonde seulement (2026-10-16) : position de la trappe et validité du signal continu
+    // (`CCU_OFFBD_CHRG_PLUG_ON_V`, true = invalide comme les autres drapeaux « V »).
+    private const val PROP_CHARGE_DOOR = 0x2140f43b
+    private const val PROP_PLUG_DC_INVALID = 0x2140f456
     private const val PROP_PACK_VOLTAGE = 0x2160f406
     private const val PROP_PACK_CURRENT = 0x2160f407
     private const val PROP_RANGE = 0x2140f41c
@@ -53,7 +63,8 @@ object EnergyReader {
     /** Valeur rendue par les mesures batterie non publiées (relevé du 2026-09-19). */
     private const val SENTINEL_MEASURE = 82.3f
     private const val SENTINEL_HALF = 511.5f
-    private const val SENTINEL_INT = 1023
+    /** Journal de la charge : celui de la sonde [ChargeProbe] et du pop-up de charge. */
+    private const val CHARGE_TAG = "MG4_CHARGE"
 
     @Volatile
     private var warnedNoCpm = false
@@ -72,7 +83,10 @@ object EnergyReader {
 
         val volts = float(PROP_PACK_VOLTAGE)
         val amperes = float(PROP_PACK_CURRENT)
-        val charging = int(PROP_CHARGE_STATUS)?.let { it == 1 }
+        val charging = ChargeDisplay.enCharge(int(PROP_CHARGE_STATUS))
+        // Les statistiques relèvent la voiture même sans module combiné : la sonde y voit aussi le
+        // type de borne.
+        ChargeProbe.observer(chargeRaw(), if (volts != null && amperes != null) -volts * amperes / 1000f else null)
 
         return EnergySnapshot(
             timestampMs = now,
@@ -93,6 +107,75 @@ object EnergyReader {
             speedKmh = MG4Hardware.getVehicleSpeedKmh()?.takeIf { it in 0f..300f },
             outsideTempC = MG4Hardware.getOutsideTempCelsius(),
         )
+    }
+
+    /** Valeurs BRUTES des signaux de charge, pour le module du combiné et la sonde `MG4_CHARGE`. */
+    data class ChargeRaw(
+        val statut: Int?,
+        val prise: Int?,
+        val ac: Int?,
+        val dc: Int?,
+        val restant: Int?,
+        val cible: Int?,
+        val trappe: Int? = null,
+        val dcInvalide: Int? = null,
+    )
+
+    /** Huit lectures. Appeler hors du fil principal. */
+    fun chargeRaw(): ChargeRaw = ChargeRaw(
+        statut = int(PROP_CHARGE_STATUS),
+        prise = int(PROP_CHARGE_PLUG),
+        ac = int(PROP_PLUG_AC),
+        dc = int(PROP_PLUG_DC),
+        restant = int(PROP_CHARGE_TIME),
+        cible = int(PROP_CHARGE_TARGET),
+        trappe = int(PROP_CHARGE_DOOR),
+        dcInvalide = int(PROP_PLUG_DC_INVALID),
+    )
+
+    /** La voiture charge-t-elle ([ChargeDisplay.enCharge]) ? `null` si illisible. Une seule lecture. */
+    fun charging(): Boolean? = ChargeDisplay.enCharge(int(PROP_CHARGE_STATUS))
+
+    /** Autonomie annoncée par la batterie, en km ; `null` hors de 1..1500. Une seule lecture. */
+    fun rangeKm(): Int? = int(PROP_RANGE)?.takeIf { it in 1..1500 }
+
+    /**
+     * Limite de charge ([ChargeLimit], pop-up de charge, 2026-10-16). Voie d'origine sur SWI133
+     * comme sur A9 : `CarBMSManager.setGlobalProperty(Integer, 0x2140f40c, code)` (service SAIC
+     * `VehicleChargingBinder`, appli `EvCharge` des A9). Repli : la même propriété par le
+     * CarPropertyManager, zone globale puis zone 0. Passe par [VehicleWriteGate] comme toute
+     * écriture. Vrai si une voie a accepté — la voiture, elle, peut encore refuser : relire.
+     */
+    fun setChargeLimitPercent(pct: Int): Boolean {
+        val code = ChargeLimit.code(pct)
+        if (!VehicleWriteGate.allow("limite de charge $pct %")) return false
+        val bms = MG4Hardware.car()?.let { car ->
+            runCatching { car.javaClass.getMethod("getCarManager", String::class.java).invoke(car, "bms") }.getOrNull()
+        }
+        if (bms != null) {
+            val ok = runCatching {
+                bms.javaClass.getMethod("setGlobalProperty", Class::class.java, Int::class.javaPrimitiveType, Any::class.java)
+                    .invoke(bms, Integer::class.java, PROP_CHARGE_TARGET, code)
+            }
+            if (ok.isSuccess) {
+                AppLogger.i(CHARGE_TAG, "limite de charge → $pct % (code $code) par le gestionnaire bms")
+                return true
+            }
+            AppLogger.w(CHARGE_TAG, "limite de charge par le gestionnaire bms : ${ok.exceptionOrNull()?.let { (it.cause ?: it).javaClass.simpleName + " " + (it.cause ?: it).message }}")
+        }
+        val cpm = MG4Hardware.carPropertyManager() ?: return false
+        for (zone in intArrayOf(AREA_GLOBAL, 0)) {
+            val ok = runCatching {
+                cpm.javaClass.getMethod("setIntProperty", Int::class.java, Int::class.java, Int::class.java)
+                    .invoke(cpm, PROP_CHARGE_TARGET, zone, code)
+            }
+            if (ok.isSuccess) {
+                AppLogger.i(CHARGE_TAG, "limite de charge → $pct % (code $code) par le CPM, zone 0x${Integer.toHexString(zone)}")
+                return true
+            }
+        }
+        AppLogger.w(CHARGE_TAG, "limite de charge $pct % : aucune voie n'a accepté l'écriture")
+        return false
     }
 
     /**
@@ -132,15 +215,8 @@ object EnergyReader {
         return kwh.takeIf { it in StatsSettings.MIN_CAPACITY_KWH..StatsSettings.MAX_CAPACITY_KWH }
     }
 
-    /**
-     * Type de prise. Les deux propriétés valent 0 hors charge et la prise active passe à 2
-     * (relevé sur charge alternative) : on ne teste donc pas une valeur précise mais un non-zéro.
-     */
-    private fun chargeType(): ChargeType? = when {
-        int(PROP_PLUG_DC)?.takeIf { it != 0 && it != SENTINEL_INT } != null -> ChargeType.DC
-        int(PROP_PLUG_AC)?.takeIf { it != 0 && it != SENTINEL_INT } != null -> ChargeType.AC
-        else -> null
-    }
+    /** Type de prise : voir [ChargeDisplay.type] (alternatif 2 / continu 0 en AC, 4 / 1 en DC). */
+    private fun chargeType(): ChargeType? = ChargeDisplay.type(int(PROP_PLUG_AC), int(PROP_PLUG_DC))
 
     /** Compteur d'énergie : négatif impossible, sentinelle exclue. */
     private fun energy(prop: Int): Float? = float(prop)?.takeIf { it >= 0f }

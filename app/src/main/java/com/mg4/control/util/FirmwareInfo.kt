@@ -96,6 +96,12 @@ object FirmwareInfo {
         return gen == Gen.SWI69 || gen == Gen.SWI131
     }
 
+    /** Firmwares « A9 » : SWI69, SWI131 et SWI132. */
+    fun isA9(): Boolean {
+        val gen = getGeneration()
+        return gen == Gen.SWI69 || gen == Gen.SWI131 || gen == Gen.SWI132
+    }
+
     /**
      * SWI68, SWI69, SWI131 et SWI165 utilisent tous le VehicleSettingManager SAIC
      * pour l'ADAS (ACC/TJA) et les alertes sonores.

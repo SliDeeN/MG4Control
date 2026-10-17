@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
 import android.media.AudioManager
+import android.media.browse.MediaBrowser
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
@@ -26,8 +27,10 @@ import com.mg4.control.model.DriveMode
 import com.mg4.control.model.HvacPopup
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.model.SeatHeat
+import com.mg4.control.shortcut.AudioSource
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.GarageMode
+import com.saicmotor.common.CommandParcelable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -2190,7 +2193,6 @@ object MG4Hardware {
     fun getAccTjaMode(): Int {
         val useNewApi = FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132
         val method = if (useNewApi) "getAccTjaState" else "getAccTjaMode"
-        if (logEnabled) AppLogger.i(TAG, "$method →")
         return (callVsm(method) as? Int) ?: -1
     }
 
@@ -2216,7 +2218,6 @@ object MG4Hardware {
     /** Lit le mode du limiteur de vitesse. Retourne 0/2/3, ou -1 si indisponible. */
     fun getSpeedLimiterMode(): Int {
         val method = if (useSasApi()) "getSasMode" else "getSpeedAsstMode"
-        if (logEnabled) AppLogger.i(TAG, "$method →")
         return (callVsm(method) as? Int) ?: -1
     }
 
@@ -2352,9 +2353,7 @@ object MG4Hardware {
      */
     fun getAebSensitivity(): Int {
         return if (FirmwareInfo.isVsmBased()) {
-            (callVsm("getFcwSensitivity") as? Int)?.takeIf { it > 0 }?.also {
-                AppLogger.d(TAG, "  AEB GET sensitivity=$it via VSM ✓")
-            } ?: -1
+            (callVsm("getFcwSensitivity") as? Int)?.takeIf { it > 0 } ?: -1
         } else {
             val raw = getIntPropertyVpm(PROP_AEB_SENSITIVITY)
             if (raw < 1) -1 else raw
@@ -2870,21 +2869,16 @@ object MG4Hardware {
         !FirmwareInfo.isVsmBased() -> {
             val vsm = callVsm133("getLaneKeepingAsstMode")
             if (vsm is Int && vsm > 0) {
-                AppLogger.d(TAG, "  ELK GET mode=$vsm via VSM133 ✓")
                 vsm
             } else elkBinderGet(TX_ELK_GET_MODE)
         }
         FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 -> {
             // SWI69/SWI131/SWI132 — CarVehicleSettingClient
-            (callVsm("getLasMode") as? Int)?.takeIf { it > 0 }?.also {
-                AppLogger.d(TAG, "  ELK GET mode=$it via VSM (Las) ✓")
-            } ?: -1
+            (callVsm("getLasMode") as? Int)?.takeIf { it > 0 } ?: -1
         }
         else -> {
             // SWI68/SWI165 — VehicleSettingManager
-            (callVsm("getLaneKeepingAsstMode") as? Int)?.takeIf { it > 0 }?.also {
-                AppLogger.d(TAG, "  ELK GET mode=$it via VSM ✓")
-            } ?: -1
+            (callVsm("getLaneKeepingAsstMode") as? Int)?.takeIf { it > 0 } ?: -1
         }
     }
 
@@ -2926,21 +2920,16 @@ object MG4Hardware {
         !FirmwareInfo.isVsmBased() -> {
             val vsm = callVsm133("getLaneKeepingAsstSen")
             if (vsm is Int && vsm > 0) {
-                AppLogger.d(TAG, "  ELK GET sen=$vsm via VSM133 ✓")
                 vsm
             } else elkBinderGet(TX_ELK_GET_SEN)
         }
         FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132 -> {
             // SWI69/SWI131/SWI132 — CarVehicleSettingClient
-            (callVsm("getLasSensitivity") as? Int)?.takeIf { it > 0 }?.also {
-                AppLogger.d(TAG, "  ELK GET sen=$it via VSM (Las) ✓")
-            } ?: -1
+            (callVsm("getLasSensitivity") as? Int)?.takeIf { it > 0 } ?: -1
         }
         else -> {
             // SWI68/SWI165 — VehicleSettingManager
-            (callVsm("getLaneKeepingAsstSen") as? Int)?.takeIf { it > 0 }?.also {
-                AppLogger.d(TAG, "  ELK GET sen=$it via VSM ✓")
-            } ?: -1
+            (callVsm("getLaneKeepingAsstSen") as? Int)?.takeIf { it > 0 } ?: -1
         }
     }
 
@@ -3032,7 +3021,6 @@ object MG4Hardware {
             }
             reply.readException()
             val result = reply.readInt()
-            AppLogger.d(TAG, "  ELK GET TX=0x${txCode.toString(16)} = $result")
             result
         } catch (e: Exception) {
             AppLogger.d(TAG, "  ELK GET TX=0x${txCode.toString(16)} exc: ${e.message}")
@@ -3654,10 +3642,7 @@ object MG4Hardware {
                     val bean = args[0] ?: return@newProxyInstance null
                     try {
                         val ignition = bean.javaClass.getMethod("getVehicleIgnition").invoke(bean) as? Int
-                        if (ignition != null) {
-                            AppLogger.i(TAG, "  Katman5 event: ignition=$ignition (${carIgnitionName(ignition)})")
-                            dispatchVehicleConditionIgnition(ignition)
-                        }
+                        if (ignition != null) dispatchVehicleConditionIgnition(ignition)
                     } catch (e: Exception) {
                         AppLogger.w(TAG, "  Katman5: onChangeEvent parse error: ${e.message}")
                     }
@@ -3695,8 +3680,11 @@ object MG4Hardware {
         // Ne dispatcher que si l'état change réellement — évite les faux RUN répétés
         // que VehicleConditionManager envoie à chaque changement de condition véhicule
         // (changement de rapport D/N/R, etc.) alors que la voiture est déjà en RUN.
+        // Au journal aussi, seulement au changement : en roulant, l'événement arrive toutes les
+        // 100 ms (plus de 200 lignes identiques sur les 30 dernières secondes d'un trajet, SWI133).
         if (state == sLastVcmIgnitionState) return
         sLastVcmIgnitionState = state
+        AppLogger.i(TAG, "  Katman5 event: ignition=$state (${carIgnitionName(state)})")
         val toNotify = vehicleConditionCallbacks.toList()
         if (toNotify.isEmpty()) return
         Handler(Looper.getMainLooper()).post { toNotify.forEach { it(state) } }
@@ -4161,16 +4149,19 @@ object MG4Hardware {
      * Valeurs rendues par `getCurrentMediaSource`.
      *
      * ⚠️ L'espace de valeurs est HYBRIDE, et ça ne se devine pas : le SDK y mélange ses
-     * `MEDIA_TYPE_*` (petits entiers) et ses `*_SOURCE_CODE` (0x12, 0x32, 0x46). Seules quatre
-     * valeurs sont CERTAINES — les trois constantes du SDK, et le 3 relevé sur véhicule en
-     * radio. Les autres restent des candidats, d'où l'identification de secours plus bas :
-     * quand le code est inconnu, on demande aux lecteurs lequel joue au lieu de parier.
+     * `MEDIA_TYPE_*` (petits entiers) et ses `*_SOURCE_CODE` (0x12, 0x32, 0x46). Il ne suit même
+     * pas `MEDIA_TYPE_*` : la voiture annonce 6 pour l'USB, que le SDK appelle ONLINE_MUSIC.
+     * Toutes les valeurs ci-dessous sont maintenant relevées ou tirées du SDK ; pour un code
+     * inconnu, l'identification de secours plus bas demande aux lecteurs lequel joue.
      */
     private const val SRC_RADIO_MIN = 1       // 1 radio, 2 FM, 3 AM, 4 DAB
     private const val SRC_RADIO_MAX = 4
     private const val SRC_BT        = 5       // certain (relevé véhicule 2026-08-26)
-    private const val SRC_ONLINE    = 6       // candidat
-    private const val SRC_USB       = 7       // candidat
+    // Relevés sur SWI133 le 2026-10-15 (cycle de sources, écran conforme) : 6 et 7 étaient
+    // inversés en « candidats » — avec l'USB en lecture, les raccourcis média s'adressaient
+    // alors au lecteur EN LIGNE.
+    private const val SRC_USB       = 6       // certain (relevé véhicule 2026-10-15)
+    private const val SRC_ONLINE    = 0xe     // certain (relevé véhicule 2026-10-15)
     private const val SRC_USB_VIDEO = 0x12    // certain (USB_VIDEO_SOURCE_CODE)
     private const val SRC_CARPLAY   = 0x32    // certain (CP_MEDIA_SOURCE_CODE)
     private const val SRC_AA        = 0x46    // certain (AA_MEDIA_SOURCE_CODE)
@@ -4290,8 +4281,14 @@ object MG4Hardware {
     }
 
     /** Envoie une commande à la pile de projection. Rend faux si le service ne répond pas. */
-    private fun ruiEnvoyer(valeur: Int): Boolean {
-        val binder = serviceBinder("", RUI_PKG, RUI_CLS) ?: return false
+    private fun ruiEnvoyer(valeur: Int): Boolean = ruiCode(valeur) != null
+
+    /** Réponse d'AllGo quand aucun téléphone n'est en projection chez lui. */
+    private const val RUI_SANS_TELEPHONE = -1
+
+    /** Comme [ruiEnvoyer], mais rend la réponse d'AllGo ; `null` si le service ne répond pas. */
+    private fun ruiCode(valeur: Int): Int? {
+        val binder = serviceBinder("", RUI_PKG, RUI_CLS) ?: return null
         val data = Parcel.obtain()
         val reply = Parcel.obtain()
         return try {
@@ -4299,14 +4296,15 @@ object MG4Hardware {
             data.writeInt(valeur)
             binder.transact(TX_RUI_MEDIA_KEY, data, reply, 0)
             reply.readException()
-            // La méthode rend un entier : on le journalise sans l'interpréter. Sa signification
-            // est inconnue, mais il distinguera un refus d'un acquittement le jour où il faudra.
+            // La méthode rend -1 quand aucun téléphone n'est en projection, 0 sinon (décompilé,
+            // `RemoteUIService`, SWI69) — sans dire si le téléphone a obéi.
             val retour = if (reply.dataAvail() > 0) reply.readInt() else 0
-            AppLogger.i(MEDIA_TAG, "projection : sendMediaPlayControlKey($valeur) → $retour")
-            true
+            AppLogger.i(MEDIA_TAG, "projection : sendMediaPlayControlKey($valeur) → $retour" +
+                if (retour == RUI_SANS_TELEPHONE) " (aucun téléphone en projection)" else "")
+            retour
         } catch (e: Exception) {
             AppLogger.w(MEDIA_TAG, "projection : commande $valeur refusée — ${(e.cause ?: e).message}")
-            false
+            null
         } finally {
             data.recycle()
             reply.recycle()
@@ -4590,10 +4588,16 @@ object MG4Hardware {
         }
     }
 
+    /** Dernière source courante écrite au journal : une ligne par changement, pas par lecture. */
+    @Volatile private var sSourceCouranteLoguee: Int? = null
+
     /** Source audio réellement active, ou -1 si le service SAIC ne répond pas. */
     private fun mediaSourceCourante(): Int {
         val v = mediaLireInt(ACT_STATUS, DESC_STATUS, 0x9) ?: return -1   // getCurrentMediaSource
-        AppLogger.i(MEDIA_TAG, "source courante = $v (${nomSource(v)})")
+        if (v != sSourceCouranteLoguee) {
+            sSourceCouranteLoguee = v
+            AppLogger.i(MEDIA_TAG, "source courante = $v (${nomSource(v)})")
+        }
         return v
     }
 
@@ -4998,6 +5002,285 @@ object MG4Hardware {
     fun mediaPrevious(): Boolean = commandeMedia(CmdMedia.PRECEDENT)
 
     fun mediaPlayPause(): Boolean = commandeMedia(CmdMedia.LECTURE_PAUSE)
+
+    /**
+     * Fait passer l'audio sur [source] (raccourci « Cycle de sources audio », 2026-10-15).
+     *
+     * Il n'existe pas de commande « changer de source » : on demande à la source visée de JOUER,
+     * ce qui la met au premier plan — constaté en août 2026, un « suivant » envoyé par erreur au
+     * Bluetooth pendant la radio faisait changer de source. Pas de vérification de disponibilité
+     * (choix de l'utilisateur) : une source sans rien à jouer reste sans effet audible, l'appui
+     * suivant passe à la suivante. Rend vrai si la commande est PARTIE ; le journal dit le reste.
+     *
+     * Ne pas appeler depuis le thread principal : les liaisons au service média y attendent.
+     */
+    fun switchAudioSource(source: AudioSource): Boolean {
+        AppLogger.i(MEDIA_TAG, "changement de source → ${source.name}")
+        // Service média SAIC muet : firmwares A9, où chaque source publie son lecteur Android.
+        if (mediaSourceCourante() < 0) {
+            // Le Bluetooth passe par l'appli Média, comme sur le launcher : voir [sourceParAppliMedia].
+            if (source == AudioSource.BLUETOOTH && sourceParAppliMedia(MEDIA_A9_TYPE_BT, source)) return true
+            return sourceParLecteur(source)
+        }
+        return when (source) {
+            AudioSource.RADIO      -> mediaTransact(RADIO_ACT, DESC_RADIO, RADIO_PLAY, RADIO_PKG, null)
+            AudioSource.BLUETOOTH  -> mediaTransact(ACT_BT, DESC_BT, 2)            // play
+            AudioSource.USB        -> mediaTransact(ACT_USB, DESC_USB, 0xe)        // play
+            AudioSource.ONLINE     -> mediaTransact(ACT_ONLINE, DESC_ONLINE, 2)    // play
+            // SWI133 par le SDK SAIC, SWI68/165 par le service allgo : celle qui est absente
+            // échoue sans effet, comme pour Lecture/Pause.
+            AudioSource.PROJECTION -> mediaTransact(ACT_CPAA, DESC_CPAA, 1) || projectionJouer()
+        }
+    }
+
+    /** Lecteur Android de chaque source sur A9 (dump SWI69) ; la projection passe par allgo. */
+    private fun lecteurA9(source: AudioSource): ComponentName? = when (source) {
+        AudioSource.RADIO      -> ComponentName("com.saicmotor.radio", "com.saicmotor.radio.service.RadioMBService")
+        AudioSource.BLUETOOTH  -> ComponentName("com.android.bluetooth", "com.android.bluetooth.a2dpsink.mbs.A2dpMediaBrowserService")
+        AudioSource.USB        -> USB1_A9
+        AudioSource.ONLINE     -> ComponentName("com.saicmotor.media", "com.saicmotor.media.mbs.OnlineMediaBrowserService")
+        AudioSource.PROJECTION -> null
+    }
+
+    // ── A9 : un lecteur USB par port ──
+    private val USB1_A9 = ComponentName("com.saicmotor.media", "com.saicmotor.media.mbs.Usb1MediaBrowserService")
+    private val USB2_A9 = ComponentName("com.saicmotor.media", "com.saicmotor.media.mbs.Usb2MediaBrowserService")
+    /** Contrôleur USB de chaque port, tel que l'appli Média le cherche dans `DiskInfo.sysPath`. */
+    private const val USB1_CONTROLEUR = "11271000.usb"
+    private const val USB2_CONTROLEUR = "112c1000.usb"
+
+    /**
+     * A9 : lecteur(s) USB à viser.
+     *
+     * ⚠️ L'appli Média a UN lecteur par port, et chacun ne joue que si une clé est montée sur
+     * SON port (décompilé SWI69, `isUsb1Mounted` / `isUsb2Mounted`). Viser toujours le port 1
+     * laissait l'USB muet dès que la clé était sur l'autre — le cas du testeur SWI69, téléphone
+     * branché en filaire pour Android Auto (2026-10-15). On cherche donc le port de la clé avec
+     * le même test qu'elle. Port inconnu ou illisible : les deux lecteurs, le port 1 en dernier
+     * pour qu'il l'emporte si deux clés sont branchées (le dernier à prendre la sortie la garde).
+     */
+    private fun lecteursUsbA9(): List<ComponentName> {
+        val ports = portsUsbMontes()
+        AppLogger.i(MEDIA_TAG, "clés USB montées : " + when {
+            ports == null    -> "illisible"
+            ports.isEmpty()  -> "aucune"
+            else             -> ports.sorted().joinToString { if (it == 0) "port inconnu" else "port $it" }
+        })
+        return when {
+            ports == null   -> listOf(USB2_A9, USB1_A9)
+            1 in ports      -> listOf(USB1_A9)
+            2 in ports      -> listOf(USB2_A9)
+            ports.isEmpty() -> listOf(USB1_A9)   // rien à jouer : le lecteur restera muet
+            else            -> listOf(USB2_A9, USB1_A9)
+        }
+    }
+
+    /**
+     * Ports USB portant une clé montée (1, 2, ou 0 pour un port inconnu) ; `null` si illisible.
+     * Même test que l'appli Média : volume public, disque USB, chemin de montage présent.
+     * `StorageManager.getVolumes` est caché ; il nous est ouvert par la signature plateforme.
+     */
+    private fun portsUsbMontes(): Set<Int>? {
+        val ctx = sAppContext ?: return null
+        return try {
+            val sm = ctx.getSystemService(Context.STORAGE_SERVICE) ?: return null
+            val volumes = sm.javaClass.getMethod("getVolumes").invoke(sm) as? List<*> ?: return null
+            volumes.filterNotNull().mapNotNullTo(mutableSetOf()) { v ->
+                val c = v.javaClass
+                val disk = c.getMethod("getDisk").invoke(v) ?: return@mapNotNullTo null
+                val type = c.getMethod("getType").invoke(v) as? Int
+                val usb = disk.javaClass.getMethod("isUsb").invoke(disk) as? Boolean
+                val monte = c.getMethod("getPath").invoke(v) != null
+                if (type != 0 || usb != true || !monte) return@mapNotNullTo null   // 0 = TYPE_PUBLIC
+                val sysPath = disk.javaClass.getField("sysPath").get(disk) as? String ?: ""
+                when {
+                    USB1_CONTROLEUR in sysPath -> 1
+                    USB2_CONTROLEUR in sysPath -> 2
+                    else -> 0
+                }
+            }
+        } catch (e: Exception) {
+            AppLogger.w(MEDIA_TAG, "ports USB illisibles : ${(e.cause ?: e).message}")
+            null
+        }
+    }
+
+    /** Session de DiAuto-MG4, récepteur Android Auto de remplacement (sans fil). */
+    private const val DIAUTO_PKG = "com.drivehub.diauto.mg4"
+
+    /**
+     * Projection : le récepteur d'origine AllGo d'abord. S'il n'a pas de téléphone (-1) ou ne
+     * répond pas, DiAuto-MG4 s'il tourne — installé à côté par certains utilisateurs, il prend
+     * le téléphone à la place d'AllGo en sans-fil (testeur SWI69, 2026-10-15 : AllGo rendait -1 à
+     * chaque appui). Son `onPlay` transmet « lecture » au téléphone, et c'est lui qui prend la
+     * sortie audio de la voiture quand le son arrive (focus étiqueté `key_car_source_type = 70`,
+     * lu dans son code source).
+     */
+    private fun projectionJouer(): Boolean {
+        val code = ruiCode(RUI_PLAY)
+        if (code != null && code != RUI_SANS_TELEPHONE) return true
+        return diautoJouer() || code != null
+    }
+
+    private fun diautoJouer(): Boolean {
+        val ctx = sAppContext ?: return false
+        val msm = ctx.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
+            ?: return false
+        // Sa session n'est active que pendant une connexion au téléphone.
+        val session = runCatching { msm.getActiveSessions(null) }.getOrNull()
+            ?.firstOrNull { it.packageName == DIAUTO_PKG }
+        if (session == null) {
+            AppLogger.i(MEDIA_TAG, "projection : DiAuto absent ou sans téléphone")
+            return false
+        }
+        return try {
+            session.transportControls.play()
+            AppLogger.i(MEDIA_TAG, "projection : « lecture » envoyée à DiAuto")
+            true
+        } catch (e: Exception) {
+            AppLogger.w(MEDIA_TAG, "projection : DiAuto refuse la lecture — ${(e.cause ?: e).message}")
+            false
+        }
+    }
+
+    // ── A9 : appli Média SAIC, commandée comme le fait le launcher (identique SWI69/131/132) ──
+    private const val MEDIA_A9_PKG     = "com.saicmotor.media"
+    private const val MEDIA_A9_SERVICE = "com.saicmotor.media.service.MediaService"
+    private const val MEDIA_A9_SWITCH  = 0x8001   // passer sur une source et la lancer
+    private const val MEDIA_A9_TYPE_BT = 2        // types : 0 USB1, 1 USB2, 2 Bluetooth, 3 en ligne
+    /** Expéditeur inscrit dans la commande : celui du launcher, la seule valeur vue en service. */
+    private const val MEDIA_A9_SENDER  = "com.saicmotor.launcher"
+
+    /**
+     * A9 : demande à l'appli Média SAIC de passer sur une de ses sources, exactement comme le
+     * launcher d'origine (`ModeManager.switchSource` → commande 0x8001 à son `MediaService`).
+     *
+     * ⚠️ Indispensable pour le Bluetooth, constaté sur SWI69 le 2026-10-15 : « lecture » envoyée
+     * au lecteur du système part bien, mais elle ne fait que réveiller le téléphone — la radio
+     * garde la sortie. Ce qui fait passer la VOITURE en Bluetooth, c'est le focus audio que
+     * l'appli Média prend au nom du Bluetooth (étiquette SAIC `key_car_source_type = 5`) avant
+     * de lancer la lecture. Si un appel est en cours, elle refuse le focus et rien ne se passe,
+     * comme avec les commandes d'origine.
+     *
+     * Rend faux si le service est introuvable ou refuse l'envoi : l'appelant se replie alors
+     * sur le lecteur.
+     */
+    private fun sourceParAppliMedia(type: Int, source: AudioSource): Boolean {
+        val ctx = sAppContext ?: return false
+        val intent = Intent()
+            .setComponent(ComponentName(MEDIA_A9_PKG, MEDIA_A9_SERVICE))
+            .putExtra(CommandParcelable.EXTRA,
+                CommandParcelable(MEDIA_A9_SWITCH, type, MEDIA_A9_SENDER))
+        return try {
+            val parti = ctx.startService(intent) != null
+            AppLogger.i(MEDIA_TAG, "source ${source.name} : " + if (parti)
+                "commande 0x${Integer.toHexString(MEDIA_A9_SWITCH)} (type $type) envoyée à l'appli Média SAIC"
+            else "service de l'appli Média SAIC introuvable — repli sur le lecteur")
+            parti
+        } catch (e: Exception) {
+            AppLogger.w(MEDIA_TAG, "source ${source.name} : appli Média SAIC injoignable " +
+                "(${(e.cause ?: e).message}) — repli sur le lecteur")
+            false
+        }
+    }
+
+    /**
+     * Source audio qui joue (point de départ du cycle de sources, 2026-10-16), ou `null` si
+     * illisible ou hors de nos sources.
+     *
+     * Ancien SDK (SWI133/68/165) : `getCurrentMediaSource` du service média SAIC — relevé sur
+     * SWI133 et SWI68, et c'est ce que lit leur launcher. A9 (SWI69/131/132) : la source que le
+     * SYSTÈME tient lui-même ([sourceSysteme]), ce que lit leur launcher. Même espace de codes
+     * ([AudioSource.fromCarCode]).
+     *
+     * Ne pas appeler depuis le thread principal : le service média peut attendre sa liaison.
+     */
+    fun currentAudioSource(): AudioSource? {
+        val sdk = mediaSourceCourante()
+        val parSdk = AudioSource.fromCarCode(sdk)
+        if (parSdk != null) return parSdk
+        val systeme = sourceSysteme()
+        val parSysteme = systeme?.let { AudioSource.fromCarCode(it) }
+        AppLogger.i(MEDIA_TAG, "source active (système) = ${systeme ?: "illisible"} → ${parSysteme?.name ?: "inconnue"}")
+        return parSysteme
+    }
+
+    /**
+     * Code de la dernière source multimédia retenue par le système, ou `null`.
+     *
+     * Décompilé (services.vdex, identique SWI69/131/132/133) : `MediaFocusControl.setLastSourceLock`,
+     * appelé à CHAQUE octroi de focus d'usage MEDIA portant l'étiquette `key_car_source_type`, la
+     * garde dans `mLastSource` et dans le réglage `audio_setting_last_source`. Les annonces GPS et
+     * les appels ne la changent pas. On lit `AudioManager.getLastSource()` (ajout SAIC, comme le
+     * launcher A9 à son démarrage) ; à défaut le réglage, écrit pour l'utilisateur courant.
+     */
+    private fun sourceSysteme(): Int? {
+        val ctx = sAppContext ?: return null
+        val am = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        val parApi = runCatching { am?.javaClass?.getMethod("getLastSource")?.invoke(am) as? Int }.getOrNull()
+        if (parApi != null && parApi > 0) return parApi
+        val parReglage = runCatching {
+            android.provider.Settings.System.getInt(ctx.contentResolver, "audio_setting_last_source", -1)
+        }.getOrNull()
+        return parReglage?.takeIf { it > 0 }
+    }
+
+    /** Lecteurs en cours de connexion : gardés en vie le temps que « lecture » parte. */
+    private val sLecteursSource = ConcurrentHashMap<String, MediaBrowser>()
+
+    /**
+     * A9 : se connecter au lecteur de la source crée sa session, et « lecture » la met au premier
+     * plan — le chemin du launcher A9 (`MediaModel`). Asynchrone : rend vrai si la connexion est
+     * lancée, le journal dit si le lecteur l'a acceptée et si la lecture est partie. L'USB peut
+     * viser deux lecteurs ([lecteursUsbA9]), la projection n'en a pas ([projectionJouer]).
+     */
+    private fun sourceParLecteur(source: AudioSource): Boolean {
+        if (source == AudioSource.PROJECTION) return projectionJouer()
+        val composants = if (source == AudioSource.USB) lecteursUsbA9() else listOfNotNull(lecteurA9(source))
+        val ctx = sAppContext ?: return false
+        composants.forEach { lecteurJouer(ctx, source, it) }
+        return composants.isNotEmpty()
+    }
+
+    private fun lecteurJouer(ctx: Context, source: AudioSource, composant: ComponentName) {
+        val cle = composant.className
+        Handler(Looper.getMainLooper()).post {
+            sLecteursSource.remove(cle)?.let { runCatching { it.disconnect() } }
+            var lecteur: MediaBrowser? = null
+            val rappels = object : MediaBrowser.ConnectionCallback() {
+                override fun onConnected() {
+                    val b = lecteur ?: return
+                    try {
+                        MediaController(ctx, b.sessionToken).transportControls.play()
+                        AppLogger.i(MEDIA_TAG, "source ${source.name} : lecteur ${cle.substringAfterLast('.')} connecté, lecture demandée")
+                    } catch (e: Exception) {
+                        AppLogger.w(MEDIA_TAG, "source ${source.name} : lecture refusée — ${(e.cause ?: e).message}")
+                    }
+                    // Libéré un peu plus tard : couper tout de suite pourrait arrêter un lecteur
+                    // qui n'a pas encore démarré sa lecture.
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        if (sLecteursSource.remove(cle, b)) runCatching { b.disconnect() }
+                    }, 5_000L)
+                }
+                override fun onConnectionFailed() {
+                    sLecteursSource.remove(cle)
+                    AppLogger.w(MEDIA_TAG, "source ${source.name} : le lecteur ${cle.substringAfterLast('.')} refuse la connexion")
+                }
+                override fun onConnectionSuspended() {
+                    sLecteursSource.remove(cle)
+                }
+            }
+            try {
+                lecteur = MediaBrowser(ctx, composant, rappels, null).also {
+                    sLecteursSource[cle] = it
+                    it.connect()
+                }
+            } catch (e: Exception) {
+                sLecteursSource.remove(cle)
+                AppLogger.w(MEDIA_TAG, "source ${source.name} : connexion impossible — ${(e.cause ?: e).message}")
+            }
+        }
+    }
 
     /**
      * Monte ou descend le volume média d'un cran.
@@ -5535,7 +5818,7 @@ object MG4Hardware {
          * et aux raccourcis — c'est elle qui sait qu'en AUTO le niveau annoncé (15) n'en est pas un.
          */
         fun reglages() = HvacPopup.Reglages(
-            tempC, tempMin, tempMax, fanLevel, fanMin, fanMax, autoOn, lastManualFan)
+            tempC, tempMin, tempMax, fanLevel, fanMin, fanMax, autoOn, lastManualFan, powerOn)
     }
 
     /**

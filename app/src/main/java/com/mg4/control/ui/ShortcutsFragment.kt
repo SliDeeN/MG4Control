@@ -28,6 +28,8 @@ import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.service.OverlayKit
+import com.mg4.control.shortcut.AudioSource
+import com.mg4.control.shortcut.AudioSourceCycle
 import com.mg4.control.shortcut.PressType
 import com.mg4.control.shortcut.ProfileCycle
 import com.mg4.control.shortcut.RegenCycle
@@ -89,6 +91,10 @@ class ShortcutsFragment : Fragment() {
     /** Pendants de [majCycleRegen] et [rechargerCycleRegen] pour la page du cycle de profils. */
     private var majCycleProfils: (() -> Unit)? = null
     private var rechargerCycleProfils: (() -> Unit)? = null
+
+    /** Cycle de sources audio en cours de composition ; la position vaut rang, comme les autres. */
+    private val sourceCycleSel = mutableListOf<AudioSource>()
+    private var rechargerCycleSources: (() -> Unit)? = null
 
     // ── Par-spinner : label list mutable + adapter + vue ─────────────────
     private val spinnerLabelLists = mutableMapOf<String, MutableList<String>>()
@@ -192,6 +198,11 @@ class ShortcutsFragment : Fragment() {
             add(ActionItem(getString(R.string.shortcuts_action_apply_profile),   ShortcutAction.APPLY_PROFILE))
             add(ActionItem(getString(R.string.shortcuts_action_profile_picker), ShortcutAction.PROFILE_PICKER))
             add(ActionItem(getString(R.string.shortcuts_action_profile_cycle),  ShortcutAction.PROFILE_CYCLE))
+            // Sources audio : aucun filtre firmware — chaque firmware a sa voie (service média
+            // SAIC, lecteurs Android sur A9, allgo pour la projection), à valider sur la voiture.
+            add(ActionItem(getString(R.string.shortcuts_action_audio_cycle),    ShortcutAction.AUDIO_SOURCE_CYCLE))
+            // Pop-up de charge : toujours proposé (2026-10-17) ; option coupée, il dit où l'activer.
+            add(ActionItem(getString(R.string.shortcuts_action_charge_popup),  ShortcutAction.CHARGE_POPUP))
             add(ActionItem(getString(R.string.shortcuts_action_open_app),       ShortcutAction.OPEN_APP))
             add(ActionItem(getString(R.string.shortcuts_action_open_custom_app),ShortcutAction.OPEN_CUSTOM_APP))
             if (MG4Hardware.hasVehiclePowerOff()) {
@@ -214,6 +225,7 @@ class ShortcutsFragment : Fragment() {
         setupConfigListeners(view)
         setupRegenCycle(view)
         setupProfileCycle(view)
+        setupSourceCycle(view)
         restoreState()
 
         // En dernier : le rail décide quelles pages existent, il lui faut l'état final.
@@ -263,6 +275,7 @@ class ShortcutsFragment : Fragment() {
         rechargerCycleRegen = null
         majCycleProfils = null
         rechargerCycleProfils = null
+        rechargerCycleSources = null
         rootView = null
         super.onDestroyView()
     }
@@ -920,12 +933,16 @@ class ShortcutsFragment : Fragment() {
      * raccourci parcourrait à cet instant (profils supprimés déjà retirés).
      */
     private fun setupProfileCycle(view: View) {
-        // Cinq boutons pour cinq profils au plus (ProfileManager.MAX_PROFILES).
+        // Dix boutons pour dix profils au plus (ProfileManager.MAX_PROFILES), en deux rangées
+        // de cinq : la seconde ne se montre qu'à partir du sixième profil.
         val boutons = listOf(
             R.id.sc_profile_cycle_1, R.id.sc_profile_cycle_2, R.id.sc_profile_cycle_3,
-            R.id.sc_profile_cycle_4, R.id.sc_profile_cycle_5
+            R.id.sc_profile_cycle_4, R.id.sc_profile_cycle_5, R.id.sc_profile_cycle_6,
+            R.id.sc_profile_cycle_7, R.id.sc_profile_cycle_8, R.id.sc_profile_cycle_9,
+            R.id.sc_profile_cycle_10
         ).mapNotNull { view.findViewById<MaterialButton>(it) }
-        val rangee = view.findViewById<View>(R.id.row_profile_cycle)
+        val rangee  = view.findViewById<View>(R.id.row_profile_cycle)
+        val rangee2 = view.findViewById<View>(R.id.row_profile_cycle_2)
         val vide   = view.findViewById<TextView>(R.id.tv_profile_cycle_empty)
         val resume = view.findViewById<TextView>(R.id.tv_profile_cycle_summary)
         val save   = view.findViewById<MaterialButton>(R.id.btn_profile_cycle_save)
@@ -949,8 +966,9 @@ class ShortcutsFragment : Fragment() {
                 btn.setTextColor(if (on) texteActif else texteInactif)
             }
             val aucun = profils.isEmpty()
-            vide?.visibility   = if (aucun) View.VISIBLE else View.GONE
-            rangee?.visibility = if (aucun) View.GONE else View.VISIBLE
+            vide?.visibility    = if (aucun) View.VISIBLE else View.GONE
+            rangee?.visibility  = if (aucun) View.GONE else View.VISIBLE
+            rangee2?.visibility = if (ProfileCycle.rows(profils.size) > 1) View.VISIBLE else View.GONE
 
             val assez = profileCycleSel.size >= ProfileCycle.MIN_PROFILES
             // Le résumé porte les noms ENTIERS : ceux des boutons sont raccourcis.
@@ -997,6 +1015,79 @@ class ShortcutsFragment : Fragment() {
     }
 
     /**
+     * Composition du cycle de sources audio (2026-10-15) — même geste que les cycles de
+     * régénération et de profils : l'ordre des appuis EST l'ordre du cycle, rien n'est enregistré
+     * avant « Sauvegarder ». Présentation en tuiles (maquette B) : pictogramme, nom, et le rang en
+     * pastille. Leur disponibilité n'est pas vérifiée, par choix ; seule la musique en ligne est
+     * retirée des A9, où elle n'existe pas ([AudioSourceCycle.offertes]).
+     */
+    private fun setupSourceCycle(view: View) {
+        val offertes = AudioSourceCycle.offertes(FirmwareInfo.isA9())
+        val tuiles = listOf(
+            Triple(AudioSource.RADIO,      R.id.sc_audio_radio,      R.id.sc_audio_radio_rank),
+            Triple(AudioSource.BLUETOOTH,  R.id.sc_audio_bluetooth,  R.id.sc_audio_bluetooth_rank),
+            Triple(AudioSource.USB,        R.id.sc_audio_usb,        R.id.sc_audio_usb_rank),
+            Triple(AudioSource.ONLINE,     R.id.sc_audio_online,     R.id.sc_audio_online_rank),
+            Triple(AudioSource.PROJECTION, R.id.sc_audio_projection, R.id.sc_audio_projection_rank),
+        ).mapNotNull { (source, bouton, rang) ->
+            val btn = view.findViewById<MaterialButton>(bouton) ?: return@mapNotNull null
+            if (source !in offertes) {
+                // La tuile ET son cadre : les autres se partagent la rangée.
+                (btn.parent as? View)?.visibility = View.GONE
+                return@mapNotNull null
+            }
+            Triple(source, btn, view.findViewById<TextView>(rang))
+        }
+        val resume = view.findViewById<TextView>(R.id.tv_audio_cycle_summary)
+        val save   = view.findViewById<MaterialButton>(R.id.btn_audio_cycle_save)
+
+        val texteActif   = requireContext().getColor(R.color.text_active)
+        val texteInactif = requireContext().getColor(R.color.text_secondary)
+
+        fun maj() {
+            tuiles.forEach { (source, btn, pastille) ->
+                val rang = sourceCycleSel.indexOf(source)
+                val on   = rang >= 0
+                btn.backgroundTintList = ColorStateList.valueOf(if (on) accentColor else defColor)
+                btn.setTextColor(if (on) texteActif else texteInactif)
+                btn.iconTint = ColorStateList.valueOf(if (on) texteActif else texteInactif)
+                pastille?.visibility = if (on) View.VISIBLE else View.GONE
+                pastille?.text = "${rang + 1}"
+            }
+            val assez = sourceCycleSel.size >= AudioSourceCycle.MIN_SOURCES
+            resume?.text = if (assez) getString(R.string.shortcuts_cfg_regen_summary,
+                sourceCycleSel.joinToString(" → ") { getString(it.label) })
+            else getString(R.string.shortcuts_cfg_audio_min)
+            save?.isEnabled = assez
+            save?.alpha     = if (assez) 1f else 0.4f
+        }
+
+        tuiles.forEach { (source, btn, _) ->
+            btn.setOnClickListener {
+                if (!sourceCycleSel.remove(source)) sourceCycleSel.add(source)
+                maj()
+            }
+        }
+        view.findViewById<MaterialButton>(R.id.btn_audio_cycle_clear)?.setOnClickListener {
+            sourceCycleSel.clear()
+            maj()
+        }
+        save?.setOnClickListener {
+            if (sourceCycleSel.size < AudioSourceCycle.MIN_SOURCES) return@setOnClickListener
+            AudioSourceCycle.save(requireContext(), sourceCycleSel)
+            AppLogger.i("MG4_SHORTCUTS", "Cycle de sources enregistré : ${sourceCycleSel.joinToString(" → ") { it.name }}")
+            Toast.makeText(requireContext(), R.string.shortcuts_cfg_regen_saved, Toast.LENGTH_SHORT).show()
+        }
+
+        rechargerCycleSources = {
+            sourceCycleSel.clear()
+            sourceCycleSel.addAll(AudioSourceCycle.order(requireContext()))
+            maj()
+        }
+        rechargerCycleSources?.invoke()
+    }
+
+    /**
      * Rail de gauche — même motif que l'éditeur de profil et les Réglages, à ceci près que
      * plusieurs entrées vont et viennent selon ce que l'utilisateur a attribué.
      *
@@ -1017,10 +1108,12 @@ class ShortcutsFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_adas)     to view.findViewById<ViewGroup>(R.id.page_sc_adas),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_regen)    to view.findViewById<ViewGroup>(R.id.page_sc_regen),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_profiles) to view.findViewById<ViewGroup>(R.id.page_sc_profiles),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_sources)  to view.findViewById<ViewGroup>(R.id.page_sc_sources),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_list)     to view.findViewById<ViewGroup>(R.id.page_sc_list)
         )
         val pageCycle   = tabs[4].second
         val pageProfils = tabs[5].second
+        val pageSources = tabs[6].second
 
         // Chaque page de réglage est adossée à une fonction : elle n'existe que si un bouton la
         // déclenche. C'est la règle qui manquait aux deux premières, dont les réglages ne
@@ -1029,7 +1122,8 @@ class ShortcutsFragment : Fragment() {
             tabs[2].second to ShortcutAction.ONE_PEDAL,
             tabs[3].second to ShortcutAction.ADAS_CYCLE,
             tabs[4].second to ShortcutAction.REGEN_CYCLE,
-            tabs[5].second to ShortcutAction.PROFILE_CYCLE
+            tabs[5].second to ShortcutAction.PROFILE_CYCLE,
+            tabs[6].second to ShortcutAction.AUDIO_SOURCE_CYCLE
         )
         setupAdvancedShortcuts(view)
         val scroll = view.findViewById<ScrollView>(R.id.scroll_shortcuts)
@@ -1089,6 +1183,7 @@ class ShortcutsFragment : Fragment() {
                 if (page === pageCycle) rechargerCycleRegen?.invoke()
                 // Idem pour le cycle de profils, qui relit en plus la liste des profils.
                 if (page === pageProfils) rechargerCycleProfils?.invoke()
+                if (page === pageSources) rechargerCycleSources?.invoke()
                 scroll?.scrollTo(0, 0)
                 apply()
             }

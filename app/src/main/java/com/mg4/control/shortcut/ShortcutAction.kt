@@ -71,7 +71,15 @@ enum class ShortcutAction(val id: Int) {
 
     // Cycle de profils : applique le profil suivant d'une séquence composée par l'utilisateur
     // (voir ProfileCycle). Le profil visé dépend du profil actif, pas d'un état mémorisé ici.
-    PROFILE_CYCLE(42);
+    PROFILE_CYCLE(42),
+
+    // Cycle de sources audio (2026-10-15) : passe à la source suivante d'une séquence composée par
+    // l'utilisateur (voir AudioSourceCycle). 43 est retiré, ne pas le réattribuer.
+    AUDIO_SOURCE_CYCLE(44),
+
+    // Pop-up de charge (2026-10-16) : le rouvre s'il a été fermé pendant une charge, ou le referme.
+    // Comme HVAC_POPUP, l'action n'écrit rien elle-même. Option coupée : un message dit où l'activer.
+    CHARGE_POPUP(45);
 
     companion object {
         /**

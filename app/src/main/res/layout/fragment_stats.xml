@@ -213,6 +213,61 @@
 
                         </LinearLayout>
 
+                        <!-- État de santé (SOH), 50 à 100 % par 0,5 : − et + maintenus pour aller
+                             vite, sans clavier. Posé par StatsFragment.bindStateOfHealth. -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/stats_soh_label"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                            <ImageView
+                                android:id="@+id/btn_stats_soh_minus"
+                                android:layout_width="52dp"
+                                android:layout_height="52dp"
+                                android:background="@drawable/bg_dialog_tile"
+                                android:padding="14dp"
+                                android:contentDescription="@string/stats_soh_less"
+                                android:src="@drawable/ic_hvac_minus" />
+
+                            <TextView
+                                android:id="@+id/tv_stats_soh"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:minWidth="96dp"
+                                android:gravity="center"
+                                android:textColor="@color/dash_accent"
+                                android:textSize="20sp"
+                                android:textStyle="bold" />
+
+                            <ImageView
+                                android:id="@+id/btn_stats_soh_plus"
+                                android:layout_width="52dp"
+                                android:layout_height="52dp"
+                                android:background="@drawable/bg_dialog_tile"
+                                android:padding="14dp"
+                                android:contentDescription="@string/stats_soh_more"
+                                android:src="@drawable/ic_hvac_plus" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_stats_soh_effective"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:textColor="@color/dash_accent"
+                            android:textSize="14sp" />
+
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"

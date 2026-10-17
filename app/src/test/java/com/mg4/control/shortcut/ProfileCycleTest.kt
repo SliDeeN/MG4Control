@@ -1,5 +1,6 @@
 package com.mg4.control.shortcut
 
+import com.mg4.control.profile.ProfileManager
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -127,5 +128,17 @@ class ProfileCycleTest {
         assertTrue("« $court » trop long", court.length <= ProfileCycle.LABEL_MAX)
         assertTrue("« $court » sans points de suspension", court.endsWith("\u2026"))
         assertTrue("« $court » ne commence plus par le nom", court.startsWith("Autoroute"))
+    }
+
+    @Test
+    fun `la seconde rangee de boutons n apparait qu a partir du sixieme profil`() {
+        // Jusqu'à cinq profils, la page reste celle d'avant le passage à dix (maquette A).
+        for (n in 0..5) assertEquals("$n profil(s)", 1, ProfileCycle.rows(n))
+        for (n in 6..10) assertEquals("$n profils", 2, ProfileCycle.rows(n))
+    }
+
+    @Test
+    fun `deux rangees suffisent pour le plafond de profils`() {
+        assertTrue(ProfileCycle.rows(ProfileManager.MAX_PROFILES) * ProfileCycle.PER_ROW >= ProfileManager.MAX_PROFILES)
     }
 }

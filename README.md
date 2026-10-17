@@ -148,7 +148,7 @@ Actions disponibles — celles qui dépendent du firmware n'apparaissent pas sur
 | Sécurité | ESC · Somnolence · Somnolence : sensibilité · Système Anticollision · ADAS · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son |
 | Confort | Siège chauffant gauche · Siège chauffant droit · Volant chauffant · Clim ON/OFF · Clim : A/C ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant · Dégivrage arrière · Recirculation · Feux de route automatiques ON/OFF · Luminosité ± · Pop-up HVAC |
 | Vitres | Ouvrir toutes les vitres · Fermer toutes les vitres |
-| Média | Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume - |
+| Média | Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume - · Cycle de sources audio |
 | Application et véhicule | Lancer un profil · Sélecteur de profils · Cycle de profils · Ouvrir MG4Control · Lancer une application · Éteindre la voiture |
 
 Les actions de confort et de sécurité **relisent l'état sur le véhicule à chaque pression** au lieu
@@ -212,7 +212,9 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
 L'action **Pop-up HVAC** ouvre la climatisation par-dessus l'écran en cours — y compris quand
 Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim d'origine. Le joystick droit
 du volant n'y déplace aucun focus : haut/bas règlent la température, gauche/droite la ventilation,
-le clic central bascule le mode AUTO (régler la ventilation en fait sortir). Un repère dans
+le clic central bascule le mode AUTO (régler la ventilation en fait sortir). Au cran 1, un appui
+à gauche éteint la clim (« OFF ») ; éteinte, gauche ne la rallume pas et droite la remet au
+cran 1. Un repère dans
 l'en-tête rappelle ces gestes, ou prévient que le joystick est inactif tant que le service
 d'accessibilité n'est pas activé — la fenêtre reste alors utilisable au doigt. Se choisissent au
 doigt : l'A/C, la recirculation, le sens de l'air et, sur les firmwares équipés (SWI133, SWI68,
@@ -226,6 +228,24 @@ moins deux profils ; sans réglage, tous les profils dans l'ordre de leur liste)
 raccourci vise le profil qui suit le profil actif et affiche son nom ; il l'applique une seconde
 plus tard, puis le confirme à l'écran. Deux appuis rapprochés sautent donc un profil sans
 l'appliquer. Si le verrou de vitesse refuse l'écriture, rien ne change.
+
+#### Cycle de sources audio
+L'action **Cycle de sources audio** passe à la source suivante d'un cycle composé sur la page
+*Cycle sources*, en tuiles : radio, Bluetooth, USB, en ligne, CarPlay / Android Auto (au moins
+deux sources ; sans réglage, radio puis Bluetooth). À chaque appui, *Source : …* s'affiche et la
+voiture y passe une seconde plus tard ; deux appuis rapprochés sautent donc une source. Il
+n'existe pas de commande « changer de source » : l'application demande à la source visée de
+jouer, ce qui la met au premier plan, sans rien mettre en pause. La disponibilité n'est pas
+vérifiée : une source sans rien à jouer reste muette, et l'appui suivant passe à la suivante,
+car le cycle repart de la dernière source choisie, pas de celle qui joue.
+
+- **SWI133, SWI68, SWI165** : par le service média SAIC, source par source.
+- **SWI69, SWI131, SWI132** : le Bluetooth passe par l'appli Média SAIC, comme la touche de
+  source d'origine — c'est elle qui fait passer la sortie audio de la voiture en Bluetooth avant
+  de lancer la lecture. L'USB vise le lecteur du port où la clé est branchée (un lecteur par
+  port). « En ligne » n'est pas proposé : cette source n'existe pas sur ces firmwares.
+- **CarPlay / Android Auto** : par le récepteur d'origine AllGo ; s'il n'a pas de téléphone,
+  l'application essaie Android Auto sans fil par DiAuto-MG4.
 
 ### Automatisation
 - **Application d'un profil selon la température extérieure** : seuil, sens
@@ -293,7 +313,7 @@ Durée de course et calibrage restent réglables option coupée : ils servent au
 > fermeture automatique, qui part alors que vous êtes déjà dehors.
 
 ### Gestion de profils
-- Sauvegarde jusqu'à **5 profils** personnalisés
+- Sauvegarde jusqu'à **10 profils** personnalisés (5 avant la 2.6.9)
 - Application instantanée d'un profil en un clic
 - Application automatique du profil par défaut **au démarrage du véhicule**
 - **Association Bluetooth** : un profil peut être lié à un appareil et s'applique à sa connexion
@@ -309,8 +329,8 @@ ailleurs. Trois sous-onglets sur le rail habituel :
 
 - **Général** : résumé sur 30 jours ou sur tout l'historique — distance, consommation, énergie
   consommée, récupérée et rechargée, coût. Réglages : prix du kWh en charge lente et en charge rapide
-  (jusqu'à 100 000, pour toutes les monnaies), monnaie, batterie de la voiture (51, 64 ou 77 kWh),
-  filtre des petits trajets, durée de conservation (30 jours à 1 an, 3 mois par défaut) et
+  (jusqu'à 100 000, pour toutes les monnaies), monnaie, batterie de la voiture (51, 64 ou 77 kWh)
+  et son **état de santé** (SOH), filtre des petits trajets, durée de conservation (30 jours à 1 an, 3 mois par défaut) et
   « Tout supprimer »
 - **Trajets** : chaque trajet avec sa durée, sa distance, sa consommation et le détail de l'énergie
 - **Recharge** : énergie rechargée, coût et sessions AC / DC, y compris les charges faites pendant
@@ -324,7 +344,7 @@ D'où viennent les chiffres :
 | Distance | Intégration de la vitesse, relevée toutes les 10 s en roulant ; l'odomètre, qui ne publie que le kilomètre entier, sert de garde-fou |
 | Énergie d'un trajet, SWI133 et SWI132 | Compteurs de la voiture, au dixième de kWh : total, climatisation, accessoires, récupération |
 | Énergie d'un trajet, autres firmwares | Leurs compteurs restent à zéro : tension × courant de la batterie, relevés chaque seconde en roulant. Le détail se limite à « Moteur » et « Climatisation et autres », au kWh entier |
-| Énergie d'une charge | Écart de pourcentage × capacité utile de la batterie choisie |
+| Énergie d'une charge | Écart de pourcentage × capacité retenue : capacité utile de la batterie choisie × état de santé |
 | Type et puissance d'une charge | Type lu sur la voiture (alternatif ou continu) ; puissance mesurée si le boîtier est éveillé pendant la charge, sinon calculée (énergie ÷ durée) et annoncée comme telle |
 
 Règles à connaître :
@@ -341,13 +361,55 @@ Règles à connaître :
   au dixième de kWh), elle s'affiche avec « ≈ » et sans décimale
 - **Petits trajets** : filtre désactivé par défaut ; activé, un trajet plus court que la distance
   choisie (1 km par défaut, de 0,1 à 50 km) n'est pas enregistré
-- **Batterie** : en changer recalcule les recharges déjà enregistrées ; tant qu'elle n'a pas été
-  confirmée, l'onglet Recharge le rappelle
+- **Batterie et état de santé** : l'état de santé se règle de 50 à 100 % par pas de 0,5 %, aux
+  boutons − et + (maintenus, ils défilent), et la capacité retenue s'affiche dessous. 100 % par
+  défaut : un concessionnaire ou une appli OBD peut le mesurer. Changer l'un ou l'autre recalcule
+  les recharges déjà enregistrées ; tant que la batterie n'a pas été confirmée, l'onglet Recharge le
+  rappelle
 - **Coupures** : le trajet en cours est enregistré après chaque relevé, et un trajet interrompu par
   l'extinction du boîtier est clos au démarrage suivant. L'historique est écrit dans un fichier
   temporaire puis renommé : une coupure d'alimentation ne le tronque jamais
 - **Horloge** : un boîtier réveillé par la charge peut repartir sur son horloge d'usine (2019) ; les
   relevés datés d'avant 2025 sont écartés
+
+### Écran conducteur
+Option de *Réglages → Interface*, **désactivée par défaut**, sur **SWI133, SWI68 et SWI165**
+seulement : un module MG4Control s'affiche au centre du combiné, derrière le volant, à la place de
+la page d'origine des onglets Navigation et Musique.
+
+Le combiné est un calculateur à part. Seul un carré de **260 × 260 px**, au centre, vient de
+l'écran central : SAIC l'y dessine avec une application système (`clusterprojection`), sur le second
+écran d'Android (n° 1, 800 × 480). MG4Control pose sa fenêtre exactement sur ce carré, avec le fond
+de cette application pour s'y fondre, dès le démarrage de l'application — sans attendre le READY.
+Sur les firmwares **A9** (SWI69, SWI131, SWI132), cette application n'existe pas et le combiné
+dessine tout lui-même : rien ne peut s'y afficher, et la carte n'apparaît pas dans les réglages.
+
+| Module | Jauge | Grand chiffre | Pied |
+|---|---|---|---|
+| **Consommation** | Anneau gradué, échelle logarithmique jusqu'à 3 000 Wh/km (300 kWh/100 km) | Wh/km ou kWh/100 km en roulant ; kW consommés à l'arrêt (sous 5 km/h) ; kW récupérés en récupération | Moyenne du trajet · énergie récupérée |
+| **Puissance** | Arc gradué de 60 kW récupérés (à gauche) à 320 kW (à droite), échelle logarithmique | kW, écrit sous le chiffre ; négatifs en récupération | Batterie · moyenne du trajet |
+
+- **Un module par onglet** : Aucun, Consommation ou Puissance pour l'onglet Navigation, de même pour
+  l'onglet Musique. Le module suit l'onglet affiché sur le combiné (`IPK_CLUSTER_TAB_BTN_STS`) ;
+  ordinateur de bord, pression des pneus et réglages sont dessinés par le combiné lui-même et
+  gardent leur page
+- **Unité de la consommation** : Wh/km (par défaut) ou kWh/100 km, avec une décimale sous 100. L'anneau
+  ne bouge pas d'une unité à l'autre ; ses graduations (0 · 100 · 200 · 500 · 1k · 3k Wh/km, ou 0 · 10 ·
+  20 · 50 · 100 · 300 kWh/100 km) et la moyenne du trajet suivent l'unité
+- **Échelle de puissance resserrée** : logarithmique, pour que l'arc bouge en roulant — 20 kW en
+  remplissent un quart, 50 kW 44 %, 100 kW 63 % ; côté récupération, 10 kW font 36 %. Graduations
+  20 · 50 · 100 · 200 · 320 et 10 · 30 · 60. Le remplissage s'arrête net au zéro, sans déborder de
+  l'autre côté
+- **Couleurs** : orange pour la consommation, bleu pour la récupération, quelle que soit la valeur ;
+  le mode de conduite s'affiche en pastille, en haut à gauche
+- **Actualisation** de la puissance, de la vitesse et de la jauge : curseur de 0,1 à 1 s (1 s par
+  défaut). Le mode de conduite et la batterie sont relus toutes les 10 s
+- **Le chiffre compte** d'une valeur à la suivante (100, 101… 300) au lieu de sauter, et la jauge
+  glisse avec lui, en 80 % de l'intervalle d'actualisation ; un changement d'unité (Wh/km → kW à
+  l'arrêt) saute directement
+- **Moyenne du trajet** : énergie nette (récupération déduite) ÷ distance intégrée depuis le passage
+  en READY, affichée à partir de 200 m. Elle est calculée sur place plutôt que reprise de l'onglet
+  Statistiques, qui peut être désactivé
 
 ### Réglages
 Écran organisé en **quatre onglets** :
@@ -355,7 +417,7 @@ Règles à connaître :
   demandée au premier lancement, dans une fenêtre à sept grandes tuiles
 - **Interface** : écran affiché au démarrage, apparence (auto / sombre / clair), taille du texte
   (standard / grand / très grand), **délai avant la fermeture des pop-ups** (1 à 60 s, 10 par
-  défaut)
+  défaut), **module sur l'écran conducteur** (SWI133, SWI68, SWI165 — cf. ci-dessus)
 - **Réglages avancés** : **Mode Garage** (cf. ci-dessous), retour au profil par défaut à chaque
   passage en READY (option, décochée), vérification des mises à jour au lancement, **alerte de mise
   à jour sur l'écran du véhicule**, **canal bêta**, extinction du véhicule écran allumé, blocage des
@@ -384,6 +446,17 @@ repère dans leur en-tête rappelle les gestes, ou prévient que le joystick est
 ne masque ni n'assombrit rien : ce qui est touché ailleurs va à l'application du dessous. Tout se
 referme seul après le **délai des pop-ups** (*Réglages → Interface*) ; sur un bandeau, le décompte
 est écrit sur le bouton qui vaut « non » — c'est lui que le délai déclenche.
+
+Le **raccourci qui ouvre un pop-up le referme** : un second appui ferme le sélecteur de profils
+comme la fin du délai (en cas de conflit Bluetooth, le premier profil proposé s'applique), et de même
+le pop-up HVAC. Quand ce raccourci est un appui long sur une touche du joystick droit, un appui court
+sur cette touche continue de naviguer — au relâchement —, et un appui maintenu jusqu'au seuil
+referme la fenêtre sans naviguer : au pop-up HVAC, refermer ne change ni la température ni la
+ventilation.
+
+Le **sélecteur de profils s'ouvre sur le profil actif** : le joystick part de sa carte, et la rangée
+défile pour la montrer s'il est au-delà du cinquième profil. En conflit Bluetooth, il part de la
+première carte, celle qu'applique le délai.
 
 **Dans l'application** :
 - les **confirmations** se ressemblent toutes — un pictogramme, un titre, un texte, un ou deux
@@ -456,11 +529,20 @@ un réglage que l'utilisateur croit global, et il l'est.
 
 ### Profils
 - Liste des profils avec application, définition par défaut, modification, suppression
+- **Ordre des profils** : un appui long sur une carte de la liste la soulève ; on la fait glisser à
+  sa place (la liste défile seule près de ses bords, un bandeau indique la position) et l'ordre est
+  enregistré au relâcher. Cet ordre est celui du sélecteur, des boutons de la page « Cycle profils »
+  et du cycle par défaut ; en conflit Bluetooth, c'est la priorité — le premier des profils en
+  conflit s'applique à la fin du délai
 - **Éditeur en plein écran** organisé en trois catégories : Conduite, Sécurité, Confort
 - **Un interrupteur par catégorie**, en tête de chaque onglet : coupée, l'onglet se replie et le
   profil n'y écrit rien — un profil peut ne régler que la sécurité, ou que le confort. Il en faut au
   moins une pour enregistrer ; les profils déjà créés gardent leurs trois catégories actives
 - Le nom du profil et le réglage « profil par défaut » restent visibles sur les trois onglets
+- **Régénération inchangée** : un interrupteur sur la section Régénération de l'onglet Conduite ;
+  coupé, le profil ne touche ni au niveau de régénération ni à la conduite à une pédale, les boutons
+  de niveau se grisent, et la liste comme le sélecteur l'indiquent (« Régén. inchangée »). Les
+  profils déjà créés gardent leur régénération
 - Volant et sièges chauffants disposent d'un interrupteur de **prise en compte** : décoché, le
   profil ne touche pas au réglage au lieu de l'éteindre
 - **Gestion automatique des feux de route** : même interrupteur, décoché par défaut — un profil
@@ -519,6 +601,9 @@ autres firmwares.
 | Firmware SWI69 | Compatible ✅ |
 | Firmware SWI165 | Compatible ✅ |
 | Firmware UNKNOWN | Mode forcé SWI133/SWI132/SWI68/SWI69/SWI131/SWI165 disponible ⚠️ |
+
+Le module sur l'écran conducteur est réservé à SWI133, SWI68 et SWI165 (cf.
+[Écran conducteur](#écran-conducteur)).
 
 ---
 
@@ -593,6 +678,8 @@ MG4Control/
 │   │   │   ├── StatsTracker.kt        # Statistiques : trajets et charges (machine à états pure, testée)
 │   │   │   ├── StatsSummary.kt        # Statistiques : agrégats d'une période (coût, consommation)
 │   │   │   ├── PowerIntegrator.kt     # Énergie par tension × courant (firmwares sans compteurs)
+│   │   │   ├── ClusterGauge.kt        # Écran conducteur : échelles des jauges, place du carré, moyenne du trajet
+│   │   │   ├── ClusterTab.kt          # Écran conducteur : onglets du combiné
 │   │   │   └── ProfileBackup.kt       # Format de la sauvegarde véhicule
 │   │   │
 │   │   ├── profile/
@@ -604,6 +691,7 @@ MG4Control/
 │   │   ├── hardware/
 │   │   │   ├── MG4Hardware.kt         # Abstraction matérielle (4 couches)
 │   │   │   ├── StatsCollector.kt      # Relevés des statistiques (seulement si elles sont activées)
+│   │   │   ├── ClusterTabReader.kt    # Onglet affiché sur le combiné
 │   │   │   └── VehicleWriteGate.kt    # Verrou de vitesse posé dans les primitives d'écriture
 │   │   │
 │   │   ├── stats/
@@ -643,6 +731,7 @@ MG4Control/
 │   │   │   ├── AppDialog.kt           # Fenêtres de l'app : confirmation, grille de choix, listes, boutons − / +
 │   │   │   ├── RestoreProfilesDialog.kt # « Restaurer les profils ? » — liste des profils retrouvés
 │   │   │   ├── StatsDialogs.kt        # Compléter une recharge, corriger un tarif (sans clavier)
+│   │   │   ├── widget/ClusterGaugeView.kt # Module de l'écran conducteur (anneau ou arc, chiffre qui compte)
 │   │   │   ├── ConsoleFragment.kt     # Journal de debug en temps réel
 │   │   │   ├── DriveRegenFragment.kt  # Héritage (non utilisé en v2)
 │   │   │   ├── ClimateFragment.kt     # Héritage (non utilisé en v2)
@@ -656,13 +745,15 @@ MG4Control/
 │   │   │   ├── HvacPopupOverlay.kt    # Pop-up HVAC (+ HvacPopupSkin.kt, sa peinture)
 │   │   │   ├── ProfileConfirmOverlay.kt # Bandeau OUI/NON des automatisations
 │   │   │   ├── VehiclePowerOffOverlay.kt # Bandeau de confirmation d'extinction
-│   │   │   └── UpdateOverlay.kt      # Bandeau « MAJ disponible » sur l'écran du véhicule
+│   │   │   ├── UpdateOverlay.kt      # Bandeau « MAJ disponible » sur l'écran du véhicule
+│   │   │   └── ClusterModuleOverlay.kt # Fenêtre du module sur l'écran du combiné, relevés et onglet
 │   │   │
 │   │   ├── receiver/
 │   │   │   └── BootReceiver.kt        # Récepteur de démarrage système
 │   │   │
 │   │   ├── util/
 │   │   │   ├── FirmwareInfo.kt        # Détection firmware + mode forcé
+│   │   │   ├── ClusterModuleSettings.kt # Écran conducteur : activation, module par onglet, actualisation
 │   │   │   ├── GarageMode.kt          # Mode Garage — met tous les automatismes en veille
 │   │   │   ├── FirmwareHelper.kt      # Lecture version firmware complète (async)
 │   │   │   ├── LocaleHelper.kt        # Gestion de la langue (7 langues) et de la taille du texte
@@ -756,6 +847,7 @@ data class DrivingProfile(
     // Prise en compte du chauffage, décorrélée de la valeur : null ou true = appliquer
     val steeringHeatEnabled: Boolean?,
     val seatHeatEnabled: Boolean?,
+    val regenEnabled: Boolean?, // Régénération : null ou true = appliquer, false = inchangée
     // ADAS
     val overspeedAlarm: Boolean,
     val speedLimitTone: Boolean,
@@ -794,7 +886,10 @@ data class DrivingProfile(
 
 ### Persistance
 
-Les profils sont sérialisés en JSON via **Gson** et stockés dans `SharedPreferences`. Maximum **5 profils** par appareil.
+Les profils sont sérialisés en JSON via **Gson** et stockés dans `SharedPreferences`. Maximum **10 profils** par appareil
+(`ProfileManager.MAX_PROFILES`). Au-delà de cinq, le sélecteur fait défiler ses cartes et la page « Cycle profils »
+passe sur deux rangées de cinq. Une version antérieure à la 2.6.9 lit et applique les dix, mais n'en crée plus et n'en
+restaure que cinq depuis la sauvegarde du véhicule.
 
 ### Application d'un profil
 
@@ -1240,7 +1335,7 @@ Available actions — those depending on the firmware do not show up on the othe
 | Safety | ESC · Drowsiness · Drowsiness: sensitivity · Forward collision · ADAS · Traffic signs (TSR) · Overspeed alert · Speed limit change alert · Sound |
 | Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: A/C ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Automatic high beam ON/OFF · Brightness ± · HVAC pop-up |
 | Windows | Open all windows · Close all windows |
-| Media | Play / Pause · Next track · Previous track · Volume + · Volume - |
+| Media | Play / Pause · Next track · Previous track · Volume + · Volume - · Audio source cycle |
 | App and vehicle | Apply a profile · Profile picker · Profile cycle · Open MG4Control · Launch an app · Power the car off |
 
 Comfort and safety actions **re-read the state from the vehicle on every press** instead of
@@ -1302,7 +1397,9 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
 The **HVAC pop-up** action opens the climate controls on top of the current screen — including
 when Android Auto or CarPlay fills the screen and hides the stock climate bar. The steering
 wheel's right joystick moves no focus there: up/down set the temperature, left/right the fan
-speed, the centre click toggles AUTO mode (adjusting the fan speed leaves it). A hint in the header
+speed, the centre click toggles AUTO mode (adjusting the fan speed leaves it). At fan level 1,
+pressing left turns the climate off ("OFF"); while it is off, left does nothing and right sets it
+back to level 1. A hint in the header
 recalls these gestures, or warns that the joystick is inactive until the accessibility service is
 enabled — the window then still works by touch. Chosen by touch: A/C, recirculation, air direction
 and, on equipped firmwares (SWI133, SWI68, SWI165), the heated steering wheel and each seat's
@@ -1315,6 +1412,24 @@ least two profiles; without it, every profile in the order of their list). On ea
 shortcut targets the profile that follows the active one and shows its name; it applies it one
 second later, then confirms it on screen. Two quick presses therefore skip a profile without
 applying it. If the speed lock refuses the write, nothing changes.
+
+#### Audio source cycle
+The **Audio source cycle** action switches to the next source of a cycle composed on the
+*Source cycle* page, as tiles: radio, Bluetooth, USB, online, CarPlay / Android Auto (at least
+two sources; without it, radio then Bluetooth). On each press, *Source: …* shows and the car
+switches to it one second later; two quick presses therefore skip a source. There is no "change
+source" command: the app asks the target source to play, which brings it to the front, without
+pausing anything. Availability is not checked: a source with nothing to play stays silent, and
+the next press moves on, because the cycle starts again from the last source chosen, not from
+the one playing.
+
+- **SWI133, SWI68, SWI165**: through the SAIC media service, source by source.
+- **SWI69, SWI131, SWI132**: Bluetooth goes through the SAIC Media app, like the original source
+  key — that app switches the car's audio output to Bluetooth before starting playback. USB
+  targets the player of the port the stick is plugged into (one player per port). "Online" is
+  not offered: that source does not exist on these firmwares.
+- **CarPlay / Android Auto**: through the original AllGo receiver; if it has no phone, the app
+  tries wireless Android Auto through DiAuto-MG4.
 
 ### Automation
 - **Apply a profile from the outside temperature**: threshold, direction (below/above), profile to
@@ -1380,7 +1495,7 @@ shortcuts use them too.
 > once you are already outside.
 
 ### Profile Management
-- Save up to **5 custom profiles**
+- Save up to **10 custom profiles** (5 before 2.6.9)
 - Instant one-tap profile application
 - Automatic default profile application **on vehicle startup**
 - **Bluetooth pairing**: a profile can be tied to a device and applied when it connects
@@ -1394,8 +1509,8 @@ the car, in a private file of the app; nothing is sent anywhere. Three sub-tabs 
 
 - **General**: summary over 30 days or the whole history — distance, consumption, energy used,
   recovered and charged, cost. Settings: kWh price for slow and fast charging (up to 100,000, for
-  every currency), currency, the car's battery (51, 64 or 77 kWh), short-trip filter, retention
-  (30 days to 1 year, 3 months by default) and "Delete all"
+  every currency), currency, the car's battery (51, 64 or 77 kWh) and its **state of health**
+  (SOH), short-trip filter, retention (30 days to 1 year, 3 months by default) and "Delete all"
 - **Trips**: each trip with its duration, distance, consumption and energy breakdown
 - **Charging**: energy charged, cost and AC / DC sessions, including charges made while the head
   unit was asleep
@@ -1408,7 +1523,7 @@ Where the figures come from:
 | Distance | Integration of the speed, read every 10 s while driving; the odometer, which only publishes whole kilometres, is the safeguard |
 | Trip energy, SWI133 and SWI132 | The car's counters, in tenths of a kWh: total, climate, accessories, regeneration |
 | Trip energy, other firmwares | Their counters stay at zero: battery voltage × current, read every second while driving. The breakdown is limited to "Motor" and "Climate control and others", in whole kWh |
-| Charge energy | Percentage gained × usable capacity of the chosen battery |
+| Charge energy | Percentage gained × capacity used: usable capacity of the chosen battery × state of health |
 | Charge type and power | Type read from the car (AC or DC); power measured if the head unit is awake during the charge, otherwise computed (energy ÷ duration) and labelled as such |
 
 Rules worth knowing:
@@ -1424,20 +1539,60 @@ Rules worth knowing:
   tenths of a kWh), it is shown with "≈" and no decimal
 - **Short trips**: filter off by default; when on, a trip shorter than the chosen distance (1 km by
   default, 0.1 to 50 km) is not recorded
-- **Battery**: changing it recalculates the charges already recorded; until it has been confirmed,
-  the Charging tab reminds you
+- **Battery and state of health**: the state of health is set from 50 to 100% in 0.5% steps, with
+  the − and + buttons (hold them to scroll), and the capacity used shows below. 100% by default: a
+  dealer or an OBD app can measure it. Changing either recalculates the charges already recorded;
+  until the battery has been confirmed, the Charging tab reminds you
 - **Power cuts**: the ongoing trip is saved after each reading, and a trip cut short by the head
   unit switching off is closed at the next start-up. The history is written to a temporary file
   then renamed: a power cut never truncates it
 - **Clock**: a head unit woken up by charging may restart on its factory clock (2019); readings
   dated before 2025 are discarded
 
+### Driver display
+An option in *Settings → Interface*, **off by default**, on **SWI133, SWI68 and SWI165** only: an
+MG4Control module shows in the centre of the instrument cluster, behind the wheel, instead of the
+original page of the Navigation and Music tabs.
+
+The cluster is a separate computer. Only a **260 × 260 px** square in its centre comes from the
+head unit: SAIC draws it there with a system app (`clusterprojection`), on Android's second display
+(no. 1, 800 × 480). MG4Control lays its window exactly over that square, with that app's background
+to blend in, as soon as the app starts — without waiting for READY. On the **A9** firmwares (SWI69,
+SWI131, SWI132), that app does not exist and the cluster draws everything itself: nothing can show
+there, and the card does not appear in the settings.
+
+| Module | Gauge | Large figure | Footer |
+|---|---|---|---|
+| **Consumption** | Graduated ring, logarithmic scale up to 3,000 Wh/km (300 kWh/100 km) | Wh/km or kWh/100 km while driving; kW drawn when stationary (below 5 km/h); kW recovered when regenerating | Trip average · energy recovered |
+| **Power** | Graduated arc from 60 kW recovered (left) to 320 kW (right), logarithmic scale | kW, written under the figure; negative when regenerating | Battery · trip average |
+
+- **One module per tab**: None, Consumption or Power for the Navigation tab, and likewise for the
+  Music tab. The module follows the tab shown on the cluster (`IPK_CLUSTER_TAB_BTN_STS`); trip
+  computer, tyre pressure and settings are drawn by the cluster itself and keep their page
+- **Consumption unit**: Wh/km (default) or kWh/100 km, with one decimal below 100. The ring does not
+  move from one unit to the other; its graduations (0 · 100 · 200 · 500 · 1k · 3k Wh/km, or 0 · 10 · 20 ·
+  50 · 100 · 300 kWh/100 km) and the trip average follow the unit
+- **Tightened power scale**: logarithmic, so the arc moves while driving — 20 kW fill a quarter of it,
+  50 kW 44%, 100 kW 63%; on the regeneration side, 10 kW make 36%. Graduations 20 · 50 · 100 · 200 · 320
+  and 10 · 30 · 60. The fill stops cleanly at zero, without spilling over to the other side
+- **Colours**: orange for consumption, blue for regeneration, whatever the value; the drive mode
+  shows as a pill at the top left
+- **Refresh rate** of power, speed and gauge: a slider from 0.1 to 1 s (1 s by default). The drive
+  mode and the battery are read every 10 s
+- **The figure counts** from one value to the next (100, 101… 300) instead of jumping, and the
+  gauge glides along, over 80% of the refresh interval; a change of unit (Wh/km → kW when
+  stationary) jumps straight away
+- **Trip average**: net energy (regeneration deducted) ÷ distance integrated since entering READY,
+  shown from 200 m. It is computed on the spot rather than taken from the Statistics tab, which can
+  be turned off
+
 ### Settings
 Screen organised into **four tabs**:
 - **Languages**: French, English, German, Spanish, Italian, Portuguese, Turkish — the language is
   asked on first launch, in a window with seven large tiles
 - **Interface**: screen shown at startup, appearance (auto / dark / light), text size (standard /
-  large / extra large), **pop-up closing delay** (1 to 60 s, 10 by default)
+  large / extra large), **pop-up closing delay** (1 to 60 s, 10 by default), **module on the
+  driver display** (SWI133, SWI68, SWI165 — see above)
 - **Advanced**: **Garage mode** (see below), return to the default profile each time the car
   enters READY (option, off by default), update check at launch, **update alert on the
   vehicle screen**, **beta channel**, power the car off while keeping the screen on, block driving
@@ -1465,6 +1620,16 @@ required); a hint in their header recalls the gestures, or warns that the joysti
 banner neither hides nor dims anything: whatever is touched elsewhere goes to the app underneath.
 Everything closes by itself after the **pop-up delay** (*Settings → Interface*); on a banner, the
 countdown is written on the button that means "no" — the one the delay triggers.
+
+The **shortcut that opens a pop-up closes it**: a second press closes the profile picker just like
+the end of the delay (in a Bluetooth conflict, the first profile offered is applied), and the HVAC
+pop-up likewise. When that shortcut is a long press on a right-joystick key, a short press on that
+key still navigates — on release —, and a press held up to the threshold closes the window without
+navigating: on the HVAC pop-up, closing changes neither the temperature nor the fan speed.
+
+The **profile picker opens on the active profile**: the joystick starts from its card, and the row
+scrolls to show it when it is beyond the fifth profile. In a Bluetooth conflict, it starts from the
+first card, the one the delay applies.
 
 **Inside the app**:
 - **confirmations** all look alike — an icon, a title, a text, one or two buttons — and their
@@ -1535,11 +1700,20 @@ users read as global, and it is.
 
 ### Profiles
 - Profile list with apply, set as default, edit and delete
+- **Profile order**: a long press on a card in the list lifts it; drag it into place (the list
+  scrolls by itself near its edges, a banner shows the position) and the order is saved on release.
+  This order is the picker's, the "Profile cycle" page buttons' and the default cycle's; in a
+  Bluetooth conflict it is the priority — the first of the conflicting profiles is applied when the
+  delay runs out
 - **Full-screen editor** organised into three categories: Driving, Safety, Comfort
 - **One switch per category**, at the top of each tab: switched off, the tab folds away and the
   profile writes nothing there — a profile can cover safety only, or comfort only. At least one is
   needed to save; existing profiles keep their three categories on
 - The profile name and the "default profile" setting stay visible across the three tabs
+- **Regeneration unchanged**: a switch on the Regeneration section of the Driving tab; when off,
+  the profile touches neither the regeneration level nor one-pedal driving, the level buttons grey
+  out, and both the list and the picker show it ("Regen unchanged"). Existing profiles keep their
+  regeneration
 - Heated steering wheel and seats have an **apply** switch: unchecked, the profile leaves the
   setting alone instead of turning it off
 - **Automatic high beam**: same switch, unchecked by default — existing profiles leave it alone
@@ -1595,6 +1769,9 @@ firmwares.
 | Firmware SWI69 | Compatible ✅ |
 | Firmware SWI165 | Compatible ✅ |
 | UNKNOWN firmware | Forced SWI133/SWI132/SWI68/SWI69/SWI131/SWI165 mode available ⚠️ |
+
+The driver display module is limited to SWI133, SWI68 and SWI165 (see
+[Driver display](#driver-display)).
 
 ---
 
@@ -1667,6 +1844,8 @@ MG4Control/
 │   │   │   ├── StatsTracker.kt        # Statistics: trips and charges (pure state machine, tested)
 │   │   │   ├── StatsSummary.kt        # Statistics: aggregates of a period (cost, consumption)
 │   │   │   ├── PowerIntegrator.kt     # Energy from voltage × current (firmwares without counters)
+│   │   │   ├── ClusterGauge.kt        # Driver display: gauge scales, square placement, trip average
+│   │   │   ├── ClusterTab.kt          # Driver display: the cluster's tabs
 │   │   │   └── ProfileBackup.kt       # Vehicle backup format
 │   │   │
 │   │   ├── profile/
@@ -1678,6 +1857,7 @@ MG4Control/
 │   │   ├── hardware/
 │   │   │   ├── MG4Hardware.kt         # Hardware abstraction (4 layers)
 │   │   │   ├── StatsCollector.kt      # Statistics readings (only when turned on)
+│   │   │   ├── ClusterTabReader.kt    # Tab shown on the cluster
 │   │   │   └── VehicleWriteGate.kt    # Speed lock, enforced inside the write primitives
 │   │   │
 │   │   ├── stats/
@@ -1717,6 +1897,7 @@ MG4Control/
 │   │   │   ├── AppDialog.kt           # App windows: confirmation, choice grid, lists, − / + buttons
 │   │   │   ├── RestoreProfilesDialog.kt # "Restore profiles?" — lists the profiles found
 │   │   │   ├── StatsDialogs.kt        # Complete a charge, fix a tariff (no keyboard)
+│   │   │   ├── widget/ClusterGaugeView.kt # Driver display module (ring or arc, counting figure)
 │   │   │   ├── ConsoleFragment.kt     # Real-time debug log viewer
 │   │   │   ├── DriveRegenFragment.kt  # Legacy (unused in v2)
 │   │   │   ├── ClimateFragment.kt     # Legacy (unused in v2)
@@ -1730,13 +1911,15 @@ MG4Control/
 │   │   │   ├── HvacPopupOverlay.kt    # HVAC pop-up (+ HvacPopupSkin.kt, its painting)
 │   │   │   ├── ProfileConfirmOverlay.kt # YES/NO banner for automations
 │   │   │   ├── VehiclePowerOffOverlay.kt # Power-off confirmation banner
-│   │   │   └── UpdateOverlay.kt      # "Update available" banner on the vehicle screen
+│   │   │   ├── UpdateOverlay.kt      # "Update available" banner on the vehicle screen
+│   │   │   └── ClusterModuleOverlay.kt # Module window on the cluster display, readings and tab
 │   │   │
 │   │   ├── receiver/
 │   │   │   └── BootReceiver.kt        # System boot receiver
 │   │   │
 │   │   ├── util/
 │   │   │   ├── FirmwareInfo.kt        # Firmware detection + forced mode
+│   │   │   ├── ClusterModuleSettings.kt # Driver display: on/off, module per tab, refresh rate
 │   │   │   ├── GarageMode.kt          # Garage mode — puts every automatism to sleep
 │   │   │   ├── FirmwareHelper.kt      # Full firmware version string reader (async)
 │   │   │   ├── LocaleHelper.kt        # Language management (7 languages) and text size
@@ -1824,6 +2007,7 @@ data class DrivingProfile(
     // Whether heating is applied at all, decoupled from its value: null or true = apply
     val steeringHeatEnabled: Boolean?,
     val seatHeatEnabled: Boolean?,
+    val regenEnabled: Boolean?, // Regeneration: null or true = apply, false = unchanged
     // ADAS
     val overspeedAlarm: Boolean,
     val speedLimitTone: Boolean,
@@ -1861,7 +2045,10 @@ data class DrivingProfile(
 
 ### Persistence
 
-Profiles are serialized to JSON via **Gson** and stored in `SharedPreferences`. Maximum **5 profiles** per device.
+Profiles are serialized to JSON via **Gson** and stored in `SharedPreferences`. Maximum **10 profiles** per device
+(`ProfileManager.MAX_PROFILES`). Beyond five, the picker scrolls its cards and the "Profile cycle" page moves to two
+rows of five. A version older than 2.6.9 reads and applies all ten, but creates no more and only restores five from
+the vehicle backup.
 
 ### Applying a Profile
 

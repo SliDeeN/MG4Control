@@ -63,7 +63,8 @@ class ProfileAdapter(
             profile, adasLabel,
             context.getString(R.string.profile_cat_drive),
             context.getString(R.string.profile_cat_safety),
-            context.getString(R.string.profile_cat_comfort)
+            context.getString(R.string.profile_cat_comfort),
+            regenUnchanged = context.getString(R.string.regen_unchanged_short)
         )
 
         holder.tvDefault.visibility = if (isDefault) View.VISIBLE else View.GONE
@@ -72,13 +73,30 @@ class ProfileAdapter(
             else           context.getColor(R.color.text_primary)
         )
 
-        holder.btnApply.setOnClickListener   { onApply(profile) }
-        holder.btnDefault.setOnClickListener { onSetDefault(profile) }
-        holder.btnEdit.setOnClickListener    { onEdit(profile) }
-        holder.btnDelete.setOnClickListener  { onDelete(profile) }
+        holder.btnApply.setOnClickListener   { if (!clicsBloques) onApply(profile) }
+        holder.btnDefault.setOnClickListener { if (!clicsBloques) onSetDefault(profile) }
+        holder.btnEdit.setOnClickListener    { if (!clicsBloques) onEdit(profile) }
+        holder.btnDelete.setOnClickListener  { if (!clicsBloques) onDelete(profile) }
     }
 
     override fun getItemCount() = profiles.size
+
+    /**
+     * Vrai pendant un glisser-déposer : un appui long relâché sans bouger sur un bouton ne doit
+     * pas le déclencher (le bouton reçoit encore ce relâcher).
+     */
+    var clicsBloques = false
+
+    /** Glisser-déposer en cours : la liste affichée suit le doigt. */
+    fun move(from: Int, to: Int) {
+        if (from !in profiles.indices || to !in profiles.indices) return
+        profiles.add(to, profiles.removeAt(from))
+        notifyItemMoved(from, to)
+    }
+
+    fun ids(): List<String> = profiles.map { it.id }
+
+    fun nomA(position: Int): String? = profiles.getOrNull(position)?.name
 
     fun update(newProfiles: List<DrivingProfile>, newDefaultId: String?) {
         profiles.clear()

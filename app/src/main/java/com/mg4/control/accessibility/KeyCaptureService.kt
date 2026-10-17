@@ -16,6 +16,7 @@ import com.mg4.control.service.MG4ControlService
 import com.mg4.control.service.ProfileConfirmOverlay
 import com.mg4.control.service.ProfilePickerOverlay
 import com.mg4.control.shortcut.PressType
+import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.GarageMode
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -75,6 +76,16 @@ class KeyCaptureService : AccessibilityService() {
 
     /** Touches du joystick dont l'appui a servi à naviguer : leur fin d'appui est avalée aussi. */
     private val navigationEnCours = mutableSetOf<Int>()
+
+    /**
+     * Appuis du joystick mis en attente pendant qu'un pop-up est ouvert (issue #137) : la touche
+     * porte, en appui long, le raccourci qui ouvre ce pop-up. Relâchée avant le seuil, elle
+     * navigue — au relâchement ; tenue jusqu'au seuil, elle referme le pop-up SANS naviguer.
+     * Naviguer d'abord aurait été plus vif, mais au pop-up HVAC le joystick règle la température
+     * et la ventilation : refermer le pop-up aurait d'abord changé un réglage.
+     */
+    private class Attente(val minuterie: Runnable, val naviguer: () -> Unit)
+    private val attentes = mutableMapOf<Int, Attente>()
 
     /**
      * Touches interceptées pour un raccourci avancé, entre leur DOWN et leur UP.
@@ -141,7 +152,14 @@ class KeyCaptureService : AccessibilityService() {
             // pu se fermer entre-temps (le clic central choisit un profil et le ferme), et ce UP
             // ne doit partir ni au système ni vers un raccourci avancé de la même touche.
             if (code in navigationEnCours) {
-                if (event.action == KeyEvent.ACTION_UP) navigationEnCours.remove(code)
+                if (event.action == KeyEvent.ACTION_UP) {
+                    navigationEnCours.remove(code)
+                    // Relâchée avant le seuil : ce n'était pas le raccourci, c'était un déplacement.
+                    attentes.remove(code)?.let { a ->
+                        handler.removeCallbacks(a.minuterie)
+                        a.naviguer()
+                    }
+                }
                 return true
             }
 
@@ -176,20 +194,43 @@ class KeyCaptureService : AccessibilityService() {
                 val profils = ProfilePickerOverlay.isShowing()
                 if (confirmation || profils || HvacPopupOverlay.isShowing()) {
                     navigationEnCours.add(code)
-                    when {
-                        confirmation -> {
-                            AppLogger.i(TAG, "touche $code — navigation popup confirmation → ${commande.name}")
-                            ProfileConfirmOverlay.naviguer(commande)
-                        }
-                        profils -> {
-                            AppLogger.i(TAG, "touche $code — navigation popup profils → ${commande.name}")
-                            ProfilePickerOverlay.naviguer(commande)
-                        }
-                        else -> {
-                            AppLogger.i(TAG, "touche $code — pop-up HVAC → ${commande.name}")
-                            HvacPopupOverlay.naviguer(commande)
+                    val naviguer: () -> Unit = {
+                        when {
+                            confirmation -> {
+                                AppLogger.i(TAG, "touche $code — navigation popup confirmation → ${commande.name}")
+                                ProfileConfirmOverlay.naviguer(commande)
+                            }
+                            profils -> {
+                                AppLogger.i(TAG, "touche $code — navigation popup profils → ${commande.name}")
+                                ProfilePickerOverlay.naviguer(commande)
+                            }
+                            else -> {
+                                AppLogger.i(TAG, "touche $code — pop-up HVAC → ${commande.name}")
+                                HvacPopupOverlay.naviguer(commande)
+                            }
                         }
                     }
+                    // La confirmation ne s'ouvre jamais par un raccourci : rien à refermer ainsi.
+                    val fermer: (() -> Unit)? = when {
+                        confirmation -> null
+                        profils -> if (ouvreEnAppuiLong(code, ShortcutAction.PROFILE_PICKER)) {
+                            { ProfilePickerOverlay.fermerParRaccourci(this) }
+                        } else null
+                        else -> if (ouvreEnAppuiLong(code, ShortcutAction.HVAC_POPUP)) {
+                            { HvacPopupOverlay.fermerParRaccourci() }
+                        } else null
+                    }
+                    if (fermer == null) {
+                        naviguer()
+                        return true
+                    }
+                    val minuterie = Runnable {
+                        attentes.remove(code)
+                        AppLogger.i(TAG, "touche $code — appui LONG sur le raccourci du pop-up ouvert → fermeture")
+                        fermer()
+                    }
+                    attentes[code] = Attente(minuterie, naviguer)
+                    handler.postDelayed(minuterie, AdvancedShortcuts.LONG_PRESS_MS)
                     return true
                 }
             }
@@ -219,6 +260,13 @@ class KeyCaptureService : AccessibilityService() {
             return false
         }
     }
+
+    /**
+     * Vrai si [code], en appui long, déclenche [action] pour le profil actif : c'est alors aussi
+     * la touche qui referme le pop-up de cette action (issue #137).
+     */
+    private fun ouvreEnAppuiLong(code: Int, action: ShortcutAction): Boolean =
+        AdvancedShortcuts.isEnabled(this) && AdvancedShortcuts.resolve(this, code, PressType.LONG)?.action == action
 
     /**
      * Début d'un appui.
@@ -378,6 +426,7 @@ class KeyCaptureService : AccessibilityService() {
         longDeclenche.clear()
         doubleDeclenche.clear()
         navigationEnCours.clear()
+        attentes.clear()
         touchesPrises.clear()
         modeles.clear()
         rejeux.clear()

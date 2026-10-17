@@ -219,6 +219,10 @@ class MG4ControlService : Service() {
         com.mg4.control.automation.AutoBrightness.start(applicationContext)
         // Coupure auto du chauffage de la batterie : relit son interrupteur à chaque passage.
         com.mg4.control.automation.BatteryHeatingAutomation.start(applicationContext)
+        // Module sur le combiné : rien tant que l'interrupteur des Réglages est coupé.
+        ClusterModuleOverlay.refresh(applicationContext, "démarrage du service")
+        // Pop-up de charge : suit la charge si l'option (cachée par défaut) est active.
+        ChargeMonitor.refresh(applicationContext)
         // Vérification de mise à jour, cinq secondes après le démarrage automatique.
         //
         // Pourquoi attendre du tout : à t=0 la liaison données de la voiture n'est pas encore
@@ -324,6 +328,7 @@ class MG4ControlService : Service() {
         skinChangeReceiver = null
         externalApiReceiver?.let { unregisterReceiver(it) } // issue #79
         externalApiReceiver = null
+        ClusterModuleOverlay.stop()
     }
 
     // POST_NOTIFICATIONS n'existe qu'à partir d'Android 13 ; la voiture est en Android 9.
@@ -1046,17 +1051,22 @@ class MG4ControlService : Service() {
     private fun executeToggle(action: ShortcutAction, pressKey: String = "") {
         val prefs = getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
 
-        // PROFILE_PICKER : overlay flottant au-dessus du launcher — aucun toggle d'état
+        // PROFILE_PICKER : overlay flottant au-dessus du launcher — un second appui le referme
+        // (issue #137), comme le pop-up HVAC.
         if (action == ShortcutAction.PROFILE_PICKER) {
-            Handler(Looper.getMainLooper()).post {
-                ProfilePickerOverlay.show(this@MG4ControlService)
-            }
+            ProfilePickerOverlay.toggle(this@MG4ControlService)
             return
         }
 
         // HVAC_POPUP : même famille — un second appui referme la fenêtre.
         if (action == ShortcutAction.HVAC_POPUP) {
             HvacPopupOverlay.toggle(this@MG4ControlService)
+            return
+        }
+
+        // CHARGE_POPUP : même famille — rouvre le pop-up de charge, ou le referme.
+        if (action == ShortcutAction.CHARGE_POPUP) {
+            ChargePopupOverlay.toggle(this@MG4ControlService)
             return
         }
 
@@ -1080,6 +1090,13 @@ class MG4ControlService : Service() {
         // délai contre les appuis rapprochés et application sont dans [ProfileCycleShortcut].
         if (action == ShortcutAction.PROFILE_CYCLE) {
             ProfileCycleShortcut.press(this@MG4ControlService)
+            return
+        }
+
+        // AUDIO_SOURCE_CYCLE : source suivante du cycle composé dans l'onglet Raccourcis. Même
+        // mécanique que le cycle de profils, dans [AudioSourceCycleShortcut].
+        if (action == ShortcutAction.AUDIO_SOURCE_CYCLE) {
+            AudioSourceCycleShortcut.press(this@MG4ControlService)
             return
         }
 
