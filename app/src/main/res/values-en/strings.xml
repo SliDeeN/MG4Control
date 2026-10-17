@@ -845,7 +845,7 @@
     <string name="charge_popup_price_note">Only changes this charge.</string>
     <string name="charge_popup_price_ok">Confirm</string>
     <string name="charge_popup_none">No charge in progress</string>
-    <string name="charge_popup_unlocked">“Charging pop-up” option now shown in Settings › Interface</string>
+    <string name="charge_popup_disabled">Turn on “Charging pop-up” in Settings › Interface</string>
     <string name="settings_charge_popup">Charging pop-up</string>
     <string name="settings_charge_popup_switch">Show the pop-up while charging</string>
     <string name="settings_charge_popup_desc">Opens whenever a charge starts: curve from the start, adjustable charge limit, cost. Closes on demand or when the car goes READY; the “Charging pop-up” shortcut reopens it.</string>

@@ -625,16 +625,15 @@
             </LinearLayout>
 
             <!-- ── Section POP-UP DE CHARGE (2026-10-16) ─────────────────────────
-                 Cachee tant que l'utilisateur ne l'a pas fait apparaitre (5 appuis sur le logo) ;
-                 desactivee par defaut. Une fois apparue, elle reste visible. -->
+                 Activee par defaut. Cachee derriere 5 appuis sur le logo pendant les essais,
+                 visible de tous depuis le 2026-10-17. -->
             <LinearLayout
                 android:id="@+id/card_charge_popup"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:background="@drawable/bg_card_rounded"
-                android:layout_marginBottom="12dp"
-                android:visibility="gone">
+                android:layout_marginBottom="12dp">
 
                 <TextView
                     android:layout_width="match_parent"
@@ -682,7 +681,7 @@
                             android:id="@+id/switch_charge_popup"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:checked="false" />
+                            android:checked="true" />
 
                     </LinearLayout>
 

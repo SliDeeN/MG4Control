@@ -78,7 +78,7 @@ enum class ShortcutAction(val id: Int) {
     AUDIO_SOURCE_CYCLE(44),
 
     // Pop-up de charge (2026-10-16) : le rouvre s'il a été fermé pendant une charge, ou le referme.
-    // Comme HVAC_POPUP, l'action n'écrit rien elle-même. Proposé seulement si l'option est active.
+    // Comme HVAC_POPUP, l'action n'écrit rien elle-même. Option coupée : un message dit où l'activer.
     CHARGE_POPUP(45);
 
     companion object {

@@ -845,7 +845,7 @@
     <string name="charge_popup_price_note">Solo cambia esta carga.</string>
     <string name="charge_popup_price_ok">Aceptar</string>
     <string name="charge_popup_none">No hay ninguna carga en curso</string>
-    <string name="charge_popup_unlocked">Opción «Pop-up de carga» visible en Ajustes › Interfaz</string>
+    <string name="charge_popup_disabled">Activa «Pop-up de carga» en Ajustes › Interfaz</string>
     <string name="settings_charge_popup">Pop-up de carga</string>
     <string name="settings_charge_popup_switch">Mostrar el pop-up durante la carga</string>
     <string name="settings_charge_popup_desc">Se abre al empezar cada carga: curva desde el inicio, límite de carga ajustable, coste. Se cierra a petición o al pasar a READY; el atajo «Pop-up de carga» lo vuelve a abrir.</string>

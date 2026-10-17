@@ -35,7 +35,6 @@ import com.mg4.control.shortcut.ProfileCycle
 import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.hardware.MG4Hardware
-import com.mg4.control.util.ChargePopupSettings
 import com.mg4.control.util.FirmwareInfo
 
 class ShortcutsFragment : Fragment() {
@@ -202,11 +201,8 @@ class ShortcutsFragment : Fragment() {
             // Sources audio : aucun filtre firmware — chaque firmware a sa voie (service média
             // SAIC, lecteurs Android sur A9, allgo pour la projection), à valider sur la voiture.
             add(ActionItem(getString(R.string.shortcuts_action_audio_cycle),    ShortcutAction.AUDIO_SOURCE_CYCLE))
-            // Pop-up de charge : seulement quand l'option est active — donc apparue (5 appuis sur le
-            // logo) ET activée. Essayé le 2026-10-16 dès l'option apparue : l'utilisateur préfère ainsi.
-            if (ChargePopupSettings.isEnabled(requireContext())) {
-                add(ActionItem(getString(R.string.shortcuts_action_charge_popup), ShortcutAction.CHARGE_POPUP))
-            }
+            // Pop-up de charge : toujours proposé (2026-10-17) ; option coupée, il dit où l'activer.
+            add(ActionItem(getString(R.string.shortcuts_action_charge_popup),  ShortcutAction.CHARGE_POPUP))
             add(ActionItem(getString(R.string.shortcuts_action_open_app),       ShortcutAction.OPEN_APP))
             add(ActionItem(getString(R.string.shortcuts_action_open_custom_app),ShortcutAction.OPEN_CUSTOM_APP))
             if (MG4Hardware.hasVehiclePowerOff()) {

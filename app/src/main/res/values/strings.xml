@@ -862,7 +862,7 @@
     <string name="charge_popup_price_note">Ne change que cette charge.</string>
     <string name="charge_popup_price_ok">Valider</string>
     <string name="charge_popup_none">Aucune charge en cours</string>
-    <string name="charge_popup_unlocked">Option « Pop-up de charge » affichée dans Réglages › Interface</string>
+    <string name="charge_popup_disabled">Activez « Pop-up de charge » dans Réglages › Interface</string>
     <string name="settings_charge_popup">Pop-up de charge</string>
     <string name="settings_charge_popup_switch">Afficher le pop-up pendant la charge</string>
     <string name="settings_charge_popup_desc">S\'ouvre à chaque début de charge : courbe depuis le début, limite de charge réglable, coût. Se ferme à la demande ou au passage en READY ; le raccourci « Pop-up de charge » le rouvre.</string>

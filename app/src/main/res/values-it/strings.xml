@@ -845,7 +845,7 @@
     <string name="charge_popup_price_note">Cambia solo questa ricarica.</string>
     <string name="charge_popup_price_ok">Conferma</string>
     <string name="charge_popup_none">Nessuna ricarica in corso</string>
-    <string name="charge_popup_unlocked">Opzione «Pop-up di ricarica» visibile in Impostazioni › Interfaccia</string>
+    <string name="charge_popup_disabled">Attiva «Pop-up di ricarica» in Impostazioni › Interfaccia</string>
     <string name="settings_charge_popup">Pop-up di ricarica</string>
     <string name="settings_charge_popup_switch">Mostra il pop-up durante la ricarica</string>
     <string name="settings_charge_popup_desc">Si apre a ogni inizio di ricarica: curva dall\'inizio, limite di ricarica regolabile, costo. Si chiude a richiesta o al passaggio in READY; la scorciatoia «Pop-up di ricarica» lo riapre.</string>

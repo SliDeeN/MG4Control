@@ -78,10 +78,15 @@ object ChargePopupOverlay {
                 fermer("second appui du raccourci")
                 return@post
             }
-            if (!ChargePopupSettings.isEnabled(app) || ChargeMonitor.etat == null) {
-                AppLogger.i(TAG, "Pop-up de charge — raccourci sans charge suivie")
-                Toast.makeText(app, LocaleHelper.applyLocale(app).getString(R.string.charge_popup_none),
-                    Toast.LENGTH_SHORT).show()
+            val texte = when {
+                !ChargePopupSettings.isEnabled(app) -> R.string.charge_popup_disabled
+                ChargeMonitor.etat == null -> R.string.charge_popup_none
+                else -> null
+            }
+            if (texte != null) {
+                AppLogger.i(TAG, "Pop-up de charge — raccourci sans effet (" +
+                    (if (texte == R.string.charge_popup_disabled) "option coupée" else "aucune charge suivie") + ")")
+                Toast.makeText(app, LocaleHelper.applyLocale(app).getString(texte), Toast.LENGTH_SHORT).show()
                 return@post
             }
             ouvrir(app, "raccourci")

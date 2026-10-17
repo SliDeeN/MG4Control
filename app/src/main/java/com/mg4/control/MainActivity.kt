@@ -28,7 +28,6 @@ import kotlinx.coroutines.withContext
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateDialogManager
 import com.mg4.control.update.UpdateNotifier
-import com.mg4.control.util.ChargePopupSettings
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.ThemeHelper
@@ -157,20 +156,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupDiagnosticUnlock() {
         findViewById<View>(R.id.topbar_logo)?.setOnClickListener {
-            // Les mêmes cinq appuis font aussi apparaître l'option « Pop-up de charge »
-            // (2026-10-16) — elle, pour de bon : le Diagnostic seul est oublié au redémarrage.
-            if (diagnosticUnlocked && ChargePopupSettings.isUnlocked(this)) return@setOnClickListener
+            if (diagnosticUnlocked) return@setOnClickListener
             logoClickCount++
             if (logoClickCount >= 5) {
                 logoClickCount = 0
                 diagnosticUnlocked = true
                 // Révèle immédiatement le bouton si l'onglet Réglages est déjà affiché
                 findViewById<View>(R.id.btn_diagnostic)?.visibility = View.VISIBLE
-                val pourLaPremiereFois = ChargePopupSettings.unlock(this)
-                findViewById<View>(R.id.card_charge_popup)?.visibility = View.VISIBLE
-                Toast.makeText(this, getString(
-                    if (pourLaPremiereFois) R.string.charge_popup_unlocked else R.string.diagnostic_unlocked),
-                    Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, getString(R.string.diagnostic_unlocked), Toast.LENGTH_SHORT).show()
             }
         }
     }

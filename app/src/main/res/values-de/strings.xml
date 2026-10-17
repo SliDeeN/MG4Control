@@ -845,7 +845,7 @@
     <string name="charge_popup_price_note">Gilt nur für diesen Ladevorgang.</string>
     <string name="charge_popup_price_ok">Übernehmen</string>
     <string name="charge_popup_none">Kein Ladevorgang aktiv</string>
-    <string name="charge_popup_unlocked">Option „Lade-Pop-up“ jetzt unter Einstellungen › Oberfläche sichtbar</string>
+    <string name="charge_popup_disabled">„Lade-Pop-up“ unter Einstellungen › Oberfläche einschalten</string>
     <string name="settings_charge_popup">Lade-Pop-up</string>
     <string name="settings_charge_popup_switch">Pop-up während des Ladens anzeigen</string>
     <string name="settings_charge_popup_desc">Öffnet sich bei jedem Ladebeginn: Kurve seit Beginn, einstellbares Ladelimit, Kosten. Schließt sich auf Wunsch oder bei READY; die Verknüpfung „Lade-Pop-up“ öffnet es erneut.</string>

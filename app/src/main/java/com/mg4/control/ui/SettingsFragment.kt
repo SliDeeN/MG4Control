@@ -239,10 +239,7 @@ class SettingsFragment : Fragment() {
             })
         }
 
-        // ── Pop-up de charge (2026-10-16) : caché tant que 5 appuis sur le logo ne l'ont pas fait
-        // apparaître (MainActivity), désactivé par défaut. Le suivi démarre ou s'arrête aussitôt.
-        view.findViewById<View>(R.id.card_charge_popup).visibility =
-            if (ChargePopupSettings.isUnlocked(requireContext())) View.VISIBLE else View.GONE
+        // ── Pop-up de charge (2026-10-16) : activé par défaut. Le suivi démarre ou s'arrête aussitôt.
         view.findViewById<Switch>(R.id.switch_charge_popup).apply {
             isChecked = ChargePopupSettings.isEnabled(requireContext())
             setOnCheckedChangeListener { _, checked ->

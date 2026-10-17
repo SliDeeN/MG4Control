@@ -845,7 +845,7 @@
     <string name="charge_popup_price_note">Yalnızca bu şarjı değiştirir.</string>
     <string name="charge_popup_price_ok">Onayla</string>
     <string name="charge_popup_none">Devam eden şarj yok</string>
-    <string name="charge_popup_unlocked">«Şarj açılır penceresi» seçeneği Ayarlar › Arayüz bölümünde gösteriliyor</string>
+    <string name="charge_popup_disabled">«Şarj açılır penceresi» seçeneğini Ayarlar › Arayüz bölümünden açın</string>
     <string name="settings_charge_popup">Şarj açılır penceresi</string>
     <string name="settings_charge_popup_switch">Şarj sırasında pencereyi göster</string>
     <string name="settings_charge_popup_desc">Her şarj başladığında açılır: başlangıçtan itibaren eğri, ayarlanabilir şarj sınırı, maliyet. İstendiğinde veya READY durumuna geçildiğinde kapanır; «Şarj açılır penceresi» kısayolu yeniden açar.</string>
