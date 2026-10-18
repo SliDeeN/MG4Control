@@ -860,4 +860,19 @@
     <string name="settings_charge_popup_switch">Pop-up während des Ladens anzeigen</string>
     <string name="settings_charge_popup_desc">Öffnet sich bei jedem Ladebeginn: Kurve seit Beginn, einstellbares Ladelimit, Kosten. Schließt sich auf Wunsch oder bei READY; die Verknüpfung „Lade-Pop-up“ öffnet es erneut.</string>
     <string name="shortcuts_action_charge_popup">Lade-Pop-up</string>
+
+    <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
+    <string name="btn_cluster_tab">Reiter des Kombiinstruments</string>
+    <string name="cluster_tab_hint">Wechsle den Reiter mit den Lenkradtasten: Die Nummer folgt live. Jeder Wechsel wird im Diagnoseprotokoll vermerkt.</string>
+    <string name="cluster_tab_code_name">Laut Originalcode: %1$s</string>
+    <string name="cluster_tab_unknown">Wert nicht im Originalcode</string>
+    <string name="cluster_tab_unreadable">Nicht lesbar</string>
+    <string name="cluster_tab_0">Bordcomputer</string>
+    <string name="cluster_tab_1">Navigation</string>
+    <string name="cluster_tab_2">Musik und Radio</string>
+    <string name="cluster_tab_3">Telefon</string>
+    <string name="cluster_tab_4">Warnzentrale</string>
+    <string name="cluster_tab_5">Einstellungen</string>
+    <string name="cluster_tab_6">Fahrassistenz</string>
+    <string name="cluster_tab_7">Reserviert</string>
 </resources>

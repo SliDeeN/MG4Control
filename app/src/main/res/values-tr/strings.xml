@@ -860,4 +860,19 @@
     <string name="settings_charge_popup_switch">Şarj sırasında pencereyi göster</string>
     <string name="settings_charge_popup_desc">Her şarj başladığında açılır: başlangıçtan itibaren eğri, ayarlanabilir şarj sınırı, maliyet. İstendiğinde veya READY durumuna geçildiğinde kapanır; «Şarj açılır penceresi» kısayolu yeniden açar.</string>
     <string name="shortcuts_action_charge_popup">Şarj açılır penceresi</string>
+
+    <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
+    <string name="btn_cluster_tab">Gösterge paneli sekmesi</string>
+    <string name="cluster_tab_hint">Sekmeyi direksiyon tuşlarıyla değiştirin: numara anlık olarak güncellenir. Her değişiklik Teşhis günlüğüne yazılır.</string>
+    <string name="cluster_tab_code_name">Orijinal koda göre: %1$s</string>
+    <string name="cluster_tab_unknown">Orijinal kodda olmayan değer</string>
+    <string name="cluster_tab_unreadable">Okunamıyor</string>
+    <string name="cluster_tab_0">Yol bilgisayarı</string>
+    <string name="cluster_tab_1">Navigasyon</string>
+    <string name="cluster_tab_2">Müzik ve radyo</string>
+    <string name="cluster_tab_3">Telefon</string>
+    <string name="cluster_tab_4">Uyarı merkezi</string>
+    <string name="cluster_tab_5">Ayarlar</string>
+    <string name="cluster_tab_6">Sürüş asistanı</string>
+    <string name="cluster_tab_7">Ayrılmış</string>
 </resources>

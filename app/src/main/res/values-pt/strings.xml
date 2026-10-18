@@ -860,4 +860,19 @@
     <string name="settings_charge_popup_switch">Mostrar o pop-up durante a carga</string>
     <string name="settings_charge_popup_desc">Abre-se no início de cada carga: curva desde o início, limite de carga ajustável, custo. Fecha-se a pedido ou ao passar a READY; o atalho «Pop-up de carga» volta a abri-lo.</string>
     <string name="shortcuts_action_charge_popup">Pop-up de carga</string>
+
+    <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
+    <string name="btn_cluster_tab">Separador do painel</string>
+    <string name="cluster_tab_hint">Muda de separador com os botões do volante: o número acompanha em direto. Cada mudança fica anotada no registo do Diagnóstico.</string>
+    <string name="cluster_tab_code_name">Segundo o código original: %1$s</string>
+    <string name="cluster_tab_unknown">Valor ausente do código original</string>
+    <string name="cluster_tab_unreadable">Ilegível</string>
+    <string name="cluster_tab_0">Computador de bordo</string>
+    <string name="cluster_tab_1">Navegação</string>
+    <string name="cluster_tab_2">Música e rádio</string>
+    <string name="cluster_tab_3">Telefone</string>
+    <string name="cluster_tab_4">Centro de alertas</string>
+    <string name="cluster_tab_5">Definições</string>
+    <string name="cluster_tab_6">Assistência à condução</string>
+    <string name="cluster_tab_7">Reservado</string>
 </resources>

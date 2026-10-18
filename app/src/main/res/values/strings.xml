@@ -877,4 +877,19 @@
     <string name="settings_charge_popup_switch">Afficher le pop-up pendant la charge</string>
     <string name="settings_charge_popup_desc">S\'ouvre à chaque début de charge : courbe depuis le début, limite de charge réglable, coût. Se ferme à la demande ou au passage en READY ; le raccourci « Pop-up de charge » le rouvre.</string>
     <string name="shortcuts_action_charge_popup">Pop-up de charge</string>
+
+    <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
+    <string name="btn_cluster_tab">Onglet du combiné</string>
+    <string name="cluster_tab_hint">Change d\'onglet avec les boutons du volant : le numéro suit en direct. Chaque changement est noté dans le journal du Diagnostic.</string>
+    <string name="cluster_tab_code_name">D\'après le code d\'origine : %1$s</string>
+    <string name="cluster_tab_unknown">Valeur absente du code d\'origine</string>
+    <string name="cluster_tab_unreadable">Illisible</string>
+    <string name="cluster_tab_0">Ordinateur de bord</string>
+    <string name="cluster_tab_1">Navigation</string>
+    <string name="cluster_tab_2">Musique et radio</string>
+    <string name="cluster_tab_3">Téléphone</string>
+    <string name="cluster_tab_4">Centre d\'alertes</string>
+    <string name="cluster_tab_5">Réglages</string>
+    <string name="cluster_tab_6">Aides à la conduite</string>
+    <string name="cluster_tab_7">Réservé</string>
 </resources>
