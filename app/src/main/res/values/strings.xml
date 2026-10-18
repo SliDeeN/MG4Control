@@ -849,10 +849,10 @@
     <string name="charge_popup_hint_sending">Envoi de la limite de %1$d %% à la voiture…</string>
     <string name="charge_popup_hint_refused">La voiture n\'a pas pris la limite de %1$d %%</string>
     <string name="charge_popup_hint_unknown">Limite de charge illisible</string>
-    <string name="charge_popup_until">%1$s jusqu\'à %2$d %%</string>
     <string name="charge_popup_until_unknown">Jusqu\'à %1$d %%</string>
-    <string name="charge_popup_end_at">fin vers %1$s</string>
-    <string name="charge_popup_done_at">terminée à %1$s</string>
+    <string name="charge_popup_end_label">Fin estimée</string>
+    <string name="charge_popup_end_left">encore %1$s · jusqu\'à %2$d %%</string>
+    <string name="charge_popup_lfp_info">Limite de charge non réglable (batterie LFP)</string>
     <string name="charge_popup_legend_power">Puissance (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batterie (%)</string>
     <string name="charge_popup_since">depuis le début de la charge (%1$s)</string>

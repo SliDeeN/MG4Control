@@ -25,10 +25,8 @@ class ChargePopupStringsTest {
         "charge_popup_hint_below" to arrayOf(60),
         "charge_popup_hint_sending" to arrayOf(90),
         "charge_popup_hint_refused" to arrayOf(90),
-        "charge_popup_until" to arrayOf("21 min", 80),
         "charge_popup_until_unknown" to arrayOf(80),
-        "charge_popup_end_at" to arrayOf("15:55"),
-        "charge_popup_done_at" to arrayOf("15:55"),
+        "charge_popup_end_left" to arrayOf("26 min", 100),
         "charge_popup_since" to arrayOf("15:31"),
         "charge_popup_target" to arrayOf(80),
         "charge_popup_end_estimate" to arrayOf("15:55"),
@@ -56,7 +54,8 @@ class ChargePopupStringsTest {
             assertEquals(dossier, reference, t.keys)
             for ((nom, args) in arguments) {
                 val rendu = String.format(Locale.FRANCE, t.getValue(nom), *args)
-                assertFalse("$dossier/$nom : $rendu", rendu.contains("%1") || rendu.contains("%2"))
+                // Un paramètre resté tel quel (« %1$s ») : pas « %100 », le turc met le signe devant.
+                assertFalse("$dossier/$nom : $rendu", Regex("""%\d+\$""").containsMatchIn(rendu))
             }
         }
     }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.view.ContextThemeWrapper
 import android.view.View
+import android.view.ViewGroup
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import com.mg4.control.R
@@ -11,11 +12,13 @@ import com.mg4.control.model.ChargePoint
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.MoneyFormat
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 
 /**
@@ -53,6 +56,58 @@ class ChargePopupLayoutTest {
                 val soc = vue.findViewById<TextView>(R.id.charge_soc).text.toString()
                 assertTrue("$langue : $soc", soc.startsWith("62"))
             }
+        }
+    }
+
+    @Test
+    fun `version A9 (LFP) - barre inerte, heure de fin en grand, dans les sept langues`() {
+        for (langue in listOf("fr", "en", "de", "es", "it", "pt", "tr")) {
+            val loc = localise(langue)
+            val themed = ContextThemeWrapper(loc, R.style.Theme_MG4Control)
+            for (e in listOf(etat(), etat(finie = true, restant = null), etat(limite = null, restant = null))) {
+                val (vue, vues) = ChargePopupOverlay.preparer(themed, loc, e, lfp = true)
+                assertFalse(vues.curseur.reglable)
+                assertEquals(View.GONE, vue.findViewById<View>(R.id.charge_hint).visibility)
+                assertEquals(View.VISIBLE, vue.findViewById<View>(R.id.charge_lfp_note).visibility)
+                val fin = vue.findViewById<TextView>(R.id.charge_end_time).text.toString()
+                assertTrue("$langue : « $fin »", fin.isNotEmpty())
+                assertFalse(vues.courbe.donnees!!.afficherLimite)
+            }
+        }
+        // Hors A9 : curseur réglable, aide visible, note LFP cachée — et la même heure de fin en bas.
+        val loc = localise("fr")
+        val (vue, vues) = ChargePopupOverlay.preparer(ContextThemeWrapper(loc, R.style.Theme_MG4Control), loc, etat(), lfp = false)
+        assertTrue(vues.curseur.reglable)
+        assertEquals(View.VISIBLE, vue.findViewById<View>(R.id.charge_hint).visibility)
+        assertEquals(View.GONE, vue.findViewById<View>(R.id.charge_lfp_note).visibility)
+        assertTrue(vue.findViewById<TextView>(R.id.charge_end_time).text.isNotEmpty())
+        assertTrue(vues.courbe.donnees!!.afficherLimite)
+    }
+
+    /**
+     * La colonne de gauche (288 dp de contenu) tient en taille de texte Standard et Grand, sur les
+     * deux familles de firmwares et dans les langues aux textes les plus longs : son dernier
+     * élément visible finit avant le bas. Compté à la main le 2026-10-18 : ~24 dp de marge en
+     * Standard, ~5 en Grand — la version A9 de la veille débordait de 31 dp sans que rien le voie.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    fun `la colonne de gauche tient en Standard et en Grand`() {
+        for (echelle in listOf(1f, 1.125f)) for (langue in listOf("fr", "de", "tr")) for (lfp in listOf(false, true)) {
+            val loc = app.createConfigurationContext(Configuration(app.resources.configuration).apply {
+                setLocale(Locale.forLanguageTag(langue))
+                fontScale = echelle
+            })
+            val (vue, _) = ChargePopupOverlay.preparer(ContextThemeWrapper(loc, R.style.Theme_MG4Control), loc, etat(), lfp)
+            val d = loc.resources.displayMetrics.density
+            vue.measure(
+                View.MeasureSpec.makeMeasureSpec((1300 * d).toInt(), View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec((500 * d).toInt(), View.MeasureSpec.EXACTLY))
+            vue.layout(0, 0, vue.measuredWidth, vue.measuredHeight)
+            val colonne = vue.findViewById<ViewGroup>(R.id.charge_left)
+            val dernier = (0 until colonne.childCount).map { colonne.getChildAt(it) }.last { it.visibility == View.VISIBLE }
+            val bas = colonne.height - colonne.paddingBottom
+            assertTrue("$langue ×$echelle lfp=$lfp : finit à ${dernier.bottom} px pour $bas", dernier.bottom <= bas)
         }
     }
 

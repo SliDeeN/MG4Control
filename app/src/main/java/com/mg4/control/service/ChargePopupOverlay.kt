@@ -26,6 +26,7 @@ import com.mg4.control.ui.AppDialog
 import com.mg4.control.ui.widget.ChargeCurveView
 import com.mg4.control.ui.widget.ChargeLimitSliderView
 import com.mg4.control.util.ChargePopupSettings
+import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.LocaleHelper
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
@@ -51,6 +52,8 @@ object ChargePopupOverlay {
     private const val HAUTEUR_DP = 400f
     private const val MARGE_FENETRE_DP = 12f
     private const val PAS_PAR_DEFAUT = 1
+    /** A9 (LFP) : la charge va au plein. */
+    private const val PLEIN_PCT = 100
 
     private val handler = Handler(Looper.getMainLooper())
 
@@ -131,9 +134,11 @@ object ChargePopupOverlay {
      * Gonfle, branche et peint le pop-up sans le poser à l'écran. Séparé pour les tests : une
      * erreur ici passe la compilation et ne se voit qu'en voiture (texte mal formé, vue absente).
      */
-    internal fun preparer(themed: Context, localized: Context, etat: ChargeMonitor.Etat?): Pair<View, Vues> {
+    internal fun preparer(
+        themed: Context, localized: Context, etat: ChargeMonitor.Etat?, lfp: Boolean = FirmwareInfo.isA9(),
+    ): Pair<View, Vues> {
         val gonflee = LayoutInflater.from(themed).inflate(R.layout.overlay_charge_popup, null)
-        val liees = Vues(gonflee, localized)
+        val liees = Vues(gonflee, localized, lfp)
         brancher(liees)
         etat?.let { peindre(liees, it) }
         return gonflee to liees
@@ -166,7 +171,12 @@ object ChargePopupOverlay {
         val vue: View = racine
     }
 
-    internal class Vues(val racine: View, val loc: Context) {
+    /**
+     * [lfp] : firmwares A9, toutes en batterie LFP (vérifié par lui le 2026-10-18) — la limite de
+     * charge n'y est pas réglable : barre de niveau seule, la note LFP à la place de l'aide, courbe
+     * sans ligne de limite. L'heure de fin en grand, en bas, est la même partout.
+     */
+    internal class Vues(val racine: View, val loc: Context, val lfp: Boolean) {
         val themed: Context = racine.context
         val locale: Locale = loc.resources.configuration.locales[0]
         val icone: ImageView = racine.findViewById(R.id.charge_title_icon)
@@ -176,8 +186,10 @@ object ChargePopupOverlay {
         val soc: TextView = racine.findViewById(R.id.charge_soc)
         val curseur: ChargeLimitSliderView = racine.findViewById(R.id.charge_slider)
         val aide: TextView = racine.findViewById(R.id.charge_hint)
-        val reste: TextView = racine.findViewById(R.id.charge_remaining)
-        val fin: TextView = racine.findViewById(R.id.charge_end)
+        val noteLfp: View = racine.findViewById(R.id.charge_lfp_note)
+        val finTitre: TextView = racine.findViewById(R.id.charge_end_title)
+        val finHeure: TextView = racine.findViewById(R.id.charge_end_time)
+        val finReste: TextView = racine.findViewById(R.id.charge_end_left)
         val legendePuissance: TextView = racine.findViewById(R.id.charge_legend_power)
         val legendeBatterie: TextView = racine.findViewById(R.id.charge_legend_battery)
         val depuis: TextView = racine.findViewById(R.id.charge_since)
@@ -261,6 +273,14 @@ object ChargePopupOverlay {
         val gris = android.content.res.ColorStateList.valueOf(v.cTexte2)
         v.fermer.imageTintList = gris
         v.prixAnnuler.imageTintList = gris
+
+        // A9 (LFP) : pas de limite à régler — la barre de niveau seule, et la note qui dit
+        // pourquoi à la place de l'aide.
+        if (v.lfp) {
+            v.curseur.reglable = false
+            v.aide.visibility = View.GONE
+            v.noteLfp.visibility = View.VISIBLE
+        }
     }
 
     /** Légende : un carré de la couleur de la courbe, puis le texte. */
@@ -281,32 +301,14 @@ object ChargePopupOverlay {
         })
         v.soc.text = e.soc?.let { decimale(v.locale).format(it) + " %" } ?: "–"
 
-        if (!v.curseur.enGlissement()) v.curseur.limite = e.limitePct
+        if (!v.curseur.enGlissement()) v.curseur.limite = if (v.lfp) null else e.limitePct
         v.curseur.niveau = e.soc
         v.curseur.enCharge = e.enCharge
         v.curseur.finie = e.finie
-        aide(v, e)
+        if (!v.lfp) aide(v, e)
 
-        // Temps restant et heure de fin.
-        val fiable = StatsTracker.clockPlausible(e.horlogeMs)
-        when {
-            e.finie -> {
-                v.reste.text = v.s(R.string.charge_popup_title_done)
-                v.fin.text = if (fiable) v.s(R.string.charge_popup_done_at, heure(v, e.horlogeMs)) else ""
-            }
-            e.restantMin != null && e.limitePct != null -> {
-                v.reste.text = v.s(R.string.charge_popup_until, duree(v, e.restantMin), e.limitePct)
-                v.fin.text = if (fiable) v.s(R.string.charge_popup_end_at, heure(v, e.horlogeMs + e.restantMin * 60_000L)) else ""
-            }
-            e.limitePct != null -> {
-                v.reste.text = v.s(R.string.charge_popup_until_unknown, e.limitePct)
-                v.fin.text = ""
-            }
-            else -> {
-                v.reste.text = ""
-                v.fin.text = ""
-            }
-        }
+        // Heure de fin, en grand, et ce qu'il reste.
+        fin(v, e, StatsTracker.clockPlausible(e.horlogeMs))
 
         // Courbe, depuis le début de la charge.
         val debut = e.debutHorlogeMs
@@ -319,9 +321,10 @@ object ChargePopupOverlay {
             restantMs = restantMs,
             socActuel = e.soc,
             kwMax = e.kwMax,
-            limitePct = e.limitePct,
+            limitePct = if (v.lfp) PLEIN_PCT else e.limitePct,
+            afficherLimite = !v.lfp,
             finie = e.finie,
-            libelleCible = e.limitePct?.let { v.s(R.string.charge_popup_target, it) },
+            libelleCible = if (v.lfp) null else e.limitePct?.let { v.s(R.string.charge_popup_target, it) },
             heureDebut = debut?.let { heure(v, it) } ?: duree(v, 0),
             heureMilieu = if (totalMs >= 10 * 60_000L) (debut?.let { heure(v, it + totalMs / 2) } ?: duree(v, (totalMs / 120_000L).toInt())) else null,
             heureFin = when {
@@ -346,6 +349,37 @@ object ChargePopupOverlay {
             debut?.let { v.s(R.string.charge_popup_since_time, heure(v, it)) })
 
         if (prixEdite != null) peindreEditeur(v)
+    }
+
+    /**
+     * Bas de la colonne, sur tous les firmwares (2026-10-18) : l'heure de fin en grand ; dessous,
+     * le temps restant et la cible (la limite, ou 100 % sur les A9). Sans horloge crédible (réveil
+     * à l'horloge d'usine), la durée prend la place de l'heure.
+     */
+    private fun fin(v: Vues, e: ChargeMonitor.Etat, fiable: Boolean) {
+        val restant = e.restantMin
+        val cible = if (v.lfp) PLEIN_PCT else e.limitePct
+        when {
+            e.finie -> {
+                v.finTitre.text = v.s(R.string.charge_popup_title_done)
+                v.finHeure.text = if (fiable) heure(v, e.horlogeMs) else "–"
+                v.finReste.text = ""
+            }
+            restant != null -> {
+                v.finTitre.text = v.s(R.string.charge_popup_end_label)
+                v.finHeure.text = if (fiable) heure(v, e.horlogeMs + restant * 60_000L) else duree(v, restant)
+                v.finReste.text = when {
+                    cible == null -> ""
+                    fiable -> v.s(R.string.charge_popup_end_left, duree(v, restant), cible)
+                    else -> v.s(R.string.charge_popup_until_unknown, cible)
+                }
+            }
+            else -> {
+                v.finTitre.text = v.s(R.string.charge_popup_end_label)
+                v.finHeure.text = "–"
+                v.finReste.text = cible?.let { v.s(R.string.charge_popup_until_unknown, it) } ?: ""
+            }
+        }
     }
 
     /** Texte sous le curseur : glissement, envoi, refus, ou simple invitation. */

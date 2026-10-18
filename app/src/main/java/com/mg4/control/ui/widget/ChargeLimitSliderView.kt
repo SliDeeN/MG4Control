@@ -18,11 +18,17 @@ import com.mg4.control.model.ChargeLimit
 /**
  * Barre de batterie du pop-up de charge, devenue curseur de la limite de charge (2026-10-16) :
  * remplie jusqu'au niveau, une poignée sur la limite, les sept crans de 40 à 100 % dessous. On la
- * glisse au doigt : une bulle donne le cran visé, et la limite part à la voiture au relâchement
- * seulement ([surRelache]).
+ * glisse au doigt : le cran visé passe en gras (et l'aide du pop-up le dit), et la limite part à
+ * la voiture au relâchement seulement ([surRelache]).
+ *
+ * Plus de bulle au-dessus de la poignée (2026-10-18) : elle réservait 26 dp en permanence pour un
+ * glissement, et cette place manquait à l'heure de fin en grand, dans une colonne de 288 dp.
  *
  * Pendant la charge, un reflet court sur la barre — du début jusqu'à la limite, jamais au-delà
  * (même règle que le module du combiné).
+ *
+ * [reglable] faux (firmwares A9, batterie LFP, 2026-10-18) : la barre de niveau seule, de 0 à
+ * 100 %, sans crans ni poignée, et elle ne répond plus au doigt.
  */
 class ChargeLimitSliderView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null,
@@ -38,6 +44,9 @@ class ChargeLimitSliderView @JvmOverloads constructor(
         set(v) { field = v; invalidate() }
     var finie = false
         set(v) { field = v; invalidate() }
+    /** Faux : limite non réglable sur cette voiture — barre de niveau seule, inerte. */
+    var reglable = true
+        set(v) { field = v; invalidate() }
 
     /** Pendant le glissement, à chaque changement de cran. */
     var surGlisse: ((Int) -> Unit)? = null
@@ -52,7 +61,6 @@ class ChargeLimitSliderView @JvmOverloads constructor(
     private val cPiste = context.getColor(R.color.dash_border)
     private val cTexte = context.getColor(R.color.text_primary)
     private val cTexte2 = context.getColor(R.color.text_secondary)
-    private val cSurAccent = context.getColor(R.color.hvac_on_accent)
 
     private val plein = Paint(Paint.ANTI_ALIAS_FLAG)
     private val trait = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
@@ -63,9 +71,10 @@ class ChargeLimitSliderView @JvmOverloads constructor(
     private fun dp(v: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, v, resources.displayMetrics)
     private fun sp(v: Float) = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, v, resources.displayMetrics)
 
-    // Géométrie : la place de la bulle en haut, la piste, puis les crans.
+    // Géométrie : un peu d'air en haut, la piste, puis les crans. La poignée agrandie et son halo
+    // débordent au-dessus pendant le glissement : la colonne ne rogne pas ses enfants.
     private val marge get() = dp(16f)
-    private val hautPiste get() = dp(34f)
+    private val hautPiste get() = dp(8f)
     private val epaisseur get() = dp(12f)
     private fun x(pct: Float) = marge + (width - 2 * marge) * pct.coerceIn(0f, 100f) / 100f
 
@@ -84,7 +93,7 @@ class ChargeLimitSliderView @JvmOverloads constructor(
             cadre.set(marge, y0, x(it), y1)
             canvas.drawRoundRect(cadre, rayon, rayon, plein)
         }
-        val cible = if (glisse) visee else limite
+        val cible = if (!reglable) null else if (glisse) visee else limite
         // Reflet : du début de la barre jusqu'à la limite, jamais au-delà.
         if (enCharge && !finie) {
             val fin = x((cible ?: 100).toFloat())
@@ -98,6 +107,21 @@ class ChargeLimitSliderView @JvmOverloads constructor(
             canvas.drawRoundRect(cadre, rayon, rayon, plein)
             canvas.restore()
             postInvalidateDelayed(IMAGE_MS)
+        }
+
+        if (!reglable) {
+            // Les deux bouts seulement : 0 à gauche, 100 en clair à droite (la charge va au plein).
+            texte.textSize = sp(13f)
+            texte.typeface = Typeface.DEFAULT
+            texte.color = cTexte2
+            texte.textAlign = Paint.Align.LEFT
+            canvas.drawText("0", marge, y1 + dp(28f), texte)
+            texte.typeface = gras
+            texte.color = cTexte
+            texte.textAlign = Paint.Align.RIGHT
+            canvas.drawText("100", width - marge, y1 + dp(28f), texte)
+            texte.textAlign = Paint.Align.CENTER
+            return
         }
 
         // Crans : un trait et son libellé, celui de la limite en clair et en gras.
@@ -127,23 +151,11 @@ class ChargeLimitSliderView @JvmOverloads constructor(
         trait.strokeWidth = dp(4f)
         trait.color = couleur
         canvas.drawCircle(xp, yc, r - dp(2f), trait)
-
-        if (glisse) {
-            val libelle = "$cible %"
-            texte.typeface = gras
-            texte.textSize = sp(15f)
-            val l = texte.measureText(libelle) + dp(18f)
-            val xb = xp.coerceIn(l / 2f, width - l / 2f)
-            plein.color = couleur
-            cadre.set(xb - l / 2f, 0f, xb + l / 2f, dp(26f))
-            canvas.drawRoundRect(cadre, dp(8f), dp(8f), plein)
-            texte.color = cSurAccent
-            canvas.drawText(libelle, xb, dp(18.5f), texte)
-        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        if (!reglable) return false
         val depart = limite ?: return false
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {

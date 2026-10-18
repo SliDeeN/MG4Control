@@ -81,12 +81,18 @@
             android:orientation="horizontal"
             android:baselineAligned="false">
 
-            <!-- ── Gauche : batterie, curseur de la limite, temps restant ── -->
+            <!-- ── Gauche : batterie, curseur de la limite, heure de fin ──
+                 290 × 314 dp, 288 dp de contenu : tout est compté (2026-10-18). Avec la taille de
+                 texte Standard il reste ~24 dp, en Grand ~5 dp ; en Très grand la dernière ligne
+                 peut être rognée (accepté). clipChildren="false" : la poignée agrandie et son halo,
+                 pendant le glissement, débordent un peu au-dessus de la barre. -->
             <LinearLayout
+                android:id="@+id/charge_left"
                 android:layout_width="290dp"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
                 android:background="@drawable/bg_hvac_panel"
+                android:clipChildren="false"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
                 android:paddingTop="14dp"
@@ -113,7 +119,7 @@
                 <com.mg4.control.ui.widget.ChargeLimitSliderView
                     android:id="@+id/charge_slider"
                     android:layout_width="match_parent"
-                    android:layout_height="80dp"
+                    android:layout_height="54dp"
                     android:layout_marginTop="6dp" />
 
                 <TextView
@@ -124,23 +130,73 @@
                     android:textSize="12sp"
                     android:maxLines="2" />
 
+                <!-- Firmwares A9 (batterie LFP) : pourquoi il n'y a pas de curseur, à la place de l'aide. -->
+                <LinearLayout
+                    android:id="@+id/charge_lfp_note"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginTop="1dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_lock"
+                        android:tint="@color/text_secondary" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:text="@string/charge_popup_lfp_info"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        android:maxLines="2" />
+
+                </LinearLayout>
+
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="0dp"
                     android:layout_weight="1" />
 
-                <TextView
-                    android:id="@+id/charge_remaining"
+                <!-- L'heure de fin, en grand, sur tous les firmwares. -->
+                <View
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:textColor="@color/text_primary"
-                    android:textSize="19sp"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
+                    android:layout_height="1dp"
+                    android:layout_marginTop="4dp"
+                    android:background="@color/dash_border" />
 
                 <TextView
-                    android:id="@+id/charge_end"
+                    android:id="@+id/charge_end_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:maxLines="1" />
+
+                <!-- Hauteur fixe en dp : l'heure garde sa taille quelle que soit la taille du texte
+                     choisie, c'est ce qui laisse tenir la colonne. -->
+                <TextView
+                    android:id="@+id/charge_end_time"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:textColor="@color/text_primary"
+                    android:textStyle="bold"
+                    android:includeFontPadding="false"
+                    android:maxLines="1"
+                    android:autoSizeTextType="uniform"
+                    android:autoSizeMinTextSize="18sp"
+                    android:autoSizeMaxTextSize="40sp"
+                    android:autoSizeStepGranularity="1sp"
+                    tools:text="16:11" />
+
+                <TextView
+                    android:id="@+id/charge_end_left"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"

@@ -832,10 +832,10 @@
     <string name="charge_popup_hint_sending">%%%1$d sınırı araca gönderiliyor…</string>
     <string name="charge_popup_hint_refused">Araç %%%1$d sınırını kabul etmedi</string>
     <string name="charge_popup_hint_unknown">Şarj sınırı okunamıyor</string>
-    <string name="charge_popup_until">%1$s · hedef %%%2$d</string>
     <string name="charge_popup_until_unknown">Hedef %%%1$d</string>
-    <string name="charge_popup_end_at">bitiş yaklaşık %1$s</string>
-    <string name="charge_popup_done_at">%1$s itibarıyla tamamlandı</string>
+    <string name="charge_popup_end_label">Tahmini bitiş</string>
+    <string name="charge_popup_end_left">%1$s kaldı · hedef %%%2$d</string>
+    <string name="charge_popup_lfp_info">Şarj sınırı ayarlanamaz (LFP batarya)</string>
     <string name="charge_popup_legend_power">Güç (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batarya (%)</string>
     <string name="charge_popup_since">şarjın başından beri (%1$s)</string>

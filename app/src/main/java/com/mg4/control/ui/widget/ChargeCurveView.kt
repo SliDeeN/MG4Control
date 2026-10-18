@@ -36,7 +36,10 @@ class ChargeCurveView @JvmOverloads constructor(
         val socActuel: Float?,
         /** Puissance max relevée depuis le début de la charge : le haut de l'axe des kW. */
         val kwMax: Float?,
+        /** Limite de charge : niveau visé par l'estimation, et ligne grise si [afficherLimite]. */
         val limitePct: Int?,
+        /** Faux sur les A9 (LFP) : la limite n'y est pas réglable, la charge va au plein. */
+        val afficherLimite: Boolean = true,
         val finie: Boolean,
         val libelleCible: String?,
         /** Sous l'axe : à gauche, au milieu, à droite. */
@@ -112,7 +115,7 @@ class ChargeCurveView @JvmOverloads constructor(
 
         // Limite : pointillé gris et son libellé, à droite — pas vert, pour ne pas se confondre avec
         // la batterie et son estimation (demande du 2026-10-17).
-        d.limitePct?.let { lim ->
+        d.limitePct?.takeIf { d.afficherLimite }?.let { lim ->
             trait.color = cTexte2
             trait.strokeWidth = dp(1.5f)
             trait.pathEffect = DashPathEffect(floatArrayOf(dp(6f), dp(5f)), 0f)
