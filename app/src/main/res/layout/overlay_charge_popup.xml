@@ -130,7 +130,8 @@
                     android:textSize="12sp"
                     android:maxLines="2" />
 
-                <!-- Firmwares A9 (batterie LFP) : pourquoi il n'y a pas de curseur, à la place de l'aide. -->
+                <!-- Limite non réglable (A9 en batterie LFP, ou type de batterie illisible) : pourquoi
+                     il n'y a pas de curseur, à la place de l'aide. -->
                 <LinearLayout
                     android:id="@+id/charge_lfp_note"
                     android:layout_width="match_parent"
@@ -147,6 +148,7 @@
                         android:tint="@color/text_secondary" />
 
                     <TextView
+                        android:id="@+id/charge_lfp_note_text"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"

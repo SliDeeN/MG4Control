@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.test.core.app.ApplicationProvider
 import com.mg4.control.R
+import com.mg4.control.model.ChargeLimitSupport
 import com.mg4.control.model.ChargePoint
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.MoneyFormat
@@ -60,12 +61,12 @@ class ChargePopupLayoutTest {
     }
 
     @Test
-    fun `version A9 (LFP) - barre inerte, heure de fin en grand, dans les sept langues`() {
+    fun `A9 en LFP - barre inerte, heure de fin en grand, dans les sept langues`() {
         for (langue in listOf("fr", "en", "de", "es", "it", "pt", "tr")) {
             val loc = localise(langue)
             val themed = ContextThemeWrapper(loc, R.style.Theme_MG4Control)
             for (e in listOf(etat(), etat(finie = true, restant = null), etat(limite = null, restant = null))) {
-                val (vue, vues) = ChargePopupOverlay.preparer(themed, loc, e, lfp = true)
+                val (vue, vues) = ChargePopupOverlay.preparer(themed, loc, e, a9 = true, codeBatterie = ChargeLimitSupport.CODE_LFP)
                 assertFalse(vues.curseur.reglable)
                 assertEquals(View.GONE, vue.findViewById<View>(R.id.charge_hint).visibility)
                 assertEquals(View.VISIBLE, vue.findViewById<View>(R.id.charge_lfp_note).visibility)
@@ -74,14 +75,23 @@ class ChargePopupLayoutTest {
                 assertFalse(vues.courbe.donnees!!.afficherLimite)
             }
         }
-        // Hors A9 : curseur réglable, aide visible, note LFP cachée — et la même heure de fin en bas.
+        // Ancien SDK, et A9 Confort (NMC, code 7) : curseur réglable, aide visible, note cachée —
+        // et la même heure de fin en bas.
         val loc = localise("fr")
-        val (vue, vues) = ChargePopupOverlay.preparer(ContextThemeWrapper(loc, R.style.Theme_MG4Control), loc, etat(), lfp = false)
-        assertTrue(vues.curseur.reglable)
-        assertEquals(View.VISIBLE, vue.findViewById<View>(R.id.charge_hint).visibility)
-        assertEquals(View.GONE, vue.findViewById<View>(R.id.charge_lfp_note).visibility)
-        assertTrue(vue.findViewById<TextView>(R.id.charge_end_time).text.isNotEmpty())
-        assertTrue(vues.courbe.donnees!!.afficherLimite)
+        val themed = ContextThemeWrapper(loc, R.style.Theme_MG4Control)
+        for ((a9, code) in listOf(false to null, true to 7, true to 9)) {
+            val (vue, vues) = ChargePopupOverlay.preparer(themed, loc, etat(), a9 = a9, codeBatterie = code)
+            assertTrue("a9=$a9 code=$code", vues.curseur.reglable)
+            assertEquals(View.VISIBLE, vue.findViewById<View>(R.id.charge_hint).visibility)
+            assertEquals(View.GONE, vue.findViewById<View>(R.id.charge_lfp_note).visibility)
+            assertTrue(vue.findViewById<TextView>(R.id.charge_end_time).text.isNotEmpty())
+            assertTrue(vues.courbe.donnees!!.afficherLimite)
+        }
+        // A9 au type de batterie illisible : pas de curseur, et une note qui ne parle pas de LFP.
+        val (vue, vues) = ChargePopupOverlay.preparer(themed, loc, etat(), a9 = true, codeBatterie = null)
+        assertFalse(vues.curseur.reglable)
+        assertEquals(loc.getString(R.string.charge_popup_limit_fixed),
+            vue.findViewById<TextView>(R.id.charge_lfp_note_text).text.toString())
     }
 
     /**
@@ -98,7 +108,8 @@ class ChargePopupLayoutTest {
                 setLocale(Locale.forLanguageTag(langue))
                 fontScale = echelle
             })
-            val (vue, _) = ChargePopupOverlay.preparer(ContextThemeWrapper(loc, R.style.Theme_MG4Control), loc, etat(), lfp)
+            val (vue, _) = ChargePopupOverlay.preparer(ContextThemeWrapper(loc, R.style.Theme_MG4Control), loc, etat(),
+                a9 = lfp, codeBatterie = if (lfp) ChargeLimitSupport.CODE_LFP else null)
             val d = loc.resources.displayMetrics.density
             vue.measure(
                 View.MeasureSpec.makeMeasureSpec((1300 * d).toInt(), View.MeasureSpec.EXACTLY),

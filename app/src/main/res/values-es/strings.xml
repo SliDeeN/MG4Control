@@ -836,6 +836,7 @@
     <string name="charge_popup_end_label">Fin estimado</string>
     <string name="charge_popup_end_left">faltan %1$s · hasta %2$d %%</string>
     <string name="charge_popup_lfp_info">Límite de carga no ajustable (batería LFP)</string>
+    <string name="charge_popup_limit_fixed">Límite de carga no ajustable en este vehículo</string>
     <string name="charge_popup_legend_power">Potencia (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batería (%)</string>
     <string name="charge_popup_since">desde el inicio de la carga (%1$s)</string>

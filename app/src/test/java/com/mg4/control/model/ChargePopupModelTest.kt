@@ -68,6 +68,18 @@ class ChargePopupModelTest {
     }
 
     @Test
+    fun `limite reglable - regle d EvCharge selon le type de batterie`() {
+        // Anciens SDK : toujours (toutes NMC), même sans code.
+        assertTrue(ChargeLimitSupport.reglable(a9 = false, code = null))
+        // A9 : seulement les codes 7 et 9 ; 1 = LFP ; illisible ou inconnu = non.
+        assertTrue(ChargeLimitSupport.reglable(a9 = true, code = 7))
+        assertTrue(ChargeLimitSupport.reglable(a9 = true, code = 9))
+        assertFalse(ChargeLimitSupport.reglable(a9 = true, code = ChargeLimitSupport.CODE_LFP))
+        assertFalse(ChargeLimitSupport.reglable(a9 = true, code = null))
+        assertFalse(ChargeLimitSupport.reglable(a9 = true, code = 3))
+    }
+
+    @Test
     fun `axe des kW - le haut est la puissance max atteinte`() {
         val pts = listOf(ChargePoint(0L, 12f, 20f), ChargePoint(5_000L, 88.4f, 21f), ChargePoint(10_000L, null, 22f))
         // Le maximum relevé entre deux points l'emporte : c'est le chiffre « max … kW » du pop-up.

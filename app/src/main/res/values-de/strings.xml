@@ -836,6 +836,7 @@
     <string name="charge_popup_end_label">Voraussichtliches Ende</string>
     <string name="charge_popup_end_left">noch %1$s · bis %2$d %%</string>
     <string name="charge_popup_lfp_info">Ladegrenze nicht einstellbar (LFP-Batterie)</string>
+    <string name="charge_popup_limit_fixed">Ladegrenze bei diesem Fahrzeug nicht einstellbar</string>
     <string name="charge_popup_legend_power">Leistung (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batterie (%)</string>
     <string name="charge_popup_since">seit Beginn des Ladevorgangs (%1$s)</string>

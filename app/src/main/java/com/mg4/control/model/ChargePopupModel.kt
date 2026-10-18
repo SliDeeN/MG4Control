@@ -31,6 +31,27 @@ object ChargeLimit {
     fun pct(code: Int?): Int? = ChargeDisplay.ciblePourcent(code)
 }
 
+/**
+ * La limite de charge est-elle réglable sur cette voiture ? Règle de l'appli de charge SAIC des A9
+ * (`EvCharge` SWI69 / SWI131 / SWI132, `isEH32EuukCanSettingChargeTargetbBatteryQuantity`, décodée
+ * le 2026-10-18) : elle ne montre son réglage — et n'accepte le toucher sur la barre — que si le code
+ * de type de batterie ([com.mg4.control.hardware.BatteryTypeConfig]) vaut 7 ou 9 ; 1 est la
+ * batterie LFP (`isOrthophosphoricAcidBattery`). Une SWI69 peut être une Standard (LFP) ou une
+ * Confort (NMC, limite réglable) : le firmware seul ne suffit pas.
+ */
+object ChargeLimitSupport {
+
+    const val CODE_LFP = 1
+    val CODES_REGLABLES = setOf(7, 9)
+
+    /**
+     * Anciens SDK (SWI133 / 68 / 165, toutes NMC) : toujours réglable. A9 : selon le code ; illisible
+     * ou inconnu → non, comme avant cette détection (une limite envoyée pour rien troublerait plus
+     * qu'un curseur absent).
+     */
+    fun reglable(a9: Boolean, code: Int?): Boolean = !a9 || code in CODES_REGLABLES
+}
+
 /** Un point de la courbe : [tMs] depuis le début de la charge, puissance qui entre (kW) et niveau (%). */
 data class ChargePoint(val tMs: Long, val kw: Float?, val soc: Float?)
 

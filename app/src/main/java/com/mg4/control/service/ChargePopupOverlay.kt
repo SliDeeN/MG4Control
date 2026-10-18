@@ -26,6 +26,8 @@ import com.mg4.control.ui.AppDialog
 import com.mg4.control.ui.widget.ChargeCurveView
 import com.mg4.control.ui.widget.ChargeLimitSliderView
 import com.mg4.control.util.ChargePopupSettings
+import com.mg4.control.hardware.BatteryTypeConfig
+import com.mg4.control.model.ChargeLimitSupport
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.LocaleHelper
 import java.text.DecimalFormat
@@ -52,7 +54,7 @@ object ChargePopupOverlay {
     private const val HAUTEUR_DP = 400f
     private const val MARGE_FENETRE_DP = 12f
     private const val PAS_PAR_DEFAUT = 1
-    /** A9 (LFP) : la charge va au plein. */
+    /** Limite non réglable : la charge va au plein. */
     private const val PLEIN_PCT = 100
 
     private val handler = Handler(Looper.getMainLooper())
@@ -135,10 +137,11 @@ object ChargePopupOverlay {
      * erreur ici passe la compilation et ne se voit qu'en voiture (texte mal formé, vue absente).
      */
     internal fun preparer(
-        themed: Context, localized: Context, etat: ChargeMonitor.Etat?, lfp: Boolean = FirmwareInfo.isA9(),
+        themed: Context, localized: Context, etat: ChargeMonitor.Etat?,
+        a9: Boolean = FirmwareInfo.isA9(), codeBatterie: Int? = if (a9) BatteryTypeConfig.code() else null,
     ): Pair<View, Vues> {
         val gonflee = LayoutInflater.from(themed).inflate(R.layout.overlay_charge_popup, null)
-        val liees = Vues(gonflee, localized, lfp)
+        val liees = Vues(gonflee, localized, !ChargeLimitSupport.reglable(a9, codeBatterie), codeBatterie == ChargeLimitSupport.CODE_LFP)
         brancher(liees)
         etat?.let { peindre(liees, it) }
         return gonflee to liees
@@ -172,11 +175,12 @@ object ChargePopupOverlay {
     }
 
     /**
-     * [lfp] : firmwares A9, toutes en batterie LFP (vérifié par lui le 2026-10-18) — la limite de
-     * charge n'y est pas réglable : barre de niveau seule, la note LFP à la place de l'aide, courbe
-     * sans ligne de limite. L'heure de fin en grand, en bas, est la même partout.
+     * [limiteFixe] : la limite n'est pas réglable ([ChargeLimitSupport] — une A9 en batterie LFP,
+     * ou au type de batterie illisible) : barre de niveau seule, la note à la place de l'aide (qui
+     * nomme la LFP si [lfp]), courbe sans ligne de limite. L'heure de fin en grand, en bas, est la
+     * même partout.
      */
-    internal class Vues(val racine: View, val loc: Context, val lfp: Boolean) {
+    internal class Vues(val racine: View, val loc: Context, val limiteFixe: Boolean, val lfp: Boolean) {
         val themed: Context = racine.context
         val locale: Locale = loc.resources.configuration.locales[0]
         val icone: ImageView = racine.findViewById(R.id.charge_title_icon)
@@ -187,6 +191,7 @@ object ChargePopupOverlay {
         val curseur: ChargeLimitSliderView = racine.findViewById(R.id.charge_slider)
         val aide: TextView = racine.findViewById(R.id.charge_hint)
         val noteLfp: View = racine.findViewById(R.id.charge_lfp_note)
+        val noteLfpTexte: TextView = racine.findViewById(R.id.charge_lfp_note_text)
         val finTitre: TextView = racine.findViewById(R.id.charge_end_title)
         val finHeure: TextView = racine.findViewById(R.id.charge_end_time)
         val finReste: TextView = racine.findViewById(R.id.charge_end_left)
@@ -274,12 +279,13 @@ object ChargePopupOverlay {
         v.fermer.imageTintList = gris
         v.prixAnnuler.imageTintList = gris
 
-        // A9 (LFP) : pas de limite à régler — la barre de niveau seule, et la note qui dit
-        // pourquoi à la place de l'aide.
-        if (v.lfp) {
+        // Limite non réglable : la barre de niveau seule, et la note qui dit pourquoi à la place
+        // de l'aide — « batterie LFP » seulement si la voiture le dit.
+        if (v.limiteFixe) {
             v.curseur.reglable = false
             v.aide.visibility = View.GONE
             v.noteLfp.visibility = View.VISIBLE
+            v.noteLfpTexte.text = v.s(if (v.lfp) R.string.charge_popup_lfp_info else R.string.charge_popup_limit_fixed)
         }
     }
 
@@ -301,11 +307,11 @@ object ChargePopupOverlay {
         })
         v.soc.text = e.soc?.let { decimale(v.locale).format(it) + " %" } ?: "–"
 
-        if (!v.curseur.enGlissement()) v.curseur.limite = if (v.lfp) null else e.limitePct
+        if (!v.curseur.enGlissement()) v.curseur.limite = if (v.limiteFixe) null else e.limitePct
         v.curseur.niveau = e.soc
         v.curseur.enCharge = e.enCharge
         v.curseur.finie = e.finie
-        if (!v.lfp) aide(v, e)
+        if (!v.limiteFixe) aide(v, e)
 
         // Heure de fin, en grand, et ce qu'il reste.
         fin(v, e, StatsTracker.clockPlausible(e.horlogeMs))
@@ -321,10 +327,10 @@ object ChargePopupOverlay {
             restantMs = restantMs,
             socActuel = e.soc,
             kwMax = e.kwMax,
-            limitePct = if (v.lfp) PLEIN_PCT else e.limitePct,
-            afficherLimite = !v.lfp,
+            limitePct = if (v.limiteFixe) PLEIN_PCT else e.limitePct,
+            afficherLimite = !v.limiteFixe,
             finie = e.finie,
-            libelleCible = if (v.lfp) null else e.limitePct?.let { v.s(R.string.charge_popup_target, it) },
+            libelleCible = if (v.limiteFixe) null else e.limitePct?.let { v.s(R.string.charge_popup_target, it) },
             heureDebut = debut?.let { heure(v, it) } ?: duree(v, 0),
             heureMilieu = if (totalMs >= 10 * 60_000L) (debut?.let { heure(v, it + totalMs / 2) } ?: duree(v, (totalMs / 120_000L).toInt())) else null,
             heureFin = when {
@@ -358,7 +364,7 @@ object ChargePopupOverlay {
      */
     private fun fin(v: Vues, e: ChargeMonitor.Etat, fiable: Boolean) {
         val restant = e.restantMin
-        val cible = if (v.lfp) PLEIN_PCT else e.limitePct
+        val cible = if (v.limiteFixe) PLEIN_PCT else e.limitePct
         when {
             e.finie -> {
                 v.finTitre.text = v.s(R.string.charge_popup_title_done)

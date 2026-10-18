@@ -866,6 +866,9 @@ class SettingsFragment : Fragment() {
         // Sonde accessibilité : service connecté ou non, et la liste brute des Réglages — sa
         // forme courte faisait dire « inactif » à tort après une MAJ ou un redémarrage.
         com.mg4.control.accessibility.KeyCaptureService.journaliserEtat(ctx)
+        // Sonde type de batterie : décide du curseur de limite du pop-up de charge sur A9
+        // (Standard LFP sans, Confort NMC avec — même firmware SWI69).
+        com.mg4.control.hardware.BatteryTypeConfig.journaliser()
 
         val appVersion = try {
             ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"

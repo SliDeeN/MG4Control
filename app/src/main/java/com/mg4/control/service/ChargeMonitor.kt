@@ -6,6 +6,7 @@ import android.os.HandlerThread
 import android.os.Looper
 import android.os.SystemClock
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.hardware.BatteryTypeConfig
 import com.mg4.control.hardware.EnergyReader
 import com.mg4.control.hardware.ReadyWatcher
 import com.mg4.control.model.ChargeDisplay
@@ -17,6 +18,7 @@ import com.mg4.control.model.ChargeType
 import com.mg4.control.model.StatsTracker
 import com.mg4.control.stats.StatsStore
 import com.mg4.control.util.ChargePopupSettings
+import com.mg4.control.util.FirmwareInfo
 
 /**
  * Suivi de la charge pour le pop-up de charge (2026-10-16) : tourne dans le service tant que
@@ -228,6 +230,9 @@ object ChargeMonitor {
                 val horloge = System.currentTimeMillis()
                 soc = EnergyReader.soc()
                 autonomie = EnergyReader.rangeKm()
+                // A9 : le type de batterie dit si le pop-up montre le curseur de limite ; lu ici,
+                // sur ce fil, pour que le pop-up le trouve déjà en mémoire.
+                if (FirmwareInfo.isA9()) BatteryTypeConfig.code()
                 log = ChargeLog(maintenant, horloge.takeIf { StatsTracker.clockPlausible(it) }, soc, autonomie)
                 dernierLentMs = 0L
                 brut = null

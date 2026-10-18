@@ -836,6 +836,7 @@
     <string name="charge_popup_end_label">Tahmini bitiş</string>
     <string name="charge_popup_end_left">%1$s kaldı · hedef %%%2$d</string>
     <string name="charge_popup_lfp_info">Şarj sınırı ayarlanamaz (LFP batarya)</string>
+    <string name="charge_popup_limit_fixed">Bu araçta şarj sınırı ayarlanamaz</string>
     <string name="charge_popup_legend_power">Güç (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batarya (%)</string>
     <string name="charge_popup_since">şarjın başından beri (%1$s)</string>
