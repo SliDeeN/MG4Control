@@ -12,6 +12,7 @@ import com.mg4.control.hardware.ReadyWatcher
 import com.mg4.control.model.ChargeDisplay
 import com.mg4.control.model.ChargeLimit
 import com.mg4.control.model.ChargeLog
+import com.mg4.control.model.ChargeObservation
 import com.mg4.control.model.ChargePoint
 import com.mg4.control.model.ChargeSession
 import com.mg4.control.model.ChargeType
@@ -21,8 +22,14 @@ import com.mg4.control.util.ChargePopupSettings
 import com.mg4.control.util.FirmwareInfo
 
 /**
- * Suivi de la charge pour le pop-up de charge (2026-10-16) : tourne dans le service tant que
- * l'option est active (Réglages › Interface, cachée par défaut), pop-up ouvert ou non.
+ * Suivi de la charge, pour le pop-up de charge (2026-10-16) et pour l'onglet Statistiques (issue
+ * #156) : tourne dans le service dès que l'un des deux est actif, pop-up ouvert ou non — le
+ * pop-up, lui, ne s'ouvre que si son option l'est.
+ *
+ *  - Prise signalée sans charge (borne rapide qui négocie) : une lecture toutes les [CHARGE_MS],
+ *    pour voir le début de la charge à deux secondes près.
+ *  - Pour les Statistiques : l'énergie mesurée et ce qui a été vu ([observation]), et la table de
+ *    l'énergie par tranche de 1 % nourrie à chaque pourcentage franchi.
  *
  *  - Hors charge, une seule lecture toutes les [VEILLE_MS] : la voiture charge-t-elle ?
  *  - Dès qu'une charge commence — ou que l'application en découvre une —, une [ChargeLog] la suit
@@ -104,6 +111,10 @@ object ChargeMonitor {
     private var consigneMs = 0L
     private var refus: Int? = null
     private var refusMs = 0L
+    /** Prise signalée sans charge : la charge peut commencer d'un instant à l'autre. */
+    private var priseBranchee = false
+    /** Tranches de 1 % apprises pendant la charge en cours, pour le journal de fin de charge. */
+    private var tranchesApprises = 0
 
     /** Dernier instantané ; `null` tant qu'aucune charge n'a été vue. */
     @Volatile var etat: Etat? = null
@@ -120,12 +131,19 @@ object ChargeMonitor {
     fun refresh(context: Context) {
         val app = context.applicationContext
         appContext = app
-        val actif = ChargePopupSettings.isEnabled(app)
+        // Le pop-up OU les Statistiques : le suivi sert aux deux (issue #156).
+        val popup = ChargePopupSettings.isEnabled(app)
+        val stats = runCatching { StatsStore(app).isEnabled() }.getOrDefault(false)
+        val actif = popup || stats
+        // Option du pop-up coupée alors que le suivi continue pour les Statistiques : le pop-up
+        // ouvert se ferme quand même (sans effet s'il ne l'est pas).
+        if (!popup) main.post { ChargePopupOverlay.fermer("option désactivée") }
         worker.post {
             if (actif && !enMarche) {
                 enMarche = true
                 ReadyWatcher.add(readyListener)
-                AppLogger.i(TAG, "pop-up de charge : suivi actif")
+                AppLogger.i(TAG, "suivi de charge actif (pop-up ${if (popup) "oui" else "non"}, " +
+                    "Statistiques ${if (stats) "oui" else "non"})")
                 worker.post(tic)
             } else if (!actif && enMarche) {
                 enMarche = false
@@ -134,7 +152,7 @@ object ChargeMonitor {
                 log = null
                 etat = null
                 enCharge = false
-                AppLogger.i(TAG, "pop-up de charge : suivi arrêté")
+                AppLogger.i(TAG, "suivi de charge arrêté")
                 main.post { ChargePopupOverlay.fermer("option désactivée") }
             }
         }
@@ -195,6 +213,32 @@ object ChargeMonitor {
      * Pour l'onglet Statistiques, qui enregistre la session à la fin de la charge : le prix
      * corrigé dans le pop-up, si la session correspond à la charge suivie.
      */
+    /**
+     * Ce que le suivi a vu de la charge qui correspond à [session], pour l'onglet Statistiques
+     * (issue #156) ; `null` s'il ne l'a pas suivie (écran éteint, application redémarrée).
+     */
+    fun observation(session: ChargeSession): ChargeObservation? {
+        val l = log ?: return null
+        val ok = l.recouvre(session.startMs, session.endMs, System.currentTimeMillis(), SystemClock.elapsedRealtime())
+        return if (ok) l.observation() else null
+    }
+
+    /** Sonde du Diagnostic : l'état des tables apprises (issue #156). */
+    fun journaliserApprentissage(ctx: Context) {
+        runCatching {
+            val store = StatsStore(ctx)
+            val defaut = store.settings().effectiveCapacityKwh / 100f
+            for (type in listOf(ChargeType.DC, ChargeType.AC)) {
+                val r = store.socTable(type).releve()
+                AppLogger.i(TAG, "diag énergie par % (${type.name}) : " + if (r.isEmpty()) "rien d'appris" else
+                    "${r.size} tranche(s) de ${r.first().first} à ${r.last().first + 1} %, " +
+                    "${"%.3f".format(java.util.Locale.US, r.map { it.second }.average())} kWh/% en moyenne " +
+                    "(défaut ${"%.3f".format(java.util.Locale.US, defaut)}) — " +
+                    r.joinToString(" ") { (t, kwh, n) -> "$t:${"%.2f".format(java.util.Locale.US, kwh)}×$n" })
+            }
+        }.onFailure { AppLogger.w(TAG, "diag énergie par % : ${it.message}") }
+    }
+
     fun avecTarif(session: ChargeSession): ChargeSession {
         val l = log ?: return session
         val prix = l.prix ?: return session
@@ -213,6 +257,8 @@ object ChargeMonitor {
             worker.postDelayed(this, when {
                 enCharge && visible -> VISIBLE_MS
                 enCharge -> CHARGE_MS
+                // Branchée sans charger : le début de la charge se voit à deux secondes près.
+                priseBranchee -> CHARGE_MS
                 visible -> LENT_MS
                 else -> VEILLE_MS
             })
@@ -239,6 +285,7 @@ object ChargeMonitor {
                 consigne = null
                 refus = null
                 nouvelle = true
+                tranchesApprises = 0
                 AppLogger.i(TAG, "charge détectée (${soc ?: "?"} %) : suivi depuis maintenant")
             } else if (fin != null) {
                 l0.reprendre()
@@ -246,20 +293,39 @@ object ChargeMonitor {
             }
         } else if (enCharge) {
             log?.terminer(maintenant)
-            log?.let { AppLogger.i(TAG, "fin de charge : +${"%.1f".format(java.util.Locale.US, it.energieKwh)} kWh " +
-                "en ${it.dureeMinutes(maintenant)} min, ${it.socDebut ?: "?"} → ${soc ?: "?"} %") }
+            log?.let {
+                val o = it.observation()
+                AppLogger.i(TAG, "fin de charge : +${"%.1f".format(java.util.Locale.US, it.energieKwh)} kWh " +
+                    "en ${it.dureeMinutes(maintenant)} min, ${it.socDebut ?: "?"} → ${soc ?: "?"} %, " +
+                    "${it.type?.name ?: "type ?"} — ${if (o.complete) "vue en entier" else
+                        "vue en partie (${"%.1f".format(java.util.Locale.US, o.energieKwh)} kWh jusqu'à ${o.socFinVue ?: "?"} %)"}, " +
+                    "$tranchesApprises tranche(s) de 1 % apprise(s)")
+            }
         }
         enCharge = charge
+        // Branchée sans charger, hors READY : on resserre la cadence pour voir le début de la charge.
+        if (!charge) priseBranchee = ReadyWatcher.ready != true &&
+            runCatching { EnergyReader.chargeRaw() }.getOrNull()?.let { ChargeDisplay.priseSignalee(it.ac, it.dc) } == true
         val l = log ?: return
 
         if (charge) {
+            priseBranchee = false
             kw = EnergyReader.dischargeKw()?.let { -it }
             EnergyReader.soc()?.let { soc = it }
-            l.ajouter(maintenant, kw, soc)
+            val tranche = l.ajouter(maintenant, kw, soc)
             if (dernierLentMs == 0L || maintenant - dernierLentMs >= LENT_MS || consigne != null) {
                 dernierLentMs = maintenant
                 brut = EnergyReader.chargeRaw()
                 EnergyReader.rangeKm()?.let { autonomie = it }
+                if (l.type == null) l.type = brut?.let { ChargeDisplay.type(it.ac, it.dc) }
+            }
+            // Une tranche de 1 % bouclée : elle nourrit la table de son type de prise (issue #156).
+            val type = l.type
+            val ctx = appContext
+            if (tranche != null && type != null && ctx != null) {
+                val ok = runCatching { StatsStore(ctx).learnSocBand(type, tranche.first, tranche.second) }.getOrDefault(false)
+                if (ok) tranchesApprises++
+                else AppLogger.i(TAG, "tranche ${tranche.first} % refusée (${"%.3f".format(java.util.Locale.US, tranche.second)} kWh)")
             }
         } else {
             kw = null
@@ -267,7 +333,9 @@ object ChargeMonitor {
         publier(maintenant)
         if (nouvelle) {
             val ctx = appContext
-            if (ctx != null && ReadyWatcher.ready != true) main.post { ChargePopupOverlay.ouvrir(ctx, "début de charge") }
+            // Le suivi tourne aussi pour les Statistiques : le pop-up, lui, reste lié à son option.
+            if (ctx != null && ReadyWatcher.ready != true && ChargePopupSettings.isEnabled(ctx))
+                main.post { ChargePopupOverlay.ouvrir(ctx, "début de charge") }
         }
     }
 

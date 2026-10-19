@@ -869,6 +869,8 @@ class SettingsFragment : Fragment() {
         // Sonde type de batterie : décide du curseur de limite du pop-up de charge sur A9
         // (Standard LFP sans, Confort NMC avec — même firmware SWI69).
         com.mg4.control.hardware.BatteryTypeConfig.journaliser()
+        // Énergie par tranche de 1 % apprise pendant les charges vues (issue #156).
+        com.mg4.control.service.ChargeMonitor.journaliserApprentissage(ctx)
 
         val appVersion = try {
             ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?"

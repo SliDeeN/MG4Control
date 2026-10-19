@@ -100,6 +100,23 @@ class ChargeLog(
     private val pts = ArrayList<ChargePoint>()
     private val energie = ChargeEnCours().also { it.commencer(debutMs) }
     private var dernierPointMs = Long.MIN_VALUE
+    /** Tranches de 1 % bouclées pendant la charge, pour la table apprise (issue #156). */
+    private val tranches = SocBandRecorder()
+
+    // ── Ce qui a été vu (issue #156) ──
+    /** Dernier relevé EN CHARGE ; remis à zéro par [reprendre] : une pause de la borne n'est pas un trou. */
+    private var dernierAjoutMs: Long? = null
+    /**
+     * Vrai dès qu'un relevé a manqué pendant la charge (écran éteint au verrouillage) ou que la fin
+     * n'a pas été vue : l'énergie mesurée ne couvre plus toute la charge.
+     */
+    var trou = false
+        private set
+    private var energieVue = 0f
+    private var socFinVue: Float? = socDebut
+    private var finVueMs: Long = debutMs
+    /** Type de prise vu pendant la charge (AC / DC). */
+    var type: ChargeType? = null
 
     val points: List<ChargePoint> get() = pts
     val energieKwh: Float get() = energie.energieKwh
@@ -113,25 +130,58 @@ class ChargeLog(
 
     val finie: Boolean get() = finMs != null
 
-    /** Un relevé : [kw] = puissance qui ENTRE dans la batterie (positive en charge). */
-    fun ajouter(maintenantMs: Long, kw: Float?, soc: Float?) {
-        if (finie) return
+    /**
+     * Un relevé : [kw] = puissance qui ENTRE dans la batterie (positive en charge). Rend la tranche
+     * de 1 % qui vient de se boucler et son énergie, s'il y en a une (issue #156).
+     */
+    fun ajouter(maintenantMs: Long, kw: Float?, soc: Float?): Pair<Int, Float>? {
+        if (finie) return null
+        val avant = dernierAjoutMs
+        if (avant != null && maintenantMs - avant > ChargeEnCours.TROU_MAX_MS) trou = true
         energie.ajouter(maintenantMs, kw)
+        dernierAjoutMs = maintenantMs
+        if (!trou) {
+            energieVue = energie.energieKwh
+            soc?.let { socFinVue = it }
+            finVueMs = maintenantMs
+        }
         if (kw != null && kw > (kwMax ?: 0f)) kwMax = kw
         if (pts.isEmpty() || maintenantMs - dernierPointMs >= POINT_MS) {
             pts += ChargePoint(maintenantMs - debutMs, kw, soc)
             dernierPointMs = maintenantMs
         }
+        return tranches.observer(maintenantMs, soc, energie.energieKwh)
     }
 
+    /**
+     * La charge est vue finie. Si le dernier relevé en charge est trop ancien, la fin s'est passée
+     * écran éteint : l'énergie mesurée ne couvre pas toute la charge ([trou]).
+     */
     fun terminer(maintenantMs: Long) {
-        if (finMs == null) finMs = maintenantMs
+        if (finMs != null) return
+        val avant = dernierAjoutMs
+        if (avant == null || maintenantMs - avant > ChargeEnCours.TROU_MAX_MS) trou = true
+        finMs = maintenantMs
     }
 
     /** La charge reprend peu après s'être arrêtée (borne qui marque une pause) : même session. */
     fun reprendre() {
         finMs = null
+        dernierAjoutMs = null
     }
+
+    /**
+     * Ce que le suivi a vu de la charge, pour les Statistiques : complète si elle a été suivie du
+     * début à la fin sans relevé manqué, sinon la partie vue jusqu'au premier trou.
+     */
+    fun observation(): ChargeObservation = ChargeObservation(
+        socDebut = socDebut,
+        energieKwh = if (trou) energieVue else energie.energieKwh,
+        dureeMs = if (trou) finVueMs - debutMs else (finMs ?: finVueMs) - debutMs,
+        socFinVue = socFinVue,
+        complete = finie && !trou,
+        type = type,
+    )
 
     /** Durée en minutes, jusqu'à [maintenantMs] ou jusqu'à la fin. */
     fun dureeMinutes(maintenantMs: Long): Int = (((finMs ?: maintenantMs) - debutMs) / 60_000L).toInt()

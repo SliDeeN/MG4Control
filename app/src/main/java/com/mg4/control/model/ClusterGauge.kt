@@ -215,6 +215,17 @@ object ClusterGauge {
         return kw * 1000f / kmh
     }
 
+    /**
+     * Consommation NÉGATIVE en récupération (issue #158) : la même formule, signe gardé — 25 kW
+     * récupérés à 60 km/h font −417 Wh/km, soit −41,7 kWh/100 km. `null` hors récupération, sous
+     * [STOP_KMH] (la division n'y a pas de sens : les kW récupérés restent affichés) ou vitesse
+     * illisible.
+     */
+    fun regenWhPerKm(kw: Float, kmh: Float?): Float? {
+        if (kmh == null || kmh < STOP_KMH || kw >= 0f) return null
+        return kw * 1000f / kmh
+    }
+
     // ── Mise en forme ────────────────────────────────────────────────────────
 
     /**
@@ -305,12 +316,18 @@ object ClusterGauge {
     /**
      * Consommation [whPerKm] écrite dans [unit] : Wh/km entiers, ou kWh/100 km avec une décimale
      * sous 100 (« 18,4 ») et entiers au-delà. [locale] : celle de l'application, jamais Locale.ROOT.
+     * Négative (récupération, issue #158) : précédée du signe moins typographique « − », comme les
+     * kW du module B.
      */
-    fun formatConsumption(whPerKm: Float, unit: ConsumptionUnit, locale: Locale): String = when (unit) {
-        ConsumptionUnit.WH_PER_KM -> String.format(locale, "%d", Math.round(whPerKm))
-        ConsumptionUnit.KWH_PER_100KM -> {
-            val v = whPerKm / 10f
-            if (v < 99.95f) String.format(locale, "%.1f", v) else String.format(locale, "%d", Math.round(v))
+    fun formatConsumption(whPerKm: Float, unit: ConsumptionUnit, locale: Locale): String {
+        val signe = if (whPerKm < 0f) "−" else ""
+        val wh = abs(whPerKm)
+        return signe + when (unit) {
+            ConsumptionUnit.WH_PER_KM -> String.format(locale, "%d", Math.round(wh))
+            ConsumptionUnit.KWH_PER_100KM -> {
+                val v = wh / 10f
+                if (v < 99.95f) String.format(locale, "%.1f", v) else String.format(locale, "%d", Math.round(v))
+            }
         }
     }
 

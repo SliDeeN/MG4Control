@@ -763,6 +763,11 @@
     <string name="stats_complete_start">Start (hh:mm)</string>
     <string name="stats_complete_end">End (hh:mm)</string>
     <string name="stats_detail_origin_completed">estimated from the battery level, times entered by hand</string>
+    <string name="stats_detail_energy_source">Energy</string>
+    <string name="stats_energy_measured">measured during the charge</string>
+    <string name="stats_energy_mixed">measured at first, then estimated from previous charges</string>
+    <string name="stats_energy_learned">estimated from previous charges</string>
+    <string name="stats_energy_percent">estimated from the battery level</string>
 
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Driver display</string>

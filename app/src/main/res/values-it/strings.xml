@@ -763,6 +763,11 @@
     <string name="stats_complete_start">Inizio (hh:mm)</string>
     <string name="stats_complete_end">Fine (hh:mm)</string>
     <string name="stats_detail_origin_completed">stimata dal livello della batteria, orari inseriti a mano</string>
+    <string name="stats_detail_energy_source">Energia</string>
+    <string name="stats_energy_measured">misurata durante la ricarica</string>
+    <string name="stats_energy_mixed">misurata all’inizio, poi stimata dalle ricariche precedenti</string>
+    <string name="stats_energy_learned">stimata dalle ricariche precedenti</string>
+    <string name="stats_energy_percent">stimata dal livello della batteria</string>
 
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Display del conducente</string>

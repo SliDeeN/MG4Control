@@ -150,6 +150,21 @@ class ClusterGaugeTest {
         assertEquals(ConsumptionUnit.WH_PER_KM, ConsumptionUnit.fromKey("inconnue"))
     }
 
+    @Test fun `en recuperation, la consommation negative en roulant seulement (issue 158)`() {
+        // L'exemple de l'issue : 25 kW récupérés à 60 km/h.
+        assertEquals(-416.67f, ClusterGauge.regenWhPerKm(-25f, 60f)!!, 0.01f)
+        assertEquals("−41,7", ClusterGauge.formatConsumption(-416.67f, ConsumptionUnit.KWH_PER_100KM, Locale.FRENCH))
+        assertEquals("−417", ClusterGauge.formatConsumption(-416.67f, ConsumptionUnit.WH_PER_KM, Locale.FRENCH))
+        // Sous 5 km/h, vitesse illisible, ou pas de récupération : rien (les kW restent affichés).
+        assertNull(ClusterGauge.regenWhPerKm(-25f, 4.9f))
+        assertNull(ClusterGauge.regenWhPerKm(-25f, null))
+        assertNull(ClusterGauge.regenWhPerKm(0f, 60f))
+        assertNull(ClusterGauge.regenWhPerKm(18f, 90f))
+        // Les consommations positives ne changent pas.
+        assertEquals("20,0", ClusterGauge.formatConsumption(200f, ConsumptionUnit.KWH_PER_100KM, Locale.FRENCH))
+        assertEquals("200", ClusterGauge.formatConsumption(200f, ConsumptionUnit.WH_PER_KM, Locale.FRENCH))
+    }
+
     @Test fun `les Wh par km ne valent qu en roulant et en consommant`() {
         assertEquals(200f, ClusterGauge.whPerKm(26f, 130f)!!, delta)
         assertNull(ClusterGauge.whPerKm(26f, 0f))

@@ -763,6 +763,11 @@
     <string name="stats_complete_start">Inicio (hh:mm)</string>
     <string name="stats_complete_end">Fin (hh:mm)</string>
     <string name="stats_detail_origin_completed">estimada a partir del nivel de batería, horas introducidas a mano</string>
+    <string name="stats_detail_energy_source">Energía</string>
+    <string name="stats_energy_measured">medida durante la carga</string>
+    <string name="stats_energy_mixed">medida al principio y luego estimada a partir de cargas anteriores</string>
+    <string name="stats_energy_learned">estimada a partir de cargas anteriores</string>
+    <string name="stats_energy_percent">estimada a partir del nivel de batería</string>
 
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Pantalla del conductor</string>

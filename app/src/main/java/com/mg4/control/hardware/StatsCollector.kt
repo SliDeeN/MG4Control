@@ -5,6 +5,9 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.ChargeEnergy
+import com.mg4.control.model.ChargeSession
+import com.mg4.control.model.ChargeType
 import com.mg4.control.model.EnergyCheck
 import com.mg4.control.model.EnergySnapshot
 import com.mg4.control.model.LastReading
@@ -140,6 +143,8 @@ object StatsCollector {
         val s = StatsStore(context)
         s.saveSettings(s.settings().copy(enabled = on))
         AppLogger.i(TAG, "enregistrement ${if (on) "activé" else "désactivé"}")
+        // Le suivi de charge (2 s) sert aussi les Statistiques : il suit cet interrupteur (issue #156).
+        ChargeMonitor.refresh(context)
         if (on) {
             start(context)
         } else {
@@ -236,7 +241,34 @@ object StatsCollector {
         // batterie aurait été corrigée pendant la charge.
         // Le prix du kWh corrigé dans le pop-up de charge vaut pour CETTE charge : il suit la session.
         is StatsTracker.Event.ChargeEnded ->
-            s.addCharge(ChargeMonitor.avecTarif(event.session.withCapacity(s.settings().effectiveCapacityKwh)))
+            s.addCharge(ChargeMonitor.avecTarif(affiner(s, event.session.withCapacity(s.settings().effectiveCapacityKwh))))
+    }
+
+    /**
+     * L'énergie retenue pour la charge (issue #156, voir [ChargeEnergy]) : en DC, mesurée si le
+     * suivi de charge l'a vue, sinon tirée de la table apprise ; en AC, le pourcentage, comme
+     * avant. Les trois valeurs sont consignées, pour comparer avec la borne.
+     */
+    private fun affiner(s: StatsStore, session: ChargeSession): ChargeSession {
+        val obs = ChargeMonitor.observation(session)
+        val type = session.type ?: obs?.type
+        val capacite = s.settings().effectiveCapacityKwh
+        val socDebut = obs?.socDebut ?: session.socStart
+        val r = ChargeEnergy.calculer(type, socDebut, session.socEnd, capacite, obs, s.socTable(ChargeType.DC))
+        val table = type?.let { t -> socDebut?.let { d -> session.socEnd?.let { f ->
+            s.socTable(t).estimer(d, f, capacite / 100f) } } }
+        AppLogger.i(TAG, "énergie de la charge ${type?.name ?: "type ?"} " +
+            "(${socDebut ?: "?"} → ${session.socEnd ?: "?"} %) : pourcentage ${session.energyKwh ?: "?"} kWh · " +
+            "mesurée ${obs?.let { "%.1f".format(java.util.Locale.US, it.energieKwh) + if (it.complete) " (en entier)" else " (en partie)" } ?: "non vue"} · " +
+            "table ${table?.let { "%.1f".format(java.util.Locale.US, it.kwh) + " (${it.tranchesApprises}/${it.tranches} tranches apprises)" } ?: "?"} " +
+            "→ ${r.kwh ?: "?"} kWh retenus (${r.source.name})")
+        return session.copy(
+            type = type,
+            socStart = socDebut,
+            energyKwh = r.kwh ?: session.energyKwh,
+            measuredPowerKw = r.puissanceKw ?: session.measuredPowerKw,
+            energySource = r.source,
+        )
     }
 
     /**

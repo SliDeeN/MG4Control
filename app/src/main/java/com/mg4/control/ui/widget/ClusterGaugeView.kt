@@ -247,7 +247,11 @@ class ClusterGaugeView(context: Context) : View(context) {
         val (chiffre, unite) = when (e?.unit) {
             null -> "–" to ""
             GaugeUnit.WH_PER_KM -> ClusterGauge.formatConsumption(v, c.unite, locale) to c.unite.label
-            GaugeUnit.KW_REGEN -> "↓" + ClusterGauge.formatKw(v, locale) to context.getString(R.string.cluster_regen_kw)
+            // En roulant, la récupération s'écrit en consommation négative (issue #158), tirée des
+            // kW récupérés affichés — elle glisse avec eux ; sous 5 km/h, les kW comme avant.
+            GaugeUnit.KW_REGEN -> ClusterGauge.regenWhPerKm(-v, c.kmh)
+                ?.let { ClusterGauge.formatConsumption(it, c.unite, locale) to c.unite.label }
+                ?: ("↓" + ClusterGauge.formatKw(v, locale) to context.getString(R.string.cluster_regen_kw))
             GaugeUnit.KW_STOPPED -> ClusterGauge.formatKw(v, locale) to context.getString(R.string.cluster_stopped_kw)
             GaugeUnit.KW -> ClusterGauge.formatKw(v, locale) to "kW"
         }
@@ -303,12 +307,16 @@ class ClusterGaugeView(context: Context) : View(context) {
             canvas.drawText("kW", cx, cy + 28f, texte)
         }
         // Consommation instantanée en grand (28, en blanc) et son unité en petit et en gris
-        // (issue #152) ; en récupération et à l'arrêt, le mot qui en tient lieu, en petit.
+        // (issue #152) ; en récupération, négative et en bleu (issue #158) ; sous 5 km/h, le mot
+        // qui en tient lieu, en petit.
         val wh = if (e == null || recup) null else c.kw?.let { ClusterGauge.whPerKm(it, c.kmh) }
+        val whRecup = if (e == null || !recup) null else c.kw?.let { ClusterGauge.regenWhPerKm(it, c.kmh) }
         when {
             e == null -> Unit
             wh != null -> valeurEtUnite(canvas, ClusterGauge.formatConsumption(wh, c.unite, locale), c.unite.label,
                 cx, cy + 64f, cTexte, tailleValeur = 28f, tailleUnite = 12f)
+            whRecup != null -> valeurEtUnite(canvas, ClusterGauge.formatConsumption(whRecup, c.unite, locale), c.unite.label,
+                cx, cy + 64f, cAccent, tailleValeur = 28f, tailleUnite = 12f)
             recup -> petit(canvas, context.getString(R.string.cluster_regen_word), cx, cy + 58f, 13f, cAccent)
             else -> petit(canvas, context.getString(R.string.cluster_stopped_word), cx, cy + 58f, 13f, cTexte2)
         }
@@ -634,10 +642,13 @@ class ClusterGaugeView(context: Context) : View(context) {
         }
     }
 
-    /** Une seule colonne, centrée : intitulé en petit, valeur dessous. */
+    /**
+     * Une seule colonne, centrée : intitulé en petit, valeur dessous — en 20 et non 16 : seule en
+     * pied depuis le retrait de la batterie, la moyenne du trajet avait la place (issue #158).
+     */
     private fun piedCentre(canvas: Canvas, libelle: String, valeur: Pair<String, String?>, couleur: Int) {
         petit(canvas, libelle, COTE / 2f, 220f, 11f, cTexte2)
-        valeurEtUnite(canvas, valeur.first, valeur.second, COTE / 2f, 241f, couleur)
+        valeurEtUnite(canvas, valeur.first, valeur.second, COTE / 2f, 244f, couleur, tailleValeur = 20f)
     }
 
     /** « 172 Wh/km » centré en [x] : la valeur en [tailleValeur], l'unité en [tailleUnite] et en gris. */

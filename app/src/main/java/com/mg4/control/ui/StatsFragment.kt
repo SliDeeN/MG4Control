@@ -27,6 +27,7 @@ import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.StatsCollector
+import com.mg4.control.model.ChargeEnergySource
 import com.mg4.control.model.ChargeSession
 import com.mg4.control.model.ChargeTimes
 import com.mg4.control.model.ChargeType
@@ -458,6 +459,22 @@ class StatsFragment : Fragment() {
     //  Détails
     // ═════════════════════════════════════════════════════════════════════════
 
+    /**
+     * D'où vient l'énergie de la charge (issue #156) : mesurée, en partie mesurée, estimée d'après
+     * les charges déjà vues, ou d'après le niveau de batterie. Pour une charge reconstituée au
+     * pourcentage, la ligne « Origine » le dit déjà : pas de doublon.
+     */
+    private fun energySourceLine(session: ChargeSession): Pair<String, String>? {
+        val source = session.energySource ?: ChargeEnergySource.PERCENT
+        if (session.reconstructed && source == ChargeEnergySource.PERCENT) return null
+        return getString(R.string.stats_detail_energy_source) to getString(when (source) {
+            ChargeEnergySource.MEASURED -> R.string.stats_energy_measured
+            ChargeEnergySource.MIXED -> R.string.stats_energy_mixed
+            ChargeEnergySource.LEARNED -> R.string.stats_energy_learned
+            ChargeEnergySource.PERCENT -> R.string.stats_energy_percent
+        })
+    }
+
     private fun tripDetail(ctx: Context, trip: Trip): View = detailBox(ctx, tripEnergyLines(trip) + listOfNotNull(
         soc(trip.socStart, trip.socEnd)?.let { getString(R.string.stats_detail_battery) to it },
         trip.outsideTempC?.let { getString(R.string.stats_detail_temp) to "${fmt(it)} °C" },
@@ -490,6 +507,7 @@ class StatsFragment : Fragment() {
 
     private fun chargeDetail(ctx: Context, session: ChargeSession, s: StatsSettings): View {
         val box = detailBox(ctx, listOfNotNull(
+            energySourceLine(session),
             // Ni puissance mesurée ni durée vraie quand l'application n'a pas vu la charge :
             // la seule chose honnête à montrer est d'où sort le chiffre.
             if (session.reconstructed)

@@ -763,6 +763,11 @@
     <string name="stats_complete_start">Beginn (hh:mm)</string>
     <string name="stats_complete_end">Ende (hh:mm)</string>
     <string name="stats_detail_origin_completed">aus dem Batteriestand geschätzt, Uhrzeiten von Hand eingetragen</string>
+    <string name="stats_detail_energy_source">Energie</string>
+    <string name="stats_energy_measured">während der Ladung gemessen</string>
+    <string name="stats_energy_mixed">zuerst gemessen, dann anhand früherer Ladungen geschätzt</string>
+    <string name="stats_energy_learned">anhand früherer Ladungen geschätzt</string>
+    <string name="stats_energy_percent">aus dem Batteriestand geschätzt</string>
 
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Fahrerdisplay</string>
