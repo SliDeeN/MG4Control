@@ -765,7 +765,7 @@
     <string name="stats_detail_origin_completed">batarya düzeyinden tahmin edildi, saatler elle girildi</string>
     <string name="stats_detail_energy_source">Enerji</string>
     <string name="stats_energy_measured">şarj sırasında ölçüldü</string>
-    <string name="stats_energy_mixed">önce ölçüldü, sonra önceki şarjlardan tahmin edildi</string>
+    <string name="stats_energy_mixed">kısmen ölçüldü, kalanı önceki şarjlardan tahmin edildi</string>
     <string name="stats_energy_learned">önceki şarjlardan tahmin edildi</string>
     <string name="stats_energy_percent">batarya düzeyinden tahmin edildi</string>
 

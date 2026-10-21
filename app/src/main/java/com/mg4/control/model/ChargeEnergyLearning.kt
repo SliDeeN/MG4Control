@@ -14,7 +14,10 @@ enum class ChargeEnergySource {
     PERCENT,
     /** Mesurée par le suivi de charge, vue du début à la fin. */
     MEASURED,
-    /** Mesurée sur la partie vue, puis la table apprise pour le reste (écran éteint en cours de route). */
+    /**
+     * Mesurée sur la partie vue, la table apprise pour le reste : écran éteint en cours de route,
+     * ou rallumé alors que la charge avait déjà commencé.
+     */
     MIXED,
     /** Jamais vue : la table apprise, tranche par tranche. */
     LEARNED,
@@ -177,10 +180,16 @@ data class ChargeObservation(
  *    longue, se fait surtout écran éteint, et la mesure côté batterie y donnerait ~10 % de moins
  *    que la wallbox.
  *  - **DC vue en entier** : l'énergie mesurée, et sa puissance moyenne (énergie ÷ durée).
- *  - **DC vue en partie** (écran éteint au verrouillage) : la mesure, puis la table pour le reste.
+ *  - **DC vue en partie** : la mesure, et la table pour ce qui n'a pas été vu — la fin (écran éteint
+ *    au verrouillage) comme le début (écran rallumé, ou application relancée, en cours de charge).
+ *    [socDebut] est alors le début RÉEL de la charge, celui de l'onglet Statistiques, antérieur à
+ *    celui du suivi.
  *  - **DC jamais vue** : la table ; tant qu'elle est vide, cela revient au pourcentage.
  */
 object ChargeEnergy {
+
+    /** Début non vu par le suivi en deçà de cet écart de % : rien à estimer. */
+    const val TETE_MIN_PCT = 0.5f
 
     /** [puissanceKw] `null` : garder la puissance de la session. */
     data class Resultat(val kwh: Float?, val source: ChargeEnergySource, val puissanceKw: Float?)
@@ -197,12 +206,18 @@ object ChargeEnergy {
         val o = observation
         if (o != null && o.energieKwh > 0f) {
             val heures = o.dureeMs / 3_600_000f
-            val puissance = if (heures > 0f) o.energieKwh / heures else null
-            if (o.complete) return Resultat(o.energieKwh.roundTenth(), ChargeEnergySource.MEASURED, puissance?.roundTenth())
-            val depuis = o.socFinVue ?: o.socDebut ?: socDebut
+            val puissance = (if (heures > 0f) o.energieKwh / heures else null)?.roundTenth()
+            // Le début de la charge, avant que le suivi ne la voie : estimé, pas perdu. Sous
+            // [TETE_MIN_PCT], c'est l'écart de cadence entre le suivi (2 s) et l'onglet (30 s).
+            val oDebut = o.socDebut
+            val tete = if (socDebut != null && oDebut != null && oDebut - socDebut > TETE_MIN_PCT)
+                tableDc.estimer(socDebut, oDebut, defaut).kwh else 0f
+            if (o.complete) return Resultat((tete + o.energieKwh).roundTenth(),
+                if (tete > 0f) ChargeEnergySource.MIXED else ChargeEnergySource.MEASURED, puissance)
+            val depuis = o.socFinVue ?: oDebut ?: socDebut
             if (depuis != null) {
                 val reste = tableDc.estimer(depuis, socFin, defaut).kwh
-                return Resultat((o.energieKwh + reste).roundTenth(), ChargeEnergySource.MIXED, puissance?.roundTenth())
+                return Resultat((tete + o.energieKwh + reste).roundTenth(), ChargeEnergySource.MIXED, puissance)
             }
         }
         val debut = o?.socDebut ?: socDebut ?: return Resultat(pourcentage, ChargeEnergySource.PERCENT, null)

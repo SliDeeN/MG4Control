@@ -173,6 +173,17 @@ class ChargeEnergyLearningTest {
         assertEquals(0.8f + 5 * 0.8f, r.kwh!!, 0.05f)
     }
 
+    @Test fun `le debut d'une charge vue en cours de route est estime, pas perdu`() {
+        // Branchée écran éteint à 30 %, voiture rallumée à 40 % : le suivi la voit de 40 à 70 %.
+        val obs = ChargeObservation(socDebut = 40f, energieKwh = 18f, dureeMs = 1_200_000L, socFinVue = 70f, complete = true)
+        val r = ChargeEnergy.calculer(ChargeType.DC, 30f, 70f, capacite, obs, SocEnergyTable())
+        assertEquals(ChargeEnergySource.MIXED, r.source)
+        assertEquals((10f * defaut + 18f).roundTenth(), r.kwh!!, delta)
+        // Le suivi a vu le début avant l'onglet Statistiques (2 s contre 30 s) : rien d'estimé.
+        val vue = ChargeEnergy.calculer(ChargeType.DC, 63.9f, 70f, capacite, obs.copy(socDebut = 63.9f, energieKwh = 4.8f), SocEnergyTable())
+        assertEquals(ChargeEnergySource.MEASURED, vue.source)
+    }
+
     @Test fun `en DC jamais vue, la table, ou le pourcentage tant qu'elle est vide`() {
         val vide = ChargeEnergy.calculer(ChargeType.DC, 64f, 70f, capacite, null, SocEnergyTable())
         assertEquals(ChargeEnergySource.PERCENT, vide.source)

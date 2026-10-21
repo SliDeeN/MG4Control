@@ -510,11 +510,12 @@ class StatsFragment : Fragment() {
             energySourceLine(session),
             // Ni puissance mesurée ni durée vraie quand l'application n'a pas vu la charge :
             // la seule chose honnête à montrer est d'où sort le chiffre.
-            if (session.reconstructed)
-                getString(R.string.stats_detail_origin) to getString(
+            // Seulement si l'énergie vient du pourcentage : mesurée en partie, c'est la ligne
+            // « Énergie » qui le dit, et « l'application ne tournait pas » serait faux.
+            if (session.reconstructed) (getString(R.string.stats_detail_origin) to getString(
                     if (session.timesKnown) R.string.stats_detail_origin_completed
                     else R.string.stats_detail_origin_estimated
-                )
+                )).takeIf { (session.energySource ?: ChargeEnergySource.PERCENT) == ChargeEnergySource.PERCENT }
             else session.measuredPowerKw?.let { getString(R.string.stats_detail_power_measured) to "${fmt(it)} kW" }
                 ?: session.powerKw?.let { getString(R.string.stats_detail_power_computed) to "${fmt(it)} kW" },
             // Reconstituée mais datée à la main : la puissance se calcule de nouveau, et reste

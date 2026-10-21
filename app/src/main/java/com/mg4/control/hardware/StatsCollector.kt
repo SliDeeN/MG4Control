@@ -253,7 +253,10 @@ object StatsCollector {
         val obs = ChargeMonitor.observation(session)
         val type = session.type ?: obs?.type
         val capacite = s.settings().effectiveCapacityKwh
-        val socDebut = obs?.socDebut ?: session.socStart
+        // Le plus ancien des deux débuts : celui du suivi (2 s) d'ordinaire, celui de l'onglet
+        // quand la charge avait commencé avant que le suivi ne la voie (écran rallumé en cours de
+        // charge, application relancée) — ce début-là sera estimé, pas perdu.
+        val socDebut = listOfNotNull(session.socStart, obs?.socDebut).minOrNull()
         val r = ChargeEnergy.calculer(type, socDebut, session.socEnd, capacite, obs, s.socTable(ChargeType.DC))
         val table = type?.let { t -> socDebut?.let { d -> session.socEnd?.let { f ->
             s.socTable(t).estimer(d, f, capacite / 100f) } } }

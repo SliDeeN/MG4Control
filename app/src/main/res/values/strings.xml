@@ -781,7 +781,7 @@
     <string name="stats_detail_origin_completed">estimée d’après le niveau de batterie, horaires saisis à la main</string>
     <string name="stats_detail_energy_source">Énergie</string>
     <string name="stats_energy_measured">mesurée pendant la charge</string>
-    <string name="stats_energy_mixed">mesurée au début, puis estimée d’après les charges déjà vues</string>
+    <string name="stats_energy_mixed">mesurée en partie, le reste estimé d’après les charges déjà vues</string>
     <string name="stats_energy_learned">estimée d’après les charges déjà vues</string>
     <string name="stats_energy_percent">estimée d’après le niveau de batterie</string>
     <string name="stats_unit_per100" translatable="false">kWh/100 km</string>

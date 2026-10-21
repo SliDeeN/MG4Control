@@ -765,7 +765,7 @@
     <string name="stats_detail_origin_completed">estimada a partir do nível da bateria, horas introduzidas à mão</string>
     <string name="stats_detail_energy_source">Energia</string>
     <string name="stats_energy_measured">medida durante o carregamento</string>
-    <string name="stats_energy_mixed">medida no início e depois estimada a partir de carregamentos anteriores</string>
+    <string name="stats_energy_mixed">medida em parte, o resto estimado a partir de carregamentos anteriores</string>
     <string name="stats_energy_learned">estimada a partir de carregamentos anteriores</string>
     <string name="stats_energy_percent">estimada a partir do nível da bateria</string>
 
