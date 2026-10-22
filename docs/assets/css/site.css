@@ -138,7 +138,7 @@ p { margin: 0 0 .9em; }
 }
 .icon-btn:hover { color: var(--ink); border-color: var(--ink-3); }
 .icon-btn svg { width: 18px; height: 18px; }
-/* Liens GitHub (discussion, bug / suggestion) : icône + texte sur grand écran, icône seule en
+/* Liens d'en-tête (groupe Telegram, bug / suggestion sur GitHub) : icône + texte sur grand écran, icône seule en
    dessous, et dans le menu ☰ sur téléphone où l'en-tête n'a plus la place. */
 .head-link {
   display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 11px; border-radius: 9px;
