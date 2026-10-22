@@ -122,15 +122,23 @@ langue mène à un dossier et non à sa page.
 
 ## Version documentée
 
-Le site et le simulateur décrivent la **2.6.8** (code de la branche `beta` au 08/10/2026, commit
-`8e591e5`, option « une seule fois » de l'automatisation A/C). Ils sont prévus pour être publiés en
-même temps que la release 2.6.8 : le bouton « Télécharger la dernière version » pointe vers
+Le site et le simulateur décrivent la **2.6.9** (code de la branche `beta` au 16/10/2026, après le
+commit `cfba533` : cycle de sources audio avec ses correctifs A9, ventilation éteinte au cran 1 du
+pop-up HVAC, module sur l'écran conducteur réservé à SWI133, SWI68 et SWI165). Ils sont prévus pour être publiés en
+même temps que la release 2.6.9 : le bouton « Télécharger la dernière version » pointe vers
 `releases/latest`, et publier plus tôt annoncerait des fonctions que la version stable n'a pas.
 
-Les nouveautés portent le badge `<span class="badge-new">` (« Nouveau · 2.6.8 ») et leur carte la
-classe `is-new` ; le filtre « ★ 2.6.8 », le lien « Nouveautés » de l'en-tête et l'encadré de
-l'accueil s'appuient dessus. À la version suivante, retirer ces badges et ces classes, réécrire
-l'encadré des nouveautés et changer la pastille `vX.Y.Z` de l'accueil.
+Les nouveautés portent le badge `<span class="badge-new">` (« Nouveau · 2.6.9 ») et leur carte la
+classe `is-new` (l'aperçu d'une nouveauté aussi, pour rester visible avec le filtre) ; le filtre « ★ 2.6.9 », le lien « Nouveautés » de l'en-tête et l'encadré de
+l'accueil s'appuient dessus. À la version suivante, retirer ces badges et ces classes (cartes et
+tableau de compatibilité), réécrire l'encadré des nouveautés et changer la pastille `vX.Y.Z` de
+l'accueil, la puce « ★ » et les deux liens « Nouveautés X.Y.Z » de l'en-tête.
+
+L'aperçu du module (rubrique « Écran conducteur », `<div class="cl" data-cluster>`) est monté par
+`MG4Sim.mountCluster` : il redessine en SVG le module de `ClusterGaugeView`, SEUL — le reste du
+combiné (vitesse, batterie, onglets) n'est volontairement pas reproduit. Les bornes de
+`ClusterGauge` sont recopiées dans `sim.js` (`CG`) : une échelle changée dans l'app doit l'être là
+aussi. La conduite (vitesse, puissance) y est simulée localement, sans toucher au véhicule virtuel.
 
 ## Ajouter ou modifier une fonctionnalité
 

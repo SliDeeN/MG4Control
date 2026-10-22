@@ -25,7 +25,7 @@ data class EnergySnapshot(
     val climateSinceStartKwh: Float? = null,
     val accessoriesSinceStartKwh: Float? = null,
     val regenSinceStartKwh: Float? = null,
-    /** Vrai quand la voiture charge (`BMS_CHRG_STS` = 1). */
+    /** Vrai quand la voiture charge (`BMS_CHRG_STS` 1..3 ou 10..12 : [ChargeDisplay.enCharge]). */
     val charging: Boolean? = null,
     /** Type de charge lu sur les deux prises ; null tant qu'aucune n'est active. */
     val chargeType: ChargeType? = null,

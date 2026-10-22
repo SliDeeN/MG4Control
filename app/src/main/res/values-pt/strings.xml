@@ -95,6 +95,9 @@
     <string name="regen_one_pedal">1 Pedal</string>
     <string name="regen_adaptive_short">Adapt.</string>
     <string name="regen_one_pedal_short">1 Ped.</string>
+    <string name="regen_unchanged">inalterada</string>
+    <string name="regen_unchanged_short">Regen. inalterada</string>
+    <string name="regen_unchanged_note">Inalterada: o perfil não altera o nível de regeneração nem a condução com um pedal.</string>
 
     <!-- Clima -->
     <string name="climate_steering_heat">Volante aquecido</string>
@@ -120,10 +123,13 @@
     <string name="profile_save">Guardar</string>
     <string name="profile_cancel">Cancelar</string>
     <string name="profile_applied">Perfil aplicado: %s</string>
+    <string name="profile_applied_check_logs">Perfil aplicado (verifique os logs)</string>
+    <string name="profile_default_set">Perfil padrão: %1$s</string>
     <string name="profile_cycle_target">Perfil: %s</string>
     <string name="profile_cycle_applied">Perfil %s aplicado</string>
     <string name="profile_cycle_incomplete">Perfil %s: aplicação incompleta</string>
     <string name="profile_max_reached">Máximo de %d perfis atingido</string>
+    <string name="profile_drag_hint">Solte: «%1$s» na posição %2$d</string>
     <string name="profile_bt_device_label">Dispositivo Bluetooth</string>
 
     <!-- Bloc climatisation du profil (onglet Confort) -->
@@ -513,6 +519,16 @@
     <string name="shortcuts_cat_profile_cycle">Ciclo perfis</string>
     <string name="shortcuts_cfg_profile_hint">Toque nos perfis pela ordem por que os quer percorrer e depois guarde. Cada pressão aplica o perfil que se segue ao perfil ativo.</string>
     <string name="shortcuts_cfg_profile_min">Um ciclo precisa de pelo menos dois perfis.</string>
+    <string name="shortcuts_action_audio_cycle">Ciclo de fontes de áudio</string>
+    <string name="shortcuts_cat_audio_cycle">Ciclo fontes</string>
+    <string name="shortcuts_cfg_audio_hint">Toque nas fontes pela ordem por que as quer percorrer e depois guarde. Uma fonte indisponível (sem pen USB, sem telemóvel) é selecionada na mesma: mais uma pressão passa à seguinte.</string>
+    <string name="shortcuts_cfg_audio_min">Um ciclo precisa de pelo menos duas fontes.</string>
+    <string name="audio_cycle_target">Fonte: %s</string>
+    <string name="audio_source_radio">Rádio</string>
+    <string name="audio_source_bluetooth">Bluetooth</string>
+    <string name="audio_source_usb">USB</string>
+    <string name="audio_source_online">Online</string>
+    <string name="audio_source_projection">CarPlay / Android Auto</string>
     <string name="adv_sc_new">Novo atalho</string>
     <string name="adv_sc_step_key">1 · Tecla</string>
     <string name="adv_sc_step_press">2 · Tipo de pressão</string>
@@ -695,7 +711,12 @@
     <string name="stats_battery_title">Bateria</string>
     <string name="stats_battery_label">Bateria do carro</string>
     <string name="stats_battery_option">%1$d kWh · %2$s kWh úteis (%3$s)</string>
-    <string name="stats_battery_note">Serve para calcular a energia dos carregamentos a partir da percentagem de bateria. Mudar de bateria recalcula os carregamentos já registados.</string>
+    <string name="stats_battery_note">Serve, com o estado de saúde, para calcular a energia dos carregamentos a partir da percentagem de bateria. Deixa 100 % se não conheceres o estado de saúde: um concessionário ou uma app OBD podem medi-lo. Alterá-los recalcula os carregamentos já registados.</string>
+    <string name="stats_soh_label">Estado de saúde (SOH)</string>
+    <string name="stats_soh_value">%1$s %%</string>
+    <string name="stats_soh_effective">Capacidade útil usada: %1$s kWh (%2$s × %3$s %%)</string>
+    <string name="stats_soh_less">Diminuir o estado de saúde</string>
+    <string name="stats_soh_more">Aumentar o estado de saúde</string>
     <string name="stats_battery_banner">A energia dos carregamentos depende da bateria selecionada: %1$s. Verifique se é a do seu carro.</string>
     <string name="stats_battery_banner_ok">Está correta</string>
     <string name="stats_battery_banner_change">Alterar</string>
@@ -742,5 +763,122 @@
     <string name="stats_complete_start">Início (hh:mm)</string>
     <string name="stats_complete_end">Fim (hh:mm)</string>
     <string name="stats_detail_origin_completed">estimada a partir do nível da bateria, horas introduzidas à mão</string>
+    <string name="stats_detail_energy_source">Energia</string>
+    <string name="stats_energy_measured">medida durante o carregamento</string>
+    <string name="stats_energy_mixed">medida em parte, o resto estimado a partir de carregamentos anteriores</string>
+    <string name="stats_energy_learned">estimada a partir de carregamentos anteriores</string>
+    <string name="stats_energy_percent">estimada a partir do nível da bateria</string>
 
+    <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
+    <string name="settings_cluster">Ecrã do condutor</string>
+    <string name="settings_cluster_module">Módulo no painel de instrumentos</string>
+    <string name="settings_cluster_module_desc">Mostra um módulo do MG4Control no centro do painel de instrumentos, nos separadores escolhidos, em vez da sua página original.</string>
+    <string name="settings_cluster_preview">Pré-visualização · viagem simulada</string>
+    <string name="settings_cluster_preview_none">Página original do separador (sem módulo)</string>
+    <string name="settings_cluster_sec_modules">Módulos</string>
+    <string name="settings_cluster_sec_appearance">Aspeto</string>
+    <string name="settings_cluster_sec_units">Unidades</string>
+    <string name="settings_cluster_row_nav">Navegação</string>
+    <string name="settings_cluster_row_media">Música</string>
+    <string name="settings_cluster_row_style">Estilo</string>
+    <string name="settings_cluster_row_pill">Etiqueta</string>
+    <string name="settings_cluster_row_gauge">Indicador</string>
+    <string name="settings_cluster_row_average">Média</string>
+    <string name="settings_cluster_advanced">Avançado · atualização %1$s · animação %2$s</string>
+    <string name="settings_cluster_none">Nenhum</string>
+    <string name="settings_cluster_tabs_note">O computador de bordo, a pressão dos pneus e as definições são desenhados pelo próprio painel: aí não pode aparecer nenhum módulo.</string>
+    <string name="cluster_unit_wh_km">Wh/km</string>
+    <string name="cluster_unit_kwh_100km">kWh/100 km</string>
+    <string name="settings_cluster_style_dynamic">Dinâmico</string>
+    <string name="settings_cluster_style_discreet">Discreto</string>
+    <string name="cluster_unit_km_kwh">km/kWh</string>
+    <string name="cluster_avg_short">média</string>
+    <string name="settings_cluster_consumption">Consumo</string>
+    <string name="settings_cluster_power">Potência</string>
+    <string name="settings_cluster_refresh">Atualização do indicador</string>
+    <string name="settings_cluster_refresh_desc">Potência, velocidade e indicador. Mais curto: mais reativo, mas o número mexe mais.</string>
+    <string name="settings_cluster_pill_mode">Modo de condução</string>
+    <string name="settings_cluster_pill_profile">Perfil</string>
+    <string name="settings_cluster_pill_none">Nenhuma</string>
+    <string name="settings_cluster_pill_desc">Perfil: o último perfil aplicado, na cor do seu modo de condução.</string>
+    <string name="settings_cluster_animation">Duração da animação</string>
+    <string name="settings_cluster_animation_desc">Tempo que o indicador leva a deslizar de um valor para o seguinte. Mais longo: mais suave, mas acompanha mais devagar.</string>
+    <string name="cluster_regen_kw">REGEN. kW</string>
+    <string name="cluster_stopped_kw">kW parado</string>
+    <string name="cluster_trip_avg">MÉDIA VIAGEM</string>
+    <string name="cluster_regen">REGEN.</string>
+    <string name="cluster_battery">BATERIA</string>
+    <string name="cluster_regen_word">regeneração</string>
+    <string name="cluster_stopped_word">parado</string>
+    <!-- Module « charge » de l'écran conducteur (2026-10-16) -->
+    <string name="cluster_charge">Carregamento</string>
+    <string name="cluster_charge_ac">Carregamento AC</string>
+    <string name="cluster_charge_dc">Carregamento DC</string>
+    <string name="cluster_charge_done">Carregamento concluído</string>
+    <string name="cluster_charge_until">Até %1$d %%</string>
+    <string name="cluster_charge_remaining">Tempo restante</string>
+    <string name="cluster_charge_level">Bateria</string>
+    <string name="cluster_charge_end_at">fim às %1$s</string>
+    <string name="cluster_charge_power">Potência</string>
+    <string name="cluster_charge_energy">Energia</string>
+    <string name="cluster_charge_duration">Duração</string>
+    <string name="cluster_duration_hm">%1$d h %2$02d</string>
+    <string name="cluster_duration_min">%1$d min</string>
+    <!-- Pop-up de charge (2026-10-16) -->
+    <string name="charge_popup_title">A carregar</string>
+    <string name="charge_popup_title_done">Carga concluída</string>
+    <string name="charge_popup_type_ac">Carga AC</string>
+    <string name="charge_popup_type_dc">Carga rápida DC</string>
+    <string name="charge_popup_type_unknown">Carga</string>
+    <string name="charge_popup_battery">Bateria</string>
+    <string name="charge_popup_hint">Arraste o cursor para mudar o limite de carga</string>
+    <string name="charge_popup_hint_release">Solte para definir o limite de carga em %1$d %%</string>
+    <string name="charge_popup_hint_below">%1$d %%: abaixo do nível atual, a carga vai parar</string>
+    <string name="charge_popup_hint_sending">A enviar o limite de %1$d %% ao carro…</string>
+    <string name="charge_popup_hint_refused">O carro não aceitou o limite de %1$d %%</string>
+    <string name="charge_popup_hint_unknown">Limite de carga ilegível</string>
+    <string name="charge_popup_until_unknown">Até %1$d %%</string>
+    <string name="charge_popup_end_label">Fim estimado</string>
+    <string name="charge_popup_end_left">faltam %1$s · até %2$d %%</string>
+    <string name="charge_popup_lfp_info">Limite de carga não ajustável (bateria LFP)</string>
+    <string name="charge_popup_limit_fixed">Limite de carga não ajustável neste veículo</string>
+    <string name="charge_popup_legend_power">Potência (kW)</string>
+    <string name="charge_popup_legend_battery" formatted="false">Bateria (%)</string>
+    <string name="charge_popup_since">desde o início da carga (%1$s)</string>
+    <string name="charge_popup_since_plain">desde o início da carga</string>
+    <string name="charge_popup_target">alvo %1$d %%</string>
+    <string name="charge_popup_end_estimate">fim estimado %1$s</string>
+    <string name="charge_popup_power">Potência</string>
+    <string name="charge_popup_power_max">máx. %1$s kW</string>
+    <string name="charge_popup_energy">Energia adicionada</string>
+    <string name="charge_popup_range">Autonomia ganha</string>
+    <string name="charge_popup_cost">Custo estimado</string>
+    <string name="charge_popup_tariff_default">%1$s %2$s/kWh · tarifa %3$s</string>
+    <string name="charge_popup_tariff_fixed">%1$s %2$s/kWh · corrigido</string>
+    <string name="charge_popup_duration">Duração</string>
+    <string name="charge_popup_since_time">desde as %1$s</string>
+    <string name="charge_popup_price_title">Preço do kWh</string>
+    <string name="charge_popup_price_note">Só altera esta carga.</string>
+    <string name="charge_popup_price_ok">Confirmar</string>
+    <string name="charge_popup_none">Nenhuma carga em curso</string>
+    <string name="charge_popup_disabled">Ative «Pop-up de carga» em Definições › Interface</string>
+    <string name="settings_charge_popup">Pop-up de carga</string>
+    <string name="settings_charge_popup_switch">Mostrar o pop-up durante a carga</string>
+    <string name="settings_charge_popup_desc">Abre-se no início de cada carga: curva desde o início, limite de carga ajustável, custo. Fecha-se a pedido ou ao passar a READY; o atalho «Pop-up de carga» volta a abri-lo.</string>
+    <string name="shortcuts_action_charge_popup">Pop-up de carga</string>
+
+    <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
+    <string name="btn_cluster_tab">Separador do painel</string>
+    <string name="cluster_tab_hint">Muda de separador com os botões do volante: o número acompanha em direto. Cada mudança fica anotada no registo do Diagnóstico.</string>
+    <string name="cluster_tab_code_name">Segundo o código original: %1$s</string>
+    <string name="cluster_tab_unknown">Valor ausente do código original</string>
+    <string name="cluster_tab_unreadable">Ilegível</string>
+    <string name="cluster_tab_0">Computador de bordo</string>
+    <string name="cluster_tab_1">Navegação</string>
+    <string name="cluster_tab_2">Música e rádio</string>
+    <string name="cluster_tab_3">Telefone</string>
+    <string name="cluster_tab_4">Centro de alertas</string>
+    <string name="cluster_tab_5">Definições</string>
+    <string name="cluster_tab_6">Assistência à condução</string>
+    <string name="cluster_tab_7">Reservado</string>
 </resources>

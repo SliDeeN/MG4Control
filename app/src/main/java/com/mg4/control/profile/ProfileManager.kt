@@ -16,7 +16,27 @@ class ProfileManager(private val context: Context) {
         private const val PREFS_NAME = "mg4_profiles"
         private const val KEY_PROFILES = "profiles_json"
         private const val KEY_DEFAULT_ID = "default_profile_id"
-        const val MAX_PROFILES = 5
+        /** Dix depuis la 2.6.9 (cinq avant) : la page « Cycle profils » en a deux rangées de cinq. */
+        const val MAX_PROFILES = 10
+
+        /**
+         * [profils] rangés dans l'ordre de [ids] (glisser-déposer de la liste). Ceux qui n'y
+         * figurent pas gardent leur place relative, en fin de liste (tri stable) : un profil créé
+         * pendant le glisser n'est pas perdu. Un identifiant inconnu est ignoré.
+         */
+        fun ordonner(profils: List<DrivingProfile>, ids: List<String>): List<DrivingProfile> {
+            val rang = ids.withIndex().associate { it.value to it.index }
+            return profils.sortedBy { rang[it.id] ?: Int.MAX_VALUE }
+        }
+
+        /**
+         * Profil par défaut après la suppression de [supprime] : si c'était lui, le premier des
+         * [restants] (ordre de la liste) prend le relais (2026-10-16). Sans relais, la liste
+         * n'affichait plus aucun « Par défaut » et le démarrage n'appliquait plus aucun profil.
+         * Sinon le défaut ne change pas. `null` quand il ne reste aucun profil.
+         */
+        fun defautApresSuppression(defaut: String?, supprime: String, restants: List<String>): String? =
+            if (defaut == supprime) restants.firstOrNull() else defaut
 
         /**
          * Verrou de processus, PAS d'instance : l'UI et le service construisent chacun leur
@@ -83,14 +103,30 @@ class ProfileManager(private val context: Context) {
             val list = getAll().toMutableList()
             list.removeAll { it.id == profileId }
             persist(list)
-            // Clear default if it was this profile
-            if (prefs.getString(KEY_DEFAULT_ID, null) == profileId) {
-                prefs.edit().remove(KEY_DEFAULT_ID).apply()
+            // Profil par défaut supprimé : le premier de la liste le remplace (defautApresSuppression).
+            val defaut = prefs.getString(KEY_DEFAULT_ID, null)
+            val relais = defautApresSuppression(defaut, profileId, list.map { it.id })
+            if (relais != defaut) {
+                prefs.edit().apply {
+                    if (relais != null) putString(KEY_DEFAULT_ID, relais) else remove(KEY_DEFAULT_ID)
+                }.apply()
             }
             // Idem pour le profil ACTIF : le laisser pointer sur un profil disparu ferait
             // résoudre les raccourcis qui lui sont associés sur un identifiant fantôme — ils
             // ne se déclencheraient jamais, sans que rien ne l'explique.
             ActiveProfile.forgetIfMissing(context, list.map { it.id })
+        }
+        triggerBackup()
+    }
+
+    /**
+     * Range les profils dans l'ordre de [ids] (glisser-déposer de la liste, 2026-10-15). Cet ordre
+     * est celui du sélecteur, du cycle par défaut et, en conflit Bluetooth, la priorité. Un profil
+     * absent de [ids] garde sa place relative, en fin de liste (tri stable).
+     */
+    fun reorder(ids: List<String>) {
+        synchronized(MUTATION_LOCK) {
+            persist(ordonner(getAll(), ids))
         }
         triggerBackup()
     }

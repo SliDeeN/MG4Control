@@ -251,6 +251,11 @@ data class ChargeSession(
      */
     val userStartMs: Long? = null,
     val userEndMs: Long? = null,
+    /**
+     * D'où vient [energyKwh] (issue #156) : `null` dans les enregistrements d'avant, c'est-à-dire
+     * le pourcentage. Mesurée ou apprise, elle ne dépend plus du réglage de la batterie.
+     */
+    val energySource: ChargeEnergySource? = null,
 ) {
     /** Bornes à afficher : celles de l'utilisateur s'il en a donné, sinon la fenêtre relevée. */
     val displayStartMs: Long get() = userStartMs ?: startMs
@@ -294,6 +299,8 @@ data class ChargeSession(
      * gardés ; sans eux, l'énergie enregistrée reste la seule information et n'est pas touchée.
      */
     fun withCapacity(capacityKwh: Float): ChargeSession {
+        // Mesurée, ou tirée de la table apprise : le réglage de la batterie n'y est pour rien.
+        if (energySource != null && energySource != ChargeEnergySource.PERCENT) return this
         val debut = socStart ?: return this
         val fin = socEnd ?: return this
         val monte = fin - debut

@@ -129,12 +129,20 @@
     }));
 
     // ── Aller à une fonctionnalité depuis l'accueil ───────────────────────
+    // data-scroll : la page défile jusqu'à un autre élément que la carte (l'aperçu de l'écran
+    // conducteur), la carte n'étant « cliquée » que pour amener la maquette au bon écran.
     document.querySelectorAll('[data-feature]').forEach((a) => a.addEventListener('click', (e) => {
       const card = byId(a.getAttribute('data-feature')); if (!card) return;
+      const dest = byId(a.getAttribute('data-scroll')) || card;
       e.preventDefault();
       if (onlyNew() && !card.classList.contains('has-new')) setOnlyNew(false);
-      scrollToEl(card);
+      // Cible encore masquée par le filtre des nouveautés : on le lève, sinon rien ne défile.
+      if (onlyNew() && dest.offsetParent === null) setOnlyNew(false);
+      // La carte d'abord, le défilement ensuite : si la maquette est encore sous le bas de l'écran,
+      // la carte la ramène au centre (site.js, reveal), et ce défilement-là annulait le nôtre —
+      // il fallait cliquer deux fois. Le dernier défilement demandé l'emporte.
       card.click();
+      scrollToEl(dest);
     }));
 
     // ── Barre de thèmes : défilement de la liste + écran de la maquette ────

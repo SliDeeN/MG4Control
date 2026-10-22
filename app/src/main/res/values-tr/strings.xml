@@ -95,6 +95,9 @@
     <string name="regen_one_pedal">Tek pedal</string>
     <string name="regen_adaptive_short">Uyarl.</string>
     <string name="regen_one_pedal_short">1 Ped.</string>
+    <string name="regen_unchanged">değiştirilmez</string>
+    <string name="regen_unchanged_short">Rejen. değiştirilmez</string>
+    <string name="regen_unchanged_note">Değiştirilmez: profil ne rejenerasyon seviyesine ne de tek pedal sürüşe dokunur.</string>
 
     <!-- Climate -->
     <string name="climate_steering_heat">Direksiyon ısıtma</string>
@@ -120,10 +123,13 @@
     <string name="profile_save">Kaydet</string>
     <string name="profile_cancel">İptal</string>
     <string name="profile_applied">Profil uygulandı: %s</string>
+    <string name="profile_applied_check_logs">Profil uygulandı (günlükleri kontrol edin)</string>
+    <string name="profile_default_set">Varsayılan profil: %1$s</string>
     <string name="profile_cycle_target">Profil: %s</string>
     <string name="profile_cycle_applied">%s profili uygulandı</string>
     <string name="profile_cycle_incomplete">%s profili: tam uygulanamadı</string>
     <string name="profile_max_reached">En fazla %d profile ulaşıldı</string>
+    <string name="profile_drag_hint">Bırakın: “%1$s” %2$d. sıraya</string>
     <string name="profile_bt_device_label">Bluetooth cihazı</string>
 
     <!-- Bloc climatisation du profil (onglet Confort) -->
@@ -513,6 +519,16 @@
     <string name="shortcuts_cat_profile_cycle">Profil döngüsü</string>
     <string name="shortcuts_cfg_profile_hint">Dolaşmak istediğiniz sırayla profillere dokunun, sonra kaydedin. Her basışta etkin profilden sonraki profil uygulanır.</string>
     <string name="shortcuts_cfg_profile_min">Bir döngü için en az iki profil gerekir.</string>
+    <string name="shortcuts_action_audio_cycle">Ses kaynağı döngüsü</string>
+    <string name="shortcuts_cat_audio_cycle">Kaynak döngüsü</string>
+    <string name="shortcuts_cfg_audio_hint">Dolaşmak istediğiniz sırayla kaynaklara dokunun, sonra kaydedin. Kullanılamayan bir kaynak (USB bellek yok, telefon yok) yine de seçilir: bir basış daha sonrakine geçer.</string>
+    <string name="shortcuts_cfg_audio_min">Bir döngü en az iki kaynak gerektirir.</string>
+    <string name="audio_cycle_target">Kaynak: %s</string>
+    <string name="audio_source_radio">Radyo</string>
+    <string name="audio_source_bluetooth">Bluetooth</string>
+    <string name="audio_source_usb">USB</string>
+    <string name="audio_source_online">Çevrimiçi</string>
+    <string name="audio_source_projection">CarPlay / Android Auto</string>
     <string name="adv_sc_new">Yeni kısayol</string>
     <string name="adv_sc_step_key">1 · Tuş</string>
     <string name="adv_sc_step_press">2 · Basış türü</string>
@@ -695,7 +711,12 @@
     <string name="stats_battery_title">Batarya</string>
     <string name="stats_battery_label">Araç bataryası</string>
     <string name="stats_battery_option">%1$d kWh · %2$s kWh kullanılabilir (%3$s)</string>
-    <string name="stats_battery_note">Şarj enerjisini batarya yüzdesinden hesaplamak için kullanılır. Bataryayı değiştirmek, kayıtlı şarjları yeniden hesaplar.</string>
+    <string name="stats_battery_note">Sağlık durumuyla birlikte, şarj enerjisini batarya yüzdesinden hesaplamak için kullanılır. Sağlık durumunu bilmiyorsanız 100 % bırakın: bir bayi veya bir OBD uygulaması ölçebilir. Değiştirmek, kayıtlı şarjları yeniden hesaplar.</string>
+    <string name="stats_soh_label">Sağlık durumu (SOH)</string>
+    <string name="stats_soh_value">%1$s %%</string>
+    <string name="stats_soh_effective">Kullanılan net kapasite: %1$s kWh (%2$s × %3$s %%)</string>
+    <string name="stats_soh_less">Sağlık durumunu azalt</string>
+    <string name="stats_soh_more">Sağlık durumunu artır</string>
     <string name="stats_battery_banner">Şarj enerjisi seçili bataryaya bağlıdır: %1$s. Aracınızınkiyle aynı olduğunu kontrol edin.</string>
     <string name="stats_battery_banner_ok">Doğru</string>
     <string name="stats_battery_banner_change">Değiştir</string>
@@ -742,5 +763,122 @@
     <string name="stats_complete_start">Başlangıç (ss:dd)</string>
     <string name="stats_complete_end">Bitiş (ss:dd)</string>
     <string name="stats_detail_origin_completed">batarya düzeyinden tahmin edildi, saatler elle girildi</string>
+    <string name="stats_detail_energy_source">Enerji</string>
+    <string name="stats_energy_measured">şarj sırasında ölçüldü</string>
+    <string name="stats_energy_mixed">kısmen ölçüldü, kalanı önceki şarjlardan tahmin edildi</string>
+    <string name="stats_energy_learned">önceki şarjlardan tahmin edildi</string>
+    <string name="stats_energy_percent">batarya düzeyinden tahmin edildi</string>
 
+    <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
+    <string name="settings_cluster">Sürücü ekranı</string>
+    <string name="settings_cluster_module">Gösterge panelinde modül</string>
+    <string name="settings_cluster_module_desc">Gösterge panelinin ortasında, seçilen sekmelerde, orijinal sayfalarının yerine bir MG4Control modülü gösterir.</string>
+    <string name="settings_cluster_preview">Önizleme · simüle sürüş</string>
+    <string name="settings_cluster_preview_none">Sekmenin özgün sayfası (modül yok)</string>
+    <string name="settings_cluster_sec_modules">Modüller</string>
+    <string name="settings_cluster_sec_appearance">Görünüm</string>
+    <string name="settings_cluster_sec_units">Birimler</string>
+    <string name="settings_cluster_row_nav">Navigasyon</string>
+    <string name="settings_cluster_row_media">Müzik</string>
+    <string name="settings_cluster_row_style">Stil</string>
+    <string name="settings_cluster_row_pill">Etiket</string>
+    <string name="settings_cluster_row_gauge">Gösterge</string>
+    <string name="settings_cluster_row_average">Ortalama</string>
+    <string name="settings_cluster_advanced">Gelişmiş · yenileme %1$s · animasyon %2$s</string>
+    <string name="settings_cluster_none">Hiçbiri</string>
+    <string name="settings_cluster_tabs_note">Yol bilgisayarı, lastik basıncı ve ayarlar gösterge panelinin kendisi tarafından çizilir: orada modül görünemez.</string>
+    <string name="cluster_unit_wh_km">Wh/km</string>
+    <string name="cluster_unit_kwh_100km">kWh/100 km</string>
+    <string name="settings_cluster_style_dynamic">Dinamik</string>
+    <string name="settings_cluster_style_discreet">Sade</string>
+    <string name="cluster_unit_km_kwh">km/kWh</string>
+    <string name="cluster_avg_short">ort.</string>
+    <string name="settings_cluster_consumption">Tüketim</string>
+    <string name="settings_cluster_power">Güç</string>
+    <string name="settings_cluster_refresh">Gösterge yenileme hızı</string>
+    <string name="settings_cluster_refresh_desc">Güç, hız ve gösterge. Daha kısa: daha hızlı tepki, ancak sayı daha çok oynar.</string>
+    <string name="settings_cluster_pill_mode">Sürüş modu</string>
+    <string name="settings_cluster_pill_profile">Profil</string>
+    <string name="settings_cluster_pill_none">Yok</string>
+    <string name="settings_cluster_pill_desc">Profil: en son uygulanan profil, sürüş modunun renginde.</string>
+    <string name="settings_cluster_animation">Animasyon süresi</string>
+    <string name="settings_cluster_animation_desc">Göstergenin bir değerden diğerine kayma süresi. Daha uzun: daha yumuşak, ancak daha yavaş takip eder.</string>
+    <string name="cluster_regen_kw">REJEN. kW</string>
+    <string name="cluster_stopped_kw">kW duruşta</string>
+    <string name="cluster_trip_avg">ORT. YOLCULUK</string>
+    <string name="cluster_regen">REJEN.</string>
+    <string name="cluster_battery">BATARYA</string>
+    <string name="cluster_regen_word">rejenerasyon</string>
+    <string name="cluster_stopped_word">duruşta</string>
+    <!-- Module « charge » de l'écran conducteur (2026-10-16) -->
+    <string name="cluster_charge">Şarj</string>
+    <string name="cluster_charge_ac">AC şarj</string>
+    <string name="cluster_charge_dc">DC şarj</string>
+    <string name="cluster_charge_done">Şarj tamamlandı</string>
+    <string name="cluster_charge_until">Hedef %%%1$d</string>
+    <string name="cluster_charge_remaining">Kalan süre</string>
+    <string name="cluster_charge_level">Batarya</string>
+    <string name="cluster_charge_end_at">bitiş %1$s</string>
+    <string name="cluster_charge_power">Güç</string>
+    <string name="cluster_charge_energy">Enerji</string>
+    <string name="cluster_charge_duration">Süre</string>
+    <string name="cluster_duration_hm">%1$d sa %2$02d dk</string>
+    <string name="cluster_duration_min">%1$d dk</string>
+    <!-- Pop-up de charge (2026-10-16) -->
+    <string name="charge_popup_title">Şarj ediliyor</string>
+    <string name="charge_popup_title_done">Şarj tamamlandı</string>
+    <string name="charge_popup_type_ac">AC şarj</string>
+    <string name="charge_popup_type_dc">DC hızlı şarj</string>
+    <string name="charge_popup_type_unknown">Şarj</string>
+    <string name="charge_popup_battery">Batarya</string>
+    <string name="charge_popup_hint">Şarj sınırını değiştirmek için kaydırıcıyı sürükleyin</string>
+    <string name="charge_popup_hint_release">Şarj sınırını %%%1$d olarak ayarlamak için bırakın</string>
+    <string name="charge_popup_hint_below">%%%1$d: mevcut seviyenin altında, şarj duracak</string>
+    <string name="charge_popup_hint_sending">%%%1$d sınırı araca gönderiliyor…</string>
+    <string name="charge_popup_hint_refused">Araç %%%1$d sınırını kabul etmedi</string>
+    <string name="charge_popup_hint_unknown">Şarj sınırı okunamıyor</string>
+    <string name="charge_popup_until_unknown">Hedef %%%1$d</string>
+    <string name="charge_popup_end_label">Tahmini bitiş</string>
+    <string name="charge_popup_end_left">%1$s kaldı · hedef %%%2$d</string>
+    <string name="charge_popup_lfp_info">Şarj sınırı ayarlanamaz (LFP batarya)</string>
+    <string name="charge_popup_limit_fixed">Bu araçta şarj sınırı ayarlanamaz</string>
+    <string name="charge_popup_legend_power">Güç (kW)</string>
+    <string name="charge_popup_legend_battery" formatted="false">Batarya (%)</string>
+    <string name="charge_popup_since">şarjın başından beri (%1$s)</string>
+    <string name="charge_popup_since_plain">şarjın başından beri</string>
+    <string name="charge_popup_target">hedef %%%1$d</string>
+    <string name="charge_popup_end_estimate">tahmini bitiş %1$s</string>
+    <string name="charge_popup_power">Güç</string>
+    <string name="charge_popup_power_max">maks. %1$s kW</string>
+    <string name="charge_popup_energy">Eklenen enerji</string>
+    <string name="charge_popup_range">Kazanılan menzil</string>
+    <string name="charge_popup_cost">Tahmini maliyet</string>
+    <string name="charge_popup_tariff_default">%1$s %2$s/kWh · %3$s tarifesi</string>
+    <string name="charge_popup_tariff_fixed">%1$s %2$s/kWh · düzeltildi</string>
+    <string name="charge_popup_duration">Süre</string>
+    <string name="charge_popup_since_time">%1$s itibarıyla</string>
+    <string name="charge_popup_price_title">kWh fiyatı</string>
+    <string name="charge_popup_price_note">Yalnızca bu şarjı değiştirir.</string>
+    <string name="charge_popup_price_ok">Onayla</string>
+    <string name="charge_popup_none">Devam eden şarj yok</string>
+    <string name="charge_popup_disabled">«Şarj açılır penceresi» seçeneğini Ayarlar › Arayüz bölümünden açın</string>
+    <string name="settings_charge_popup">Şarj açılır penceresi</string>
+    <string name="settings_charge_popup_switch">Şarj sırasında pencereyi göster</string>
+    <string name="settings_charge_popup_desc">Her şarj başladığında açılır: başlangıçtan itibaren eğri, ayarlanabilir şarj sınırı, maliyet. İstendiğinde veya READY durumuna geçildiğinde kapanır; «Şarj açılır penceresi» kısayolu yeniden açar.</string>
+    <string name="shortcuts_action_charge_popup">Şarj açılır penceresi</string>
+
+    <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
+    <string name="btn_cluster_tab">Gösterge paneli sekmesi</string>
+    <string name="cluster_tab_hint">Sekmeyi direksiyon tuşlarıyla değiştirin: numara anlık olarak güncellenir. Her değişiklik Teşhis günlüğüne yazılır.</string>
+    <string name="cluster_tab_code_name">Orijinal koda göre: %1$s</string>
+    <string name="cluster_tab_unknown">Orijinal kodda olmayan değer</string>
+    <string name="cluster_tab_unreadable">Okunamıyor</string>
+    <string name="cluster_tab_0">Yol bilgisayarı</string>
+    <string name="cluster_tab_1">Navigasyon</string>
+    <string name="cluster_tab_2">Müzik ve radyo</string>
+    <string name="cluster_tab_3">Telefon</string>
+    <string name="cluster_tab_4">Uyarı merkezi</string>
+    <string name="cluster_tab_5">Ayarlar</string>
+    <string name="cluster_tab_6">Sürüş asistanı</string>
+    <string name="cluster_tab_7">Ayrılmış</string>
 </resources>

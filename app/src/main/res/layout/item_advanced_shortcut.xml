@@ -39,11 +39,18 @@
         android:textColor="@color/text_secondary"
         android:textSize="16sp" />
 
-    <!-- Modifier : change la fonction et le profil, sans refaire touche et type d'appui. -->
+    <!-- Modifier : change la fonction et le profil, sans refaire touche et type d'appui.
+         Largeur au texte, 84 dp au moins (issue #138) : à 84 dp fixes, majuscules du bouton et
+         16 dp de marge de chaque côté ne laissaient que 52 dp — « DELETE », « LÖSCHEN »,
+         « DÜZENLE » ou « MODIFICA » passaient sur deux lignes. -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/adv_item_edit"
-        android:layout_width="84dp"
+        android:layout_width="wrap_content"
+        android:minWidth="84dp"
         android:layout_height="52dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:maxLines="1"
         android:layout_marginEnd="8dp"
         android:text="@string/adv_sc_edit"
         android:textColor="@color/text_secondary"
@@ -58,8 +65,12 @@
     <!-- Sans suppression, un raccourci enregistré par erreur serait définitif. -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/adv_item_delete"
-        android:layout_width="84dp"
+        android:layout_width="wrap_content"
+        android:minWidth="84dp"
         android:layout_height="52dp"
+        android:paddingStart="12dp"
+        android:paddingEnd="12dp"
+        android:maxLines="1"
         android:text="@string/adv_sc_delete"
         android:textColor="@color/text_secondary"
         android:textSize="16sp"

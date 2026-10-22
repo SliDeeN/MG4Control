@@ -160,6 +160,22 @@
                 app:strokeColor="@color/dash_border"
                 app:cornerRadius="8dp" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_sc_sub_sources"
+                android:layout_marginStart="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/shortcuts_cat_audio_cycle"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                android:textAllCaps="true"
+                android:visibility="gone"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
             <!-- Pas de retrait, contrairement aux quatre réglages : la liste n'est pas
                  conditionnelle, c'est une destination permanente au même rang que les deux
                  premiers onglets. -->
@@ -864,8 +880,9 @@
 
                 <!-- ═══ Cycle de profils — séquence composée par l'utilisateur ═══ -->
                 <!-- Même écran que le cycle de régénération, avec les profils pour boutons. Il y
-                     a cinq boutons parce qu'il y a cinq profils au plus ; le code masque ceux
-                     qui n'ont pas de profil et écrit le nom et le rang des autres. -->
+                     a dix boutons parce qu'il y a dix profils au plus, en deux rangées de cinq ;
+                     le code masque ceux qui n'ont pas de profil, la seconde rangée tant qu'il y
+                     en a cinq ou moins, et écrit le nom et le rang des autres. -->
                 <LinearLayout
                     android:id="@+id/page_sc_profiles"
                     android:layout_width="match_parent"
@@ -940,6 +957,26 @@
 
                         </LinearLayout>
 
+                        <!-- Profils 6 à 10 : même rangée, cachée tant qu'il y a cinq profils ou moins. -->
+                        <LinearLayout
+                            android:id="@+id/row_profile_cycle_2"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:baselineAligned="false"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="5dp"
+                            android:visibility="gone">
+
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_6" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_7" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_8" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_9" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton android:id="@+id/sc_profile_cycle_10" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:maxLines="2" android:paddingStart="2dp" android:paddingEnd="2dp" android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
                         <TextView
                             android:id="@+id/tv_profile_cycle_summary"
                             android:layout_width="match_parent"
@@ -973,6 +1010,132 @@
 
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btn_profile_cycle_save"
+                                android:layout_width="wrap_content"
+                                android:layout_height="52dp"
+                                android:layout_marginStart="8dp"
+                                android:text="@string/shortcuts_cfg_regen_save"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- ═══ Cycle de sources audio — séquence composée par l'utilisateur ═══ -->
+                <!-- Même écran que les cycles de régénération et de profils, en tuiles (maquette B
+                     du 2026-10-15) : pictogramme, nom, et le rang en pastille. -->
+                <LinearLayout
+                    android:id="@+id/page_sc_sources"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_card_rounded"
+                        android:layout_marginEnd="5dp"
+                        android:paddingBottom="12dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/shortcuts_action_audio_cycle"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.10"
+                            android:textAllCaps="true"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="8dp" />
+
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/dash_border" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/shortcuts_cfg_audio_hint"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:baselineAligned="false"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp">
+
+                            <FrameLayout android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp">
+                                <com.google.android.material.button.MaterialButton android:id="@+id/sc_audio_radio" android:layout_width="match_parent" android:layout_height="match_parent" android:insetTop="0dp" android:insetBottom="0dp" android:paddingStart="2dp" android:paddingEnd="2dp" android:paddingTop="4dp" android:paddingBottom="4dp" android:maxLines="1" android:ellipsize="end" android:text="@string/audio_source_radio" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:icon="@drawable/ic_source_radio" app:iconGravity="top" app:iconSize="22dp" app:iconPadding="2dp" app:iconTint="@color/text_secondary" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                                <TextView android:id="@+id/sc_audio_radio_rank" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="top|end" android:layout_margin="5dp" android:background="@drawable/bg_rank_badge" android:gravity="center" android:textColor="@color/accent_eco" android:textSize="13sp" android:textStyle="bold" android:translationZ="10dp" android:visibility="gone" />
+                            </FrameLayout>
+                            <FrameLayout android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp">
+                                <com.google.android.material.button.MaterialButton android:id="@+id/sc_audio_bluetooth" android:layout_width="match_parent" android:layout_height="match_parent" android:insetTop="0dp" android:insetBottom="0dp" android:paddingStart="2dp" android:paddingEnd="2dp" android:paddingTop="4dp" android:paddingBottom="4dp" android:maxLines="1" android:ellipsize="end" android:text="@string/audio_source_bluetooth" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:icon="@drawable/ic_source_bluetooth" app:iconGravity="top" app:iconSize="22dp" app:iconPadding="2dp" app:iconTint="@color/text_secondary" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                                <TextView android:id="@+id/sc_audio_bluetooth_rank" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="top|end" android:layout_margin="5dp" android:background="@drawable/bg_rank_badge" android:gravity="center" android:textColor="@color/accent_eco" android:textSize="13sp" android:textStyle="bold" android:translationZ="10dp" android:visibility="gone" />
+                            </FrameLayout>
+                            <FrameLayout android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp">
+                                <com.google.android.material.button.MaterialButton android:id="@+id/sc_audio_usb" android:layout_width="match_parent" android:layout_height="match_parent" android:insetTop="0dp" android:insetBottom="0dp" android:paddingStart="2dp" android:paddingEnd="2dp" android:paddingTop="4dp" android:paddingBottom="4dp" android:maxLines="1" android:ellipsize="end" android:text="@string/audio_source_usb" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:icon="@drawable/ic_source_usb" app:iconGravity="top" app:iconSize="22dp" app:iconPadding="2dp" app:iconTint="@color/text_secondary" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                                <TextView android:id="@+id/sc_audio_usb_rank" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="top|end" android:layout_margin="5dp" android:background="@drawable/bg_rank_badge" android:gravity="center" android:textColor="@color/accent_eco" android:textSize="13sp" android:textStyle="bold" android:translationZ="10dp" android:visibility="gone" />
+                            </FrameLayout>
+                            <FrameLayout android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginEnd="5dp">
+                                <com.google.android.material.button.MaterialButton android:id="@+id/sc_audio_online" android:layout_width="match_parent" android:layout_height="match_parent" android:insetTop="0dp" android:insetBottom="0dp" android:paddingStart="2dp" android:paddingEnd="2dp" android:paddingTop="4dp" android:paddingBottom="4dp" android:maxLines="1" android:ellipsize="end" android:text="@string/audio_source_online" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:icon="@drawable/ic_source_online" app:iconGravity="top" app:iconSize="22dp" app:iconPadding="2dp" app:iconTint="@color/text_secondary" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                                <TextView android:id="@+id/sc_audio_online_rank" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="top|end" android:layout_margin="5dp" android:background="@drawable/bg_rank_badge" android:gravity="center" android:textColor="@color/accent_eco" android:textSize="13sp" android:textStyle="bold" android:translationZ="10dp" android:visibility="gone" />
+                            </FrameLayout>
+                            <FrameLayout android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1">
+                                <com.google.android.material.button.MaterialButton android:id="@+id/sc_audio_projection" android:layout_width="match_parent" android:layout_height="match_parent" android:insetTop="0dp" android:insetBottom="0dp" android:paddingStart="2dp" android:paddingEnd="2dp" android:paddingTop="4dp" android:paddingBottom="4dp" android:maxLines="1" android:ellipsize="end" android:text="@string/audio_source_projection" android:textAllCaps="false" android:textColor="@color/text_secondary" android:textSize="15sp" app:icon="@drawable/ic_source_projection" app:iconGravity="top" app:iconSize="22dp" app:iconPadding="2dp" app:iconTint="@color/text_secondary" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                                <TextView android:id="@+id/sc_audio_projection_rank" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="top|end" android:layout_margin="5dp" android:background="@drawable/bg_rank_badge" android:gravity="center" android:textColor="@color/accent_eco" android:textSize="13sp" android:textStyle="bold" android:translationZ="10dp" android:visibility="gone" />
+                            </FrameLayout>
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_audio_cycle_summary"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="16sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="end"
+                            android:layout_marginTop="10dp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_audio_cycle_clear"
+                                android:layout_width="wrap_content"
+                                android:layout_height="52dp"
+                                android:text="@string/shortcuts_cfg_regen_clear"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_audio_cycle_save"
                                 android:layout_width="wrap_content"
                                 android:layout_height="52dp"
                                 android:layout_marginStart="8dp"

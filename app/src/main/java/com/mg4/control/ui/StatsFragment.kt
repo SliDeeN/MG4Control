@@ -5,6 +5,8 @@ import android.content.res.ColorStateList
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.text.InputType
 import android.view.Gravity
 import android.view.LayoutInflater
@@ -14,6 +16,7 @@ import android.view.inputmethod.EditorInfo
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Spinner
@@ -22,7 +25,9 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
+import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.StatsCollector
+import com.mg4.control.model.ChargeEnergySource
 import com.mg4.control.model.ChargeSession
 import com.mg4.control.model.ChargeTimes
 import com.mg4.control.model.ChargeType
@@ -53,7 +58,14 @@ class StatsFragment : Fragment() {
         const val PAGE_CHARGES = 2
         /** Période courte du résumé, en jours. L'autre choix est « tout l'historique ». */
         const val SHORT_PERIOD_DAYS = 30
+        const val TAG = "MG4_STATS"
+        /** Attente après le dernier pas de l'état de santé avant de recalculer les recharges. */
+        const val RECALCUL_SOH_MS = 800L
     }
+
+    private val handler = Handler(Looper.getMainLooper())
+    /** Vrai tant qu'un recalcul des recharges attend la fin d'un réglage de l'état de santé. */
+    private var recalculEnAttente = false
 
     private lateinit var store: StatsStore
 
@@ -102,6 +114,7 @@ class StatsFragment : Fragment() {
             }
         }
         bindBattery(view)
+        bindStateOfHealth(view)
         // Un menu ne permet pas de « choisir » la valeur déjà sélectionnée : le bandeau offre donc
         // les deux gestes, confirmer la batterie affichée ou aller la changer.
         view.findViewById<MaterialButton>(R.id.btn_stats_battery_ok).setOnClickListener {
@@ -112,6 +125,16 @@ class StatsFragment : Fragment() {
             .setOnClickListener { showBatterySetting() }
 
         render()
+    }
+
+    override fun onPause() {
+        // On quitte l'écran avant la fin de l'attente : le recalcul se fait tout de suite, il ne
+        // doit pas se perdre.
+        if (recalculEnAttente) {
+            handler.removeCallbacks(recalculSoh)
+            recalculSoh.run()
+        }
+        super.onPause()
     }
 
     override fun onResume() {
@@ -183,12 +206,53 @@ class StatsFragment : Fragment() {
                 if (choisie == store.settings().battery) return
                 store.saveSettings(store.settings().copy(capacityKwh = choisie.usableKwh))
                 store.markCapacityUserSet()
-                store.recalculateCharges(choisie.usableKwh)
+                store.recalculateCharges(store.settings().effectiveCapacityKwh)
                 render()
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
+    }
+
+    /**
+     * État de santé de la batterie, sous le choix de la batterie : − et +, par 0,5 %, maintenus
+     * pour aller vite. Le réglage est enregistré à chaque pas ; les recharges, elles, ne sont
+     * recalculées qu'une fois le doigt levé ([RECALCUL_SOH_MS]) — un appui maintenu traverse
+     * des dizaines de valeurs, inutile de réécrire l'historique pour chacune.
+     */
+    private fun bindStateOfHealth(view: View) {
+        val ctx = view.context
+        listOf(R.id.btn_stats_soh_minus, R.id.btn_stats_soh_plus).forEach {
+            view.findViewById<ImageView>(it).imageTintList = ColorStateList.valueOf(ctx.getColor(R.color.text_primary))
+        }
+        fun pas(direction: Int) {
+            val s = store.settings()
+            val soh = StatsSettings.stepSoh(s.stateOfHealthPercent, direction)
+            if (soh == s.stateOfHealthPercent) return
+            store.saveSettings(s.copy(stateOfHealthPercent = soh))
+            renderStateOfHealth(view, store.settings())
+            handler.removeCallbacks(recalculSoh)
+            handler.postDelayed(recalculSoh, RECALCUL_SOH_MS)
+            recalculEnAttente = true
+        }
+        AppDialog.repeter(view.findViewById(R.id.btn_stats_soh_minus)) { pas(-1) }
+        AppDialog.repeter(view.findViewById(R.id.btn_stats_soh_plus)) { pas(1) }
+        renderStateOfHealth(view, store.settings())
+    }
+
+    /** Valeur, et la capacité qu'elle donne avec la batterie choisie. */
+    private fun renderStateOfHealth(v: View, s: StatsSettings) {
+        v.findViewById<TextView>(R.id.tv_stats_soh).text = getString(R.string.stats_soh_value, fmt(s.stateOfHealthPercent))
+        v.findViewById<TextView>(R.id.tv_stats_soh_effective).text = getString(
+            R.string.stats_soh_effective, fmt(s.effectiveCapacityKwh), fmt(s.capacityKwh), fmt(s.stateOfHealthPercent))
+    }
+
+    /** Recalcul des recharges enregistrées après un changement d'état de santé, une fois. */
+    private val recalculSoh = Runnable {
+        recalculEnAttente = false
+        AppLogger.i(TAG, "état de santé de la batterie → ${store.settings().stateOfHealthPercent} %")
+        store.recalculateCharges(store.settings().effectiveCapacityKwh)
+        if (isAdded) render()
     }
 
     /** Depuis le bandeau de l'onglet Recharge : mène au réglage, là où il se trouve. */
@@ -222,6 +286,8 @@ class StatsFragment : Fragment() {
     ) {
         if (!s.enabled) return
         val ctx = v.context
+        // La capacité retenue suit aussi le choix de la batterie.
+        renderStateOfHealth(v, s)
 
         val tiles = v.findViewById<LinearLayout>(R.id.stats_summary_tiles)
         tiles
@@ -393,6 +459,22 @@ class StatsFragment : Fragment() {
     //  Détails
     // ═════════════════════════════════════════════════════════════════════════
 
+    /**
+     * D'où vient l'énergie de la charge (issue #156) : mesurée, en partie mesurée, estimée d'après
+     * les charges déjà vues, ou d'après le niveau de batterie. Pour une charge reconstituée au
+     * pourcentage, la ligne « Origine » le dit déjà : pas de doublon.
+     */
+    private fun energySourceLine(session: ChargeSession): Pair<String, String>? {
+        val source = session.energySource ?: ChargeEnergySource.PERCENT
+        if (session.reconstructed && source == ChargeEnergySource.PERCENT) return null
+        return getString(R.string.stats_detail_energy_source) to getString(when (source) {
+            ChargeEnergySource.MEASURED -> R.string.stats_energy_measured
+            ChargeEnergySource.MIXED -> R.string.stats_energy_mixed
+            ChargeEnergySource.LEARNED -> R.string.stats_energy_learned
+            ChargeEnergySource.PERCENT -> R.string.stats_energy_percent
+        })
+    }
+
     private fun tripDetail(ctx: Context, trip: Trip): View = detailBox(ctx, tripEnergyLines(trip) + listOfNotNull(
         soc(trip.socStart, trip.socEnd)?.let { getString(R.string.stats_detail_battery) to it },
         trip.outsideTempC?.let { getString(R.string.stats_detail_temp) to "${fmt(it)} °C" },
@@ -425,13 +507,15 @@ class StatsFragment : Fragment() {
 
     private fun chargeDetail(ctx: Context, session: ChargeSession, s: StatsSettings): View {
         val box = detailBox(ctx, listOfNotNull(
+            energySourceLine(session),
             // Ni puissance mesurée ni durée vraie quand l'application n'a pas vu la charge :
             // la seule chose honnête à montrer est d'où sort le chiffre.
-            if (session.reconstructed)
-                getString(R.string.stats_detail_origin) to getString(
+            // Seulement si l'énergie vient du pourcentage : mesurée en partie, c'est la ligne
+            // « Énergie » qui le dit, et « l'application ne tournait pas » serait faux.
+            if (session.reconstructed) (getString(R.string.stats_detail_origin) to getString(
                     if (session.timesKnown) R.string.stats_detail_origin_completed
                     else R.string.stats_detail_origin_estimated
-                )
+                )).takeIf { (session.energySource ?: ChargeEnergySource.PERCENT) == ChargeEnergySource.PERCENT }
             else session.measuredPowerKw?.let { getString(R.string.stats_detail_power_measured) to "${fmt(it)} kW" }
                 ?: session.powerKw?.let { getString(R.string.stats_detail_power_computed) to "${fmt(it)} kW" },
             // Reconstituée mais datée à la main : la puissance se calcule de nouveau, et reste

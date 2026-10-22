@@ -418,6 +418,10 @@
 }
 .p-item + .p-item { margin-top: 8px; }
 .p-top { display: flex; align-items: baseline; gap: 6px; }
+/* Ordre des profils : poignée, carte soulevée, bandeau de position (ProfileFragment). */
+.p-grip { flex: none; width: 22px; height: 22px; align-self: center; color: var(--dash-text-lo); }
+.p-item.p-lift { box-shadow: 0 0 0 2px var(--dash-accent); position: relative; z-index: 1; }
+.p-drag-hint { position: absolute; top: 22px; right: 26px; z-index: 2; background: var(--dash-accent-dim); color: var(--dash-accent); border-radius: 5px; padding: 6px 14px; font-size: calc(16px * var(--ts, 1)); font-weight: 700; pointer-events: none; }
 .p-name { font-size: calc(18px * var(--ts, 1)); font-weight: 700; color: var(--text-primary); }
 .p-name.def { color: var(--accent-normal); }
 .p-sum { flex: 1; font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -638,6 +642,13 @@
   border-radius: 50%; background: var(--dash-accent); color: var(--dash-card); font-size: 12px; font-weight: 700;
 }
 
+/* Cycle de sources : tuiles (pictogramme, nom, rang en pastille), verte une fois choisie — accent_eco de l'app */
+.b.src { position: relative; height: 64px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-transform: none; font-size: calc(15px * var(--ts, 1)); }
+.b.src svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
+.b.src > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.b.src.on { background: #2E7D32; border-color: #2E7D32; color: #fff; }
+.src-n { position: absolute; top: 5px; right: 5px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fff; color: #2E7D32; font-size: 13px; font-weight: 700; }
+
 /* Liste des raccourcis groupée (touche + type d'appui) */
 .sc-group { border: 1px solid var(--dash-border); border-radius: 12px; padding: 8px; }
 .sc-group + .sc-group { margin-top: 8px; }
@@ -673,6 +684,9 @@
 /* ── Statistiques : rappel de la batterie réglée, en haut de l'onglet Recharge ── */
 .st-banner { background: var(--dash-warn-dim); border: 1px solid var(--dash-warn); border-radius: 10px; padding: 6px 12px; }
 .st-banner .a-row { gap: 8px; }
+/* État de santé de la batterie : − valeur + (StatsFragment.bindStateOfHealth) */
+.st-soh { min-width: 96px; text-align: center; color: var(--dash-accent); font-size: calc(20px * var(--ts, 1)); }
+.st-soh-eff { color: var(--dash-accent); }
 
 /* ══════════ 2.6.8 : pop-ups et fenêtres « modernes » ══════════
    Mêmes mises en page que l'application : overlay_*.xml pour ce qui se pose par-dessus l'écran de la
@@ -741,6 +755,8 @@
   display: flex; flex-direction: column; background: var(--dash-btn); border: 1px solid var(--dash-border); color: var(--text-primary);
 }
 .pkp-card.on { background: var(--dash-accent-dim); border: 2px solid var(--dash-accent); }
+.pkp-cards.scroll { justify-content: flex-start; overflow-x: auto; scrollbar-width: none; }
+.pkp-cards.scroll::-webkit-scrollbar { display: none; }
 .pkp-top { display: flex; align-items: center; height: 22px; }
 .pkp-card i { flex: 1; }
 .pkp-card b { margin-top: 10px; font-size: calc(20px * var(--ts, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1016,6 +1032,94 @@
 .mw-log { flex: none; height: 380px; margin-top: 14px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--dash-border) transparent; }
 .mw-log pre { margin: 0; font-family: ui-monospace, Consolas, monospace; font-size: calc(13px * var(--ts, 1)); line-height: 1.5; color: var(--text-secondary); white-space: pre-wrap; }
 
+/* ── Pop-up de charge (overlay_charge_popup.xml) : carte de 1140 × 400 dp, trois colonnes ──
+   À gauche le niveau, la barre-curseur de la limite et l'heure de fin ; au milieu la courbe ;
+   à droite les cinq lignes, ou l'éditeur du prix de cette charge. */
+.cgp { width: 1140px; height: 400px; display: flex; flex-direction: column; }
+.cgp > .ov-head > .mw-ico { color: var(--dash-accent); }
+.cgp-pill {
+  flex: none; height: 30px; margin-right: 10px; padding: 0 14px; border-radius: 15px; display: inline-flex; align-items: center;
+  background: var(--dash-accent-dim); color: var(--dash-accent); font-size: calc(14px * var(--ts, 1)); font-weight: 700; white-space: nowrap;
+}
+.cgp-pill.done { background: var(--dash-eco-dim); color: var(--dash-eco); }
+.cgp-body { flex: 1; min-height: 0; display: flex; gap: 10px; }
+.cgp-left { flex: none; width: 290px; padding: 12px 15px; }
+.cgp-left > small, .cgp-end small { font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); }
+.cgp-soc { font-size: calc(58px * var(--ts, 1)); line-height: 1.05; font-weight: 700; white-space: nowrap; }
+.cgp-bar { display: block; flex: none; margin-top: 6px; overflow: visible; }
+.cgp-hit { cursor: pointer; }
+.cgp-shine { fill: #fff; fill-opacity: .45; animation: cgpShine 1.8s linear infinite; }
+@keyframes cgpShine { from { transform: translateX(0); } to { transform: translateX(var(--run)); } }
+.cgp-hint { min-height: 15px; font-size: calc(12px * var(--ts, 1)); color: var(--text-secondary); }
+.cgp-note { display: flex; gap: 6px; font-size: calc(12px * var(--ts, 1)); color: var(--text-secondary); }
+.cgp-note .mw-ico { width: 14px; height: 14px; margin-top: 1px; }
+.cgp-left > i { flex: 1; }
+.cgp-end { flex: none; display: flex; flex-direction: column; margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--dash-border); }
+/* Hauteur fixe : l'heure garde sa taille quelle que soit la taille du texte (autoSize de l'app). */
+.cgp-end b { height: 40px; line-height: 40px; font-size: 38px; font-weight: 700; white-space: nowrap; }
+.cgp-end span { margin-top: 2px; font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cgp-mid { flex: 1; min-width: 0; overflow: hidden; }
+.cgp-legend { flex: none; display: flex; align-items: center; gap: 18px; font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); white-space: nowrap; }
+.cgp-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.cgp-legend span i { width: 10px; height: 10px; border-radius: 50%; }
+.cgp-legend em { flex: 1; min-width: 0; text-align: right; font-style: normal; font-size: calc(12px * var(--ts, 1)); overflow: hidden; text-overflow: ellipsis; }
+.cgp-curve { display: block; flex: none; margin-top: 6px; }
+.cgp-right { flex: none; width: 255px; padding: 2px 14px; }
+.cgp-row { flex: 1; min-height: 0; display: flex; align-items: center; }
+.cgp-row + .cgp-row { border-top: 1px solid var(--dash-border); }
+.cgp-row > div { flex: 1; min-width: 0; }
+.cgp-row b { display: block; font-size: calc(14px * var(--ts, 1)); font-weight: 400; }
+.cgp-row small { display: block; font-size: calc(11px * var(--ts, 1)); color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cgp-row .v { font-size: calc(21px * var(--ts, 1)); font-weight: 700; white-space: nowrap; }
+.cgp-row .u { margin-left: 4px; font-size: calc(12px * var(--ts, 1)); color: var(--text-secondary); }
+.cgp-edit { flex: none; width: 26px; height: 26px; margin-left: 6px; padding: 4px; border: 0; background: none; color: var(--dash-accent); display: flex; }
+.cgp-edit .mw-ico { width: 18px; height: 18px; }
+.cgp-right.ed { padding: 10px 12px; }
+.cgp-edhead { flex: none; display: flex; align-items: center; gap: 8px; height: 36px; }
+.cgp-edhead b { font-size: calc(16px * var(--ts, 1)); }
+.cgp-edhead span { flex: 1; font-size: calc(12px * var(--ts, 1)); color: var(--text-secondary); }
+.cgp-x { flex: none; width: 36px; height: 36px; padding: 7px; border: 0; border-radius: 50%; background: none; color: var(--text-secondary); display: flex; }
+.cgp-price { flex: none; height: 56px; }
+.cgp-price b { font-size: calc(24px * var(--ts, 1)); }
+.cgp-price span { font-size: calc(12px * var(--ts, 1)); }
+.cgp-steps { flex: none; height: 38px; margin-top: 6px; }
+.cgp-steps > button { font-size: calc(12px * var(--ts, 1)); }
+.cgp-cost { flex: none; display: flex; align-items: baseline; gap: 6px; margin-top: 8px; }
+.cgp-cost span { flex: 1; font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); }
+.cgp-cost b { font-size: calc(19px * var(--ts, 1)); }
+.cgp-cost s { font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); }
+.cgp-note2 { margin-top: 4px; font-size: calc(12px * var(--ts, 1)); color: var(--dash-text-lo); }
+.cgp-right > i { flex: 1; }
+.cgp-edacts { flex: none; display: flex; gap: 8px; height: 46px; }
+.cgp-edacts .mw-b { height: 46px; padding: 0 8px; font-size: calc(14px * var(--ts, 1)); }
+.cgp-edacts .mw-b:first-child { flex: 1.2; }
+
+/* ── Réglages › Interface : carte « Écran conducteur » refondue (2026-10-17) ──
+   L'aperçu à gauche (la vraie jauge sur un trajet simulé), les réglages groupés à droite. */
+.cls-wrap { display: flex; gap: 16px; margin-top: 10px; }
+.cls-prev { flex: none; width: 214px; display: flex; flex-direction: column; gap: 8px; }
+.cls-prev .a-sub { margin: 0; }
+.cls-sq { display: block; width: 214px; height: 214px; border-radius: 10px; background: #0C0C0C; font-family: Roboto, "Segoe UI", system-ui, sans-serif; }
+.cls-none {
+  height: 214px; padding: 16px; border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center;
+  background: var(--dash-btn); font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary);
+}
+.cls-set { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.cls-set > .a-sub { margin: 8px 0 0; }
+.cls-set > .a-sub:first-child { margin-top: 0; }
+.cls-group { display: flex; flex-direction: column; gap: 6px; }
+.cls-row { display: flex; align-items: center; gap: 10px; }
+.cls-lbl { flex: none; width: 112px; font-size: calc(14px * var(--ts, 1)); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cls-row > .a-grid { flex: 1; min-width: 0; }
+.cls-row .b { height: 42px; font-size: calc(14px * var(--ts, 1)); }
+.cls-adv {
+  display: flex; align-items: center; gap: 10px; height: 40px; margin-top: 8px; padding: 0 12px; text-align: left; cursor: pointer;
+  border: 1px solid var(--dash-border); border-radius: 8px; background: var(--dash-btn); color: var(--text-secondary); font: inherit; font-size: calc(14px * var(--ts, 1));
+}
+.cls-adv span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cls-adv i { font-style: normal; }
+.cls-advbox { display: flex; flex-direction: column; gap: 4px; }
+
 @media (prefers-reduced-motion: reduce) {
-  .ov-card, .a-banner, .mw { animation: none !important; }
+  .ov-card, .a-banner, .mw, .cgp-shine { animation: none !important; }
 }

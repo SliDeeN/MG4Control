@@ -32,4 +32,28 @@ object ProfilePicker {
         nombre <= 0       -> CARTE_MAX_DP
         else              -> minOf(CARTE_MAX_DP, (RANGEE_DP - (nombre - 1) * ECART_DP) / nombre)
     }
+
+    /**
+     * Carte d'où part le joystick, et que la rangée montre à l'ouverture : celle du profil actif
+     * (demande du 2026-10-15, avec le passage à dix profils). Sauf dans un conflit Bluetooth
+     * ([restreint]) : le délai y applique la PREMIÈRE carte, c'est elle qu'il faut voir et viser.
+     * Profil actif absent de la liste, ou aucun : la première.
+     */
+    fun carteDeDepart(rangActif: Int, nombre: Int, restreint: Boolean): Int =
+        if (restreint || rangActif !in 0 until nombre) 0 else rangActif
+
+    /**
+     * Défilement de la rangée à l'ouverture, en dp, pour que la carte [rang] soit entière à
+     * l'écran avec un quart de sa voisine — ce que fait le joystick en s'y déplaçant
+     * (OverlayNavigation). Rien à défiler tant que la carte tient dans la rangée ; jamais au-delà
+     * de la dernière carte.
+     */
+    fun defilementInitialDp(rang: Int, nombre: Int): Float {
+        if (nombre <= VISIBLES || rang <= 0) return 0f
+        val carte = largeurCarteDp(nombre)
+        val droite = rang * (carte + ECART_DP) + carte
+        if (droite <= RANGEE_DP) return 0f
+        val total = nombre * carte + (nombre - 1) * ECART_DP
+        return minOf(droite - RANGEE_DP + carte / 4f, total - RANGEE_DP)
+    }
 }

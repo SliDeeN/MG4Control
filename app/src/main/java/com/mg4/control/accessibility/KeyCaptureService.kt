@@ -4,6 +4,7 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.app.Instrumentation
 import android.content.Context
+import android.content.Intent
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -16,6 +17,7 @@ import com.mg4.control.service.MG4ControlService
 import com.mg4.control.service.ProfileConfirmOverlay
 import com.mg4.control.service.ProfilePickerOverlay
 import com.mg4.control.shortcut.PressType
+import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.GarageMode
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
@@ -46,6 +48,7 @@ class KeyCaptureService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        connecte = true
         // Le XML déclare la CAPACITÉ (canRequestFilterKeyEvents) ; le drapeau, lui, doit être
         // posé ici. Déclarer la capacité sans demander le drapeau ne filtre rien du tout.
         serviceInfo = serviceInfo?.apply {
@@ -75,6 +78,16 @@ class KeyCaptureService : AccessibilityService() {
 
     /** Touches du joystick dont l'appui a servi à naviguer : leur fin d'appui est avalée aussi. */
     private val navigationEnCours = mutableSetOf<Int>()
+
+    /**
+     * Appuis du joystick mis en attente pendant qu'un pop-up est ouvert (issue #137) : la touche
+     * porte, en appui long, le raccourci qui ouvre ce pop-up. Relâchée avant le seuil, elle
+     * navigue — au relâchement ; tenue jusqu'au seuil, elle referme le pop-up SANS naviguer.
+     * Naviguer d'abord aurait été plus vif, mais au pop-up HVAC le joystick règle la température
+     * et la ventilation : refermer le pop-up aurait d'abord changé un réglage.
+     */
+    private class Attente(val minuterie: Runnable, val naviguer: () -> Unit)
+    private val attentes = mutableMapOf<Int, Attente>()
 
     /**
      * Touches interceptées pour un raccourci avancé, entre leur DOWN et leur UP.
@@ -141,7 +154,14 @@ class KeyCaptureService : AccessibilityService() {
             // pu se fermer entre-temps (le clic central choisit un profil et le ferme), et ce UP
             // ne doit partir ni au système ni vers un raccourci avancé de la même touche.
             if (code in navigationEnCours) {
-                if (event.action == KeyEvent.ACTION_UP) navigationEnCours.remove(code)
+                if (event.action == KeyEvent.ACTION_UP) {
+                    navigationEnCours.remove(code)
+                    // Relâchée avant le seuil : ce n'était pas le raccourci, c'était un déplacement.
+                    attentes.remove(code)?.let { a ->
+                        handler.removeCallbacks(a.minuterie)
+                        a.naviguer()
+                    }
+                }
                 return true
             }
 
@@ -176,20 +196,43 @@ class KeyCaptureService : AccessibilityService() {
                 val profils = ProfilePickerOverlay.isShowing()
                 if (confirmation || profils || HvacPopupOverlay.isShowing()) {
                     navigationEnCours.add(code)
-                    when {
-                        confirmation -> {
-                            AppLogger.i(TAG, "touche $code — navigation popup confirmation → ${commande.name}")
-                            ProfileConfirmOverlay.naviguer(commande)
-                        }
-                        profils -> {
-                            AppLogger.i(TAG, "touche $code — navigation popup profils → ${commande.name}")
-                            ProfilePickerOverlay.naviguer(commande)
-                        }
-                        else -> {
-                            AppLogger.i(TAG, "touche $code — pop-up HVAC → ${commande.name}")
-                            HvacPopupOverlay.naviguer(commande)
+                    val naviguer: () -> Unit = {
+                        when {
+                            confirmation -> {
+                                AppLogger.i(TAG, "touche $code — navigation popup confirmation → ${commande.name}")
+                                ProfileConfirmOverlay.naviguer(commande)
+                            }
+                            profils -> {
+                                AppLogger.i(TAG, "touche $code — navigation popup profils → ${commande.name}")
+                                ProfilePickerOverlay.naviguer(commande)
+                            }
+                            else -> {
+                                AppLogger.i(TAG, "touche $code — pop-up HVAC → ${commande.name}")
+                                HvacPopupOverlay.naviguer(commande)
+                            }
                         }
                     }
+                    // La confirmation ne s'ouvre jamais par un raccourci : rien à refermer ainsi.
+                    val fermer: (() -> Unit)? = when {
+                        confirmation -> null
+                        profils -> if (ouvreEnAppuiLong(code, ShortcutAction.PROFILE_PICKER)) {
+                            { ProfilePickerOverlay.fermerParRaccourci(this) }
+                        } else null
+                        else -> if (ouvreEnAppuiLong(code, ShortcutAction.HVAC_POPUP)) {
+                            { HvacPopupOverlay.fermerParRaccourci() }
+                        } else null
+                    }
+                    if (fermer == null) {
+                        naviguer()
+                        return true
+                    }
+                    val minuterie = Runnable {
+                        attentes.remove(code)
+                        AppLogger.i(TAG, "touche $code — appui LONG sur le raccourci du pop-up ouvert → fermeture")
+                        fermer()
+                    }
+                    attentes[code] = Attente(minuterie, naviguer)
+                    handler.postDelayed(minuterie, AdvancedShortcuts.LONG_PRESS_MS)
                     return true
                 }
             }
@@ -219,6 +262,13 @@ class KeyCaptureService : AccessibilityService() {
             return false
         }
     }
+
+    /**
+     * Vrai si [code], en appui long, déclenche [action] pour le profil actif : c'est alors aussi
+     * la touche qui referme le pop-up de cette action (issue #137).
+     */
+    private fun ouvreEnAppuiLong(code: Int, action: ShortcutAction): Boolean =
+        AdvancedShortcuts.isEnabled(this) && AdvancedShortcuts.resolve(this, code, PressType.LONG)?.action == action
 
     /**
      * Début d'un appui.
@@ -369,7 +419,14 @@ class KeyCaptureService : AccessibilityService() {
 
     override fun onInterrupt() { /* inutilisé */ }
 
+    override fun onUnbind(intent: Intent?): Boolean {
+        // Le système nous délie : service coupé dans les Réglages, ou appli mise à jour.
+        connecte = false
+        return super.onUnbind(intent)
+    }
+
     override fun onDestroy() {
+        connecte = false
         // Le service peut être coupé pendant qu'une minuterie court : sans ça, elle déclencherait
         // une action alors que la fonctionnalité vient d'être désactivée.
         handler.removeCallbacksAndMessages(null)
@@ -378,6 +435,7 @@ class KeyCaptureService : AccessibilityService() {
         longDeclenche.clear()
         doubleDeclenche.clear()
         navigationEnCours.clear()
+        attentes.clear()
         touchesPrises.clear()
         modeles.clear()
         rejeux.clear()
@@ -400,20 +458,41 @@ class KeyCaptureService : AccessibilityService() {
         var listener: ((Int) -> Unit)? = null
 
         /**
-         * Vrai si l'utilisateur a activé notre service dans les réglages d'accessibilité.
-         *
-         * Lu dans Settings.Secure plutôt que via AccessibilityManager : on veut savoir si NOTRE
-         * composant précis est dans la liste, pas si un service quelconque tourne.
+         * Vrai entre [onServiceConnected] et [onUnbind] / [onDestroy] : le service TOURNE, dans le
+         * processus de l'appli (elle n'en a qu'un), donc les touches et le joystick nous parviennent.
+         * C'est la réponse la plus sûre ; la liste des Réglages ne sert plus que de repli, le temps
+         * que le système relie le service après un (re)démarrage de l'appli.
          */
-        fun isEnabled(context: Context): Boolean = try {
-            val actifs = Settings.Secure.getString(
-                context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
-            ).orEmpty()
-            val nous = "${context.packageName}/${KeyCaptureService::class.java.name}"
-            actifs.split(':').any { it.equals(nous, ignoreCase = true) }
+        @Volatile
+        var connecte = false
+            private set
+
+        /**
+         * Vrai si notre service est actif : connecté, ou à défaut inscrit dans la liste des
+         * services d'accessibilité activés, sous sa forme longue OU courte
+         * ([AccessibilityServiceList]). Ne lire que la forme longue faisait dire « inactif » après
+         * une MAJ ou un redémarrage de la voiture, alors que le joystick naviguait (2026-10-17).
+         */
+        fun isEnabled(context: Context): Boolean =
+            connecte || AccessibilityServiceList.contient(liste(context), context.packageName, KeyCaptureService::class.java.name)
+
+        /**
+         * Sonde du diagnostic : l'état vu par chaque source et la liste BRUTE, pour savoir sous
+         * quelle forme le système l'a laissée (une trace de la voiture vaut mieux qu'une hypothèse).
+         */
+        fun journaliserEtat(context: Context) {
+            val brute = liste(context)
+            val forme = AccessibilityServiceList.forme(brute, context.packageName, KeyCaptureService::class.java.name)
+            AppLogger.i(TAG, "diag accessibilité — connecté=$connecte, dans la liste=${forme.name.lowercase()}, " +
+                "raccourcis avancés=${AdvancedShortcuts.isEnabled(context)}, liste brute=« ${brute ?: ""} »")
+        }
+
+        /** La valeur brute du réglage, `null` s'il est vide ou illisible. */
+        private fun liste(context: Context): String? = try {
+            Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
         } catch (e: Exception) {
             AppLogger.w(TAG, "état du service illisible : ${e.message}")
-            false
+            null
         }
     }
 }

@@ -14,6 +14,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.HorizontalScrollView
+import androidx.core.view.doOnLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -87,6 +88,12 @@ object ProfilePickerOverlay {
     private var dismissRunnable: Runnable? = null
     private var countdownRunnable: Runnable? = null
 
+    /**
+     * Repli du pop-up affiché (conflit Bluetooth), à jouer s'il se ferme sans choix ni « Fermer » :
+     * à l'échéance, ou quand on rappuie sur le raccourci ([toggle]). Thread principal seulement.
+     */
+    private var repli: (() -> Unit)? = null
+
     /** Focus au joystick du popup affiché ; vit et meurt avec la vue. Thread principal seulement. */
     private var navigation: OverlayNavigation? = null
 
@@ -112,6 +119,39 @@ object ProfilePickerOverlay {
      */
     fun show(context: Context) {
         handler.post { showOnMainThread(context, profiles = null, onAutoDismiss = null) }
+    }
+
+    /**
+     * Raccourci volant : ouvre le popup avec tous les profils, ou le referme s'il est déjà à
+     * l'écran (issue #137). Avant, un second appui le refermait et le rouvrait aussitôt : on le
+     * croyait impossible à fermer. Peut être appelé depuis n'importe quel thread.
+     */
+    fun toggle(context: Context) {
+        handler.post {
+            if (overlayView != null) fermerParRaccourciSurMain(context, "second appui du raccourci")
+            else showOnMainThread(context, profiles = null, onAutoDismiss = null)
+        }
+    }
+
+    /**
+     * Appui long, au joystick, de la touche qui a ouvert le popup (issue #137) : le referme s'il
+     * est encore là, n'ouvre jamais. Peut être appelé depuis n'importe quel thread.
+     */
+    fun fermerParRaccourci(context: Context) {
+        handler.post { fermerParRaccourciSurMain(context, "appui long du joystick") }
+    }
+
+    /**
+     * Fermeture demandée par le raccourci : comme l'échéance, elle laisse partir le repli d'un
+     * conflit Bluetooth — sans quoi aucun profil ne serait appliqué.
+     */
+    private fun fermerParRaccourciSurMain(context: Context, origine: String) {
+        if (overlayView == null) return
+        val enAttente = repli
+        AppLogger.i(TAG, "Overlay — $origine → fermeture" +
+            if (enAttente != null) " (repli du conflit Bluetooth, comme à l'échéance)" else "")
+        dismissOnMainThread(context)
+        enAttente?.invoke()
     }
 
     /**
@@ -158,6 +198,7 @@ object ProfilePickerOverlay {
 
         // Si déjà affiché → on remplace (sans déclencher l'ancien onAutoDismiss)
         dismissOnMainThread(context)
+        repli = onAutoDismiss
 
         val profilesToShow = profiles ?: ProfileManager(context).getAll()
         if (profilesToShow.isEmpty()) {
@@ -222,6 +263,16 @@ object ProfilePickerOverlay {
             container.addView(carte)
             carte
         }
+
+        // Ouverture sur le profil actif (2026-10-15) : le joystick part de sa carte, et la rangée
+        // défile pour la montrer s'il est au-delà du cinquième. Sauf en conflit Bluetooth
+        // (liste restreinte), où le délai applique la première carte.
+        val carteDepart = ProfilePicker.carteDeDepart(
+            profilesToShow.indexOfFirst { it.id == actifId }, profilesToShow.size, restreint = profiles != null)
+        val decalage = OverlayKit.dp(themedContext,
+            ProfilePicker.defilementInitialDp(carteDepart, profilesToShow.size))
+        // Après la mise en page : avant, la rangée n'a pas de largeur et ramène tout défilement à 0.
+        if (decalage > 0) rangee.doOnLayout { rangee.scrollTo(decalage, 0) }
 
         // ── Bouton « Ouvrir MG4Control » (toujours visible) ───────────────
         val ouvrir = view.findViewById<TextView>(R.id.overlay_btn_open_app)
@@ -424,12 +475,12 @@ object ProfilePickerOverlay {
                 (if (peutEteindre) listOf(eteindre) else emptyList<View>()))
             if (briVisible) add(listOf(ligneCurseur))
         }
-        // Focus de départ sur le premier profil : c'est ce qu'on vient chercher dans ce popup, et
-        // c'est aussi celui qu'applique le délai d'un conflit Bluetooth.
+        // Focus de départ sur la carte du profil actif (voir carteDepart) : un appui à droite
+        // vise le profil suivant. En conflit Bluetooth, la première — celle qu'applique le délai.
         navigation = OverlayNavigation(
             context              = themedContext,
             grille               = lignes.filter { it.isNotEmpty() },
-            depart               = JoystickFocus.Position(0, 0),
+            depart               = JoystickFocus.Position(0, carteDepart),
             surDeplacement       = { resetTimers() },
             ligneCurseur         = if (briVisible) ligneCurseur else null,
             reglerCurseur        = reglerLuminosite,
@@ -482,14 +533,16 @@ object ProfilePickerOverlay {
             mode.text = profile.driveMode.label
             mode.setTextColor(texte)
             OverlayKit.fond(mode, fond, rayon = p.rayonPastille)
-            resume.text = localized.getString(R.string.drive_section_regen) + " " + profile.regenLevel.label
+            resume.text = localized.getString(R.string.drive_section_regen) + " " +
+                if (profile.appliesRegen) profile.regenLevel.label else localized.getString(R.string.regen_unchanged)
         } else {
             mode.visibility = View.INVISIBLE
             resume.text = ProfileSections.summary(
                 profile, adasLabel = "",
                 driveName   = localized.getString(R.string.profile_cat_drive),
                 safetyName  = localized.getString(R.string.profile_cat_safety),
-                comfortName = localized.getString(R.string.profile_cat_comfort))
+                comfortName = localized.getString(R.string.profile_cat_comfort),
+                regenUnchanged = localized.getString(R.string.regen_unchanged_short))
         }
 
         carte.findViewById<TextView>(R.id.profile_card_name).text = profile.name
@@ -542,6 +595,7 @@ object ProfilePickerOverlay {
     }
 
     private fun dismissOnMainThread(context: Context) {
+        repli = null
         dismissRunnable?.let  { handler.removeCallbacks(it) }
         countdownRunnable?.let { handler.removeCallbacks(it) }
         dismissRunnable   = null

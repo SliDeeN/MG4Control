@@ -148,8 +148,8 @@ Actions disponibles — celles qui dépendent du firmware n'apparaissent pas sur
 | Sécurité | ESC · Somnolence · Somnolence : sensibilité · Système Anticollision · ADAS · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son |
 | Confort | Siège chauffant gauche · Siège chauffant droit · Volant chauffant · Clim ON/OFF · Clim : A/C ON/OFF · Clim : température ± · Clim : ventilation ± · Dégivrage avant · Dégivrage arrière · Recirculation · Feux de route automatiques ON/OFF · Luminosité ± · Pop-up HVAC |
 | Vitres | Ouvrir toutes les vitres · Fermer toutes les vitres |
-| Média | Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume - |
-| Application et véhicule | Lancer un profil · Sélecteur de profils · Cycle de profils · Ouvrir MG4Control · Lancer une application · Éteindre la voiture |
+| Média | Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume - · Cycle de sources audio |
+| Application et véhicule | Lancer un profil · Sélecteur de profils · Cycle de profils · Pop-up de charge · Ouvrir MG4Control · Lancer une application · Éteindre la voiture |
 
 Les actions de confort et de sécurité **relisent l'état sur le véhicule à chaque pression** au lieu
 de mémoriser le leur : l'utilisateur agit aussi depuis l'écran d'origine, un état gardé en mémoire
@@ -212,7 +212,9 @@ d'origine reste inchangé (Faible → Moyen → Fort → Adaptatif).
 L'action **Pop-up HVAC** ouvre la climatisation par-dessus l'écran en cours — y compris quand
 Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim d'origine. Le joystick droit
 du volant n'y déplace aucun focus : haut/bas règlent la température, gauche/droite la ventilation,
-le clic central bascule le mode AUTO (régler la ventilation en fait sortir). Un repère dans
+le clic central bascule le mode AUTO (régler la ventilation en fait sortir). Au cran 1, un appui
+à gauche éteint la clim (« OFF ») ; éteinte, gauche ne la rallume pas et droite la remet au
+cran 1. Un repère dans
 l'en-tête rappelle ces gestes, ou prévient que le joystick est inactif tant que le service
 d'accessibilité n'est pas activé — la fenêtre reste alors utilisable au doigt. Se choisissent au
 doigt : l'A/C, la recirculation, le sens de l'air et, sur les firmwares équipés (SWI133, SWI68,
@@ -226,6 +228,24 @@ moins deux profils ; sans réglage, tous les profils dans l'ordre de leur liste)
 raccourci vise le profil qui suit le profil actif et affiche son nom ; il l'applique une seconde
 plus tard, puis le confirme à l'écran. Deux appuis rapprochés sautent donc un profil sans
 l'appliquer. Si le verrou de vitesse refuse l'écriture, rien ne change.
+
+#### Cycle de sources audio
+L'action **Cycle de sources audio** passe à la source suivante d'un cycle composé sur la page
+*Cycle sources*, en tuiles : radio, Bluetooth, USB, en ligne, CarPlay / Android Auto (au moins
+deux sources ; sans réglage, radio puis Bluetooth). À chaque appui, *Source : …* s'affiche et la
+voiture y passe une seconde plus tard ; deux appuis rapprochés sautent donc une source. Il
+n'existe pas de commande « changer de source » : l'application demande à la source visée de
+jouer, ce qui la met au premier plan, sans rien mettre en pause. La disponibilité n'est pas
+vérifiée : une source sans rien à jouer reste muette, et l'appui suivant passe à la suivante,
+car le cycle repart de la dernière source choisie, pas de celle qui joue.
+
+- **SWI133, SWI68, SWI165** : par le service média SAIC, source par source.
+- **SWI69, SWI131, SWI132** : le Bluetooth passe par l'appli Média SAIC, comme la touche de
+  source d'origine — c'est elle qui fait passer la sortie audio de la voiture en Bluetooth avant
+  de lancer la lecture. L'USB vise le lecteur du port où la clé est branchée (un lecteur par
+  port). « En ligne » n'est pas proposé : cette source n'existe pas sur ces firmwares.
+- **CarPlay / Android Auto** : par le récepteur d'origine AllGo ; s'il n'a pas de téléphone,
+  l'application essaie Android Auto sans fil par DiAuto-MG4.
 
 ### Automatisation
 - **Application d'un profil selon la température extérieure** : seuil, sens
@@ -293,7 +313,7 @@ Durée de course et calibrage restent réglables option coupée : ils servent au
 > fermeture automatique, qui part alors que vous êtes déjà dehors.
 
 ### Gestion de profils
-- Sauvegarde jusqu'à **5 profils** personnalisés
+- Sauvegarde jusqu'à **10 profils** personnalisés (5 avant la 2.6.9)
 - Application instantanée d'un profil en un clic
 - Application automatique du profil par défaut **au démarrage du véhicule**
 - **Association Bluetooth** : un profil peut être lié à un appareil et s'applique à sa connexion
@@ -309,8 +329,8 @@ ailleurs. Trois sous-onglets sur le rail habituel :
 
 - **Général** : résumé sur 30 jours ou sur tout l'historique — distance, consommation, énergie
   consommée, récupérée et rechargée, coût. Réglages : prix du kWh en charge lente et en charge rapide
-  (jusqu'à 100 000, pour toutes les monnaies), monnaie, batterie de la voiture (51, 64 ou 77 kWh),
-  filtre des petits trajets, durée de conservation (30 jours à 1 an, 3 mois par défaut) et
+  (jusqu'à 100 000, pour toutes les monnaies), monnaie, batterie de la voiture (51, 64 ou 77 kWh)
+  et son **état de santé** (SOH), filtre des petits trajets, durée de conservation (30 jours à 1 an, 3 mois par défaut) et
   « Tout supprimer »
 - **Trajets** : chaque trajet avec sa durée, sa distance, sa consommation et le détail de l'énergie
 - **Recharge** : énergie rechargée, coût et sessions AC / DC, y compris les charges faites pendant
@@ -324,7 +344,8 @@ D'où viennent les chiffres :
 | Distance | Intégration de la vitesse, relevée toutes les 10 s en roulant ; l'odomètre, qui ne publie que le kilomètre entier, sert de garde-fou |
 | Énergie d'un trajet, SWI133 et SWI132 | Compteurs de la voiture, au dixième de kWh : total, climatisation, accessoires, récupération |
 | Énergie d'un trajet, autres firmwares | Leurs compteurs restent à zéro : tension × courant de la batterie, relevés chaque seconde en roulant. Le détail se limite à « Moteur » et « Climatisation et autres », au kWh entier |
-| Énergie d'une charge | Écart de pourcentage × capacité utile de la batterie choisie |
+| Énergie d'une charge, alternatif | Écart de pourcentage × capacité retenue : capacité utile de la batterie choisie × état de santé |
+| Énergie d'une charge, continu | Mesurée pendant la charge (tension × courant) ; la partie non vue est estimée d'après une table apprise par tranche de 1 % (cf. *Charges rapides*) |
 | Type et puissance d'une charge | Type lu sur la voiture (alternatif ou continu) ; puissance mesurée si le boîtier est éveillé pendant la charge, sinon calculée (énergie ÷ durée) et annoncée comme telle |
 
 Règles à connaître :
@@ -341,13 +362,121 @@ Règles à connaître :
   au dixième de kWh), elle s'affiche avec « ≈ » et sans décimale
 - **Petits trajets** : filtre désactivé par défaut ; activé, un trajet plus court que la distance
   choisie (1 km par défaut, de 0,1 à 50 km) n'est pas enregistré
-- **Batterie** : en changer recalcule les recharges déjà enregistrées ; tant qu'elle n'a pas été
-  confirmée, l'onglet Recharge le rappelle
+- **Batterie et état de santé** : l'état de santé se règle de 50 à 100 % par pas de 0,5 %, aux
+  boutons − et + (maintenus, ils défilent), et la capacité retenue s'affiche dessous. 100 % par
+  défaut : un concessionnaire ou une appli OBD peut le mesurer. Changer l'un ou l'autre recalcule
+  les recharges enregistrées d'après le pourcentage — une énergie mesurée ne bouge pas ; tant que la
+  batterie n'a pas été confirmée, l'onglet Recharge le rappelle
+- **Charges rapides** : le pourcentage affiché ne suit pas l'énergie entrée (de 62,8 à 70,1 %,
+  5,0 kWh mesurés côté batterie, quand l'écart de pourcentage n'en comptait que 4,2). L'énergie
+  d'une charge en continu est donc **mesurée** pendant la charge, relevée toutes les 2 s, pop-up de
+  charge activé ou non. L'écran central s'éteint au verrouillage : la partie non vue — la fin, ou
+  le début si l'écran s'est rallumé en pleine charge — est estimée d'après une **table apprise par
+  tranche de 1 %**, nourrie par chaque tranche vue en entier (une tranche sert dès deux mesures,
+  les plus récentes comptent davantage, une mesure invraisemblable est refusée). Une charge jamais
+  vue est estimée tranche par tranche, ou d'après le pourcentage tant que la table est vide. Le
+  détail de la charge dit d'où vient son énergie : *mesurée pendant la charge*, *mesurée en
+  partie*, *estimée d'après les charges déjà vues* ou *estimée d'après le niveau de batterie*. Les
+  charges en alternatif, longues et faites surtout écran éteint, restent calculées d'après le
+  pourcentage
 - **Coupures** : le trajet en cours est enregistré après chaque relevé, et un trajet interrompu par
   l'extinction du boîtier est clos au démarrage suivant. L'historique est écrit dans un fichier
   temporaire puis renommé : une coupure d'alimentation ne le tronque jamais
 - **Horloge** : un boîtier réveillé par la charge peut repartir sur son horloge d'usine (2019) ; les
   relevés datés d'avant 2025 sont écartés
+
+### Écran conducteur
+Option de *Réglages → Interface*, **désactivée par défaut**, sur **SWI133, SWI68 et SWI165**
+seulement : un module MG4Control s'affiche au centre du combiné, derrière le volant, à la place de
+la page d'origine des onglets Navigation et Musique.
+
+Le combiné est un calculateur à part. Seul un carré de **260 × 260 px**, au centre, vient de
+l'écran central : SAIC l'y dessine avec une application système (`clusterprojection`), sur le second
+écran d'Android (n° 1, 800 × 480). MG4Control pose sa fenêtre exactement sur ce carré, avec le fond
+de cette application pour s'y fondre, dès le démarrage de l'application — sans attendre le READY.
+Sur les firmwares **A9** (SWI69, SWI131, SWI132), cette application n'existe pas et le combiné
+dessine tout lui-même : rien ne peut s'y afficher, et la carte n'apparaît pas dans les réglages.
+
+| Module | Jauge | Grand chiffre | Pied |
+|---|---|---|---|
+| **Consommation** | Anneau gradué, échelle logarithmique jusqu'à 3 000 Wh/km (300 kWh/100 km) | Wh/km ou kWh/100 km en roulant ; kW consommés à l'arrêt (sous 5 km/h) ; en récupération, une consommation négative en bleu (25 kW récupérés à 60 km/h : −41,7 kWh/100 km), les kW récupérés sous 5 km/h | Moyenne du trajet · énergie récupérée |
+| **Puissance** | Arc gradué de 60 kW récupérés (à gauche) à 320 kW (à droite), échelle logarithmique | kW entiers en roulant (une décimale à l'arrêt), négatifs en récupération ; dessous, en grand, la consommation instantanée, négative et bleue en récupération | Moyenne du trajet, seule et centrée — la batterie est déjà sur le combiné |
+
+- **Un module par onglet** : Aucun, Consommation ou Puissance pour l'onglet Navigation, de même pour
+  l'onglet Musique. Le module suit l'onglet affiché sur le combiné (`IPK_CLUSTER_TAB_BTN_STS`) ;
+  ordinateur de bord, pression des pneus et réglages sont dessinés par le combiné lui-même et
+  gardent leur page
+- **Style** : *Dynamique* (l'anneau ou l'arc, et le chiffre qui compte) ou *Discret*, pour qui
+  trouve distrayants les chiffres qui défilent : une barre fine graduée, des chiffres fixes sous les
+  crans. Puissance : le zéro marqué, la récupération à gauche en bleu, la puissance à droite en gris
+  clair. Consommation : une courte zone de récupération à gauche, puis l'échelle ; un triangle
+  « moy. » marque la moyenne du trajet, et la barre est verte en dessous, orange au-dessus. Mêmes
+  échelles que le style dynamique, même pastille, même moyenne en bas ; la barre suit en deux
+  secondes, sans trembler, quelle que soit l'actualisation
+- **Pastille** en haut à gauche : *Profil* (par défaut) — le dernier profil appliqué, en capitales,
+  dans la couleur du mode de conduite **du profil** (celle de la voiture s'il ne règle pas la
+  conduite) —, *Mode de conduite*, ou *Aucune*. Jamais plus large que celle du mode le plus long :
+  un nom plus long finit en ellipse
+- **Unités** : celle de la **jauge**, Wh/km (par défaut) ou kWh/100 km, avec une décimale sous 100 —
+  l'anneau ne bouge pas d'une unité à l'autre, ses graduations (0 · 100 · 200 · 500 · 1k · 3k Wh/km,
+  ou 0 · 10 · 20 · 50 · 100 · 300 kWh/100 km) suivent l'unité — et, à part, celle de la **moyenne du
+  trajet** : Wh/km, kWh/100 km ou km/kWh (par défaut, celle de la jauge)
+- **Échelle de puissance resserrée** : logarithmique, pour que l'arc bouge en roulant — 20 kW en
+  remplissent un quart, 50 kW 44 %, 100 kW 63 % ; côté récupération, 10 kW font 36 %. Graduations
+  20 · 50 · 100 · 200 · 320 et 10 · 30 · 60. Le remplissage s'arrête net au zéro, sans déborder de
+  l'autre côté
+- **Couleurs** : orange pour la consommation, bleu pour la récupération, quelle que soit la valeur
+- **Avancé** : l'**actualisation** de la puissance, de la vitesse et de la jauge, de 0,1 à 1 s (1 s
+  par défaut ; plus court, plus réactif, mais le chiffre bouge davantage), et la **durée de
+  l'animation**, de 0,2 à 2 s (0,8 s par défaut). Le mode de conduite et le profil sont relus
+  toutes les 10 s
+- **Le chiffre compte** d'une valeur à la suivante (100, 101… 300) au lieu de sauter, et la jauge
+  glisse avec lui, sur la durée d'animation réglée ; un changement d'unité (Wh/km → kW à l'arrêt)
+  saute directement
+- **Moyenne du trajet** : énergie nette (récupération déduite) ÷ distance intégrée depuis le passage
+  en READY, affichée à partir de 200 m. Elle est calculée sur place plutôt que reprise de l'onglet
+  Statistiques, qui peut être désactivé
+- **Pendant une charge**, le **module de charge** remplace la jauge sur les onglets qui en ont une,
+  dès que la charge est détectée, en AC comme en rapide : en grand le temps restant jusqu'à la
+  limite, dessous le niveau au dixième et l'heure de fin, la barre de batterie avec le repère de la
+  limite, puis puissance, énergie et durée. L'éclair de la pastille pulse et un reflet court sur la
+  barre jusqu'à la limite ; à la fin, tout se fige et passe au vert (« Charge terminée »). Au
+  débranchement ou au READY, la jauge revient
+- **Carte de réglages** : à gauche, un **aperçu** — la vraie jauge sur un trajet simulé, qui suit
+  chaque réglage, pour l'onglet Navigation ou Musique ; à droite, les réglages en trois groupes
+  (Modules, Apparence, Unités), puis « Avancé », replié sous son résumé
+
+### Pop-up de charge
+Option de *Réglages → Interface*, **activée par défaut**, sur tous les firmwares : dès qu'une charge
+commence, en AC comme en rapide, un pop-up plein cadre s'ouvre sur l'écran central — y compris
+quand l'application démarre en pleine charge. Il n'a pas de décompte : il se ferme par sa croix, au
+passage en READY, ou d'un appui sur le raccourci **Pop-up de charge**, qui le rouvre aussi (option
+coupée, le raccourci dit où l'activer). Une pause de la borne de moins de 10 minutes reste la même
+charge.
+
+- **À gauche** : la batterie au dixième, la barre de niveau, puis l'heure de fin estimée en grand et
+  le temps restant jusqu'à la limite
+- **Au milieu** : la courbe de la puissance (aire bleue) et du niveau (ligne verte) **depuis le début
+  de la charge**, pas depuis l'ouverture du pop-up — l'application relève la charge en arrière-plan,
+  un point toutes les 5 s (un trou si l'écran s'éteint). L'axe des kW monte jusqu'à la puissance
+  maximale atteinte, la limite est en pointillé gris, et un pointillé vert relie le niveau actuel à
+  la limite, à l'heure de fin donnée par la voiture
+- **À droite** : puissance (et le maximum atteint), énergie ajoutée, autonomie gagnée — l'écart de
+  l'autonomie estimée par la voiture depuis le début —, coût estimé et durée
+
+**Limite de charge** : la barre de batterie sert de curseur, de 40 à 100 % par pas de 10 ; le cran
+visé passe en gras, et la limite part à la voiture au relâchement (`BMS_CHRG_TRGT_SOC`, la propriété
+qu'écrit l'écran d'origine). Sous le niveau actuel, le pop-up prévient que la charge s'arrêtera ; si
+la voiture n'a pas pris la nouvelle limite au bout de 20 s, il le dit. Sur les firmwares **A9**
+(SWI69, SWI131, SWI132), la limite ne se règle que si la voiture le permet, selon la règle de son
+application de charge (type de batterie lu en `0x21704244`, codes 7 et 9) : pas sur une batterie LFP
+(MG4 Standard), qui charge jusqu'à 100 %. La barre montre alors le seul niveau, un cadenas
+l'explique, et l'heure de fin vise le plein.
+
+**Prix de cette charge** : le coût suit le tarif AC ou DC de l'onglet Statistiques ; le crayon ouvre
+un éditeur sans clavier — boutons − et +, pas au choix, coût recalculé en direct, l'ancien barré.
+*Tarif par défaut* revient au tarif des Statistiques ; le prix corrigé suit la charge dans l'onglet
+Statistiques.
 
 ### Réglages
 Écran organisé en **quatre onglets** :
@@ -355,7 +484,8 @@ Règles à connaître :
   demandée au premier lancement, dans une fenêtre à sept grandes tuiles
 - **Interface** : écran affiché au démarrage, apparence (auto / sombre / clair), taille du texte
   (standard / grand / très grand), **délai avant la fermeture des pop-ups** (1 à 60 s, 10 par
-  défaut)
+  défaut), **pop-up de charge** (activé par défaut), **module sur l'écran conducteur** (SWI133,
+  SWI68, SWI165 — cf. ci-dessus)
 - **Réglages avancés** : **Mode Garage** (cf. ci-dessous), retour au profil par défaut à chaque
   passage en READY (option, décochée), vérification des mises à jour au lancement, **alerte de mise
   à jour sur l'écran du véhicule**, **canal bêta**, extinction du véhicule écran allumé, blocage des
@@ -375,15 +505,28 @@ gros boutons, et plus aucune saisie au clavier.
 |---|---|
 | Sélecteur de profils | Plein cadre : une carte par profil (mode de conduite en couleur, profil en cours marqué « Actif »), luminosité (Nuit / Moyen / Jour et curseur), Ouvrir MG4Control, Éteindre la voiture |
 | Pop-up HVAC | Plein cadre : chauffages, température et ventilation au joystick, A/C et recirculation |
+| Pop-up de charge | Plein cadre : niveau et limite de charge, courbe depuis le début, heure de fin, puissance, énergie, autonomie gagnée, coût, durée |
 | Confirmation d'une automatisation | Bandeau en bas de l'écran : mesure, seuil, profil proposé, NON / OUI |
 | Mise à jour disponible | Bandeau : versions, Plus tard / Ignorer cette version / Installer la MAJ |
 | Extinction du véhicule | Bandeau : Annuler / Éteindre — ou « Extinction impossible » hors de P |
 
-Les deux pop-ups se pilotent au **joystick droit du volant** (service d'accessibilité requis) ; un
-repère dans leur en-tête rappelle les gestes, ou prévient que le joystick est inactif. Un bandeau
-ne masque ni n'assombrit rien : ce qui est touché ailleurs va à l'application du dessous. Tout se
-referme seul après le **délai des pop-ups** (*Réglages → Interface*) ; sur un bandeau, le décompte
-est écrit sur le bouton qui vaut « non » — c'est lui que le délai déclenche.
+Le sélecteur et le pop-up HVAC se pilotent au **joystick droit du volant** (service d'accessibilité
+requis) ; un repère dans leur en-tête rappelle les gestes, ou prévient que le joystick est inactif.
+Un bandeau ne masque ni n'assombrit rien : ce qui est touché ailleurs va à l'application du dessous.
+Tout se referme seul après le **délai des pop-ups** (*Réglages → Interface*), sauf le pop-up de
+charge, qui reste jusqu'à sa croix ou au READY ; sur un bandeau, le décompte est écrit sur le bouton
+qui vaut « non » — c'est lui que le délai déclenche.
+
+Le **raccourci qui ouvre un pop-up le referme** : un second appui ferme le sélecteur de profils
+comme la fin du délai (en cas de conflit Bluetooth, le premier profil proposé s'applique), et de même
+les pop-ups HVAC et de charge. Quand ce raccourci est un appui long sur une touche du joystick droit, un appui court
+sur cette touche continue de naviguer — au relâchement —, et un appui maintenu jusqu'au seuil
+referme la fenêtre sans naviguer : au pop-up HVAC, refermer ne change ni la température ni la
+ventilation.
+
+Le **sélecteur de profils s'ouvre sur le profil actif** : le joystick part de sa carte, et la rangée
+défile pour la montrer s'il est au-delà du cinquième profil. En conflit Bluetooth, il part de la
+première carte, celle qu'applique le délai.
 
 **Dans l'application** :
 - les **confirmations** se ressemblent toutes — un pictogramme, un titre, un texte, un ou deux
@@ -391,8 +534,8 @@ est écrit sur le bouton qui vaut « non » — c'est lui que le délai déclenc
   un avertissement, rouge pour ce qui efface ou éteint ;
 - une **application** ou un **profil** se choisit dans une grille de tuiles qui défile ;
 - un **raccourci avancé** se modifie dans deux listes côte à côte ;
-- les **horaires** et le **tarif** d'une recharge (onglet Statistiques) se règlent aux boutons −
-  et +, sans clavier — celui de la voiture couvre la moitié de l'écran. Les minutes vont de cinq en
+- les **horaires** et le **tarif** d'une recharge (onglet Statistiques), comme le **prix** de la
+  charge en cours (pop-up de charge), se règlent aux boutons − et +, sans clavier — celui de la voiture couvre la moitié de l'écran. Les minutes vont de cinq en
   cinq, le pas du tarif se choisit, et un appui maintenu répète le pas.
 
 ### Mode Garage
@@ -456,11 +599,20 @@ un réglage que l'utilisateur croit global, et il l'est.
 
 ### Profils
 - Liste des profils avec application, définition par défaut, modification, suppression
+- **Ordre des profils** : un appui long sur une carte de la liste la soulève ; on la fait glisser à
+  sa place (la liste défile seule près de ses bords, un bandeau indique la position) et l'ordre est
+  enregistré au relâcher. Cet ordre est celui du sélecteur, des boutons de la page « Cycle profils »
+  et du cycle par défaut ; en conflit Bluetooth, c'est la priorité — le premier des profils en
+  conflit s'applique à la fin du délai
 - **Éditeur en plein écran** organisé en trois catégories : Conduite, Sécurité, Confort
 - **Un interrupteur par catégorie**, en tête de chaque onglet : coupée, l'onglet se replie et le
   profil n'y écrit rien — un profil peut ne régler que la sécurité, ou que le confort. Il en faut au
   moins une pour enregistrer ; les profils déjà créés gardent leurs trois catégories actives
 - Le nom du profil et le réglage « profil par défaut » restent visibles sur les trois onglets
+- **Régénération inchangée** : un interrupteur sur la section Régénération de l'onglet Conduite ;
+  coupé, le profil ne touche ni au niveau de régénération ni à la conduite à une pédale, les boutons
+  de niveau se grisent, et la liste comme le sélecteur l'indiquent (« Régén. inchangée »). Les
+  profils déjà créés gardent leur régénération
 - Volant et sièges chauffants disposent d'un interrupteur de **prise en compte** : décoché, le
   profil ne touche pas au réglage au lieu de l'éteindre
 - **Gestion automatique des feux de route** : même interrupteur, décoché par défaut — un profil
@@ -519,6 +671,11 @@ autres firmwares.
 | Firmware SWI69 | Compatible ✅ |
 | Firmware SWI165 | Compatible ✅ |
 | Firmware UNKNOWN | Mode forcé SWI133/SWI132/SWI68/SWI69/SWI131/SWI165 disponible ⚠️ |
+
+Le module sur l'écran conducteur est réservé à SWI133, SWI68 et SWI165 (cf.
+[Écran conducteur](#écran-conducteur)). Le pop-up de charge fonctionne partout ; sur les A9, sa
+limite de charge ne se règle que si la batterie le permet (pas en LFP — cf.
+[Pop-up de charge](#pop-up-de-charge)).
 
 ---
 
@@ -593,6 +750,11 @@ MG4Control/
 │   │   │   ├── StatsTracker.kt        # Statistiques : trajets et charges (machine à états pure, testée)
 │   │   │   ├── StatsSummary.kt        # Statistiques : agrégats d'une période (coût, consommation)
 │   │   │   ├── PowerIntegrator.kt     # Énergie par tension × courant (firmwares sans compteurs)
+│   │   │   ├── ClusterGauge.kt        # Écran conducteur : échelles des jauges, place du carré, moyenne du trajet
+│   │   │   ├── ClusterTab.kt          # Écran conducteur : onglets du combiné
+│   │   │   ├── ChargeModule.kt        # Module de charge du combiné : cible, temps restant, énergie
+│   │   │   ├── ChargePopupModel.kt    # Pop-up de charge : limite, échelle de la courbe, relevés de la charge
+│   │   │   ├── ChargeEnergyLearning.kt # Énergie des charges : table apprise par tranche de 1 %, source retenue
 │   │   │   └── ProfileBackup.kt       # Format de la sauvegarde véhicule
 │   │   │
 │   │   ├── profile/
@@ -604,6 +766,9 @@ MG4Control/
 │   │   ├── hardware/
 │   │   │   ├── MG4Hardware.kt         # Abstraction matérielle (4 couches)
 │   │   │   ├── StatsCollector.kt      # Relevés des statistiques (seulement si elles sont activées)
+│   │   │   ├── ClusterTabReader.kt    # Onglet affiché sur le combiné
+│   │   │   ├── BatteryTypeConfig.kt   # Type de batterie (A9) : limite de charge réglable ou non
+│   │   │   ├── ChargeProbe.kt         # Sonde de diagnostic de la charge (journal MG4_CHARGE)
 │   │   │   └── VehicleWriteGate.kt    # Verrou de vitesse posé dans les primitives d'écriture
 │   │   │
 │   │   ├── stats/
@@ -611,6 +776,7 @@ MG4Control/
 │   │   │
 │   │   ├── accessibility/
 │   │   │   ├── KeyCaptureService.kt   # Service d'accessibilité — voit les touches avant le launcher
+│   │   │   ├── AccessibilityServiceList.kt # Le service est-il activé ? (formes longue et courte du nom)
 │   │   │   └── AdvancedShortcuts.kt   # Stockage (touche, type d'appui) → action
 │   │   │
 │   │   ├── shortcut/
@@ -643,6 +809,11 @@ MG4Control/
 │   │   │   ├── AppDialog.kt           # Fenêtres de l'app : confirmation, grille de choix, listes, boutons − / +
 │   │   │   ├── RestoreProfilesDialog.kt # « Restaurer les profils ? » — liste des profils retrouvés
 │   │   │   ├── StatsDialogs.kt        # Compléter une recharge, corriger un tarif (sans clavier)
+│   │   │   ├── ClusterSettingsPreview.kt # Aperçu de l'écran conducteur dans les réglages (trajet simulé)
+│   │   │   ├── ClusterTabDialog.kt    # Diagnostic : onglet affiché sur le combiné
+│   │   │   ├── widget/ClusterGaugeView.kt # Module de l'écran conducteur (anneau, arc ou barre discrète ; charge)
+│   │   │   ├── widget/ChargeCurveView.kt # Courbe du pop-up de charge
+│   │   │   ├── widget/ChargeLimitSliderView.kt # Barre de batterie, curseur de la limite de charge
 │   │   │   ├── ConsoleFragment.kt     # Journal de debug en temps réel
 │   │   │   ├── DriveRegenFragment.kt  # Héritage (non utilisé en v2)
 │   │   │   ├── ClimateFragment.kt     # Héritage (non utilisé en v2)
@@ -656,13 +827,18 @@ MG4Control/
 │   │   │   ├── HvacPopupOverlay.kt    # Pop-up HVAC (+ HvacPopupSkin.kt, sa peinture)
 │   │   │   ├── ProfileConfirmOverlay.kt # Bandeau OUI/NON des automatisations
 │   │   │   ├── VehiclePowerOffOverlay.kt # Bandeau de confirmation d'extinction
-│   │   │   └── UpdateOverlay.kt      # Bandeau « MAJ disponible » sur l'écran du véhicule
+│   │   │   ├── UpdateOverlay.kt      # Bandeau « MAJ disponible » sur l'écran du véhicule
+│   │   │   ├── ChargeMonitor.kt       # Suivi de charge en arrière-plan (pop-up et statistiques)
+│   │   │   ├── ChargePopupOverlay.kt  # Pop-up de charge (plein cadre)
+│   │   │   └── ClusterModuleOverlay.kt # Fenêtre du module sur l'écran du combiné, relevés et onglet
 │   │   │
 │   │   ├── receiver/
 │   │   │   └── BootReceiver.kt        # Récepteur de démarrage système
 │   │   │
 │   │   ├── util/
 │   │   │   ├── FirmwareInfo.kt        # Détection firmware + mode forcé
+│   │   │   ├── ClusterModuleSettings.kt # Écran conducteur : activation, module par onglet, style, pastille, unités, actualisation, animation
+│   │   │   ├── ChargePopupSettings.kt # Pop-up de charge : activé ou non
 │   │   │   ├── GarageMode.kt          # Mode Garage — met tous les automatismes en veille
 │   │   │   ├── FirmwareHelper.kt      # Lecture version firmware complète (async)
 │   │   │   ├── LocaleHelper.kt        # Gestion de la langue (7 langues) et de la taille du texte
@@ -756,6 +932,7 @@ data class DrivingProfile(
     // Prise en compte du chauffage, décorrélée de la valeur : null ou true = appliquer
     val steeringHeatEnabled: Boolean?,
     val seatHeatEnabled: Boolean?,
+    val regenEnabled: Boolean?, // Régénération : null ou true = appliquer, false = inchangée
     // ADAS
     val overspeedAlarm: Boolean,
     val speedLimitTone: Boolean,
@@ -794,7 +971,10 @@ data class DrivingProfile(
 
 ### Persistance
 
-Les profils sont sérialisés en JSON via **Gson** et stockés dans `SharedPreferences`. Maximum **5 profils** par appareil.
+Les profils sont sérialisés en JSON via **Gson** et stockés dans `SharedPreferences`. Maximum **10 profils** par appareil
+(`ProfileManager.MAX_PROFILES`). Au-delà de cinq, le sélecteur fait défiler ses cartes et la page « Cycle profils »
+passe sur deux rangées de cinq. Une version antérieure à la 2.6.9 lit et applique les dix, mais n'en crée plus et n'en
+restaure que cinq depuis la sauvegarde du véhicule.
 
 ### Application d'un profil
 
@@ -1240,8 +1420,8 @@ Available actions — those depending on the firmware do not show up on the othe
 | Safety | ESC · Drowsiness · Drowsiness: sensitivity · Forward collision · ADAS · Traffic signs (TSR) · Overspeed alert · Speed limit change alert · Sound |
 | Comfort | Left seat heating · Right seat heating · Heated steering · Climate ON/OFF · Climate: A/C ON/OFF · Climate: temperature ± · Climate: fan ± · Front defrost · Rear defrost · Recirculation · Automatic high beam ON/OFF · Brightness ± · HVAC pop-up |
 | Windows | Open all windows · Close all windows |
-| Media | Play / Pause · Next track · Previous track · Volume + · Volume - |
-| App and vehicle | Apply a profile · Profile picker · Profile cycle · Open MG4Control · Launch an app · Power the car off |
+| Media | Play / Pause · Next track · Previous track · Volume + · Volume - · Audio source cycle |
+| App and vehicle | Apply a profile · Profile picker · Profile cycle · Charging pop-up · Open MG4Control · Launch an app · Power the car off |
 
 Comfort and safety actions **re-read the state from the vehicle on every press** instead of
 remembering their own: the user also acts from the stock screen, so a remembered state would drift
@@ -1302,7 +1482,9 @@ behaviour stands unchanged (Low → Medium → High → Adaptive).
 The **HVAC pop-up** action opens the climate controls on top of the current screen — including
 when Android Auto or CarPlay fills the screen and hides the stock climate bar. The steering
 wheel's right joystick moves no focus there: up/down set the temperature, left/right the fan
-speed, the centre click toggles AUTO mode (adjusting the fan speed leaves it). A hint in the header
+speed, the centre click toggles AUTO mode (adjusting the fan speed leaves it). At fan level 1,
+pressing left turns the climate off ("OFF"); while it is off, left does nothing and right sets it
+back to level 1. A hint in the header
 recalls these gestures, or warns that the joystick is inactive until the accessibility service is
 enabled — the window then still works by touch. Chosen by touch: A/C, recirculation, air direction
 and, on equipped firmwares (SWI133, SWI68, SWI165), the heated steering wheel and each seat's
@@ -1315,6 +1497,24 @@ least two profiles; without it, every profile in the order of their list). On ea
 shortcut targets the profile that follows the active one and shows its name; it applies it one
 second later, then confirms it on screen. Two quick presses therefore skip a profile without
 applying it. If the speed lock refuses the write, nothing changes.
+
+#### Audio source cycle
+The **Audio source cycle** action switches to the next source of a cycle composed on the
+*Source cycle* page, as tiles: radio, Bluetooth, USB, online, CarPlay / Android Auto (at least
+two sources; without it, radio then Bluetooth). On each press, *Source: …* shows and the car
+switches to it one second later; two quick presses therefore skip a source. There is no "change
+source" command: the app asks the target source to play, which brings it to the front, without
+pausing anything. Availability is not checked: a source with nothing to play stays silent, and
+the next press moves on, because the cycle starts again from the last source chosen, not from
+the one playing.
+
+- **SWI133, SWI68, SWI165**: through the SAIC media service, source by source.
+- **SWI69, SWI131, SWI132**: Bluetooth goes through the SAIC Media app, like the original source
+  key — that app switches the car's audio output to Bluetooth before starting playback. USB
+  targets the player of the port the stick is plugged into (one player per port). "Online" is
+  not offered: that source does not exist on these firmwares.
+- **CarPlay / Android Auto**: through the original AllGo receiver; if it has no phone, the app
+  tries wireless Android Auto through DiAuto-MG4.
 
 ### Automation
 - **Apply a profile from the outside temperature**: threshold, direction (below/above), profile to
@@ -1380,7 +1580,7 @@ shortcuts use them too.
 > once you are already outside.
 
 ### Profile Management
-- Save up to **5 custom profiles**
+- Save up to **10 custom profiles** (5 before 2.6.9)
 - Instant one-tap profile application
 - Automatic default profile application **on vehicle startup**
 - **Bluetooth pairing**: a profile can be tied to a device and applied when it connects
@@ -1394,8 +1594,8 @@ the car, in a private file of the app; nothing is sent anywhere. Three sub-tabs 
 
 - **General**: summary over 30 days or the whole history — distance, consumption, energy used,
   recovered and charged, cost. Settings: kWh price for slow and fast charging (up to 100,000, for
-  every currency), currency, the car's battery (51, 64 or 77 kWh), short-trip filter, retention
-  (30 days to 1 year, 3 months by default) and "Delete all"
+  every currency), currency, the car's battery (51, 64 or 77 kWh) and its **state of health**
+  (SOH), short-trip filter, retention (30 days to 1 year, 3 months by default) and "Delete all"
 - **Trips**: each trip with its duration, distance, consumption and energy breakdown
 - **Charging**: energy charged, cost and AC / DC sessions, including charges made while the head
   unit was asleep
@@ -1408,7 +1608,8 @@ Where the figures come from:
 | Distance | Integration of the speed, read every 10 s while driving; the odometer, which only publishes whole kilometres, is the safeguard |
 | Trip energy, SWI133 and SWI132 | The car's counters, in tenths of a kWh: total, climate, accessories, regeneration |
 | Trip energy, other firmwares | Their counters stay at zero: battery voltage × current, read every second while driving. The breakdown is limited to "Motor" and "Climate control and others", in whole kWh |
-| Charge energy | Percentage gained × usable capacity of the chosen battery |
+| Charge energy, AC | Percentage gained × capacity used: usable capacity of the chosen battery × state of health |
+| Charge energy, DC | Measured during the charge (voltage × current); the part not seen is estimated from a table learnt per 1% band (see *Fast charges*) |
 | Charge type and power | Type read from the car (AC or DC); power measured if the head unit is awake during the charge, otherwise computed (energy ÷ duration) and labelled as such |
 
 Rules worth knowing:
@@ -1424,20 +1625,123 @@ Rules worth knowing:
   tenths of a kWh), it is shown with "≈" and no decimal
 - **Short trips**: filter off by default; when on, a trip shorter than the chosen distance (1 km by
   default, 0.1 to 50 km) is not recorded
-- **Battery**: changing it recalculates the charges already recorded; until it has been confirmed,
-  the Charging tab reminds you
+- **Battery and state of health**: the state of health is set from 50 to 100% in 0.5% steps, with
+  the − and + buttons (hold them to scroll), and the capacity used shows below. 100% by default: a
+  dealer or an OBD app can measure it. Changing either recalculates the charges recorded from the
+  percentage — a measured energy doesn't change; until the battery has been confirmed, the Charging
+  tab reminds you
+- **Fast charges**: the displayed percentage doesn't track the energy going in (from 62.8 to 70.1%,
+  5.0 kWh measured at the battery, while the percentage difference only accounted for 4.2). A DC
+  charge's energy is therefore **measured** during the charge, read every 2 s, whether the charging
+  pop-up is on or not. The head unit turns off when the car is locked: the part not seen — the end,
+  or the start if the screen came back on in the middle of a charge — is estimated from a **table
+  learnt per 1% band**, fed by every band seen in full (a band is used from two measurements, the
+  most recent ones weigh more, an implausible measurement is rejected). A charge never seen is
+  estimated band by band, or from the percentage while the table is empty. The charge's details say
+  where its energy comes from: *measured during the charge*, *partly measured*, *estimated from
+  previous charges* or *estimated from the battery level*. AC charges, long and mostly done with the
+  screen off, are still computed from the percentage
 - **Power cuts**: the ongoing trip is saved after each reading, and a trip cut short by the head
   unit switching off is closed at the next start-up. The history is written to a temporary file
   then renamed: a power cut never truncates it
 - **Clock**: a head unit woken up by charging may restart on its factory clock (2019); readings
   dated before 2025 are discarded
 
+### Driver display
+An option in *Settings → Interface*, **off by default**, on **SWI133, SWI68 and SWI165** only: an
+MG4Control module shows in the centre of the instrument cluster, behind the wheel, instead of the
+original page of the Navigation and Music tabs.
+
+The cluster is a separate computer. Only a **260 × 260 px** square in its centre comes from the
+head unit: SAIC draws it there with a system app (`clusterprojection`), on Android's second display
+(no. 1, 800 × 480). MG4Control lays its window exactly over that square, with that app's background
+to blend in, as soon as the app starts — without waiting for READY. On the **A9** firmwares (SWI69,
+SWI131, SWI132), that app does not exist and the cluster draws everything itself: nothing can show
+there, and the card does not appear in the settings.
+
+| Module | Gauge | Large figure | Footer |
+|---|---|---|---|
+| **Consumption** | Graduated ring, logarithmic scale up to 3,000 Wh/km (300 kWh/100 km) | Wh/km or kWh/100 km while driving; kW drawn when stationary (below 5 km/h); when regenerating, a negative consumption in blue (25 kW recovered at 60 km/h: −41.7 kWh/100 km), the kW recovered below 5 km/h | Trip average · energy recovered |
+| **Power** | Graduated arc from 60 kW recovered (left) to 320 kW (right), logarithmic scale | Whole kW while driving (one decimal when stationary), negative when regenerating; below, in large type, the instant consumption, negative and blue when regenerating | Trip average, alone and centred — the battery is already on the cluster |
+
+- **One module per tab**: None, Consumption or Power for the Navigation tab, and likewise for the
+  Music tab. The module follows the tab shown on the cluster (`IPK_CLUSTER_TAB_BTN_STS`); trip
+  computer, tyre pressure and settings are drawn by the cluster itself and keep their page
+- **Style**: *Dynamic* (the ring or the arc, and the counting figure) or *Discreet*, for those who
+  find scrolling figures distracting: a thin graduated bar, fixed figures under the ticks. Power:
+  zero marked, regeneration on the left in blue, power on the right in light grey. Consumption: a
+  short regeneration zone on the left, then the scale; an "avg" triangle marks the trip average,
+  and the bar is green below it, orange above. Same scales as the dynamic style, same badge, same
+  average at the bottom; the bar follows over two seconds, without jitter, whatever the refresh rate
+- **Badge** at the top left: *Profile* (default) — the last applied profile, in capitals, in the
+  colour of **the profile's** drive mode (the car's if the profile doesn't set driving) —, *Drive
+  mode*, or *None*. Never wider than the longest drive mode's badge: a longer name ends with an
+  ellipsis
+- **Units**: the **gauge** unit, Wh/km (default) or kWh/100 km, with one decimal below 100 — the
+  ring does not move from one unit to the other, its graduations (0 · 100 · 200 · 500 · 1k · 3k Wh/km,
+  or 0 · 10 · 20 · 50 · 100 · 300 kWh/100 km) follow the unit — and, separately, the **trip
+  average** unit: Wh/km, kWh/100 km or km/kWh (by default, the gauge unit)
+- **Tightened power scale**: logarithmic, so the arc moves while driving — 20 kW fill a quarter of it,
+  50 kW 44%, 100 kW 63%; on the regeneration side, 10 kW make 36%. Graduations 20 · 50 · 100 · 200 · 320
+  and 10 · 30 · 60. The fill stops cleanly at zero, without spilling over to the other side
+- **Colours**: orange for consumption, blue for regeneration, whatever the value
+- **Advanced**: the **refresh rate** of power, speed and gauge, from 0.1 to 1 s (1 s by default;
+  shorter is more responsive, but the figure moves more), and the **animation length**, from 0.2 to
+  2 s (0.8 s by default). The drive mode and the profile are read every 10 s
+- **The figure counts** from one value to the next (100, 101… 300) instead of jumping, and the
+  gauge glides along, over the animation length set; a change of unit (Wh/km → kW when stationary)
+  jumps straight away
+- **Trip average**: net energy (regeneration deducted) ÷ distance integrated since entering READY,
+  shown from 200 m. It is computed on the spot rather than taken from the Statistics tab, which can
+  be turned off
+- **While charging**, the **charge module** replaces the gauge on the tabs that have one, as soon as
+  a charge is detected, AC or fast: in large type the time left to the limit, below it the level to
+  a tenth and the end time, the battery bar with the limit mark, then power, energy and duration.
+  The badge's lightning bolt pulses and a highlight runs along the bar up to the limit; when done,
+  everything freezes and turns green ("Charge complete"). When unplugged or in READY, the gauge
+  comes back
+- **Settings card**: on the left, a **preview** — the real gauge on a simulated trip, following
+  every setting, for the Navigation or Music tab; on the right, the settings in three groups
+  (Modules, Appearance, Units), then "Advanced", folded under its summary
+
+### Charging pop-up
+An option in *Settings → Interface*, **on by default**, on every firmware: as soon as a charge
+starts, AC or fast, a full-frame pop-up opens on the head unit — including when the app starts in
+the middle of a charge. It has no countdown: it closes with its cross, when the car goes to READY,
+or with the **Charging pop-up** shortcut, which also reopens it (with the option off, the shortcut
+says where to turn it on). A charger pause of less than 10 minutes remains the same charge.
+
+- **Left**: the battery to a tenth, the level bar, then the estimated end time in large type and
+  the time left to the limit
+- **Middle**: the curve of power (blue area) and level (green line) **since the start of the
+  charge**, not since the pop-up opened — the app logs the charge in the background, one point every
+  5 s (a gap if the screen turns off). The kW axis goes up to the highest power reached, the limit
+  is a grey dotted line, and a green dotted line joins the current level to the limit at the end
+  time given by the car
+- **Right**: power (and the maximum reached), energy added, range gained — the change in the car's
+  estimated range since the start —, estimated cost and duration
+
+**Charge limit**: the battery bar works as a slider, from 40 to 100% in steps of 10; the targeted
+step turns bold, and the limit goes to the car on release (`BMS_CHRG_TRGT_SOC`, the property the
+original screen writes). Below the current level, the pop-up warns that the charge will stop; if the
+car hasn't taken the new limit after 20 s, it says so. On the **A9** firmwares (SWI69, SWI131,
+SWI132), the limit can only be set when the car allows it, following its own charging app's rule
+(battery type read at `0x21704244`, codes 7 and 9): not with an LFP battery (MG4 Standard), which
+charges to 100%. The bar then shows the level only, a padlock explains why, and the end time aims
+for full.
+
+**Price of this charge**: the cost follows the AC or DC tariff from the Statistics tab; the pencil
+opens a keyboard-free editor — − and + buttons, selectable step, cost recalculated live, the old one
+struck through. *Default tariff* goes back to the Statistics tariff; the corrected price follows the
+charge into the Statistics tab.
+
 ### Settings
 Screen organised into **four tabs**:
 - **Languages**: French, English, German, Spanish, Italian, Portuguese, Turkish — the language is
   asked on first launch, in a window with seven large tiles
 - **Interface**: screen shown at startup, appearance (auto / dark / light), text size (standard /
-  large / extra large), **pop-up closing delay** (1 to 60 s, 10 by default)
+  large / extra large), **pop-up closing delay** (1 to 60 s, 10 by default), **charging pop-up**
+  (on by default), **module on the driver display** (SWI133, SWI68, SWI165 — see above)
 - **Advanced**: **Garage mode** (see below), return to the default profile each time the car
   enters READY (option, off by default), update check at launch, **update alert on the
   vehicle screen**, **beta channel**, power the car off while keeping the screen on, block driving
@@ -1456,15 +1760,27 @@ no more keyboard input.
 |---|---|
 | Profile picker | Full frame: one card per profile (drive mode in colour, current profile marked "Active"), brightness (Night / Medium / Day and a slider), Open MG4Control, Power the car off |
 | HVAC pop-up | Full frame: heating, temperature and fan speed on the joystick, A/C and recirculation |
+| Charging pop-up | Full frame: level and charge limit, curve since the start, end time, power, energy, range gained, cost, duration |
 | Automation confirmation | Banner at the bottom of the screen: reading, threshold, proposed profile, NO / YES |
 | Update available | Banner: versions, Later / Skip this version / Install update |
 | Vehicle power-off | Banner: Cancel / Power off — or "Cannot power off" outside P |
 
-Both pop-ups are driven with the **steering wheel's right joystick** (accessibility service
-required); a hint in their header recalls the gestures, or warns that the joystick is inactive. A
-banner neither hides nor dims anything: whatever is touched elsewhere goes to the app underneath.
-Everything closes by itself after the **pop-up delay** (*Settings → Interface*); on a banner, the
-countdown is written on the button that means "no" — the one the delay triggers.
+The picker and the HVAC pop-up are driven with the **steering wheel's right joystick**
+(accessibility service required); a hint in their header recalls the gestures, or warns that the
+joystick is inactive. A banner neither hides nor dims anything: whatever is touched elsewhere goes to
+the app underneath. Everything closes by itself after the **pop-up delay** (*Settings → Interface*),
+except the charging pop-up, which stays until its cross or READY; on a banner, the countdown is
+written on the button that means "no" — the one the delay triggers.
+
+The **shortcut that opens a pop-up closes it**: a second press closes the profile picker just like
+the end of the delay (in a Bluetooth conflict, the first profile offered is applied), and the HVAC
+and charging pop-ups likewise. When that shortcut is a long press on a right-joystick key, a short press on that
+key still navigates — on release —, and a press held up to the threshold closes the window without
+navigating: on the HVAC pop-up, closing changes neither the temperature nor the fan speed.
+
+The **profile picker opens on the active profile**: the joystick starts from its card, and the row
+scrolls to show it when it is beyond the fifth profile. In a Bluetooth conflict, it starts from the
+first card, the one the delay applies.
 
 **Inside the app**:
 - **confirmations** all look alike — an icon, a title, a text, one or two buttons — and their
@@ -1472,8 +1788,8 @@ countdown is written on the button that means "no" — the one the delay trigger
   whatever deletes or powers off;
 - an **app** or a **profile** is picked from a scrolling grid of tiles;
 - an **advanced shortcut** is edited in two side-by-side lists;
-- the **times** and the **tariff** of a charge (Statistics tab) are set with − and + buttons,
-  without a keyboard — the car's one covers half the screen. Minutes go in steps of five, the
+- the **times** and the **tariff** of a charge (Statistics tab), like the **price** of the charge in
+  progress (charging pop-up), are set with − and + buttons, without a keyboard — the car's one covers half the screen. Minutes go in steps of five, the
   tariff step is selectable, and holding a button repeats the step.
 
 ### Garage mode
@@ -1535,11 +1851,20 @@ users read as global, and it is.
 
 ### Profiles
 - Profile list with apply, set as default, edit and delete
+- **Profile order**: a long press on a card in the list lifts it; drag it into place (the list
+  scrolls by itself near its edges, a banner shows the position) and the order is saved on release.
+  This order is the picker's, the "Profile cycle" page buttons' and the default cycle's; in a
+  Bluetooth conflict it is the priority — the first of the conflicting profiles is applied when the
+  delay runs out
 - **Full-screen editor** organised into three categories: Driving, Safety, Comfort
 - **One switch per category**, at the top of each tab: switched off, the tab folds away and the
   profile writes nothing there — a profile can cover safety only, or comfort only. At least one is
   needed to save; existing profiles keep their three categories on
 - The profile name and the "default profile" setting stay visible across the three tabs
+- **Regeneration unchanged**: a switch on the Regeneration section of the Driving tab; when off,
+  the profile touches neither the regeneration level nor one-pedal driving, the level buttons grey
+  out, and both the list and the picker show it ("Regen unchanged"). Existing profiles keep their
+  regeneration
 - Heated steering wheel and seats have an **apply** switch: unchecked, the profile leaves the
   setting alone instead of turning it off
 - **Automatic high beam**: same switch, unchecked by default — existing profiles leave it alone
@@ -1595,6 +1920,11 @@ firmwares.
 | Firmware SWI69 | Compatible ✅ |
 | Firmware SWI165 | Compatible ✅ |
 | UNKNOWN firmware | Forced SWI133/SWI132/SWI68/SWI69/SWI131/SWI165 mode available ⚠️ |
+
+The driver display module is limited to SWI133, SWI68 and SWI165 (see
+[Driver display](#driver-display)). The charging pop-up works everywhere; on the A9 firmwares, its
+charge limit can only be set when the battery allows it (not with LFP — see
+[Charging pop-up](#charging-pop-up)).
 
 ---
 
@@ -1667,6 +1997,11 @@ MG4Control/
 │   │   │   ├── StatsTracker.kt        # Statistics: trips and charges (pure state machine, tested)
 │   │   │   ├── StatsSummary.kt        # Statistics: aggregates of a period (cost, consumption)
 │   │   │   ├── PowerIntegrator.kt     # Energy from voltage × current (firmwares without counters)
+│   │   │   ├── ClusterGauge.kt        # Driver display: gauge scales, square placement, trip average
+│   │   │   ├── ClusterTab.kt          # Driver display: the cluster's tabs
+│   │   │   ├── ChargeModule.kt        # Cluster charge module: target, time left, energy
+│   │   │   ├── ChargePopupModel.kt    # Charging pop-up: limit, curve scale, charge log
+│   │   │   ├── ChargeEnergyLearning.kt # Charge energy: table learnt per 1% band, source kept
 │   │   │   └── ProfileBackup.kt       # Vehicle backup format
 │   │   │
 │   │   ├── profile/
@@ -1678,6 +2013,9 @@ MG4Control/
 │   │   ├── hardware/
 │   │   │   ├── MG4Hardware.kt         # Hardware abstraction (4 layers)
 │   │   │   ├── StatsCollector.kt      # Statistics readings (only when turned on)
+│   │   │   ├── ClusterTabReader.kt    # Tab shown on the cluster
+│   │   │   ├── BatteryTypeConfig.kt   # Battery type (A9): charge limit adjustable or not
+│   │   │   ├── ChargeProbe.kt         # Charging diagnostic probe (MG4_CHARGE log)
 │   │   │   └── VehicleWriteGate.kt    # Speed lock, enforced inside the write primitives
 │   │   │
 │   │   ├── stats/
@@ -1685,6 +2023,7 @@ MG4Control/
 │   │   │
 │   │   ├── accessibility/
 │   │   │   ├── KeyCaptureService.kt   # Accessibility service — sees keys before the launcher
+│   │   │   ├── AccessibilityServiceList.kt # Is the service enabled? (long and short name forms)
 │   │   │   └── AdvancedShortcuts.kt   # Storage for (key, press type) → action
 │   │   │
 │   │   ├── shortcut/
@@ -1717,6 +2056,11 @@ MG4Control/
 │   │   │   ├── AppDialog.kt           # App windows: confirmation, choice grid, lists, − / + buttons
 │   │   │   ├── RestoreProfilesDialog.kt # "Restore profiles?" — lists the profiles found
 │   │   │   ├── StatsDialogs.kt        # Complete a charge, fix a tariff (no keyboard)
+│   │   │   ├── ClusterSettingsPreview.kt # Driver display preview in the settings (simulated trip)
+│   │   │   ├── ClusterTabDialog.kt    # Diagnostic: tab shown on the cluster
+│   │   │   ├── widget/ClusterGaugeView.kt # Driver display module (ring, arc or discreet bar; charge)
+│   │   │   ├── widget/ChargeCurveView.kt # Charging pop-up curve
+│   │   │   ├── widget/ChargeLimitSliderView.kt # Battery bar, charge-limit slider
 │   │   │   ├── ConsoleFragment.kt     # Real-time debug log viewer
 │   │   │   ├── DriveRegenFragment.kt  # Legacy (unused in v2)
 │   │   │   ├── ClimateFragment.kt     # Legacy (unused in v2)
@@ -1730,13 +2074,18 @@ MG4Control/
 │   │   │   ├── HvacPopupOverlay.kt    # HVAC pop-up (+ HvacPopupSkin.kt, its painting)
 │   │   │   ├── ProfileConfirmOverlay.kt # YES/NO banner for automations
 │   │   │   ├── VehiclePowerOffOverlay.kt # Power-off confirmation banner
-│   │   │   └── UpdateOverlay.kt      # "Update available" banner on the vehicle screen
+│   │   │   ├── UpdateOverlay.kt      # "Update available" banner on the vehicle screen
+│   │   │   ├── ChargeMonitor.kt       # Background charge tracking (pop-up and statistics)
+│   │   │   ├── ChargePopupOverlay.kt  # Charging pop-up (full frame)
+│   │   │   └── ClusterModuleOverlay.kt # Module window on the cluster display, readings and tab
 │   │   │
 │   │   ├── receiver/
 │   │   │   └── BootReceiver.kt        # System boot receiver
 │   │   │
 │   │   ├── util/
 │   │   │   ├── FirmwareInfo.kt        # Firmware detection + forced mode
+│   │   │   ├── ClusterModuleSettings.kt # Driver display: on/off, module per tab, style, badge, units, refresh, animation
+│   │   │   ├── ChargePopupSettings.kt # Charging pop-up: on or off
 │   │   │   ├── GarageMode.kt          # Garage mode — puts every automatism to sleep
 │   │   │   ├── FirmwareHelper.kt      # Full firmware version string reader (async)
 │   │   │   ├── LocaleHelper.kt        # Language management (7 languages) and text size
@@ -1824,6 +2173,7 @@ data class DrivingProfile(
     // Whether heating is applied at all, decoupled from its value: null or true = apply
     val steeringHeatEnabled: Boolean?,
     val seatHeatEnabled: Boolean?,
+    val regenEnabled: Boolean?, // Regeneration: null or true = apply, false = unchanged
     // ADAS
     val overspeedAlarm: Boolean,
     val speedLimitTone: Boolean,
@@ -1861,7 +2211,10 @@ data class DrivingProfile(
 
 ### Persistence
 
-Profiles are serialized to JSON via **Gson** and stored in `SharedPreferences`. Maximum **5 profiles** per device.
+Profiles are serialized to JSON via **Gson** and stored in `SharedPreferences`. Maximum **10 profiles** per device
+(`ProfileManager.MAX_PROFILES`). Beyond five, the picker scrolls its cards and the "Profile cycle" page moves to two
+rows of five. A version older than 2.6.9 reads and applies all ten, but creates no more and only restores five from
+the vehicle backup.
 
 ### Applying a Profile
 

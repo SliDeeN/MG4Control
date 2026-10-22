@@ -120,6 +120,10 @@ data class DrivingProfile(
     val driveEnabled: Boolean? = null,
     val safetyEnabled: Boolean? = null,
     val comfortEnabled: Boolean? = null,
+    // Régénération « inchangée » (issue #140) : le profil ne touche ni au niveau de régénération
+    // ni à la conduite à une pédale, qui en est un niveau. NULLABLE À DESSEIN, comme les
+    // chauffages : un profil enregistré avant la fonction rend `null`, lu « appliquée ».
+    val regenEnabled: Boolean? = null,
     // [BT-PROFILES] MAC de l'appareil Bluetooth associé à ce profil (null = aucun)
     val btDeviceMac: String? = null
 ) {
@@ -128,6 +132,9 @@ data class DrivingProfile(
 
     /** Sièges chauffants à appliquer ? (idem) */
     val appliesSeatHeat: Boolean get() = seatHeatEnabled ?: true
+
+    /** Régénération à appliquer ? (idem — issue #140) */
+    val appliesRegen: Boolean get() = regenEnabled ?: true
 
     // Défauts pour un profil antérieur à la fonctionnalité : ce sont ceux que la voiture
     // rétablit elle-même à chaque démarrage, donc les appliquer ne change rien à l'état
@@ -154,4 +161,7 @@ data class DrivingProfile(
     val writesClimate: Boolean get() = appliesComfort && hvacEnabled
     /** Consigne des feux de route automatiques, ou `null` = le profil n'y touche pas. */
     val writesAutoHighBeam: Boolean? get() = if (appliesComfort) autoHighBeam else null
+
+    /** Même règle pour la régénération, qui vit sur la page Conduite. */
+    val writesRegen: Boolean get() = appliesDrive && appliesRegen
 }

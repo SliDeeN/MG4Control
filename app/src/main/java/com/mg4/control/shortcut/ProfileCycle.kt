@@ -32,6 +32,9 @@ object ProfileCycle {
     /** Longueur d'un nom sur son bouton, points de suspension compris. */
     const val LABEL_MAX = 16
 
+    /** Boutons par rangée sur la page de composition : deux rangées pour dix profils au plus. */
+    const val PER_ROW = 5
+
     // ── La règle, sans Android ───────────────────────────────────────────────
 
     /**
@@ -83,6 +86,14 @@ object ProfileCycle {
         val net = nom.trim()
         return if (net.length <= LABEL_MAX) net else net.take(LABEL_MAX - 1).trimEnd() + "\u2026"
     }
+
+    /**
+     * Rangées de boutons à montrer pour [profils] profils. La seconde n'apparaît qu'au-delà de
+     * [PER_ROW] : jusque-là, la page reste celle d'avant le passage à dix profils (maquette A
+     * choisie le 2026-10-15). Une rangée au moins, même sans profil : c'est le texte « aucun
+     * profil » qui la remplace alors.
+     */
+    fun rows(profils: Int): Int = if (profils > PER_ROW) 2 else 1
 
     // ── Le réglage enregistré ────────────────────────────────────────────────
 

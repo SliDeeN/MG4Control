@@ -10,6 +10,7 @@ import com.mg4.control.model.ChargeSession
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.LastReading
 import com.mg4.control.model.PendingState
+import com.mg4.control.model.SocEnergyTable
 import com.mg4.control.model.StatsHistory
 import com.mg4.control.model.StatsSettings
 import com.mg4.control.model.Trip
@@ -45,7 +46,11 @@ class StatsStore(private val context: Context) {
         private const val KEY_CAPACITY_USER = "capacity_user_set"
         private const val KEY_SKIP_SHORT = "skip_short_trips"
         private const val KEY_MIN_TRIP = "min_trip_km"
+        private const val KEY_SOH = "state_of_health_percent"
         private const val KEY_ENERGY_CHECKS = "energy_checks"
+        /** Table apprise de l'énergie par tranche de 1 %, une par type de prise (issue #156). */
+        private const val KEY_SOC_TABLE_AC = "soc_energy_table_ac"
+        private const val KEY_SOC_TABLE_DC = "soc_energy_table_dc"
         private const val MAX_ENERGY_CHECKS = 40
 
         /** Verrou de processus : le service écrit pendant que l'écran lit. */
@@ -91,6 +96,7 @@ class StatsStore(private val context: Context) {
         ).usableKwh,
         skipShortTrips = prefs.getBoolean(KEY_SKIP_SHORT, false),
         minTripKm = prefs.getFloat(KEY_MIN_TRIP, StatsSettings.DEFAULT_MIN_TRIP_KM),
+        stateOfHealthPercent = StatsSettings.clampSoh(prefs.getFloat(KEY_SOH, StatsSettings.DEFAULT_SOH)),
     )
 
     fun saveSettings(s: StatsSettings) {
@@ -103,10 +109,28 @@ class StatsStore(private val context: Context) {
             putFloat(KEY_CAPACITY, s.capacityKwh)
             putBoolean(KEY_SKIP_SHORT, s.skipShortTrips)
             putFloat(KEY_MIN_TRIP, s.minTripKm)
+            putFloat(KEY_SOH, s.stateOfHealthPercent)
         }
     }
 
     fun isEnabled(): Boolean = prefs.getBoolean(KEY_ENABLED, false)
+
+    // ── Énergie par tranche de 1 %, apprise pendant les charges vues (issue #156) ──
+
+    private fun cleTable(type: ChargeType) = if (type == ChargeType.DC) KEY_SOC_TABLE_DC else KEY_SOC_TABLE_AC
+
+    fun socTable(type: ChargeType): SocEnergyTable = SocEnergyTable.decoder(prefs.getString(cleTable(type), null))
+
+    /**
+     * Une tranche bouclée pendant une charge vue : rend faux si la mesure est refusée
+     * (invraisemblable au regard de la capacité réglée).
+     */
+    fun learnSocBand(type: ChargeType, tranche: Int, kwh: Float): Boolean = synchronized(LOCK) {
+        val t = socTable(type)
+        val ok = t.observer(tranche, kwh, settings().effectiveCapacityKwh / 100f)
+        if (ok) prefs.edit { putString(cleTable(type), t.encoder()) }
+        ok
+    }
 
     /**
      * Batterie choisie ou confirmée par l'utilisateur : la valeur lue sur le véhicule ne l'écrase
@@ -126,7 +150,7 @@ class StatsStore(private val context: Context) {
         if (batterie == settings().battery) return false
         saveSettings(settings().copy(capacityKwh = batterie.usableKwh))
         AppLogger.i(TAG, "capacité lue sur le véhicule : $kwh kWh → batterie ${batterie.nominalKwh} kWh")
-        recalculateCharges(batterie.usableKwh)
+        recalculateCharges(settings().effectiveCapacityKwh)
         return true
     }
 

@@ -5,12 +5,16 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.os.SystemClock
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.ChargeEnergy
+import com.mg4.control.model.ChargeSession
+import com.mg4.control.model.ChargeType
 import com.mg4.control.model.EnergyCheck
 import com.mg4.control.model.EnergySnapshot
 import com.mg4.control.model.LastReading
 import com.mg4.control.model.PowerIntegrator
 import com.mg4.control.model.StatsTracker
 import com.mg4.control.model.Trip
+import com.mg4.control.service.ChargeMonitor
 import com.mg4.control.stats.StatsStore
 import com.mg4.control.util.FirmwareInfo
 
@@ -139,6 +143,8 @@ object StatsCollector {
         val s = StatsStore(context)
         s.saveSettings(s.settings().copy(enabled = on))
         AppLogger.i(TAG, "enregistrement ${if (on) "activé" else "désactivé"}")
+        // Le suivi de charge (2 s) sert aussi les Statistiques : il suit cet interrupteur (issue #156).
+        ChargeMonitor.refresh(context)
         if (on) {
             start(context)
         } else {
@@ -156,7 +162,7 @@ object StatsCollector {
             running = true
             val s = StatsStore(app)
             store = s
-            val t = StatsTracker(s.settings().capacityKwh, countersExpected = compteursAttendus())
+            val t = StatsTracker(s.settings().effectiveCapacityKwh, countersExpected = compteursAttendus())
             tracker = t
             // Ce qui restait ouvert au démarrage précédent se referme ici, avec son dernier relevé
             // connu : c'est ce qui sauve les trajets dont la fin coïncide avec l'extinction.
@@ -171,7 +177,8 @@ object StatsCollector {
             EnergyReader.batteryCapacityKwh()?.let { s.adoptVehicleCapacity(it) }
             ReadyWatcher.add(readyListener)
             worker.post(tick)
-            AppLogger.i(TAG, "collecte active (capacité ${s.settings().capacityKwh} kWh, " +
+            AppLogger.i(TAG, "collecte active (capacité ${s.settings().capacityKwh} kWh × état de santé " +
+                "${s.settings().stateOfHealthPercent} %, " +
                 "compteurs d'énergie ${if (compteursAttendus()) "attendus" else "non alimentés sur ce firmware"})")
         }
     }
@@ -232,8 +239,39 @@ object StatsCollector {
         }
         // Le suivi garde la capacité de son démarrage : celle du moment fait foi, au cas où la
         // batterie aurait été corrigée pendant la charge.
+        // Le prix du kWh corrigé dans le pop-up de charge vaut pour CETTE charge : il suit la session.
         is StatsTracker.Event.ChargeEnded ->
-            s.addCharge(event.session.withCapacity(s.settings().capacityKwh))
+            s.addCharge(ChargeMonitor.avecTarif(affiner(s, event.session.withCapacity(s.settings().effectiveCapacityKwh))))
+    }
+
+    /**
+     * L'énergie retenue pour la charge (issue #156, voir [ChargeEnergy]) : en DC, mesurée si le
+     * suivi de charge l'a vue, sinon tirée de la table apprise ; en AC, le pourcentage, comme
+     * avant. Les trois valeurs sont consignées, pour comparer avec la borne.
+     */
+    private fun affiner(s: StatsStore, session: ChargeSession): ChargeSession {
+        val obs = ChargeMonitor.observation(session)
+        val type = session.type ?: obs?.type
+        val capacite = s.settings().effectiveCapacityKwh
+        // Le plus ancien des deux débuts : celui du suivi (2 s) d'ordinaire, celui de l'onglet
+        // quand la charge avait commencé avant que le suivi ne la voie (écran rallumé en cours de
+        // charge, application relancée) — ce début-là sera estimé, pas perdu.
+        val socDebut = listOfNotNull(session.socStart, obs?.socDebut).minOrNull()
+        val r = ChargeEnergy.calculer(type, socDebut, session.socEnd, capacite, obs, s.socTable(ChargeType.DC))
+        val table = type?.let { t -> socDebut?.let { d -> session.socEnd?.let { f ->
+            s.socTable(t).estimer(d, f, capacite / 100f) } } }
+        AppLogger.i(TAG, "énergie de la charge ${type?.name ?: "type ?"} " +
+            "(${socDebut ?: "?"} → ${session.socEnd ?: "?"} %) : pourcentage ${session.energyKwh ?: "?"} kWh · " +
+            "mesurée ${obs?.let { "%.1f".format(java.util.Locale.US, it.energieKwh) + if (it.complete) " (en entier)" else " (en partie)" } ?: "non vue"} · " +
+            "table ${table?.let { "%.1f".format(java.util.Locale.US, it.kwh) + " (${it.tranchesApprises}/${it.tranches} tranches apprises)" } ?: "?"} " +
+            "→ ${r.kwh ?: "?"} kWh retenus (${r.source.name})")
+        return session.copy(
+            type = type,
+            socStart = socDebut,
+            energyKwh = r.kwh ?: session.energyKwh,
+            measuredPowerKw = r.puissanceKw ?: session.measuredPowerKw,
+            energySource = r.source,
+        )
     }
 
     /**
@@ -245,7 +283,7 @@ object StatsCollector {
      * elle vivait en mémoire. La ligne le dit au lieu d'afficher zéro.
      */
     private fun comparer(s: StatsStore, trip: Trip) {
-        val ligne = EnergyCheck(trip, integrator.result(), s.settings().capacityKwh).line()
+        val ligne = EnergyCheck(trip, integrator.result(), s.settings().effectiveCapacityKwh).line()
         integrator.reset()
         s.addEnergyCheck(ligne)
         AppLogger.i(TAG, "énergie · $ligne")

@@ -151,7 +151,7 @@ details.fold .cols { margin-top: 14px; }
 
 /* Filtre « Nouveautés 2.6.7 » */
 .x-list.only-new .pt:not(.has-new), .x-list.only-new .grp:not(.has-new),
-.x-list.only-new .grp .widget, .x-list.only-new details.fold, .x-list.only-new .grp .callout { display: none; }
+.x-list.only-new .grp .widget:not(.is-new), .x-list.only-new details.fold, .x-list.only-new .grp .callout { display: none; }
 .x-chips.only-new .x-chip[data-grp]:not(.has-new) { display: none; }
 
 /* Mobile : maquette plus compacte, tout tient dans la scène collée */

@@ -10,14 +10,16 @@ import org.junit.Test
  */
 class ProfileSectionsTest {
 
-    private fun profil(drive: Boolean? = null, safety: Boolean? = null, comfort: Boolean? = null) =
+    private fun profil(
+        drive: Boolean? = null, safety: Boolean? = null, comfort: Boolean? = null, regen: Boolean? = null
+    ) =
         DrivingProfile(
             name = "Essai", driveMode = DriveMode.SPORT, regenLevel = RegenLevel.HIGH,
-            driveEnabled = drive, safetyEnabled = safety, comfortEnabled = comfort
+            driveEnabled = drive, safetyEnabled = safety, comfortEnabled = comfort, regenEnabled = regen
         )
 
     private fun resume(p: DrivingProfile, adas: String = "ACC") =
-        ProfileSections.summary(p, adas, "Conduite", "Sécurité", "Confort")
+        ProfileSections.summary(p, adas, "Conduite", "Sécurité", "Confort", regenUnchanged = "Régén. inchangée")
 
     // ── Enregistrement ───────────────────────────────────────────────────────
 
@@ -44,6 +46,12 @@ class ProfileSectionsTest {
     @Test
     fun `conduite coupee - le resume ne cite ni mode ni regeneration`() {
         assertEquals("ACC", resume(profil(drive = false)))
+    }
+
+    @Test
+    fun `regeneration inchangee - le resume le dit a la place du niveau`() {
+        // Issue #140 : annoncer « High » serait faux, le profil n'y touchera pas.
+        assertEquals("Sport · Régén. inchangée · ACC", resume(profil(regen = false)))
     }
 
     @Test
