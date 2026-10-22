@@ -25,9 +25,10 @@
 
   function fmt(s, args) {
     let i = 0;
-    return s.replace(/%(\d+)\$([sd])|%([sd])/g, (m, pos) => {
+    return s.replace(/%(\d+)\$(0\d+)?([sd])|%([sd])/g, (m, pos, pad) => {
       const idx = pos ? parseInt(pos, 10) - 1 : i++;
-      return args[idx] != null ? args[idx] : '';
+      const v = args[idx] != null ? String(args[idx]) : '';
+      return pad ? v.padStart(parseInt(pad, 10), '0') : v;
     }).replace(/%%/g, '%');
   }
   /** Chaîne de l'app, dans la langue de l'app simulée (repli sur le français, comme Android). */
@@ -103,12 +104,13 @@
     ];
     const charges = [
       { start: at(1, 22, 30), end: at(0, 5, 10), type: 'AC', kwh: 23.6, soc: [52, 90], temp: 8, reconstructed: true, timesKnown: false },
-      { start: at(3, 16, 55), end: at(3, 17, 31), type: 'DC', kwh: 32.9, soc: [41, 94], temp: 18, powerMeasured: 58.4 },
+      // Charge rapide vue par l'application : énergie MESURÉE, plus que l'écart de % × capacité (issue #156).
+      { start: at(3, 16, 55), end: at(3, 17, 31), type: 'DC', kwh: 36.1, soc: [41, 94], temp: 18, powerMeasured: 60.2, source: 'MEASURED' },
       // Charges de nuit : la fin tombe le lendemain, donc un jour de moins dans le passé (d - 1).
       { start: at(4, 21, 5), end: at(3, 3, 40), type: 'AC', kwh: 18.0, soc: [67, 96], temp: 10, reconstructed: true, timesKnown: true, powerComputed: 2.7 },
       { start: at(8, 20, 40), end: at(7, 2, 20), type: 'AC', kwh: 16.1, soc: [62, 88], temp: 6, powerMeasured: 2.9, fixedPrice: 0.152 }
     ];
-    charges.forEach((c) => { c.kwh = chargeKwh(c, BATTERIES[64]); });
+    charges.forEach((c) => { if (!c.source) c.kwh = chargeKwh(c, BATTERIES[64]); });
     return { trips, charges };
   }
 
@@ -138,7 +140,9 @@
         brightness: 70, volume: 14, volMax: 30, prevVolume: null,
         soc: 64, lights: false, batHeat: false, highBeam: true,
         doors: { L: false, R: false },
-        media: { playing: false, track: 3, source: 'RADIO' }
+        media: { playing: false, track: 3, source: 'RADIO' },
+        // Recharge simulée (véhicule virtuel) et limite de charge réglée sur la voiture.
+        charge: null, chargeLimit: 80
       },
       profiles: [daily, road, winter],
       defaultId: daily.id,
@@ -146,7 +150,11 @@
       settings: { defaultScreen: 'dashboard', theme: 'auto', api: false, autoUpdate: true, beta: false, gate: false, gateMax: 30,
                   garage: false, textSize: 'standard', updOverlay: true, readyDefault: false, popupDelay: 10,
                   // Écran conducteur (ClusterModuleSettings) : module par onglet, actualisation en ms.
-                  cluster: false, clusterNav: 'consumption', clusterMedia: 'none', clusterRefresh: 1000, clusterUnit: 'wh' },
+                  cluster: false, clusterNav: 'consumption', clusterMedia: 'none', clusterRefresh: 1000, clusterUnit: 'wh',
+                  // Style, pastille, unité de la moyenne (null = celle de la jauge), durée de l'animation (ms).
+                  clusterStyle: 'dynamic', clusterPill: 'profile', clusterAvg: null, clusterAnim: 800,
+                  // Pop-up de charge (ChargePopupSettings) : activé par défaut.
+                  chargePopup: true },
       sc: {
         enabled: true,
         map: { btn1_single: 'PROFILE_PICKER', btn1_long: 'ONE_PEDAL', btn2_single: 'NONE', btn2_long: 'ADAS_CYCLE' },
@@ -384,7 +392,100 @@
   }
   function recomputeCharges() {
     const st = state.stats, cap = capacityKwh(st.battery, st.soh);
-    st.charges.forEach((c) => { c.kwh = chargeKwh(c, cap); });
+    // Seules les charges au pourcentage suivent la batterie : une énergie mesurée ne bouge pas.
+    st.charges.forEach((c) => { if (!c.source || c.source === 'PERCENT') c.kwh = chargeKwh(c, cap); });
+  }
+
+  // ── Recharge simulée (ChargeMonitor) ──────────────────────────────────────
+  // Le véhicule virtuel branche une borne : la charge avance en accéléré (un relevé toutes les
+  // 0,5 s vaut 20 s en DC, 3 min en AC), le pop-up de charge s'ouvre à son début, le module du
+  // combiné la montre, et elle entre dans les Statistiques au débranchement.
+  const CHARGE_TICK_MS = 500;
+  const CHARGE_SIM_MS = { DC: 20000, AC: 180000 };
+  /** En charge rapide, le pourcentage monte moins vite que l'énergie entrée (issue #156). */
+  const SOC_LAG = { DC: 1.15, AC: 1 };
+  let chargeTimer = null, chargeTickN = 0;
+  /** Puissance selon le niveau : la courbe d'une borne rapide (DC), une wallbox de 7,2 kW (AC). */
+  function chargeKwAt(type, soc) {
+    if (type === 'AC') return soc < 95 ? 7.2 : Math.max(1.5, 7.2 - (soc - 95) * 1.1);
+    if (soc < 20) return 92 + soc * 1.1;
+    if (soc < 55) return 114 - (soc - 20) * 0.35;
+    return Math.max(18, 101.75 - (soc - 55) * 2.6);
+  }
+  const chargeCap = () => capacityKwh(state.stats.battery, state.stats.soh);
+  /**
+   * Limite réglable (ChargeLimitSupport) : toujours sur l'ancien SDK ; sur A9 selon le type de
+   * batterie — dans la maquette, la 51 kWh fait la Standard en LFP (non), 64 et 77 kWh (NMC) oui.
+   */
+  const chargeLimitAdjustable = () => !caps().a9 || state.stats.battery !== 51;
+  /** Niveau visé : la limite réglée, ou le plein quand elle n'est pas réglable. */
+  const chargeTarget = () => (chargeLimitAdjustable() ? car().chargeLimit : 100);
+  /** Autonomie estimée par la voiture : « Autonomie gagnée » en est l'écart depuis le début. */
+  const rangeKm = (soc) => Math.round(soc / 100 * chargeCap() * 1000 / 165);
+  /** Temps restant jusqu'au niveau visé, en temps simulé (null : atteint, ou charge finie). */
+  function chargeRemainingMs(ch) {
+    const target = chargeTarget(), cap = chargeCap();
+    if (ch.done || ch.soc >= target) return null;
+    let h = 0;
+    for (let x = ch.soc; x < target; x += 0.5) h += Math.min(0.5, target - x) / 100 * cap * SOC_LAG[ch.type] / chargeKwAt(ch.type, x);
+    return h * 3.6e6;
+  }
+  function startCharge(type) {
+    const c = car();
+    if (c.charge) stopCharge();
+    // Branchée, la voiture n'est jamais en READY.
+    c.speed = 0; c.ready = false;
+    const kw = chargeKwAt(type, c.soc);
+    c.charge = { type, soc: c.soc, soc0: c.soc, kwh: 0, kw, kwMax: kw, simMs: 0, pts: [{ t: 0, kw, soc: c.soc }], range0: rangeKm(c.soc), price: null, done: false, doneAt: null };
+    clearInterval(chargeTimer);
+    chargeTimer = setInterval(chargeTick, CHARGE_TICK_MS);
+    // Le pop-up s'ouvre à chaque début de charge, si l'option est active (ChargeMonitor).
+    if (state.settings.chargePopup) { const s = activeSim(); if (s) s.openChargePopup(); }
+    commit();
+  }
+  function chargeTick() {
+    const c = car(), ch = c.charge;
+    if (!ch) { clearInterval(chargeTimer); chargeTimer = null; return; }
+    if (ch.done) return;
+    const target = chargeTarget();
+    if (ch.soc >= target) { ch.done = true; ch.kw = 0; ch.doneAt = Date.now(); }
+    else {
+      const dt = CHARGE_SIM_MS[ch.type], kw = chargeKwAt(ch.type, ch.soc) * (1 + (Math.random() - 0.5) * 0.03), e = kw * dt / 3.6e6;
+      ch.kwh += e; ch.simMs += dt; ch.kw = kw; ch.kwMax = Math.max(ch.kwMax, kw);
+      ch.soc = Math.min(target, ch.soc + e * 100 / (chargeCap() * SOC_LAG[ch.type]));
+      if (ch.soc >= target - 1e-6) { ch.done = true; ch.kw = 0; ch.doneAt = Date.now(); }
+      ch.pts.push({ t: ch.simMs, kw, soc: ch.soc });
+      c.soc = Math.floor(ch.soc);
+    }
+    // Le pop-up suit chaque relevé ; le reste de la page, toutes les deux secondes.
+    instances.forEach((i) => { const o = i.ui.overlay; if (o && o.type === 'charge') i.render(); });
+    if (++chargeTickN % 4 === 0 || ch.done) listeners.forEach((f) => f());
+  }
+  /** Limite relevée au-dessus du niveau : une charge finie reprend. */
+  function resumeCharge() {
+    const ch = car().charge;
+    if (!ch || !ch.done || ch.soc >= chargeTarget()) return;
+    ch.done = false; ch.doneAt = null; ch.kw = chargeKwAt(ch.type, ch.soc);
+  }
+  /** Débranchement : le pop-up se ferme, la session entre dans les Statistiques (si activées). */
+  function stopCharge() {
+    const c = car(), ch = c.charge;
+    if (!ch) return;
+    clearInterval(chargeTimer); chargeTimer = null;
+    c.charge = null;
+    instances.forEach((i) => { const o = i.ui.overlay; if (o && o.type === 'charge') { i.ui.overlay = null; i.render(); } });
+    const st = state.stats;
+    if (st.enabled && ch.soc - ch.soc0 >= 0.5 && ch.simMs > 0) {
+      const end = Date.now(), cap = chargeCap();
+      const session = { start: end - ch.simMs, end, type: ch.type, soc: [Math.round(ch.soc0), Math.round(ch.soc)], temp: c.outside,
+        powerMeasured: Math.round(ch.kwh / (ch.simMs / 3.6e6) * 10) / 10 };
+      // DC vue de bout en bout : l'énergie mesurée ; AC : l'écart de pourcentage × capacité, comme avant.
+      if (ch.type === 'DC') { session.kwh = Math.round(ch.kwh * 10) / 10; session.source = 'MEASURED'; }
+      else session.kwh = chargeKwh(session, cap);
+      if (ch.price != null) session.fixedPrice = ch.price;
+      st.charges.unshift(session);
+    }
+    commit();
   }
   /** Luminosité automatique, version « feux seuls » : niveau jour ou nuit selon l'état des feux. */
   function autoBrightness() {
@@ -414,6 +515,8 @@
   }
   function ignition() {
     const c = car();
+    // Branchée, la voiture n'est pas en READY : y revenir débranche, et le pop-up se ferme.
+    if (c.charge) stopCharge();
     const wasReady = c.ready, wasOn = c.on;
     c.on = true; c.ready = true; c.maxSpeed = c.speed; c.readyAt = Date.now();
     c.esc = true; c.aebOn = true; // la voiture les rétablit à chaque démarrage
@@ -585,7 +688,7 @@
     HVAC_TOGGLE: 'shortcuts_action_hvac_toggle', HVAC_AC_TOGGLE: 'shortcuts_action_hvac_ac_toggle', HVAC_TEMP_UP: 'shortcuts_action_hvac_temp_up', HVAC_TEMP_DOWN: 'shortcuts_action_hvac_temp_down',
     HVAC_FAN_UP: 'shortcuts_action_hvac_fan_up', HVAC_FAN_DOWN: 'shortcuts_action_hvac_fan_down', DEFROST_FRONT_TOGGLE: 'shortcuts_action_defrost_front',
     DEFROST_REAR_TOGGLE: 'shortcuts_action_defrost_rear', HVAC_RECIRC_CYCLE: 'shortcuts_action_hvac_recirc',
-    HVAC_POPUP: 'shortcuts_action_hvac_popup',
+    HVAC_POPUP: 'shortcuts_action_hvac_popup', CHARGE_POPUP: 'shortcuts_action_charge_popup',
     BRIGHTNESS_UP: 'shortcuts_action_brightness_up', BRIGHTNESS_DOWN: 'shortcuts_action_brightness_down',
     AUTO_HIGH_BEAM_TOGGLE: 'shortcuts_action_auto_high_beam', BATTERY_HEAT_TOGGLE: 'shortcuts_action_battery_heat',
     MEDIA_NEXT: 'shortcuts_action_media_next', MEDIA_PREVIOUS: 'shortcuts_action_media_prev', MEDIA_PLAY_PAUSE: 'shortcuts_action_media_play_pause',
@@ -640,7 +743,7 @@
     if (k.beam) a.push('AUTO_HIGH_BEAM_TOGGLE');
     if (k.batHeat) a.push('BATTERY_HEAT_TOGGLE');
     a.push('MEDIA_NEXT', 'MEDIA_PREVIOUS', 'MEDIA_PLAY_PAUSE', 'VOLUME_UP', 'VOLUME_DOWN',
-      'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_PICKER', 'PROFILE_CYCLE', 'AUDIO_SOURCE_CYCLE', 'OPEN_APP', 'OPEN_CUSTOM_APP');
+      'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_PICKER', 'PROFILE_CYCLE', 'AUDIO_SOURCE_CYCLE', 'CHARGE_POPUP', 'OPEN_APP', 'OPEN_CUSTOM_APP');
     if (k.power) a.push('VEHICLE_POWER_OFF');
     return a;
   }
@@ -753,6 +856,7 @@
       }
       case 'PROFILE_PICKER': { const s = activeSim(); if (s) s.togglePicker(); return 'picker'; }
       case 'HVAC_POPUP': { const s = activeSim(); if (s) s.toggleHvacPopup(); return 'hvac'; }
+      case 'CHARGE_POPUP': { const s = activeSim(); if (s) s.toggleChargePopup(); return 'charge'; }
       case 'OPEN_APP': { const s = activeSim(); if (s) { if (s.ui.screen === 'closed') s.go(state.settings.defaultScreen); } msg = L('MG4Control au premier plan', 'MG4Control brought to front'); break; }
       case 'OPEN_CUSTOM_APP': msg = L('Lancement de ', 'Launching ') + ((extra && extra.app) || '?'); break;
       case 'VEHICLE_POWER_OFF': { const s = activeSim(); if (s) s.askPowerOff(); return 'power'; }
@@ -1145,6 +1249,7 @@
       this._lastKey = key;
       if (focused) { const f = this.app.querySelector('[data-fid="' + focused + '"]'); if (f) { f.focus(); if (f.setSelectionRange && f.type === 'text') { const n = f.value.length; f.setSelectionRange(n, n); } } }
       this.app.querySelectorAll('input[type=range]').forEach(paintRange);
+      this.app.querySelectorAll('svg[data-clprev]').forEach(clPreviewSvg);
       if (this.hl) this.applyHl();
     }
 
@@ -1561,28 +1666,54 @@
         '<div class="a-sec" data-hl="s-popupdelay"><div class="a-h">' + esc(S('settings_popup_delay')) + '</div>' +
           '<div class="a-row"><div style="flex:1">' + range('popupDelay', 1, 60, popupDelay()) + '</div><span class="a-val" data-out="popupDelay">' + popupDelay() + ' s</span></div>' +
           '<div class="a-desc">' + esc(S('settings_popup_delay_desc')) + '</div></div>' +
+        // Pop-up de charge (ChargePopupSettings) : tous les firmwares, activé par défaut.
+        '<div class="a-sec" data-hl="s-chargepopup"><div class="a-h">' + esc(S('settings_charge_popup')) + '</div>' +
+          '<div class="a-row"><span class="lbl">' + esc(S('settings_charge_popup_switch')) + '<small>' + esc(S('settings_charge_popup_desc')) + '</small></span>' + sw(s.chargePopup, 'chargePopup') + '</div></div>' +
         (k.cluster ? this.setCluster() : '');
     }
-    /** Carte « Écran conducteur » : SWI133, SWI68 et SWI165 seulement, absente ailleurs (ClusterModuleSettings.SUPPORTED). */
+    /**
+     * Carte « Écran conducteur » : SWI133, SWI68 et SWI165 seulement, absente ailleurs
+     * (ClusterModuleSettings.SUPPORTED). Refonte du 2026-10-17 : l'aperçu à gauche — la vraie jauge
+     * sur un trajet simulé, qui suit chaque réglage —, les réglages groupés à droite (Modules,
+     * Apparence, Unités) et « Avancé » replié.
+     */
     setCluster() {
-      const s = state.settings, ref = Math.round(s.clusterRefresh / 100);
-      const mod = (tab, cur) => [['none', 'settings_cluster_none'], ['consumption', 'settings_cluster_consumption'], ['power', 'settings_cluster_power']]
-        .map(([v, key]) => '<button class="b' + (cur === v ? ' on' : '') + '" data-a="clusterMod" data-x="' + tab + '" data-v="' + v + '">' + esc(S(key)) + '</button>').join('');
-      let h = '<div class="a-sec" data-hl="s-cluster"><div class="a-h">' + esc(S('settings_cluster')) + '</div>' +
+      const s = state.settings, u = this.ui, ref = Math.round(s.clusterRefresh / 100), anim = Math.round(s.clusterAnim / 100);
+      const seg = (a, cur, opts, x) => '<div class="a-grid g' + opts.length + '">' + opts.map(([v, key]) => '<button class="b nc' + (cur === v ? ' on' : '') + '" data-a="' + a + '" data-v="' + v + '"' +
+        (x ? ' data-x="' + x + '"' : '') + '>' + esc(S(key)) + '</button>').join('') + '</div>';
+      const line = (label, inner, hl) => '<div class="cls-row"' + (hl ? ' data-hl="' + hl + '"' : '') + '><span class="cls-lbl">' + esc(label) + '</span>' + inner + '</div>';
+      const mods = [['none', 'settings_cluster_none'], ['consumption', 'settings_cluster_consumption'], ['power', 'settings_cluster_power']];
+      const h = '<div class="a-sec" data-hl="s-cluster"><div class="a-h">' + esc(S('settings_cluster')) + '</div>' +
         '<div class="a-row"><span class="lbl">' + esc(S('settings_cluster_module')) + '<small>' + esc(S('settings_cluster_module_desc')) + '</small></span>' + sw(s.cluster, 'cluster') + '</div>';
-      // Activer déplie : choix par onglet, puis l'actualisation de la jauge.
-      if (s.cluster) h +=
-        '<div data-hl="s-cluster-tabs" style="margin-top:8px"><div class="a-sub">' + esc(S('settings_cluster_tab_nav')) + '</div><div class="a-grid g3">' + mod('nav', s.clusterNav) + '</div>' +
-        '<div class="a-sub" style="margin-top:8px">' + esc(S('settings_cluster_tab_media')) + '</div><div class="a-grid g3">' + mod('media', s.clusterMedia) + '</div>' +
-        '<div class="a-desc" style="margin-top:6px">' + esc(S('settings_cluster_tabs_note')) + '</div>' +
-        // Unité de la consommation (ClusterModuleSettings.consumptionUnit) : Wh/km par défaut.
-        '<div class="a-sub" style="margin-top:8px">' + esc(S('settings_cluster_unit')) + '</div><div class="a-grid g2" data-hl="s-cluster-unit">' +
-          [['wh', 'cluster_unit_wh_km'], ['kwh', 'cluster_unit_kwh_100km']].map(([v, key]) => '<button class="b nc' + (s.clusterUnit === v ? ' on' : '') + '" data-a="clusterUnit" data-v="' + v + '">' + esc(S(key)) + '</button>').join('') + '</div></div>' +
-        '<div data-hl="s-cluster-refresh" style="margin-top:10px"><div class="a-sub">' + esc(S('settings_cluster_refresh')) + '</div>' +
-        '<div class="a-row"><div style="flex:1">' + range('clusterRefresh', 1, 10, ref) + '</div><span class="a-val" data-out="clusterRefresh">' + outText('clusterRefresh', ref) + '</span></div>' +
-        '<div class="a-desc">' + esc(S('settings_cluster_refresh_desc')) + '</div></div>';
-      // L'écran du combiné des trois firmwares : n° 1, 800 × 480 (LVDS).
-      return h + '<div class="a-desc" style="margin-top:8px">' + esc(S('settings_cluster_display_found', 1, 800, 480)) + '</div></div>';
+      // Activer déplie : l'aperçu et les réglages.
+      if (!s.cluster) return h + '</div>';
+      const tab = u.clPrevTab || 'nav', m = tab === 'media' ? s.clusterMedia : s.clusterNav;
+      const prev = '<div class="cls-prev" data-hl="s-cluster-preview"><div class="a-sub">' + esc(S('settings_cluster_preview')) + '</div>' +
+        (m === 'none' ? '<div class="cls-none">' + esc(S('settings_cluster_preview_none')) + '</div>' : '<svg class="cls-sq" viewBox="0 0 260 260" data-clprev="' + m + '" role="img"></svg>') +
+        '<div class="a-grid g2">' + [['nav', 'settings_cluster_row_nav'], ['media', 'settings_cluster_row_media']]
+          .map(([v, key]) => '<button class="b nc sm' + (tab === v ? ' on' : '') + '" data-a="clPrevTab" data-v="' + v + '">' + esc(S(key)) + '</button>').join('') + '</div></div>';
+      const set = '<div class="cls-set">' +
+        '<div class="a-sub">' + esc(S('settings_cluster_sec_modules')) + '</div>' +
+        '<div class="cls-group" data-hl="s-cluster-tabs">' + line(S('settings_cluster_row_nav'), seg('clusterMod', s.clusterNav, mods, 'nav')) + line(S('settings_cluster_row_media'), seg('clusterMod', s.clusterMedia, mods, 'media')) + '</div>' +
+        '<div class="a-desc">' + esc(S('settings_cluster_tabs_note')) + '</div>' +
+        '<div class="a-sub">' + esc(S('settings_cluster_sec_appearance')) + '</div>' +
+        line(S('settings_cluster_row_style'), seg('clusterStyle', s.clusterStyle, [['dynamic', 'settings_cluster_style_dynamic'], ['discreet', 'settings_cluster_style_discreet']]), 's-cluster-style') +
+        line(S('settings_cluster_row_pill'), seg('clusterPill', s.clusterPill, [['mode', 'settings_cluster_pill_mode'], ['profile', 'settings_cluster_pill_profile'], ['none', 'settings_cluster_pill_none']]), 's-cluster-pill') +
+        '<div class="a-desc">' + esc(S('settings_cluster_pill_desc')) + '</div>' +
+        '<div class="a-sub">' + esc(S('settings_cluster_sec_units')) + '</div>' +
+        // Unité de la jauge, puis celle de la moyenne du trajet : la même tant qu'on n'en choisit pas d'autre.
+        line(S('settings_cluster_row_gauge'), seg('clusterUnit', s.clusterUnit, [['wh', 'cluster_unit_wh_km'], ['kwh', 'cluster_unit_kwh_100km']]), 's-cluster-unit') +
+        line(S('settings_cluster_row_average'), seg('clusterAvg', s.clusterAvg || s.clusterUnit, [['wh', 'cluster_unit_wh_km'], ['kwh', 'cluster_unit_kwh_100km'], ['km', 'cluster_unit_km_kwh']]), 's-cluster-avg') +
+        '<button class="cls-adv" data-a="clAdv" data-hl="s-cluster-refresh"><span>' + esc(S('settings_cluster_advanced', fmtS(s.clusterRefresh) + ' s', fmtS(s.clusterAnim) + ' s')) + '</span><i>' + (u.clAdv ? '▴' : '▾') + '</i></button>' +
+        (u.clAdv ? '<div class="cls-advbox">' +
+          '<div class="a-sub">' + esc(S('settings_cluster_refresh')) + '</div>' +
+          '<div class="a-row"><div style="flex:1">' + range('clusterRefresh', 1, 10, ref) + '</div><span class="a-val" data-out="clusterRefresh">' + outText('clusterRefresh', ref) + '</span></div>' +
+          '<div class="a-desc">' + esc(S('settings_cluster_refresh_desc')) + '</div>' +
+          '<div class="a-sub" style="margin-top:8px">' + esc(S('settings_cluster_animation')) + '</div>' +
+          '<div class="a-row"><div style="flex:1">' + range('clusterAnim', 2, 20, anim) + '</div><span class="a-val" data-out="clusterAnim">' + outText('clusterAnim', anim) + '</span></div>' +
+          '<div class="a-desc">' + esc(S('settings_cluster_animation_desc')) + '</div></div>' : '') +
+        '</div>';
+      return h + '<div class="cls-wrap">' + prev + set + '</div></div>';
     }
     setAdv() {
       const s = state.settings, k = caps();
@@ -2050,8 +2181,12 @@
         if (open) {
           const pr = s.price(c);
           const tariff = this.num(pr, 3) + ' ' + st.currency + '/kWh · ' + (c.fixedPrice != null ? S('stats_tariff_instead', this.num(c.type === 'DC' ? st.priceDc : st.priceAc, 3)) : S('stats_tariff_default'));
-          const lines = [];
-          if (c.reconstructed) lines.push([S('stats_detail_origin'), S(c.timesKnown ? 'stats_detail_origin_completed' : 'stats_detail_origin_estimated')]);
+          const lines = [], src = c.source || 'PERCENT';
+          // D'où vient l'énergie (issue #156) ; pour une charge reconstituée au pourcentage, la
+          // ligne « Origine » le dit déjà — et elle seule.
+          if (!(c.reconstructed && src === 'PERCENT')) lines.push([S('stats_detail_energy_source'),
+            S({ MEASURED: 'stats_energy_measured', MIXED: 'stats_energy_mixed', LEARNED: 'stats_energy_learned', PERCENT: 'stats_energy_percent' }[src]), 'st-energy-src']);
+          else lines.push([S('stats_detail_origin'), S(c.timesKnown ? 'stats_detail_origin_completed' : 'stats_detail_origin_estimated')]);
           if (c.powerMeasured) lines.push([S('stats_detail_power_measured'), this.num(c.powerMeasured, 1) + ' kW']);
           else if (c.powerComputed) lines.push([S('stats_detail_power_computed'), this.num(c.powerComputed, 1) + ' kW']);
           lines.push([S('stats_detail_battery'), c.soc[0] + ' % → ' + c.soc[1] + ' %'], [S('stats_detail_temp'), this.num(c.temp, 1) + ' °C'], [S('stats_detail_tariff'), tariff]);
@@ -2062,7 +2197,7 @@
       return h;
     }
     detailBox(lines, extra) {
-      return '<div class="st-detail">' + lines.map(([k, v]) => '<div class="a-row" style="min-height:30px"><span class="lbl" style="font-size:14px;color:var(--text-secondary)">' + esc(k) + '</span><span style="font-size:14px">' + esc(v) + '</span></div>').join('') + (extra || '') + '</div>';
+      return '<div class="st-detail">' + lines.map(([k, v, hl]) => '<div class="a-row"' + (hl ? ' data-hl="' + hl + '"' : '') + ' style="min-height:30px"><span class="lbl" style="font-size:14px;color:var(--text-secondary)">' + esc(k) + '</span><span style="font-size:14px">' + esc(v) + '</span></div>').join('') + (extra || '') + '</div>';
     }
 
     // ── Overlays ───────────────────────────────────────────────────────────
@@ -2137,6 +2272,20 @@
       const o = this.ui.overlay;
       if (o && o.type === 'hvac') return this.closeOverlay();
       this.openHvacPopup();
+    }
+    /** Pop-up de charge : pas de décompte, il reste jusqu'à la croix, au READY ou au débranchement. */
+    openChargePopup() {
+      clearInterval(this._cd);
+      this.ui.overlay = { type: 'charge', editor: null, hint: null, hintPct: null };
+      this.render();
+    }
+    /** Le raccourci le rouvre ou le referme ; option coupée, il dit où l'activer. */
+    toggleChargePopup() {
+      const o = this.ui.overlay;
+      if (o && o.type === 'charge') return this.closeOverlay();
+      if (!state.settings.chargePopup) return this.toast(S('charge_popup_disabled'), 3400);
+      if (!car().charge) return this.toast(S('charge_popup_none'));
+      this.openChargePopup();
     }
     /**
      * Le raccourci du sélecteur le referme s'il est déjà ouvert (issue #137), comme la fin du
@@ -2311,7 +2460,122 @@
           this.ovHead(MW.fan, S('clim_card_title'), o, 'hpClose', chip, 'left:' + (heatOn ? 244 : 0) + 'px;width:600px') +
           '<div class="hvp-body">' + heat + zone + side + '</div></div></div>';
       }
+      if (o.type === 'charge') return this.chargePopupHtml(o);
       return this.bannerHtml(o, nav);
+    }
+    /**
+     * Pop-up de charge (overlay_charge_popup.xml, 1140 × 400 dp) : à gauche le niveau, la barre qui
+     * sert de curseur à la limite et l'heure de fin ; au milieu la courbe depuis le début de la
+     * charge ; à droite puissance, énergie, autonomie gagnée, coût (crayon : prix de cette charge)
+     * et durée.
+     */
+    chargePopupHtml(o) {
+      const c = car(), ch = c.charge, st = state.stats;
+      if (!ch) return '';
+      const adj = chargeLimitAdjustable(), target = chargeTarget(), done = ch.done;
+      const hm = (ms) => new Intl.DateTimeFormat(appLang() === 'en' ? 'en-GB' : appLang(), { hour: '2-digit', minute: '2-digit' }).format(ms);
+      const dur = (ms) => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 60 ? S('cluster_duration_hm', Math.floor(m / 60), m % 60) : S('cluster_duration_min', m); };
+      const now = Date.now(), t0 = now - ch.simMs, rem = chargeRemainingMs(ch);
+      const priceDef = ch.type === 'DC' ? st.priceDc : st.priceAc, price = ch.price != null ? ch.price : priceDef;
+      const head = '<div class="ov-head">' + MW.bolt + '<div class="ov-title">' + esc(S(done ? 'charge_popup_title_done' : 'charge_popup_title')) + '</div>' +
+        '<span class="cgp-pill' + (done ? ' done' : '') + '">' + esc(S(ch.type === 'DC' ? 'charge_popup_type_dc' : 'charge_popup_type_ac')) + '</span>' +
+        '<button class="ov-x" data-a="cgClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>';
+      // La barre de batterie : un curseur de 40 à 100 % là où la limite se règle (le cran choisi
+      // en gras, la poignée dessus), le niveau seul ailleurs ; un reflet court jusqu'au niveau visé.
+      const W = 258, m = 16, X = (p) => m + (W - 2 * m) * clamp(p, 0, 100) / 100, col = done ? 'var(--dash-eco)' : 'var(--dash-accent)';
+      const cid = 'cgp' + instances.indexOf(this);
+      let bar = '<rect x="' + m + '" y="8" width="' + (W - 2 * m) + '" height="12" rx="6" style="fill:var(--dash-border)"/>' +
+        '<rect x="' + m + '" y="8" width="' + (X(ch.soc) - m).toFixed(1) + '" height="12" rx="6" style="fill:' + col + '"/>';
+      if (!done) bar += '<clipPath id="' + cid + '"><rect x="' + m + '" y="8" width="' + (X(target) - m).toFixed(1) + '" height="12" rx="6"/></clipPath>' +
+        '<g clip-path="url(#' + cid + ')"><rect class="cgp-shine" x="' + (m - 26) + '" y="8" width="26" height="12" rx="6" style="--run:' + Math.round(X(target) - m + 26) + 'px;animation-delay:-' + (now % 1800) + 'ms"/></g>';
+      if (adj) {
+        const step = (W - 2 * m) / 10;
+        [40, 50, 60, 70, 80, 90, 100].forEach((p) => {
+          const xc = X(p), on = p === target;
+          bar += '<line x1="' + xc.toFixed(1) + '" y1="26" x2="' + xc.toFixed(1) + '" y2="31" style="stroke:var(--text-secondary)" stroke-width="1.5"/>' +
+            '<text x="' + xc.toFixed(1) + '" y="48" text-anchor="middle" font-size="13"' + (on ? ' font-weight="700" style="fill:var(--text-primary)"' : ' style="fill:var(--text-secondary)"') + '>' + p + '</text>';
+        });
+        bar += '<circle cx="' + X(target).toFixed(1) + '" cy="14" r="12" fill="#fff"/><circle cx="' + X(target).toFixed(1) + '" cy="14" r="10" fill="none" stroke-width="4" style="stroke:' + col + '"/>';
+        // Zones de toucher, une par cran : la maquette se règle d'un toucher plutôt qu'en glissant.
+        [40, 50, 60, 70, 80, 90, 100].forEach((p) => {
+          const a = p === 40 ? 0 : X(p) - step / 2, b = p === 100 ? W : X(p) + step / 2;
+          bar += '<rect class="cgp-hit" x="' + a.toFixed(1) + '" y="0" width="' + (b - a).toFixed(1) + '" height="54" fill="transparent" data-a="cgLimit" data-v="' + p + '"/>';
+        });
+      } else {
+        bar += '<text x="' + m + '" y="48" font-size="13" style="fill:var(--text-secondary)">0</text>' +
+          '<text x="' + (W - m) + '" y="48" text-anchor="end" font-size="13" font-weight="700" style="fill:var(--text-primary)">100</text>';
+      }
+      const hint = adj
+        ? '<div class="cgp-hint">' + esc(o.hint === 'below' ? S('charge_popup_hint_below', o.hintPct) : o.hint === 'sending' ? S('charge_popup_hint_sending', o.hintPct) : S('charge_popup_hint')) + '</div>'
+        : '<div class="cgp-note">' + MW.lock + '<span>' + esc(S('charge_popup_lfp_info')) + '</span></div>';
+      const end = '<div class="cgp-end"><small>' + esc(S(done ? 'charge_popup_title_done' : 'charge_popup_end_label')) + '</small>' +
+        '<b>' + esc(done ? hm(ch.doneAt || now) : rem != null ? hm(now + rem) : '–') + '</b>' +
+        '<span>' + esc(done || rem == null ? S('charge_popup_until_unknown', target) : S('charge_popup_end_left', dur(rem), target)) + '</span></div>';
+      const left = '<div class="ov-pan cgp-left" data-hl="cg-slider"><small>' + esc(S('charge_popup_battery')) + '</small><b class="cgp-soc">' + esc(this.num(ch.soc, 1)) + ' %</b>' +
+        '<svg class="cgp-bar" width="' + W + '" height="54" aria-hidden="true">' + bar + '</svg>' + hint + '<i></i>' + end + '</div>';
+      const legend = '<div class="cgp-legend"><span><i style="background:var(--dash-accent)"></i>' + esc(S('charge_popup_legend_power')) + '</span>' +
+        '<span><i style="background:var(--dash-eco)"></i>' + esc(S('charge_popup_legend_battery')) + '</span><em>' + esc(S('charge_popup_since', hm(t0))) + '</em></div>';
+      const mid = '<div class="ov-pan cgp-mid" data-hl="cg-curve">' + legend + this.chargeCurve(ch, rem, target, adj, hm, t0) + '</div>';
+      const row = (label, value, unit, sub, edit, hl) => '<div class="cgp-row"' + (hl ? ' data-hl="' + hl + '"' : '') + '><div><b>' + esc(label) + '</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</div>' +
+        '<span class="v">' + esc(value) + '</span>' + (unit ? '<span class="u">' + esc(unit) + '</span>' : '') +
+        (edit ? '<button class="cgp-edit" data-a="cgPrice" aria-label="' + esc(S('charge_popup_price_title')) + '">' + MW.edit + '</button>' : '') + '</div>';
+      const ed = o.editor;
+      const right = ed
+        ? '<div class="ov-pan cgp-right ed" data-hl="cg-cost"><div class="cgp-edhead"><b>' + esc(S('charge_popup_price_title')) + '</b><span>' + ch.type + '</span>' +
+          '<button class="cgp-x" data-a="cgPriceCancel" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>' +
+          '<div class="mw-price cgp-price"><button class="mw-step" data-a="cgPriceStep" data-v="-1" data-rep>' + MW.minus + '</button><div><b>' + esc(this.price(ed.val)) + '</b><span>' + esc(st.currency) + '/kWh</span></div>' +
+          '<button class="mw-step" data-a="cgPriceStep" data-v="1" data-rep>' + MW.plus + '</button></div>' +
+          '<div class="ov-seg cgp-steps">' + ed.steps.map((x, i) => '<button' + (i === ed.stepI ? ' class="on"' : '') + ' data-a="cgPricePas" data-v="' + i + '">±' + esc(this.price(x)) + '</button>').join('') + '</div>' +
+          '<div class="cgp-cost"><span>' + esc(S('charge_popup_cost')) + '</span><b>' + esc(this.num(ch.kwh * ed.val, 2) + ' ' + st.currency) + '</b>' +
+          (Math.abs(ed.val - price) > 1e-9 ? '<s>' + esc(this.num(ch.kwh * price, 2)) + '</s>' : '') + '</div>' +
+          '<small class="cgp-note2">' + esc(S('charge_popup_price_note')) + '</small><i></i>' +
+          '<div class="cgp-edacts"><button class="mw-b" data-a="cgPriceDef"><span>' + esc(S('stats_tariff_default')) + '</span></button><button class="mw-b p" data-a="cgPriceOk"><span>' + esc(S('charge_popup_price_ok')) + '</span></button></div></div>'
+        : '<div class="ov-pan cgp-right">' +
+          row(S('charge_popup_power'), done ? '–' : this.num(ch.kw, 1), 'kW', S('charge_popup_power_max', this.num(ch.kwMax, 1))) +
+          row(S('charge_popup_energy'), '+' + this.num(ch.kwh, 1), 'kWh') +
+          row(S('charge_popup_range'), '+' + Math.max(0, rangeKm(ch.soc) - ch.range0), 'km') +
+          row(S('charge_popup_cost'), this.num(ch.kwh * price, 2), st.currency,
+            ch.price != null ? S('charge_popup_tariff_fixed', this.price(price), st.currency) : S('charge_popup_tariff_default', this.price(price), st.currency, ch.type), true, 'cg-cost') +
+          row(S('charge_popup_duration'), dur(ch.simMs), '', S('charge_popup_since_time', hm(t0))) + '</div>';
+      return '<div class="a-scrim" data-a="cgBg"><div class="ov-card cgp" data-hl="charge-popup">' + head + '<div class="cgp-body">' + left + mid + right + '</div></div></div>';
+    }
+    /**
+     * Courbe (ChargeCurveView) : la puissance (aire bleue, axe de gauche, son haut = la puissance
+     * max atteinte) et le niveau (ligne verte, axe de droite) depuis le début de la charge, la
+     * limite en pointillé gris, et le pointillé vert du niveau actuel jusqu'à la limite à l'heure
+     * de fin estimée.
+     */
+    chargeCurve(ch, rem, target, adj, hm, t0) {
+      const W = 515, H = 262, gl = 34, gr = W - 30, gt = 8, gb = H - 22, l = gr - gl, h = gb - gt;
+      const el = ch.simMs, total = Math.max(60000, el + (rem || 0));
+      const top = Math.max(ch.kwMax, ...ch.pts.map((p) => p.kw)) || 10;
+      const X = (t) => gl + l * clamp(t / total, 0, 1), Yk = (k) => gb - h * clamp(k / top, 0, 1), Ys = (v) => gb - h * clamp(v / 100, 0, 1);
+      const f = (v) => v.toFixed(1);
+      const lab = (k) => (k === 0 ? '0' : top < 10 ? this.num(k, 1) : String(Math.round(k)));
+      const tx = (x, y, t, anchor, style) => '<text x="' + f(x) + '" y="' + f(y) + '" text-anchor="' + anchor + '" style="fill:var(--text-secondary)' + (style || '') + '">' + esc(t) + '</text>';
+      let g = '';
+      if (!ch.done && rem != null) g += '<rect x="' + f(X(el)) + '" y="' + gt + '" width="' + f(gr - X(el)) + '" height="' + h + '" style="fill:var(--text-primary);fill-opacity:.03"/>';
+      for (let i = 0; i <= 4; i++) g += '<line x1="' + gl + '" y1="' + f(gt + h * i / 4) + '" x2="' + gr + '" y2="' + f(gt + h * i / 4) + '" style="stroke:var(--dash-border)"/>';
+      [0, top / 2, top].forEach((k) => { g += tx(gl - 6, Yk(k) + 4, lab(k), 'end'); });
+      [0, 50, 100].forEach((v) => { g += tx(gr + 6, Ys(v) + 4, String(v), 'start'); });
+      g += tx(gl, H - 4, hm(t0), 'start') + tx(gl + l / 2, H - 4, hm(t0 + total / 2), 'middle') + tx(gr, H - 4, hm(t0 + total), 'end');
+      if (adj) g += '<line x1="' + gl + '" y1="' + f(Ys(target)) + '" x2="' + gr + '" y2="' + f(Ys(target)) + '" stroke-width="1.5" stroke-dasharray="6 5" style="stroke:var(--text-secondary)"/>' +
+        tx(gr - 4, Ys(target) - 6, S('charge_popup_target', target), 'end');
+      const pts = ch.pts;
+      if (pts.length) {
+        const kwLine = pts.map((p, i) => (i ? 'L' : 'M') + f(X(p.t)) + ' ' + f(Yk(p.kw))).join('');
+        g += '<path d="M' + f(X(pts[0].t)) + ' ' + gb + kwLine.replace(/^M/, 'L') + 'L' + f(X(pts[pts.length - 1].t)) + ' ' + gb + 'Z" style="fill:var(--dash-accent);fill-opacity:.2"/>' +
+          '<path d="' + kwLine + '" fill="none" stroke-width="2.5" stroke-linejoin="round" style="stroke:var(--dash-accent)"/>' +
+          '<path d="' + pts.map((p, i) => (i ? 'L' : 'M') + f(X(p.t)) + ' ' + f(Ys(p.soc))).join('') + '" fill="none" stroke-width="2.5" stroke-linejoin="round" style="stroke:var(--dash-eco)"/>';
+      }
+      if (!ch.done && rem != null && target > ch.soc) g += '<line x1="' + f(X(el)) + '" y1="' + f(Ys(ch.soc)) + '" x2="' + gr + '" y2="' + f(Ys(target)) + '" stroke-width="2" stroke-dasharray="2 5" style="stroke:var(--dash-eco);stroke-opacity:.55"/>';
+      if (!ch.done) {
+        const last = pts[pts.length - 1];
+        g += '<line x1="' + f(X(el)) + '" y1="' + gt + '" x2="' + f(X(el)) + '" y2="' + gb + '" stroke-dasharray="2 4" style="stroke:var(--text-secondary)"/>' +
+          (last ? '<circle cx="' + f(X(el)) + '" cy="' + f(Yk(last.kw)) + '" r="4" style="fill:var(--text-primary)"/>' : '') +
+          '<circle cx="' + f(X(el)) + '" cy="' + f(Ys(ch.soc)) + '" r="4" style="fill:var(--dash-eco)"/>';
+      }
+      return '<svg class="cgp-curve" width="' + W + '" height="' + H + '" font-size="12" aria-hidden="true">' + g + '</svg>';
     }
     /**
      * Bandeaux : une question posée en bas de l'écran, sans le cacher. Ce qui est touché ailleurs va
@@ -2518,7 +2782,7 @@
         const t = e.target.closest('[data-a]');
         if (!t || !this.app.contains(t)) return;
         if (t.disabled || t.classList.contains('dis')) return;
-        if ((t.getAttribute('data-a') === 'pkBg' || t.getAttribute('data-a') === 'hpBg') && e.target !== t) return; // clic dans la carte
+        if (['pkBg', 'hpBg', 'cgBg'].includes(t.getAttribute('data-a')) && e.target !== t) return; // clic dans la carte
         this.act(t.getAttribute('data-a'), t.getAttribute('data-v'), t);
       });
       this.app.addEventListener('input', (e) => {
@@ -2773,6 +3037,28 @@
         // Overlays
         case 'pkBg': case 'pkClose': return this.closeOverlay();
         case 'hpBg': case 'hpClose': return this.closeOverlay();
+        case 'cgBg': case 'cgClose': return this.closeOverlay();
+        case 'cgLimit': {
+          // Un cran de la limite : envoyé à la voiture ; sous le niveau actuel, la charge s'arrête.
+          const ch = c.charge, o = u.overlay;
+          if (!ch || !chargeLimitAdjustable() || !o) return;
+          c.chargeLimit = n; o.hintPct = n; o.hint = n < ch.soc ? 'below' : 'sending';
+          if (n > ch.soc) resumeCharge();
+          clearTimeout(this._cgHint);
+          this._cgHint = setTimeout(() => { const cur = this.ui.overlay; if (cur && cur.type === 'charge') { cur.hint = null; this.render(); } }, 1600);
+          return r();
+        }
+        case 'cgPrice': {
+          const ch = c.charge; if (!ch || !u.overlay) return;
+          const def = ch.type === 'DC' ? state.stats.priceDc : state.stats.priceAc, val = ch.price != null ? ch.price : def;
+          u.overlay.editor = { val, steps: priceSteps(Math.max(val, def)), stepI: 1 };
+          return this.render();
+        }
+        case 'cgPriceStep': { const ed = u.overlay && u.overlay.editor; if (ed) ed.val = priceMove(ed.val, ed.steps[ed.stepI], n); return this.render(); }
+        case 'cgPricePas': { const ed = u.overlay && u.overlay.editor; if (ed) ed.stepI = n; return this.render(); }
+        case 'cgPriceCancel': if (u.overlay) u.overlay.editor = null; return this.render();
+        case 'cgPriceDef': if (c.charge) c.charge.price = null; if (u.overlay) u.overlay.editor = null; return r();
+        case 'cgPriceOk': if (c.charge && u.overlay && u.overlay.editor) c.charge.price = u.overlay.editor.val; if (u.overlay) u.overlay.editor = null; return r();
         case 'hpKey': return this.hvacKey(v);
         case 'hpAc': if (u.overlay) u.overlay.left = u.overlay.total; c.clim.ac = !c.clim.ac; return r();
         // Chauffages : le niveau d'un siège se choisit d'un toucher — l'application y amène la voiture
@@ -2837,6 +3123,16 @@
         case 'readyDefault': s.readyDefault = !s.readyDefault; return r();
         case 'cluster': s.cluster = !s.cluster; return r();
         case 'clusterUnit': s.clusterUnit = v; return r();
+        case 'clusterStyle': s.clusterStyle = v; return r();
+        case 'clusterPill': s.clusterPill = v; return r();
+        case 'clusterAvg': s.clusterAvg = v; return r();
+        case 'clPrevTab': u.clPrevTab = v; return this.render();
+        case 'clAdv': u.clAdv = !u.clAdv; return this.render();
+        case 'chargePopup':
+          // Couper l'option referme le pop-up ouvert.
+          s.chargePopup = !s.chargePopup;
+          if (!s.chargePopup) instances.forEach((i) => { const o = i.ui.overlay; if (o && o.type === 'charge') i.ui.overlay = null; });
+          return r();
         case 'clusterMod': s[el && el.getAttribute('data-x') === 'media' ? 'clusterMedia' : 'clusterNav'] = v; return r();
         case 'updOverlay': s.updOverlay = !s.updOverlay; return r();
         case 'textSize': s.textSize = v; return r();
@@ -2978,6 +3274,7 @@
         case 'waDelay': state.winAuto.delay = +t.value; return commit();
         case 'popupDelay': state.settings.popupDelay = clamp(+t.value, 1, 60); return commit();
         case 'clusterRefresh': state.settings.clusterRefresh = clamp(Math.round(+t.value), 1, 10) * 100; return commit();
+        case 'clusterAnim': state.settings.clusterAnim = clamp(Math.round(+t.value), 2, 20) * 100; return commit();
         case 'waBeepVol': state.winAuto.beepVol = +t.value; return commit();
         case 'winCourse': state.winCourse = Math.round(+t.value * 1000); return commit();
         case 'stCurrency': state.stats.currency = (t.value || '').slice(0, 3) || '€'; return commit();
@@ -3102,6 +3399,31 @@
           else this.toast(L('Écran conducteur : SWI133, SWI68 et SWI165 seulement. Changez de firmware au-dessus de la maquette.', 'Driver display: SWI133, SWI68 and SWI165 only. Switch firmware above the mockup.'), 3600);
           return commit();
         case 'statsCharges': state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 2; return commit();
+        case 'statsEnergy': {
+          // Le détail de la charge rapide mesurée : sa ligne « Énergie ».
+          const i = Math.max(0, state.stats.charges.findIndex((x) => x.source === 'MEASURED'));
+          state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 2; u.statsOpen = 'c' + i; return commit();
+        }
+        case 'clusterDiscreet':
+          u.screen = 'settings'; u.tabs.set = 1;
+          if (caps().cluster) { state.settings.cluster = true; state.settings.clusterStyle = 'discreet'; }
+          else this.toast(L('Écran conducteur : SWI133, SWI68 et SWI165 seulement. Changez de firmware au-dessus de la maquette.', 'Driver display: SWI133, SWI68 and SWI165 only. Switch firmware above the mockup.'), 3600);
+          return commit();
+        case 'chargeCluster':
+          // Le module de charge se voit dans l'aperçu sous les cartes : une borne rapide est branchée.
+          if (caps().cluster) state.settings.cluster = true;
+          u.screen = 'settings'; u.tabs.set = 1;
+          if (!car().charge) startCharge('DC');
+          return commit();
+        case 'chargePopup': case 'chargeAc': case 'chargePrice': {
+          // Une charge en cours (rapide, ou AC pour « Brancher en AC »), et son pop-up ouvert.
+          state.settings.chargePopup = true;
+          const type = name === 'chargeAc' ? 'AC' : 'DC', ch = car().charge;
+          if (!ch || (name === 'chargeAc' && ch.type !== 'AC')) startCharge(type);
+          else this.openChargePopup();
+          if (name === 'chargePrice') this.act('cgPrice');
+          return;
+        }
         case 'regenCycle':
           // Révèle la page « Cycle regen » : la fonction doit être attribuée quelque part.
           if (!this.assigned('REGEN_CYCLE')) { state.sc.map.btn2_single = 'REGEN_CYCLE'; delete state.sc.extra.btn2_single; }
@@ -3144,7 +3466,7 @@
       case 'waSpeed': return v + ' km/h';
       case 'waTime': return v + ' min';
       case 'waDelay': case 'popupDelay': return v + ' s';
-      case 'clusterRefresh': return fmtS(+v * 100) + ' s';
+      case 'clusterRefresh': case 'clusterAnim': return fmtS(+v * 100) + ' s';
       case 'waBeepVol': case 'batThr': case 'briDay': case 'briNight': return v + ' %';
       case 'bhMin': return S('batheat_auto_minutes_value', v);
       case 'winCourse': return S('win_cal_seconds', fmtS(+v * 1000));
@@ -3202,6 +3524,8 @@
     plug: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9,3 V8 M15,3 V8 M6,8 H18 V12 a6,6 0 0 1 -12,0 Z M12,18 V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     bug: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8,9 a4,4 0 0 1 8,0 V15 a4,4 0 0 1 -8,0 Z M4,12 H8 M16,12 H20 M5,7 L8,9 M19,7 L16,9 M5,18 L8,16 M19,18 L16,16 M12,11 V19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     info: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3,12 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M12,11 V16.5 M12,7.8 V8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    bolt: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13,2.5 L5.5,13.5 H11 L10,21.5 L18.5,10 H13 Z" fill="currentColor"/></svg>',
+    lock: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5,10.5 H17.5 V20 H6.5 Z M8.5,10.5 V7.5 a3.5,3.5 0 0 1 7,0 V10.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     download: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,4 V15 M7.5,10.5 L12,15 L16.5,10.5 M5,19.5 H19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
   };
   // Volant chauffant du pop-up HVAC (res/drawable/ic_steering_wheel_heat.xml) : Google Material
@@ -3312,6 +3636,7 @@
     const fw = state.fw;
     state = initialState(); state.fw = fw;
     clearTimeout(cycleTimer); cycleTarget = null;
+    clearInterval(chargeTimer); chargeTimer = null;
     instances.forEach((i) => { i.ui.overlay = null; i.ui.dialog = null; i.ui.edit = null; i.ui.regenDraft = null; i.ui.profileDraft = null; if (i.ui.screen === 'profileEdit') i.startEdit(state.profiles[0]); });
     commit();
   }
@@ -3389,6 +3714,7 @@
       '<label class="dock-f"><span><span data-l10n="dock-temp"></span> <b data-o="temp"></b></span><input type="range" min="-15" max="45" step="1" data-d="temp"></label>' +
       '<label class="dock-f"><span><span data-l10n="dock-soc"></span> <b data-o="soc"></b></span><input type="range" min="5" max="100" step="1" data-d="soc"></label>' +
       '<div class="dock-f"><span data-l10n="dock-lights"></span><div class="dock-row"><button type="button" class="dock-btn" data-d="lights"></button></div></div>' +
+      '<div class="dock-f"><span><span data-l10n="dock-charge"></span> <b data-o="charge"></b></span><div class="dock-row"><button type="button" class="dock-btn" data-chg="AC"></button><button type="button" class="dock-btn" data-chg="DC"></button></div></div>' +
       '<div class="dock-f"><span data-l10n="dock-bt"></span><div class="dock-row" data-o="bt"></div></div>' +
       '<div class="dock-f"><span data-l10n="dock-doors"></span><div class="dock-row"><button type="button" class="dock-btn" data-door="L"></button><button type="button" class="dock-btn" data-door="R"></button></div></div>' +
       '<div class="dock-f"><span data-l10n="dock-media"></span><div class="dock-row dock-media"><b data-o="vol"></b></div></div>' +
@@ -3404,7 +3730,12 @@
     el.querySelector('.dock-x').addEventListener('click', () => toggle(false));
     const q = (s) => el.querySelector(s);
     q('[data-d=fw]').addEventListener('change', (e) => setFirmware(e.target.value));
-    q('[data-d=speed]').addEventListener('input', (e) => { const c = car(); c.speed = +e.target.value; c.maxSpeed = Math.max(c.maxSpeed || 0, c.speed); commit(); });
+    q('[data-d=speed]').addEventListener('input', (e) => {
+      const c = car();
+      // Rouler débranche la borne.
+      if (c.charge && +e.target.value > 0) stopCharge();
+      c.speed = +e.target.value; c.maxSpeed = Math.max(c.maxSpeed || 0, c.speed); commit();
+    });
     q('[data-d=temp]').addEventListener('input', (e) => { car().outside = +e.target.value; commit(); });
     // Batterie : franchir le seuil en roulant déclenche le profil, une fois par épisode.
     q('[data-d=soc]').addEventListener('input', (e) => { car().soc = +e.target.value; batteryAutomation(null); commit(); });
@@ -3415,6 +3746,17 @@
       commit();
     });
     q('[data-o=bt]').addEventListener('click', (e) => { const b = e.target.closest('[data-mac]'); if (b) toggleBt(b.getAttribute('data-mac')); });
+    el.querySelectorAll('[data-chg]').forEach((b) => b.addEventListener('click', () => {
+      const t = b.getAttribute('data-chg'), ch = car().charge;
+      if (ch && ch.type === t) {
+        stopCharge();
+        setLog('🔌 ' + L('Borne débranchée', 'Charger unplugged') + (state.stats.enabled ? L(' : la charge entre dans les Statistiques.', ': the charge goes into Statistics.') : '.'));
+        return;
+      }
+      startCharge(t);
+      setLog('⚡ ' + (t === 'DC' ? L('Borne rapide branchée', 'Fast charger plugged in') : L('Wallbox branchée', 'Wallbox plugged in')) +
+        (state.settings.chargePopup ? L(' : le pop-up de charge s\u2019ouvre.', ': the charging pop-up opens.') : L(' (pop-up de charge désactivé).', ' (charging pop-up off).')));
+    }));
     el.querySelectorAll('[data-door]').forEach((b) => b.addEventListener('click', () => { const s = b.getAttribute('data-door'); setDoor(s, !car().doors[s]); }));
     q('[data-d=ignition]').addEventListener('click', () => {
       const tr = ignition();
@@ -3436,7 +3778,7 @@
         'dock-temp': L('Temp. extérieure', 'Outside temp.'), 'dock-bt': L('Bluetooth connecté', 'Bluetooth connected'),
         'dock-doors': L('Portes avant', 'Front doors'), 'dock-media': L('Volume média', 'Media volume'), 'dock-wheel': L('Volant', 'Steering wheel'),
         'dock-active': L('Profil en cours (dernier appliqué)', 'Current profile (last applied)'),
-        'dock-soc': L('Batterie', 'Battery'), 'dock-lights': L('Feux', 'Lights')
+        'dock-soc': L('Batterie', 'Battery'), 'dock-lights': L('Feux', 'Lights'), 'dock-charge': L('Borne de recharge', 'Charger')
       };
       el.querySelectorAll('[data-l10n]').forEach((n) => { n.textContent = L10N[n.getAttribute('data-l10n')] || ''; });
       q('.dock-sum').textContent = L('Véhicule virtuel', 'Virtual vehicle') + ' · ' + (state.fw === 'UNKNOWN' && state.forced ? 'UNKNOWN→' + state.forced : state.fw) + ' · ' + c.speed + ' km/h · ' + c.outside + ' °C';
@@ -3444,7 +3786,15 @@
       q('[data-d=speed]').value = c.speed; q('[data-o=speed]').textContent = c.speed + ' km/h';
       q('[data-d=temp]').value = c.outside; q('[data-o=temp]').textContent = c.outside + ' °C';
       q('[data-d=soc]').value = c.soc; q('[data-o=soc]').textContent = c.soc + ' %';
+      q('[data-d=soc]').disabled = !!c.charge;
       q('[data-d=lights]').textContent = c.lights ? L('Allumés', 'On') : L('Éteints', 'Off'); q('[data-d=lights]').classList.toggle('on', c.lights);
+      const ch = c.charge;
+      q('[data-o=charge]').textContent = ch ? (ch.done ? L('charge terminée', 'charge complete') : Math.round(ch.kw) + ' kW') : '';
+      el.querySelectorAll('[data-chg]').forEach((b) => {
+        const t = b.getAttribute('data-chg'), on = !!ch && ch.type === t;
+        b.textContent = (on ? '⚡ ' : '') + (t === 'DC' ? L('Rapide DC', 'Fast DC') : 'AC 7 kW') + (on ? L(' · débrancher', ' · unplug') : '');
+        b.classList.toggle('on', on);
+      });
       q('[data-o=bt]').innerHTML = state.bt.devices.map((d) => '<button type="button" class="dock-btn' + (state.bt.connected.includes(d.mac) ? ' on bt' : '') + '" data-mac="' + d.mac + '">' + (state.bt.connected.includes(d.mac) ? '● ' : '○ ') + esc(d.name) + '</button>').join('');
       const ap = activeProfile();
       q('[data-o=active]').textContent = ap ? ap.name : L('aucun', 'none');
@@ -3469,11 +3819,18 @@
   // ── Écran conducteur : aperçu du module (ClusterGauge + ClusterGaugeView) ──
   /** Bornes de ClusterGauge, les mêmes que l'app. */
   const CG = { STOP_KMH: 5, WH_KM_FULL: 3000, WH_KM_CURVE: 100, REGEN_FULL_KW: 60, STOPPED_FULL_KW: 20, POWER_FULL_KW: 320,
-                POWER_CURVE_KW: 20, REGEN_CURVE_KW: 10, SMOOTHING: 0.5 };
-  /** Graduations (ClusterGauge) : consommation en Wh/km, puissance et récupération en kW. */
-  const CG_TICKS = { cons: [0, 100, 200, 500, 1000, 3000], power: [20, 50, 100, 200, 320], regen: [10, 30, 60] };
+                POWER_CURVE_KW: 20, REGEN_CURVE_KW: 10, SMOOTHING: 0.5, DISCREET_ZERO: 0.3, DISCREET_TAU_MS: 2000 };
+  /**
+   * Graduations (ClusterGauge) : consommation en Wh/km, puissance et récupération en kW ; style
+   * discret, les crans de la barre de puissance et ceux qui portent un chiffre (200 kW et 200 Wh/km
+   * gardent leur trait seul, trop serrés sur l'échelle logarithmique).
+   */
+  const CG_TICKS = { cons: [0, 100, 200, 500, 1000, 3000], power: [20, 50, 100, 200, 320], regen: [10, 30, 60],
+                     dPower: [-60, -20, 0, 20, 50, 100, 200, 320], dPowerLab: [-60, -20, 0, 20, 50, 100, 320], dConsLab: [0, 100, 500, 1000, 3000] };
   const part01 = (f) => clamp(f, 0, 1);
   function whPerKm(kw, kmh) { return kmh == null || kmh < CG.STOP_KMH || kw < 0 ? null : kw * 1000 / kmh; }
+  /** Consommation NÉGATIVE en récupération (issue #158) : 25 kW à 60 km/h font −417 Wh/km ; rien sous 5 km/h. */
+  function regenWhPerKm(kw, kmh) { return kmh == null || kmh < CG.STOP_KMH || kw >= 0 ? null : kw * 1000 / kmh; }
   /** Module A : Wh/km sur une échelle logarithmique jusqu'à 3 000, kW à l'arrêt et en récupération. */
   function gaugeConsumption(kw, kmh) {
     if (kw < 0) return { fraction: part01(-kw / CG.REGEN_FULL_KW), regen: true, value: -kw, unit: 'KW_REGEN' };
@@ -3490,129 +3847,298 @@
     if (kw < 0) return { fraction: -regenFraction(-kw), regen: true, value: kw, unit: 'KW' };
     return { fraction: powerFraction(kw), regen: false, value: kw, unit: 'KW' };
   }
+  /** Style discret : la récupération occupe les 30 premiers % de la barre, mêmes échelles que les jauges. */
+  const discreetPowerFraction = (kw) => (kw < 0 ? CG.DISCREET_ZERO * (1 - regenFraction(-kw)) : CG.DISCREET_ZERO + (1 - CG.DISCREET_ZERO) * powerFraction(kw));
+
+  /** Couleurs du combiné : toujours sombres, quel que soit le thème de l'application. */
+  const CL = { bg: '#0C0C0C', track: '#2A2A2E', text: '#FFFFFF', text2: '#B0B0B0', accent: '#38BDF8', warn: '#F59E0B', eco: '#22C55E',
+               discret: '#8A8A90', cran: '#4A4A52', clair: '#D4D4D8' };
+  const MODE_COL = { ECO: '#22C55E', NORMAL: '#38BDF8', SPORT: '#F43F5E', SNOW: '#A5B4FC', CUSTOM: '#F59E0B' };
+  const clLoc = () => (appLang() === 'en' ? 'en-GB' : appLang());
+  const cl1 = (v) => v.toLocaleString(clLoc(), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  /** Valeur absolue des kW, une décimale sous 10 seulement (ClusterGauge.formatKw). */
+  const clKw = (v) => { const a = Math.abs(v); return a < 9.95 ? cl1(a) : String(Math.round(a)); };
+  /** Consommation dans l'unité de la jauge (formatConsumption) : [chiffre, unité], « − » gardé en récupération. */
+  function clCons(wh, unit) {
+    const sign = wh < 0 ? '−' : '', a = Math.abs(wh);
+    if (unit !== 'kwh') return [sign + Math.round(a), 'Wh/km'];
+    const k = a / 10;
+    return [sign + (k < 99.95 ? cl1(k) : String(Math.round(k))), 'kWh/100 km'];
+  }
+  /** Moyenne du trajet dans SON unité (formatAverage) : km/kWh = 1 000 ÷ Wh/km ; un tiret sans moyenne. */
+  function clAvg(wh, unit) {
+    if (wh == null) return ['–', null];
+    if (unit === 'km') return wh > 0 ? [cl1(1000 / wh), 'km/kWh'] : ['–', null];
+    return clCons(wh, unit);
+  }
+  /** Libellé d'une graduation de consommation : « 1k » plutôt que 1000, ou des kWh/100 km. */
+  const clTick = (w, unit) => (unit === 'kwh' ? String(Math.round(w / 10)) : w >= 1000 ? Math.round(w / 1000) + 'k' : String(w));
+  const clDur = (min) => (min >= 60 ? S('cluster_duration_hm', Math.floor(min / 60), min % 60) : S('cluster_duration_min', min));
+  /**
+   * Pastille (ClusterGauge.pill) : le dernier profil appliqué, dans la couleur du mode de conduite
+   * DU PROFIL (celle de la voiture s'il ne règle pas la conduite) ; le mode lu sur la voiture ; ou rien.
+   */
+  function clusterPill() {
+    const choice = state.settings.clusterPill, mode = car().driveMode;
+    if (choice === 'none') return null;
+    if (choice === 'mode') return { text: (DRIVE_LABEL[mode] || mode).toUpperCase(), mode };
+    const p = activeProfile(), name = p ? p.name.trim() : '';
+    if (!name) return null;
+    return { text: name.toLocaleUpperCase(appLang()), mode: catOn(p, 'drive') ? p.driveMode : mode };
+  }
+
+  function clArc(cx, cy, r, start, sweep, col) {
+    if (Math.abs(sweep) < 0.5) return '';
+    const p = (a) => (cx + r * Math.cos(a * Math.PI / 180)).toFixed(2) + ' ' + (cy + r * Math.sin(a * Math.PI / 180)).toFixed(2);
+    return '<path d="M' + p(start) + 'A' + r + ' ' + r + ' 0 ' + (Math.abs(sweep) > 180 ? 1 : 0) + ' ' + (sweep > 0 ? 1 : 0) + ' ' + p(start + sweep) + '" fill="none" stroke="' + col + '" stroke-width="13" stroke-linecap="round"/>';
+  }
+  /** Un texte : sans graisse, un léger espacement (petit()) ; [ls] le fixe. */
+  const clTxt = (t, x, y, size, col, weight, anchor, ls) => (t ? '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" font-size="' + size + '" fill="' + col + '" text-anchor="' + (anchor || 'middle') + '"' +
+    (weight ? ' font-weight="' + weight + '"' : '') + (ls != null ? ' letter-spacing="' + ls + '"' : weight ? '' : ' letter-spacing="0.5"') + '>' + esc(t) + '</text>' : '');
+  /** « 172 Wh/km » centré : la valeur, puis son unité en petit et en gris (valeurEtUnite). */
+  const clValue = (x, y, v, col, sv, su) => '<text x="' + x + '" y="' + y + '" text-anchor="middle" font-size="' + (sv || 16) + '" font-weight="500" fill="' + col + '">' + esc(v[0]) +
+    (v[1] ? '<tspan font-size="' + (su || 11) + '" font-weight="400" fill="' + CL.text2 + '"> ' + esc(v[1]) + '</tspan>' : '') + '</text>';
+  /** Deux colonnes sous la jauge, séparées d'un filet. */
+  const clFoot = (l1, v1, c1, l2, v2, c2) => '<rect x="129.5" y="206" width="1" height="38" fill="' + CL.track + '"/>' +
+    clTxt(l1, 70, 220, 11, CL.text2) + clValue(70, 241, v1, c1) + clTxt(l2, 190, 220, 11, CL.text2) + clValue(190, 241, v2, c2);
+  /** Une seule colonne, centrée, la valeur en 20 (issue #158) : la moyenne du trajet seule. */
+  const clFootCentre = (l, v) => clTxt(l, 130, 220, 11, CL.text2) + clValue(130, 244, v, CL.text, 20);
+  /** Graduation à l'extérieur de la piste : un trait, et son libellé un peu plus loin. */
+  const clGrad = (cx, cy, r, a, lab) => {
+    const dx = Math.cos(a * Math.PI / 180), dy = Math.sin(a * Math.PI / 180);
+    return '<line x1="' + (cx + (r + 8) * dx).toFixed(1) + '" y1="' + (cy + (r + 8) * dy).toFixed(1) + '" x2="' + (cx + (r + 13) * dx).toFixed(1) + '" y2="' + (cy + (r + 13) * dy).toFixed(1) + '" stroke="' + CL.text2 + '" stroke-width="1.5"/>' +
+      clTxt(lab, cx + (r + 22) * dx, cy + (r + 22) * dy + 4, 11, CL.text2);
+  };
+  /** Pastille en haut à gauche, jamais plus large que celle du mode le plus long : un nom plus long finit en ellipse. */
+  function clPillSvg(p) {
+    const col = MODE_COL[p.mode] || CL.text2, name = p.text.length > 6 ? p.text.slice(0, 5) + '…' : p.text;
+    return '<rect x="14" y="14" width="' + (name.length * 7.7 + 30).toFixed(1) + '" height="22" rx="11" fill="' + col + '" fill-opacity=".25"/><circle cx="26" cy="25" r="3.5" fill="' + col + '"/>' +
+      '<text x="35" y="29.5" font-size="11" font-weight="500" letter-spacing="1" fill="' + col + '">' + esc(name) + '</text>';
+  }
+
+  /** Module B : l'arc de puissance (issues #152 et #158). */
+  function clPower(g) {
+    const cx = 130, cy = 122, R = 88, st = g.st;
+    let h = '';
+    CG_TICKS.power.forEach((k) => { h += clGrad(cx, cy, R, 270 + 120 * powerFraction(k), String(k)); });
+    CG_TICKS.regen.forEach((k) => { h += clGrad(cx, cy, R, 270 - 120 * regenFraction(k), String(k)); });
+    h += clArc(cx, cy, R, 150, 240, CL.track);
+    // Le remplissage s'arrête net au zéro : son bout arrondi ne passe pas de l'autre côté.
+    if (st) h += '<defs><clipPath id="' + g.id + 'P"><rect x="130" y="0" width="130" height="260"/></clipPath><clipPath id="' + g.id + 'R"><rect x="0" y="0" width="130" height="260"/></clipPath></defs>' +
+      '<g clip-path="url(#' + g.id + (g.part >= 0 ? 'P' : 'R') + ')">' + clArc(cx, cy, R, 270, 120 * g.part, st.regen ? CL.accent : CL.warn) + '</g>';
+    h += '<line x1="130" y1="' + (cy - R - 8) + '" x2="130" y2="' + (cy - R + 8) + '" stroke="' + CL.text2 + '" stroke-width="2"/>' + clTxt('0', 130, cy - R - 12, 11, CL.text2);
+    const v = g.value != null ? g.value : st && st.value;
+    const recup = !!st && v != null && v < 0;
+    // Des kW entiers en roulant, une décimale à l'arrêt (issue #152).
+    const big = !st || v == null ? '–' : (recup ? '−' : '') + (g.kmh != null && g.kmh >= CG.STOP_KMH ? String(Math.round(Math.abs(v))) : clKw(v));
+    h += clTxt(big, cx, cy + 12, big.length > 3 ? 46 : 54, recup ? CL.accent : CL.text, 500);
+    if (st) h += clTxt('kW', cx, cy + 28, 13, recup ? CL.accent : CL.text2, 500);
+    // La consommation instantanée en grand sous les kW (issue #152), négative et bleue en
+    // récupération (issue #158) ; sous 5 km/h, le mot qui en tient lieu.
+    const wh = !st || recup || g.kw == null ? null : whPerKm(g.kw, g.kmh);
+    const whR = !st || !recup || g.kw == null ? null : regenWhPerKm(g.kw, g.kmh);
+    if (wh != null) h += clValue(cx, cy + 64, clCons(wh, g.unit), CL.text, 28, 12);
+    else if (whR != null) h += clValue(cx, cy + 64, clCons(whR, g.unit), CL.accent, 28, 12);
+    else if (recup) h += clTxt(S('cluster_regen_word'), cx, cy + 58, 13, CL.accent);
+    else if (st) h += clTxt(S('cluster_stopped_word'), cx, cy + 58, 13, CL.text2);
+    // La batterie est déjà sur le combiné : seule reste la moyenne du trajet, centrée.
+    return h + clFootCentre(S('cluster_trip_avg'), clAvg(g.avgWh, g.avgUnit));
+  }
+  /** Module A : l'anneau de consommation. */
+  function clConsumption(g) {
+    const cx = 130, cy = 120, st = g.st;
+    let h = '';
+    // Graduations en Wh/km, libellées dans l'unité choisie : l'anneau, lui, ne change pas.
+    CG_TICKS.cons.forEach((w) => { h += clGrad(cx, cy, 80, 135 + 270 * consFraction(w), clTick(w, g.unit)); });
+    h += clArc(cx, cy, 80, 135, 270, CL.track);
+    if (st) h += clArc(cx, cy, 80, 135, 270 * g.part, st.regen ? CL.accent : CL.warn);
+    const v = g.value != null ? g.value : st ? st.value : 0;
+    let big = ['–', ''];
+    if (st && st.unit === 'WH_PER_KM') big = clCons(v, g.unit);
+    // En roulant, la récupération s'écrit en consommation négative (issue #158) ; sous 5 km/h, les kW.
+    else if (st && st.unit === 'KW_REGEN') { const w = regenWhPerKm(-v, g.kmh); big = w != null ? clCons(w, g.unit) : ['↓' + clKw(v), S('cluster_regen_kw')]; }
+    else if (st) big = [clKw(v), S('cluster_stopped_kw')];
+    const recup = !!st && st.unit === 'KW_REGEN';
+    h += clTxt(big[0], cx, cy + 16, big[0].length > 3 ? 46 : 54, recup ? CL.accent : CL.text, 500);
+    h += clTxt(big[1], cx, cy + 40, 13, recup ? CL.accent : CL.text2);
+    return h + clFoot(S('cluster_trip_avg'), clAvg(g.avgWh, g.avgUnit), CL.text, S('cluster_regen'), g.regenWh != null ? ['+' + Math.round(g.regenWh), 'Wh'] : ['–', null], CL.accent);
+  }
+  // Style discret (issue #153, variante A) : une barre fine graduée, des chiffres fixes sous les crans.
+  const clBar = (x0, x1, col) => (x1 - x0 < 0.5 ? '' : '<line x1="' + x0.toFixed(1) + '" y1="124" x2="' + x1.toFixed(1) + '" y2="124" stroke="' + col + '" stroke-width="6" stroke-linecap="round"/>');
+  const clNotch = (x, lab, main) => '<line x1="' + x.toFixed(1) + '" y1="131" x2="' + x.toFixed(1) + '" y2="136" stroke="' + (main ? CL.text : CL.cran) + '" stroke-width="' + (main ? 2 : 1) + '"/>' +
+    (lab == null ? '' : clTxt(lab, x, 152, 13, main ? CL.text2 : CL.discret, main ? 500 : null, 'middle', 0));
+  const clTitle = (t) => clTxt(t.toLocaleUpperCase(appLang()), 130, 70, 11, CL.discret, null, 'middle', 1.5);
+  function clDiscreetPower(g) {
+    const X = (f) => 30 + 200 * f, zero = X(CG.DISCREET_ZERO), st = g.st;
+    let h = clTitle(S('settings_cluster_power')) + clBar(30, 230, CL.track);
+    const v = g.value != null ? g.value : st && st.value;
+    if (st && v != null) {
+      const xv = X(discreetPowerFraction(v));
+      if (v < -0.5) h += clBar(xv, zero, CL.accent);
+      else if (v > 0.5) h += clBar(zero, xv, CL.clair);
+    }
+    CG_TICKS.dPower.forEach((k) => { h += clNotch(X(discreetPowerFraction(k)), CG_TICKS.dPowerLab.includes(k) ? String(k) : null, k === 0); });
+    // Le zéro, repère de toute la barre.
+    h += '<line x1="' + zero + '" y1="113" x2="' + zero + '" y2="135" stroke="' + CL.text + '" stroke-width="2"/>' + clTxt('kW', 230, 110, 11, CL.discret, null, 'end', 0);
+    return h + clFootCentre(S('cluster_trip_avg'), clAvg(g.avgWh, g.avgUnit));
+  }
+  function clDiscreetCons(g) {
+    const st = g.st, X = (wh) => 72 + 158 * consFraction(wh), avg = g.avgWh;
+    // À gauche, une courte zone pour la récupération ; puis l'échelle de consommation.
+    let h = clTitle(S('settings_cluster_consumption')) + clBar(30, 66, CL.track) + clBar(72, 230, CL.track);
+    const v = g.value != null ? g.value : st && st.value;
+    if (st && v != null) {
+      if (st.unit === 'KW_REGEN') h += clBar(66 - 36 * regenFraction(v), 66, CL.accent);
+      else if (st.unit === 'WH_PER_KM') h += clBar(72, X(v), avg != null && v > avg ? CL.warn : CL.eco);
+    }
+    CG_TICKS.cons.forEach((w) => { h += clNotch(X(w), CG_TICKS.dConsLab.includes(w) ? clTick(w, g.unit) : null, false); });
+    h += clTxt(S('cluster_regen'), 48, 152, 11, CL.accent, null, 'middle', 0) + clTxt(g.unit === 'kwh' ? 'kWh/100 km' : 'Wh/km', 230, 168, 11, CL.discret, null, 'end', 0);
+    // La moyenne du trajet : un triangle au-dessus de la barre, et son mot.
+    if (avg != null) {
+      const xm = X(avg);
+      h += '<path d="M' + (xm - 5).toFixed(1) + ' 108L' + (xm + 5).toFixed(1) + ' 108L' + xm.toFixed(1) + ' 116Z" fill="' + CL.text + '"/>' + clTxt(S('cluster_avg_short'), xm, 103, 11, CL.text2, null, 'middle', 0);
+    }
+    return h + clFootCentre(S('cluster_trip_avg'), clAvg(avg, g.avgUnit));
+  }
+  // Pictogrammes du module de charge (ic_cluster_*) : Material Icons bolt, battery_charging_full et
+  // schedule (Apache License 2.0), dans un carré de 24.
+  const CL_ICON = {
+    bolt: 'M11 21h-1l1-7H7.5c-.88 0-.33-.75-.31-.78C8.48 10.94 10.42 7.54 13.01 3h1l-1 7h3.51c.4 0 .62.19.4.66C12.97 17.55 11 21 11 21z',
+    battery: 'M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4zM11 20v-5.5H9L13 7v5.5h2L11 20z',
+    clock: 'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z'
+  };
+  /**
+   * Module « charge » (maquette B) : il remplace la jauge pendant une charge — en grand le temps
+   * restant jusqu'à la limite, dessous le niveau au dixième et l'heure de fin, la barre avec le
+   * repère de la limite et son reflet, puis puissance, énergie et durée. L'éclair pulse ; à la fin,
+   * tout se fige et passe au vert.
+   */
+  function clChargeSvg(ch) {
+    const t = performance.now(), done = ch.done, col = done ? CL.eco : CL.accent;
+    const name = S(done ? 'cluster_charge_done' : ch.type === 'DC' ? 'cluster_charge_dc' : 'cluster_charge_ac');
+    const pulse = done ? 1 : 0.675 + 0.325 * Math.cos(2 * Math.PI * (t % 1400) / 1400);
+    let h = '<rect x="14" y="14" width="' + (name.length * 6.6 + 34).toFixed(1) + '" height="22" rx="11" fill="' + col + '" fill-opacity=".25"/>' +
+      '<path d="' + CL_ICON.bolt + '" transform="translate(19 17) scale(.667)" fill="' + col + '" opacity="' + pulse.toFixed(2) + '"/>' + clTxt(name, 37, 29.5, 11, col, 500, 'start');
+    const lvl = cl1(ch.soc) + ' %';
+    h += clTxt(done ? S('cluster_charge_level') : S('cluster_charge_until', ch.target), 130, 66, 13, CL.text2);
+    const big = done ? lvl : ch.remMin != null ? clDur(ch.remMin) : '–';
+    h += clTxt(big, 130, 108, big.length > 7 ? 34 : 40, done ? CL.eco : CL.text, 500);
+    if (!done) h += clTxt([lvl, ch.endAt ? S('cluster_charge_end_at', ch.endAt) : null].filter(Boolean).join(' · '), 130, 130, 13, CL.text2);
+    const g0 = 16, d0 = 244, xc = g0 + (d0 - g0) * clamp(ch.target, 0, 100) / 100;
+    h += '<rect x="16" y="146" width="228" height="6" rx="3" fill="' + CL.track + '"/>';
+    if (ch.soc > 0) h += '<rect x="16" y="146" width="' + ((d0 - g0) * clamp(ch.soc / 100, 0, 1)).toFixed(1) + '" height="6" rx="3" fill="' + col + '"/>';
+    // Le reflet court du début jusqu'à la limite, jamais au-delà.
+    if (!done) {
+      const x = g0 + (t % 1800) / 1800 * (xc - g0 + 18) - 18;
+      h += '<clipPath id="' + ch.id + 'S"><rect x="16" y="146" width="' + (xc - g0).toFixed(1) + '" height="6"/></clipPath>' +
+        '<rect clip-path="url(#' + ch.id + 'S)" x="' + x.toFixed(1) + '" y="146" width="18" height="6" rx="3" fill="#fff" fill-opacity=".55"/>';
+    }
+    h += '<rect x="' + (xc - 1).toFixed(1) + '" y="143" width="2" height="12" fill="' + CL.text + '"/>';
+    const line = (y, ico, lab, v, u) => '<path d="' + CL_ICON[ico] + '" transform="translate(16 ' + (y - 14) + ') scale(.75)" fill="' + CL.text2 + '"/>' + clTxt(lab, 42, y, 14, CL.text2, null, 'start', 0) +
+      '<text x="244" y="' + y + '" text-anchor="end" font-size="15" font-weight="500" fill="' + CL.text + '">' + esc(v) + (u ? '<tspan font-size="11" font-weight="400" fill="' + CL.text2 + '"> ' + esc(u) + '</tspan>' : '') + '</text>';
+    return h + line(184, 'bolt', S('cluster_charge_power'), done || ch.kw == null ? '–' : clKw(ch.kw), done ? null : 'kW') +
+      line(208, 'battery', S('cluster_charge_energy'), '+' + cl1(ch.kwh), 'kWh') +
+      line(232, 'clock', S('cluster_charge_duration'), clDur(ch.durMin), null);
+  }
+  /** La charge en cours, telle que le module la montre ; null sans borne branchée. */
+  function clChargeInfo(id) {
+    const ch = car().charge;
+    if (!ch) return null;
+    const rem = chargeRemainingMs(ch);
+    return { id, type: ch.type, done: ch.done, kw: ch.done ? null : ch.kw, kwh: ch.kwh, soc: ch.soc, target: chargeTarget(),
+             durMin: Math.round(ch.simMs / 60000), remMin: rem != null ? Math.round(rem / 60000) : null,
+             endAt: rem != null ? new Intl.DateTimeFormat(clLoc(), { hour: '2-digit', minute: '2-digit' }).format(Date.now() + rem) : null };
+  }
+  /**
+   * Le carré de 260 px de ClusterGaugeView, en SVG. `g` : mod ('consumption' | 'power'), style
+   * ('dynamic' | 'discreet'), unit et avgUnit, st (état visé) avec part et value (ce qui est à
+   * l'écran pendant le glissement), kw et kmh, avgWh, regenWh, pill, charge, et id (préfixe des
+   * découpes, unique dans la page).
+   */
+  function clusterSvg(g) {
+    const h = '<rect width="260" height="260" fill="' + CL.bg + '"/>';
+    if (g.charge) return h + clChargeSvg(g.charge);
+    const pill = g.pill ? clPillSvg(g.pill) : '';
+    if (g.style === 'discreet') return h + pill + (g.mod === 'power' ? clDiscreetPower(g) : clDiscreetCons(g));
+    return h + pill + (g.mod === 'power' ? clPower(g) : clConsumption(g));
+  }
+
+  // Aperçu de la carte de réglages (ClusterSettingsPreview) : un trajet simulé de 24 s, en boucle,
+  // redessiné à chaque pas avec tous les réglages du moment. [s, km/h, kW]
+  const PREV_TRIP = [[0, 0, 1.6], [3, 30, 18], [6, 50, 9], [10, 70, 13], [13, 95, 45], [15, 85, -24], [18, 45, -12], [21, 12, 3], [24, 0, 1.6]];
+  const prevT0 = performance.now();
+  let prevN = 0, prevTimer = null;
+  function clPreviewSvg(svg) {
+    const s = state.settings, mod = svg.getAttribute('data-clprev'), t = ((performance.now() - prevT0) / 1000) % 24;
+    let i = 0;
+    while (i < PREV_TRIP.length - 2 && PREV_TRIP[i + 1][0] <= t) i++;
+    const a = PREV_TRIP[i], b = PREV_TRIP[i + 1], f = (t - a[0]) / (b[0] - a[0]);
+    const kmh = Math.round(a[1] + (b[1] - a[1]) * f), kw = a[2] + (b[2] - a[2]) * f;
+    const st = mod === 'power' ? gaugePower(kw) : gaugeConsumption(kw, kmh);
+    if (!svg.id) svg.id = 'clp' + (++prevN);
+    svg.innerHTML = clusterSvg({ id: svg.id + 'c', mod, style: s.clusterStyle, unit: s.clusterUnit, avgUnit: s.clusterAvg || s.clusterUnit, pill: clusterPill(),
+      st, part: st.fraction, value: st.value, kw, kmh, avgWh: 168, regenWh: 180 });
+    if (!prevTimer) prevTimer = setInterval(() => instances.forEach((x) => x.app.querySelectorAll('svg[data-clprev]').forEach(clPreviewSvg)), 250);
+  }
+
   /**
    * Aperçu du module : le carré de 260 px dessiné comme ClusterGaugeView, SEUL — le reste du
    * combiné n'est pas reproduit (demande du 2026-10-16 : pas de vitesse ni de batterie autour).
-   * Unité et actualisation viennent des réglages de la maquette ; la puissance et la vitesse sont
-   * simulées (croisière, accélération, freinage), et le chiffre et la jauge glissent d'un relevé
-   * au suivant, comme dans l'app.
+   * Style, unités, pastille, actualisation et animation viennent des réglages de la maquette ; la
+   * puissance et la vitesse sont simulées (croisière, accélération, freinage), et le chiffre et la
+   * jauge glissent d'un relevé au suivant, comme dans l'app. Une borne branchée (ici, ou dans le
+   * véhicule virtuel) fait place au module de charge.
    */
   function mountCluster(el) {
-    const COL = { bg: '#0C0C0C', track: '#2A2A2E', text: '#FFFFFF', text2: '#B0B0B0', lo: '#52525B', accent: '#38BDF8', warn: '#F59E0B' };
-    const MODE_COL = { ECO: '#22C55E', NORMAL: '#38BDF8', SPORT: '#F43F5E', SNOW: '#A5B4FC', CUSTOM: '#F59E0B' };
     el.innerHTML =
       '<div class="cl-screen"><svg class="cl-sq" viewBox="0 0 260 260" role="img"></svg></div>' +
       '<div class="cl-ctl">' +
         '<div class="dock-f"><span data-o="modl"></span><div class="dock-row"><button type="button" class="dock-btn" data-clmod="consumption"></button><button type="button" class="dock-btn" data-clmod="power"></button></div></div>' +
+        '<div class="dock-f"><span data-o="stylel"></span><div class="dock-row"><button type="button" class="dock-btn" data-clstyle="dynamic"></button><button type="button" class="dock-btn" data-clstyle="discreet"></button></div></div>' +
         '<div class="dock-f"><span data-o="unitl"></span><div class="dock-row"><button type="button" class="dock-btn" data-clunit="wh"></button><button type="button" class="dock-btn" data-clunit="kwh"></button></div></div>' +
-        '<div class="dock-row"><button type="button" class="dock-btn" data-run="accel"></button><button type="button" class="dock-btn" data-run="brake"></button></div>' +
+        '<div class="dock-row"><button type="button" class="dock-btn" data-run="accel"></button><button type="button" class="dock-btn" data-run="brake"></button><button type="button" class="dock-btn" data-run="charge"></button></div>' +
         '<p class="cl-msg"></p>' +
       '</div>';
     const q = (sel) => el.querySelector(sel), svg = q('.cl-sq');
     // Module montré : celui de l'onglet Navigation dans les réglages de la maquette, puis au choix.
     let mod = state.settings.clusterNav === 'power' ? 'power' : 'consumption';
-    let speed = 50, smoothed = null, boost = null, anim = 0, timer = null, period = 0, lastT = null, visible = true, lastUnit;
+    let speed = 50, smoothed = null, boost = null, anim = 0, timer = null, period = 0, lastT = null, visible = true, lastKey;
     const shown = { part: 0, value: null, unit: null };
     let target = null;
     const trip = { kwh: 0, regenKwh: 0, km: 0 };
-    const loc = () => (appLang() === 'en' ? 'en-GB' : appLang());
-    const fmtKw = (v) => { const a = Math.abs(v); return a < 9.95 ? a.toLocaleString(loc(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : String(Math.round(a)); };
-    /** Consommation dans l'unité choisie (ClusterGauge.formatConsumption) : [chiffre, unité]. */
-    const cons = (wh) => {
-      if (state.settings.clusterUnit !== 'kwh') return [String(Math.round(wh)), 'Wh/km'];
-      const k = wh / 10;
-      return [k < 99.95 ? k.toLocaleString(loc(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : String(Math.round(k)), 'kWh/100 km'];
-    };
-    const avg = () => (trip.km < 0.2 ? ['–', null] : cons(trip.kwh * 1000 / trip.km));
     /** Croisière : 125 Wh/km plus la traînée ; à l'arrêt, la clim et les accessoires. */
     const cruiseKw = (v) => (v < CG.STOP_KMH ? 1.8 : (125 + 0.0075 * v * v) * v / 1000);
 
-    function arc(cx, cy, r, start, sweep, col) {
-      if (Math.abs(sweep) < 0.5) return '';
-      const p = (a) => (cx + r * Math.cos(a * Math.PI / 180)).toFixed(2) + ' ' + (cy + r * Math.sin(a * Math.PI / 180)).toFixed(2);
-      return '<path d="M' + p(start) + 'A' + r + ' ' + r + ' 0 ' + (Math.abs(sweep) > 180 ? 1 : 0) + ' ' + (sweep > 0 ? 1 : 0) + ' ' + p(start + sweep) + '" fill="none" stroke="' + col + '" stroke-width="13" stroke-linecap="round"/>';
-    }
-    const txt = (t, x, y, size, col, weight, anchor) => (t ? '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" font-size="' + size + '" fill="' + col + '" text-anchor="' + (anchor || 'middle') + '"' + (weight ? ' font-weight="' + weight + '"' : ' letter-spacing="0.5"') + '>' + esc(t) + '</text>' : '');
-    /** Deux colonnes sous la jauge, séparées d'un filet : intitulé en petit, valeur dessous et son unité en petit. */
-    const valeur = (x, v, col) => '<text x="' + x + '" y="241" text-anchor="middle" font-size="16" font-weight="500" fill="' + col + '">' + esc(v[0]) +
-      (v[1] ? '<tspan font-size="11" font-weight="400" fill="' + COL.text2 + '"> ' + esc(v[1]) + '</tspan>' : '') + '</text>';
-    const foot = (l1, v1, c1, l2, v2, c2) => '<rect x="129.5" y="206" width="1" height="38" fill="' + COL.track + '"/>' +
-      txt(l1, 70, 220, 11, COL.text2) + valeur(70, v1, c1) + txt(l2, 190, 220, 11, COL.text2) + valeur(190, v2, c2);
-    /** Graduation à l'extérieur de la piste : un trait, et son libellé un peu plus loin. */
-    const grad = (cx, cy, r, a, lab) => {
-      const dx = Math.cos(a * Math.PI / 180), dy = Math.sin(a * Math.PI / 180);
-      return '<line x1="' + (cx + (r + 8) * dx).toFixed(1) + '" y1="' + (cy + (r + 8) * dy).toFixed(1) + '" x2="' + (cx + (r + 13) * dx).toFixed(1) + '" y2="' + (cy + (r + 13) * dy).toFixed(1) + '" stroke="' + COL.text2 + '" stroke-width="1.5"/>' +
-        txt(lab, cx + (r + 22) * dx, cy + (r + 22) * dy + 4, 11, COL.text2);
-    };
-    function pill() {
-      const mode = car().driveMode, mc = MODE_COL[mode] || MODE_COL.NORMAL, name = (DRIVE_LABEL[mode] || mode).toUpperCase();
-      return '<rect x="14" y="14" width="' + (name.length * 7.7 + 30).toFixed(1) + '" height="22" rx="11" fill="' + mc + '" fill-opacity=".25"/><circle cx="26" cy="25" r="3.5" fill="' + mc + '"/>' +
-        '<text x="35" y="29.5" font-size="11" font-weight="500" letter-spacing="1" fill="' + mc + '">' + esc(name) + '</text>';
+    function draw() {
+      const s = state.settings;
+      svg.innerHTML = clusterSvg({ id: 'clw', mod, style: s.clusterStyle, unit: s.clusterUnit, avgUnit: s.clusterAvg || s.clusterUnit, pill: clusterPill(),
+        st: target, part: shown.part, value: shown.value, kw: smoothed, kmh: speed,
+        avgWh: trip.km < 0.2 ? null : trip.kwh * 1000 / trip.km, regenWh: trip.regenKwh * 1000, charge: clChargeInfo('clw') });
     }
 
-    function draw(mod) {
-      let h = '<rect width="260" height="260" fill="' + COL.bg + '"/>';
-      const st = target, c = car();
-      h += pill();
-      if (mod === 'power') {
-        const cx = 130, cy = 122, R = 88;
-        CG_TICKS.power.forEach((k) => { h += grad(cx, cy, R, 270 + 120 * powerFraction(k), String(k)); });
-        CG_TICKS.regen.forEach((k) => { h += grad(cx, cy, R, 270 - 120 * regenFraction(k), String(k)); });
-        h += arc(cx, cy, R, 150, 240, COL.track);
-        // Le remplissage s'arrête net au zéro : son bout arrondi ne passe pas de l'autre côté.
-        if (st) h += '<defs><clipPath id="clPow"><rect x="130" y="0" width="130" height="260"/></clipPath><clipPath id="clReg"><rect x="0" y="0" width="130" height="260"/></clipPath></defs>' +
-          '<g clip-path="url(#' + (shown.part >= 0 ? 'clPow' : 'clReg') + ')">' + arc(cx, cy, R, 270, 120 * shown.part, st.regen ? COL.accent : COL.warn) + '</g>';
-        h += '<line x1="130" y1="' + (cy - R - 8) + '" x2="130" y2="' + (cy - R + 8) + '" stroke="' + COL.text2 + '" stroke-width="2"/>' + txt('0', 130, cy - R - 12, 11, COL.text2);
-        const v = shown.value != null ? shown.value : st && st.value;
-        const recup = !!st && v != null && v < 0;
-        const big = !st || v == null ? '–' : (recup ? '−' : '') + fmtKw(v);
-        h += txt(big, cx, cy + 12, big.length > 3 ? 46 : 54, recup ? COL.accent : COL.text, 500);
-        if (st) h += txt('kW', cx, cy + 32, 13, recup ? COL.accent : COL.text2, 500);
-        const wh = smoothed == null ? null : whPerKm(smoothed, speed);
-        h += txt(!st ? '' : recup ? S('cluster_regen_word') : wh != null ? cons(wh).join(' ') : S('cluster_stopped_word'), cx, cy + 50, 13, COL.text2);
-        h += foot(S('cluster_battery'), [S('autobri_percent', c.soc), null], COL.text, S('cluster_trip_avg'), avg(), COL.text);
-      } else {
-        const cx = 130, cy = 120;
-        // Graduations en Wh/km, libellées dans l'unité choisie : l'anneau, lui, ne change pas.
-        const kwh = state.settings.clusterUnit === 'kwh';
-        CG_TICKS.cons.forEach((w) => { h += grad(cx, cy, 80, 135 + 270 * consFraction(w), kwh ? String(w / 10) : w >= 1000 ? (w / 1000) + 'k' : String(w)); });
-        h += arc(cx, cy, 80, 135, 270, COL.track);
-        if (st) h += arc(cx, cy, 80, 135, 270 * shown.part, st.regen ? COL.accent : COL.warn);
-        const v = shown.value != null ? shown.value : st ? st.value : 0;
-        let big = '–', unit = '';
-        if (st && st.unit === 'WH_PER_KM') { [big, unit] = cons(v); }
-        else if (st && st.unit === 'KW_REGEN') { big = '↓' + fmtKw(v); unit = S('cluster_regen_kw'); }
-        else if (st) { big = fmtKw(v); unit = S('cluster_stopped_kw'); }
-        const recup = !!st && st.unit === 'KW_REGEN';
-        h += txt(big, cx, cy + 16, big.length > 3 ? 46 : 54, recup ? COL.accent : COL.text, 500);
-        h += txt(unit, cx, cy + 40, 13, recup ? COL.accent : COL.text2);
-        h += foot(S('cluster_trip_avg'), avg(), COL.text, S('cluster_regen'), ['+' + Math.round(trip.regenKwh * 1000), 'Wh'], COL.accent);
-      }
-      svg.innerHTML = h;
-    }
-
-    /** Nouveau relevé : l'anneau et le chiffre partent de ce qui est à l'écran (ClusterGaugeView.montrer). */
+    /** Nouveau relevé : la jauge et le chiffre partent de ce qui est à l'écran (ClusterGaugeView.montrer). */
     function show() {
       cancelAnimationFrame(anim);
-      if (smoothed == null) { target = null; shown.value = null; shown.unit = null; shown.part = 0; draw(mod); return; }
+      if (smoothed == null) { target = null; shown.value = null; shown.unit = null; shown.part = 0; draw(); return; }
       const next = mod === 'power' ? gaugePower(smoothed) : gaugeConsumption(smoothed, speed);
       const from = { part: shown.part, value: shown.value, unit: shown.unit };
       shown.unit = next.unit; target = next;
-      const dur = clamp(state.settings.clusterRefresh * 0.8, 50, 800), t0 = performance.now();
+      // Durée du glissement : réglée à part de l'actualisation (issue #152).
+      const dur = clamp(state.settings.clusterAnim, 200, 2000), t0 = performance.now();
       const step = (now) => {
         const x = Math.min(1, Math.max(0, (now - t0) / dur)), ease = 1 - (1 - x) * (1 - x);
         shown.part = from.part + (next.fraction - from.part) * ease;
         // Même unité : le chiffre compte (100, 101… 300) ; sinon il saute (ClusterGauge.shownValue).
         shown.value = from.value == null || from.unit !== next.unit ? next.value : from.value + (next.value - from.value) * ease;
-        draw(mod);
+        draw();
         if (x < 1) anim = requestAnimationFrame(step);
       };
       anim = requestAnimationFrame(step);
     }
 
     function tick() {
-      if (!visible) return;
-      const now = performance.now();
+      if (!visible || car().charge) return;
+      const now = performance.now(), dt = lastT == null ? 0 : now - lastT;
       let raw;
       if (boost) {
         const p = Math.min(1, (now - boost.t0) / boost.dur);
@@ -3621,9 +4147,12 @@
         if (p >= 1) { boost = null; paint(); }
       } else raw = cruiseKw(speed);
       raw *= 1 + (Math.random() - 0.5) * 0.06;
-      smoothed = smoothed == null ? raw : smoothed + CG.SMOOTHING * (raw - smoothed);
-      if (lastT != null) {
-        const dt = now - lastT;
+      // Style discret : un lissage dans le temps — la barre suit en deux secondes, sans trembler,
+      // quelle que soit l'actualisation (ClusterGauge.smoothTime).
+      if (smoothed == null) smoothed = raw;
+      else if (state.settings.clusterStyle === 'discreet') smoothed += (raw - smoothed) * Math.min(1, dt / CG.DISCREET_TAU_MS);
+      else smoothed += CG.SMOOTHING * (raw - smoothed);
+      if (dt > 0) {
         trip.kwh += smoothed * dt / 3.6e6; trip.km += speed * dt / 3.6e6;
         if (smoothed < 0) trip.regenKwh += -smoothed * dt / 3.6e6;
       }
@@ -3635,17 +4164,24 @@
       if (p === period) return;
       period = p; clearInterval(timer); timer = setInterval(tick, p);
     }
+    // Module de charge : l'éclair pulse et le reflet court, une image toutes les 60 ms.
+    setInterval(() => { if (visible && car().charge) { lastT = null; draw(); } }, 60);
 
     el.addEventListener('click', (e) => {
       const m = e.target.closest('[data-clmod]');
       if (m) { mod = m.getAttribute('data-clmod'); paint(); show(); return; }
+      // Style et unité sont ceux des réglages de la maquette : les changer ici les change là-bas aussi.
+      const st = e.target.closest('[data-clstyle]');
+      if (st) { state.settings.clusterStyle = st.getAttribute('data-clstyle'); commit(); return; }
       const u = e.target.closest('[data-clunit]');
-      // L'unité est celle des réglages de la maquette : la changer ici la change là-bas aussi.
       if (u) { state.settings.clusterUnit = u.getAttribute('data-clunit'); commit(); return; }
       const r = e.target.closest('[data-run]');
       if (!r) return;
+      const what = r.getAttribute('data-run');
+      if (what === 'charge') { if (car().charge) stopCharge(); else startCharge('DC'); return; }
+      if (car().charge) stopCharge();
       const now = performance.now();
-      boost = r.getAttribute('data-run') === 'accel'
+      boost = what === 'accel'
         ? { t0: now, dur: 3000, from: speed, to: Math.min(130, speed + 40), kw: 150 }
         : { t0: now, dur: 3500, from: speed, to: Math.max(0, speed - 50), kw: -45 };
       paint();
@@ -3653,12 +4189,17 @@
     if ('IntersectionObserver' in window) new IntersectionObserver((en) => { visible = en.some((x) => x.isIntersecting); }).observe(el);
 
     function paint() {
-      const k = caps(), s = state.settings;
+      const k = caps(), s = state.settings, ch = car().charge;
       q('[data-o=modl]').textContent = L('Module', 'Module');
-      q('[data-o=unitl]').textContent = S('settings_cluster_unit');
+      q('[data-o=stylel]').textContent = S('settings_cluster_row_style');
+      q('[data-o=unitl]').textContent = S('settings_cluster_row_gauge');
       el.querySelectorAll('[data-clmod]').forEach((b) => {
         const v = b.getAttribute('data-clmod');
         b.textContent = S(v === 'power' ? 'settings_cluster_power' : 'settings_cluster_consumption'); b.classList.toggle('on', v === mod);
+      });
+      el.querySelectorAll('[data-clstyle]').forEach((b) => {
+        const v = b.getAttribute('data-clstyle');
+        b.textContent = S(v === 'discreet' ? 'settings_cluster_style_discreet' : 'settings_cluster_style_dynamic'); b.classList.toggle('on', v === s.clusterStyle);
       });
       el.querySelectorAll('[data-clunit]').forEach((b) => {
         const v = b.getAttribute('data-clunit');
@@ -3666,14 +4207,18 @@
       });
       q('[data-run=accel]').textContent = L('Accélérer', 'Accelerate');
       q('[data-run=brake]').textContent = L('Freiner', 'Brake');
+      q('[data-run=charge]').textContent = ch ? L('🔌 Débrancher', '🔌 Unplug') : L('⚡ Charge DC', '⚡ DC charge');
+      q('[data-run=charge]').classList.toggle('on', !!ch);
       q('[data-run=accel]').disabled = speed >= 130 && !boost;
       q('[data-run=brake]').disabled = speed < 10 && !boost;
-      q('.cl-msg').textContent = k.cluster
-        ? L('Relevé toutes les ' + fmtS(s.clusterRefresh) + ' s : la jauge et le chiffre glissent d\u2019une valeur à la suivante.', 'Reading every ' + fmtS(s.clusterRefresh) + ' s: the gauge and the number glide from one value to the next.')
-        : L('Sur ' + k.g + ', ce module ne peut pas s\u2019afficher : le combiné dessine tout lui-même. Il existe sur SWI133, SWI68 et SWI165.', 'On ' + k.g + ', this module cannot show: the cluster draws everything itself. It exists on SWI133, SWI68 and SWI165.');
+      q('.cl-msg').textContent = !k.cluster
+        ? L('Sur ' + k.g + ', ce module ne peut pas s’afficher : le combiné dessine tout lui-même. Il existe sur SWI133, SWI68 et SWI165.', 'On ' + k.g + ', this module cannot show: the cluster draws everything itself. It exists on SWI133, SWI68 and SWI165.')
+        : ch ? L('Une charge est en cours : le module de charge remplace la jauge. Débranchez pour la retrouver.', 'A charge is in progress: the charge module replaces the gauge. Unplug to get it back.')
+        : L('Relevé toutes les ' + fmtS(s.clusterRefresh) + ' s, glissement en ' + fmtS(s.clusterAnim) + ' s : la jauge et le chiffre vont d’une valeur à la suivante.', 'Reading every ' + fmtS(s.clusterRefresh) + ' s, gliding over ' + fmtS(s.clusterAnim) + ' s: the gauge and the number move from one value to the next.');
       schedule();
-      // Un autre réglage de la maquette ne relance pas la jauge ; l'unité, si.
-      if (s.clusterUnit !== lastUnit) { lastUnit = s.clusterUnit; show(); }
+      // Un autre réglage de la maquette ne relance pas la jauge ; ceux qui changent son dessin, si.
+      const key = [s.clusterUnit, s.clusterStyle, s.clusterAvg, s.clusterPill, appLang(), state.activeProfileId, car().driveMode, !!ch].join('|');
+      if (key !== lastKey) { lastKey = key; if (!ch) show(); else draw(); }
     }
     listeners.add(paint);
     paint();

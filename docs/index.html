@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/site.css?v=1d26e151">
-  <link rel="stylesheet" href="assets/css/sim.css?v=58126668">
+  <link rel="stylesheet" href="assets/css/sim.css?v=248c15cd">
   <link rel="stylesheet" href="assets/css/explorer.css?v=f9d0452c">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,10 +138,13 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span>
-        <b><span data-l="fr">7 nouveautés dans cette version</span></b>
+        <b><span data-l="fr">10 nouveautés dans cette version</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span></button>
       </div>
       <div class="wn-list">
+        <a href="#f-chargepopup" data-feature="f-chargepopup"><span data-l="fr">⚡ Pop-up de charge</span></a>
+        <a href="#f-cluster-discreet" data-feature="f-cluster-discreet"><span data-l="fr">🎚️ Écran conducteur : style discret et charge</span></a>
+        <a href="#f-stats-dcenergy" data-feature="f-stats-dcenergy"><span data-l="fr">🔌 Énergie des charges rapides mesurée</span></a>
         <a href="#apercu-module" data-feature="f-cluster" data-scroll="apercu-module"><span data-l="fr">🖥️ Écran conducteur : consommation ou puissance</span></a>
         <a href="#f-audiocycle" data-feature="f-audiocycle"><span data-l="fr">🎵 Cycle de sources audio</span></a>
         <a href="#f-profiles10" data-feature="f-profiles10"><span data-l="fr">👥 Jusqu'à 10 profils</span></a>
@@ -182,6 +185,7 @@
           <a class="x-chip" href="#vitres" data-grp="vitres"><span data-l="fr">Vitres</span></a>
           <a class="x-chip" href="#audio" data-grp="audio">Volume</a>
           <a class="x-chip" href="#statistiques" data-grp="statistiques"><span data-l="fr">Statistiques</span></a>
+          <a class="x-chip" href="#recharge" data-grp="recharge"><span data-l="fr">Recharge</span></a>
           <a class="x-chip" href="#ecran-conducteur" data-grp="ecran-conducteur"><span data-l="fr">Écran conducteur</span></a>
           <a class="x-chip" href="#reglages" data-grp="reglages"><span data-l="fr">Réglages</span></a>
           <a class="x-chip" href="#garage" data-grp="garage"><span data-l="fr">Mode Garage</span></a>
@@ -601,7 +605,7 @@
           <tr><td><span data-l="fr">Sécurité</span></td><td data-l="fr">ESC · Somnolence · Somnolence : sensibilité · Système anticollision (alternance de mode) · ADAS (alternance) · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son</td></tr>
           <tr><td><span data-l="fr">Confort</span></td><td data-l="fr">Siège chauffant gauche / droit (cycle) · Volant chauffant · Clim ON/OFF · Clim : A/C · Clim : température ± · Clim : ventilation ± · Dégivrage avant / arrière · Recirculation (cycle) · Luminosité ± (pas de 10 %) · Feux de route automatiques · Pop-up HVAC</td></tr>
           <tr><td><span data-l="fr">Média</span></td><td data-l="fr">Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume − · Cycle de sources audio</td></tr>
-          <tr><td><span data-l="fr">Application et véhicule</span></td><td data-l="fr">Lancer un profil · Sélecteur de profil (popup) · Cycle de profils · Ouvrir MG4Control · Lancer une application · Éteindre la voiture</td></tr>
+          <tr><td><span data-l="fr">Application et véhicule</span></td><td data-l="fr">Lancer un profil · Sélecteur de profil (popup) · Cycle de profils · Pop-up de charge · Ouvrir MG4Control · Lancer une application · Éteindre la voiture</td></tr>
         </tbody>
       </table>
     </div>
@@ -812,6 +816,7 @@
       <span class="lbl"><span data-l="fr">Essayer :</span></span>
       <button type="button" data-demo-btn="statsComplete"><span data-l="fr">Compléter une recharge</span></button>
       <button type="button" data-demo-btn="statsTariff"><span data-l="fr">Corriger un tarif</span></button>
+      <button type="button" data-demo-btn="statsEnergy"><span data-l="fr">Voir une charge rapide mesurée</span></button>
     </div>
   </div>
   <div class="points three">
@@ -843,6 +848,50 @@
         <p data-l="fr">Une charge de nuit est <b>reconstituée</b> au réveil ; on peut la <b>compléter</b> (type de prise, heures) pour obtenir la puissance moyenne, et <b>corriger le tarif</b> d'une session. Ces deux saisies se font sans clavier, aux boutons − et + : heures et minutes (de cinq en cinq) pour les horaires, un pas au choix pour le tarif.</p>
       </details>
     </div>
+    <div class="pt is-new" id="f-stats-dcenergy" data-hl-key="st-energy-src" data-demo="statsEnergy">
+      <h3><span data-l="fr">Énergie des charges rapides</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span></h3>
+      <p data-l="fr">En charge rapide, l'énergie est mesurée pendant la charge au lieu d'être déduite du pourcentage, et le détail de chaque recharge dit d'où vient son énergie.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">En charge rapide, le pourcentage affiché ne suit pas l'énergie entrée : sur une charge de 62,8 à 70,1 %, 5,0 kWh mesurés côté batterie, quand l'écart de pourcentage n'en comptait que 4,2. L'application mesure donc l'énergie pendant la charge, même pop-up de charge désactivé. L'écran central s'éteint quand on verrouille la voiture : une charge vue en partie est mesurée sur ce qui a été vu et estimée pour le reste, une charge jamais vue est estimée, dans les deux cas d'après une table apprise tranche de 1 % par tranche de 1 % au fil des charges rapides suivies (une tranche sert dès deux mesures, les plus récentes comptent davantage). Le détail le dit : « mesurée pendant la charge », « mesurée en partie », « estimée d'après les charges déjà vues » ou « estimée d'après le niveau de batterie ». Les charges AC restent calculées d'après le pourcentage, et une énergie mesurée ne bouge plus quand on change de batterie ou d'état de santé.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── Recharge : pop-up de charge ─────────────── -->
+<section class="grp" id="recharge" data-demo="chargePopup">
+  <div class="grp-head">
+    <div class="sec-kicker"><span data-l="fr">Pop-up · Réglages · Interface</span></div>
+    <h2><span data-l="fr">Recharge</span></h2>
+    <p data-l="fr">Dès qu'une charge commence, un pop-up s'ouvre sur l'écran central : la courbe depuis le début de la charge, l'heure de fin, la limite de charge à régler du doigt et le coût. Sur tous les firmwares, activé par défaut.</p>
+    <div class="demo-bar">
+      <span class="lbl"><span data-l="fr">Essayer :</span></span>
+      <button type="button" data-demo-btn="chargePopup"><span data-l="fr">Brancher une borne rapide</span></button>
+      <button type="button" data-demo-btn="chargeAc"><span data-l="fr">Brancher une wallbox</span></button>
+    </div>
+  </div>
+  <div class="points three">
+    <div class="pt is-new" id="f-chargepopup" data-hl-key="charge-popup" data-demo="chargePopup">
+      <h3><span data-l="fr">Pop-up de charge</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span></h3>
+      <p data-l="fr">La batterie au dixième, la courbe de la puissance et du niveau, puis la puissance, l'énergie ajoutée, l'autonomie gagnée, le coût et la durée.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Il s'ouvre à chaque début de charge, en AC comme en rapide, même quand l'application démarre en pleine charge, et se ferme à la demande ou au passage en READY : pas de décompte. La courbe part du début de la charge, pas de l'ouverture du pop-up : l'application relève la charge en arrière-plan (un trou si l'écran s'éteint), l'axe des kW monte jusqu'à la puissance maximale atteinte, et un pointillé relie le niveau actuel à la limite, à l'heure de fin estimée. L'autonomie gagnée est l'écart de l'autonomie estimée par la voiture depuis le début. Le raccourci « Pop-up de charge » le rouvre ou le referme ; l'option se coupe dans Réglages › Interface. Dans la maquette, branchez une borne depuis le véhicule virtuel : la charge avance en accéléré, et entre dans les Statistiques au débranchement.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-chargelimit" data-hl-key="cg-slider" data-demo="chargePopup">
+      <h3><span data-l="fr">Limite de charge au doigt</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span></h3>
+      <p data-l="fr">La barre de batterie devient un curseur : de 40 à 100 % par pas de 10, la limite part à la voiture au relâchement, et l'heure de fin suit.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Sous le niveau actuel, le pop-up prévient que la charge s'arrêtera ; si la voiture ne prend pas la nouvelle limite, il le dit. Sur les firmwares A9 (SWI69, SWI131, SWI132), la limite ne se règle que si la voiture le permet, comme dans son application de charge : pas sur une batterie LFP (MG4 Standard), qui charge jusqu'à 100 %. La barre montre alors le seul niveau, un cadenas l'explique, et l'heure de fin vise le plein. Dans la maquette, une A9 avec la batterie de 51 kWh (onglet Statistiques) tient lieu de batterie LFP. Firmware sélectionné : <span data-fw-name></span>.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-chargeprice" data-hl-key="cg-cost" data-demo="chargePrice">
+      <h3><span data-l="fr">Prix de cette charge</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span></h3>
+      <p data-l="fr">Le coût suit le tarif AC ou DC de l'onglet Statistiques ; le crayon le corrige pour cette charge seulement, sans clavier.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Boutons − et + avec un pas au choix (maintenus, ils défilent), coût recalculé en direct, l'ancien barré à côté. « Tarif par défaut » revient au tarif des Statistiques. Le prix corrigé suit la charge dans l'onglet Statistiques, comme « Corriger le tarif ».</p>
+      </details>
+    </div>
   </div>
 </section>
 
@@ -851,10 +900,11 @@
   <div class="grp-head">
     <div class="sec-kicker"><span data-l="fr">Réglages · Interface</span></div>
     <h2><span data-l="fr">Écran conducteur</span></h2>
-    <p data-l="fr">Un module MG4Control au centre du combiné, derrière le volant : la consommation en direct ou la puissance. Sur SWI133, SWI68 et SWI165, désactivé par défaut.</p>
+    <p data-l="fr">Un module MG4Control au centre du combiné, derrière le volant : la consommation en direct ou la puissance, en style dynamique ou discret, et la charge en cours. Sur SWI133, SWI68 et SWI165, désactivé par défaut.</p>
     <div class="demo-bar">
       <span class="lbl"><span data-l="fr">Essayer :</span></span>
       <button type="button" data-demo-btn="cluster" data-hl="s-cluster"><span data-l="fr">Activer le module</span></button>
+      <button type="button" data-demo-btn="clusterDiscreet" data-hl="s-cluster-style"><span data-l="fr">Style discret</span></button>
     </div>
   </div>
   <div class="points three">
@@ -867,22 +917,36 @@
     </div>
     <div class="pt is-new" id="f-cluster-modules" data-hl-key="s-cluster-tabs" data-demo="cluster">
       <h3><span data-l="fr">Consommation ou puissance</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span></h3>
-      <p data-l="fr">Deux modules gradués : l'anneau de la consommation en direct, en Wh/km ou en kWh/100 km, ou l'arc de la puissance, la récupération à gauche, la puissance à droite.</p>
+      <p data-l="fr">Deux modules gradués : l'anneau de la consommation en direct, ou l'arc de la puissance, la récupération à gauche, la puissance à droite et la consommation instantanée dessous.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Consommation : en Wh/km ou en kWh/100 km au choix (Réglages › Interface), en roulant, sur une échelle logarithmique jusqu'à 3 000 Wh/km (300 kWh/100 km) pour que les pointes d'accélération restent lisibles ; les graduations suivent l'unité ; à l'arrêt, les kW consommés (clim, accessoires) ; en récupération, les kW récupérés, en bleu. Puissance, en kW écrits sous le chiffre : de 60 kW récupérés à 320 kW (la XPower), sur une échelle resserrée qui fait bouger l'arc en roulant — 20 kW en remplissent déjà un quart —, en orange quand la batterie se vide, en bleu quand elle se recharge ; le remplissage s'arrête net au zéro. Au pied, la moyenne du trajet depuis le READY (récupération déduite) avec l'énergie récupérée, ou la batterie ; en haut, le mode de conduite. Le chiffre ne saute pas d'une valeur à l'autre : il compte (100, 101… 300), et la jauge glisse avec lui.</p>
+        <p data-l="fr">Consommation : en Wh/km ou en kWh/100 km, en roulant, sur une échelle logarithmique jusqu'à 3 000 Wh/km (300 kWh/100 km) pour que les pointes d'accélération restent lisibles ; les graduations suivent l'unité ; à l'arrêt, les kW consommés (clim, accessoires) ; en récupération, dès 5 km/h, une consommation négative, en bleu (25 kW récupérés à 60 km/h : −41,7 kWh/100 km), l'anneau montrant les kW récupérés. Puissance : de 60 kW récupérés à 320 kW (la XPower), sur une échelle resserrée qui fait bouger l'arc en roulant — 20 kW en remplissent déjà un quart —, en orange quand la batterie se vide, en bleu quand elle se recharge ; le remplissage s'arrête net au zéro ; des kW entiers en roulant, et dessous, en grand, la consommation instantanée, négative et bleue en récupération. Au pied, la moyenne du trajet depuis le READY (récupération déduite), plus l'énergie récupérée sur le module Consommation ; la batterie, déjà sur le combiné, n'y est plus. En haut, une pastille : le profil appliqué dans la couleur de son mode de conduite, ou le mode. Le chiffre ne saute pas d'une valeur à l'autre : il compte (100, 101… 300), et la jauge glisse avec lui.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-cluster-tabs" data-hl-key="s-cluster-refresh" data-demo="cluster">
-      <h3><span data-l="fr">Un module par onglet</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span></h3>
-      <p data-l="fr">Un module pour l'onglet Navigation, un autre (ou aucun) pour l'onglet Musique, et l'actualisation de la jauge, de 0,1 à 1 s.</p>
+      <h3><span data-l="fr">Un module par onglet, et un aperçu</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span></h3>
+      <p data-l="fr">Un module pour l'onglet Navigation, un autre (ou aucun) pour l'onglet Musique ; à côté des réglages, un aperçu sur un trajet simulé suit chaque changement.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Les onglets du combiné se choisissent au volant, et le module suit l'onglet affiché. Ordinateur de bord, pression des pneus et réglages sont dessinés par le combiné lui-même : aucun module ne peut s'y afficher. Puissance, vitesse et jauge sont relues de 0,1 à 1 seconde (1 s par défaut) : plus court, plus réactif, mais le chiffre bouge davantage. Le mode de conduite et la batterie, eux, sont relus toutes les 10 secondes.</p>
+        <p data-l="fr">Les onglets du combiné se choisissent au volant, et le module suit l'onglet affiché. Ordinateur de bord, pression des pneus et réglages sont dessinés par le combiné lui-même : aucun module ne peut s'y afficher. Les réglages sont rangés en trois groupes : Modules ; Apparence, avec le style (dynamique ou discret) et la pastille (profil, mode de conduite ou aucune) ; Unités, avec celle de la jauge (Wh/km ou kWh/100 km) et, à part, celle de la moyenne du trajet, qui peut aussi s'écrire en km/kWh. « Avancé » déplie l'actualisation, de 0,1 à 1 s (1 s par défaut : plus court, plus réactif, mais le chiffre bouge davantage), et la durée de l'animation, de 0,2 à 2 s (0,8 s par défaut), le temps que met la jauge pour glisser d'une valeur à la suivante. Le mode de conduite et le profil sont relus toutes les 10 secondes.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-cluster-discreet" data-hl-key="s-cluster-style" data-demo="clusterDiscreet">
+      <h3><span data-l="fr">Style discret</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span></h3>
+      <p data-l="fr">Pour qui trouve distrayants les chiffres qui défilent : une barre fine graduée, des chiffres fixes sous les crans, et la moyenne du trajet en bas.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Puissance : le zéro marqué, la récupération à gauche en bleu, la puissance à droite en gris clair. Consommation : une courte zone de récupération à gauche, puis l'échelle ; un triangle « moy. » marque la moyenne du trajet, et la barre est verte en dessous, orange au-dessus. Mêmes échelles que le style dynamique (60 kW de récupération, 320 kW, 3 000 Wh/km), même pastille, même moyenne en bas. La barre suit en deux secondes, sans trembler, quelle que soit l'actualisation. Réglages › Interface › Apparence › Style.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-cluster-charge" data-hl-key="s-cluster-preview" data-demo="chargeCluster">
+      <h3><span data-l="fr">Pendant une charge</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span></h3>
+      <p data-l="fr">Le module de charge remplace la jauge : en grand le temps restant jusqu'à la limite, le niveau au dixième et l'heure de fin, puis puissance, énergie et durée.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Il prend la place de la jauge sur les onglets qui ont un module, dès qu'une charge est détectée, en AC comme en rapide. L'éclair de la pastille pulse et un reflet court sur la barre jusqu'à la limite ; à la fin, tout se fige et passe au vert : « Charge terminée ». Au débranchement, la jauge revient. Essayez l'aperçu sous les cartes : « ⚡ Charge DC » branche une borne rapide.</p>
       </details>
     </div>
   </div>
   <div class="widget is-new" id="apercu-module">
     <h3><span data-l="fr">Aperçu du module</span></h3>
-    <p class="sub" data-l="fr">Le module tel qu'il s'affiche dans le carré central du combiné, avec l'unité et l'actualisation réglées dans la maquette. La conduite est simulée : choisissez le module, accélérez, freinez.</p>
+    <p class="sub" data-l="fr">Le module tel qu'il s'affiche dans le carré central du combiné, avec le style, les unités, la pastille et l'animation réglés dans la maquette. La conduite est simulée : choisissez le module et le style, accélérez, freinez, ou branchez une borne.</p>
     <div class="cl" data-cluster></div>
   </div>
 </section>
@@ -1199,6 +1263,7 @@
           <tr><td><span data-l="fr">Luminosité automatique · profil selon la batterie</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
           <tr><td><span data-l="fr">Statistiques : énergie des trajets</span></td><td data-col="SWI133" class="p"><span data-l="fr">✓ compteurs</span></td><td data-col="SWI132" class="p"><span data-l="fr">✓ compteurs</span></td><td data-col="SWI68" class="p"><span data-l="fr">✓ calculée</span></td><td data-col="SWI69" class="p"><span data-l="fr">✓ calculée</span></td><td data-col="SWI131" class="p"><span data-l="fr">✓ calculée</span></td><td data-col="SWI165" class="p"><span data-l="fr">✓ calculée</span></td></tr>
           <tr><td><span data-l="fr">Module sur l'écran conducteur</span> <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="n">✕</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="n">✕</td><td data-col="SWI131" class="n">✕</td><td data-col="SWI165" class="y">✓</td></tr>
+          <tr><td><span data-l="fr">Pop-up de charge · limite de charge</span> <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.9</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="p"><span data-l="fr">✓ limite selon la batterie</span></td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="p"><span data-l="fr">✓ limite selon la batterie</span></td><td data-col="SWI131" class="p"><span data-l="fr">✓ limite selon la batterie</span></td><td data-col="SWI165" class="y">✓</td></tr>
           <tr><td><span data-l="fr">Éteindre le véhicule (écran actif)</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
           <tr><td><span data-l="fr">Profils · raccourcis · automatisations · API</span></td><td data-col="SWI133" class="y">✓</td><td data-col="SWI132" class="y">✓</td><td data-col="SWI68" class="y">✓</td><td data-col="SWI69" class="y">✓</td><td data-col="SWI131" class="y">✓</td><td data-col="SWI165" class="y">✓</td></tr>
         </tbody>
@@ -1276,8 +1341,8 @@
 <div class="dock" aria-label="Véhicule virtuel"></div>
 <button type="button" class="to-top" aria-label="Revenir en haut de la page" title="Revenir en haut de la page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="assets/js/strings.js?v=ce7bbf76"></script>
-<script src="assets/js/sim.js?v=7e1009b1"></script>
+<script src="assets/js/strings.js?v=af8d61bc"></script>
+<script src="assets/js/sim.js?v=6c75f95a"></script>
 <script src="assets/js/site.js?v=eae0ab3a"></script>
 <script src="assets/js/explorer.js?v=cfdef38a"></script>
 </body>
