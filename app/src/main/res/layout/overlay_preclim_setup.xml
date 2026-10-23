@@ -1,0 +1,307 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pré-climatisation (issue #130, maquette du 2026-10-23) : pop-up ouvert par le raccourci au
+     volant. À gauche le mode — « Maintenant » (durée maximale) ou « À une heure » (premier cycle,
+     durée, nombre de cycles, pause) —, à droite les réglages de la clim, en bas le programme et
+     Démarrer. Carte de base 1140 × 440 dp, agrandie comme le pop-up HVAC (OverlayKit.contextes). -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/preclim_backdrop"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#99000000"
+    android:clickable="true"
+    android:focusable="true">
+
+    <LinearLayout
+        android:layout_width="1140dp"
+        android:layout_height="440dp"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:background="@drawable/bg_hvac_modern_card"
+        android:padding="16dp"
+        android:clickable="true"
+        android:focusable="true">
+
+        <!-- ── En-tête : titre, repère du joystick, fermeture ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="44dp"
+            android:layout_marginBottom="10dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <ImageView
+                android:id="@+id/preclim_title_icon"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_marginStart="4dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_hvac_ac" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="10dp"
+                android:text="@string/preclim_title"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <LinearLayout
+                android:id="@+id/preclim_joy_chip"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:paddingStart="12dp"
+                android:paddingEnd="14dp">
+
+                <TextView
+                    android:id="@+id/preclim_joy_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:drawableStart="@drawable/ic_hvac_target"
+                    android:drawablePadding="6dp"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/preclim_joy_move"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:drawableStart="@drawable/ic_overlay_stick_move"
+                    android:drawablePadding="3dp"
+                    android:text="@string/overlay_joy_navigate"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+
+                <TextView
+                    android:id="@+id/preclim_joy_ok"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="14dp"
+                    android:drawableStart="@drawable/ic_hvac_stick_click"
+                    android:drawablePadding="4dp"
+                    android:text="@string/overlay_joy_validate"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:maxLines="1" />
+
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/preclim_close"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:layout_marginStart="12dp"
+                android:contentDescription="@string/nav_close"
+                android:scaleType="center"
+                android:src="@drawable/ic_hvac_close" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal"
+            android:baselineAligned="false">
+
+            <!-- ── Gauche : le mode et son programme ── -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="@drawable/bg_hvac_panel"
+                android:padding="14dp">
+
+                <LinearLayout
+                    android:id="@+id/preclim_modes"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:orientation="horizontal"
+                    android:background="@drawable/bg_dialog_segments"
+                    android:padding="4dp" />
+
+                <LinearLayout
+                    android:id="@+id/preclim_now"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/preclim_now_caption"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="15sp" />
+
+                    <LinearLayout
+                        android:id="@+id/preclim_max_row"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/preclim_at"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <include android:id="@+id/preclim_row_first" layout="@layout/item_preclim_stepper" />
+                    <include android:id="@+id/preclim_row_run" layout="@layout/item_preclim_stepper" />
+                    <include android:id="@+id/preclim_row_runs" layout="@layout/item_preclim_stepper" />
+                    <include android:id="@+id/preclim_row_pause" layout="@layout/item_preclim_stepper" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- ── Droite : les réglages de la clim, et ceux d'avant qui reviendront ── -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:orientation="vertical"
+                android:background="@drawable/bg_hvac_panel"
+                android:padding="14dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/preclim_clim_caption"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08"
+                    android:textAllCaps="true" />
+
+                <include android:id="@+id/preclim_row_temp" layout="@layout/item_preclim_stepper" />
+                <include android:id="@+id/preclim_row_fan" layout="@layout/item_preclim_stepper" />
+
+                <LinearLayout
+                    android:id="@+id/preclim_fan_bar"
+                    android:layout_width="match_parent"
+                    android:layout_height="6dp"
+                    android:layout_marginTop="6dp"
+                    android:orientation="horizontal" />
+
+                <LinearLayout
+                    android:id="@+id/preclim_ac_row"
+                    android:layout_width="match_parent"
+                    android:layout_height="50dp"
+                    android:layout_marginTop="10dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="8dp"
+                    android:background="@drawable/bg_dialog_tile"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/preclim_ac"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:id="@+id/preclim_ac_state"
+                        android:layout_width="wrap_content"
+                        android:layout_height="32dp"
+                        android:gravity="center"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:maxLines="1" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/preclim_current"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    android:maxLines="2"
+                    android:ellipsize="end" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- ── Bas : le programme, Annuler, Démarrer ── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:layout_marginTop="12dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/preclim_plan"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginEnd="12dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="15sp"
+                android:maxLines="2"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/preclim_cancel"
+                android:layout_width="180dp"
+                android:layout_height="52dp"
+                android:background="@drawable/bg_dialog_tile"
+                android:gravity="center"
+                android:text="@string/preclim_cancel"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/preclim_start"
+                android:layout_width="220dp"
+                android:layout_height="52dp"
+                android:layout_marginStart="10dp"
+                android:background="@drawable/bg_dialog_primary"
+                android:gravity="center"
+                android:text="@string/preclim_start"
+                android:textColor="@color/hvac_on_accent"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

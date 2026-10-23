@@ -79,7 +79,11 @@ enum class ShortcutAction(val id: Int) {
 
     // Pop-up de charge (2026-10-16) : le rouvre s'il a été fermé pendant une charge, ou le referme.
     // Comme HVAC_POPUP, l'action n'écrit rien elle-même. Option coupée : un message dit où l'activer.
-    CHARGE_POPUP(45);
+    CHARGE_POPUP(45),
+
+    // Pré-climatisation (issue #130, 2026-10-23) : ouvre son pop-up de réglage, ou réaffiche l'écran
+    // de suivi pendant un programme. N'écrit rien elle-même : c'est « Démarrer » qui lance.
+    PRE_CLIMATE(46);
 
     companion object {
         /**

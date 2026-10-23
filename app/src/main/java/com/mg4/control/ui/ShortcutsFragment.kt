@@ -25,6 +25,7 @@ import com.mg4.control.accessibility.AdvancedShortcuts
 import com.mg4.control.accessibility.KeyCaptureService
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.DrivingProfile
+import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.service.OverlayKit
@@ -36,6 +37,7 @@ import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.util.FirmwareInfo
+import com.mg4.control.util.PreClimateSettings
 
 class ShortcutsFragment : Fragment() {
 
@@ -203,6 +205,9 @@ class ShortcutsFragment : Fragment() {
             add(ActionItem(getString(R.string.shortcuts_action_audio_cycle),    ShortcutAction.AUDIO_SOURCE_CYCLE))
             // Pop-up de charge : toujours proposé (2026-10-17) ; option coupée, il dit où l'activer.
             add(ActionItem(getString(R.string.shortcuts_action_charge_popup),  ShortcutAction.CHARGE_POPUP))
+            // Pré-climatisation (issue #130) : verrouillage, clim et extinction existent sur tout
+            // firmware connu.
+            if (isKnown) add(ActionItem(getString(R.string.shortcuts_action_preclim), ShortcutAction.PRE_CLIMATE))
             add(ActionItem(getString(R.string.shortcuts_action_open_app),       ShortcutAction.OPEN_APP))
             add(ActionItem(getString(R.string.shortcuts_action_open_custom_app),ShortcutAction.OPEN_CUSTOM_APP))
             if (MG4Hardware.hasVehiclePowerOff()) {
@@ -226,6 +231,7 @@ class ShortcutsFragment : Fragment() {
         setupRegenCycle(view)
         setupProfileCycle(view)
         setupSourceCycle(view)
+        setupPreClimatePage(view)
         restoreState()
 
         // En dernier : le rail décide quelles pages existent, il lui faut l'état final.
@@ -1109,6 +1115,7 @@ class ShortcutsFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_regen)    to view.findViewById<ViewGroup>(R.id.page_sc_regen),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_profiles) to view.findViewById<ViewGroup>(R.id.page_sc_profiles),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_sources)  to view.findViewById<ViewGroup>(R.id.page_sc_sources),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_preclim)  to view.findViewById<ViewGroup>(R.id.page_sc_preclim),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_list)     to view.findViewById<ViewGroup>(R.id.page_sc_list)
         )
         val pageCycle   = tabs[4].second
@@ -1123,7 +1130,8 @@ class ShortcutsFragment : Fragment() {
             tabs[3].second to ShortcutAction.ADAS_CYCLE,
             tabs[4].second to ShortcutAction.REGEN_CYCLE,
             tabs[5].second to ShortcutAction.PROFILE_CYCLE,
-            tabs[6].second to ShortcutAction.AUDIO_SOURCE_CYCLE
+            tabs[6].second to ShortcutAction.AUDIO_SOURCE_CYCLE,
+            tabs[7].second to ShortcutAction.PRE_CLIMATE
         )
         setupAdvancedShortcuts(view)
         val scroll = view.findViewById<ScrollView>(R.id.scroll_shortcuts)
@@ -1447,6 +1455,38 @@ class ShortcutsFragment : Fragment() {
         if (v is ViewGroup) {
             for (i in 0 until v.childCount) setChildrenEnabled(v.getChildAt(i), enabled)
         }
+    }
+
+    /**
+     * Page « Pré-climatisation » (issue #130) : décompte avant verrouillage, seuil de batterie et
+     * écran pendant l'attente. Enregistré à chaque appui — rien à valider.
+     */
+    private fun setupPreClimatePage(view: View) {
+        val ctx = requireContext()
+        val tvLock = view.findViewById<TextView>(R.id.tv_preclim_lock)
+        val tvSoc = view.findViewById<TextView>(R.id.tv_preclim_soc)
+        val dim = view.findViewById<MaterialButton>(R.id.btn_preclim_screen_dim)
+        val off = view.findViewById<MaterialButton>(R.id.btn_preclim_screen_off)
+        fun peindre() {
+            tvLock.text = getString(R.string.preclim_value_seconds, PreClimateSettings.lockSeconds(ctx))
+            tvSoc.text = getString(R.string.preclim_value_percent, PreClimateSettings.minSoc(ctx))
+            highlightConfig(mapOf(0 to dim, 1 to off), if (PreClimateSettings.screenOff(ctx)) 1 else 0)
+        }
+        AppDialog.repeter(view.findViewById(R.id.btn_preclim_lock_minus)) {
+            PreClimateSettings.setLockSeconds(ctx, PreClimateSettings.lockSeconds(ctx) - PreClimatePlan.LOCK_STEP_S); peindre()
+        }
+        AppDialog.repeter(view.findViewById(R.id.btn_preclim_lock_plus)) {
+            PreClimateSettings.setLockSeconds(ctx, PreClimateSettings.lockSeconds(ctx) + PreClimatePlan.LOCK_STEP_S); peindre()
+        }
+        AppDialog.repeter(view.findViewById(R.id.btn_preclim_soc_minus)) {
+            PreClimateSettings.setMinSoc(ctx, PreClimateSettings.minSoc(ctx) - PreClimatePlan.SOC_STEP); peindre()
+        }
+        AppDialog.repeter(view.findViewById(R.id.btn_preclim_soc_plus)) {
+            PreClimateSettings.setMinSoc(ctx, PreClimateSettings.minSoc(ctx) + PreClimatePlan.SOC_STEP); peindre()
+        }
+        dim.setOnClickListener { PreClimateSettings.setScreenOff(ctx, false); peindre() }
+        off.setOnClickListener { PreClimateSettings.setScreenOff(ctx, true); peindre() }
+        peindre()
     }
 
     private fun highlightConfig(map: Map<Int, MaterialButton?>, active: Int) {

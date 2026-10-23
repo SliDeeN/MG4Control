@@ -1448,6 +1448,70 @@ object MG4Hardware {
         }
     }
 
+    // ── Verrouillage central (issue #130, pré-climatisation) ────────────────
+    // VEHICLE_LOCK 0x11403800, zone globale : écrire 1 = verrouiller ; lire > 0 = verrouillé (A9 :
+    // 1 à 4 ; le sens exact de chaque valeur n'est écrit nulle part). C'est la tuile « Lock » du
+    // panneau déroulant d'origine. Voies décodées en octobre 2026 (commit d8bc3e2) :
+    //   • SWI133    : VPM ID_ZONED_VEHICLE_LOCK 0x603000c — lecture ✅ en voiture le 2026-10-11 ;
+    //   • SWI68/165 : VehicleControlManager.setDoorLock / getDoorLock ;
+    //   • A9        : CarPropertyManager en direct, comme le CabinController du SystemUI A9.
+    // Repli partout : CarPropertyManager — la voie qu'a validée MG4Dash sur SWI69 et SWI165
+    // (2026-10-19/20) ; sur A9, le repli est CarVehicleSettingClient.setZonedVehicleLockState.
+    // Jamais de déverrouillage : la pré-climatisation n'en a pas besoin (le conducteur ouvre).
+    private const val PROP_VEHICLE_LOCK = 0x11403800
+    private const val AREA_VEHICLE_LOCK = 0x1000000
+    private const val VPM_VEHICLE_LOCK = 0x603000c
+    private const val VEHICLE_LOCK_ON = 1
+
+    /** Portes verrouillées ? null si aucune voie ne répond. */
+    fun readCentralLock(): Boolean? {
+        val brut = readCentralLockRaw()
+        return if (brut < 0) null else brut > 0
+    }
+
+    /**
+     * Vrai une fois que seule la voie de repli répond : la pré-climatisation relit le verrouillage
+     * toutes les deux secondes pendant des heures, une voie d'origine en échec écrirait sinon une
+     * erreur au journal à chaque fois. Remis à faux si le repli échoue à son tour.
+     */
+    @Volatile private var sLockReadFallback = false
+
+    private fun readCentralLockRaw(): Int {
+        if (!sLockReadFallback) {
+            val origine = when {
+                isA9Vsm() -> getIntPropertyCPM(PROP_VEHICLE_LOCK, AREA_VEHICLE_LOCK)
+                FirmwareInfo.isVsmBased() -> (callVcontrol("getDoorLock") as? Int) ?: -1
+                sVpm != null -> getIntPropertyVpm(VPM_VEHICLE_LOCK)
+                else -> -1
+            }
+            if (origine >= 0) return origine
+        }
+        val repli = if (isA9Vsm()) (callVsm("getZonedVehicleLockState") as? Int) ?: -1
+                    else getIntPropertyCPM(PROP_VEHICLE_LOCK, AREA_VEHICLE_LOCK)
+        if (repli >= 0 && !sLockReadFallback) AppLogger.i(TAG, "verrouillage central : lu par la voie de repli")
+        sLockReadFallback = repli >= 0
+        return repli
+    }
+
+    /**
+     * Verrouille les portes, comme la tuile « Lock » du panneau d'origine. [repli] : la seconde
+     * voie, à essayer quand la relecture dit que la première n'a rien fait. Rend vrai si la
+     * commande est PARTIE — seule la relecture dit si les portes sont verrouillées.
+     */
+    fun lockDoors(repli: Boolean = false): Boolean {
+        val voie: String
+        val ok = when {
+            isA9Vsm() && !repli -> { voie = "CPM"; setIntPropertyCPM(PROP_VEHICLE_LOCK, AREA_VEHICLE_LOCK, VEHICLE_LOCK_ON) }
+            isA9Vsm() -> { voie = "VSM setZonedVehicleLockState"; callVsmVoid("setZonedVehicleLockState", VEHICLE_LOCK_ON) }
+            repli -> { voie = "CPM"; setIntPropertyCPM(PROP_VEHICLE_LOCK, AREA_VEHICLE_LOCK, VEHICLE_LOCK_ON) }
+            FirmwareInfo.isVsmBased() -> { voie = "VCTRL setDoorLock"; callVcontrolVoid("setDoorLock", VEHICLE_LOCK_ON) }
+            sVpm != null -> { voie = "VPM 0x603000c"; setIntPropertyVpmRecovery(VPM_VEHICLE_LOCK, VEHICLE_LOCK_ON) }
+            else -> { voie = "CPM"; setIntPropertyCPM(PROP_VEHICLE_LOCK, AREA_VEHICLE_LOCK, VEHICLE_LOCK_ON) }
+        }
+        AppLogger.i(TAG, "lockDoors (${if (repli) "repli" else "voie d'origine"} : $voie) → $ok")
+        return ok
+    }
+
     // ── Garde de sécurité : levier en position P ? ───────────────────────────
     // L'OEM n'autorise le power-off qu'en P (gear == 1), mais NE garde PAS la commande
     // côté firmware → c'est l'app qui doit vérifier (sinon extinction possible en roulant).

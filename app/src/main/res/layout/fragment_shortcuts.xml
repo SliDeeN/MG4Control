@@ -52,9 +52,16 @@
         android:layout_weight="1"
         android:orientation="horizontal">
 
-        <LinearLayout
+        <!-- Le rail défile : avec toutes les fonctions à réglage attribuées, il a neuf entrées. -->
+        <ScrollView
             android:layout_width="180dp"
             android:layout_height="match_parent"
+            android:scrollbars="none"
+            android:overScrollMode="never">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingTop="14dp"
             android:paddingEnd="14dp">
@@ -176,6 +183,24 @@
                 app:strokeColor="@color/dash_border"
                 app:cornerRadius="8dp" />
 
+            <!-- Pré-climatisation (issue #130) : même règle, l'entrée n'existe que si la fonction
+                 est attribuée à un bouton. -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_sc_sub_preclim"
+                android:layout_marginStart="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/shortcuts_cat_preclim"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                android:textAllCaps="true"
+                android:visibility="gone"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
             <!-- Pas de retrait, contrairement aux quatre réglages : la liste n'est pas
                  conditionnelle, c'est une destination permanente au même rang que les deux
                  premiers onglets. -->
@@ -194,6 +219,8 @@
                 app:cornerRadius="8dp" />
 
         </LinearLayout>
+
+        </ScrollView>
 
         <View
             android:layout_width="1dp"
@@ -1148,6 +1175,223 @@
                                 app:cornerRadius="8dp" />
 
                         </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- ═══ Pré-climatisation (issue #130) — réglages qui ne changent pas d'une fois sur l'autre ═══ -->
+                <!-- Le mode, les horaires et la clim se choisissent dans le pop-up du raccourci. -->
+                <LinearLayout
+                    android:id="@+id/page_sc_preclim"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_card_rounded"
+                        android:layout_marginEnd="5dp"
+                        android:paddingBottom="14dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/shortcuts_action_preclim"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.10"
+                            android:textAllCaps="true"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="8dp" />
+
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/dash_border" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/preclim_cfg_hint"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/preclim_cfg_lock"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_lock_minus"
+                                android:layout_width="64dp"
+                                android:layout_height="52dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="−"
+                                android:textColor="@color/text_primary"
+                                android:textSize="20sp"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <TextView
+                                android:id="@+id/tv_preclim_lock"
+                                android:layout_width="96dp"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:textColor="@color/text_primary"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_lock_plus"
+                                android:layout_width="64dp"
+                                android:layout_height="52dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="+"
+                                android:textColor="@color/text_primary"
+                                android:textSize="20sp"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/preclim_cfg_soc"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_soc_minus"
+                                android:layout_width="64dp"
+                                android:layout_height="52dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="−"
+                                android:textColor="@color/text_primary"
+                                android:textSize="20sp"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <TextView
+                                android:id="@+id/tv_preclim_soc"
+                                android:layout_width="96dp"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:textColor="@color/text_primary"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_soc_plus"
+                                android:layout_width="64dp"
+                                android:layout_height="52dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="+"
+                                android:textColor="@color/text_primary"
+                                android:textSize="20sp"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/preclim_cfg_screen"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_screen_dim"
+                                android:layout_width="170dp"
+                                android:layout_height="52dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="@string/preclim_screen_dim"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                android:maxLines="1"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_screen_off"
+                                android:layout_width="170dp"
+                                android:layout_height="52dp"
+                                android:layout_marginStart="8dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="@string/preclim_screen_off"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                android:maxLines="1"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/preclim_cfg_warning"
+                            android:textColor="@color/dash_warn"
+                            android:textSize="13sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="14dp" />
 
                     </LinearLayout>
 

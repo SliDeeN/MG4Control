@@ -14,6 +14,7 @@ import android.view.accessibility.AccessibilityEvent
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.service.HvacPopupOverlay
 import com.mg4.control.service.MG4ControlService
+import com.mg4.control.service.PreClimatePopupOverlay
 import com.mg4.control.service.ProfileConfirmOverlay
 import com.mg4.control.service.ProfilePickerOverlay
 import com.mg4.control.shortcut.PressType
@@ -194,7 +195,8 @@ class KeyCaptureService : AccessibilityService() {
             if (commande != null && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 val confirmation = ProfileConfirmOverlay.isShowing()
                 val profils = ProfilePickerOverlay.isShowing()
-                if (confirmation || profils || HvacPopupOverlay.isShowing()) {
+                val preclim = PreClimatePopupOverlay.isShowing()
+                if (confirmation || profils || preclim || HvacPopupOverlay.isShowing()) {
                     navigationEnCours.add(code)
                     val naviguer: () -> Unit = {
                         when {
@@ -205,6 +207,10 @@ class KeyCaptureService : AccessibilityService() {
                             profils -> {
                                 AppLogger.i(TAG, "touche $code — navigation popup profils → ${commande.name}")
                                 ProfilePickerOverlay.naviguer(commande)
+                            }
+                            preclim -> {
+                                AppLogger.i(TAG, "touche $code — pop-up pré-climatisation → ${commande.name}")
+                                PreClimatePopupOverlay.naviguer(commande)
                             }
                             else -> {
                                 AppLogger.i(TAG, "touche $code — pop-up HVAC → ${commande.name}")
@@ -217,6 +223,9 @@ class KeyCaptureService : AccessibilityService() {
                         confirmation -> null
                         profils -> if (ouvreEnAppuiLong(code, ShortcutAction.PROFILE_PICKER)) {
                             { ProfilePickerOverlay.fermerParRaccourci(this) }
+                        } else null
+                        preclim -> if (ouvreEnAppuiLong(code, ShortcutAction.PRE_CLIMATE)) {
+                            { PreClimatePopupOverlay.fermerParRaccourci() }
                         } else null
                         else -> if (ouvreEnAppuiLong(code, ShortcutAction.HVAC_POPUP)) {
                             { HvacPopupOverlay.fermerParRaccourci() }

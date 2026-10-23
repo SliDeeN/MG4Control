@@ -62,6 +62,14 @@ class UpdateCheckerTest {
     }
 
     @Test
+    fun `un patch a deux chiffres se compare en nombre, pas en texte`() {
+        // 2.6.10 : premier numéro à deux chiffres. En texte, « 10 » passerait avant « 9 ».
+        assertTrue(UpdateChecker.isNewer("2.6.10", "2.6.9"))
+        assertFalse(UpdateChecker.isNewer("2.6.9", "2.6.10"))
+        assertTrue(UpdateChecker.isNewer("2.6.10-beta.43", "2.6.9"))
+    }
+
+    @Test
     fun `remote minor superieur est plus recent`() {
         assertTrue(UpdateChecker.isNewer("2.7.0", "2.6.9"))
     }

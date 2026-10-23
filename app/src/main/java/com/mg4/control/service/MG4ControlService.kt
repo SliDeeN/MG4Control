@@ -1070,6 +1070,12 @@ class MG4ControlService : Service() {
             return
         }
 
+        // PRE_CLIMATE : même famille — pop-up de réglage, ou écran de suivi pendant un programme.
+        if (action == ShortcutAction.PRE_CLIMATE) {
+            PreClimate.raccourci(this@MG4ControlService)
+            return
+        }
+
         // APPLY_PROFILE : action directe — pas de toggle d'état, chaque pression applique le profil
         if (action == ShortcutAction.APPLY_PROFILE) {
             val profileId = prefs.getString("shortcut_${pressKey}_profile_id", null) ?: return
