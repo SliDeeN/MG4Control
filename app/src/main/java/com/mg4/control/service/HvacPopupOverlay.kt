@@ -114,6 +114,33 @@ object HvacPopupOverlay {
     private var battements = 0
 
     /**
+     * Consigne de température ou de ventilation (2026-10-23) : la valeur demandée fait foi jusqu'à
+     * ce que la voiture l'ait prise. Deux crans rapides (2 → 4) laissaient la ventilation sur 3 :
+     * la voiture semble ignorer un niveau qui arrive trop tôt après le précédent. D'où des
+     * écritures espacées ([HvacPopup.attenteEnvoi]), une relecture après chacune, et un renvoi si
+     * la voiture n'y est pas ([HvacPopup.suiteConsigne]). Thread principal seulement.
+     */
+    private class Consigne(
+        val nom: String,
+        val ecrire: (Int) -> Boolean,
+        val lire: (MG4Hardware.ClimateState) -> Int?,
+    ) {
+        /** Valeur voulue ; null = rien en cours, l'écran suit la voiture. */
+        var cible: Int? = null
+        var renvois = 0
+        var derniereEcriture = 0L
+        var enVol = false
+        var envoi: Runnable? = null
+        var verification: Runnable? = null
+    }
+
+    private val consigneTemp = Consigne("température", { MG4Hardware.setClimateTemp(it) }, { it.tempC })
+    private val consigneVentilation = Consigne("ventilation", { MG4Hardware.setClimateFan(it) }, { it.fanLevel })
+
+    /** Une consigne attend d'être envoyée ou confirmée : la relecture d'entretien ne doit pas l'écraser. */
+    private fun consignesEnCours(): Boolean = consigneTemp.cible != null || consigneVentilation.cible != null
+
+    /**
      * Vrai si le popup est à l'écran. Lu depuis [KeyCaptureService] pour décider, AU MOMENT de
      * l'appui, si le joystick doit être avalé.
      */
@@ -301,7 +328,7 @@ object HvacPopupOverlay {
                 AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : température ${s.tempC} → ${action.cible}")
                 etat = s.copy(tempC = action.cible)
                 afficher()
-                ecrireDiffere("température") { MG4Hardware.setClimateTemp(action.cible) }
+                demander(consigneTemp, action.cible)
             }
             // Un niveau écrit à la main est aussi ce qui fait SORTIR d'AUTO, comme sur l'écran
             // d'origine : l'état corrigé n'est donc plus en AUTO.
@@ -311,7 +338,7 @@ object HvacPopupOverlay {
                 // Écrire un cran rallume aussi une clim éteinte.
                 etat = s.copy(fanLevel = action.cible, autoOn = s.autoOn?.let { false }, powerOn = s.powerOn?.let { true })
                 afficher()
-                ecrireDiffere("ventilation") { MG4Hardware.setClimateFan(action.cible) }
+                demander(consigneVentilation, action.cible)
             }
             // Gauche au cran le plus bas (issue #147). Même file que la ventilation : un cran
             // encore en attente ne doit pas rallumer la clim après coup, ni l'inverse.
@@ -319,6 +346,8 @@ object HvacPopupOverlay {
                 AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : ventilation ${s.fanLevel} → climatisation éteinte")
                 etat = s.copy(powerOn = false, fanLevel = 0)
                 afficher()
+                // Un cran encore en attente ou à renvoyer rallumerait la clim après coup.
+                abandonner(consigneVentilation)
                 ecrireDiffere("ventilation") { MG4Hardware.setClimatePower(false) }
             }
             // Clic central hors AUTO. En AUTO, il rend la main : c'est alors une [Ventilation].
@@ -326,6 +355,8 @@ object HvacPopupOverlay {
                 AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : mode AUTO activé")
                 etat = s.copy(autoOn = true)
                 afficher()
+                // Un cran renvoyé ensuite ferait ressortir d'AUTO.
+                abandonner(consigneVentilation)
                 ecrire { MG4Hardware.setClimateAuto(true) }
             }
             null -> AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : rien à écrire (butée ou valeur illisible)")
@@ -435,6 +466,93 @@ object HvacPopupOverlay {
         ecrire { MG4Hardware.setSteeringHeat(!actuel) }
     }
 
+    /** Nouvelle valeur voulue : elle part après l'anti-rebond, et jamais trop près de la précédente. */
+    private fun demander(c: Consigne, valeur: Int) {
+        c.cible = valeur
+        c.renvois = 0
+        c.verification?.let { handler.removeCallbacks(it) }
+        c.verification = null
+        planifierEnvoi(c, WRITE_DEBOUNCE_MS)
+    }
+
+    private fun planifierEnvoi(c: Consigne, antiRebond: Long) {
+        c.envoi?.let { handler.removeCallbacks(it) }
+        val r = Runnable {
+            c.envoi = null
+            envoyer(c)
+        }
+        c.envoi = r
+        handler.postDelayed(r, HvacPopup.attenteEnvoi(SystemClock.uptimeMillis(), c.derniereEcriture, antiRebond))
+    }
+
+    private fun envoyer(c: Consigne) {
+        val valeur = c.cible ?: return
+        // L'écriture d'avant tourne encore : on repassera, espacement compris.
+        if (c.enVol) { planifierEnvoi(c, 0L); return }
+        c.enVol = true
+        vehicule.execute {
+            val ok = try { c.ecrire(valeur) } catch (e: Exception) {
+                AppLogger.w(TAG, "Pop-up HVAC — écriture ${c.nom} : ${e.message}")
+                false
+            }
+            handler.post {
+                c.enVol = false
+                c.derniereEcriture = SystemClock.uptimeMillis()
+                if (!ok) vues?.let { Toast.makeText(it.localized, R.string.clim_write_failed, Toast.LENGTH_SHORT).show() }
+                // Une valeur plus récente a été demandée entre-temps : son envoi est déjà prévu.
+                if (c.cible != valeur) return@post
+                val v = Runnable {
+                    c.verification = null
+                    verifier(c, valeur)
+                }
+                c.verification = v
+                handler.postDelayed(v, SETTLE_MS)
+            }
+        }
+    }
+
+    /**
+     * La voiture a-t-elle pris [valeur] ? Sinon on la renvoie. Continue même pop-up fermé : un cran
+     * demandé juste avant la fermeture doit être appliqué.
+     */
+    private fun verifier(c: Consigne, valeur: Int) {
+        if (c.cible != valeur) return
+        vehicule.execute {
+            val lu = lireEtat()
+            handler.post {
+                if (c.cible != valeur) return@post
+                val vu = lu?.let(c.lire)
+                when (HvacPopup.suiteConsigne(vu, valeur, c.renvois)) {
+                    HvacPopup.Suite.CONFIRMEE -> {
+                        if (c.renvois > 0) AppLogger.i(TAG, "Pop-up HVAC — ${c.nom} : $valeur prise après ${c.renvois} renvoi(s)")
+                        c.cible = null
+                        relire()
+                    }
+                    HvacPopup.Suite.RENVOYER -> {
+                        c.renvois++
+                        AppLogger.w(TAG, "Pop-up HVAC — ${c.nom} : voiture sur $vu, consigne $valeur renvoyée (essai ${c.renvois})")
+                        planifierEnvoi(c, 0L)
+                    }
+                    HvacPopup.Suite.ABANDON -> {
+                        AppLogger.w(TAG, "Pop-up HVAC — ${c.nom} : voiture sur ${vu ?: "illisible"} malgré " +
+                            "${c.renvois} renvoi(s) de $valeur — l'écran reprend la voiture")
+                        c.cible = null
+                        relire()
+                    }
+                }
+            }
+        }
+    }
+
+    /** Plus rien à envoyer ni à vérifier pour [c] (clim éteinte, AUTO demandé). */
+    private fun abandonner(c: Consigne) {
+        c.envoi?.let { handler.removeCallbacks(it) }
+        c.verification?.let { handler.removeCallbacks(it) }
+        c.envoi = null
+        c.verification = null
+        c.cible = null
+    }
+
     private fun ecrireDiffere(
         reglage: String, apaisement: Long = SETTLE_MS, file: Executor = vehicule, action: () -> Boolean,
     ) {
@@ -470,14 +588,14 @@ object HvacPopupOverlay {
     /** Remet l'écran sur ce que la voiture a réellement retenu, une fois les écritures passées. */
     private fun relire() {
         // Une écriture plus récente attend ou est en vol : sa propre relecture suivra.
-        if (overlayView == null || ecrituresEnVol > 0 || differees.isNotEmpty()) return
+        if (overlayView == null || ecrituresEnVol > 0 || differees.isNotEmpty() || consignesEnCours()) return
         // Trop tôt après une écriture, la voiture rendrait l'ANCIENNE valeur et l'écran reculerait.
         if (SystemClock.uptimeMillis() < silenceJusqua) return
         vehicule.execute {
             val lu = lireEtat() ?: return@execute
             val chauds = lireChauffages()
             handler.post {
-                if (overlayView != null && ecrituresEnVol == 0 && differees.isEmpty()) {
+                if (overlayView != null && ecrituresEnVol == 0 && differees.isEmpty() && !consignesEnCours()) {
                     etat = lu
                     chauffages = chauds
                     afficher()
@@ -499,6 +617,10 @@ object HvacPopupOverlay {
         val restantes = differees.values.toList()
         differees.clear()
         restantes.forEach { handler.removeCallbacks(it); it.run() }
+        // Pareil pour les consignes : envoyées tout de suite, puis vérifiées comme d'habitude.
+        listOf(consigneTemp, consigneVentilation).forEach { c ->
+            c.envoi?.let { r -> handler.removeCallbacks(r); r.run() }
+        }
         vues = null
         etat = null
         chauffages = null

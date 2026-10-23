@@ -300,4 +300,27 @@ class HvacPopupTest {
         assertNull(HvacPopup.part(20, 20, 20))
         assertNull(HvacPopup.part(20, 33, 17))
     }
+
+    // ── Consignes vérifiées (2026-10-23) ─────────────────────────────────────
+
+    @Test fun `une consigne que la voiture n a pas prise est renvoyee, trois fois au plus`() {
+        // Exemple du signalement : 2 → 4 en deux crans, la voiture reste sur 3.
+        assertEquals(HvacPopup.Suite.RENVOYER, HvacPopup.suiteConsigne(vu = 3, cible = 4, renvois = 0))
+        assertEquals(HvacPopup.Suite.RENVOYER, HvacPopup.suiteConsigne(vu = 3, cible = 4, renvois = 2))
+        assertEquals(HvacPopup.Suite.ABANDON, HvacPopup.suiteConsigne(vu = 3, cible = 4, renvois = 3))
+        assertEquals(HvacPopup.Suite.CONFIRMEE, HvacPopup.suiteConsigne(vu = 4, cible = 4, renvois = 1))
+        // Relecture illisible : on n'insiste pas.
+        assertEquals(HvacPopup.Suite.ABANDON, HvacPopup.suiteConsigne(vu = null, cible = 4, renvois = 0))
+    }
+
+    @Test fun `deux ecritures du meme reglage restent espacees`() {
+        // Première écriture : l'anti-rebond seul.
+        assertEquals(200L, HvacPopup.attenteEnvoi(maintenantMs = 10_000L, derniereMs = 0L, antiRebondMs = 200L))
+        // 50 ms après une écriture : on attend d'avoir 500 ms d'écart.
+        assertEquals(450L, HvacPopup.attenteEnvoi(10_050L, 10_000L, 200L))
+        // Longtemps après : l'anti-rebond suffit.
+        assertEquals(200L, HvacPopup.attenteEnvoi(12_000L, 10_000L, 200L))
+        // Renvoi après relecture (aucun anti-rebond) : seulement l'espacement restant.
+        assertEquals(0L, HvacPopup.attenteEnvoi(10_700L, 10_000L, 0L))
+    }
 }

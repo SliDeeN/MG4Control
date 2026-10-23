@@ -122,6 +122,38 @@ object HvacPopup {
         (reglages.dernierNiveau ?: ((reglages.fanMin + reglages.fanMax) / 2))
             .coerceIn(reglages.fanMin, reglages.fanMax)
 
+    // ── Consignes vérifiées : température et ventilation (2026-10-23) ─────────
+    //
+    // Deux crans rapides (2 → 4) laissaient la ventilation sur 3 : la voiture semble ignorer un
+    // niveau qui arrive trop tôt après le précédent. La consigne demandée fait donc foi jusqu'à ce
+    // que la voiture l'ait prise : écritures espacées, relecture, renvoi si besoin.
+
+    /** Écart minimal entre deux écritures du même réglage, en ms. */
+    const val ESPACEMENT_MS = 500L
+    /** Renvois au plus d'une consigne que la voiture n'a pas prise. */
+    const val RENVOIS_MAX = 3
+
+    /** Ce qu'il faut faire d'une consigne après relecture. */
+    enum class Suite { CONFIRMEE, RENVOYER, ABANDON }
+
+    /**
+     * Après relecture : [vu] est la valeur de la voiture (`null` si illisible), [cible] la consigne,
+     * [renvois] ceux déjà faits. Illisible : on n'insiste pas, l'écran reprendra la voiture.
+     */
+    fun suiteConsigne(vu: Int?, cible: Int, renvois: Int): Suite = when {
+        vu == cible -> Suite.CONFIRMEE
+        vu == null || renvois >= RENVOIS_MAX -> Suite.ABANDON
+        else -> Suite.RENVOYER
+    }
+
+    /**
+     * Attente avant d'envoyer une consigne : l'anti-rebond [antiRebondMs], et au moins
+     * [ESPACEMENT_MS] après la dernière écriture du même réglage ([derniereMs], 0 = jamais).
+     */
+    fun attenteEnvoi(maintenantMs: Long, derniereMs: Long, antiRebondMs: Long): Long =
+        if (derniereMs == 0L) antiRebondMs
+        else maxOf(antiRebondMs, ESPACEMENT_MS - (maintenantMs - derniereMs))
+
     // ── Taille de la fenêtre ─────────────────────────────────────────────────
     const val LARGEUR_DP = 864f      // la carte de overlay_hvac_popup.xml, sans chauffages
     const val HAUTEUR_DP = 392f
