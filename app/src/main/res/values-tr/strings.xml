@@ -884,19 +884,15 @@
     <string name="shortcuts_action_charge_popup">Şarj açılır penceresi</string>
 
     <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
-    <string name="btn_cluster_tab">Gösterge paneli sekmesi</string>
-    <string name="cluster_tab_hint">Sekmeyi direksiyon tuşlarıyla değiştirin: numara anlık olarak güncellenir. Her değişiklik Teşhis günlüğüne yazılır.</string>
-    <string name="cluster_tab_code_name">Orijinal koda göre: %1$s</string>
-    <string name="cluster_tab_unknown">Orijinal kodda olmayan değer</string>
-    <string name="cluster_tab_unreadable">Okunamıyor</string>
-    <string name="cluster_tab_0">Yol bilgisayarı</string>
-    <string name="cluster_tab_1">Navigasyon</string>
-    <string name="cluster_tab_2">Müzik ve radyo</string>
-    <string name="cluster_tab_3">Telefon</string>
-    <string name="cluster_tab_4">Uyarı merkezi</string>
-    <string name="cluster_tab_5">Ayarlar</string>
-    <string name="cluster_tab_6">Sürüş asistanı</string>
-    <string name="cluster_tab_7">Ayrılmış</string>
+    <string name="btn_charge_state">Şarj durumu</string>
+    <string name="charge_state_saic_name">Orijinal başlatıcıya göre: %1$s</string>
+    <string name="charge_state_unknown">Değer orijinal tablolarda yok</string>
+    <string name="charge_state_unreadable">Okunamıyor</string>
+    <string name="charge_state_ours_charging">MG4Control: şarj oluyor</string>
+    <string name="charge_state_ours_idle">MG4Control: şarj olmuyor</string>
+    <string name="charge_state_history">Açılıştan beri değişiklikler</string>
+    <string name="charge_state_history_empty">Henüz değişiklik yok</string>
+    <string name="charge_state_hint">Şarj sırasında pencereyi açık bırakın: takma, başlangıç, bitiş, çıkarma. Her değişiklik Teşhis günlüğüne de yazılır.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Ön iklimlendirme</string>
     <string name="shortcuts_cat_preclim">Ön iklimlendirme</string>

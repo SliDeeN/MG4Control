@@ -648,11 +648,11 @@ class SettingsFragment : Fragment() {
         // Bouton Diagnostic débloqué via 5 clics sur le logo (cf. MainActivity)
         btnDiagnostic.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
 
-        // Onglet du combiné : outil de relevé, débloqué avec le Diagnostic (même principe) — remis
-        // le 2026-10-18 pour les relevés d'un testeur SWI165.
-        val btnClusterTab = view.findViewById<MaterialButton>(R.id.btn_cluster_tab)
-        btnClusterTab.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
-        btnClusterTab.setOnClickListener { ClusterTabDialog.afficher(requireContext()) }
+        // État de charge : outil de relevé, débloqué avec le Diagnostic (même principe) — à la
+        // place de « Onglet du combiné » depuis le 2026-10-23.
+        val btnChargeState = view.findViewById<MaterialButton>(R.id.btn_charge_state)
+        btnChargeState.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
+        btnChargeState.setOnClickListener { ChargeStateDialog.afficher(requireContext()) }
 
         btnUpdate.setOnClickListener {
             btnUpdate.isEnabled = false

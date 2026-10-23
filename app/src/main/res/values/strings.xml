@@ -901,19 +901,15 @@
     <string name="shortcuts_action_charge_popup">Pop-up de charge</string>
 
     <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
-    <string name="btn_cluster_tab">Onglet du combiné</string>
-    <string name="cluster_tab_hint">Change d\'onglet avec les boutons du volant : le numéro suit en direct. Chaque changement est noté dans le journal du Diagnostic.</string>
-    <string name="cluster_tab_code_name">D\'après le code d\'origine : %1$s</string>
-    <string name="cluster_tab_unknown">Valeur absente du code d\'origine</string>
-    <string name="cluster_tab_unreadable">Illisible</string>
-    <string name="cluster_tab_0">Ordinateur de bord</string>
-    <string name="cluster_tab_1">Navigation</string>
-    <string name="cluster_tab_2">Musique et radio</string>
-    <string name="cluster_tab_3">Téléphone</string>
-    <string name="cluster_tab_4">Centre d\'alertes</string>
-    <string name="cluster_tab_5">Réglages</string>
-    <string name="cluster_tab_6">Aides à la conduite</string>
-    <string name="cluster_tab_7">Réservé</string>
+    <string name="btn_charge_state">État de charge</string>
+    <string name="charge_state_saic_name">D’après le lanceur d’origine : %1$s</string>
+    <string name="charge_state_unknown">Valeur absente des tables d’origine</string>
+    <string name="charge_state_unreadable">Illisible</string>
+    <string name="charge_state_ours_charging">MG4Control : en charge</string>
+    <string name="charge_state_ours_idle">MG4Control : pas en charge</string>
+    <string name="charge_state_history">Changements depuis l’ouverture</string>
+    <string name="charge_state_history_empty">Aucun changement pour l’instant</string>
+    <string name="charge_state_hint">Laisse la fenêtre ouverte pendant une charge : branchement, début, fin, débranchement. Chaque changement est aussi noté dans le journal du Diagnostic.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Pré-climatisation</string>
     <string name="shortcuts_cat_preclim">Pré-climatisation</string>

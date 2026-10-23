@@ -2135,15 +2135,15 @@
                 app:iconTint="@color/dash_text_lo"
                 app:iconGravity="textStart" />
 
-            <!-- ── Bouton ONGLET DU COMBINÉ : outil de relevé, débloqué avec le Diagnostic
+            <!-- ── Bouton ÉTAT DE CHARGE : outil de relevé, débloqué avec le Diagnostic
                  (5 appuis sur le logo), juste au-dessus de lui. ── -->
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_cluster_tab"
+                android:id="@+id/btn_charge_state"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:layout_marginBottom="8dp"
                 android:visibility="gone"
-                android:text="@string/btn_cluster_tab"
+                android:text="@string/btn_charge_state"
                 android:textColor="@color/dash_warn"
                 android:textSize="16sp"
                 android:letterSpacing="0.06"

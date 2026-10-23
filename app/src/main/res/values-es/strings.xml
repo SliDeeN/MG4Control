@@ -884,19 +884,15 @@
     <string name="shortcuts_action_charge_popup">Pop-up de carga</string>
 
     <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
-    <string name="btn_cluster_tab">Pestaña del cuadro</string>
-    <string name="cluster_tab_hint">Cambia de pestaña con los botones del volante: el número se actualiza en directo. Cada cambio se anota en el registro del Diagnóstico.</string>
-    <string name="cluster_tab_code_name">Según el código original: %1$s</string>
-    <string name="cluster_tab_unknown">Valor ausente del código original</string>
-    <string name="cluster_tab_unreadable">Ilegible</string>
-    <string name="cluster_tab_0">Ordenador de a bordo</string>
-    <string name="cluster_tab_1">Navegación</string>
-    <string name="cluster_tab_2">Música y radio</string>
-    <string name="cluster_tab_3">Teléfono</string>
-    <string name="cluster_tab_4">Centro de alertas</string>
-    <string name="cluster_tab_5">Ajustes</string>
-    <string name="cluster_tab_6">Asistencia a la conducción</string>
-    <string name="cluster_tab_7">Reservado</string>
+    <string name="btn_charge_state">Estado de carga</string>
+    <string name="charge_state_saic_name">Según el launcher original: %1$s</string>
+    <string name="charge_state_unknown">Valor ausente de las tablas originales</string>
+    <string name="charge_state_unreadable">Ilegible</string>
+    <string name="charge_state_ours_charging">MG4Control: cargando</string>
+    <string name="charge_state_ours_idle">MG4Control: sin cargar</string>
+    <string name="charge_state_history">Cambios desde la apertura</string>
+    <string name="charge_state_history_empty">Ningún cambio por ahora</string>
+    <string name="charge_state_hint">Deja la ventana abierta durante una carga: conexión, inicio, fin, desconexión. Cada cambio también se anota en el registro del Diagnóstico.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Preclimatización</string>
     <string name="shortcuts_cat_preclim">Preclimatización</string>

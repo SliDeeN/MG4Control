@@ -54,6 +54,14 @@ object EnergyReader {
     // (`CCU_OFFBD_CHRG_PLUG_ON_V`, true = invalide comme les autres drapeaux « V »).
     private const val PROP_CHARGE_DOOR = 0x2140f43b
     private const val PROP_PLUG_DC_INVALID = 0x2140f456
+    // Fenêtre « État de charge » seulement (2026-10-23). Noms relevés par MG4Dash dans le
+    // CarBMSManager SAIC : motif d'arrêt `BMS_CHRG_SP_RSN`, décharge `V2X`, et 0x2160f43c / 0x2160f43d
+    // = courant / tension d'entrée du chargeur embarqué — que notre sonde appelle, elle,
+    // « température batterie » et « tension secteur » : c'est à trancher en charge alternative.
+    private const val PROP_CHARGE_STOP_REASON = 0x2140f415
+    private const val PROP_V2X = 0x2140f430
+    private const val PROP_BMS_43C = 0x2160f43c
+    private const val PROP_BMS_43D = 0x2160f43d
     private const val PROP_PACK_VOLTAGE = 0x2160f406
     private const val PROP_PACK_CURRENT = 0x2160f407
     private const val PROP_RANGE = 0x2140f41c
@@ -131,6 +139,30 @@ object EnergyReader {
         cible = int(PROP_CHARGE_TARGET),
         trappe = int(PROP_CHARGE_DOOR),
         dcInvalide = int(PROP_PLUG_DC_INVALID),
+    )
+
+    /** Relevé de la fenêtre « État de charge » ([com.mg4.control.ui.ChargeStateDialog]). */
+    data class ChargeDebug(
+        val brut: ChargeRaw,
+        val raison: Int?,
+        val v2x: Int?,
+        val volts: Float?,
+        val amperes: Float?,
+        val bms43c: Float?,
+        val bms43d: Float?,
+        val soc: Float?,
+    )
+
+    /** Quinze lectures. Appeler hors du fil principal. */
+    fun chargeDebug(): ChargeDebug = ChargeDebug(
+        brut = chargeRaw(),
+        raison = int(PROP_CHARGE_STOP_REASON),
+        v2x = int(PROP_V2X),
+        volts = float(PROP_PACK_VOLTAGE),
+        amperes = float(PROP_PACK_CURRENT),
+        bms43c = float(PROP_BMS_43C),
+        bms43d = float(PROP_BMS_43D),
+        soc = soc(),
     )
 
     /** La voiture charge-t-elle ([ChargeDisplay.enCharge]) ? `null` si illisible. Une seule lecture. */

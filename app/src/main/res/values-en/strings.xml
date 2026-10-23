@@ -884,19 +884,15 @@
     <string name="shortcuts_action_charge_popup">Charging pop-up</string>
 
     <!-- Onglet du combiné : outil de relevé débloqué avec le Diagnostic -->
-    <string name="btn_cluster_tab">Cluster tab</string>
-    <string name="cluster_tab_hint">Switch tabs with the steering wheel buttons: the number follows live. Each change is written to the Diagnostic log.</string>
-    <string name="cluster_tab_code_name">According to the original code: %1$s</string>
-    <string name="cluster_tab_unknown">Value not in the original code</string>
-    <string name="cluster_tab_unreadable">Unreadable</string>
-    <string name="cluster_tab_0">Trip computer</string>
-    <string name="cluster_tab_1">Navigation</string>
-    <string name="cluster_tab_2">Music and radio</string>
-    <string name="cluster_tab_3">Phone</string>
-    <string name="cluster_tab_4">Warning centre</string>
-    <string name="cluster_tab_5">Settings</string>
-    <string name="cluster_tab_6">Driving assistance</string>
-    <string name="cluster_tab_7">Reserved</string>
+    <string name="btn_charge_state">Charge state</string>
+    <string name="charge_state_saic_name">According to the original launcher: %1$s</string>
+    <string name="charge_state_unknown">Value missing from the original tables</string>
+    <string name="charge_state_unreadable">Unreadable</string>
+    <string name="charge_state_ours_charging">MG4Control: charging</string>
+    <string name="charge_state_ours_idle">MG4Control: not charging</string>
+    <string name="charge_state_history">Changes since opening</string>
+    <string name="charge_state_history_empty">No change yet</string>
+    <string name="charge_state_hint">Leave the window open during a charge: plugging in, start, end, unplugging. Each change is also written to the Diagnostic log.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Pre-conditioning</string>
     <string name="shortcuts_cat_preclim">Pre-conditioning</string>
