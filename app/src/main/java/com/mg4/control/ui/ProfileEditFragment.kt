@@ -131,6 +131,7 @@ class ProfileEditFragment : Fragment() {
         var hvacTempSel     = data.hvacTemp.coerceIn(HVAC_TEMP_MIN, HVAC_TEMP_MAX)
         var hvacFanSel      = data.hvacFan.coerceIn(HVAC_FAN_MIN, HVAC_FAN_MAX)
         var hvacLoopSel     = data.hvacLoopMode
+        var hvacEcoSel      = data.hvacEco
         var hvacAirSel      = data.hvacAirFlow   // bits AirFlow, null = inchangé
         // Index 0/1/2, ou null quand le profil ne s'est jamais prononcé (créé avant la
         // fonctionnalité). L'éditeur propose alors Normal, mais rien n'est enregistré tant que
@@ -327,6 +328,12 @@ class ProfileEditFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_hvac_air_windshield_rear)  to AirFlow.REAR_DEFROST
         )
         val btnAirNone = view.findViewById<MaterialButton>(R.id.btn_hvac_air_none)
+        // Ligne « ECO » (2026-10-23) : Activé / Désactivé / Inchangé, comme la recirculation.
+        val ecoBtns = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_hvac_eco_on),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_eco_off),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_eco_none)
+        )
 
         /**
          * Trois grisages en cascade, qui reproduisent des règles du véhicule et non des choix
@@ -340,7 +347,7 @@ class ProfileEditFragment : Fragment() {
             val actif  = hvacEnabledSel
             val allume = actif && hvacPowerSel
             setBtnsEnabled(listOf(btnPower), actif)
-            setBtnsEnabled(listOf(btnAc, btnAuto) + loopBtns +
+            setBtnsEnabled(listOf(btnAc, btnAuto) + loopBtns + ecoBtns +
                 airBtns.map { it.first } + btnAirNone, allume)
             listOf(sldTemp, sldFan).forEach { it.isEnabled = allume }
             sldFan.isEnabled = allume && !hvacAutoSel
@@ -356,6 +363,9 @@ class ProfileEditFragment : Fragment() {
         bindGroup(listOf(
             loopBtns[0] to 0, loopBtns[1] to 1, loopBtns[2] to 2, loopBtns[3] to null
         ), hvacLoopSel) { hvacLoopSel = it }
+        bindGroup(listOf<Pair<MaterialButton, Boolean?>>(
+            ecoBtns[0] to true, ecoBtns[1] to false, ecoBtns[2] to null
+        ), hvacEcoSel) { hvacEcoSel = it }
 
         /**
          * Ligne « Air » : « Inchangé » allumé ⇔ aucun bouton coché (null). Hors « Inchangé », le
@@ -814,6 +824,7 @@ class ProfileEditFragment : Fragment() {
                 hvacDefrostRear  = null,
                 hvacLoopMode     = hvacLoopSel,
                 hvacAirFlow      = hvacAirSel,
+                hvacEco          = hvacEcoSel,
                 autoHighBeam     = if (highBeamEnabledSel) highBeamOnSel else null,
                 driveEnabled     = driveCatSel,
                 safetyEnabled    = safetyCatSel,

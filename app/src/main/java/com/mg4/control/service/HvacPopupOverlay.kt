@@ -277,6 +277,7 @@ object HvacPopupOverlay {
         air           = ::basculerAir,
         lunette       = ::basculerLunette,
         ac            = ::basculerAc,
+        eco           = ::basculerEco,
         recirculation = ::choisirRecirculation,
         siegeNiveau   = ::choisirSiege,
         volant        = ::basculerVolant,
@@ -367,6 +368,17 @@ object HvacPopupOverlay {
         etat = s.copy(acOn = !actuel)
         afficher()
         ecrire { MG4Hardware.setClimateAc(!actuel) }
+    }
+
+    /** Mode ECO de la clim : la clim limite sa puissance. */
+    private fun basculerEco() {
+        val s = etat ?: return
+        relancerDelai()
+        val actuel = s.ecoOn ?: return
+        AppLogger.i(TAG, "Pop-up HVAC — ECO : $actuel → ${!actuel}")
+        etat = s.copy(ecoOn = !actuel)
+        afficher()
+        ecrire { MG4Hardware.setClimateEco(!actuel) }
     }
 
     /**

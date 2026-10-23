@@ -2437,6 +2437,24 @@
                     app:strokeColor="@color/dash_border"
                     app:cornerRadius="8dp" />
 
+                <!-- Mode ECO de la clim (2026-10-23) : vert quand il est actif. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/clim_btn_eco"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/clim_eco"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="16sp"
+                    android:textAllCaps="true"
+                    app:icon="@drawable/ic_clim_eco"
+                    app:iconGravity="textStart"
+                    app:iconSize="20dp"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="8dp" />
+
             </LinearLayout>
 
             <!-- ── Colonne 2 : Recirculation ───────────────────────── -->

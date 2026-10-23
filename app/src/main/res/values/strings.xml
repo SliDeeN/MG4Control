@@ -141,6 +141,10 @@
     <string name="profile_hvac_row_air">Air</string>
     <string name="profile_hvac_on">Marche</string>
     <string name="profile_hvac_unchanged">Inchangé</string>
+    <string name="clim_eco">ECO</string>
+    <string name="profile_hvac_row_eco">ECO</string>
+    <string name="profile_hvac_eco_on">Activé</string>
+    <string name="profile_hvac_eco_off">Désactivé</string>
     <string name="profile_hvac_temp_value">%1$d °C</string>
     <string name="profile_bt_none">Aucun</string>
 

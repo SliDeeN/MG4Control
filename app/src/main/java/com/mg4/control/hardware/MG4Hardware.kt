@@ -5866,6 +5866,8 @@ object MG4Hardware {
     private const val PROP_AOSP_FAN_DIRECTION = 0x15400501
     /** État A/C — encodage mesuré sur véhicule : 1 = allumé, 0 = éteint. */
     private const val PROP_HVAC_AC_ON = 0x15402500
+    /** Mode ECO de la clim (`HVAC_ECON_ON`, 1 = actif) : même propriété sur les 6 firmwares. */
+    private const val PROP_HVAC_ECON_ON = 0x15402504
 
     /**
      * Amène une commande **cyclique** du HVAC SAIC jusqu'à un état voulu.
@@ -5919,7 +5921,9 @@ object MG4Hardware {
         /** Sens de l'air, valeur brute 0–7 ([AirFlow]) ; null si illisible. */
         val airFlow: Int?,
         /** Dernier niveau de ventilation réglé à la main ([lastManualFan]) ; null si jamais vu. */
-        val lastManualFan: Int? = null
+        val lastManualFan: Int? = null,
+        /** Mode ECO de la clim ([setClimateEco]) ; null si illisible. */
+        val ecoOn: Boolean? = null,
     ) {
         /**
          * Température et ventilation vues par la logique commune au pop-up HVAC, à la page Clim
@@ -6019,7 +6023,10 @@ object MG4Hardware {
             // Propriété d'abord (même voie que le recyclage) ; le getter OEM lit la même chose,
             // en repli si le CarHvacManager n'est pas encore lié.
             airFlow      = getIntPropertyHvac(PROP_HVAC_BLOWER_DIRECTION, AREA_HVAC).takeIf { it in 0..7 }
-                ?: acInt("getBlowerDirectionMode")?.takeIf { it in 0..7 }
+                ?: acInt("getBlowerDirectionMode")?.takeIf { it in 0..7 },
+            // Getter OEM d'abord (le panneau clim d'origine le lit), propriété en repli.
+            ecoOn        = (acInt("getEconStatus")?.takeIf { it >= 0 }
+                ?: getIntPropertyHvac(PROP_HVAC_ECON_ON, AREA_HVAC).takeIf { it >= 0 })?.let { it == 1 }
         )
     }
 
@@ -6063,7 +6070,8 @@ object MG4Hardware {
             loopMode     = (a9Get("getAirCirculationStatus") as? Int)?.takeIf { it >= 0 },
             defrostFront = a9Get("getFrontDefrostStatus") as? Boolean,
             defrostRear  = a9Get("getRearDefrostStatus") as? Boolean,
-            airFlow      = (a9Get("getFanDirection") as? Int)?.takeIf { it in 0..7 }
+            airFlow      = (a9Get("getFanDirection") as? Int)?.takeIf { it in 0..7 },
+            ecoOn        = a9Get("getEcoStatus") as? Boolean
         )
     }
 
@@ -6115,6 +6123,43 @@ object MG4Hardware {
             hvacCycleTo("ac", PROP_HVAC_AC_ON, if (on) 1 else 0, maxSteps = 2) {
                 acSet("setAcStatus", 1)
             }
+
+    /**
+     * Mode ECO de la clim (2026-10-23) : la clim limite sa puissance pour ménager la batterie.
+     *
+     * ⚠️ Un APPUI, pas une affectation, sur tous les firmwares : le panneau clim d'origine
+     * (HvacView, SystemUI SWI165) envoie toujours `setEconStatus(1)`, et l'adaptateur A9
+     * (CarAdapterHvacManager SWI69) fait de `switchEcoStatus()` une écriture de 1 sur
+     * `HVAC_ECON_ON`. D'où la bascule relue, comme pour l'A/C.
+     */
+    fun setClimateEco(on: Boolean): Boolean =
+        if (isClimateA9()) a9CycleTo("eco", "getEcoStatus", if (on) 1 else 0, 2, "switchEcoStatus")
+        else ecoAncienSdk(on)
+
+    /**
+     * Ancien SDK : lire, appuyer si l'état diffère, relire — deux appuis au plus. La lecture passe
+     * par le getter du SDK (celui du panneau d'origine), la propriété ne servant qu'en repli.
+     * ⚠️ Bloquant (~400 ms par appui) → hors du thread principal.
+     */
+    private fun ecoAncienSdk(on: Boolean): Boolean {
+        for (appuis in 0..2) {
+            val lu = acInt("getEconStatus")?.takeIf { it >= 0 }
+                ?: getIntPropertyHvac(PROP_HVAC_ECON_ON, AREA_HVAC).takeIf { it >= 0 }
+            if (lu == null) {
+                climLog("eco=$on — état courant illisible", false)
+                return false
+            }
+            if ((lu == 1) == on) {
+                climLog("eco=$on atteint ($appuis appui(s))", true)
+                return true
+            }
+            if (appuis == 2) break
+            acSet("setEconStatus", 1)
+            try { Thread.sleep(400) } catch (_: InterruptedException) {}
+        }
+        climLog("eco=$on NON atteint", false)
+        return false
+    }
 
     /**
      * Mode AUTO : la voiture règle elle-même la ventilation et le sens de l'air.
@@ -6300,7 +6345,8 @@ object MG4Hardware {
         targetTemp: Int,
         fanLevel: Int,
         loopMode: Int?,
-        airFlow: Int?
+        airFlow: Int?,
+        eco: Boolean? = null
     ): Boolean {
         val state = getClimateState() ?: run {
             AppLogger.w(CLIM_TAG, "Profil : état clim illisible → abandon")
@@ -6335,6 +6381,8 @@ object MG4Hardware {
             ok = setClimateLoopMode(mode) && ok
         }
 
+        if (eco != null) ok = setClimateEco(eco) && ok
+
         // Ligne « Air » (boutons cumulables) — elle remplace les anciennes lignes Dég. AV / AR
         // depuis leur validation sur SWI133. « Pare-brise AV » passe par la VALEUR du sens de
         // l'air, la lunette arrière par le dégivrage arrière. Hors « Inchangé », le profil applique
@@ -6348,7 +6396,7 @@ object MG4Hardware {
 
         AppLogger.i(CLIM_TAG, "Profil : clim=ON A/C=$ac consigne=$targetTemp " +
             (if (autoMode) "ventilation=AUTO" else "vent=$fanLevel") +
-            " recyclage=${loopMode ?: "inchangé"} " +
+            " recyclage=${loopMode ?: "inchangé"} eco=${eco ?: "inchangé"} " +
             "air=${airFlow?.let { "boutons=$it valeur=${AirFlow.directionForMask(it)}" } ?: "inchangé"} → ok=$ok")
         return ok
     }

@@ -101,6 +101,11 @@ data class DrivingProfile(
      */
     val hvacAirFlow: Int? = null,
     /**
+     * Mode ECO de la clim (2026-10-23). `null` = inchangé — c'est aussi ce que Gson rend pour un
+     * profil enregistré avant l'ajout du champ : un profil existant n'y touche pas.
+     */
+    val hvacEco: Boolean? = null,
+    /**
      * Feux de route automatiques. `null` = le profil n'y touche pas : interrupteur de l'éditeur
      * sur OFF, et c'est aussi ce que Gson rend pour un profil enregistré avant la fonctionnalité.
      * Un seul champ suffit, contrairement aux chauffages : la valeur n'existe que si elle s'applique.

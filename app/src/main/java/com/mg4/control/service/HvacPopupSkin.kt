@@ -58,6 +58,8 @@ internal class HvacPopupSkin(
         val air: (part: Int) -> Unit,
         val lunette: () -> Unit,
         val ac: () -> Unit,
+        /** Mode ECO de la clim (2026-10-23). */
+        val eco: () -> Unit = {},
         /** Choix direct d'un mode ([MG4Hardware.LoopMode]). */
         val recirculation: (mode: Int) -> Unit,
         /** Siège chauffant : un niveau précis, de 0 (éteint) à 3. */
@@ -108,6 +110,10 @@ internal class HvacPopupSkin(
     private val acTitre: TextView       = view.findViewById(R.id.hvac_ac_title)
     private val acEtat: TextView        = view.findViewById(R.id.hvac_ac_state)
 
+    private val eco: View               = view.findViewById(R.id.hvac_eco)
+    private val ecoIcone: ImageView     = view.findViewById(R.id.hvac_eco_icon)
+    private val ecoTitre: TextView      = view.findViewById(R.id.hvac_eco_title)
+
     private val recirculation: Map<Int, TextView> = mapOf(
         MG4Hardware.LoopMode.INNER   to view.findViewById<TextView>(R.id.hvac_loop_inner),
         MG4Hardware.LoopMode.OUTSIDE to view.findViewById<TextView>(R.id.hvac_loop_outside),
@@ -150,6 +156,8 @@ internal class HvacPopupSkin(
     private val chaud           = themed.getColor(R.color.dash_warn)
     private val chaudDoux       = themed.getColor(R.color.dash_warn_dim)
     private val surChaud        = themed.getColor(R.color.hvac_on_heat)
+    private val vert            = themed.getColor(R.color.dash_eco)
+    private val surVert         = themed.getColor(R.color.hvac_on_eco)
     private val bouton          = themed.getColor(R.color.dash_btn)
     private val bordure         = themed.getColor(R.color.dash_border)
     private val segmentChoisi   = themed.getColor(R.color.hvac_segment_on)
@@ -211,6 +219,7 @@ internal class HvacPopupSkin(
         airWindshield.setOnClickListener { gestes.air(AirFlow.WINDSHIELD) }
         airRear.setOnClickListener       { gestes.lunette() }
         ac.setOnClickListener            { gestes.ac() }
+        eco.setOnClickListener           { gestes.eco() }
         recirculation.forEach { (mode, vue) -> vue.setOnClickListener { gestes.recirculation(mode) } }
         fermer.setOnClickListener        { gestes.fermer() }
         placerRepere(avecChauffages)
@@ -293,6 +302,13 @@ internal class HvacPopupSkin(
             else -> localized.getString(if (compresseur) R.string.climate_on else R.string.climate_off)
         }
         inerte(ac, etat.acOn == null)
+
+        // ECO : plein et vert quand il est actif, comme le compresseur l'est en bleu.
+        val economie = etat.ecoOn == true
+        if (economie) fond(eco, vert) else fond(eco, bouton, bordure, traitFin)
+        ecoIcone.imageTintList = ColorStateList.valueOf(if (economie) surVert else texteSecondaire)
+        ecoTitre.setTextColor(if (economie) surVert else textePrincipal)
+        inerte(eco, etat.ecoOn == null)
 
         recirculation.forEach { (mode, vue) -> tuile(vue, etat.loopMode?.let { it == mode }) }
         // Valeur illisible → tuiles grisées. Valeur lue mais hors échelle (7 « aucun »)

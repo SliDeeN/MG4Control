@@ -2188,6 +2188,31 @@
                         <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_auto" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/clim_auto" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
 
                     </LinearLayout>
+                    <!-- Ligne « ECO » (2026-10-23) : Activé / Désactivé / Inchangé. Le 4e emplacement
+                         reste vide pour garder la largeur des boutons de la ligne Recirculation. -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginTop="6dp">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:minWidth="72dp"
+                            android:text="@string/profile_hvac_row_eco"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp"
+                            android:letterSpacing="0.06"
+                            android:textAllCaps="true" />
+
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_eco_on" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="6dp" android:text="@string/profile_hvac_eco_on" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_eco_off" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/profile_hvac_eco_off" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+                        <com.google.android.material.button.MaterialButton android:id="@+id/btn_hvac_eco_none" style="@style/Widget.MaterialComponents.Button.OutlinedButton" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/profile_hvac_unchanged" android:textSize="14sp" android:insetTop="0dp" android:insetBottom="0dp" />
+                        <View android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="5dp" />
+
+                    </LinearLayout>
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"

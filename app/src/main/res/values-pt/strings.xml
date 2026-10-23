@@ -139,6 +139,10 @@
     <string name="profile_hvac_row_air">Ar</string>
     <string name="profile_hvac_on">Ligado</string>
     <string name="profile_hvac_unchanged">Inalterado</string>
+    <string name="clim_eco">ECO</string>
+    <string name="profile_hvac_row_eco">ECO</string>
+    <string name="profile_hvac_eco_on">Ativado</string>
+    <string name="profile_hvac_eco_off">Desativado</string>
     <string name="profile_hvac_temp_value">%1$d °C</string>
     <string name="profile_bt_none">Nenhum</string>
 
