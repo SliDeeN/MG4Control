@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sons d'automatisation : le cadre d'un des deux sons, dans la carte (thème clair ou sombre). -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+    <stroke android:width="1dp" android:color="@color/dash_border" />
+    <corners android:radius="12dp" />
+</shape>

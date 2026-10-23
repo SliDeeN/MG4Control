@@ -64,6 +64,8 @@ object ProfileApplier {
         // raccourcis associés à un profil — voir [ActiveProfile], et surtout la distinction avec
         // [lastManualProfileId] juste en dessous, qui répond à une question différente.
         ActiveProfile.set(MG4Hardware.appContext(), profile.id)
+        // Sons d'automatisation (issue #161) : l'événement « profil appliqué », pour ce profil-ci.
+        com.mg4.control.automation.SoundAutomation.profilApplique(profile.id)
 
         // Application manuelle (popup volant / app / raccourci) → on mémorise le choix de l'utilisateur
         // pour que le passage en READY le respecte au lieu de ré-appliquer le profil par défaut.

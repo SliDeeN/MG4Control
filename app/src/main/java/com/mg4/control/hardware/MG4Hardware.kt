@@ -34,6 +34,7 @@ import com.saicmotor.common.CommandParcelable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
  * Hardware abstraction layer for MG4 vehicle control.
@@ -1530,6 +1531,17 @@ object MG4Hardware {
      */
     fun isVehicleInPark(): Boolean? {
         val gen = FirmwareInfo.getGeneration()
+        val gear = readGearRaw() ?: Int.MIN_VALUE
+        AppLogger.i(TAG, "isVehicleInPark — gen=$gen gear=$gear (P=$GEAR_PARK_VALUE)")
+        return if (gear < 0) null else gear == GEAR_PARK_VALUE
+    }
+
+    /**
+     * Rapport engagé, valeur brute SAIC (P = 1, D = 4 relevé sur SWI133), sans journal : les sons
+     * d'automatisation (issue #161) le relisent deux fois par seconde. `null` si illisible.
+     */
+    fun readGearRaw(): Int? {
+        val gen = FirmwareInfo.getGeneration()
         val gear = when {
             gen == FirmwareInfo.Gen.SWI133 ->
                 if (sVpm == null) Int.MIN_VALUE else getIntPropertyVpm(PROP_GEAR_STS)
@@ -1539,8 +1551,7 @@ object MG4Hardware {
                 readVcmCarGear()                  // VehicleConditionManager.getCarGear()
             else -> Int.MIN_VALUE
         }
-        AppLogger.i(TAG, "isVehicleInPark — gen=$gen gear=$gear (P=$GEAR_PARK_VALUE)")
-        return if (gear < 0) null else gear == GEAR_PARK_VALUE
+        return gear.takeIf { it >= 0 }
     }
 
     // ── État READY (SENSOR_EPTRDY) : fermeture auto des vitres en quittant la voiture ──────
@@ -4171,6 +4182,9 @@ object MG4Hardware {
     @Volatile private var sCarDoorMgr: Any? = null   // CarDoorLockManager (service "doorlock")
     @Volatile private var sDoorConnecting = false
     @Volatile private var sAnyFrontOpenPrev = false
+    /** Front d'ouverture d'une porte avant, pour les sons d'automatisation (issue #161) : l'une ou l'autre. */
+    private val sFrontDoorListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
+    @Volatile private var sFrontOpenForListeners = false
     @Volatile private var sVolumeBeforeDrop = -1     // volume mémorisé à l'ouverture (pour restauration)
 
     // ────────────────────────────────────────────────────────────────────────
@@ -5167,6 +5181,36 @@ object MG4Hardware {
             AppLogger.w(MEDIA_TAG, "ports USB illisibles : ${(e.cause ?: e).message}")
             null
         }
+    }
+
+    /**
+     * Dossiers lisibles des clés USB montées, pour l'import des sons (issue #161). Volumes publics
+     * sur disque USB, chemin public puis chemin interne (`/mnt/media_rw/…`, que l'uid système lit
+     * aussi) ; en repli, les dossiers de `/storage` autres que la mémoire interne.
+     */
+    fun usbVolumeRoots(): List<File> {
+        val ctx = sAppContext ?: return emptyList()
+        val trouves = LinkedHashSet<File>()
+        try {
+            val sm = ctx.getSystemService(Context.STORAGE_SERVICE)
+            val volumes = sm?.javaClass?.getMethod("getVolumes")?.invoke(sm) as? List<*>
+            volumes?.filterNotNull()?.forEach { v ->
+                val c = v.javaClass
+                val disk = c.getMethod("getDisk").invoke(v) ?: return@forEach
+                val usb = disk.javaClass.getMethod("isUsb").invoke(disk) as? Boolean
+                if (c.getMethod("getType").invoke(v) as? Int != 0 || usb != true) return@forEach   // 0 = TYPE_PUBLIC
+                listOf("getPath", "getInternalPath").mapNotNull { m ->
+                    runCatching { c.getMethod(m).invoke(v) as? File }.getOrNull()
+                }.firstOrNull { it.canRead() && it.listFiles() != null }?.let { trouves += it }
+            }
+        } catch (e: Exception) {
+            AppLogger.w(MEDIA_TAG, "volumes USB illisibles : ${(e.cause ?: e).message}")
+        }
+        if (trouves.isEmpty()) {
+            File("/storage").listFiles()?.filter { it.name != "emulated" && it.name != "self" && it.listFiles() != null }
+                ?.forEach { trouves += it }
+        }
+        return trouves.toList()
     }
 
     /** Session de DiAuto-MG4, récepteur Android Auto de remplacement (sans fil). */
@@ -6435,7 +6479,25 @@ object MG4Hardware {
             sDoorReadLast[area] = v
             AppLogger.i(DOORWATCH_TAG, "area=0x${area.toString(16)} ${prev ?: "?"} → $v")
         }
+        // Sons d'automatisation : une porte avant vient de s'ouvrir, quelle que soit la baisse du volume.
+        val ouverte = DOOR_FRONT_AREAS.any { sDoorReadLast[it] == 1 }
+        if (ouverte && !sFrontOpenForListeners) sFrontDoorListeners.forEach { runCatching { it() } }
+        sFrontOpenForListeners = ouverte
         evaluateDoorTrigger()
+    }
+
+    /**
+     * Prévient [listener] à chaque ouverture d'une porte avant (après une fermeture). Là où la porte
+     * est lisible seulement ([hasDoorDetection]) : la connexion à la voiture est ouverte au besoin.
+     */
+    fun addFrontDoorOpenListener(listener: () -> Unit) {
+        if (!hasDoorDetection()) return
+        sFrontDoorListeners.addIfAbsent(listener)
+        connectCarProperty()   // idempotent
+    }
+
+    fun removeFrontDoorOpenListener(listener: () -> Unit) {
+        sFrontDoorListeners.remove(listener)
     }
 
     /** Recalcule "au moins une porte choisie ouverte" à partir de l'état accumulé et applique

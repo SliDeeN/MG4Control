@@ -32,6 +32,8 @@ import com.mg4.control.automation.BatteryAutomationSettings
 import com.mg4.control.automation.BatteryHeatingSettings
 import com.mg4.control.automation.ClimateAutomationSettings
 import com.mg4.control.automation.ClimateRuleEditor
+import com.mg4.control.automation.SoundAutomation
+import com.mg4.control.automation.SoundAutomationSettings
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.model.DrivingProfile
@@ -49,6 +51,9 @@ class AutomationFragment : Fragment() {
 
     /** Carte des vitres : le panneau survit à la vue, comme au tableau de bord avant le déplacement. */
     private val windowsPanel = WindowsPanel()
+
+    /** Carte des sons (issue #161). */
+    private val soundCard = SoundCard()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -121,6 +126,40 @@ class AutomationFragment : Fragment() {
         bindBatteryHeatingAutomation(view, prefs)
         bindClimateAutomation(view, prefs)
         bindDoorVolume(view, prefs)
+        bindSounds(view)
+    }
+
+    // ══════════ Sons d'automatisation (issue #161) ══════════
+
+    /**
+     * Interrupteur général et dépliage ici, comme les autres cartes ; le contenu (deux sons,
+     * profils) dans [SoundCard]. Cachée là où le volume de la voiture n'est pas pilotable : le son
+     * se joue au volume choisi, réglé sur la voiture le temps du son.
+     */
+    private fun bindSounds(view: View) {
+        val card = view.findViewById<View>(R.id.card_sound)
+        if (!MG4Hardware.hasDoorVolumeFeature()) {
+            card.visibility = View.GONE
+            return
+        }
+        val ctx = requireContext()
+        val toggle = view.findViewById<Switch>(R.id.switch_sound)
+        val content = view.findViewById<View>(R.id.row_sound_config)
+        val enabled = SoundAutomationSettings.isEnabled(ctx)
+        toggle.isChecked = enabled
+        soundCard.bind(this, view, enabled)
+        val deplier = bindExpander(view.findViewById(R.id.btn_sound_expand), content, expanded = enabled)
+        toggle.setOnCheckedChangeListener { _, checked ->
+            SoundAutomationSettings.setEnabled(ctx, checked)
+            soundCard.griser(checked)
+            deplier(checked)
+            SoundAutomation.refresh(ctx)
+        }
+    }
+
+    override fun onDestroyView() {
+        soundCard.detacher()
+        super.onDestroyView()
     }
 
     // ══════════ Baisse du volume en quittant la voiture ══════════

@@ -219,6 +219,9 @@ class MG4ControlService : Service() {
         com.mg4.control.automation.AutoBrightness.start(applicationContext)
         // Coupure auto du chauffage de la batterie : relit son interrupteur à chaque passage.
         com.mg4.control.automation.BatteryHeatingAutomation.start(applicationContext)
+        // Sons d'automatisation (issue #161) : rien tant que l'option est coupée ; sinon le son
+        // du démarrage de MG4Control, puis les événements choisis.
+        com.mg4.control.automation.SoundAutomation.start(applicationContext)
         // Module sur le combiné : rien tant que l'interrupteur des Réglages est coupé.
         ClusterModuleOverlay.refresh(applicationContext, "démarrage du service")
         // Pop-up de charge : suit la charge si l'option (cachée par défaut) est active.
