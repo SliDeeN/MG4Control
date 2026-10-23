@@ -222,6 +222,8 @@ class MG4ControlService : Service() {
         // Sons d'automatisation (issue #161) : rien tant que l'option est coupée ; sinon le son
         // du démarrage de MG4Control, puis les événements choisis.
         com.mg4.control.automation.SoundAutomation.start(applicationContext)
+        // Boutons flottants : rien tant qu'aucun bouton n'est créé.
+        FloatingButtonsOverlay.refresh(applicationContext)
         // Module sur le combiné : rien tant que l'interrupteur des Réglages est coupé.
         ClusterModuleOverlay.refresh(applicationContext, "démarrage du service")
         // Pop-up de charge : suit la charge si l'option (cachée par défaut) est active.

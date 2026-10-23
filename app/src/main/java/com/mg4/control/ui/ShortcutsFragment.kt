@@ -60,6 +60,9 @@ class ShortcutsFragment : Fragment() {
     /** Liste de base (sans label custom) — partagée pour tous les spinners. */
     private var baseActionItems: List<ActionItem> = emptyList()
 
+    /** Page « Boutons flottants » (2026-10-23). */
+    private val floatingPage = FloatingButtonsPage()
+
     /** Clés identifiant chaque ligne slot × type de pression. */
     private val slotPressList = listOf(
         "btn1_single", "btn1_long",
@@ -236,6 +239,11 @@ class ShortcutsFragment : Fragment() {
         setupProfileCycle(view)
         setupSourceCycle(view)
         setupPreClimatePage(view)
+        // Boutons flottants : les actions du volant, sans celles qui demandent un réglage à part
+        // (profil ou appli à choisir) — la bulle n'a que son raccourci.
+        floatingPage.bind(this, view, baseActionItems
+            .filter { it.action !in setOf(ShortcutAction.NONE, ShortcutAction.APPLY_PROFILE, ShortcutAction.OPEN_CUSTOM_APP) }
+            .map { it.label to it.action })
         restoreState()
 
         // En dernier : le rail décide quelles pages existent, il lui faut l'état final.
@@ -1120,7 +1128,8 @@ class ShortcutsFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_profiles) to view.findViewById<ViewGroup>(R.id.page_sc_profiles),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_sources)  to view.findViewById<ViewGroup>(R.id.page_sc_sources),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_preclim)  to view.findViewById<ViewGroup>(R.id.page_sc_preclim),
-            view.findViewById<MaterialButton>(R.id.btn_sc_sub_list)     to view.findViewById<ViewGroup>(R.id.page_sc_list)
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_list)     to view.findViewById<ViewGroup>(R.id.page_sc_list),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_floating) to view.findViewById<ViewGroup>(R.id.page_sc_floating)
         )
         val pageCycle   = tabs[4].second
         val pageProfils = tabs[5].second
