@@ -186,6 +186,7 @@ object PreClimatePopupOverlay {
         val actuels: TextView = racine.findViewById(R.id.preclim_current)
         val plan: TextView = racine.findViewById(R.id.preclim_plan)
         val chien: TextView = racine.findViewById(R.id.preclim_dog_toggle)
+        val avertChien: TextView = racine.findViewById(R.id.preclim_dog_warning)
         val annuler: TextView = racine.findViewById(R.id.preclim_cancel)
         val demarrer: TextView = racine.findViewById(R.id.preclim_start)
         val cases = mutableListOf<TextView>()
@@ -212,6 +213,8 @@ object PreClimatePopupOverlay {
         // L'icône de fermeture et les − / + sont blancs : teintés, ils restent visibles en thème clair.
         v.fermer.imageTintList = ColorStateList.valueOf(v.texte2)
         v.icone.imageTintList = ColorStateList.valueOf(v.accent)
+        OverlayKit.fond(v.avertChien, v.alerteDoux, v.alerte, v.dp(1f), v.dp(12f).toFloat())
+        v.avertChien.compoundDrawableTintList = ColorStateList.valueOf(v.alerte)
         listOf(v.premier, v.duree, v.cycles, v.pause, v.temp, v.ventil).forEach {
             it.moins.imageTintList = ColorStateList.valueOf(v.texte)
             it.plus.imageTintList = ColorStateList.valueOf(v.texte)
@@ -313,6 +316,7 @@ object PreClimatePopupOverlay {
         }
         v.actuels.text = v.s(R.string.preclim_current, resumeActuel(v))
         v.chien.visibility = if (maintenant) View.VISIBLE else View.GONE
+        v.avertChien.visibility = if (maintenant && r.dog) View.VISIBLE else View.GONE
         OverlayKit.fond(v.chien, if (r.dog) v.accentDoux else v.bouton, if (r.dog) v.accent else v.bordure,
             v.dp(if (r.dog) 2f else 1f), v.dp(12f).toFloat())
         v.chien.setTextColor(if (r.dog) v.accent else v.texte2)

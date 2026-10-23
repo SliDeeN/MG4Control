@@ -200,6 +200,24 @@
                     android:layout_marginTop="6dp"
                     android:orientation="horizontal" />
 
+                <!-- Mode chien choisi : avertissement (2026-10-23, son texte). Dans ce panneau et non
+                     sous les durées : 286 dp de haut pour les deux, celui-ci garde ~15 dp de plus,
+                     de quoi loger 4 lignes (maquette du 2026-10-24). Fond et icône peints par le
+                     code, aux couleurs d'alerte ; masqué, la ligne « Actuels » reste en bas. -->
+                <TextView
+                    android:id="@+id/preclim_dog_warning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:padding="10dp"
+                    android:drawableStart="@drawable/ic_dialog_warning"
+                    android:drawablePadding="10dp"
+                    android:gravity="center_vertical"
+                    android:text="@string/preclim_dog_warning"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="0dp"

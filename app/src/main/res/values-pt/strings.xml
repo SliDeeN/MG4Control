@@ -1007,6 +1007,7 @@
     <string name="preclim_dog_text">O meu humano volta já. Entretanto estou confortável: o clima está ligado e regulado para</string>
     <string name="preclim_dog_outside">Lá fora estão %1$s</string>
     <string name="preclim_dog_status">Modo cão do MG4Control · clima ligado desde as %1$s · bateria %2$s</string>
+    <string name="preclim_dog_warning">Verifique regularmente se o modo cão continua ativo. Um nível de bateria demasiado baixo, um trancamento involuntário com a chave ou uma avaria desligaria o ar condicionado ou o aquecimento.</string>
     <string name="preclim_cfg_cluster">Mostrar no ecrã do condutor</string>
     <string name="preclim_cfg_cluster_desc">Durante o programa, uma ficha substitui o módulo Consumo ou Potência nos separadores Navegação e Música do painel, mesmo com o módulo desativado.</string>
     <string name="cluster_preclim_outside">lá fora</string>

@@ -1007,6 +1007,7 @@
     <string name="preclim_dog_text">Mein Mensch ist gleich zurück. Bis dahin habe ich es gemütlich: Die Klimaanlage läuft und ist eingestellt auf</string>
     <string name="preclim_dog_outside">Draußen sind es %1$s</string>
     <string name="preclim_dog_status">MG4Control-Hundemodus · Klima an seit %1$s · Akku %2$s</string>
+    <string name="preclim_dog_warning">Prüfe regelmäßig, ob der Hundemodus noch aktiv ist. Ein zu niedriger Akkustand, ein versehentliches Verriegeln mit dem Schlüssel oder eine Störung würde die Klimaanlage oder die Heizung abschalten.</string>
     <string name="preclim_cfg_cluster">Auf dem Fahrerdisplay anzeigen</string>
     <string name="preclim_cfg_cluster_desc">Während des Programms ersetzt eine Karte das Modul Verbrauch oder Leistung auf den Kombi-Tabs Navigation und Musik, auch wenn das Modul ausgeschaltet ist.</string>
     <string name="cluster_preclim_outside">draußen</string>

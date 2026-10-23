@@ -102,6 +102,22 @@
                     android:textColor="@color/dash_accent"
                     android:textSize="18sp" />
 
+                <!-- Mode chien : avertissement (2026-10-23, son texte), comme dans le pop-up. Fond et
+                     icône peints par le code, aux couleurs d'alerte. -->
+                <TextView
+                    android:id="@+id/preclim_cd_dog_warning"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:padding="12dp"
+                    android:drawableStart="@drawable/ic_dialog_warning"
+                    android:drawablePadding="12dp"
+                    android:gravity="center_vertical"
+                    android:text="@string/preclim_dog_warning"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:visibility="gone" />
+
                 <TextView
                     android:id="@+id/preclim_cd_cancel"
                     android:layout_width="220dp"

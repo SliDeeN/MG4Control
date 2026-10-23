@@ -127,6 +127,7 @@ class PreClimateActivity : Activity() {
         val cdAnneau: PreClimateRingView = racine.findViewById(R.id.preclim_cd_ring)
         val cdChiffre: TextView = racine.findViewById(R.id.preclim_cd_number)
         val cdClim: TextView = racine.findViewById(R.id.preclim_cd_clim)
+        val cdAvertChien: TextView = racine.findViewById(R.id.preclim_cd_dog_warning)
         val cdAnnuler: TextView = racine.findViewById(R.id.preclim_cd_cancel)
         val suivi: View = racine.findViewById(R.id.preclim_live)
         val titre: TextView = racine.findViewById(R.id.preclim_live_title)
@@ -187,6 +188,8 @@ class PreClimateActivity : Activity() {
             PreClimateScreen.fermer("Fermer")
         }
         listOf(v.arreter, v.chienArreter).forEach { OverlayKit.fond(it, v.dangerDoux, v.danger, v.dp(1f), v.dp(12f).toFloat()) }
+        OverlayKit.fond(v.cdAvertChien, v.alerteDoux, v.alerte, v.dp(1f), v.dp(12f).toFloat())
+        v.cdAvertChien.compoundDrawableTintList = ColorStateList.valueOf(v.alerte)
     }
 
     /** Un toucher : l'écran se rallume pour [EVEIL_MS]. */
@@ -258,6 +261,7 @@ class PreClimateActivity : Activity() {
         val clim = resumeDemande(e)
         v.cdClim.text = if (e.req.mode == PreClimateMode.NOW) v.s(R.string.preclim_cd_now, clim)
             else v.s(R.string.preclim_cd_at, heure(e.wallTimes.firstOrNull()?.first ?: 0), clim)
+        v.cdAvertChien.visibility = if (e.req.dog) View.VISIBLE else View.GONE
     }
 
     private fun peindreSuivi(e: PreClimate.Etat, maintenant: Long) {

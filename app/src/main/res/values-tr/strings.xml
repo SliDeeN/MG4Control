@@ -1007,6 +1007,7 @@
     <string name="preclim_dog_text">Sahibim birazdan dönecek. Bu arada keyfim yerinde: klima açık ve şu sıcaklığa ayarlı</string>
     <string name="preclim_dog_outside">Dışarıda hava %1$s</string>
     <string name="preclim_dog_status">MG4Control köpek modu · klima %1$s saatinden beri açık · batarya %2$s</string>
+    <string name="preclim_dog_warning">Köpek modunun hâlâ açık olduğunu düzenli olarak kontrol edin. Çok düşük batarya seviyesi, anahtarla istemeden kilitleme veya bir arıza klimayı ya da ısıtmayı kapatır.</string>
     <string name="preclim_cfg_cluster">Sürücü ekranında göster</string>
     <string name="preclim_cfg_cluster_desc">Program sürerken, gösterge panelinin Navigasyon ve Müzik sekmelerinde Tüketim veya Güç modülünün yerini bir kart alır; modül kapalı olsa bile.</string>
     <string name="cluster_preclim_outside">dışarı</string>

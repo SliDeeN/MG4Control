@@ -1007,6 +1007,7 @@
     <string name="preclim_dog_text">Il mio umano torna presto. Intanto sto comodo: il clima è acceso e impostato su</string>
     <string name="preclim_dog_outside">Fuori ci sono %1$s</string>
     <string name="preclim_dog_status">Modalità cane di MG4Control · clima acceso dalle %1$s · batteria %2$s</string>
+    <string name="preclim_dog_warning">Controlla regolarmente che la modalità cane sia ancora attiva. Un livello di batteria troppo basso, un blocco involontario con la chiave o un malfunzionamento spegnerebbe l’aria condizionata o il riscaldamento.</string>
     <string name="preclim_cfg_cluster">Mostra sul display del conducente</string>
     <string name="preclim_cfg_cluster_desc">Durante il programma, una scheda sostituisce il modulo Consumo o Potenza nelle schede Navigazione e Musica del quadro, anche se il modulo è disattivato.</string>
     <string name="cluster_preclim_outside">fuori</string>

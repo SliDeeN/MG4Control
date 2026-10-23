@@ -1024,6 +1024,7 @@
     <string name="preclim_dog_text">Mon humain revient bientôt. En attendant, je suis bien installé : la clim tourne et elle est réglée sur</string>
     <string name="preclim_dog_outside">Dehors, il fait %1$s</string>
     <string name="preclim_dog_status">Mode chien de MG4Control · clim en marche depuis %1$s · batterie %2$s</string>
+    <string name="preclim_dog_warning">Il est recommandé de vérifier régulièrement que le mode chien est toujours actif. Un niveau de batterie trop faible, un verrouillage involontaire avec la clé ou un dysfonctionnement couperait la climatisation ou le chauffage.</string>
     <string name="preclim_cfg_cluster">Afficher sur l’écran conducteur</string>
     <string name="preclim_cfg_cluster_desc">Pendant le programme, une fiche remplace le module Consommation ou Puissance sur les onglets Navigation et Musique du combiné, même si le module est désactivé.</string>
     <string name="cluster_preclim_outside">dehors</string>
