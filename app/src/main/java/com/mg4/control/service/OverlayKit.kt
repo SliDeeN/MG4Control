@@ -41,10 +41,14 @@ internal object OverlayKit {
      * densité corrigée pour qu'elles prennent la même part de l'écran partout — dp et sp suivent
      * d'un bloc, pictos et texte restent nets ([HvacPopup.echelle]).
      */
-    fun contextes(context: Context, largeurDp: Float, hauteurDp: Float): Contextes {
+    fun contextes(
+        context: Context, largeurDp: Float, hauteurDp: Float,
+        partLargeur: Float = HvacPopup.PART_LARGEUR, partHauteur: Float = HvacPopup.PART_HAUTEUR,
+    ): Contextes {
         val localized = LocaleHelper.applyLocale(context)
         val mesures = localized.resources.displayMetrics
-        val echelle = HvacPopup.echelle(mesures.widthPixels, mesures.heightPixels, mesures.density, largeurDp, hauteurDp)
+        val echelle = HvacPopup.echelle(mesures.widthPixels, mesures.heightPixels, mesures.density, largeurDp, hauteurDp,
+            partLargeur, partHauteur)
         val auTheme = ThemeHelper.withAppTheme(localized)
         val agrandi = auTheme.createConfigurationContext(
             Configuration(auTheme.resources.configuration).apply {

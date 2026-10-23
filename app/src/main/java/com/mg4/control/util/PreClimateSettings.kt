@@ -4,6 +4,7 @@ import android.content.Context
 import com.mg4.control.model.PreClimateMode
 import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateRequest
+import com.mg4.control.model.PreClimateScreenMode
 
 /**
  * Pré-climatisation (issue #130) : réglages de sa page dans l'onglet Raccourcis (décompte avant
@@ -18,7 +19,9 @@ object PreClimateSettings {
     private const val PREFS = "mg4_settings"
     private const val KEY_LOCK = "preclim_lock_s"
     private const val KEY_SOC = "preclim_min_soc"
+    /** Ancien réglage à deux choix (atténué / éteint), relu une fois pour la migration. */
     private const val KEY_SCREEN_OFF = "preclim_screen_off"
+    private const val KEY_SCREEN_MODE = "preclim_screen_mode"
     private const val KEY_MAX = "preclim_max_min"
     private const val KEY_FIRST = "preclim_first_minute"
     private const val KEY_RUN = "preclim_run_min"
@@ -27,6 +30,7 @@ object PreClimateSettings {
     private const val KEY_TEMP = "preclim_temp"
     private const val KEY_FAN = "preclim_fan"
     private const val KEY_AC = "preclim_ac"
+    private const val KEY_DOG = "preclim_dog"
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -36,9 +40,16 @@ object PreClimateSettings {
     fun minSoc(ctx: Context): Int = PreClimatePlan.clampSoc(prefs(ctx).getInt(KEY_SOC, PreClimatePlan.DEFAULT_SOC))
     fun setMinSoc(ctx: Context, pct: Int) = prefs(ctx).edit().putInt(KEY_SOC, PreClimatePlan.clampSoc(pct)).apply()
 
-    /** Écran pendant l'attente : éteint (vrai) ou atténué (faux, par défaut). */
-    fun screenOff(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_SCREEN_OFF, false)
-    fun setScreenOff(ctx: Context, off: Boolean) = prefs(ctx).edit().putBoolean(KEY_SCREEN_OFF, off).apply()
+    /** Écran pendant l'attente : atténué par défaut (et « éteint » pour qui l'avait choisi avant). */
+    fun screenMode(ctx: Context): PreClimateScreenMode {
+        val p = prefs(ctx)
+        val nom = p.getString(KEY_SCREEN_MODE, null)
+            ?: return if (p.getBoolean(KEY_SCREEN_OFF, false)) PreClimateScreenMode.OFF else PreClimateScreenMode.DIM
+        return PreClimateScreenMode.entries.firstOrNull { it.name == nom } ?: PreClimateScreenMode.DIM
+    }
+
+    fun setScreenMode(ctx: Context, mode: PreClimateScreenMode) =
+        prefs(ctx).edit().putString(KEY_SCREEN_MODE, mode.name).apply()
 
     /**
      * Derniers choix du pop-up, mode « Maintenant ». Jamais vus : durée 1 h, premier cycle dans une
@@ -58,6 +69,7 @@ object PreClimateSettings {
             tempC = p.getInt(KEY_TEMP, -1).takeIf { it > 0 } ?: tempNow ?: DEFAULT_TEMP,
             fan = p.getInt(KEY_FAN, -1).takeIf { it > 0 } ?: fanNow ?: DEFAULT_FAN,
             ac = p.getBoolean(KEY_AC, true),
+            dog = p.getBoolean(KEY_DOG, false),
         )
     }
 
@@ -71,6 +83,7 @@ object PreClimateSettings {
             .putInt(KEY_TEMP, r.tempC)
             .putInt(KEY_FAN, r.fan)
             .putBoolean(KEY_AC, r.ac)
+            .putBoolean(KEY_DOG, r.dog)
             .apply()
     }
 

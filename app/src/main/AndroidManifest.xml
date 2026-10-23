@@ -69,6 +69,18 @@
             </intent-filter>
         </activity>
 
+        <!-- Pré-climatisation (issue #130) : l'écran de suivi, en plein écran immersif comme
+             DiAuto-MG4 — une fenêtre superposée reste sous la barre du haut et le rail de gauche.
+             Sa propre tâche, hors des récents : le fermer rend la main à ce qui était au premier plan. -->
+        <activity
+            android:name=".ui.PreClimateActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity="com.mg4.control.preclimate"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.MG4Control.PreClimate" />
+
         <!-- [T-910] foregroundServiceType est OBLIGATOIRE à partir d'API 34 : sans lui,
              startForeground() lève MissingForegroundServiceTypeException. Sans effet sur
              AAOS 9 (API 28), mais le déclarer maintenant évite un crash au premier bump de

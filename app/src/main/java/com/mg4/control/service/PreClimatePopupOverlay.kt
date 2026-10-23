@@ -139,7 +139,7 @@ object PreClimatePopupOverlay {
         demarrage = false
         peindre()
         // Après la mise en page : la navigation lit la position des cases à l'écran.
-        v.racine.post { naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, 1)) }
+        v.racine.post { naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, Int.MAX_VALUE)) }
         AppLogger.i(TAG, "Pop-up affiché — clim ${clim.temp ?: "?"} °C, ventilation ${if (clim.auto) "AUTO" else clim.fan ?: "?"}, " +
             "bornes ${clim.tempMin}–${clim.tempMax} °C / ${clim.fanMin}–${clim.fanMax}")
     }
@@ -185,6 +185,7 @@ object PreClimatePopupOverlay {
         val acEtat: TextView = racine.findViewById(R.id.preclim_ac_state)
         val actuels: TextView = racine.findViewById(R.id.preclim_current)
         val plan: TextView = racine.findViewById(R.id.preclim_plan)
+        val chien: TextView = racine.findViewById(R.id.preclim_dog_toggle)
         val annuler: TextView = racine.findViewById(R.id.preclim_cancel)
         val demarrer: TextView = racine.findViewById(R.id.preclim_start)
         val cases = mutableListOf<TextView>()
@@ -263,6 +264,7 @@ object PreClimatePopupOverlay {
         }
 
         v.ac.setOnClickListener { changer { it.copy(ac = !it.ac) } }
+        v.chien.setOnClickListener { changer { it.copy(dog = !it.dog) } }
         v.demarrer.setOnClickListener { demarrer(app) }
     }
 
@@ -305,7 +307,14 @@ object PreClimatePopupOverlay {
             v.dp(1f), v.dp(16f).toFloat())
         v.acEtat.setTextColor(if (r.ac) v.accent else v.texte2)
         v.actuels.text = v.s(R.string.preclim_current, resumeActuel(v))
+        v.chien.visibility = if (maintenant) View.VISIBLE else View.GONE
+        OverlayKit.fond(v.chien, if (r.dog) v.accentDoux else v.bouton, if (r.dog) v.accent else v.bordure,
+            v.dp(if (r.dog) 2f else 1f), v.dp(12f).toFloat())
+        v.chien.setTextColor(if (r.dog) v.accent else v.texte2)
+        v.chien.compoundDrawableTintList = ColorStateList.valueOf(if (r.dog) v.accent else v.texte2)
         v.plan.text = when {
+            maintenant && r.dog && r.maxMin > 0 -> v.s(R.string.preclim_plan_dog, heure(v, (mur + r.maxMin).roundToInt()))
+            maintenant && r.dog -> v.s(R.string.preclim_plan_dog_open, PreClimateSettings.minSoc(v.loc))
             maintenant && r.maxMin > 0 -> v.s(R.string.preclim_plan_now, heure(v, (mur + r.maxMin).roundToInt()))
             maintenant -> v.s(R.string.preclim_plan_now_open, PreClimateSettings.minSoc(v.loc))
             else -> {
@@ -359,11 +368,11 @@ object PreClimatePopupOverlay {
                 add(listOf(v.cycles.moins, v.cycles.plus, v.ac))
                 add(listOf(v.pause.moins, v.pause.plus))
             }
-            add(listOf(v.annuler, v.demarrer))
+            add((if (r.mode == PreClimateMode.NOW) listOf<View>(v.chien) else emptyList()) + listOf(v.annuler, v.demarrer))
         }
         // L'anneau de l'ancienne navigation resterait sur sa case, peut-être d'un autre mode.
         (v.cases + v.puces + listOf(v.premier, v.duree, v.cycles, v.pause, v.temp, v.ventil).flatMap { listOf(it.moins, it.plus) } +
-            listOf(v.fermer, v.ac, v.annuler, v.demarrer)).forEach { it.foreground = null }
+            listOf(v.fermer, v.ac, v.chien, v.annuler, v.demarrer)).forEach { it.foreground = null }
         val ligne = depart.ligne.coerceIn(0, lignes.lastIndex)
         navigation = OverlayNavigation(
             context = v.themed,

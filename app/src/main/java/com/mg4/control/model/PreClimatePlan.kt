@@ -29,7 +29,22 @@ data class PreClimateRequest(
     val tempC: Int,
     val fan: Int,
     val ac: Boolean,
+    /**
+     * Mode chien (2026-10-23) : l'écran reste allumé et dit aux passants que tout va bien, avec la
+     * température réglée. Mode « Maintenant » seulement : en attente, la clim serait coupée.
+     */
+    val dog: Boolean = false,
 )
+
+/** L'écran de suivi pendant l'attente, portes verrouillées (page du raccourci). */
+enum class PreClimateScreenMode {
+    /** Luminosité inchangée. */
+    NORMAL,
+    /** Voile et luminosité au minimum ; un toucher rallume. */
+    DIM,
+    /** Voile presque opaque. */
+    OFF,
+}
 
 /** Pourquoi la pré-climatisation s'est arrêtée. */
 enum class PreClimateEnd {

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pré-climatisation (issue #130, maquette du 2026-10-23) : l'écran de suivi, plein cadre, sur fond
-     noir quel que soit le thème. Trois vues : le décompte avant verrouillage, le suivi (anneau
-     animé en bleu, cycles, batterie) et la fin. Contenu de base 1280 × 480 dp, agrandi pour remplir
-     l'écran (OverlayKit.contextes) ; le voile, par-dessus, atténue l'écran pendant l'attente. -->
+<!-- Pré-climatisation (issue #130, maquette du 2026-10-23) : l'écran de suivi (PreClimateActivity),
+     en plein écran, sur fond noir quel que soit le thème. Quatre vues : le décompte avant
+     verrouillage, le suivi (anneau animé en bleu, cycles, batterie), le mode chien (un message pour
+     les passants) et la fin. Contenu de base 1280 × 480 dp, agrandi pour remplir l'écran
+     (OverlayKit.contextes) ; le voile, par-dessus, atténue l'écran pendant l'attente. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/preclim_screen"
     android:layout_width="match_parent"
@@ -320,6 +321,124 @@
                             android:maxLines="1" />
 
                     </LinearLayout>
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- ── Mode chien : un message pour les passants, écran jamais atténué ── -->
+        <LinearLayout
+            android:id="@+id/preclim_dog"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="70dp"
+            android:paddingEnd="60dp"
+            android:visibility="gone">
+
+            <FrameLayout
+                android:layout_width="300dp"
+                android:layout_height="300dp">
+
+                <com.mg4.control.ui.widget.PreClimateRingView
+                    android:id="@+id/preclim_dog_ring"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <ImageView
+                    android:id="@+id/preclim_dog_paw"
+                    android:layout_width="120dp"
+                    android:layout_height="120dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_preclim_paw" />
+
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="52dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/preclim_dog_title"
+                    android:textColor="@color/text_primary"
+                    android:textSize="38sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/preclim_dog_text"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="21sp"
+                    android:lineSpacingMultiplier="1.2" />
+
+                <TextView
+                    android:id="@+id/preclim_dog_temp"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/dash_accent"
+                    android:textSize="92sp"
+                    android:includeFontPadding="false" />
+
+                <TextView
+                    android:id="@+id/preclim_dog_outside"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="21sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="18dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/preclim_dog_status"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="12dp"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="14sp"
+                        android:maxLines="2"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:id="@+id/preclim_dog_hide"
+                        android:layout_width="150dp"
+                        android:layout_height="match_parent"
+                        android:background="@drawable/bg_dialog_tile"
+                        android:gravity="center"
+                        android:text="@string/preclim_hide"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:maxLines="1" />
+
+                    <TextView
+                        android:id="@+id/preclim_dog_stop"
+                        android:layout_width="150dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="8dp"
+                        android:gravity="center"
+                        android:text="@string/preclim_stop"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:maxLines="1" />
 
                 </LinearLayout>
 

@@ -890,7 +890,7 @@
     <string name="preclim_cfg_screen">Schermo durante l’attesa</string>
     <string name="preclim_screen_dim">Attenuato</string>
     <string name="preclim_screen_off">Spento</string>
-    <string name="preclim_cfg_warning">Prendi la chiave e non bloccare con essa: l’auto si spegnerebbe. Comando luci su OFF. Non lasciare mai un bambino o un animale da solo in auto: il clima può fermarsi in qualsiasi momento.</string>
+    <string name="preclim_cfg_warning">Prendi la chiave e non bloccare con essa: l’auto si spegnerebbe. Comando luci su OFF. Non lasciare mai un bambino da solo in auto; in modalità cane, non stare via a lungo: il clima può fermarsi in qualsiasi momento (batteria, guasto).</string>
     <string name="preclim_value_seconds">%1$d s</string>
     <string name="preclim_value_percent">%1$d %%</string>
     <string name="preclim_value_celsius">%1$d °C</string>
@@ -964,4 +964,12 @@
     <string name="preclim_end_restored_off">Clima ripristinato: spento (%1$s)</string>
     <string name="preclim_close">Chiudi</string>
     <string name="preclim_cancelled">Preclimatizzazione annullata</string>
+    <string name="preclim_screen_normal">Normale</string>
+    <string name="preclim_dog">Modalità cane</string>
+    <string name="preclim_plan_dog">Modalità cane · schermo acceso per i passanti · stop verso le %1$s</string>
+    <string name="preclim_plan_dog_open">Modalità cane · schermo acceso per i passanti · stop sotto il %1$d %%</string>
+    <string name="preclim_dog_title">Niente paura, sto benissimo!</string>
+    <string name="preclim_dog_text">Il mio umano torna presto. Intanto sto comodo: il clima è acceso e impostato su</string>
+    <string name="preclim_dog_outside">Fuori ci sono %1$s</string>
+    <string name="preclim_dog_status">Modalità cane di MG4Control · clima acceso dalle %1$s · batteria %2$s</string>
 </resources>

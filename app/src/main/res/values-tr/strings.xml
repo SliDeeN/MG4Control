@@ -890,7 +890,7 @@
     <string name="preclim_cfg_screen">Bekleme sırasında ekran</string>
     <string name="preclim_screen_dim">Kısık</string>
     <string name="preclim_screen_off">Kapalı</string>
-    <string name="preclim_cfg_warning">Anahtarı yanınıza alın ve anahtarla kilitlemeyin: araç kapanır. Far anahtarını OFF konumuna getirin. Asla bir çocuğu veya hayvanı araçta yalnız bırakmayın: klima her an durabilir.</string>
+    <string name="preclim_cfg_warning">Anahtarı yanınıza alın ve anahtarla kilitlemeyin: araç kapanır. Far anahtarını OFF konumuna getirin. Asla bir çocuğu araçta yalnız bırakmayın; köpek modunda uzun süre uzaklaşmayın: klima her an durabilir (batarya, arıza).</string>
     <string name="preclim_value_seconds">%1$d sn</string>
     <string name="preclim_value_percent">%%%1$d</string>
     <string name="preclim_value_celsius">%1$d °C</string>
@@ -964,4 +964,12 @@
     <string name="preclim_end_restored_off">Klima geri yüklendi: kapalı (%1$s)</string>
     <string name="preclim_close">Kapat</string>
     <string name="preclim_cancelled">Ön iklimlendirme iptal edildi</string>
+    <string name="preclim_screen_normal">Normal</string>
+    <string name="preclim_dog">Köpek modu</string>
+    <string name="preclim_plan_dog">Köpek modu · ekran yoldan geçenler için açık · %1$s civarında durur</string>
+    <string name="preclim_plan_dog_open">Köpek modu · ekran yoldan geçenler için açık · %%%1$d altında durur</string>
+    <string name="preclim_dog_title">Merak etmeyin, gayet iyiyim!</string>
+    <string name="preclim_dog_text">Sahibim birazdan dönecek. Bu arada keyfim yerinde: klima açık ve şu sıcaklığa ayarlı</string>
+    <string name="preclim_dog_outside">Dışarıda hava %1$s</string>
+    <string name="preclim_dog_status">MG4Control köpek modu · klima %1$s saatinden beri açık · batarya %2$s</string>
 </resources>

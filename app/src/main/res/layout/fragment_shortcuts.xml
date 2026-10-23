@@ -1352,9 +1352,25 @@
                                 android:textSize="16sp" />
 
                             <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btn_preclim_screen_dim"
-                                android:layout_width="170dp"
+                                android:id="@+id/btn_preclim_screen_normal"
+                                android:layout_width="150dp"
                                 android:layout_height="52dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="@string/preclim_screen_normal"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                android:maxLines="1"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_screen_dim"
+                                android:layout_width="150dp"
+                                android:layout_height="52dp"
+                                android:layout_marginStart="8dp"
                                 android:insetTop="0dp"
                                 android:insetBottom="0dp"
                                 android:text="@string/preclim_screen_dim"
@@ -1367,7 +1383,7 @@
                                 app:cornerRadius="8dp" />
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btn_preclim_screen_off"
-                                android:layout_width="170dp"
+                                android:layout_width="150dp"
                                 android:layout_height="52dp"
                                 android:layout_marginStart="8dp"
                                 android:insetTop="0dp"

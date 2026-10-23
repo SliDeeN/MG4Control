@@ -890,7 +890,7 @@
     <string name="preclim_cfg_screen">Bildschirm während des Wartens</string>
     <string name="preclim_screen_dim">Gedimmt</string>
     <string name="preclim_screen_off">Aus</string>
-    <string name="preclim_cfg_warning">Schlüssel mitnehmen und nicht damit verriegeln: Das Auto würde sich ausschalten. Lichtschalter auf OFF. Niemals ein Kind oder Tier allein im Auto lassen: Die Klimaanlage kann jederzeit ausgehen.</string>
+    <string name="preclim_cfg_warning">Schlüssel mitnehmen und nicht damit verriegeln: Das Auto würde sich ausschalten. Lichtschalter auf OFF. Niemals ein Kind allein im Auto lassen; im Hundemodus nicht lange wegbleiben: Die Klimaanlage kann jederzeit ausgehen (Akku, Störung).</string>
     <string name="preclim_value_seconds">%1$d s</string>
     <string name="preclim_value_percent">%1$d %%</string>
     <string name="preclim_value_celsius">%1$d °C</string>
@@ -964,4 +964,12 @@
     <string name="preclim_end_restored_off">Klima wiederhergestellt: aus (%1$s)</string>
     <string name="preclim_close">Schließen</string>
     <string name="preclim_cancelled">Vorklimatisierung abgebrochen</string>
+    <string name="preclim_screen_normal">Normal</string>
+    <string name="preclim_dog">Hundemodus</string>
+    <string name="preclim_plan_dog">Hundemodus · Bildschirm für Passanten an · Stopp gegen %1$s</string>
+    <string name="preclim_plan_dog_open">Hundemodus · Bildschirm für Passanten an · Stopp unter %1$d %%</string>
+    <string name="preclim_dog_title">Keine Sorge, mir geht es bestens!</string>
+    <string name="preclim_dog_text">Mein Mensch ist gleich zurück. Bis dahin habe ich es gemütlich: Die Klimaanlage läuft und ist eingestellt auf</string>
+    <string name="preclim_dog_outside">Draußen sind es %1$s</string>
+    <string name="preclim_dog_status">MG4Control-Hundemodus · Klima an seit %1$s · Akku %2$s</string>
 </resources>

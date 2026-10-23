@@ -26,6 +26,7 @@ import com.mg4.control.accessibility.KeyCaptureService
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.PreClimatePlan
+import com.mg4.control.model.PreClimateScreenMode
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.service.OverlayKit
@@ -1465,12 +1466,15 @@ class ShortcutsFragment : Fragment() {
         val ctx = requireContext()
         val tvLock = view.findViewById<TextView>(R.id.tv_preclim_lock)
         val tvSoc = view.findViewById<TextView>(R.id.tv_preclim_soc)
-        val dim = view.findViewById<MaterialButton>(R.id.btn_preclim_screen_dim)
-        val off = view.findViewById<MaterialButton>(R.id.btn_preclim_screen_off)
+        val choix = mapOf(
+            PreClimateScreenMode.NORMAL to view.findViewById<MaterialButton>(R.id.btn_preclim_screen_normal),
+            PreClimateScreenMode.DIM to view.findViewById(R.id.btn_preclim_screen_dim),
+            PreClimateScreenMode.OFF to view.findViewById(R.id.btn_preclim_screen_off),
+        )
         fun peindre() {
             tvLock.text = getString(R.string.preclim_value_seconds, PreClimateSettings.lockSeconds(ctx))
             tvSoc.text = getString(R.string.preclim_value_percent, PreClimateSettings.minSoc(ctx))
-            highlightConfig(mapOf(0 to dim, 1 to off), if (PreClimateSettings.screenOff(ctx)) 1 else 0)
+            highlightConfig(choix.mapKeys { it.key.ordinal }, PreClimateSettings.screenMode(ctx).ordinal)
         }
         AppDialog.repeter(view.findViewById(R.id.btn_preclim_lock_minus)) {
             PreClimateSettings.setLockSeconds(ctx, PreClimateSettings.lockSeconds(ctx) - PreClimatePlan.LOCK_STEP_S); peindre()
@@ -1484,8 +1488,7 @@ class ShortcutsFragment : Fragment() {
         AppDialog.repeter(view.findViewById(R.id.btn_preclim_soc_plus)) {
             PreClimateSettings.setMinSoc(ctx, PreClimateSettings.minSoc(ctx) + PreClimatePlan.SOC_STEP); peindre()
         }
-        dim.setOnClickListener { PreClimateSettings.setScreenOff(ctx, false); peindre() }
-        off.setOnClickListener { PreClimateSettings.setScreenOff(ctx, true); peindre() }
+        choix.forEach { (mode, bouton) -> bouton.setOnClickListener { PreClimateSettings.setScreenMode(ctx, mode); peindre() } }
         peindre()
     }
 

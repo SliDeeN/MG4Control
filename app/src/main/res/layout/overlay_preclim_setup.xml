@@ -273,6 +273,22 @@
                 android:maxLines="2"
                 android:ellipsize="end" />
 
+            <!-- Mode chien : « Maintenant » seulement ; peint par le code (choisi ou non). -->
+            <TextView
+                android:id="@+id/preclim_dog_toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="52dp"
+                android:layout_marginEnd="10dp"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="18dp"
+                android:drawableStart="@drawable/ic_preclim_paw"
+                android:drawablePadding="8dp"
+                android:text="@string/preclim_dog"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
             <TextView
                 android:id="@+id/preclim_cancel"
                 android:layout_width="180dp"

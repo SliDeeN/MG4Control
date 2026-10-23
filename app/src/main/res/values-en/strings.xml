@@ -890,7 +890,7 @@
     <string name="preclim_cfg_screen">Screen while waiting</string>
     <string name="preclim_screen_dim">Dimmed</string>
     <string name="preclim_screen_off">Off</string>
-    <string name="preclim_cfg_warning">Take the key and don’t lock with it: the car would switch off. Set the light switch to OFF. Never leave a child or an animal alone in the car: the climate can stop at any time.</string>
+    <string name="preclim_cfg_warning">Take the key and don’t lock with it: the car would switch off. Set the light switch to OFF. Never leave a child alone in the car; in dog mode, don’t stay away long: the climate can stop at any time (battery, fault).</string>
     <string name="preclim_value_seconds">%1$d s</string>
     <string name="preclim_value_percent">%1$d %%</string>
     <string name="preclim_value_celsius">%1$d °C</string>
@@ -964,4 +964,12 @@
     <string name="preclim_end_restored_off">Climate restored: off (%1$s)</string>
     <string name="preclim_close">Close</string>
     <string name="preclim_cancelled">Pre-conditioning cancelled</string>
+    <string name="preclim_screen_normal">Normal</string>
+    <string name="preclim_dog">Dog mode</string>
+    <string name="preclim_plan_dog">Dog mode · screen on for passers-by · stops around %1$s</string>
+    <string name="preclim_plan_dog_open">Dog mode · screen on for passers-by · stops below %1$d %%</string>
+    <string name="preclim_dog_title">Don’t worry, I’m perfectly fine!</string>
+    <string name="preclim_dog_text">My human will be back soon. Meanwhile I’m comfy: the climate is on and set to</string>
+    <string name="preclim_dog_outside">Outside, it’s %1$s</string>
+    <string name="preclim_dog_status">MG4Control dog mode · climate on since %1$s · battery %2$s</string>
 </resources>

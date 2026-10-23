@@ -63,7 +63,7 @@ object PreClimate {
     enum class Phase { COUNTDOWN, ACTIVE, ENDED }
     enum class LockState { PENDING, LOCKED, FAILED }
 
-    /** Ce que montre l'écran de suivi ([PreClimateScreenOverlay]). Temps monotones. */
+    /** Ce que montre l'écran de suivi ([PreClimateScreen]). Temps monotones. */
     data class Etat(
         val phase: Phase,
         val req: PreClimateRequest,
@@ -115,7 +115,7 @@ object PreClimate {
      */
     fun raccourci(context: Context) {
         if (actif()) {
-            principal.post { PreClimateScreenOverlay.afficher(context.applicationContext, "raccourci") }
+            principal.post { PreClimateScreen.afficher(context.applicationContext, "raccourci") }
             return
         }
         PreClimatePopupOverlay.toggle(context)
@@ -144,7 +144,9 @@ object PreClimate {
             PreClimateSettings.saveRequest(app, req)
             val borne = req.copy(
                 tempC = req.tempC.coerceIn(clim.tempMin, clim.tempMax),
-                fan = req.fan.coerceIn(clim.fanMin, clim.fanMax))
+                fan = req.fan.coerceIn(clim.fanMin, clim.fanMax),
+                // Mode chien : « Maintenant » seulement — en attente, la clim serait coupée.
+                dog = req.dog && req.mode == PreClimateMode.NOW)
             val maintenant = SystemClock.elapsedRealtime()
             val mur = minuteDuJour()
             val cycles = PreClimatePlan.cycles(borne, maintenant, mur)
@@ -167,11 +169,11 @@ object PreClimate {
             AppLogger.i(TAG, "démarrée : ${borne.mode} " + (if (borne.mode == PreClimateMode.NOW)
                 "max ${borne.maxMin} min" else "${borne.runs} × ${borne.runMin} min (pause ${borne.pauseMin} min), " +
                 "1er cycle dans ${"%.0f".format(java.util.Locale.US, PreClimatePlan.minutesUntil(borne.firstMinuteOfDay, mur))} min") +
-                ", clim ${borne.tempC} °C ventil. ${borne.fan} A/C ${borne.ac}, verrouillage dans " +
+                ", clim ${borne.tempC} °C ventil. ${borne.fan} A/C ${borne.ac}${if (borne.dog) ", mode chien" else ""}, verrouillage dans " +
                 "${(e.lockAtMs - maintenant) / 1000} s, arrêt sous ${e.minSoc} % (batterie ${soc ?: "?"} %) ; avant : $snap")
             principal.post {
                 surDepart()
-                PreClimateScreenOverlay.afficher(app, "démarrage")
+                PreClimateScreen.afficher(app, "démarrage")
             }
             publier(e)
             // Mode « Maintenant » : la clim prend tout de suite les réglages choisis.
@@ -365,7 +367,7 @@ object PreClimate {
         travail.postDelayed({
             if (etat === fini) {
                 etat = null
-                principal.post { PreClimateScreenOverlay.fermer("fin, état oublié") }
+                principal.post { PreClimateScreen.fermer("fin, état oublié") }
             }
         }, END_KEEP_MS)
     }

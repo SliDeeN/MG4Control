@@ -907,7 +907,7 @@
     <string name="preclim_cfg_screen">Écran pendant l’attente</string>
     <string name="preclim_screen_dim">Atténué</string>
     <string name="preclim_screen_off">Éteint</string>
-    <string name="preclim_cfg_warning">Prenez la clé et ne verrouillez pas avec elle : la voiture s’éteindrait. Commodo des feux sur OFF. Ne laissez jamais un enfant ou un animal seul à bord : la clim peut s’arrêter à tout moment.</string>
+    <string name="preclim_cfg_warning">Prenez la clé et ne verrouillez pas avec elle : la voiture s’éteindrait. Commodo des feux sur OFF. Ne laissez jamais un enfant seul à bord ; en mode chien, ne partez pas longtemps : la clim peut s’arrêter à tout moment (batterie, panne).</string>
     <string name="preclim_value_seconds">%1$d s</string>
     <string name="preclim_value_percent">%1$d %%</string>
     <string name="preclim_value_celsius">%1$d °C</string>
@@ -981,4 +981,12 @@
     <string name="preclim_end_restored_off">Clim rétablie : arrêtée (%1$s)</string>
     <string name="preclim_close">Fermer</string>
     <string name="preclim_cancelled">Pré-climatisation annulée</string>
+    <string name="preclim_screen_normal">Normal</string>
+    <string name="preclim_dog">Mode chien</string>
+    <string name="preclim_plan_dog">Mode chien · écran allumé pour les passants · arrêt vers %1$s</string>
+    <string name="preclim_plan_dog_open">Mode chien · écran allumé pour les passants · arrêt sous %1$d %%</string>
+    <string name="preclim_dog_title">Pas d’inquiétude, je vais très bien !</string>
+    <string name="preclim_dog_text">Mon humain revient bientôt. En attendant, je suis bien installé : la clim tourne et elle est réglée sur</string>
+    <string name="preclim_dog_outside">Dehors, il fait %1$s</string>
+    <string name="preclim_dog_status">Mode chien de MG4Control · clim en marche depuis %1$s · batterie %2$s</string>
 </resources>
