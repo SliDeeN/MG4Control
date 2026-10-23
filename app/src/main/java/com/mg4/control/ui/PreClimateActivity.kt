@@ -22,9 +22,6 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import com.mg4.control.R
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.ClimateSnapshot
@@ -32,10 +29,13 @@ import com.mg4.control.model.PreClimateEnd
 import com.mg4.control.model.PreClimateMode
 import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateScreenMode
+import com.mg4.control.model.PreClimateTrend
 import com.mg4.control.service.OverlayKit
 import com.mg4.control.service.PreClimate
 import com.mg4.control.service.PreClimateScreen
+import com.mg4.control.ui.widget.PreClimateParticlesView
 import com.mg4.control.ui.widget.PreClimateRingView
+import com.mg4.control.util.FullScreen
 import com.mg4.control.util.PreClimateSettings
 import java.util.Calendar
 import java.util.Locale
@@ -76,7 +76,8 @@ class PreClimateActivity : Activity() {
         v = Vues(LayoutInflater.from(sombre).inflate(R.layout.activity_preclim, null), c.localized)
         brancher()
         setContentView(v.racine)
-        OverlayKit.tenirDansLaFenetre(v.racine, (MARGE_DP * c.mesures.density).roundToInt(), "Pré-climatisation (suivi)")
+        OverlayKit.tenirDansLaFenetre(v.racine, (MARGE_DP * c.mesures.density).roundToInt(), "Pré-climatisation (suivi)",
+            carte = v.racine.findViewById(R.id.preclim_frame))
         pleinEcran()
         PreClimateScreen.attacher(this)
         eveilJusqua = SystemClock.elapsedRealtime() + EVEIL_MS
@@ -112,18 +113,8 @@ class PreClimateActivity : Activity() {
         finish()
     }
 
-    /** Barres système masquées : drapeaux d'origine (Android 9) et contrôleur d'encarts. */
-    private fun pleinEcran() {
-        @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-            View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-            View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-        WindowCompat.getInsetsController(window, window.decorView).apply {
-            hide(WindowInsetsCompat.Type.systemBars())
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-    }
+    /** Toujours en plein écran, quel que soit le réglage de l'application. */
+    private fun pleinEcran() = FullScreen.apply(window, true)
 
     // ── Vues ─────────────────────────────────────────────────────────────────
 
@@ -131,6 +122,7 @@ class PreClimateActivity : Activity() {
         val themed: Context = racine.context
         val locale: Locale = loc.resources.configuration.locales[0]
         val voile: View = racine.findViewById(R.id.preclim_dim)
+        val particules: PreClimateParticlesView = racine.findViewById(R.id.preclim_particles)
         val decompte: View = racine.findViewById(R.id.preclim_cd)
         val cdAnneau: PreClimateRingView = racine.findViewById(R.id.preclim_cd_ring)
         val cdChiffre: TextView = racine.findViewById(R.id.preclim_cd_number)
@@ -166,6 +158,7 @@ class PreClimateActivity : Activity() {
 
         val accent = themed.getColor(R.color.dash_accent)
         val accentDoux = themed.getColor(R.color.dash_accent_dim)
+        val chaud = themed.getColor(R.color.preclim_heat)
         val vert = themed.getColor(R.color.dash_eco)
         val alerte = themed.getColor(R.color.dash_warn)
         val alerteDoux = themed.getColor(R.color.dash_warn_dim)
@@ -194,7 +187,6 @@ class PreClimateActivity : Activity() {
             PreClimateScreen.fermer("Fermer")
         }
         listOf(v.arreter, v.chienArreter).forEach { OverlayKit.fond(it, v.dangerDoux, v.danger, v.dp(1f), v.dp(12f).toFloat()) }
-        v.chienPatte.imageTintList = ColorStateList.valueOf(v.accent)
     }
 
     /** Un toucher : l'écran se rallume pour [EVEIL_MS]. */
@@ -237,7 +229,26 @@ class PreClimateActivity : Activity() {
         }
         // Le mode chien ne s'atténue jamais : les passants doivent pouvoir lire.
         attenuer(e.phase == PreClimate.Phase.ACTIVE && !chien && maintenant > eveilJusqua)
+        peindreParticules(e)
     }
+
+    /**
+     * Particules sur tout l'écran tant que la clim tourne (2026-10-23) ; arrêtées sous le voile,
+     * où on ne les verrait plus, et pendant l'attente, où rien ne chauffe ni ne refroidit.
+     */
+    private fun peindreParticules(e: PreClimate.Etat) {
+        val enMarche = e.phase == PreClimate.Phase.ACTIVE && e.step is PreClimatePlan.Step.Running &&
+            v.voile.visibility != View.VISIBLE
+        v.particules.tendance = PreClimatePlan.trend(e.req.tempC, e.outsideC)
+        v.particules.intensite = PreClimatePlan.intensity(e.req.tempC, e.outsideC)
+        v.particules.visibility = if (enMarche) View.VISIBLE else View.GONE
+        v.particules.actif = enMarche
+    }
+
+    /** Couleur des particules, reprise par l'anneau et la température : orange si la clim chauffe, sinon bleu. */
+    private fun couleurClim(e: PreClimate.Etat): Int =
+        if (e.step is PreClimatePlan.Step.Running &&
+            PreClimatePlan.trend(e.req.tempC, e.outsideC) == PreClimateTrend.HEATING) v.chaud else v.accent
 
     private fun peindreDecompte(e: PreClimate.Etat, maintenant: Long) {
         val reste = (e.lockAtMs - maintenant).coerceAtLeast(0L)
@@ -254,6 +265,7 @@ class PreClimateActivity : Activity() {
         peindreVerrou(e)
         val step = e.step
         v.anneau.fraction = step?.let { PreClimatePlan.fraction(it, maintenant) } ?: 0f
+        v.anneau.couleur = couleurClim(e)
         val aUneHeure = e.req.mode == PreClimateMode.AT_TIME
         when (step) {
             is PreClimatePlan.Step.Waiting -> {
@@ -265,19 +277,11 @@ class PreClimateActivity : Activity() {
             }
             is PreClimatePlan.Step.Running -> {
                 v.anneau.anim = PreClimateRingView.Anim.ONDES
-                val sansLimite = step.untilMs == PreClimatePlan.NEVER
-                v.anneauTitre.text = when {
-                    aUneHeure -> v.s(R.string.preclim_cycle, step.index + 1, e.cycles.size)
-                    sansLimite -> v.s(R.string.preclim_elapsed)
-                    else -> v.s(R.string.preclim_remaining)
-                }
-                v.anneauGrand.text = duree(
-                    if (sansLimite) ((maintenant - step.fromMs) / 60_000L).toInt() else minutesRestantes(step.untilMs, maintenant))
-                v.anneauSous.text = when {
-                    aUneHeure -> v.s(R.string.preclim_until, heure(e.wallTimes.getOrNull(step.index)?.second ?: 0))
-                    sansLimite -> v.s(R.string.preclim_unlimited)
-                    else -> v.s(R.string.preclim_stop_at, heure((e.startWallMinute + e.req.maxMin).roundToInt()))
-                }
+                v.anneauTitre.text = if (aUneHeure) v.s(R.string.preclim_cycle, step.index + 1, e.cycles.size)
+                    else v.s(R.string.preclim_remaining)
+                v.anneauGrand.text = duree(minutesRestantes(step.untilMs, maintenant))
+                v.anneauSous.text = if (aUneHeure) v.s(R.string.preclim_until, heure(e.wallTimes.getOrNull(step.index)?.second ?: 0))
+                    else v.s(R.string.preclim_stop_at, heure((e.startWallMinute + e.req.maxMin).roundToInt()))
                 pastille(v.etat, v.s(R.string.preclim_state_run), v.accentDoux, v.accent)
             }
             else -> {
@@ -287,7 +291,12 @@ class PreClimateActivity : Activity() {
                 v.anneauSous.text = ""
             }
         }
-        v.clim.text = resumeDemande(e)
+        v.clim.text = SpannableStringBuilder(resumeDemande(e)).apply {
+            // La consigne prend la couleur des particules.
+            val temp = v.s(R.string.preclim_value_celsius, e.req.tempC)
+            val i = indexOf(temp)
+            if (i >= 0) setSpan(ForegroundColorSpan(couleurClim(e)), i, i + temp.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
         lignes(e, step)
         v.dehors.text = v.s(R.string.preclim_outside, temperatureDehors(e))
         v.batterie.text = v.s(R.string.preclim_battery, batterie(e))
@@ -301,6 +310,10 @@ class PreClimateActivity : Activity() {
         val enMarche = e.step is PreClimatePlan.Step.Running
         v.chienAnneau.anim = if (enMarche) PreClimateRingView.Anim.ONDES else PreClimateRingView.Anim.ORBITE
         v.chienAnneau.fraction = e.step?.let { PreClimatePlan.fraction(it, maintenant) } ?: 0f
+        val couleur = couleurClim(e)
+        v.chienAnneau.couleur = couleur
+        v.chienPatte.imageTintList = ColorStateList.valueOf(couleur)
+        v.chienTemp.setTextColor(couleur)
         v.chienTemp.text = v.s(R.string.preclim_value_celsius, e.req.tempC)
         v.chienDehors.text = v.s(R.string.preclim_dog_outside, temperatureDehors(e))
         v.chienEtat.text = v.s(R.string.preclim_dog_status, heure(e.startWallMinute.toInt()), batterie(e))
@@ -334,8 +347,7 @@ class PreClimateActivity : Activity() {
         } else {
             listOf(
                 v.s(R.string.preclim_started_at, heure(e.startWallMinute.toInt())),
-                if (e.req.maxMin > 0) v.s(R.string.preclim_off_at, heure((e.startWallMinute + e.req.maxMin).roundToInt()))
-                else v.s(R.string.preclim_until_return, e.minSoc),
+                v.s(R.string.preclim_off_at, heure((e.startWallMinute + e.req.maxMin).roundToInt())),
             )
         }
         textes.forEach { t ->

@@ -145,8 +145,10 @@ object PreClimate {
             val borne = req.copy(
                 tempC = req.tempC.coerceIn(clim.tempMin, clim.tempMax),
                 fan = req.fan.coerceIn(clim.fanMin, clim.fanMax),
-                // Mode chien : « Maintenant » seulement — en attente, la clim serait coupée.
-                dog = req.dog && req.mode == PreClimateMode.NOW)
+                // Mode chien : « Maintenant » seulement — en attente, la clim serait coupée — et 2 h.
+                // Le choix de durée enregistré plus haut reste celui de l'utilisateur.
+                dog = req.dog && req.mode == PreClimateMode.NOW,
+                maxMin = PreClimatePlan.maxMinutes(req))
             val maintenant = SystemClock.elapsedRealtime()
             val mur = minuteDuJour()
             val cycles = PreClimatePlan.cycles(borne, maintenant, mur)

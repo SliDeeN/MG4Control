@@ -292,6 +292,9 @@
     <string name="settings_text_size">Dimensione del testo</string>
     <string name="settings_popup_delay">Tempo prima della chiusura dei pop-up</string>
     <string name="settings_popup_delay_desc">Selettore profilo, conferma di automazione e pop-up HVAC. Ogni azione fa ripartire il tempo.</string>
+    <string name="settings_fullscreen">Schermo intero</string>
+    <string name="settings_fullscreen_switch">Nascondi la barra di stato e la barra di navigazione</string>
+    <string name="settings_fullscreen_desc">Tutta l\'altezza dello schermo per MG4Control. Scorri dal bordo per far riapparire le barre per un attimo.</string>
     <string name="settings_text_size_standard">Standard</string>
     <string name="settings_text_size_large">Grande</string>
     <string name="settings_text_size_xlarge">Molto grande</string>
@@ -900,7 +903,6 @@
     <string name="preclim_mode_now">Adesso</string>
     <string name="preclim_mode_at">A un orario</string>
     <string name="preclim_now_caption">Il clima parte subito e funziona al massimo:</string>
-    <string name="preclim_no_limit">Senza limite</string>
     <string name="preclim_first">Primo ciclo</string>
     <string name="preclim_run">Durata di un ciclo</string>
     <string name="preclim_runs">Cicli</string>
@@ -915,7 +917,6 @@
     <string name="preclim_summary">%1$s · ventilazione %2$s</string>
     <string name="preclim_summary_ac">%1$s · ventilazione %2$s · A/C</string>
     <string name="preclim_plan_now">Clima subito · auto spenta verso le %1$s</string>
-    <string name="preclim_plan_now_open">Clima subito · stop al tuo ritorno o sotto il %1$d %%</string>
     <string name="preclim_plan_at">Cicli alle %1$s · auto spenta verso le %2$s</string>
     <string name="preclim_tomorrow">domani %1$s</string>
     <string name="preclim_cancel">Annulla</string>
@@ -935,16 +936,13 @@
     <string name="preclim_at_time">alle %1$s</string>
     <string name="preclim_cycle">Ciclo %1$d / %2$d</string>
     <string name="preclim_remaining">Restante</string>
-    <string name="preclim_elapsed">Da</string>
     <string name="preclim_until">fino alle %1$s</string>
     <string name="preclim_stop_at">stop alle %1$s</string>
-    <string name="preclim_unlimited">senza limite</string>
     <string name="preclim_state_wait">Clima spento in attesa</string>
     <string name="preclim_state_run">Clima acceso</string>
     <string name="preclim_run_line">Ciclo %1$d · %2$s → %3$s</string>
     <string name="preclim_started_at">Avviata alle %1$s</string>
     <string name="preclim_off_at">Auto spenta verso le %1$s</string>
-    <string name="preclim_until_return">Stop al tuo ritorno o sotto il %1$d %%</string>
     <string name="preclim_outside">Esterno %1$s</string>
     <string name="preclim_battery">Batteria %1$s</string>
     <string name="preclim_hint">Sblocca per fermare e ritrovare le tue impostazioni · tocca lo schermo per illuminarlo</string>
@@ -967,7 +965,6 @@
     <string name="preclim_screen_normal">Normale</string>
     <string name="preclim_dog">Modalità cane</string>
     <string name="preclim_plan_dog">Modalità cane · schermo acceso per i passanti · stop verso le %1$s</string>
-    <string name="preclim_plan_dog_open">Modalità cane · schermo acceso per i passanti · stop sotto il %1$d %%</string>
     <string name="preclim_dog_title">Niente paura, sto benissimo!</string>
     <string name="preclim_dog_text">Il mio umano torna presto. Intanto sto comodo: il clima è acceso e impostato su</string>
     <string name="preclim_dog_outside">Fuori ci sono %1$s</string>

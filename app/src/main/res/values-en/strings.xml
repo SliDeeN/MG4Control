@@ -292,6 +292,9 @@
     <string name="settings_text_size">Text size</string>
     <string name="settings_popup_delay">Pop-up auto-close delay</string>
     <string name="settings_popup_delay_desc">Profile picker, automation confirmation and HVAC pop-up. Each action restarts the delay.</string>
+    <string name="settings_fullscreen">Full screen</string>
+    <string name="settings_fullscreen_switch">Hide the status bar and the navigation bar</string>
+    <string name="settings_fullscreen_desc">The whole screen height for MG4Control. Swipe from the edge to bring the bars back for a moment.</string>
     <string name="settings_text_size_standard">Standard</string>
     <string name="settings_text_size_large">Large</string>
     <string name="settings_text_size_xlarge">Extra large</string>
@@ -900,7 +903,6 @@
     <string name="preclim_mode_now">Now</string>
     <string name="preclim_mode_at">At a set time</string>
     <string name="preclim_now_caption">The climate starts right away and runs for at most:</string>
-    <string name="preclim_no_limit">No limit</string>
     <string name="preclim_first">First run</string>
     <string name="preclim_run">Run length</string>
     <string name="preclim_runs">Runs</string>
@@ -915,7 +917,6 @@
     <string name="preclim_summary">%1$s · fan %2$s</string>
     <string name="preclim_summary_ac">%1$s · fan %2$s · A/C</string>
     <string name="preclim_plan_now">Climate right away · car switched off around %1$s</string>
-    <string name="preclim_plan_now_open">Climate right away · stops when you come back or below %1$d %%</string>
     <string name="preclim_plan_at">Runs at %1$s · car switched off around %2$s</string>
     <string name="preclim_tomorrow">tomorrow %1$s</string>
     <string name="preclim_cancel">Cancel</string>
@@ -935,16 +936,13 @@
     <string name="preclim_at_time">at %1$s</string>
     <string name="preclim_cycle">Run %1$d / %2$d</string>
     <string name="preclim_remaining">Left</string>
-    <string name="preclim_elapsed">Running for</string>
     <string name="preclim_until">until %1$s</string>
     <string name="preclim_stop_at">stops at %1$s</string>
-    <string name="preclim_unlimited">no limit</string>
     <string name="preclim_state_wait">Climate off while waiting</string>
     <string name="preclim_state_run">Climate on</string>
     <string name="preclim_run_line">Run %1$d · %2$s → %3$s</string>
     <string name="preclim_started_at">Started at %1$s</string>
     <string name="preclim_off_at">Car switched off around %1$s</string>
-    <string name="preclim_until_return">Stops when you come back or below %1$d %%</string>
     <string name="preclim_outside">Outside %1$s</string>
     <string name="preclim_battery">Battery %1$s</string>
     <string name="preclim_hint">Unlock to stop and get your settings back · touch the screen to light it up</string>
@@ -967,7 +965,6 @@
     <string name="preclim_screen_normal">Normal</string>
     <string name="preclim_dog">Dog mode</string>
     <string name="preclim_plan_dog">Dog mode · screen on for passers-by · stops around %1$s</string>
-    <string name="preclim_plan_dog_open">Dog mode · screen on for passers-by · stops below %1$d %%</string>
     <string name="preclim_dog_title">Don’t worry, I’m perfectly fine!</string>
     <string name="preclim_dog_text">My human will be back soon. Meanwhile I’m comfy: the climate is on and set to</string>
     <string name="preclim_dog_outside">Outside, it’s %1$s</string>

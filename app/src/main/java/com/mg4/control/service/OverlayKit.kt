@@ -128,9 +128,11 @@ internal object OverlayKit {
      *
      * @param marge espace à garder autour de la carte quand il faut la réduire, en pixels
      * @param nom   de quel pop-up parle le journal
+     * @param carte la vue à réduire : par défaut le premier enfant de [racine]
      */
-    fun tenirDansLaFenetre(racine: View, marge: Int, nom: String) {
-        val carte = (racine as? ViewGroup)?.getChildAt(0) ?: return
+    fun tenirDansLaFenetre(racine: View, marge: Int, nom: String,
+                           carte: View? = (racine as? ViewGroup)?.getChildAt(0)) {
+        if (carte == null) return
         val libre = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         carte.measure(libre, libre)
         val largeur = carte.measuredWidth

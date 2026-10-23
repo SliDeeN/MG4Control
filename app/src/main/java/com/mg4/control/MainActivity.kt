@@ -29,6 +29,7 @@ import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateDialogManager
 import com.mg4.control.update.UpdateNotifier
 import com.mg4.control.util.FirmwareInfo
+import com.mg4.control.util.FullScreen
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.ThemeHelper
 
@@ -57,6 +58,13 @@ class MainActivity : AppCompatActivity() {
             // Recree les activites vivantes : pas de recreate() manuel a ajouter.
             AppCompatDelegate.setDefaultNightMode(target)
         }
+        FullScreen.apply(window, FullScreen.isEnabled(this))
+    }
+
+    /** Réglage « Plein écran » : une fenêtre de dialogue peut avoir fait revenir les barres. */
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus && FullScreen.isEnabled(this)) FullScreen.apply(window, true)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

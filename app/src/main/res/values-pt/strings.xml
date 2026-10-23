@@ -292,6 +292,9 @@
     <string name="settings_text_size">Tamanho do texto</string>
     <string name="settings_popup_delay">Tempo até fechar os pop-ups</string>
     <string name="settings_popup_delay_desc">Seletor de perfil, confirmação de automação e pop-up HVAC. Cada ação reinicia o tempo.</string>
+    <string name="settings_fullscreen">Ecrã inteiro</string>
+    <string name="settings_fullscreen_switch">Ocultar a barra de estado e a barra de navegação</string>
+    <string name="settings_fullscreen_desc">Toda a altura do ecrã para o MG4Control. Deslize a partir da margem para as barras reaparecerem por instantes.</string>
     <string name="settings_text_size_standard">Padrão</string>
     <string name="settings_text_size_large">Grande</string>
     <string name="settings_text_size_xlarge">Muito grande</string>
@@ -900,7 +903,6 @@
     <string name="preclim_mode_now">Agora</string>
     <string name="preclim_mode_at">A uma hora</string>
     <string name="preclim_now_caption">O clima arranca de imediato e funciona no máximo:</string>
-    <string name="preclim_no_limit">Sem limite</string>
     <string name="preclim_first">Primeiro ciclo</string>
     <string name="preclim_run">Duração de um ciclo</string>
     <string name="preclim_runs">Ciclos</string>
@@ -915,7 +917,6 @@
     <string name="preclim_summary">%1$s · ventilação %2$s</string>
     <string name="preclim_summary_ac">%1$s · ventilação %2$s · A/C</string>
     <string name="preclim_plan_now">Clima de imediato · carro desligado por volta das %1$s</string>
-    <string name="preclim_plan_now_open">Clima de imediato · para no seu regresso ou abaixo de %1$d %%</string>
     <string name="preclim_plan_at">Ciclos às %1$s · carro desligado por volta das %2$s</string>
     <string name="preclim_tomorrow">amanhã %1$s</string>
     <string name="preclim_cancel">Cancelar</string>
@@ -935,16 +936,13 @@
     <string name="preclim_at_time">às %1$s</string>
     <string name="preclim_cycle">Ciclo %1$d / %2$d</string>
     <string name="preclim_remaining">Restante</string>
-    <string name="preclim_elapsed">Há</string>
     <string name="preclim_until">até às %1$s</string>
     <string name="preclim_stop_at">para às %1$s</string>
-    <string name="preclim_unlimited">sem limite</string>
     <string name="preclim_state_wait">Clima desligado em espera</string>
     <string name="preclim_state_run">Clima ligado</string>
     <string name="preclim_run_line">Ciclo %1$d · %2$s → %3$s</string>
     <string name="preclim_started_at">Iniciada às %1$s</string>
     <string name="preclim_off_at">Carro desligado por volta das %1$s</string>
-    <string name="preclim_until_return">Para no seu regresso ou abaixo de %1$d %%</string>
     <string name="preclim_outside">Exterior %1$s</string>
     <string name="preclim_battery">Bateria %1$s</string>
     <string name="preclim_hint">Destranque para parar e recuperar as suas definições · toque no ecrã para o iluminar</string>
@@ -967,7 +965,6 @@
     <string name="preclim_screen_normal">Normal</string>
     <string name="preclim_dog">Modo cão</string>
     <string name="preclim_plan_dog">Modo cão · ecrã ligado para quem passa · para por volta das %1$s</string>
-    <string name="preclim_plan_dog_open">Modo cão · ecrã ligado para quem passa · para abaixo de %1$d %%</string>
     <string name="preclim_dog_title">Não se preocupem, estou ótimo!</string>
     <string name="preclim_dog_text">O meu humano volta já. Entretanto estou confortável: o clima está ligado e regulado para</string>
     <string name="preclim_dog_outside">Lá fora estão %1$s</string>

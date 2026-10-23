@@ -6,7 +6,7 @@ package com.mg4.control.model
  * Sans iSmart, rien ne rallume une voiture éteinte depuis l'écran central (essais de MG4Dash sur
  * SWI69, 2026-10-19) : la voiture reste donc ALLUMÉE et verrouillée pendant l'absence du
  * conducteur, et la clim tourne selon l'un des deux modes :
- *  - [PreClimateMode.NOW] : tout de suite, au plus [PreClimateRequest.maxMin] minutes ;
+ *  - [PreClimateMode.NOW] : tout de suite, au plus [PreClimateRequest.maxMin] minutes (2 h) ;
  *  - [PreClimateMode.AT_TIME] : à une heure choisie, en un ou plusieurs cycles séparés d'une
  *    pause, clim coupée en attendant (≈ 0,2 kW voiture allumée, relevé de l'auteur de l'issue).
  *
@@ -19,7 +19,7 @@ enum class PreClimateMode { NOW, AT_TIME }
 /** Ce que l'utilisateur a choisi dans le pop-up. Températures en °C, durées en minutes. */
 data class PreClimateRequest(
     val mode: PreClimateMode,
-    /** [PreClimateMode.NOW] : durée maximale, 0 = sans limite (le seuil de batterie arrête alors). */
+    /** [PreClimateMode.NOW] : durée maximale, l'une de [PreClimatePlan.MAX_CHOICES]. */
     val maxMin: Int,
     /** [PreClimateMode.AT_TIME] : heure du premier cycle, en minutes depuis minuit. */
     val firstMinuteOfDay: Int,
@@ -32,6 +32,7 @@ data class PreClimateRequest(
     /**
      * Mode chien (2026-10-23) : l'écran reste allumé et dit aux passants que tout va bien, avec la
      * température réglée. Mode « Maintenant » seulement : en attente, la clim serait coupée.
+     * Durée imposée : [PreClimatePlan.DOG_MAX_MIN] (demande du 2026-10-23).
      */
     val dog: Boolean = false,
 )
@@ -45,6 +46,12 @@ enum class PreClimateScreenMode {
     /** Voile presque opaque. */
     OFF,
 }
+
+/**
+ * Ce que fait la clim d'après l'écart entre la consigne et l'extérieur (2026-10-23) : la couleur des
+ * particules, de l'anneau et de la température de l'écran de suivi — bleu, orange, ou bleu calme.
+ */
+enum class PreClimateTrend { COOLING, HEATING, HOLDING }
 
 /** Pourquoi la pré-climatisation s'est arrêtée. */
 enum class PreClimateEnd {
@@ -67,9 +74,14 @@ enum class PreClimateEnd {
 
 object PreClimatePlan {
 
-    /** Durées maximales proposées en mode [PreClimateMode.NOW] ; 0 = sans limite. */
-    val MAX_CHOICES = listOf(15, 30, 60, 120, 0)
+    /**
+     * Durées maximales proposées en mode [PreClimateMode.NOW]. Plus de « Sans limite » depuis le
+     * 2026-10-23 : 2 h au plus (une valeur 0 enregistrée avant redevient [DEFAULT_MAX_MIN]).
+     */
+    val MAX_CHOICES = listOf(15, 30, 60, 120)
     const val DEFAULT_MAX_MIN = 60
+    /** Mode chien : toujours la durée la plus longue, sans choix. */
+    const val DOG_MAX_MIN = 120
 
     const val RUN_MIN = 5
     const val RUN_MAX = 60
@@ -103,9 +115,6 @@ object PreClimatePlan {
     private const val MINUTES_PAR_JOUR = 1440
     private const val MS_PAR_MIN = 60_000L
 
-    /** Une échéance que rien n'atteint : mode [PreClimateMode.NOW] sans limite. */
-    const val NEVER = Long.MAX_VALUE
-
     /**
      * Minutes de [nowMinuteOfDay] (avec ses secondes) jusqu'au prochain [firstMinuteOfDay] : une
      * heure déjà passée — ou à moins d'une minute — est celle du lendemain.
@@ -122,13 +131,16 @@ object PreClimatePlan {
     /** Un cycle de clim, en temps monotone. */
     data class Cycle(val startMs: Long, val endMs: Long)
 
+    /** Durée maximale effective en mode [PreClimateMode.NOW] : celle choisie, ou 2 h en mode chien. */
+    fun maxMinutes(req: PreClimateRequest): Int =
+        if (req.dog && req.mode == PreClimateMode.NOW) DOG_MAX_MIN else clampMax(req.maxMin)
+
     /**
      * Cycles de [req], [startMs] étant l'instant (monotone) du démarrage et [nowMinuteOfDay]
      * l'heure murale au même instant. Mode NOW : un seul cycle, du démarrage à la durée maximale.
      */
     fun cycles(req: PreClimateRequest, startMs: Long, nowMinuteOfDay: Double): List<Cycle> = when (req.mode) {
-        PreClimateMode.NOW -> listOf(
-            Cycle(startMs, if (req.maxMin > 0) startMs + req.maxMin * MS_PAR_MIN else NEVER))
+        PreClimateMode.NOW -> listOf(Cycle(startMs, startMs + maxMinutes(req) * MS_PAR_MIN))
         PreClimateMode.AT_TIME -> {
             val first = startMs + (minutesUntil(req.firstMinuteOfDay, nowMinuteOfDay) * MS_PAR_MIN).toLong()
             (0 until req.runs.coerceIn(RUNS_MIN, RUNS_MAX)).map { i ->
@@ -143,14 +155,14 @@ object PreClimatePlan {
         cycles(req, 0L, nowMinuteOfDay).map { c ->
             // Arrondi, pas troncature : 1109,9999 doit rester 18:30 et non devenir 18:29.
             fun mur(ms: Long) = Math.floorMod(Math.round(nowMinuteOfDay + ms / MS_PAR_MIN.toDouble()), MINUTES_PAR_JOUR.toLong()).toInt()
-            mur(c.startMs) to (if (c.endMs == NEVER) -1 else mur(c.endMs))
+            mur(c.startMs) to mur(c.endMs)
         }
 
     /** Où en est le programme. */
     sealed class Step {
         /** Clim coupée jusqu'au cycle [index] ; l'attente a commencé à [fromMs]. */
         data class Waiting(val index: Int, val fromMs: Long, val untilMs: Long) : Step()
-        /** Cycle [index] en cours, jusqu'à [untilMs] ([NEVER] : sans limite). */
+        /** Cycle [index] en cours, jusqu'à [untilMs]. */
         data class Running(val index: Int, val fromMs: Long, val untilMs: Long) : Step()
         /** Tous les cycles sont finis. */
         data object Done : Step()
@@ -166,16 +178,38 @@ object PreClimatePlan {
         return Step.Done
     }
 
-    /** Part écoulée de l'étape, de 0 à 1 (l'arc de l'écran de suivi) ; sans limite : un tour par heure. */
+    /** Part écoulée de l'étape, de 0 à 1 (l'arc de l'écran de suivi). */
     fun fraction(step: Step, nowMs: Long): Float {
         val (from, until) = when (step) {
             is Step.Waiting -> step.fromMs to step.untilMs
             is Step.Running -> step.fromMs to step.untilMs
             Step.Done -> return 1f
         }
-        if (until == NEVER) return ((nowMs - from) % (60 * MS_PAR_MIN)).toFloat() / (60 * MS_PAR_MIN)
         if (until <= from) return 1f
         return ((nowMs - from).toFloat() / (until - from)).coerceIn(0f, 1f)
+    }
+
+    // ── Animation de l'écran de suivi ────────────────────────────────────────
+
+    /** Écart (°C) en deçà duquel la clim ne fait que maintenir. */
+    private const val TREND_DEADBAND_C = 0.5f
+    /** Écart (°C) au-delà duquel l'animation est à son maximum (≈ 10 °C au-dessus du plancher). */
+    private const val TREND_FULL_C = 14f
+
+    /** Refroidit si la consigne est sous l'extérieur, chauffe au-dessus ; extérieur illisible : maintient. */
+    fun trend(setC: Int, outsideC: Float?): PreClimateTrend {
+        val ecart = setC - (outsideC ?: return PreClimateTrend.HOLDING)
+        return when {
+            ecart > TREND_DEADBAND_C -> PreClimateTrend.HEATING
+            ecart < -TREND_DEADBAND_C -> PreClimateTrend.COOLING
+            else -> PreClimateTrend.HOLDING
+        }
+    }
+
+    /** Force de l'animation, de 0,15 (maintien) à 1 : plus l'écart est grand, plus elle est ample et vive. */
+    fun intensity(setC: Int, outsideC: Float?): Float {
+        if (trend(setC, outsideC) == PreClimateTrend.HOLDING) return 0.15f
+        return (0.3f + kotlin.math.abs(setC - outsideC!!) / TREND_FULL_C).coerceAtMost(1f)
     }
 
     // ── Réglages bornés ──────────────────────────────────────────────────────

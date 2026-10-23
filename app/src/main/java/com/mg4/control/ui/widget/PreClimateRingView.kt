@@ -2,6 +2,7 @@ package com.mg4.control.ui.widget
 
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
 import android.os.SystemClock
@@ -20,6 +21,9 @@ import kotlin.math.sin
  * point fait lentement le tour ([Anim.ORBITE], 14 s), clim en marche de fines ondes partent du
  * centre ([Anim.ONDES]) ; pendant le décompte l'arc se vide ([Anim.AUCUNE], c'est [fraction] qui
  * bouge). Une image toutes les [IMAGE_MS] au plus, et seulement quand quelque chose bouge.
+ *
+ * Le disque intérieur est noir : derrière, les particules de [PreClimateParticlesView] passent, et
+ * le décompte doit rester net. [couleur] suit celle des particules (bleu, ou orange quand ça chauffe).
  */
 class PreClimateRingView @JvmOverloads constructor(
     context: Context, attrs: AttributeSet? = null,
@@ -33,8 +37,11 @@ class PreClimateRingView @JvmOverloads constructor(
     var anim: Anim = Anim.AUCUNE
         set(v) { field = v; invalidate() }
 
+    /** Couleur de l'arc, du point et des ondes ; le bleu de l'application par défaut. */
+    var couleur: Int = context.getColor(R.color.dash_accent)
+        set(v) { if (field != v) { field = v; invalidate() } }
+
     private val cPiste = context.getColor(R.color.dash_border)
-    private val cAccent = context.getColor(R.color.dash_accent)
     private val epaisseur = dp(9f)
 
     private val trait = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND }
@@ -51,13 +58,16 @@ class PreClimateRingView @JvmOverloads constructor(
         if (r <= 0f) return
         val t = SystemClock.uptimeMillis()
 
+        plein.color = Color.BLACK
+        plein.alpha = 255
+        canvas.drawCircle(cx, cy, r + epaisseur / 2f, plein)
         trait.strokeWidth = epaisseur
         trait.color = cPiste
         trait.alpha = 255
         canvas.drawCircle(cx, cy, r, trait)
         cadre.set(cx - r, cy - r, cx + r, cy + r)
         if (fraction > 0.002f) {
-            trait.color = cAccent
+            trait.color = couleur
             canvas.drawArc(cadre, -90f, 360f * fraction, false, trait)
         }
 
@@ -65,13 +75,13 @@ class PreClimateRingView @JvmOverloads constructor(
             Anim.ORBITE -> {
                 val a = -PI / 2 + 2 * PI * ((t % ORBITE_MS).toDouble() / ORBITE_MS)
                 val respiration = 0.55f + 0.35f * sin(2 * PI * (t % RESPIRATION_MS) / RESPIRATION_MS).toFloat()
-                plein.color = cAccent
+                plein.color = couleur
                 plein.alpha = (255 * respiration).toInt().coerceIn(0, 255)
                 canvas.drawCircle(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat(), epaisseur * 0.45f, plein)
             }
             Anim.ONDES -> {
                 trait.strokeWidth = dp(1.6f)
-                trait.color = cAccent
+                trait.color = couleur
                 for (k in 0 until NB_ONDES) {
                     val p = ((t % ONDE_MS).toFloat() / ONDE_MS + k.toFloat() / NB_ONDES) % 1f
                     trait.alpha = ((1f - p) * 0.55f * 255).toInt().coerceIn(0, 255)

@@ -292,6 +292,9 @@
     <string name="settings_text_size">Yazı boyutu</string>
     <string name="settings_popup_delay">Açılır pencerelerin kapanma süresi</string>
     <string name="settings_popup_delay_desc">Profil seçici, otomasyon onayı ve HVAC açılır penceresi. Her işlem süreyi yeniden başlatır.</string>
+    <string name="settings_fullscreen">Tam ekran</string>
+    <string name="settings_fullscreen_switch">Durum çubuğunu ve gezinme çubuğunu gizle</string>
+    <string name="settings_fullscreen_desc">Ekranın tüm yüksekliği MG4Control için. Çubukları kısa süreliğine geri getirmek için kenardan kaydırın.</string>
     <string name="settings_text_size_standard">Standart</string>
     <string name="settings_text_size_large">Büyük</string>
     <string name="settings_text_size_xlarge">Çok büyük</string>
@@ -900,7 +903,6 @@
     <string name="preclim_mode_now">Şimdi</string>
     <string name="preclim_mode_at">Belirli saatte</string>
     <string name="preclim_now_caption">Klima hemen başlar ve en fazla şu süre çalışır:</string>
-    <string name="preclim_no_limit">Sınırsız</string>
     <string name="preclim_first">İlk döngü</string>
     <string name="preclim_run">Döngü süresi</string>
     <string name="preclim_runs">Döngüler</string>
@@ -915,7 +917,6 @@
     <string name="preclim_summary">%1$s · fan %2$s</string>
     <string name="preclim_summary_ac">%1$s · fan %2$s · A/C</string>
     <string name="preclim_plan_now">Klima hemen · araç %1$s civarında kapanır</string>
-    <string name="preclim_plan_now_open">Klima hemen · dönüşünüzde veya %%%1$d altında durur</string>
     <string name="preclim_plan_at">Döngüler: %1$s · araç %2$s civarında kapanır</string>
     <string name="preclim_tomorrow">yarın %1$s</string>
     <string name="preclim_cancel">İptal</string>
@@ -935,16 +936,13 @@
     <string name="preclim_at_time">saat %1$s</string>
     <string name="preclim_cycle">Döngü %1$d / %2$d</string>
     <string name="preclim_remaining">Kalan</string>
-    <string name="preclim_elapsed">Geçen</string>
     <string name="preclim_until">%1$s saatine kadar</string>
     <string name="preclim_stop_at">%1$s saatinde durur</string>
-    <string name="preclim_unlimited">sınırsız</string>
     <string name="preclim_state_wait">Beklerken klima kapalı</string>
     <string name="preclim_state_run">Klima açık</string>
     <string name="preclim_run_line">Döngü %1$d · %2$s → %3$s</string>
     <string name="preclim_started_at">Başlangıç %1$s</string>
     <string name="preclim_off_at">Araç %1$s civarında kapanır</string>
-    <string name="preclim_until_return">Dönüşünüzde veya %%%1$d altında durur</string>
     <string name="preclim_outside">Dış %1$s</string>
     <string name="preclim_battery">Batarya %1$s</string>
     <string name="preclim_hint">Durdurmak ve ayarlarınızı geri almak için kilidi açın · aydınlatmak için ekrana dokunun</string>
@@ -967,7 +965,6 @@
     <string name="preclim_screen_normal">Normal</string>
     <string name="preclim_dog">Köpek modu</string>
     <string name="preclim_plan_dog">Köpek modu · ekran yoldan geçenler için açık · %1$s civarında durur</string>
-    <string name="preclim_plan_dog_open">Köpek modu · ekran yoldan geçenler için açık · %%%1$d altında durur</string>
     <string name="preclim_dog_title">Merak etmeyin, gayet iyiyim!</string>
     <string name="preclim_dog_text">Sahibim birazdan dönecek. Bu arada keyfim yerinde: klima açık ve şu sıcaklığa ayarlı</string>
     <string name="preclim_dog_outside">Dışarıda hava %1$s</string>

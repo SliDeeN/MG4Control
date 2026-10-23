@@ -51,6 +51,8 @@ object PreClimatePopupOverlay {
     private const val TEMP_MAX_REPLI = 32
     private const val FAN_MIN_REPLI = 1
     private const val FAN_MAX_REPLI = 7
+    /** Durées non choisissables en mode chien. */
+    private const val ALPHA_GRISE = 0.35f
 
     private val handler = Handler(Looper.getMainLooper())
     private val lecture = Executors.newSingleThreadExecutor()
@@ -232,8 +234,9 @@ object PreClimatePopupOverlay {
                 textSize = 16f
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
                 maxLines = 1
-                text = if (minutes == 0) v.s(R.string.preclim_no_limit) else duree(v, minutes)
-                setOnClickListener { changer { it.copy(maxMin = minutes) } }
+                text = duree(v, minutes)
+                // Mode chien : 2 h imposées, les autres durées sont grisées.
+                setOnClickListener { if (req?.dog != true) changer { it.copy(maxMin = minutes) } }
             }
             v.rangeeMax.addView(puce, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f).apply {
                 if (v.puces.isNotEmpty()) marginStart = v.dp(8f)
@@ -264,7 +267,11 @@ object PreClimatePopupOverlay {
         }
 
         v.ac.setOnClickListener { changer { it.copy(ac = !it.ac) } }
-        v.chien.setOnClickListener { changer { it.copy(dog = !it.dog) } }
+        v.chien.setOnClickListener {
+            changer { it.copy(dog = !it.dog) }
+            // Les durées entrent dans la navigation ou en sortent : on la refait, sur ce bouton.
+            naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, 0))
+        }
         v.demarrer.setOnClickListener { demarrer(app) }
     }
 
@@ -275,8 +282,11 @@ object PreClimatePopupOverlay {
     }
 
     private fun changer(f: (PreClimateRequest) -> PreClimateRequest) {
-        val r = req ?: return
-        req = f(r)
+        val r = f(req ?: return)
+        req = r
+        // Enregistré à chaque changement, et pas seulement à « Démarrer » : fermé sans démarrer, ou
+        // démarrage refusé (pas en P), le pop-up rouvre quand même sur ces réglages.
+        vues?.let { PreClimateSettings.saveRequest(it.loc, r) }
         peindre()
     }
 
@@ -286,11 +296,13 @@ object PreClimatePopupOverlay {
         val maintenant = r.mode == PreClimateMode.NOW
         v.blocMaintenant.visibility = if (maintenant) View.VISIBLE else View.GONE
         v.blocHeure.visibility = if (maintenant) View.GONE else View.VISIBLE
+        val max = PreClimatePlan.maxMinutes(r)
         v.puces.forEachIndexed { i, puce ->
-            val on = PreClimatePlan.MAX_CHOICES[i] == r.maxMin
+            val on = PreClimatePlan.MAX_CHOICES[i] == max
             OverlayKit.fond(puce, if (on) v.accentDoux else v.bouton, if (on) v.accent else v.bordure,
                 v.dp(if (on) 2f else 1f), v.dp(12f).toFloat())
             puce.setTextColor(if (on) v.texte else v.texte2)
+            puce.alpha = if (r.dog && !on) ALPHA_GRISE else 1f
         }
         val mur = PreClimate.minuteDuJour()
         v.premier.valeur.text = heure(v, r.firstMinuteOfDay)
@@ -313,10 +325,8 @@ object PreClimatePopupOverlay {
         v.chien.setTextColor(if (r.dog) v.accent else v.texte2)
         v.chien.compoundDrawableTintList = ColorStateList.valueOf(if (r.dog) v.accent else v.texte2)
         v.plan.text = when {
-            maintenant && r.dog && r.maxMin > 0 -> v.s(R.string.preclim_plan_dog, heure(v, (mur + r.maxMin).roundToInt()))
-            maintenant && r.dog -> v.s(R.string.preclim_plan_dog_open, PreClimateSettings.minSoc(v.loc))
-            maintenant && r.maxMin > 0 -> v.s(R.string.preclim_plan_now, heure(v, (mur + r.maxMin).roundToInt()))
-            maintenant -> v.s(R.string.preclim_plan_now_open, PreClimateSettings.minSoc(v.loc))
+            maintenant && r.dog -> v.s(R.string.preclim_plan_dog, heure(v, (mur + max).roundToInt()))
+            maintenant -> v.s(R.string.preclim_plan_now, heure(v, (mur + max).roundToInt()))
             else -> {
                 val cycles = PreClimatePlan.wallTimes(r, mur)
                 val debuts = cycles.joinToString(" · ") { heure(v, it.first) }
@@ -359,7 +369,7 @@ object PreClimatePopupOverlay {
         val lignes = buildList<List<View>> {
             add(v.cases + v.fermer)
             if (r.mode == PreClimateMode.NOW) {
-                add(v.puces + listOf(v.temp.moins, v.temp.plus))
+                add((if (r.dog) emptyList() else v.puces) + listOf(v.temp.moins, v.temp.plus))
                 add(listOf(v.ventil.moins, v.ventil.plus))
                 add(listOf(v.ac))
             } else {

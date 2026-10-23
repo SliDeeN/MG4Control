@@ -3,7 +3,8 @@
      en plein écran, sur fond noir quel que soit le thème. Quatre vues : le décompte avant
      verrouillage, le suivi (anneau animé en bleu, cycles, batterie), le mode chien (un message pour
      les passants) et la fin. Contenu de base 1280 × 480 dp, agrandi pour remplir l'écran
-     (OverlayKit.contextes) ; le voile, par-dessus, atténue l'écran pendant l'attente. -->
+     (OverlayKit.contextes) ; le voile, par-dessus, atténue l'écran pendant l'attente. Derrière tout,
+     sur l'écran entier, les particules bleues ou orange tant que la clim tourne. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/preclim_screen"
     android:layout_width="match_parent"
@@ -12,7 +13,15 @@
     android:clickable="true"
     android:focusable="true">
 
+    <com.mg4.control.ui.widget.PreClimateParticlesView
+        android:id="@+id/preclim_particles"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:visibility="gone" />
+
     <FrameLayout
+        android:id="@+id/preclim_frame"
         android:layout_width="1280dp"
         android:layout_height="480dp"
         android:layout_gravity="center">

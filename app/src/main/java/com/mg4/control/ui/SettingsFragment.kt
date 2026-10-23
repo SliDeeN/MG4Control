@@ -49,6 +49,7 @@ import com.mg4.control.service.MG4ControlService
 import com.mg4.control.service.OverlayKit
 import com.mg4.control.util.GarageMode
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.FullScreen
 import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.ChargePopupSettings
 import com.mg4.control.util.ClusterModuleSettings
@@ -244,6 +245,16 @@ class SettingsFragment : Fragment() {
                     AppLogger.i("MG4_SETTINGS", "Délai de fermeture des pop-ups → ${PopupDelay.fromSlider(slider.value)} s")
                 }
             })
+        }
+
+        // ── Plein écran (2026-10-23) : désactivé par défaut, appliqué aussitôt.
+        view.findViewById<Switch>(R.id.switch_fullscreen).apply {
+            isChecked = FullScreen.isEnabled(requireContext())
+            setOnCheckedChangeListener { _, checked ->
+                FullScreen.setEnabled(requireContext(), checked)
+                FullScreen.apply(requireActivity().window, checked)
+                AppLogger.i("MG4_SETTINGS", "Plein écran ${if (checked) "activé" else "désactivé"}")
+            }
         }
 
         // ── Pop-up de charge (2026-10-16) : activé par défaut. Le suivi démarre ou s'arrête aussitôt.

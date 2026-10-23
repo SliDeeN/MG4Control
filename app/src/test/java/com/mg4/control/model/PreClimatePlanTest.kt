@@ -43,13 +43,23 @@ class PreClimatePlanTest {
         assertEquals(listOf(1110 to 1125, 1155 to 1170, 1200 to 1215), PreClimatePlan.wallTimes(req(), maintenant))
     }
 
-    @Test fun `tout de suite, un seul cycle, sans fin s'il n'a pas de limite`() {
+    @Test fun `tout de suite, un seul cycle, toujours borne`() {
         val borne = PreClimatePlan.cycles(req(PreClimateMode.NOW, maxMin = 60), 1_000L, maintenant).single()
         assertEquals(1_000L, borne.startMs)
         assertEquals(1_000L + 60 * min, borne.endMs)
-        val libre = PreClimatePlan.cycles(req(PreClimateMode.NOW, maxMin = 0), 1_000L, maintenant).single()
-        assertEquals(PreClimatePlan.NEVER, libre.endMs)
-        assertEquals(listOf(1038 to -1), PreClimatePlan.wallTimes(req(PreClimateMode.NOW, maxMin = 0), maintenant))
+        assertEquals(listOf(1038 to 1098), PreClimatePlan.wallTimes(req(PreClimateMode.NOW, maxMin = 60), maintenant))
+        // L'ancien « Sans limite » (0) enregistré redevient la durée par défaut.
+        assertEquals(PreClimatePlan.DEFAULT_MAX_MIN, PreClimatePlan.maxMinutes(req(PreClimateMode.NOW, maxMin = 0)))
+        assertFalse(0 in PreClimatePlan.MAX_CHOICES)
+    }
+
+    @Test fun `le mode chien impose 2 h, en mode Maintenant seulement`() {
+        val chien = req(PreClimateMode.NOW, maxMin = 15).copy(dog = true)
+        assertEquals(120, PreClimatePlan.maxMinutes(chien))
+        assertEquals(1_000L + 120 * min, PreClimatePlan.cycles(chien, 1_000L, maintenant).single().endMs)
+        // Sans le mode chien, le choix de l'utilisateur revient.
+        assertEquals(15, PreClimatePlan.maxMinutes(chien.copy(dog = false)))
+        assertEquals(60, PreClimatePlan.maxMinutes(req(PreClimateMode.AT_TIME, maxMin = 60).copy(dog = true)))
     }
 
     @Test fun `l'etape suit le programme`() {
@@ -64,9 +74,25 @@ class PreClimatePlanTest {
 
     @Test fun `la part ecoulee de l'etape fait l'arc`() {
         assertEquals(0.5f, PreClimatePlan.fraction(PreClimatePlan.Step.Waiting(0, 0L, 10 * min), 5 * min), 0.001f)
-        // Sans limite : un tour par heure.
-        assertEquals(0.25f, PreClimatePlan.fraction(PreClimatePlan.Step.Running(0, 0L, PreClimatePlan.NEVER), 75 * min), 0.001f)
+        assertEquals(0.25f, PreClimatePlan.fraction(PreClimatePlan.Step.Running(0, 0L, 120 * min), 30 * min), 0.001f)
         assertEquals(1f, PreClimatePlan.fraction(PreClimatePlan.Step.Done, 0L), 0.001f)
+    }
+
+    // ── Animation ────────────────────────────────────────────────────────────
+
+    @Test fun `la couleur suit l'ecart entre la consigne et l'exterieur`() {
+        assertEquals(PreClimateTrend.COOLING, PreClimatePlan.trend(21, 31f))
+        assertEquals(PreClimateTrend.HEATING, PreClimatePlan.trend(22, 4f))
+        // Moins d'un demi-degré d'écart, ou extérieur illisible : la clim maintient.
+        assertEquals(PreClimateTrend.HOLDING, PreClimatePlan.trend(21, 21.4f))
+        assertEquals(PreClimateTrend.HOLDING, PreClimatePlan.trend(21, null))
+    }
+
+    @Test fun `l'animation est d'autant plus forte que l'ecart est grand`() {
+        assertEquals(0.15f, PreClimatePlan.intensity(21, null), 0.001f)
+        assertEquals(0.3f + 2f / 14f, PreClimatePlan.intensity(21, 23f), 0.001f)
+        assertEquals(1f, PreClimatePlan.intensity(16, 40f), 0.001f)
+        assertTrue(PreClimatePlan.intensity(21, 31f) > PreClimatePlan.intensity(21, 25f))
     }
 
     // ── Réglages ─────────────────────────────────────────────────────────────
@@ -84,7 +110,9 @@ class PreClimatePlanTest {
 
     @Test fun `les reglages restent dans leurs bornes`() {
         assertEquals(PreClimatePlan.DEFAULT_MAX_MIN, PreClimatePlan.clampMax(45))
-        assertEquals(0, PreClimatePlan.clampMax(0))
+        // L'ancien « Sans limite » n'existe plus.
+        assertEquals(PreClimatePlan.DEFAULT_MAX_MIN, PreClimatePlan.clampMax(0))
+        assertEquals(120, PreClimatePlan.clampMax(120))
         assertEquals(PreClimatePlan.LOCK_MIN_S, PreClimatePlan.clampLock(5))
         assertEquals(PreClimatePlan.SOC_MAX, PreClimatePlan.clampSoc(50))
         assertEquals(PreClimatePlan.RUNS_MAX, PreClimatePlan.clampRuns(9))
