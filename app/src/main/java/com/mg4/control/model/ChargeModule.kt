@@ -24,12 +24,17 @@ object ChargeDisplay {
     fun minutesRestantes(brut: Int?): Int? = brut?.takeIf { it in 0 until SENTINELLE }
 
     /**
-     * États de `BMS_CHRG_STS` que SAIC compte comme « en charge » (`EnergyManager.isCharging` de
-     * SaicAdapterService, identique sur SWI133 et A9). Relevés SWI133 : 1 en alternatif
-     * (2026-09-19), **10 en continu** (2026-10-16, 108 kW) ; 5 = branché sur une borne rapide, charge
-     * pas encore lancée.
+     * États de `BMS_CHRG_STS` comptés « en charge » (noms : [ChargeStateNames]). Relevés SWI133 :
+     * 1 en alternatif (2026-09-19), **10 en continu** (2026-10-16, 108 kW) ; 5 = branché sur une
+     * borne rapide, charge pas encore lancée.
+     *
+     * Charge alternative suivie de bout en bout le 2026-10-23 (fenêtre « État de charge ») :
+     * 0 → 5 → 7 → **1** → 3 → 2 → 0. L'équilibrage (3) et « charge terminée » (2) ne sont plus de
+     * la charge — sa décision pour 3, et 2 suit forcément : compté seul, il faisait « reprendre » la
+     * charge juste après l'équilibrage. `EnergyManager.isCharging` de SaicAdapterService, d'où
+     * venait l'ancien ensemble, compte les deux : on s'en écarte exprès.
      */
-    private val ETATS_EN_CHARGE = setOf(1, 2, 3, 10, 11, 12)
+    private val ETATS_EN_CHARGE = setOf(1, 10, 11, 12)
 
     /** La voiture charge-t-elle ? `null` si l'état est illisible. */
     fun enCharge(statut: Int?): Boolean? = statut?.let { it in ETATS_EN_CHARGE }

@@ -21,8 +21,8 @@ data class ChargeStateSignals(
  *
  * L'état 11 s'appelle `super_offboard` (charge) dans les deux lanceurs. Seul le texte anglais du
  * SWI69 (« Discharge connector connected ») le fait passer pour du V2L, et MG4Dash l'a repris
- * ainsi. L'état 2 est bien « Charging complete », que SAIC compte pourtant « en charge »
- * ([ChargeDisplay.enCharge]) : c'est ce que la fenêtre doit permettre de vérifier en voiture.
+ * ainsi. Charge alternative relevée sur SWI133 le 2026-10-23 : 0 → 5 → 7 → 1 → 3 → 2 → 0 ; depuis,
+ * 2 et 3 ne comptent plus « en charge » ([ChargeDisplay.enCharge]).
  *
  * Textes anglais du firmware, laissés tels quels : c'est un outil de relevé, pas de l'affichage.
  * Que le motif d'arrêt 0x2140f415 suive la table du lanceur n'est pas prouvé : la fenêtre le
