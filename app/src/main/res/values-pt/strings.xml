@@ -897,6 +897,9 @@
     <string name="charge_state_hint">Deixa a janela aberta durante um carregamento: ligação, início, fim, desligação. Cada mudança fica também anotada no registo do Diagnóstico.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Pré-climatização</string>
+    <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="projection_no_phone">Nenhum telemóvel ligado (Android Auto / CarPlay)</string>
+    <string name="projection_launch_failed">Não foi possível abrir %1$s</string>
     <string name="shortcuts_cat_preclim">Pré-climatização</string>
     <string name="shortcuts_cat_floating">Botões flutuantes</string>
     <string name="floating_desc">Bolhas de atalho por cima de todas as aplicações. Toque curto: o atalho. Toque longo: mover a bolha.</string>

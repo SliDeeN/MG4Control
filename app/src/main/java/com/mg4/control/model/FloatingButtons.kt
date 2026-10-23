@@ -96,6 +96,22 @@ object FloatingButtons {
         ((x + w / 2f) / ecranW.coerceAtLeast(1)).coerceIn(0f, 1f) to
             ((y + h / 2f) / ecranH.coerceAtLeast(1)).coerceIn(0f, 1f)
 
+    /** Fenêtre du halo, en px : position à l'écran et taille. */
+    data class HaloFrame(val left: Int, val top: Int, val width: Int, val height: Int)
+
+    /**
+     * Fenêtre du halo d'une bulle posée en ([x], [y]) px (2026-10-23) : la bulle agrandie de [marge]
+     * de chaque côté, rognée aux bords de l'écran — l'anneau d'une bulle collée au bord est coupé,
+     * plutôt que décalé par le gestionnaire de fenêtres.
+     */
+    fun haloFrame(x: Int, y: Int, w: Int, h: Int, marge: Int, ecranW: Int, ecranH: Int): HaloFrame {
+        val gauche = (x - marge).coerceAtLeast(0)
+        val haut = (y - marge).coerceAtLeast(0)
+        val droite = (x + w + marge).coerceAtMost(ecranW)
+        val bas = (y + h + marge).coerceAtMost(ecranH)
+        return HaloFrame(gauche, haut, (droite - gauche).coerceAtLeast(1), (bas - haut).coerceAtLeast(1))
+    }
+
     /** Rapport engagé en marche arrière, valeur SAIC (P = 1, R = 2, N = 3, D = 4 ; R à confirmer). */
     const val GEAR_REVERSE = 2
 }

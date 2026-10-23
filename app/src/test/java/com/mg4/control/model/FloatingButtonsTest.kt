@@ -40,4 +40,16 @@ class FloatingButtonsTest {
         assertEquals(0.92f to 0.22f, FloatingButtons.defaultPosition(0))
         assertEquals(0.9f, FloatingButtons.defaultPosition(9).second, 0.001f)
     }
+
+    @Test fun `le halo entoure la bulle et s arrete aux bords de l ecran`() {
+        // Au milieu : la bulle agrandie de la marge de chaque côté.
+        assertEquals(FloatingButtons.HaloFrame(478, 278, 244, 164),
+            FloatingButtons.haloFrame(500, 300, 200, 120, 22, 1920, 720))
+        // Collée en haut à gauche : rognée, jamais en dehors de l'écran.
+        assertEquals(FloatingButtons.HaloFrame(0, 0, 222, 142),
+            FloatingButtons.haloFrame(0, 0, 200, 120, 22, 1920, 720))
+        // Collée en bas à droite.
+        assertEquals(FloatingButtons.HaloFrame(1698, 578, 222, 142),
+            FloatingButtons.haloFrame(1720, 600, 200, 120, 22, 1920, 720))
+    }
 }

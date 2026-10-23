@@ -897,6 +897,9 @@
     <string name="charge_state_hint">Lass das Fenster während eines Ladevorgangs offen: Einstecken, Beginn, Ende, Ausstecken. Jede Änderung wird auch im Diagnoseprotokoll vermerkt.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Vorklimatisierung</string>
+    <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="projection_no_phone">Kein Telefon verbunden (Android Auto / CarPlay)</string>
+    <string name="projection_launch_failed">%1$s lässt sich nicht öffnen</string>
     <string name="shortcuts_cat_preclim">Vorklimatisierung</string>
     <string name="shortcuts_cat_floating">Schwebende Tasten</string>
     <string name="floating_desc">Verknüpfungsblasen über allen Apps. Kurz drücken: die Verknüpfung. Lang drücken: die Blase verschieben.</string>

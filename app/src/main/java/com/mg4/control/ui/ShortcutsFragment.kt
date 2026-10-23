@@ -215,6 +215,9 @@ class ShortcutsFragment : Fragment() {
             // Pré-climatisation (issue #130) : verrouillage, clim et extinction existent sur tout
             // firmware connu.
             if (isKnown) add(ActionItem(getString(R.string.shortcuts_action_preclim), ShortcutAction.PRE_CLIMATE))
+            // Android Auto / CarPlay : le service AllGo est sur les six firmwares ; vérifié quand même,
+            // un raccourci qui ne trouverait personne ne dirait que « aucun téléphone ».
+            if (allgoPresent()) add(ActionItem(getString(R.string.shortcuts_action_projection), ShortcutAction.PROJECTION))
             add(ActionItem(getString(R.string.shortcuts_action_open_app),       ShortcutAction.OPEN_APP))
             add(ActionItem(getString(R.string.shortcuts_action_open_custom_app),ShortcutAction.OPEN_CUSTOM_APP))
             if (MG4Hardware.hasVehiclePowerOff()) {
@@ -559,6 +562,12 @@ class ShortcutsFragment : Fragment() {
      * rafraîchissent les spinners de l'écran classique et remettraient un emplacement à NONE en
      * cas d'annulation. Les réutiliser ici aurait modifié les raccourcis classiques au passage.
      */
+    /** Service AllGo du raccourci Android Auto / CarPlay (`com.allgo.rui`), sur les six firmwares connus. */
+    private fun allgoPresent(): Boolean = runCatching {
+        requireContext().packageManager.getPackageInfo("com.allgo.rui", 0)
+        true
+    }.getOrDefault(false)
+
     private fun choisirAppAvancee(slot: String, apres: () -> Unit) {
         val cle = "shortcut_${slot}_custom_app"
         choisirUneApp(dejaChoisie = prefs.getString(cle, null)) { paquet, _ ->

@@ -897,6 +897,9 @@
     <string name="charge_state_hint">Deja la ventana abierta durante una carga: conexión, inicio, fin, desconexión. Cada cambio también se anota en el registro del Diagnóstico.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Preclimatización</string>
+    <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="projection_no_phone">Ningún teléfono conectado (Android Auto / CarPlay)</string>
+    <string name="projection_launch_failed">No se puede abrir %1$s</string>
     <string name="shortcuts_cat_preclim">Preclimatización</string>
     <string name="shortcuts_cat_floating">Botones flotantes</string>
     <string name="floating_desc">Burbujas de acceso directo sobre todas las aplicaciones. Pulsación corta: el acceso directo. Pulsación larga: mover la burbuja.</string>

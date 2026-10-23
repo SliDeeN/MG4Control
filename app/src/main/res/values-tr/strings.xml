@@ -897,6 +897,9 @@
     <string name="charge_state_hint">Şarj sırasında pencereyi açık bırakın: takma, başlangıç, bitiş, çıkarma. Her değişiklik Teşhis günlüğüne de yazılır.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Ön iklimlendirme</string>
+    <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="projection_no_phone">Bağlı telefon yok (Android Auto / CarPlay)</string>
+    <string name="projection_launch_failed">%1$s açılamadı</string>
     <string name="shortcuts_cat_preclim">Ön iklimlendirme</string>
     <string name="shortcuts_cat_floating">Yüzen düğmeler</string>
     <string name="floating_desc">Tüm uygulamaların üzerinde kısayol baloncukları. Kısa basış: kısayol. Uzun basış: baloncuğu taşı.</string>

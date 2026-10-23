@@ -83,7 +83,12 @@ enum class ShortcutAction(val id: Int) {
 
     // Pré-climatisation (issue #130, 2026-10-23) : ouvre son pop-up de réglage, ou réaffiche l'écran
     // de suivi pendant un programme. N'écrit rien elle-même : c'est « Démarrer » qui lance.
-    PRE_CLIMATE(46);
+    PRE_CLIMATE(46),
+
+    // Android Auto / CarPlay (2026-10-23) : ouvre la projection du téléphone en session (AllGo le
+    // dit), sinon un message ; projection déjà à l'écran : retour à l'écran d'avant. Voir
+    // ProjectionShortcut. N'écrit rien dans la voiture.
+    PROJECTION(47);
 
     companion object {
         /**

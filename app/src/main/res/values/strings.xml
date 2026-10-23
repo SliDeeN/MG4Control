@@ -914,6 +914,9 @@
     <string name="charge_state_hint">Laisse la fenêtre ouverte pendant une charge : branchement, début, fin, débranchement. Chaque changement est aussi noté dans le journal du Diagnostic.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Pré-climatisation</string>
+    <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="projection_no_phone">Aucun téléphone connecté (Android Auto / CarPlay)</string>
+    <string name="projection_launch_failed">Impossible d’ouvrir %1$s</string>
     <string name="shortcuts_cat_preclim">Pré-climatisation</string>
     <string name="shortcuts_cat_floating">Boutons flottants</string>
     <string name="floating_desc">Des bulles de raccourci par-dessus toutes les applications. Appui court : le raccourci. Appui long : déplacer la bulle.</string>

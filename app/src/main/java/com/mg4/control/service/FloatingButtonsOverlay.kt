@@ -33,7 +33,8 @@ import kotlin.math.roundToInt
  * par-dessus toutes les applications (sous la barre d'état et le rail, comme les pop-ups).
  *
  * Appui COURT : le raccourci, relayé au service par le même intent que les raccourcis avancés —
- * un seul chemin d'exécution. Appui LONG ([APPUI_LONG_MS]) : la bulle se soulève (bordure orange)
+ * un seul chemin d'exécution ; la bulle s'enfonce sous le doigt et un halo en sort au relâchement
+ * ([FloatingHalo], variante D du 2026-10-23). Appui LONG ([APPUI_LONG_MS]) : la bulle se soulève (bordure orange)
  * et suit le doigt ; relâchée, sa place est enregistrée. Un glissé commencé avant l'appui long
  * n'est ni un appui ni un déplacement : c'est le doigt qui passait sur la carte.
  *
@@ -47,6 +48,10 @@ object FloatingButtonsOverlay {
     private const val APPUI_LONG_MS = 500L
     private const val RAPPORT_MS = 700L
     private const val LARGEUR_MAX_DP = 360f
+    /** Bulle sous le doigt (maquette D) : à peine enfoncée, le halo dit le reste. */
+    private const val ENFONCEE = 0.95f
+    private const val ENFONCE_MS = 80L
+    private const val RELACHE_MS = 100L
 
     /** Bulle : fond sombre presque opaque, bordure bleue (orange pendant le déplacement). */
     private val FOND = Color.argb(0xE6, 0x17, 0x17, 0x1A)
@@ -148,6 +153,8 @@ object FloatingButtonsOverlay {
         var annule = false
         val appuiLong = Runnable {
             deplacement = true
+            // L'enfoncement s'arrête là : peindre() pose l'agrandissement du déplacement.
+            bulle.vue.animate().cancel()
             bulle.vue.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             peindre(bulle.vue, bulle.bouton, bulle.vue.text.toString(), deplacement = true)
         }
@@ -160,6 +167,7 @@ object FloatingButtonsOverlay {
                     fenetreY = bulle.params.y
                     deplacement = false
                     annule = false
+                    bulle.vue.animate().scaleX(ENFONCEE).scaleY(ENFONCEE).setDuration(ENFONCE_MS).start()
                     main.postDelayed(appuiLong, APPUI_LONG_MS)
                 }
                 MotionEvent.ACTION_MOVE -> {
@@ -174,6 +182,7 @@ object FloatingButtonsOverlay {
                     } else if (!annule && hypot(dx, dy) > seuil) {
                         annule = true
                         main.removeCallbacks(appuiLong)
+                        relacher(bulle.vue)
                     }
                 }
                 MotionEvent.ACTION_UP -> {
@@ -184,7 +193,11 @@ object FloatingButtonsOverlay {
                             peindre(bulle.vue, bulle.bouton, bulle.vue.text.toString(), deplacement = false)
                             enregistrerPlace(ctx, bulle)
                         }
-                        !annule -> declencher(ctx, bulle.bouton)
+                        !annule -> {
+                            relacher(bulle.vue)
+                            halo(ctx, bulle)
+                            declencher(ctx, bulle.bouton)
+                        }
                     }
                 }
                 MotionEvent.ACTION_CANCEL -> {
@@ -193,11 +206,23 @@ object FloatingButtonsOverlay {
                         deplacement = false
                         peindre(bulle.vue, bulle.bouton, bulle.vue.text.toString(), deplacement = false)
                         enregistrerPlace(ctx, bulle)
+                    } else {
+                        relacher(bulle.vue)
                     }
                 }
             }
             true
         }
+    }
+
+    private fun relacher(vue: View) {
+        vue.animate().scaleX(1f).scaleY(1f).setDuration(RELACHE_MS).start()
+    }
+
+    /** Halo autour de la bulle, à sa place et à sa taille d'origine (l'enfoncement ne compte pas). */
+    private fun halo(ctx: Context, bulle: Bulle) {
+        val wm = fenetres ?: return
+        FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, ecran(wm), BORDURE)
     }
 
     private fun enregistrerPlace(ctx: Context, bulle: Bulle) {

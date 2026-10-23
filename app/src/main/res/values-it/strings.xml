@@ -897,6 +897,9 @@
     <string name="charge_state_hint">Lascia la finestra aperta durante una ricarica: collegamento, inizio, fine, scollegamento. Ogni modifica viene anche annotata nel registro della Diagnostica.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Preclimatizzazione</string>
+    <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="projection_no_phone">Nessun telefono collegato (Android Auto / CarPlay)</string>
+    <string name="projection_launch_failed">Impossibile aprire %1$s</string>
     <string name="shortcuts_cat_preclim">Preclimatizzazione</string>
     <string name="shortcuts_cat_floating">Pulsanti mobili</string>
     <string name="floating_desc">Bolle di scorciatoia sopra tutte le app. Pressione breve: la scorciatoia. Pressione lunga: spostare la bolla.</string>

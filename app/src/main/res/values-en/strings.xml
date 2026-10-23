@@ -897,6 +897,9 @@
     <string name="charge_state_hint">Leave the window open during a charge: plugging in, start, end, unplugging. Each change is also written to the Diagnostic log.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
     <string name="shortcuts_action_preclim">Pre-conditioning</string>
+    <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
+    <string name="projection_no_phone">No phone connected (Android Auto / CarPlay)</string>
+    <string name="projection_launch_failed">Couldn’t open %1$s</string>
     <string name="shortcuts_cat_preclim">Pre-conditioning</string>
     <string name="shortcuts_cat_floating">Floating buttons</string>
     <string name="floating_desc">Shortcut bubbles on top of every app. Short press: the shortcut. Long press: move the bubble.</string>

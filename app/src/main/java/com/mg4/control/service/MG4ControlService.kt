@@ -1081,6 +1081,13 @@ class MG4ControlService : Service() {
             return
         }
 
+        // PROJECTION : Android Auto ou CarPlay selon le téléphone en session, ou retour à l'écran
+        // d'avant si la projection est déjà affichée.
+        if (action == ShortcutAction.PROJECTION) {
+            ProjectionShortcut.press(this@MG4ControlService)
+            return
+        }
+
         // APPLY_PROFILE : action directe — pas de toggle d'état, chaque pression applique le profil
         if (action == ShortcutAction.APPLY_PROFILE) {
             val profileId = prefs.getString("shortcut_${pressKey}_profile_id", null) ?: return

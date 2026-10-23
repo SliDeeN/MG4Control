@@ -22,6 +22,12 @@
          android.uid.system. -->
     <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL"
         tools:ignore="ProtectedPermissions" />
+    <!-- Raccourci « Android Auto / CarPlay » (2026-10-23) : voir les tâches des autres applis et
+         ramener devant l'écran d'avant la projection. REAL_GET_TASKS est signature|privileged,
+         obtenue parce que l'app tourne en android.uid.system. -->
+    <uses-permission android:name="android.permission.REAL_GET_TASKS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.REORDER_TASKS" />
     <!-- Vehicle control permissions (Android Automotive / SAIC) -->
     <uses-permission android:name="android.car.permission.CAR_ENERGY" />
     <!-- Capacité de la batterie (INFO_EV_BATTERY_CAPACITY) : propriété statique du véhicule,
