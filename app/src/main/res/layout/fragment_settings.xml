@@ -1273,7 +1273,8 @@
                             android:letterSpacing="0.12"
                             android:textAllCaps="true" />
 
-                        <!-- Distance : km ou miles pour tout le module (2026-10-23, variante B). -->
+                        <!-- Distance : Auto (comme la voiture), km ou miles pour tout le module
+                             (2026-10-23, variante B ; Auto le même jour). -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1295,11 +1296,28 @@
                                 android:orientation="horizontal">
 
                                 <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_cluster_dist_auto"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="@string/cluster_distance_auto"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp"
+                                    app:backgroundTint="@color/dash_btn"
+                                    app:strokeWidth="1dp"
+                                    app:strokeColor="@color/dash_border"
+                                    app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
                                     android:id="@+id/btn_cluster_dist_km"
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:minHeight="52dp"
                                     android:layout_weight="1"
+                                    android:layout_marginStart="4dp"
                                     android:layout_marginEnd="4dp"
                                     android:text="@string/cluster_distance_km"
                                     android:textAllCaps="false"

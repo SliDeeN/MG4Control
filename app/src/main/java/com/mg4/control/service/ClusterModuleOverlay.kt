@@ -34,6 +34,7 @@ import com.mg4.control.hardware.EnergyReader
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.ChargeProbe
 import com.mg4.control.hardware.ReadyWatcher
+import com.mg4.control.hardware.VehicleDistanceUnit
 import com.mg4.control.model.ChargeDisplay
 import com.mg4.control.model.ChargeEnCours
 import com.mg4.control.model.ClusterGauge
@@ -439,7 +440,9 @@ internal object ClusterModuleOverlay {
                     recupWh = trajet.regenWh(),
                     unite = ClusterModuleSettings.consumptionUnit(ctx),
                     uniteMoyenne = ClusterModuleSettings.averageUnit(ctx),
-                    distance = ClusterModuleSettings.distanceUnit(ctx),
+                    // Auto : l'unité de la voiture, relue au plus une fois par minute (binder, ce fil).
+                    distance = ClusterModuleSettings.distanceUnit(ctx,
+                        if (ClusterModuleSettings.distanceChoice(ctx) == null) VehicleDistanceUnit.actualiser() else null),
                     style = style,
                     // À la place de la jauge réglée pour l'onglet, jamais sur un onglet sans module.
                     charge = if (session.active) vueCharge(maintenant) else null,

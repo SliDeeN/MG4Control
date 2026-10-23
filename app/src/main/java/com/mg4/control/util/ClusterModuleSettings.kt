@@ -42,7 +42,10 @@ object ClusterModuleSettings {
     const val KEY_REFRESH = "cluster_refresh_ms"
     /** Unité de la consommation (2026-10-15), Wh/km par défaut. */
     const val KEY_UNIT = "cluster_consumption_unit"
-    /** Unité de distance de tout le module : km ou miles (2026-10-23). */
+    /**
+     * Unité de distance de tout le module : km, miles (2026-10-23) ou « auto » = comme la voiture
+     * — le défaut quand rien n'est enregistré, depuis le même jour.
+     */
     const val KEY_DISTANCE = "cluster_distance_unit"
 
     /**
@@ -119,12 +122,22 @@ object ClusterModuleSettings {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_STYLE, style.key).apply()
     }
 
-    /** Relue à chaque relevé ; km sans choix (2026-10-23). */
-    fun distanceUnit(ctx: Context?): DistanceUnit =
-        DistanceUnit.fromKey(ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_DISTANCE, null))
+    /** Choix enregistré : km ou miles, `null` = Auto (« auto » enregistré, ou aucun choix). */
+    fun distanceChoice(ctx: Context?): DistanceUnit? =
+        ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_DISTANCE, null)
+            ?.let { k -> DistanceUnit.entries.firstOrNull { it.key == k } }
 
-    fun setDistanceUnit(ctx: Context, unit: DistanceUnit) {
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_DISTANCE, unit.key).apply()
+    /**
+     * Relue à chaque relevé : le choix, sinon [vehicle] — l'unité de la voiture, que l'appelant
+     * tient de `VehicleDistanceUnit.connue()` — et km si elle n'est pas connue.
+     */
+    fun distanceUnit(ctx: Context?, vehicle: DistanceUnit?): DistanceUnit =
+        DistanceUnit.resolve(ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_DISTANCE, null), vehicle)
+
+    /** [unit] `null` = Auto. */
+    fun setDistanceChoice(ctx: Context, unit: DistanceUnit?) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString(KEY_DISTANCE, unit?.key ?: DistanceUnit.AUTO).apply()
     }
 
     /** Relue à chaque relevé ; sans choix, l'unité de la jauge. */

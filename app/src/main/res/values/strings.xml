@@ -817,6 +817,8 @@
     <string name="settings_cluster_row_distance">Distance</string>
     <string name="cluster_distance_km">km</string>
     <string name="cluster_distance_miles">miles</string>
+    <string name="cluster_distance_auto">Auto</string>
+    <string name="cluster_distance_auto_value">Auto (%1$s)</string>
     <string name="settings_cluster_advanced">Avancé · actualisation %1$s · animation %2$s</string>
     <string name="settings_cluster_none">Aucun</string>
     <string name="settings_cluster_tabs_note">Ordinateur de bord, pression des pneus et réglages sont dessinés par le combiné lui-même : un module ne peut pas s\'y afficher.</string>

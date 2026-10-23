@@ -6,6 +6,7 @@ import android.os.SystemClock
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.TextView
+import com.mg4.control.hardware.VehicleDistanceUnit
 import com.mg4.control.model.ClusterGauge
 import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ClusterTab
@@ -121,7 +122,7 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
             recupWh = recupWh,
             unite = unite,
             uniteMoyenne = ClusterModuleSettings.averageUnit(ctx),
-            distance = ClusterModuleSettings.distanceUnit(ctx),
+            distance = ClusterModuleSettings.distanceUnit(ctx, VehicleDistanceUnit.connue()),
             style = ClusterModuleSettings.style(ctx),
         ), if (dtMs == 0L) 0L else ClusterModuleSettings.animationMs(ctx).toLong())
     }

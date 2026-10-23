@@ -78,8 +78,9 @@ class MainActivity : AppCompatActivity() {
         // (voie A9 : broadcast com.saicmotor.changeSkin reçu par le service)
         ThemeHelper.onThemeChanged = { recreate() }
 
-        // Premier lancement : choix de la langue avant tout
-        if (LocaleHelper.isFirstLaunch(this)) {
+        // Premier lancement : la langue de la voiture si l'appli la parle (2026-10-23), sinon le
+        // choix de la langue avant tout.
+        if (LocaleHelper.isFirstLaunch(this) && !LocaleHelper.adoptCarLanguage(this)) {
             showLanguagePicker()
             return
         }

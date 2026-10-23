@@ -95,8 +95,29 @@ enum class DistanceUnit(val key: String, val short: String, val factor: Float) {
     MILES("mi", "mi", 1.609344f);
 
     companion object {
+        /** Choix « Auto » enregistré : comme la voiture. */
+        const val AUTO = "auto"
+
         /** km par défaut : l'affichage d'avant le choix. */
         fun fromKey(key: String?): DistanceUnit = entries.firstOrNull { it.key == key } ?: KM
+
+        /**
+         * Unité affichée (2026-10-23) : celle choisie, sinon — « Auto » ou aucun choix — celle de la
+         * voiture, et km si la voiture ne la donne pas.
+         */
+        fun resolve(key: String?, vehicle: DistanceUnit?): DistanceUnit =
+            entries.firstOrNull { it.key == key } ?: vehicle ?: KM
+
+        /**
+         * Unité réglée dans la voiture, d'après `DISTANCE_UNITS_ADJUST` 0x2140f439 : 0 = km, 1 = miles
+         * (`DistanceUnit` de carapi sur A9 ; le service SAIC de SWI133 la lit pour le combiné,
+         * `getClstrDistUnit`). Toute autre valeur : inconnue.
+         */
+        fun fromVehicle(raw: Int?): DistanceUnit? = when (raw) {
+            0 -> KM
+            1 -> MILES
+            else -> null
+        }
     }
 }
 

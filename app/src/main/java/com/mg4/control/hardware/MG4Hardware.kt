@@ -1624,6 +1624,46 @@ object MG4Hardware {
     }
     @Volatile private var sCarStateErrLogged = false
 
+    // ── Unité de distance de la voiture (2026-10-23) ────────────────────────
+    // DISTANCE_UNITS_ADJUST 0x2140f439, 0 = km / 1 = miles. SWI133 : le service SAIC la lit pour le
+    // combiné (`VehicleChargingBinder.getClstrDistUnit`, CarBMSManager, zone globale). A9 :
+    // `CarEvClient.getDistanceUnits()` (carapi `DistanceUnit`, mêmes valeurs, −1 en erreur), gardé en
+    // secours si le CarPropertyManager ne répond pas. Lue par [VehicleDistanceUnit].
+    private const val PROP_DISTANCE_UNITS = 0x2140f439
+    private const val CAR_EV_CLIENT_CLASS = "com.saicmotor.carapi.client.CarEvClient"
+    private const val CAR_EV_SERVICE_CODE = 0x4
+    @Volatile private var sCarEv: Any? = null                      // A9 : CarEvClient (lazy)
+    @Volatile private var sCarEvErrLogged = false
+
+    /** Valeur brute de l'unité de distance réglée dans la voiture, ou `null` si aucune voie ne répond. Binder. */
+    fun readDistanceUnitsRaw(): Int? {
+        for (zone in intArrayOf(AREA_GLOBAL, 0)) {
+            getIntPropertyCPM(PROP_DISTANCE_UNITS, zone).takeIf { it >= 0 }?.let { return it }
+        }
+        if (!FirmwareInfo.isA9()) return null
+        val ev = a9CarEv() ?: return null
+        return runCatching { ev.javaClass.getMethod("getDistanceUnits").invoke(ev) as? Int }
+            .getOrNull()?.takeIf { it >= 0 }
+    }
+
+    /** A9 : CarEvClient, créé à la première demande ; null si indisponible. */
+    private fun a9CarEv(): Any? {
+        sCarEv?.let { return it }
+        val cl = sVsm?.javaClass?.classLoader ?: return null
+        return try {
+            val adapterClass = cl.loadClass(CAR_ADAPTER_CLIENT_CLASS)
+            val adapter = adapterClass.getMethod("getInstance", Context::class.java).invoke(null, sAppContext)
+            val binder = adapterClass.getMethod("queryClient", Int::class.javaPrimitiveType)
+                .invoke(adapter, CAR_EV_SERVICE_CODE) as? android.os.IBinder ?: return null
+            val evClass = cl.loadClass(CAR_EV_CLIENT_CLASS)
+            evClass.getConstructor(android.os.IBinder::class.java).newInstance(binder).also { sCarEv = it }
+        } catch (e: Exception) {
+            if (!sCarEvErrLogged) AppLogger.w(TAG, "  A9 CarEvClient err: ${e.javaClass.simpleName}: ${e.message}")
+            sCarEvErrLogged = true
+            null
+        }
+    }
+
     private fun getMixIntProperty(propId: Int): Int {
         val vpm = sVpm ?: return -1
         return try {

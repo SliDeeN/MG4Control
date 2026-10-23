@@ -800,6 +800,8 @@
     <string name="settings_cluster_row_distance">Distancia</string>
     <string name="cluster_distance_km">km</string>
     <string name="cluster_distance_miles">millas</string>
+    <string name="cluster_distance_auto">Auto</string>
+    <string name="cluster_distance_auto_value">Auto (%1$s)</string>
     <string name="settings_cluster_advanced">Avanzado · actualización %1$s · animación %2$s</string>
     <string name="settings_cluster_none">Ninguno</string>
     <string name="settings_cluster_tabs_note">El ordenador de a bordo, la presión de los neumáticos y los ajustes los dibuja el propio cuadro: ahí no puede aparecer ningún módulo.</string>

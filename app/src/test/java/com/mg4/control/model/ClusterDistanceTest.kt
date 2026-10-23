@@ -38,4 +38,21 @@ class ClusterDistanceTest {
         assertEquals(DistanceUnit.KM, DistanceUnit.fromKey(null))
         assertEquals(DistanceUnit.MILES, DistanceUnit.fromKey("mi"))
     }
+
+    @Test fun `auto suit la voiture et retombe sur km`() {
+        // Aucun choix (installations d'avant) ou « Auto » : l'unité de la voiture.
+        assertEquals(DistanceUnit.MILES, DistanceUnit.resolve(null, DistanceUnit.MILES))
+        assertEquals(DistanceUnit.MILES, DistanceUnit.resolve(DistanceUnit.AUTO, DistanceUnit.MILES))
+        assertEquals(DistanceUnit.KM, DistanceUnit.resolve(DistanceUnit.AUTO, null))
+        // Un choix explicite l'emporte sur la voiture.
+        assertEquals(DistanceUnit.KM, DistanceUnit.resolve("km", DistanceUnit.MILES))
+        assertEquals(DistanceUnit.MILES, DistanceUnit.resolve("mi", DistanceUnit.KM))
+    }
+
+    @Test fun `unite de la voiture 0 km 1 miles`() {
+        assertEquals(DistanceUnit.KM, DistanceUnit.fromVehicle(0))
+        assertEquals(DistanceUnit.MILES, DistanceUnit.fromVehicle(1))
+        assertEquals(null, DistanceUnit.fromVehicle(2))
+        assertEquals(null, DistanceUnit.fromVehicle(null))
+    }
 }

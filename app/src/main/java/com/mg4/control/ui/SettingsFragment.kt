@@ -36,6 +36,7 @@ import com.mg4.control.util.DataUsage
 import com.mg4.control.debug.CrashLogger
 import com.mg4.control.hardware.EnergyProbe
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.hardware.VehicleDistanceUnit
 import com.mg4.control.hardware.VehicleWriteGate
 import com.mg4.control.profile.ReadyProfilePolicy
 import com.mg4.control.update.ApkCleanup
@@ -310,8 +311,10 @@ class SettingsFragment : Fragment() {
             ConsumptionUnit.WH_PER_KM to view.findViewById(R.id.btn_cluster_unit_wh),
             ConsumptionUnit.KWH_PER_100KM to view.findViewById(R.id.btn_cluster_unit_kwh),
         )
-        // Distance : km ou miles pour tout le module (2026-10-23).
-        val distBtns: List<Pair<DistanceUnit, MaterialButton>> = listOf(
+        // Distance : Auto (comme la voiture, `null`), km ou miles pour tout le module (2026-10-23).
+        val btnDistAuto = view.findViewById<MaterialButton>(R.id.btn_cluster_dist_auto)
+        val distBtns: List<Pair<DistanceUnit?, MaterialButton>> = listOf(
+            null to btnDistAuto,
             DistanceUnit.KM to view.findViewById(R.id.btn_cluster_dist_km),
             DistanceUnit.MILES to view.findViewById(R.id.btn_cluster_dist_mi),
         )
@@ -352,8 +355,15 @@ class SettingsFragment : Fragment() {
             clusterBtns.forEach { (onglet, module, btn) ->
                 peindre(btn, module == ClusterModuleSettings.moduleFor(ctx, onglet))
             }
-            val distance = ClusterModuleSettings.distanceUnit(ctx)
-            distBtns.forEach { (d, btn) -> peindre(btn, d == distance) }
+            val voiture = VehicleDistanceUnit.connue()
+            val distance = ClusterModuleSettings.distanceUnit(ctx, voiture)
+            val choixDistance = ClusterModuleSettings.distanceChoice(ctx)
+            distBtns.forEach { (d, btn) -> peindre(btn, d == choixDistance) }
+            // « Auto (miles) » : ce que la voiture dit, dès qu'on l'a lu.
+            btnDistAuto.text = voiture?.let {
+                getString(R.string.cluster_distance_auto_value, getString(
+                    if (it == DistanceUnit.MILES) R.string.cluster_distance_miles else R.string.cluster_distance_km))
+            } ?: getString(R.string.cluster_distance_auto)
             // Les unités se lisent dans la distance choisie : « Wh/mi », « mi/kWh »…
             unitBtns.forEach { (u, btn) -> btn.text = u.labelFor(distance) }
             avgBtns.forEach { (u, btn) -> btn.text = u.labelFor(distance) }
@@ -397,12 +407,19 @@ class SettingsFragment : Fragment() {
         }
         distBtns.forEach { (d, btn) ->
             btn.setOnClickListener {
-                if (d == ClusterModuleSettings.distanceUnit(requireContext())) return@setOnClickListener
-                ClusterModuleSettings.setDistanceUnit(requireContext(), d)
-                AppLogger.i(ClusterModuleOverlay.TAG, "Distance des modules du combiné → ${d.key}")
+                if (d == ClusterModuleSettings.distanceChoice(requireContext())) return@setOnClickListener
+                ClusterModuleSettings.setDistanceChoice(requireContext(), d)
+                AppLogger.i(ClusterModuleOverlay.TAG, "Distance des modules du combiné → ${d?.key ?: DistanceUnit.AUTO}")
                 updateClusterCard()
             }
         }
+        // L'unité de la voiture, lue hors du fil principal (binder) : le bouton Auto la montre,
+        // et l'aperçu la suit si Auto est choisi.
+        if (ClusterModuleSettings.isSupported()) Thread {
+            val avant = VehicleDistanceUnit.connue()
+            val lue = VehicleDistanceUnit.actualiser()
+            if (lue != avant) view.post { if (isAdded) updateClusterCard() }
+        }.start()
         unitBtns.forEach { (u, btn) ->
             btn.setOnClickListener {
                 if (u == ClusterModuleSettings.consumptionUnit(requireContext())) return@setOnClickListener
