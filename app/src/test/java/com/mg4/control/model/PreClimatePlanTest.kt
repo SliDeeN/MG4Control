@@ -19,7 +19,7 @@ class PreClimatePlanTest {
     private fun req(
         mode: PreClimateMode = PreClimateMode.AT_TIME, maxMin: Int = 60, first: Int = 18 * 60 + 30,
         run: Int = 15, runs: Int = 3, pause: Int = 30,
-    ) = PreClimateRequest(mode, maxMin, first, run, runs, pause, tempC = 25, fan = 8, ac = true)
+    ) = PreClimateRequest(mode, maxMin, first, run, runs, pause, tempC = 25, fan = 8)
 
     // ── Programme ────────────────────────────────────────────────────────────
 

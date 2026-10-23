@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Pré-climatisation (issue #130, maquette du 2026-10-23) : pop-up ouvert par le raccourci au
      volant. À gauche le mode — « Maintenant » (durée maximale) ou « À une heure » (premier cycle,
-     durée, nombre de cycles, pause) —, à droite les réglages de la clim, en bas le programme et
+     durée, nombre de cycles, pause) —, à droite les réglages de la clim (compresseur toujours en marche), en bas le programme et
      Démarrer. Carte de base 1140 × 440 dp, agrandie comme le pop-up HVAC (OverlayKit.contextes). -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/preclim_backdrop"
@@ -199,42 +199,6 @@
                     android:layout_height="6dp"
                     android:layout_marginTop="6dp"
                     android:orientation="horizontal" />
-
-                <LinearLayout
-                    android:id="@+id/preclim_ac_row"
-                    android:layout_width="match_parent"
-                    android:layout_height="50dp"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="8dp"
-                    android:background="@drawable/bg_dialog_tile"
-                    android:clickable="true"
-                    android:focusable="true">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/preclim_ac"
-                        android:textColor="@color/text_primary"
-                        android:textSize="16sp"
-                        android:maxLines="1"
-                        android:ellipsize="end" />
-
-                    <TextView
-                        android:id="@+id/preclim_ac_state"
-                        android:layout_width="wrap_content"
-                        android:layout_height="32dp"
-                        android:gravity="center"
-                        android:paddingStart="14dp"
-                        android:paddingEnd="14dp"
-                        android:textSize="14sp"
-                        android:textStyle="bold"
-                        android:maxLines="1" />
-
-                </LinearLayout>
 
                 <View
                     android:layout_width="match_parent"

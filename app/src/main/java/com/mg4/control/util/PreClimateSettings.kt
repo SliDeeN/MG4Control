@@ -29,7 +29,6 @@ object PreClimateSettings {
     private const val KEY_PAUSE = "preclim_pause_min"
     private const val KEY_TEMP = "preclim_temp"
     private const val KEY_FAN = "preclim_fan"
-    private const val KEY_AC = "preclim_ac"
     private const val KEY_DOG = "preclim_dog"
     /** Fiche sur l'écran conducteur pendant le programme (2026-10-23) : activée par défaut. */
     private const val KEY_CLUSTER = "preclim_cluster"
@@ -74,7 +73,6 @@ object PreClimateSettings {
             pauseMin = PreClimatePlan.clampPause(p.getInt(KEY_PAUSE, PreClimatePlan.DEFAULT_PAUSE_MIN)),
             tempC = p.getInt(KEY_TEMP, -1).takeIf { it > 0 } ?: tempNow ?: DEFAULT_TEMP,
             fan = p.getInt(KEY_FAN, -1).takeIf { it > 0 } ?: fanNow ?: DEFAULT_FAN,
-            ac = p.getBoolean(KEY_AC, true),
             dog = p.getBoolean(KEY_DOG, false),
         )
     }
@@ -88,7 +86,6 @@ object PreClimateSettings {
             .putInt(KEY_PAUSE, r.pauseMin)
             .putInt(KEY_TEMP, r.tempC)
             .putInt(KEY_FAN, r.fan)
-            .putBoolean(KEY_AC, r.ac)
             .putBoolean(KEY_DOG, r.dog)
             .apply()
     }

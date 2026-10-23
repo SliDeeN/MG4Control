@@ -28,7 +28,6 @@ data class PreClimateRequest(
     val pauseMin: Int,
     val tempC: Int,
     val fan: Int,
-    val ac: Boolean,
     /**
      * Mode chien (2026-10-23) : l'écran reste allumé et dit aux passants que tout va bien, avec la
      * température réglée. Mode « Maintenant » seulement : en attente, la clim serait coupée.
@@ -291,10 +290,11 @@ object PreClimateClimate {
     /**
      * Réglages de la pré-climatisation : marche, puis consigne, ventilation (qui fait sortir
      * d'AUTO) et compresseur — ce dernier une fois la clim lancée (MG4Dash, 2026-10-22 : l'A/C
-     * envoyé en même temps que la mise en marche ne prenait pas toujours).
+     * envoyé en même temps que la mise en marche ne prenait pas toujours). Compresseur TOUJOURS
+     * en marche : le choix a été retiré du pop-up le 2026-10-23, à sa demande.
      */
     fun applySteps(req: PreClimateRequest): List<ClimateStep> = listOf(
-        ClimateStep.PowerOn, ClimateStep.Temp(req.tempC), ClimateStep.Fan(req.fan), ClimateStep.Ac(req.ac))
+        ClimateStep.PowerOn, ClimateStep.Temp(req.tempC), ClimateStep.Fan(req.fan), ClimateStep.Ac(true))
 
     /**
      * Écritures qui rendent à la clim l'état de [snap].

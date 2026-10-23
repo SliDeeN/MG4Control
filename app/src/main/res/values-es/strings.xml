@@ -316,12 +316,18 @@
 
     <!-- [BT-PROFILES] Perfiles Bluetooth -->
     <!-- Pantalla de audio (solo A9) -->
-    <string name="door_volume_title">Bajar el volumen al salir del coche</string>
+    <string name="door_volume_title">Multimedia al salir del coche</string>
     <string name="door_volume_desc">Reduce el volumen multimedia al abrir una puerta delantera</string>
     <string name="door_volume_level_label">Nivel objetivo</string>
     <string name="door_volume_restore_title">Restaurar al cerrar</string>
     <string name="door_volume_desc_ready">Baja el volumen multimedia cuando el coche sale del modo READY en P (cinturón desabrochado y puerta del conductor abierta, o coche apagado)</string>
     <string name="door_volume_restore_ready_title">Restaurar al volver a READY</string>
+    <string name="door_media_mode_volume">Bajar el volumen</string>
+    <string name="door_media_mode_pause">Pausar</string>
+    <string name="door_media_pause_desc">Pausa la reproducción al abrir una puerta delantera, si algo suena</string>
+    <string name="door_media_pause_desc_ready">Pausa la reproducción cuando el coche sale del modo READY en P (cinturón suelto y puerta del conductor abierta, o apagado)</string>
+    <string name="door_media_resume_title">Reanudar la reproducción al cerrar</string>
+    <string name="door_media_resume_ready_title">Reanudar la reproducción al volver a READY</string>
     <string name="door_volume_doors_label">Puertas que activan</string>
     <string name="door_left">Izquierda</string>
     <string name="door_right">Derecha</string>
@@ -914,9 +920,6 @@
     <string name="preclim_clim_caption">Ajustes del clima</string>
     <string name="preclim_temp">Temperatura</string>
     <string name="preclim_fan">Ventilación</string>
-    <string name="preclim_ac">A/C (compresor)</string>
-    <string name="preclim_ac_on">Activado</string>
-    <string name="preclim_ac_off">Desactivado</string>
     <string name="preclim_current">Actuales: %1$s · se restablecen al final</string>
     <string name="preclim_summary">%1$s · ventilación %2$s</string>
     <string name="preclim_summary_ac">%1$s · ventilación %2$s · A/C</string>

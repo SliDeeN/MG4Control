@@ -187,12 +187,48 @@ class AutomationFragment : Fragment() {
         val cbLeft  = view.findViewById<CheckBox>(R.id.cb_door_left)
         val cbRight = view.findViewById<CheckBox>(R.id.cb_door_right)
 
-        if (!MG4Hardware.hasDoorDetection()) {
-            view.findViewById<TextView>(R.id.door_volume_desc_text).setText(R.string.door_volume_desc_ready)
-            view.findViewById<TextView>(R.id.door_volume_restore_label).setText(R.string.door_volume_restore_ready_title)
+        val porte = MG4Hardware.hasDoorDetection()
+        if (!porte) {
             view.findViewById<View>(R.id.door_volume_doors_label).visibility = View.GONE
             view.findViewById<View>(R.id.door_volume_doors_row).visibility = View.GONE
         }
+
+        // Baisser le volume ou mettre en pause (2026-10-23) : le niveau ne sert qu'à la baisse,
+        // et la description comme l'option de restauration disent ce que fait le mode choisi.
+        val btnVolume = view.findViewById<MaterialButton>(R.id.btn_door_mode_volume)
+        val btnPause  = view.findViewById<MaterialButton>(R.id.btn_door_mode_pause)
+        val rowLevel  = view.findViewById<View>(R.id.row_door_volume_level)
+        fun peindreMode() {
+            val pause = prefs.getString(MG4Hardware.KEY_DOOR_MODE, null) == MG4Hardware.DOOR_MODE_PAUSE
+            listOf(btnVolume to !pause, btnPause to pause).forEach { (b, on) ->
+                b.backgroundTintList = ColorStateList.valueOf(requireContext().getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn))
+                b.strokeColor = ColorStateList.valueOf(requireContext().getColor(if (on) R.color.dash_accent else R.color.dash_border))
+                b.setTextColor(requireContext().getColor(if (on) R.color.text_primary else R.color.text_secondary))
+            }
+            rowLevel.visibility = if (pause) View.GONE else View.VISIBLE
+            slider.visibility = if (pause) View.GONE else View.VISIBLE
+            view.findViewById<TextView>(R.id.door_volume_desc_text).setText(when {
+                pause && porte -> R.string.door_media_pause_desc
+                pause -> R.string.door_media_pause_desc_ready
+                porte -> R.string.door_volume_desc
+                else -> R.string.door_volume_desc_ready
+            })
+            view.findViewById<TextView>(R.id.door_volume_restore_label).setText(when {
+                pause && porte -> R.string.door_media_resume_title
+                pause -> R.string.door_media_resume_ready_title
+                porte -> R.string.door_volume_restore_title
+                else -> R.string.door_volume_restore_ready_title
+            })
+        }
+        btnVolume.setOnClickListener {
+            prefs.edit().putString(MG4Hardware.KEY_DOOR_MODE, MG4Hardware.DOOR_MODE_VOLUME).apply()
+            peindreMode()
+        }
+        btnPause.setOnClickListener {
+            prefs.edit().putString(MG4Hardware.KEY_DOOR_MODE, MG4Hardware.DOOR_MODE_PAUSE).apply()
+            peindreMode()
+        }
+        peindreMode()
 
         val enabled = prefs.getBoolean("door_volume_enabled", false)
         toggle.isChecked  = enabled
@@ -203,6 +239,7 @@ class AutomationFragment : Fragment() {
         fun griser(actif: Boolean) {
             content.alpha = if (actif) 1f else 0.4f
             slider.isEnabled = actif; restore.isEnabled = actif
+            btnVolume.isEnabled = actif; btnPause.isEnabled = actif
             cbLeft.isEnabled = actif; cbRight.isEnabled = actif
         }
         griser(enabled)

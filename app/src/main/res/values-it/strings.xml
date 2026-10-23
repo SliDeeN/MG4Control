@@ -316,12 +316,18 @@
 
     <!-- [BT-PROFILES] Profili Bluetooth -->
     <!-- Schermata Audio (solo A9) -->
-    <string name="door_volume_title">Abbassa il volume scendendo dall\'auto</string>
+    <string name="door_volume_title">Media quando si lascia l’auto</string>
     <string name="door_volume_desc">Abbassa il volume multimediale all\'apertura di una porta anteriore</string>
     <string name="door_volume_level_label">Livello target</string>
     <string name="door_volume_restore_title">Ripristina alla chiusura</string>
     <string name="door_volume_desc_ready">Abbassa il volume multimediale quando l\'auto esce dalla modalità READY in P (cintura slacciata e porta del conducente aperta, o auto spenta)</string>
     <string name="door_volume_restore_ready_title">Ripristina al ritorno in READY</string>
+    <string name="door_media_mode_volume">Abbassa il volume</string>
+    <string name="door_media_mode_pause">Metti in pausa</string>
+    <string name="door_media_pause_desc">Mette in pausa i media all’apertura di una porta anteriore, se qualcosa è in riproduzione</string>
+    <string name="door_media_pause_desc_ready">Mette in pausa i media quando l’auto esce dalla modalità READY in P (cintura slacciata e porta del conducente aperta, o spegnimento)</string>
+    <string name="door_media_resume_title">Riprendi la riproduzione alla chiusura</string>
+    <string name="door_media_resume_ready_title">Riprendi la riproduzione al ritorno in READY</string>
     <string name="door_volume_doors_label">Porte di attivazione</string>
     <string name="door_left">Sinistra</string>
     <string name="door_right">Destra</string>
@@ -914,9 +920,6 @@
     <string name="preclim_clim_caption">Impostazioni del clima</string>
     <string name="preclim_temp">Temperatura</string>
     <string name="preclim_fan">Ventilazione</string>
-    <string name="preclim_ac">A/C (compressore)</string>
-    <string name="preclim_ac_on">Attivo</string>
-    <string name="preclim_ac_off">Spento</string>
     <string name="preclim_current">Attuali: %1$s · ripristinate alla fine</string>
     <string name="preclim_summary">%1$s · ventilazione %2$s</string>
     <string name="preclim_summary_ac">%1$s · ventilazione %2$s · A/C</string>

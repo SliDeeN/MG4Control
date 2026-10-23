@@ -318,13 +318,19 @@
 
     <!-- [BT-PROFILES] Profils Bluetooth -->
     <!-- Écran Audio (A9 uniquement) -->
-    <string name="door_volume_title">Baisse du volume en quittant la voiture</string>
+    <string name="door_volume_title">Média en quittant la voiture</string>
     <string name="door_volume_desc">Baisse le volume média à l\'ouverture d\'une porte avant</string>
     <string name="door_volume_level_label">Niveau cible</string>
     <string name="door_volume_level_value" translatable="false">%1$d / %2$d</string>
     <string name="door_volume_restore_title">Restaurer à la fermeture</string>
     <string name="door_volume_desc_ready">Baisse le volume média quand la voiture sort du mode READY en P (ceinture détachée et porte conducteur ouverte, ou extinction)</string>
     <string name="door_volume_restore_ready_title">Restaurer au retour en READY</string>
+    <string name="door_media_mode_volume">Baisser le volume</string>
+    <string name="door_media_mode_pause">Mettre en pause</string>
+    <string name="door_media_pause_desc">Met le média en pause à l’ouverture d’une porte avant, s’il joue</string>
+    <string name="door_media_pause_desc_ready">Met le média en pause quand la voiture sort du mode READY en P (ceinture détachée et porte conducteur ouverte, ou extinction)</string>
+    <string name="door_media_resume_title">Reprendre la lecture à la fermeture</string>
+    <string name="door_media_resume_ready_title">Reprendre la lecture au retour en READY</string>
     <string name="door_volume_doors_label">Portes déclencheuses</string>
     <string name="door_left">Gauche</string>
     <string name="door_right">Droite</string>
@@ -931,9 +937,6 @@
     <string name="preclim_clim_caption">Réglages de la clim</string>
     <string name="preclim_temp">Température</string>
     <string name="preclim_fan">Ventilation</string>
-    <string name="preclim_ac">A/C (compresseur)</string>
-    <string name="preclim_ac_on">Activé</string>
-    <string name="preclim_ac_off">Coupé</string>
     <string name="preclim_current">Actuels : %1$s · rétablis à la fin</string>
     <string name="preclim_summary">%1$s · ventilation %2$s</string>
     <string name="preclim_summary_ac">%1$s · ventilation %2$s · A/C</string>

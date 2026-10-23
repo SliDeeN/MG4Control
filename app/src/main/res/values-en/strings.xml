@@ -316,12 +316,18 @@
 
     <!-- [BT-PROFILES] Bluetooth profiles -->
     <!-- Audio screen (A9 only) -->
-    <string name="door_volume_title">Volume drop when leaving the car</string>
+    <string name="door_volume_title">Media when leaving the car</string>
     <string name="door_volume_desc">Lowers media volume when a front door opens</string>
     <string name="door_volume_level_label">Target level</string>
     <string name="door_volume_restore_title">Restore on close</string>
     <string name="door_volume_desc_ready">Lowers media volume when the car leaves READY in P (seat belt unfastened and driver door opened, or car switched off)</string>
     <string name="door_volume_restore_ready_title">Restore when back to READY</string>
+    <string name="door_media_mode_volume">Lower the volume</string>
+    <string name="door_media_mode_pause">Pause</string>
+    <string name="door_media_pause_desc">Pauses the media when a front door opens, if something is playing</string>
+    <string name="door_media_pause_desc_ready">Pauses the media when the car leaves READY mode in P (seatbelt off and driver door open, or switch-off)</string>
+    <string name="door_media_resume_title">Resume playback on closing</string>
+    <string name="door_media_resume_ready_title">Resume playback on return to READY</string>
     <string name="door_volume_doors_label">Trigger doors</string>
     <string name="door_left">Left</string>
     <string name="door_right">Right</string>
@@ -914,9 +920,6 @@
     <string name="preclim_clim_caption">Climate settings</string>
     <string name="preclim_temp">Temperature</string>
     <string name="preclim_fan">Fan speed</string>
-    <string name="preclim_ac">A/C (compressor)</string>
-    <string name="preclim_ac_on">On</string>
-    <string name="preclim_ac_off">Off</string>
     <string name="preclim_current">Current: %1$s · restored at the end</string>
     <string name="preclim_summary">%1$s · fan %2$s</string>
     <string name="preclim_summary_ac">%1$s · fan %2$s · A/C</string>

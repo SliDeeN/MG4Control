@@ -316,12 +316,18 @@
 
     <!-- [BT-PROFILES] Bluetooth profiles -->
     <!-- Audio screen (A9 only) -->
-    <string name="door_volume_title">Araçtan inerken sesi kıs</string>
+    <string name="door_volume_title">Araçtan inerken medya</string>
     <string name="door_volume_desc">Ön kapılardan biri açılınca medya sesini kısar</string>
     <string name="door_volume_level_label">Hedef düzey</string>
     <string name="door_volume_restore_title">Kapanınca geri yükle</string>
     <string name="door_volume_desc_ready">Araç P konumundayken READY durumundan çıkınca (emniyet kemeri çözülüp sürücü kapısı açıldığında ya da araç kapatıldığında) medya sesini kısar</string>
     <string name="door_volume_restore_ready_title">READY durumuna dönünce geri yükle</string>
+    <string name="door_media_mode_volume">Sesi azalt</string>
+    <string name="door_media_mode_pause">Duraklat</string>
+    <string name="door_media_pause_desc">Bir ön kapı açıldığında, bir şey çalıyorsa medyayı duraklatır</string>
+    <string name="door_media_pause_desc_ready">Araç P konumunda READY modundan çıktığında medyayı duraklatır (emniyet kemeri çözülmüş ve sürücü kapısı açık ya da kapatma)</string>
+    <string name="door_media_resume_title">Kapanınca çalmaya devam et</string>
+    <string name="door_media_resume_ready_title">READY’ye dönünce çalmaya devam et</string>
     <string name="door_volume_doors_label">Tetikleyen kapılar</string>
     <string name="door_left">Sol</string>
     <string name="door_right">Sağ</string>
@@ -914,9 +920,6 @@
     <string name="preclim_clim_caption">Klima ayarları</string>
     <string name="preclim_temp">Sıcaklık</string>
     <string name="preclim_fan">Fan</string>
-    <string name="preclim_ac">A/C (kompresör)</string>
-    <string name="preclim_ac_on">Açık</string>
-    <string name="preclim_ac_off">Kapalı</string>
     <string name="preclim_current">Mevcut: %1$s · sonunda geri yüklenir</string>
     <string name="preclim_summary">%1$s · fan %2$s</string>
     <string name="preclim_summary_ac">%1$s · fan %2$s · A/C</string>

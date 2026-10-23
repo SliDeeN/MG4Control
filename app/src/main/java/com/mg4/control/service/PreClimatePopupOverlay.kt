@@ -183,8 +183,6 @@ object PreClimatePopupOverlay {
         val temp = Ligne(racine.findViewById(R.id.preclim_row_temp))
         val ventil = Ligne(racine.findViewById(R.id.preclim_row_fan))
         val barre: LinearLayout = racine.findViewById(R.id.preclim_fan_bar)
-        val ac: View = racine.findViewById(R.id.preclim_ac_row)
-        val acEtat: TextView = racine.findViewById(R.id.preclim_ac_state)
         val actuels: TextView = racine.findViewById(R.id.preclim_current)
         val plan: TextView = racine.findViewById(R.id.preclim_plan)
         val chien: TextView = racine.findViewById(R.id.preclim_dog_toggle)
@@ -266,7 +264,6 @@ object PreClimatePopupOverlay {
             v.crans += cran
         }
 
-        v.ac.setOnClickListener { changer { it.copy(ac = !it.ac) } }
         v.chien.setOnClickListener {
             changer { it.copy(dog = !it.dog) }
             // Les durées entrent dans la navigation ou en sortent : on la refait, sur ce bouton.
@@ -314,10 +311,6 @@ object PreClimatePopupOverlay {
         v.crans.forEachIndexed { i, cran ->
             OverlayKit.fond(cran, if (v.clim.fanMin + i <= r.fan) v.accent else v.bordure, rayon = v.dp(3f).toFloat())
         }
-        v.acEtat.text = v.s(if (r.ac) R.string.preclim_ac_on else R.string.preclim_ac_off)
-        OverlayKit.fond(v.acEtat, if (r.ac) v.accentDoux else v.bouton, if (r.ac) v.accent else v.bordure,
-            v.dp(1f), v.dp(16f).toFloat())
-        v.acEtat.setTextColor(if (r.ac) v.accent else v.texte2)
         v.actuels.text = v.s(R.string.preclim_current, resumeActuel(v))
         v.chien.visibility = if (maintenant) View.VISIBLE else View.GONE
         OverlayKit.fond(v.chien, if (r.dog) v.accentDoux else v.bouton, if (r.dog) v.accent else v.bordure,
@@ -371,18 +364,17 @@ object PreClimatePopupOverlay {
             if (r.mode == PreClimateMode.NOW) {
                 add((if (r.dog) emptyList() else v.puces) + listOf(v.temp.moins, v.temp.plus))
                 add(listOf(v.ventil.moins, v.ventil.plus))
-                add(listOf(v.ac))
             } else {
                 add(listOf(v.premier.moins, v.premier.plus, v.temp.moins, v.temp.plus))
                 add(listOf(v.duree.moins, v.duree.plus, v.ventil.moins, v.ventil.plus))
-                add(listOf(v.cycles.moins, v.cycles.plus, v.ac))
+                add(listOf(v.cycles.moins, v.cycles.plus))
                 add(listOf(v.pause.moins, v.pause.plus))
             }
             add((if (r.mode == PreClimateMode.NOW) listOf<View>(v.chien) else emptyList()) + listOf(v.annuler, v.demarrer))
         }
         // L'anneau de l'ancienne navigation resterait sur sa case, peut-être d'un autre mode.
         (v.cases + v.puces + listOf(v.premier, v.duree, v.cycles, v.pause, v.temp, v.ventil).flatMap { listOf(it.moins, it.plus) } +
-            listOf(v.fermer, v.ac, v.chien, v.annuler, v.demarrer)).forEach { it.foreground = null }
+            listOf(v.fermer, v.chien, v.annuler, v.demarrer)).forEach { it.foreground = null }
         val ligne = depart.ligne.coerceIn(0, lignes.lastIndex)
         navigation = OverlayNavigation(
             context = v.themed,

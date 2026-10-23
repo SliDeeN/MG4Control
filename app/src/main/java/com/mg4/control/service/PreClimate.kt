@@ -175,7 +175,7 @@ object PreClimate {
             AppLogger.i(TAG, "démarrée : ${borne.mode} " + (if (borne.mode == PreClimateMode.NOW)
                 "max ${borne.maxMin} min" else "${borne.runs} × ${borne.runMin} min (pause ${borne.pauseMin} min), " +
                 "1er cycle dans ${"%.0f".format(java.util.Locale.US, PreClimatePlan.minutesUntil(borne.firstMinuteOfDay, mur))} min") +
-                ", clim ${borne.tempC} °C ventil. ${borne.fan} A/C ${borne.ac}${if (borne.dog) ", mode chien" else ""}, verrouillage dans " +
+                ", clim ${borne.tempC} °C ventil. ${borne.fan}${if (borne.dog) ", mode chien" else ""}, verrouillage dans " +
                 "${(e.lockAtMs - maintenant) / 1000} s, arrêt sous ${e.minSoc} % (batterie ${soc ?: "?"} %) ; avant : $snap")
             principal.post {
                 surDepart()
@@ -332,7 +332,7 @@ object PreClimate {
             ecrire(pas).also { if (pas == ClimateStep.PowerOn) SystemClock.sleep(CLIM_START_MS) }
         }.all { it }
         presetApplied = true
-        AppLogger.i(TAG, "clim réglée : ${req.tempC} °C, ventilation ${req.fan}, A/C ${req.ac} → ok=$ok")
+        AppLogger.i(TAG, "clim réglée : ${req.tempC} °C, ventilation ${req.fan}, A/C → ok=$ok")
     }
 
     private fun ecrire(pas: ClimateStep): Boolean = try {

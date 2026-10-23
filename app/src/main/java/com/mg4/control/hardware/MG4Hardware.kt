@@ -5082,6 +5082,47 @@ object MG4Hardware {
     fun mediaPlayPause(): Boolean = commandeMedia(CmdMedia.LECTURE_PAUSE)
 
     /**
+     * Un média joue-t-il ? Même lecture que la bascule Lecture/Pause : la source déclarée par le
+     * service SAIC (radio par son propre service, USB par `isPlaying`, les autres par leur état),
+     * les sessions sur A9. Radio illisible = en lecture, comme dans [commandeMedia].
+     */
+    private fun mediaJoue(): Boolean {
+        val src = mediaSourceCourante()
+        if (src < 0) return sessionJoue() ?: musiqueEnCours()
+        return when {
+            src in SRC_RADIO_MIN..SRC_RADIO_MAX -> radioInfo()?.enLecture != false
+            src == SRC_USB -> mediaLireInt(ACT_USB, DESC_USB, 0x1e)?.let { it != 0 } ?: musiqueEnCours()
+            src == SRC_BT || src == SRC_ONLINE || src == SRC_CARPLAY || src == SRC_AA -> enLecture(src)
+            else -> sourceQuiJoue() != null || enLecture(src)
+        }
+    }
+
+    /**
+     * Pause en quittant la voiture (2026-10-23) : met en pause la source active SI elle joue.
+     * Rend vrai si une pause a été envoyée — c'est elle seule que [mediaResumeIfStopped] reprendra.
+     * Hors du thread principal (liaisons au service média).
+     */
+    fun mediaPauseIfPlaying(): Boolean {
+        if (!mediaJoue()) {
+            AppLogger.i(MEDIA_TAG, "pause demandée : rien ne joue — aucune action")
+            return false
+        }
+        return commandeMedia(CmdMedia.LECTURE_PAUSE)
+    }
+
+    /**
+     * Reprise de ce que [mediaPauseIfPlaying] a mis en pause — sauf si un média joue déjà : le
+     * conducteur a relancé lui-même, ou changé de source, et on ne touche à rien.
+     */
+    fun mediaResumeIfStopped(): Boolean {
+        if (mediaJoue()) {
+            AppLogger.i(MEDIA_TAG, "reprise demandée : un média joue déjà — aucune action")
+            return false
+        }
+        return commandeMedia(CmdMedia.LECTURE_PAUSE)
+    }
+
+    /**
      * Fait passer l'audio sur [source] (raccourci « Cycle de sources audio », 2026-10-15).
      *
      * Il n'existe pas de commande « changer de source » : on demande à la source visée de JOUER,
@@ -5554,6 +5595,19 @@ object MG4Hardware {
     private fun doorVolumeLevel(): Int =
         sAppContext?.getSharedPreferences("mg4_settings", 0)?.getInt("door_volume_level", 0) ?: 0
 
+    /**
+     * « Mettre en pause » au lieu de baisser le volume (demande d'un utilisateur, 2026-10-23).
+     * Préférence `door_volume_mode` : "pause", ou rien / "volume" = la baisse d'origine.
+     */
+    private fun doorPauseMode(): Boolean =
+        sAppContext?.getSharedPreferences("mg4_settings", 0)?.getString(KEY_DOOR_MODE, null) == DOOR_MODE_PAUSE
+
+    const val KEY_DOOR_MODE = "door_volume_mode"
+    const val DOOR_MODE_VOLUME = "volume"
+    const val DOOR_MODE_PAUSE = "pause"
+    /** MG4Control a mis le média en pause : seule cette pause-là se reprend. Survit à un redémarrage de l'écran. */
+    private const val KEY_MEDIA_PAUSED_BY_US = "door_media_paused"
+
     private fun doorRestoreEnabled(): Boolean =
         sAppContext?.getSharedPreferences("mg4_settings", 0)?.getBoolean("door_volume_restore", false) ?: false
 
@@ -5610,6 +5664,15 @@ object MG4Hardware {
     private const val KEY_VOLUME_BEFORE_DROP = "door_volume_before_drop"
 
     private fun dropMediaVolumeForExit(origin: String) {
+        if (doorPauseMode()) {
+            CoroutineScope(Dispatchers.IO).launch {
+                val ok = mediaPauseIfPlaying()
+                sAppContext?.getSharedPreferences("mg4_settings", 0)?.edit()
+                    ?.putBoolean(KEY_MEDIA_PAUSED_BY_US, ok)?.apply()
+                AppLogger.i(DOORWATCH_TAG, "$origin → média ${if (ok) "mis en pause" else "laissé (rien ne jouait ou échec)"}")
+            }
+            return
+        }
         val level = doorVolumeLevel()
         CoroutineScope(Dispatchers.IO).launch {
             val before = getMediaVolume()
@@ -5623,6 +5686,19 @@ object MG4Hardware {
 
     private fun restoreMediaVolumeAfterDrop(origin: String) {
         val prefs = sAppContext?.getSharedPreferences("mg4_settings", 0)
+        // Pause : ne se reprend que si c'est NOUS qui l'avons mise, quel que soit le mode réglé
+        // depuis — un changement de mode entre l'ouverture et la fermeture ne laisse rien en plan.
+        if (prefs?.getBoolean(KEY_MEDIA_PAUSED_BY_US, false) == true) {
+            prefs.edit().remove(KEY_MEDIA_PAUSED_BY_US).apply()
+            if (!doorRestoreEnabled()) {
+                AppLogger.i(DOORWATCH_TAG, "$origin → reprise désactivée (média laissé en pause)")
+            } else {
+                CoroutineScope(Dispatchers.IO).launch {
+                    val ok = mediaResumeIfStopped()
+                    AppLogger.i(DOORWATCH_TAG, "$origin → reprise de la lecture = $ok")
+                }
+            }
+        }
         val restore = sVolumeBeforeDrop.takeIf { it >= 0 } ?: prefs?.getInt(KEY_VOLUME_BEFORE_DROP, -1) ?: -1
         sVolumeBeforeDrop = -1
         prefs?.edit()?.remove(KEY_VOLUME_BEFORE_DROP)?.apply()

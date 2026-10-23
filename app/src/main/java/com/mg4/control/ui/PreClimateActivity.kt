@@ -416,10 +416,9 @@ class PreClimateActivity : Activity() {
     private fun batterie(e: PreClimate.Etat): String =
         e.soc?.let { v.s(R.string.preclim_value_percent, it.toInt()) } ?: "–"
 
-    /** « 25 °C · ventilation 8 · A/C » : ce que la pré-climatisation règle. */
+    /** « 25 °C · ventilation 8 · A/C » : ce que la pré-climatisation règle (compresseur toujours en marche). */
     private fun resumeDemande(e: PreClimate.Etat): String = v.s(
-        if (e.req.ac) R.string.preclim_summary_ac else R.string.preclim_summary,
-        v.s(R.string.preclim_value_celsius, e.req.tempC), e.req.fan.toString())
+        R.string.preclim_summary_ac, v.s(R.string.preclim_value_celsius, e.req.tempC), e.req.fan.toString())
 
     /** « Clim rétablie : 21 °C · ventilation 4 » — ou « arrêtée (…) » si elle l'était. */
     private fun restauration(s: ClimateSnapshot): String {

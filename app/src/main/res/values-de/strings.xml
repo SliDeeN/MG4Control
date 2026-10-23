@@ -316,12 +316,18 @@
 
     <!-- [BT-PROFILES] Bluetooth-Profile -->
     <!-- Audio-Bildschirm (nur A9) -->
-    <string name="door_volume_title">Lautstärke beim Verlassen des Autos senken</string>
+    <string name="door_volume_title">Medien beim Verlassen des Autos</string>
     <string name="door_volume_desc">Senkt die Medienlautstärke beim Öffnen einer Vordertür</string>
     <string name="door_volume_level_label">Zielpegel</string>
     <string name="door_volume_restore_title">Beim Schließen wiederherstellen</string>
     <string name="door_volume_desc_ready">Senkt die Medienlautstärke, wenn das Auto in P den READY-Modus verlässt (Gurt gelöst und Fahrertür geöffnet, oder Auto ausgeschaltet)</string>
     <string name="door_volume_restore_ready_title">Bei Rückkehr in READY wiederherstellen</string>
+    <string name="door_media_mode_volume">Lautstärke senken</string>
+    <string name="door_media_mode_pause">Pausieren</string>
+    <string name="door_media_pause_desc">Pausiert die Medien beim Öffnen einer Vordertür, falls etwas läuft</string>
+    <string name="door_media_pause_desc_ready">Pausiert die Medien, wenn das Auto in P den READY-Modus verlässt (Gurt gelöst und Fahrertür offen, oder Ausschalten)</string>
+    <string name="door_media_resume_title">Wiedergabe beim Schließen fortsetzen</string>
+    <string name="door_media_resume_ready_title">Wiedergabe bei Rückkehr in READY fortsetzen</string>
     <string name="door_volume_doors_label">Auslösende Türen</string>
     <string name="door_left">Links</string>
     <string name="door_right">Rechts</string>
@@ -914,9 +920,6 @@
     <string name="preclim_clim_caption">Klimaeinstellungen</string>
     <string name="preclim_temp">Temperatur</string>
     <string name="preclim_fan">Gebläse</string>
-    <string name="preclim_ac">A/C (Kompressor)</string>
-    <string name="preclim_ac_on">An</string>
-    <string name="preclim_ac_off">Aus</string>
     <string name="preclim_current">Aktuell: %1$s · am Ende wiederhergestellt</string>
     <string name="preclim_summary">%1$s · Gebläse %2$s</string>
     <string name="preclim_summary_ac">%1$s · Gebläse %2$s · A/C</string>
