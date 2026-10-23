@@ -969,4 +969,14 @@
     <string name="preclim_dog_text">My human will be back soon. Meanwhile I’m comfy: the climate is on and set to</string>
     <string name="preclim_dog_outside">Outside, it’s %1$s</string>
     <string name="preclim_dog_status">MG4Control dog mode · climate on since %1$s · battery %2$s</string>
+    <string name="preclim_cfg_cluster">Show on the driver display</string>
+    <string name="preclim_cfg_cluster_desc">While it runs, a card replaces the Consumption or Power module on the cluster’s Navigation and Music tabs, even if the module is turned off.</string>
+    <string name="cluster_preclim_outside">outside</string>
+    <string name="cluster_preclim_remaining">%1$s left · stops %2$s</string>
+    <string name="cluster_preclim_cycle">Cycle %1$d/%2$d · until %3$s</string>
+    <string name="cluster_preclim_next">Next cycle at %1$s</string>
+    <string name="cluster_preclim_lock_in">Locking in %1$d s</string>
+    <string name="cluster_dog_fine">I’m perfectly fine!</string>
+    <string name="cluster_dog_set">The climate is set to</string>
+    <string name="cluster_dog_since">Since %1$s · battery %2$s</string>
 </resources>

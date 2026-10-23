@@ -969,4 +969,14 @@
     <string name="preclim_dog_text">Sahibim birazdan dönecek. Bu arada keyfim yerinde: klima açık ve şu sıcaklığa ayarlı</string>
     <string name="preclim_dog_outside">Dışarıda hava %1$s</string>
     <string name="preclim_dog_status">MG4Control köpek modu · klima %1$s saatinden beri açık · batarya %2$s</string>
+    <string name="preclim_cfg_cluster">Sürücü ekranında göster</string>
+    <string name="preclim_cfg_cluster_desc">Program sürerken, gösterge panelinin Navigasyon ve Müzik sekmelerinde Tüketim veya Güç modülünün yerini bir kart alır; modül kapalı olsa bile.</string>
+    <string name="cluster_preclim_outside">dışarı</string>
+    <string name="cluster_preclim_remaining">%1$s kaldı · %2$s durur</string>
+    <string name="cluster_preclim_cycle">Döngü %1$d/%2$d · %3$s saatine kadar</string>
+    <string name="cluster_preclim_next">Sonraki döngü %1$s</string>
+    <string name="cluster_preclim_lock_in">%1$d sn içinde kilitlenecek</string>
+    <string name="cluster_dog_fine">Gayet iyiyim!</string>
+    <string name="cluster_dog_set">Klima şu sıcaklığa ayarlı</string>
+    <string name="cluster_dog_since">%1$s saatinden beri · batarya %2$s</string>
 </resources>

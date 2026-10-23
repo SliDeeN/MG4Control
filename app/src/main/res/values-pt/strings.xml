@@ -969,4 +969,14 @@
     <string name="preclim_dog_text">O meu humano volta já. Entretanto estou confortável: o clima está ligado e regulado para</string>
     <string name="preclim_dog_outside">Lá fora estão %1$s</string>
     <string name="preclim_dog_status">Modo cão do MG4Control · clima ligado desde as %1$s · bateria %2$s</string>
+    <string name="preclim_cfg_cluster">Mostrar no ecrã do condutor</string>
+    <string name="preclim_cfg_cluster_desc">Durante o programa, uma ficha substitui o módulo Consumo ou Potência nos separadores Navegação e Música do painel, mesmo com o módulo desativado.</string>
+    <string name="cluster_preclim_outside">lá fora</string>
+    <string name="cluster_preclim_remaining">faltam %1$s · para às %2$s</string>
+    <string name="cluster_preclim_cycle">Ciclo %1$d/%2$d · até às %3$s</string>
+    <string name="cluster_preclim_next">Próximo ciclo às %1$s</string>
+    <string name="cluster_preclim_lock_in">Trancamento em %1$d s</string>
+    <string name="cluster_dog_fine">Estou ótimo!</string>
+    <string name="cluster_dog_set">O clima está regulado para</string>
+    <string name="cluster_dog_since">Desde as %1$s · bateria %2$s</string>
 </resources>

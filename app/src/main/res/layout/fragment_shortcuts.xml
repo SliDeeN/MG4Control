@@ -1399,6 +1399,51 @@
 
                         </LinearLayout>
 
+                        <!-- Fiche sur l'écran conducteur : SWI133, SWI68 et SWI165 seulement (le code la masque ailleurs). -->
+                        <LinearLayout
+                            android:id="@+id/row_preclim_cluster"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp"
+                            android:visibility="gone">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:minHeight="52dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/preclim_cfg_cluster"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp" />
+
+                                <Switch
+                                    android:id="@+id/switch_preclim_cluster"
+                                    android:scaleX="1.3"
+                                    android:scaleY="1.3"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content" />
+
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/preclim_cfg_cluster_desc"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+
+                        </LinearLayout>
+
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"

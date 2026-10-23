@@ -31,6 +31,8 @@ object PreClimateSettings {
     private const val KEY_FAN = "preclim_fan"
     private const val KEY_AC = "preclim_ac"
     private const val KEY_DOG = "preclim_dog"
+    /** Fiche sur l'écran conducteur pendant le programme (2026-10-23) : activée par défaut. */
+    private const val KEY_CLUSTER = "preclim_cluster"
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -50,6 +52,10 @@ object PreClimateSettings {
 
     fun setScreenMode(ctx: Context, mode: PreClimateScreenMode) =
         prefs(ctx).edit().putString(KEY_SCREEN_MODE, mode.name).apply()
+
+    /** Réglage seul : la fiche ne s'affiche en plus que sur les firmwares du module (`ClusterModuleSettings.isSupported`). */
+    fun showOnCluster(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_CLUSTER, true)
+    fun setShowOnCluster(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_CLUSTER, on).apply()
 
     /**
      * Derniers choix du pop-up, mode « Maintenant ». Jamais vus : durée 1 h, premier cycle dans une

@@ -18,6 +18,7 @@ import com.mg4.control.model.PreClimateMode
 import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateRequest
 import com.mg4.control.model.UnlockWatch
+import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.util.PreClimateSettings
 import java.util.Calendar
 
@@ -100,6 +101,8 @@ object PreClimate {
 
     // ── Fil du programme seulement ───────────────────────────────────────────
     private var wake: PowerManager.WakeLock? = null
+    /** Contexte de l'application, retenu au démarrage : la fin prévient le combiné. */
+    @Volatile private var appContext: Context? = null
     private var presetApplied = false
     private var lastStepKey: String? = null
     private var unlockWatch = UnlockWatch()
@@ -142,6 +145,7 @@ object PreClimate {
                 return@post
             }
             PreClimateSettings.saveRequest(app, req)
+            appContext = app
             val borne = req.copy(
                 tempC = req.tempC.coerceIn(clim.tempMin, clim.tempMax),
                 fan = req.fan.coerceIn(clim.fanMin, clim.fanMax),
@@ -177,11 +181,22 @@ object PreClimate {
                 surDepart()
                 PreClimateScreen.afficher(app, "démarrage")
             }
+            // La fiche prend la place du module du combiné — posé pour elle s'il est désactivé.
+            ClusterModuleOverlay.refresh(app, "pré-climatisation")
             publier(e)
             // Mode « Maintenant » : la clim prend tout de suite les réglages choisis.
             if (borne.mode == PreClimateMode.NOW) appliquer(borne)
             travail.postDelayed(tick, TICK_MS)
         }
+    }
+
+    /**
+     * La fiche de la pré-climatisation est-elle à montrer sur l'écran conducteur
+     * ([ClusterModuleOverlay]) : programme en cours, réglage activé, firmware du module.
+     */
+    fun surLeCombine(context: Context): Boolean {
+        val phase = etat?.phase ?: return false
+        return phase != Phase.ENDED && ClusterModuleSettings.isSupported() && PreClimateSettings.showOnCluster(context)
     }
 
     /** Bouton « Arrêter » de l'écran de suivi. */
@@ -363,6 +378,7 @@ object PreClimate {
             powerOffOk = eteinte, soc = EnergyReader.soc() ?: e.soc)
         etat = fini
         publier(fini)
+        appContext?.let { ClusterModuleOverlay.refresh(it, "fin de la pré-climatisation") }
         relacherVeille()
         presetApplied = false
         lastStepKey = null

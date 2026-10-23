@@ -969,4 +969,14 @@
     <string name="preclim_dog_text">Mein Mensch ist gleich zurück. Bis dahin habe ich es gemütlich: Die Klimaanlage läuft und ist eingestellt auf</string>
     <string name="preclim_dog_outside">Draußen sind es %1$s</string>
     <string name="preclim_dog_status">MG4Control-Hundemodus · Klima an seit %1$s · Akku %2$s</string>
+    <string name="preclim_cfg_cluster">Auf dem Fahrerdisplay anzeigen</string>
+    <string name="preclim_cfg_cluster_desc">Während des Programms ersetzt eine Karte das Modul Verbrauch oder Leistung auf den Kombi-Tabs Navigation und Musik, auch wenn das Modul ausgeschaltet ist.</string>
+    <string name="cluster_preclim_outside">draußen</string>
+    <string name="cluster_preclim_remaining">noch %1$s · Stopp %2$s</string>
+    <string name="cluster_preclim_cycle">Zyklus %1$d/%2$d · bis %3$s</string>
+    <string name="cluster_preclim_next">Nächster Zyklus um %1$s</string>
+    <string name="cluster_preclim_lock_in">Verriegelung in %1$d s</string>
+    <string name="cluster_dog_fine">Mir geht es bestens!</string>
+    <string name="cluster_dog_set">Die Klimaanlage ist eingestellt auf</string>
+    <string name="cluster_dog_since">Seit %1$s · Akku %2$s</string>
 </resources>

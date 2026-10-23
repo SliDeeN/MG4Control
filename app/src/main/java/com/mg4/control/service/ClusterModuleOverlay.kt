@@ -44,12 +44,16 @@ import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ClusterTrip
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.DrivingProfile
+import com.mg4.control.model.PreClimateMode
+import com.mg4.control.model.PreClimatePlan
+import com.mg4.control.model.PreClimateTrend
 import com.mg4.control.model.StatsTracker
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.ui.widget.ClusterGaugeView
 import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.util.LocaleHelper
+import kotlin.math.roundToInt
 
 /**
  * Module MG4Control sur le combiné (Réglages › Interface, 2026-10-14).
@@ -78,6 +82,10 @@ import com.mg4.control.util.LocaleHelper
  * propre avertissement à la place du carré et bloque les onglets (essai du 2026-10-16) ; coupé
  * pour cela, le module a été remis en service le 2026-10-17 : l'utilisateur a trouvé comment faire
  * revenir l'affichage du combiné ([MODULE_CHARGE]).
+ *
+ * Pendant une pré-climatisation (issue #130, 2026-10-23), sa fiche passe avant tout, sur les onglets
+ * Navigation et Musique, même réglés sur « Aucun » ; la fenêtre est posée pour elle si le module est
+ * désactivé, et retirée à la fin ([PreClimate.surLeCombine]).
  *
  * Vu sur le combiné le 2026-10-14 (SWI133) : la fenêtre s'y affiche bien. La place du carré vient
  * de la mise en page de l'appli SAIC ([ClusterGauge.placement]) ; le journal ([TAG]) donne l'écran
@@ -124,6 +132,7 @@ internal object ClusterModuleOverlay {
     /** Dernier onglet et dernier module annoncés au journal : un mot par changement, pas par relevé. */
     private var dernierOnglet: Int? = -1
     private var dernierModule: ClusterModule? = null
+    private var dernierPreClim = false
     private var mode: DriveMode? = null
     /**
      * Profil de la pastille (issue #152) : relu quand le profil actif change, et avec les valeurs
@@ -174,7 +183,9 @@ internal object ClusterModuleOverlay {
         main.post {
             // Hors des firmwares pris en charge, rien — même si le réglage a été activé pendant les
             // essais sur A9 : sans ça, une fenêtre invisible resterait posée sur l'écran du combiné.
-            if (ClusterModuleSettings.isEnabled(app) && ClusterModuleSettings.isSupported()) {
+            // Module désactivé : posé quand même le temps d'une pré-climatisation.
+            if (ClusterModuleSettings.isSupported() &&
+                (ClusterModuleSettings.isEnabled(app) || PreClimate.surLeCombine(app))) {
                 if (!abonne) {
                     abonne = true
                     ReadyWatcher.add(readyListener)
@@ -184,7 +195,7 @@ internal object ClusterModuleOverlay {
                 afficher(origine)
             } else {
                 desabonner()
-                masquer("réglage désactivé")
+                masquer(if (origine == "réglage") "réglage désactivé" else "$origine, module désactivé")
             }
         }
     }
@@ -304,6 +315,7 @@ internal object ClusterModuleOverlay {
             dernierLentMs = 0L
             dernierOnglet = -1
             dernierModule = null
+            dernierPreClim = false
             session.terminer()
             chargeBrute = null
             chargeFinie = false
@@ -401,7 +413,21 @@ internal object ClusterModuleOverlay {
                 dernierOnglet = onglet
                 dernierModule = module
             }
-            val contenu = module?.let {
+            // Pré-climatisation : sa fiche sur les onglets qui portent l'image de l'écran central,
+            // quel que soit le module réglé pour eux.
+            val preClim = PreClimate.etat?.takeIf { PreClimate.surLeCombine(ctx) }
+                ?.takeIf { onglet == null || onglet == ClusterTab.NAVIGATION.value || onglet == ClusterTab.MEDIA.value }
+                ?.let { vuePreClim(it, maintenant) }
+            if ((preClim != null) != dernierPreClim) {
+                dernierPreClim = preClim != null
+                AppLogger.i(TAG, if (preClim != null) "pré-climatisation : sa fiche remplace le module"
+                    else "pré-climatisation : la fiche se retire")
+            }
+            val contenu = if (preClim != null) ClusterGaugeView.Contenu(
+                // Ni jauge ni pastille tant que la fiche est là.
+                module = module ?: ClusterModule.CONSUMPTION, kw = null, kmh = null, pastille = null,
+                moyenneWhKm = null, recupWh = null, preClim = preClim,
+            ) else module?.let {
                 ClusterGaugeView.Contenu(
                     module = it,
                     kw = kwLisse,
@@ -434,6 +460,42 @@ internal object ClusterModuleOverlay {
 
     /** Langue choisie dans l'application (comme la vue) : le nom du profil s'écrit en capitales dans celle-ci. */
     private fun langue(ctx: Context): java.util.Locale = java.util.Locale.forLanguageTag(LocaleHelper.getLanguage(ctx))
+
+    /** Ce que montre la fiche de la pré-climatisation à cet instant (fil du lecteur). */
+    private fun vuePreClim(e: PreClimate.Etat, maintenant: Long): ClusterGaugeView.PreClim {
+        val step = e.step
+        val decompte = e.phase == PreClimate.Phase.COUNTDOWN
+        // « Maintenant » : la clim tourne dès le décompte, réglée au démarrage.
+        val enMarche = (e.phase == PreClimate.Phase.ACTIVE && step is PreClimatePlan.Step.Running) ||
+            (decompte && e.req.mode == PreClimateMode.NOW)
+        val etape = when {
+            decompte -> ClusterGaugeView.Etape.Decompte(((e.lockAtMs - maintenant).coerceAtLeast(0L) + 999).div(1000).toInt())
+            step is PreClimatePlan.Step.Waiting -> ClusterGaugeView.Etape.Attente(e.wallTimes.getOrNull(step.index)?.first ?: 0)
+            step is PreClimatePlan.Step.Running && e.req.mode == PreClimateMode.AT_TIME ->
+                ClusterGaugeView.Etape.Cycle(step.index + 1, e.cycles.size, e.wallTimes.getOrNull(step.index)?.second ?: 0)
+            else -> ClusterGaugeView.Etape.Restant(
+                minutes = if (step is PreClimatePlan.Step.Running) minutesRestantes(step.untilMs - maintenant) else e.req.maxMin,
+                finMinute = (e.startWallMinute + e.req.maxMin).roundToInt())
+        }
+        // Comme l'écran central : le décompte se vide, le reste se remplit.
+        val part = if (decompte) (e.lockAtMs - maintenant).coerceAtLeast(0L).toFloat() / (e.lockAtMs - e.startMs).coerceAtLeast(1L)
+            else step?.let { PreClimatePlan.fraction(it, maintenant) } ?: 0f
+        return ClusterGaugeView.PreClim(
+            chien = e.req.dog,
+            tendance = if (enMarche) PreClimatePlan.trend(e.req.tempC, e.outsideC) else PreClimateTrend.HOLDING,
+            enMarche = enMarche,
+            consigneC = e.req.tempC,
+            dehorsC = e.outsideC,
+            part = part,
+            etape = etape,
+            batterie = e.soc,
+            verrou = if (decompte) null else e.lock,
+            debutMinute = e.startWallMinute.toInt(),
+        )
+    }
+
+    /** Minutes jusqu'à l'échéance, arrondies au-dessus : « 1 min » jusqu'à la dernière seconde. */
+    private fun minutesRestantes(ms: Long): Int = ((ms.coerceAtLeast(0L) + 59_999L) / 60_000L).toInt()
 
     /** Ce que montre le module « charge » à cet instant (fil du lecteur). */
     private fun vueCharge(maintenant: Long): ClusterGaugeView.Charge {

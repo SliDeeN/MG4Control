@@ -29,7 +29,9 @@ import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateScreenMode
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.service.ClusterModuleOverlay
 import com.mg4.control.service.OverlayKit
+import com.mg4.control.service.PreClimate
 import com.mg4.control.shortcut.AudioSource
 import com.mg4.control.shortcut.AudioSourceCycle
 import com.mg4.control.shortcut.PressType
@@ -37,6 +39,7 @@ import com.mg4.control.shortcut.ProfileCycle
 import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.PreClimateSettings
 
@@ -1489,6 +1492,18 @@ class ShortcutsFragment : Fragment() {
             PreClimateSettings.setMinSoc(ctx, PreClimateSettings.minSoc(ctx) + PreClimatePlan.SOC_STEP); peindre()
         }
         choix.forEach { (mode, bouton) -> bouton.setOnClickListener { PreClimateSettings.setScreenMode(ctx, mode); peindre() } }
+        // Fiche sur l'écran conducteur : réservée aux firmwares où le combiné montre l'écran central.
+        view.findViewById<View>(R.id.row_preclim_cluster).visibility =
+            if (ClusterModuleSettings.isSupported()) View.VISIBLE else View.GONE
+        view.findViewById<Switch>(R.id.switch_preclim_cluster).apply {
+            isChecked = PreClimateSettings.showOnCluster(ctx)
+            setOnCheckedChangeListener { _, coche ->
+                PreClimateSettings.setShowOnCluster(ctx, coche)
+                AppLogger.i(PreClimate.TAG, "fiche sur l'écran conducteur ${if (coche) "activée" else "désactivée"}")
+                // Programme en cours : la fiche apparaît ou part tout de suite.
+                ClusterModuleOverlay.refresh(ctx, "réglage de la pré-climatisation")
+            }
+        }
         peindre()
     }
 

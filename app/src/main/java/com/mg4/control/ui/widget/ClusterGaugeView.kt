@@ -44,8 +44,11 @@ import com.mg4.control.model.GaugeLevel
 import com.mg4.control.model.GaugeState
 import com.mg4.control.model.GaugeUnit
 import com.mg4.control.model.PillContent
+import com.mg4.control.model.PreClimateTrend
 import com.mg4.control.service.OverlayKit
+import com.mg4.control.service.PreClimate
 import java.text.NumberFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.PI
@@ -75,6 +78,11 @@ import kotlin.math.sin
  * niveau et l'heure de fin, la barre de la batterie, puis puissance, énergie et durée. L'éclair
  * de la pastille pulse et un reflet court sur la barre tant que la charge dure ; à la fin, tout
  * se fige et passe au vert.
+ *
+ * Pendant une pré-climatisation (issue #130, 2026-10-23, maquette C « fiche »), sa fiche passe
+ * avant tout ([PreClimate]) : la consigne en grand, bleue ou orange comme l'écran central, la barre
+ * de l'étape, puis le reste et la batterie ; en mode chien, un mot pour les passants. Sans
+ * animation, à sa demande : l'écran central en a déjà une.
  */
 class ClusterGaugeView(context: Context) : View(context) {
 
@@ -95,6 +103,32 @@ class ClusterGaugeView(context: Context) : View(context) {
         val finVersMs: Long?,
     )
 
+    /**
+     * Fiche de la pré-climatisation. [enMarche] : la clim tourne (sinon consigne en gris) ;
+     * [part] : part écoulée de l'étape, pour la barre ; [verrou] : `null` pendant le décompte.
+     * Heures en minutes depuis minuit.
+     */
+    data class PreClim(
+        val chien: Boolean,
+        val tendance: PreClimateTrend,
+        val enMarche: Boolean,
+        val consigneC: Int,
+        val dehorsC: Float?,
+        val part: Float,
+        val etape: Etape,
+        val batterie: Float?,
+        val verrou: PreClimate.LockState?,
+        val debutMinute: Int,
+    )
+
+    /** La ligne sous la barre de la fiche. */
+    sealed class Etape {
+        data class Decompte(val secondes: Int) : Etape()
+        data class Restant(val minutes: Int, val finMinute: Int) : Etape()
+        data class Cycle(val numero: Int, val total: Int, val finMinute: Int) : Etape()
+        data class Attente(val prochainMinute: Int) : Etape()
+    }
+
     /** Ce que montre le module. Puissance lissée, positive en décharge ; `null` = illisible. */
     data class Contenu(
         val module: ClusterModule,
@@ -111,6 +145,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         val style: ClusterGaugeStyle = ClusterGaugeStyle.DYNAMIC,
         /** Pendant une charge : le module « charge » remplace la jauge. */
         val charge: Charge? = null,
+        /** Pendant une pré-climatisation : sa fiche, avant la charge et la jauge. */
+        val preClim: PreClim? = null,
     )
 
     private var contenu: Contenu? = null
@@ -130,7 +166,10 @@ class ClusterGaugeView(context: Context) : View(context) {
     private val cTexte2 = sombre.getColor(R.color.text_secondary)
     private val cAccent = sombre.getColor(R.color.dash_accent)
     private val cVert = sombre.getColor(R.color.dash_eco)
-    private val icones = listOf(R.drawable.ic_cluster_bolt, R.drawable.ic_cluster_battery_charging, R.drawable.ic_cluster_clock)
+    private val cChaud = sombre.getColor(R.color.preclim_heat)
+    private val cAlerte = sombre.getColor(R.color.dash_warn)
+    private val icones = listOf(R.drawable.ic_cluster_bolt, R.drawable.ic_cluster_battery_charging, R.drawable.ic_cluster_clock,
+        R.drawable.ic_hvac_ac, R.drawable.ic_cluster_flame, R.drawable.ic_preclim_paw)
         .associateWith { ContextCompat.getDrawable(context, it)?.mutate() }
 
     private val locale: Locale = context.resources.configuration.locales[0]
@@ -151,6 +190,8 @@ class ClusterGaugeView(context: Context) : View(context) {
     /** Texte de la pastille du mode le plus long (« NORMAL », « CUSTOM ») : la place qu'ont les jauges. */
     private val largeurPastilleMax = DriveMode.entries.maxOf { textePastille.measureText(it.label.uppercase(Locale.ROOT)) }
     private val moyen = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+    /** Textes de la fiche de la pré-climatisation (alignés à gauche ou à droite, coupés au besoin). */
+    private val texteFiche = TextPaint(Paint.ANTI_ALIAS_FLAG)
     private val cadre = RectF()
 
     /**
@@ -159,7 +200,7 @@ class ClusterGaugeView(context: Context) : View(context) {
      */
     fun montrer(c: Contenu, animationMs: Long) {
         contenu = c
-        if (c.charge != null) {
+        if (c.charge != null || c.preClim != null) {
             // Rien à faire glisser : les valeurs de la charge bougent lentement, l'animation est
             // celle de l'éclair et de la barre (onDraw).
             animation?.cancel()
@@ -205,6 +246,13 @@ class ClusterGaugeView(context: Context) : View(context) {
         val echelle = minOf(width, height) / ClusterGauge.SIDE_PX.toFloat()
         canvas.save()
         canvas.scale(echelle, echelle)
+
+        c.preClim?.let { p ->
+            // Rien ne bouge : redessinée à chaque relevé.
+            preClim(canvas, p)
+            canvas.restore()
+            return
+        }
 
         c.charge?.let { ch ->
             charge(canvas, ch)
@@ -435,6 +483,99 @@ class ClusterGaugeView(context: Context) : View(context) {
             canvas.drawText(context.getString(R.string.cluster_avg_short), xm, Y_BARRE - 21f, texte)
         }
         piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne), cTexte)
+    }
+
+    // ── Pré-climatisation (maquette C, « fiche ») ────────────────────────────
+
+    private fun preClim(canvas: Canvas, p: PreClim) {
+        val couleur = if (p.tendance == PreClimateTrend.HEATING) cChaud else cAccent
+        val d = COTE - MARGE_FICHE
+        val consigne = context.getString(R.string.preclim_value_celsius, p.consigneC)
+        val dehors = p.dehorsC?.let { context.getString(R.string.preclim_value_celsius, it.roundToInt()) } ?: "–"
+        val batterie = p.batterie?.let { context.getString(R.string.preclim_value_percent, it.roundToInt()) } ?: "–"
+
+        // En-tête : patte, flamme ou flocon, et le titre.
+        val icone = when {
+            p.chien -> R.drawable.ic_preclim_paw
+            p.tendance == PreClimateTrend.HEATING -> R.drawable.ic_cluster_flame
+            else -> R.drawable.ic_hvac_ac
+        }
+        icones[icone]?.let {
+            it.setTint(couleur)
+            it.alpha = 255
+            it.setBounds(18, 21, 40, 43)
+            it.draw(canvas)
+        }
+        aGauche(canvas, context.getString(if (p.chien) R.string.preclim_dog else R.string.preclim_title),
+            48f, 38f, 16f, cTexte, moyen)
+
+        if (p.chien) {
+            aGauche(canvas, context.getString(R.string.cluster_dog_fine), MARGE_FICHE, 85f, 20f, cTexte, moyen)
+            aGauche(canvas, context.getString(R.string.cluster_dog_set), MARGE_FICHE, 112f, 13f, cTexte2, Typeface.DEFAULT)
+            aGauche(canvas, consigne, MARGE_FICHE, 168f, 50f, couleur, moyen)
+            aDroite(canvas, context.getString(R.string.cluster_preclim_outside) + " " + dehors, d, 166f, 14f, cTexte2, Typeface.DEFAULT)
+            aGauche(canvas, context.getString(R.string.cluster_dog_since, heure(p.debutMinute), batterie),
+                MARGE_FICHE, 234f, 13f, cTexte2, Typeface.DEFAULT)
+            return
+        }
+
+        aGauche(canvas, consigne, MARGE_FICHE, 114f, 52f, if (p.enMarche) couleur else cTexte2, moyen)
+        aDroite(canvas, context.getString(R.string.cluster_preclim_outside), d, 88f, 13f, C_DISCRET, Typeface.DEFAULT)
+        aDroite(canvas, dehors, d, 110f, 18f, cTexte2, moyen)
+
+        // Barre de l'étape, sans reflet.
+        plein.color = cPiste
+        cadre.set(MARGE_FICHE, 144f, d, 151f)
+        canvas.drawRoundRect(cadre, 3.5f, 3.5f, plein)
+        val part = p.part.coerceIn(0f, 1f)
+        if (part > 0f) {
+            plein.color = couleur
+            cadre.set(MARGE_FICHE, 144f, MARGE_FICHE + (d - MARGE_FICHE) * part, 151f)
+            canvas.drawRoundRect(cadre, 3.5f, 3.5f, plein)
+        }
+
+        val ligne = when (val e = p.etape) {
+            is Etape.Decompte -> context.getString(R.string.cluster_preclim_lock_in, e.secondes)
+            is Etape.Restant -> context.getString(R.string.cluster_preclim_remaining, duree(e.minutes), heure(e.finMinute))
+            is Etape.Cycle -> context.getString(R.string.cluster_preclim_cycle, e.numero, e.total, heure(e.finMinute))
+            is Etape.Attente -> context.getString(R.string.cluster_preclim_next, heure(e.prochainMinute))
+        }
+        aGauche(canvas, ligne, MARGE_FICHE, 181f, 14f, cTexte, Typeface.DEFAULT)
+
+        val verrou = when (p.verrou) {
+            PreClimate.LockState.LOCKED -> context.getString(R.string.preclim_lock_ok)
+            PreClimate.LockState.FAILED -> context.getString(R.string.preclim_lock_failed)
+            PreClimate.LockState.PENDING -> context.getString(R.string.preclim_lock_pending)
+            null -> null
+        }
+        aGauche(canvas, listOfNotNull(context.getString(R.string.preclim_battery, batterie), verrou).joinToString(" · "),
+            MARGE_FICHE, 234f, 13f, if (p.verrou == PreClimate.LockState.FAILED) cAlerte else cTexte2, Typeface.DEFAULT)
+    }
+
+    private fun aGauche(canvas: Canvas, s: String, x: Float, y: Float, taille: Float, couleur: Int, police: Typeface) =
+        ecrire(canvas, s, x, y, taille, couleur, police, Paint.Align.LEFT)
+
+    private fun aDroite(canvas: Canvas, s: String, x: Float, y: Float, taille: Float, couleur: Int, police: Typeface) =
+        ecrire(canvas, s, x, y, taille, couleur, police, Paint.Align.RIGHT)
+
+    /** Une ligne de la fiche, coupée d'une ellipse si elle déborde du carré. */
+    private fun ecrire(canvas: Canvas, s: String, x: Float, y: Float, taille: Float, couleur: Int, police: Typeface, align: Paint.Align) {
+        texteFiche.typeface = police
+        texteFiche.textSize = taille
+        texteFiche.color = couleur
+        texteFiche.textAlign = align
+        val place = if (align == Paint.Align.LEFT) COTE - MARGE_FICHE - x else x - MARGE_FICHE
+        canvas.drawText(TextUtils.ellipsize(s, texteFiche, place, TextUtils.TruncateAt.END).toString(), x, y, texteFiche)
+    }
+
+    /** Heure murale ([minuteDuJour] depuis minuit) au format de la voiture. */
+    private fun heure(minuteDuJour: Int): String {
+        val m = Math.floorMod(minuteDuJour, 1440)
+        val c = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, m / 60)
+            set(Calendar.MINUTE, m % 60)
+        }
+        return DateFormat.getTimeFormat(context).format(c.time)
     }
 
     // ── Module « charge » (maquette B) ──────────────────────────────────────
@@ -733,5 +874,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         const val PULSATION_MS = 1_400L
         const val REFLET_MS = 1_800L
         const val REFLET_PX = 18f
+        /** Fiche de la pré-climatisation : marges gauche et droite. */
+        const val MARGE_FICHE = 22f
     }
 }
