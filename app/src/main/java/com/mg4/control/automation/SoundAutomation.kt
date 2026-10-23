@@ -20,6 +20,7 @@ import com.mg4.control.model.SoundSlot
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.util.GarageMode
 import java.io.File
+import java.io.FileInputStream
 
 /**
  * Sons d'automatisation (issue #161, 2026-10-23) : un son importé joué à un événement choisi —
@@ -199,7 +200,10 @@ object SoundAutomation {
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                     .build())
-                setDataSource(chemin)
+                // Par descripteur, pas par chemin : c'est le serveur média qui ouvrirait le chemin,
+                // et il n'a pas accès au stockage privé de l'appli (« Prepare failed 0x80000000 »,
+                // essai SWI133 du 2026-10-23). Le descripteur peut être fermé dès l'appel rendu.
+                FileInputStream(chemin).use { setDataSource(it.fd) }
                 setOnCompletionListener { fil.post { terminer("fin du son") } }
                 setOnErrorListener { _, quoi, extra ->
                     fil.post { terminer("erreur du lecteur $quoi/$extra") }
