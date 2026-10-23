@@ -75,6 +75,7 @@ object SoundImport {
         val dossier = SoundAutomationSettings.dossier(ctx)
         val cible = File(dossier, "son${index + 1}.${f.file.extension.lowercase()}")
         dossier.listFiles()?.filter { it.nameWithoutExtension == "son${index + 1}" && it != cible }?.forEach { it.delete() }
+        oublierCopiePartagee(index)
         f.file.inputStream().use { entree -> cible.outputStream().use { entree.copyTo(it) } }
         val s = SoundAutomationSettings.slot(ctx, index).copy(path = cible.path, title = f.file.name, durationMs = f.durationMs)
         SoundAutomationSettings.saveSlot(ctx, index, s)
@@ -88,9 +89,17 @@ object SoundImport {
     /** Retire le fichier du son [index] ; ses événements et son volume restent. */
     fun retirer(ctx: Context, index: Int) {
         SoundAutomationSettings.slot(ctx, index).path?.let { File(it).delete() }
+        oublierCopiePartagee(index)
         SoundAutomationSettings.saveSlot(ctx, index,
             SoundAutomationSettings.slot(ctx, index).copy(path = null, title = null, durationMs = 0L))
         AppLogger.i(TAG, "son ${index + 1} retiré")
+    }
+
+    /** La copie de repli du lecteur (mémoire partagée, voir SoundAutomation) suit le son importé. */
+    private fun oublierCopiePartagee(index: Int) {
+        @Suppress("DEPRECATION")
+        File(android.os.Environment.getExternalStorageDirectory(), "MG4Control/sounds").listFiles()
+            ?.filter { it.nameWithoutExtension == "son${index + 1}" }?.forEach { it.delete() }
     }
 
     private fun f(path: String) = File(path).name

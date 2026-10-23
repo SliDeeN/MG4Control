@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.media.MediaDataSource
 import android.media.MediaPlayer
 import android.os.Handler
 import android.os.HandlerThread
@@ -20,7 +21,6 @@ import com.mg4.control.model.SoundSlot
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.util.GarageMode
 import java.io.File
-import java.io.FileInputStream
 
 /**
  * Sons d'automatisation (issue #161, 2026-10-23) : un son importé joué à un événement choisi —
@@ -184,6 +184,14 @@ object SoundAutomation {
             AppLogger.i(TAG, "son ${index + 1} ($raison) ignoré : un son joue encore (${garde.remainingMs(maintenant)} ms)")
             return
         }
+        // Lecteur prêt AVANT de toucher au focus et au volume : un fichier illisible ne change rien.
+        val p = preparer(chemin)
+        if (p == null) {
+            AppLogger.w(TAG, "son ${index + 1} ($raison) : lecture impossible")
+            garde.release()
+            return
+        }
+        lecteur = p
         prendreVeille(ctx, s.durationMs)
         demanderFocus(ctx)
         // Volume de la voiture pour ce son ; rendu à la fin s'il n'a pas bougé entre-temps.
@@ -195,26 +203,10 @@ object SoundAutomation {
             volumeMis = cible
         }
         try {
-            lecteur = MediaPlayer().apply {
-                setAudioAttributes(AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                    .build())
-                // Par descripteur, pas par chemin : c'est le serveur média qui ouvrirait le chemin,
-                // et il n'a pas accès au stockage privé de l'appli (« Prepare failed 0x80000000 »,
-                // essai SWI133 du 2026-10-23). Le descripteur peut être fermé dès l'appel rendu.
-                FileInputStream(chemin).use { setDataSource(it.fd) }
-                setOnCompletionListener { fil.post { terminer("fin du son") } }
-                setOnErrorListener { _, quoi, extra ->
-                    fil.post { terminer("erreur du lecteur $quoi/$extra") }
-                    true
-                }
-                prepare()
-                start()
-            }
+            p.start()
         } catch (e: Exception) {
-            AppLogger.w(TAG, "son ${index + 1} ($raison) : lecture impossible — ${e.javaClass.simpleName}: ${e.message}")
-            terminer("lecture impossible")
+            AppLogger.w(TAG, "son ${index + 1} ($raison) : démarrage impossible — ${e.javaClass.simpleName}: ${e.message}")
+            terminer("démarrage impossible")
             return
         }
         enLecture = index
@@ -222,6 +214,56 @@ object SoundAutomation {
         AppLogger.i(TAG, "son ${index + 1} « ${s.title} » (${s.durationMs} ms) — $raison — volume " +
             (if (volumeMis >= 0) "$avant → $volumeMis" else "inchangé ($avant)") + if (ecoute) " — écoute" else "")
         prevenir()
+    }
+
+    /**
+     * D'où le lecteur lit le son. Le serveur média ne peut lire AUCUN fichier du stockage privé de
+     * l'appli, ni par chemin ni par descripteur : l'appli tourne en uid système et ses fichiers lui
+     * sont réservés (« Prepare failed 0x80000000 » les deux fois, essais SWI133 du 2026-10-23).
+     */
+    private enum class Voie(val nom: String) {
+        /** Le son passe par la mémoire de l'appli (30 s au plus : quelques centaines de Ko). */
+        MEMOIRE("mémoire"),
+        /** Repli : une copie dans la mémoire partagée de la voiture, que le serveur média lit. */
+        PARTAGEE("mémoire partagée"),
+    }
+
+    /** Lecteur prêt à jouer [chemin], par la première [Voie] qui marche ; `null` si aucune. */
+    private fun preparer(chemin: String): MediaPlayer? {
+        for (voie in Voie.entries) {
+            val p = MediaPlayer()
+            try {
+                p.setAudioAttributes(AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .build())
+                when (voie) {
+                    Voie.MEMOIRE -> p.setDataSource(SonEnMemoire(File(chemin).readBytes()))
+                    Voie.PARTAGEE -> p.setDataSource(copiePartagee(File(chemin)).path)
+                }
+                p.setOnCompletionListener { fil.post { terminer("fin du son") } }
+                p.setOnErrorListener { _, quoi, extra ->
+                    fil.post { terminer("erreur du lecteur $quoi/$extra") }
+                    true
+                }
+                p.prepare()
+                AppLogger.i(TAG, "lecteur prêt (voie : ${voie.nom})")
+                return p
+            } catch (e: Exception) {
+                runCatching { p.release() }
+                AppLogger.w(TAG, "voie ${voie.nom} : ${e.javaClass.simpleName}: ${e.message}")
+            }
+        }
+        return null
+    }
+
+    /** Copie du son dans `MG4Control/sounds` de la mémoire partagée (dossier de la sauvegarde des profils). */
+    private fun copiePartagee(source: File): File {
+        @Suppress("DEPRECATION")
+        val dossier = File(android.os.Environment.getExternalStorageDirectory(), "MG4Control/sounds").apply { mkdirs() }
+        val copie = File(dossier, source.name)
+        if (!copie.isFile || copie.length() != source.length()) source.copyTo(copie, overwrite = true)
+        return copie
     }
 
     /** Fin du son, quelle qu'en soit la raison : volume rendu, focus et veille relâchés. Idempotent. */
@@ -289,5 +331,19 @@ object SoundAutomation {
     private fun relacherVeille() {
         runCatching { veille?.takeIf { it.isHeld }?.release() }
         veille = null
+    }
+
+    /** Le son, lu depuis la mémoire de l'appli par le lecteur (voir [jouer]). */
+    private class SonEnMemoire(private val octets: ByteArray) : MediaDataSource() {
+        override fun readAt(position: Long, buffer: ByteArray, offset: Int, size: Int): Int {
+            if (position >= octets.size) return -1
+            val n = minOf(size.toLong(), octets.size - position).toInt()
+            System.arraycopy(octets, position.toInt(), buffer, offset, n)
+            return n
+        }
+
+        override fun getSize(): Long = octets.size.toLong()
+
+        override fun close() {}
     }
 }
