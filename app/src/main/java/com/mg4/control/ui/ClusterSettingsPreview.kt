@@ -121,6 +121,7 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
             recupWh = recupWh,
             unite = unite,
             uniteMoyenne = ClusterModuleSettings.averageUnit(ctx),
+            distance = ClusterModuleSettings.distanceUnit(ctx),
             style = ClusterModuleSettings.style(ctx),
         ), if (dtMs == 0L) 0L else ClusterModuleSettings.animationMs(ctx).toLong())
     }

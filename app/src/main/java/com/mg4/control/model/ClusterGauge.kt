@@ -45,6 +45,12 @@ enum class ConsumptionUnit(val key: String, val label: String) {
     WH_PER_KM("wh_km", "Wh/km"),
     KWH_PER_100KM("kwh_100km", "kWh/100 km");
 
+    /** Libellé dans l'unité de distance réglée ([DistanceUnit]) : « Wh/mi », « kWh/100 mi »… */
+    fun labelFor(distance: DistanceUnit): String = when (this) {
+        WH_PER_KM -> "Wh/${distance.short}"
+        KWH_PER_100KM -> "kWh/100 ${distance.short}"
+    }
+
     companion object {
         /** Wh/km par défaut : l'affichage d'avant le choix, pour qui utilisait déjà le module. */
         fun fromKey(key: String?): ConsumptionUnit = entries.firstOrNull { it.key == key } ?: WH_PER_KM
@@ -61,6 +67,13 @@ enum class AverageUnit(val key: String, val label: String) {
     KWH_PER_100KM("kwh_100km", "kWh/100 km"),
     KM_PER_KWH("km_kwh", "km/kWh");
 
+    /** Libellé dans l'unité de distance réglée : « Wh/mi », « kWh/100 mi », « mi/kWh »… */
+    fun labelFor(distance: DistanceUnit): String = when (this) {
+        WH_PER_KM -> "Wh/${distance.short}"
+        KWH_PER_100KM -> "kWh/100 ${distance.short}"
+        KM_PER_KWH -> "${distance.short}/kWh"
+    }
+
     companion object {
         fun of(gauge: ConsumptionUnit): AverageUnit = when (gauge) {
             ConsumptionUnit.WH_PER_KM -> WH_PER_KM
@@ -68,6 +81,22 @@ enum class AverageUnit(val key: String, val label: String) {
         }
 
         fun resolve(key: String?, gauge: ConsumptionUnit): AverageUnit = entries.firstOrNull { it.key == key } ?: of(gauge)
+    }
+}
+
+/**
+ * Unité de distance des modules (2026-10-23, demande d'un utilisateur, variante B) : en miles,
+ * TOUT le module passe en miles — jauge, graduations (mêmes chiffres, lus en Wh/mi ou kWh/100 mi)
+ * et moyenne du trajet —, jamais de mélange avec les km. [factor] convertit une valeur « par km »
+ * en valeur « par unité » : Wh/mi = Wh/km × 1,609344. Les calculs restent en Wh/km.
+ */
+enum class DistanceUnit(val key: String, val short: String, val factor: Float) {
+    KM("km", "km", 1f),
+    MILES("mi", "mi", 1.609344f);
+
+    companion object {
+        /** km par défaut : l'affichage d'avant le choix. */
+        fun fromKey(key: String?): DistanceUnit = entries.firstOrNull { it.key == key } ?: KM
     }
 }
 
@@ -177,9 +206,10 @@ object ClusterGauge {
 
     // ── Module A ─────────────────────────────────────────────────────────────
 
-    fun consumption(kw: Float, kmh: Float?): GaugeState {
+    /** [distance] : la valeur et la part de l'anneau sont dans son unité (Wh/mi en miles). */
+    fun consumption(kw: Float, kmh: Float?, distance: DistanceUnit = DistanceUnit.KM): GaugeState {
         if (kw < 0f) return GaugeState(part(-kw / REGEN_FULL_KW), GaugeLevel.REGEN, -kw, GaugeUnit.KW_REGEN)
-        val wh = whPerKm(kw, kmh)
+        val wh = whPerKm(kw, kmh)?.times(distance.factor)
             ?: return GaugeState(part(kw / STOPPED_FULL_KW), GaugeLevel.CONSUMPTION, kw, GaugeUnit.KW_STOPPED)
         return GaugeState(consumptionFraction(wh), GaugeLevel.CONSUMPTION, wh, GaugeUnit.WH_PER_KM)
     }
@@ -263,10 +293,15 @@ object ClusterGauge {
      * Moyenne du trajet [whPerKm] dans [unit] : comme [formatConsumption], ou des km/kWh à une
      * décimale. `null` sans consommation positive (les km/kWh y seraient infinis).
      */
-    fun formatAverage(whPerKm: Float, unit: AverageUnit, locale: Locale): String? = when (unit) {
-        AverageUnit.WH_PER_KM -> formatConsumption(whPerKm, ConsumptionUnit.WH_PER_KM, locale)
-        AverageUnit.KWH_PER_100KM -> formatConsumption(whPerKm, ConsumptionUnit.KWH_PER_100KM, locale)
-        AverageUnit.KM_PER_KWH -> whPerKm.takeIf { it > 0f }?.let { String.format(locale, "%.1f", 1000f / it) }
+    fun formatAverage(
+        whPerKm: Float, unit: AverageUnit, locale: Locale, distance: DistanceUnit = DistanceUnit.KM,
+    ): String? {
+        val parUnite = whPerKm * distance.factor
+        return when (unit) {
+            AverageUnit.WH_PER_KM -> formatConsumption(parUnite, ConsumptionUnit.WH_PER_KM, locale)
+            AverageUnit.KWH_PER_100KM -> formatConsumption(parUnite, ConsumptionUnit.KWH_PER_100KM, locale)
+            AverageUnit.KM_PER_KWH -> parUnite.takeIf { it > 0f }?.let { String.format(locale, "%.1f", 1000f / it) }
+        }
     }
 
     // ── Style discret : une barre fine graduée (issue #153, variante A) ────────

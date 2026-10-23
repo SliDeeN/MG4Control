@@ -797,6 +797,9 @@
     <string name="settings_cluster_row_pill">Etichetta</string>
     <string name="settings_cluster_row_gauge">Indicatore</string>
     <string name="settings_cluster_row_average">Media</string>
+    <string name="settings_cluster_row_distance">Distanza</string>
+    <string name="cluster_distance_km">km</string>
+    <string name="cluster_distance_miles">miglia</string>
     <string name="settings_cluster_advanced">Avanzate · aggiornamento %1$s · animazione %2$s</string>
     <string name="settings_cluster_none">Nessuno</string>
     <string name="settings_cluster_tabs_note">Computer di bordo, pressione pneumatici e impostazioni sono disegnati dal quadro stesso: lì non può comparire alcun modulo.</string>

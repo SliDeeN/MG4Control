@@ -7,6 +7,7 @@ import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ConsumptionUnit
+import com.mg4.control.model.DistanceUnit
 import kotlin.math.roundToInt
 
 /**
@@ -41,6 +42,8 @@ object ClusterModuleSettings {
     const val KEY_REFRESH = "cluster_refresh_ms"
     /** Unité de la consommation (2026-10-15), Wh/km par défaut. */
     const val KEY_UNIT = "cluster_consumption_unit"
+    /** Unité de distance de tout le module : km ou miles (2026-10-23). */
+    const val KEY_DISTANCE = "cluster_distance_unit"
 
     /**
      * Actualisation de la puissance, de la vitesse et de la jauge, en ms : 0,1 à 1 s par pas de
@@ -114,6 +117,14 @@ object ClusterModuleSettings {
 
     fun setStyle(ctx: Context, style: ClusterGaugeStyle) {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_STYLE, style.key).apply()
+    }
+
+    /** Relue à chaque relevé ; km sans choix (2026-10-23). */
+    fun distanceUnit(ctx: Context?): DistanceUnit =
+        DistanceUnit.fromKey(ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_DISTANCE, null))
+
+    fun setDistanceUnit(ctx: Context, unit: DistanceUnit) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_DISTANCE, unit.key).apply()
     }
 
     /** Relue à chaque relevé ; sans choix, l'unité de la jauge. */

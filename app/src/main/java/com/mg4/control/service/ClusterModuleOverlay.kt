@@ -439,6 +439,7 @@ internal object ClusterModuleOverlay {
                     recupWh = trajet.regenWh(),
                     unite = ClusterModuleSettings.consumptionUnit(ctx),
                     uniteMoyenne = ClusterModuleSettings.averageUnit(ctx),
+                    distance = ClusterModuleSettings.distanceUnit(ctx),
                     style = style,
                     // À la place de la jauge réglée pour l'onglet, jamais sur un onglet sans module.
                     charge = if (session.active) vueCharge(maintenant) else null,

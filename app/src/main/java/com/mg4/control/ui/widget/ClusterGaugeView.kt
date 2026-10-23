@@ -39,6 +39,7 @@ import com.mg4.control.model.ClusterGauge
 import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ConsumptionUnit
+import com.mg4.control.model.DistanceUnit
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.GaugeLevel
 import com.mg4.control.model.GaugeState
@@ -142,6 +143,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         val unite: ConsumptionUnit = ConsumptionUnit.WH_PER_KM,
         /** Unité de la moyenne du trajet, en bas : réglée à part, km/kWh compris. */
         val uniteMoyenne: AverageUnit = AverageUnit.of(unite),
+        /** km ou miles pour tout le module (2026-10-23). */
+        val distance: DistanceUnit = DistanceUnit.KM,
         val style: ClusterGaugeStyle = ClusterGaugeStyle.DYNAMIC,
         /** Pendant une charge : le module « charge » remplace la jauge. */
         val charge: Charge? = null,
@@ -208,7 +211,7 @@ class ClusterGaugeView(context: Context) : View(context) {
             return
         }
         val nouveau = c.kw?.let {
-            if (c.module == ClusterModule.POWER) ClusterGauge.power(it) else ClusterGauge.consumption(it, c.kmh)
+            if (c.module == ClusterModule.POWER) ClusterGauge.power(it) else ClusterGauge.consumption(it, c.kmh, c.distance)
         }
         etat = nouveau
         animation?.cancel()
@@ -294,11 +297,11 @@ class ClusterGaugeView(context: Context) : View(context) {
         val v = valeurAffichee ?: e?.value ?: 0f
         val (chiffre, unite) = when (e?.unit) {
             null -> "–" to ""
-            GaugeUnit.WH_PER_KM -> ClusterGauge.formatConsumption(v, c.unite, locale) to c.unite.label
+            GaugeUnit.WH_PER_KM -> ClusterGauge.formatConsumption(v, c.unite, locale) to c.unite.labelFor(c.distance)
             // En roulant, la récupération s'écrit en consommation négative (issue #158), tirée des
             // kW récupérés affichés — elle glisse avec eux ; sous 5 km/h, les kW comme avant.
             GaugeUnit.KW_REGEN -> ClusterGauge.regenWhPerKm(-v, c.kmh)
-                ?.let { ClusterGauge.formatConsumption(it, c.unite, locale) to c.unite.label }
+                ?.let { ClusterGauge.formatConsumption(it * c.distance.factor, c.unite, locale) to c.unite.labelFor(c.distance) }
                 ?: ("↓" + ClusterGauge.formatKw(v, locale) to context.getString(R.string.cluster_regen_kw))
             GaugeUnit.KW_STOPPED -> ClusterGauge.formatKw(v, locale) to context.getString(R.string.cluster_stopped_kw)
             GaugeUnit.KW -> ClusterGauge.formatKw(v, locale) to "kW"
@@ -308,7 +311,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         petit(canvas, unite, cx, cy + 40f, 13f, if (recup) cAccent else cTexte2)
 
         pied(canvas,
-            context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne), cTexte,
+            context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne, c.distance), cTexte,
             context.getString(R.string.cluster_regen), c.recupWh?.let { "+${it.roundToInt()}" to "Wh" } ?: ("–" to null), cAccent)
     }
 
@@ -357,13 +360,13 @@ class ClusterGaugeView(context: Context) : View(context) {
         // Consommation instantanée en grand (28, en blanc) et son unité en petit et en gris
         // (issue #152) ; en récupération, négative et en bleu (issue #158) ; sous 5 km/h, le mot
         // qui en tient lieu, en petit.
-        val wh = if (e == null || recup) null else c.kw?.let { ClusterGauge.whPerKm(it, c.kmh) }
-        val whRecup = if (e == null || !recup) null else c.kw?.let { ClusterGauge.regenWhPerKm(it, c.kmh) }
+        val wh = if (e == null || recup) null else c.kw?.let { ClusterGauge.whPerKm(it, c.kmh) }?.times(c.distance.factor)
+        val whRecup = if (e == null || !recup) null else c.kw?.let { ClusterGauge.regenWhPerKm(it, c.kmh) }?.times(c.distance.factor)
         when {
             e == null -> Unit
-            wh != null -> valeurEtUnite(canvas, ClusterGauge.formatConsumption(wh, c.unite, locale), c.unite.label,
+            wh != null -> valeurEtUnite(canvas, ClusterGauge.formatConsumption(wh, c.unite, locale), c.unite.labelFor(c.distance),
                 cx, cy + 64f, cTexte, tailleValeur = 28f, tailleUnite = 12f)
-            whRecup != null -> valeurEtUnite(canvas, ClusterGauge.formatConsumption(whRecup, c.unite, locale), c.unite.label,
+            whRecup != null -> valeurEtUnite(canvas, ClusterGauge.formatConsumption(whRecup, c.unite, locale), c.unite.labelFor(c.distance),
                 cx, cy + 64f, cAccent, tailleValeur = 28f, tailleUnite = 12f)
             recup -> petit(canvas, context.getString(R.string.cluster_regen_word), cx, cy + 58f, 13f, cAccent)
             else -> petit(canvas, context.getString(R.string.cluster_stopped_word), cx, cy + 58f, 13f, cTexte2)
@@ -371,7 +374,7 @@ class ClusterGaugeView(context: Context) : View(context) {
 
         // Le pourcentage de batterie est déjà sur le combiné : seule reste la moyenne du trajet,
         // centrée, sans filet (issue #152).
-        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne), cTexte)
+        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne, c.distance), cTexte)
     }
 
     // ── Style discret : barre fine graduée (issue #153, variante A) ───────────
@@ -439,7 +442,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         texte.textAlign = Paint.Align.RIGHT
         canvas.drawText("kW", BARRE_D, Y_BARRE - 14f, texte)
         texte.textAlign = Paint.Align.CENTER
-        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne), cTexte)
+        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne, c.distance), cTexte)
     }
 
     private fun discretConsommation(canvas: Canvas, c: Contenu) {
@@ -450,7 +453,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         fun xConso(wh: Float) = CONSO_G + (BARRE_D - CONSO_G) * ClusterGauge.discreetConsumptionFraction(wh)
         val e = etat
         val v = valeurAffichee ?: e?.value
-        val moy = c.moyenneWhKm
+        // Même unité que la barre : en miles, la moyenne passe en Wh/mi pour se placer dessus.
+        val moy = c.moyenneWhKm?.times(c.distance.factor)
         if (e != null && v != null) when (e.unit) {
             GaugeUnit.KW_REGEN -> barreDiscrete(canvas,
                 RECUP_D - (RECUP_D - BARRE_G) * ClusterGauge.discreetRegenFraction(v), RECUP_D, cAccent)
@@ -469,7 +473,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         canvas.drawText(context.getString(R.string.cluster_regen), (BARRE_G + RECUP_D) / 2f, Y_BARRE + 28f, texte)
         texte.color = C_DISCRET
         texte.textAlign = Paint.Align.RIGHT
-        canvas.drawText(c.unite.label, BARRE_D, Y_BARRE + 44f, texte)
+        canvas.drawText(c.unite.labelFor(c.distance), BARRE_D, Y_BARRE + 44f, texte)
         texte.textAlign = Paint.Align.CENTER
         // La moyenne du trajet : un triangle au-dessus de la barre, et son mot.
         moy?.let {
@@ -482,7 +486,7 @@ class ClusterGaugeView(context: Context) : View(context) {
             texte.color = cTexte2
             canvas.drawText(context.getString(R.string.cluster_avg_short), xm, Y_BARRE - 21f, texte)
         }
-        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne), cTexte)
+        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne, c.distance), cTexte)
     }
 
     // ── Pré-climatisation (maquette C, « fiche ») ────────────────────────────
@@ -838,8 +842,8 @@ class ClusterGaugeView(context: Context) : View(context) {
     }
 
     /** Moyenne du trajet dans son unité (réglée à part), ou un tiret tant qu'elle n'a pas de sens. */
-    private fun moyenne(wh: Float?, unite: AverageUnit): Pair<String, String?> =
-        wh?.let { ClusterGauge.formatAverage(it, unite, locale) }?.let { it to unite.label } ?: ("–" to null)
+    private fun moyenne(wh: Float?, unite: AverageUnit, distance: DistanceUnit): Pair<String, String?> =
+        wh?.let { ClusterGauge.formatAverage(it, unite, locale, distance) }?.let { it to unite.labelFor(distance) } ?: ("–" to null)
 
     private fun couleur(niveau: GaugeLevel): Int = sombre.getColor(when (niveau) {
         GaugeLevel.CONSUMPTION -> R.color.dash_warn

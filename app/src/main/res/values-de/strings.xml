@@ -797,6 +797,9 @@
     <string name="settings_cluster_row_pill">Plakette</string>
     <string name="settings_cluster_row_gauge">Anzeige</string>
     <string name="settings_cluster_row_average">Durchschnitt</string>
+    <string name="settings_cluster_row_distance">Entfernung</string>
+    <string name="cluster_distance_km">km</string>
+    <string name="cluster_distance_miles">Meilen</string>
     <string name="settings_cluster_advanced">Erweitert · Aktualisierung %1$s · Animation %2$s</string>
     <string name="settings_cluster_none">Keins</string>
     <string name="settings_cluster_tabs_note">Bordcomputer, Reifendruck und Einstellungen zeichnet das Kombiinstrument selbst: Dort kann kein Modul erscheinen.</string>

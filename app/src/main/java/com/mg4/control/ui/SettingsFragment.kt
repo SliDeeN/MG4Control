@@ -59,6 +59,7 @@ import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.AverageUnit
 import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ConsumptionUnit
+import com.mg4.control.model.DistanceUnit
 import com.mg4.control.service.ChargeMonitor
 import com.mg4.control.service.ClusterModuleOverlay
 import com.mg4.control.util.TextSize
@@ -309,6 +310,11 @@ class SettingsFragment : Fragment() {
             ConsumptionUnit.WH_PER_KM to view.findViewById(R.id.btn_cluster_unit_wh),
             ConsumptionUnit.KWH_PER_100KM to view.findViewById(R.id.btn_cluster_unit_kwh),
         )
+        // Distance : km ou miles pour tout le module (2026-10-23).
+        val distBtns: List<Pair<DistanceUnit, MaterialButton>> = listOf(
+            DistanceUnit.KM to view.findViewById(R.id.btn_cluster_dist_km),
+            DistanceUnit.MILES to view.findViewById(R.id.btn_cluster_dist_mi),
+        )
         // Style des modules (issue #153) : dynamique ou discret.
         val styleBtns: List<Pair<ClusterGaugeStyle, MaterialButton>> = listOf(
             ClusterGaugeStyle.DYNAMIC to view.findViewById(R.id.btn_cluster_style_dynamic),
@@ -346,6 +352,11 @@ class SettingsFragment : Fragment() {
             clusterBtns.forEach { (onglet, module, btn) ->
                 peindre(btn, module == ClusterModuleSettings.moduleFor(ctx, onglet))
             }
+            val distance = ClusterModuleSettings.distanceUnit(ctx)
+            distBtns.forEach { (d, btn) -> peindre(btn, d == distance) }
+            // Les unités se lisent dans la distance choisie : « Wh/mi », « mi/kWh »…
+            unitBtns.forEach { (u, btn) -> btn.text = u.labelFor(distance) }
+            avgBtns.forEach { (u, btn) -> btn.text = u.labelFor(distance) }
             val unite = ClusterModuleSettings.consumptionUnit(ctx)
             unitBtns.forEach { (u, btn) -> peindre(btn, u == unite) }
             val pastille = ClusterModuleSettings.pill(ctx)
@@ -381,6 +392,14 @@ class SettingsFragment : Fragment() {
                 AppLogger.i(ClusterModuleOverlay.TAG, "Module du combiné, onglet ${onglet.name} → ${module?.key ?: "aucun"}")
                 // L'aperçu montre l'onglet qu'on vient de régler.
                 apercu.onglet = onglet
+                updateClusterCard()
+            }
+        }
+        distBtns.forEach { (d, btn) ->
+            btn.setOnClickListener {
+                if (d == ClusterModuleSettings.distanceUnit(requireContext())) return@setOnClickListener
+                ClusterModuleSettings.setDistanceUnit(requireContext(), d)
+                AppLogger.i(ClusterModuleOverlay.TAG, "Distance des modules du combiné → ${d.key}")
                 updateClusterCard()
             }
         }

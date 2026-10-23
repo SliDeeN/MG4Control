@@ -1273,6 +1273,63 @@
                             android:letterSpacing="0.12"
                             android:textAllCaps="true" />
 
+                        <!-- Distance : km ou miles pour tout le module (2026-10-23, variante B). -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:layout_width="150dp"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_cluster_row_distance"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_cluster_dist_km"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="@string/cluster_distance_km"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp"
+                                    app:backgroundTint="@color/dash_btn"
+                                    app:strokeWidth="1dp"
+                                    app:strokeColor="@color/dash_border"
+                                    app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_cluster_dist_mi"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="4dp"
+                                    android:text="@string/cluster_distance_miles"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp"
+                                    app:backgroundTint="@color/dash_btn"
+                                    app:strokeWidth="1dp"
+                                    app:strokeColor="@color/dash_border"
+                                    app:cornerRadius="8dp" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"

@@ -797,6 +797,9 @@
     <string name="settings_cluster_row_pill">Badge</string>
     <string name="settings_cluster_row_gauge">Gauge</string>
     <string name="settings_cluster_row_average">Average</string>
+    <string name="settings_cluster_row_distance">Distance</string>
+    <string name="cluster_distance_km">km</string>
+    <string name="cluster_distance_miles">miles</string>
     <string name="settings_cluster_advanced">Advanced · refresh %1$s · animation %2$s</string>
     <string name="settings_cluster_none">None</string>
     <string name="settings_cluster_tabs_note">Trip computer, tyre pressure and settings are drawn by the cluster itself: a module can\'t appear there.</string>
