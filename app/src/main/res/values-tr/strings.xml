@@ -923,7 +923,6 @@
     <string name="floating_hide_reverse">Geri viteste gizle (geri görüş kamerası)</string>
     <string name="floating_hvac_zone">Android Auto / CarPlay sırasında klima çubuğu</string>
     <string name="floating_hvac_zone_desc">Yansıtma sırasında üst çubuk artık klimayı açmıyor: oraya dokunmak MG4Control HVAC açılır penceresini açar.</string>
-    <string name="floating_hvac_zone_show">Bölgeyi göster (çubuğu kapladığını kontrol etmek için)</string>
     <string name="floating_reset">Baloncukları ilk yerlerine geri koy</string>
     <string name="floating_reset_btn">Sıfırla</string>
     <string name="floating_reset_done">Baloncuklar yerlerine konuldu</string>

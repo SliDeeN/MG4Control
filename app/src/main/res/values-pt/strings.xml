@@ -923,7 +923,6 @@
     <string name="floating_hide_reverse">Ocultar em marcha-atrás (câmara traseira)</string>
     <string name="floating_hvac_zone">Barra de climatização com Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">Durante a projeção, a barra superior já não abre a climatização: um toque aí abre o pop-up HVAC do MG4Control.</string>
-    <string name="floating_hvac_zone_show">Mostrar a zona (para verificar que cobre a barra)</string>
     <string name="floating_reset">Repor as bolhas no lugar original</string>
     <string name="floating_reset_btn">Repor</string>
     <string name="floating_reset_done">Bolhas repostas no lugar</string>

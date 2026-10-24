@@ -923,7 +923,6 @@
     <string name="floating_hide_reverse">Im Rückwärtsgang ausblenden (Rückfahrkamera)</string>
     <string name="floating_hvac_zone">Klimaleiste während Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">Während der Projektion öffnet die obere Leiste die Klimaanlage nicht mehr: Ein Tippen dort öffnet das HVAC-Pop-up von MG4Control.</string>
-    <string name="floating_hvac_zone_show">Zone anzeigen (zum Prüfen, ob sie die Leiste abdeckt)</string>
     <string name="floating_reset">Blasen an ihren ursprünglichen Platz zurücksetzen</string>
     <string name="floating_reset_btn">Zurücksetzen</string>
     <string name="floating_reset_done">Blasen zurückgesetzt</string>

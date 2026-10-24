@@ -69,20 +69,10 @@ class FloatingButtonsPage {
             }
         }
         // Zone clim pendant la projection : indépendante des bulles, elle a son propre interrupteur.
-        val montrer = view.findViewById<Switch>(R.id.switch_floating_hvac_zone_show)
         view.findViewById<Switch>(R.id.switch_floating_hvac_zone).apply {
             isChecked = FloatingButtonSettings.isHvacZoneEnabled(ctx)
-            montrer.isEnabled = isChecked
             setOnCheckedChangeListener { _, on ->
                 FloatingButtonSettings.setHvacZoneEnabled(ctx, on)
-                montrer.isEnabled = on
-                ProjectionHvacZone.refresh(ctx)
-            }
-        }
-        montrer.apply {
-            isChecked = FloatingButtonSettings.showHvacZone(ctx)
-            setOnCheckedChangeListener { _, on ->
-                FloatingButtonSettings.setShowHvacZone(ctx, on)
                 ProjectionHvacZone.refresh(ctx)
             }
         }

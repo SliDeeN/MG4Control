@@ -33,8 +33,9 @@ import kotlin.math.roundToInt
  * avec un second type en repli. Appui ou glissé : le pop-up s'ouvre, ou se referme.
  *
  * Projection devant : tâche du haut relue toutes les [SONDE_MS] (comme [ProjectionShortcut]).
- * Interrupteur dans Raccourcis › Boutons flottants, activé par défaut, indépendant des bulles ;
- * « Montrer la zone » la colore pour vérifier qu'elle couvre bien la barre. Journal : [TAG].
+ * Interrupteur dans Raccourcis › Boutons flottants, activé par défaut, indépendant des bulles.
+ * Couverture de la barre vérifiée en voiture le 2026-10-24 (l'option qui colorait la zone pour ce
+ * contrôle a été retirée ensuite). Journal : [TAG].
  */
 object ProjectionHvacZone {
 
@@ -50,8 +51,6 @@ object ProjectionHvacZone {
     private const val LARGEUR_DP = 320f
     /** Sous la barre système, de quoi couvrir une languette qui en dépasse. */
     private const val DEBORD_DP = 16f
-    /** « Montrer la zone » : orange translucide. */
-    private val COULEUR_VISIBLE = Color.argb(0x66, 0xF5, 0x9E, 0x0B)
 
     private val main = Handler(Looper.getMainLooper())
     private val lecteur: Handler by lazy { Handler(HandlerThread("mg4-zone").also { it.start() }.looper) }
@@ -107,7 +106,7 @@ object ProjectionHvacZone {
         val d = ctx.resources.displayMetrics.density
         val barre = barreSysteme(ctx)
         val v = View(ctx).apply {
-            setBackgroundColor(if (FloatingButtonSettings.showHvacZone(ctx)) COULEUR_VISIBLE else Color.TRANSPARENT)
+            setBackgroundColor(Color.TRANSPARENT)
             setOnTouchListener { _, ev ->
                 // L'appui ou le glissé vers le bas de l'original : au relâchement, quel qu'il soit.
                 if (ev.actionMasked == MotionEvent.ACTION_UP) {

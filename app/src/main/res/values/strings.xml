@@ -940,7 +940,6 @@
     <string name="floating_hide_reverse">Masquer en marche arrière (caméra de recul)</string>
     <string name="floating_hvac_zone">Barre clim pendant Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">Pendant la projection, la barre du haut n’ouvre plus la clim : un appui à cet endroit ouvre le pop-up HVAC de MG4Control.</string>
-    <string name="floating_hvac_zone_show">Montrer la zone (pour vérifier qu’elle couvre la barre)</string>
     <string name="floating_reset">Remettre les bulles à leur place d’origine</string>
     <string name="floating_reset_btn">Réinitialiser</string>
     <string name="floating_reset_done">Bulles remises à leur place</string>
