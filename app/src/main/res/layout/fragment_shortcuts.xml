@@ -1565,7 +1565,8 @@
                             android:text="@string/floating_add"
                             android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
 
-                        <!-- Édition de la bulle choisie : aperçu, titre, raccourci, tailles. -->
+                        <!-- Édition de la bulle choisie : titre, raccourci, tailles. Pas d'aperçu
+                             (retiré le 2026-10-24, sa demande) : la vraie bulle suit à l'écran. -->
                         <LinearLayout
                             android:id="@+id/floating_edit"
                             android:layout_width="match_parent"
@@ -1585,20 +1586,6 @@
                                 android:textColor="@color/text_primary"
                                 android:textSize="18sp"
                                 android:textStyle="bold" />
-
-                            <FrameLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="150dp"
-                                android:layout_marginTop="8dp"
-                                android:background="@color/dash_btn">
-
-                                <TextView
-                                    android:id="@+id/floating_preview"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_gravity="center" />
-
-                            </FrameLayout>
 
                             <LinearLayout
                                 android:layout_width="match_parent"
@@ -1823,6 +1810,77 @@
 
                             <Switch
                                 android:id="@+id/switch_floating_reverse"
+                                android:scaleX="1.3"
+                                android:scaleY="1.3"
+                                android:layout_marginHorizontal="8dp"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+
+                        </LinearLayout>
+
+                        <!-- Zone clim pendant Android Auto / CarPlay (2026-10-24) : la barre du haut n'ouvre
+                             plus la clim pendant la projection ; la zone ouvre notre pop-up HVAC. -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp">
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_hvac_zone"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/floating_hvac_zone_desc"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="13sp" />
+
+                            </LinearLayout>
+
+                            <Switch
+                                android:id="@+id/switch_floating_hvac_zone"
+                                android:scaleX="1.3"
+                                android:scaleY="1.3"
+                                android:layout_marginHorizontal="8dp"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/floating_hvac_zone_show"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                            <Switch
+                                android:id="@+id/switch_floating_hvac_zone_show"
                                 android:scaleX="1.3"
                                 android:scaleY="1.3"
                                 android:layout_marginHorizontal="8dp"

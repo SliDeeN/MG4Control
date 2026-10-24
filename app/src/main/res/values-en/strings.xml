@@ -921,6 +921,9 @@
     <string name="floating_close">Close</string>
     <string name="floating_options">Options</string>
     <string name="floating_hide_reverse">Hide in reverse (rear camera)</string>
+    <string name="floating_hvac_zone">Climate bar during Android Auto / CarPlay</string>
+    <string name="floating_hvac_zone_desc">During projection, the top bar no longer opens the climate controls: a tap there opens the MG4Control HVAC pop-up.</string>
+    <string name="floating_hvac_zone_show">Show the zone (to check it covers the bar)</string>
     <string name="floating_reset">Put the bubbles back in their original place</string>
     <string name="floating_reset_btn">Reset</string>
     <string name="floating_reset_done">Bubbles put back in place</string>
@@ -928,6 +931,8 @@
     <string name="floating_choose_action">Choose the shortcut</string>
     <string name="floating_unknown_action">Shortcut unavailable</string>
     <string name="floating_summary">%1$s · %2$s · text %3$d sp</string>
+    <string name="floating_value_fan">Fan %1$s</string>
+    <string name="floating_value_volume">Volume %1$d</string>
     <string name="preclim_cfg_hint">Starts from the steering-wheel shortcut. The mode, times and climate settings are chosen in its window, which always opens on “Now”. At the end, the climate goes back to the settings it had before.</string>
     <string name="preclim_cfg_lock">Lock the doors after</string>
     <string name="preclim_cfg_soc">Stop below this battery level</string>

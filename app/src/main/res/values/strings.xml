@@ -938,6 +938,9 @@
     <string name="floating_close">Fermer</string>
     <string name="floating_options">Options</string>
     <string name="floating_hide_reverse">Masquer en marche arrière (caméra de recul)</string>
+    <string name="floating_hvac_zone">Barre clim pendant Android Auto / CarPlay</string>
+    <string name="floating_hvac_zone_desc">Pendant la projection, la barre du haut n’ouvre plus la clim : un appui à cet endroit ouvre le pop-up HVAC de MG4Control.</string>
+    <string name="floating_hvac_zone_show">Montrer la zone (pour vérifier qu’elle couvre la barre)</string>
     <string name="floating_reset">Remettre les bulles à leur place d’origine</string>
     <string name="floating_reset_btn">Réinitialiser</string>
     <string name="floating_reset_done">Bulles remises à leur place</string>
@@ -945,6 +948,8 @@
     <string name="floating_choose_action">Choisir le raccourci</string>
     <string name="floating_unknown_action">Raccourci indisponible</string>
     <string name="floating_summary">%1$s · %2$s · texte %3$d sp</string>
+    <string name="floating_value_fan">Ventilation %1$s</string>
+    <string name="floating_value_volume">Volume %1$d</string>
     <string name="preclim_cfg_hint">Se lance avec le raccourci au volant. Le mode, les horaires et les réglages de la clim se choisissent dans sa fenêtre, qui s’ouvre toujours sur « Maintenant ». À la fin, la clim retrouve les réglages qu’elle avait avant.</string>
     <string name="preclim_cfg_lock">Verrouillage des portes après</string>
     <string name="preclim_cfg_soc">Arrêt sous ce niveau de batterie</string>

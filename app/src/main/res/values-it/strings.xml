@@ -921,6 +921,9 @@
     <string name="floating_close">Chiudi</string>
     <string name="floating_options">Opzioni</string>
     <string name="floating_hide_reverse">Nascondi in retromarcia (telecamera posteriore)</string>
+    <string name="floating_hvac_zone">Barra clima durante Android Auto / CarPlay</string>
+    <string name="floating_hvac_zone_desc">Durante la proiezione, la barra in alto non apre più il clima: un tocco lì apre il pop-up HVAC di MG4Control.</string>
+    <string name="floating_hvac_zone_show">Mostra la zona (per verificare che copra la barra)</string>
     <string name="floating_reset">Riporta le bolle al loro posto originale</string>
     <string name="floating_reset_btn">Ripristina</string>
     <string name="floating_reset_done">Bolle riportate al loro posto</string>
@@ -928,6 +931,8 @@
     <string name="floating_choose_action">Scegli la scorciatoia</string>
     <string name="floating_unknown_action">Scorciatoia non disponibile</string>
     <string name="floating_summary">%1$s · %2$s · testo %3$d sp</string>
+    <string name="floating_value_fan">Ventilazione %1$s</string>
+    <string name="floating_value_volume">Volume %1$d</string>
     <string name="preclim_cfg_hint">Si avvia con la scorciatoia al volante. Modalità, orari e impostazioni del clima si scelgono nella sua finestra, che si apre sempre su «Adesso». Alla fine, il clima ritrova le impostazioni che aveva prima.</string>
     <string name="preclim_cfg_lock">Blocca le porte dopo</string>
     <string name="preclim_cfg_soc">Stop sotto questo livello di batteria</string>

@@ -921,6 +921,9 @@
     <string name="floating_close">Schließen</string>
     <string name="floating_options">Optionen</string>
     <string name="floating_hide_reverse">Im Rückwärtsgang ausblenden (Rückfahrkamera)</string>
+    <string name="floating_hvac_zone">Klimaleiste während Android Auto / CarPlay</string>
+    <string name="floating_hvac_zone_desc">Während der Projektion öffnet die obere Leiste die Klimaanlage nicht mehr: Ein Tippen dort öffnet das HVAC-Pop-up von MG4Control.</string>
+    <string name="floating_hvac_zone_show">Zone anzeigen (zum Prüfen, ob sie die Leiste abdeckt)</string>
     <string name="floating_reset">Blasen an ihren ursprünglichen Platz zurücksetzen</string>
     <string name="floating_reset_btn">Zurücksetzen</string>
     <string name="floating_reset_done">Blasen zurückgesetzt</string>
@@ -928,6 +931,8 @@
     <string name="floating_choose_action">Verknüpfung wählen</string>
     <string name="floating_unknown_action">Verknüpfung nicht verfügbar</string>
     <string name="floating_summary">%1$s · %2$s · Text %3$d sp</string>
+    <string name="floating_value_fan">Gebläse %1$s</string>
+    <string name="floating_value_volume">Lautstärke %1$d</string>
     <string name="preclim_cfg_hint">Wird über die Lenkradtaste gestartet. Modus, Zeiten und Klimaeinstellungen werden in ihrem Fenster gewählt, das sich immer auf „Jetzt“ öffnet. Am Ende kehrt die Klimaanlage zu ihren vorherigen Einstellungen zurück.</string>
     <string name="preclim_cfg_lock">Türen verriegeln nach</string>
     <string name="preclim_cfg_soc">Stopp unter diesem Akkustand</string>

@@ -224,6 +224,8 @@ class MG4ControlService : Service() {
         com.mg4.control.automation.SoundAutomation.start(applicationContext)
         // Boutons flottants : rien tant qu'aucun bouton n'est créé.
         FloatingButtonsOverlay.refresh(applicationContext)
+        // Barre clim pendant Android Auto / CarPlay : surveille la projection, pose la zone au besoin.
+        ProjectionHvacZone.refresh(applicationContext)
         // Module sur le combiné : rien tant que l'interrupteur des Réglages est coupé.
         ClusterModuleOverlay.refresh(applicationContext, "démarrage du service")
         // Pop-up de charge : suit la charge si l'option (cachée par défaut) est active.

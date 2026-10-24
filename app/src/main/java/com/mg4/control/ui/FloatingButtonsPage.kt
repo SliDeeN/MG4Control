@@ -17,15 +17,17 @@ import com.mg4.control.R
 import com.mg4.control.model.FloatingButton
 import com.mg4.control.model.FloatingButtons
 import com.mg4.control.service.FloatingButtonsOverlay
+import com.mg4.control.service.ProjectionHvacZone
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.FloatingButtonSettings
 
 /**
  * Page « Boutons flottants » de l'onglet Raccourcis (2026-10-23, maquette v2) : la liste, l'ajout
- * (le raccourci d'abord, le titre suit), l'édition d'une bulle — aperçu, titre (par défaut le nom
- * du raccourci, ↺ pour y revenir), raccourci, taille de la bulle (curseur à trois repères
- * aimantés) et du texte — et les options. Chaque changement est enregistré ; les bulles à l'écran
- * suivent après un court délai, pour ne pas les reposer à chaque lettre tapée.
+ * (le raccourci d'abord, le titre suit), l'édition d'une bulle — titre (par défaut le nom du
+ * raccourci, ↺ pour y revenir), raccourci, taille de la bulle (curseur à trois repères aimantés)
+ * et du texte — et les options. Chaque changement est enregistré ; les bulles à l'écran suivent
+ * après un court délai, pour ne pas les reposer à chaque lettre tapée. Pas d'aperçu dans
+ * l'édition (retiré le 2026-10-24) : la vraie bulle, à l'écran, en tient lieu.
  */
 class FloatingButtonsPage {
 
@@ -64,6 +66,24 @@ class FloatingButtonsPage {
             setOnCheckedChangeListener { _, on ->
                 FloatingButtonSettings.setHideInReverse(ctx, on)
                 FloatingButtonsOverlay.refresh(ctx)
+            }
+        }
+        // Zone clim pendant la projection : indépendante des bulles, elle a son propre interrupteur.
+        val montrer = view.findViewById<Switch>(R.id.switch_floating_hvac_zone_show)
+        view.findViewById<Switch>(R.id.switch_floating_hvac_zone).apply {
+            isChecked = FloatingButtonSettings.isHvacZoneEnabled(ctx)
+            montrer.isEnabled = isChecked
+            setOnCheckedChangeListener { _, on ->
+                FloatingButtonSettings.setHvacZoneEnabled(ctx, on)
+                montrer.isEnabled = on
+                ProjectionHvacZone.refresh(ctx)
+            }
+        }
+        montrer.apply {
+            isChecked = FloatingButtonSettings.showHvacZone(ctx)
+            setOnCheckedChangeListener { _, on ->
+                FloatingButtonSettings.setShowHvacZone(ctx, on)
+                ProjectionHvacZone.refresh(ctx)
             }
         }
         view.findViewById<MaterialButton>(R.id.btn_floating_reset).setOnClickListener {
@@ -206,7 +226,7 @@ class FloatingButtonsPage {
         }
     }
 
-    /** Enregistre [b], repeint l'aperçu (et les champs, sauf pendant la frappe), puis les bulles. */
+    /** Enregistre [b], repeint l'édition (les champs, sauf pendant la frappe), puis les bulles. */
     private fun modifier(b: FloatingButton, repeindreChamps: Boolean = true) {
         val ctx = fragment?.context ?: return
         FloatingButtonSettings.update(ctx, b)
@@ -235,7 +255,6 @@ class FloatingButtonsPage {
         val nom = b.actionLabel.ifEmpty { ctx.getString(R.string.floating_unknown_action) }
         val rang = FloatingButtonSettings.buttons(ctx).indexOfFirst { it.id == b.id }
         racine.findViewById<TextView>(R.id.floating_edit_heading).text = ctx.getString(R.string.floating_edit_heading, rang + 1)
-        FloatingButtonsOverlay.peindre(racine.findViewById(R.id.floating_preview), b, FloatingButtons.title(b, nom), deplacement = false)
         racine.findViewById<MaterialButton>(R.id.btn_floating_action).text = nom
         if (repeindreChamps) {
             majTitre = true

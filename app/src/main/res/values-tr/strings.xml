@@ -921,6 +921,9 @@
     <string name="floating_close">Kapat</string>
     <string name="floating_options">Seçenekler</string>
     <string name="floating_hide_reverse">Geri viteste gizle (geri görüş kamerası)</string>
+    <string name="floating_hvac_zone">Android Auto / CarPlay sırasında klima çubuğu</string>
+    <string name="floating_hvac_zone_desc">Yansıtma sırasında üst çubuk artık klimayı açmıyor: oraya dokunmak MG4Control HVAC açılır penceresini açar.</string>
+    <string name="floating_hvac_zone_show">Bölgeyi göster (çubuğu kapladığını kontrol etmek için)</string>
     <string name="floating_reset">Baloncukları ilk yerlerine geri koy</string>
     <string name="floating_reset_btn">Sıfırla</string>
     <string name="floating_reset_done">Baloncuklar yerlerine konuldu</string>
@@ -928,6 +931,8 @@
     <string name="floating_choose_action">Kısayolu seçin</string>
     <string name="floating_unknown_action">Kısayol kullanılamıyor</string>
     <string name="floating_summary">%1$s · %2$s · metin %3$d sp</string>
+    <string name="floating_value_fan">Fan %1$s</string>
+    <string name="floating_value_volume">Ses %1$d</string>
     <string name="preclim_cfg_hint">Direksiyondaki kısayolla başlatılır. Mod, saatler ve klima ayarları, her zaman «Şimdi» sekmesinde açılan penceresinden seçilir. Sonunda klima önceki ayarlarına döner.</string>
     <string name="preclim_cfg_lock">Kapıları şu süre sonra kilitle</string>
     <string name="preclim_cfg_soc">Bu batarya düzeyinin altında durdur</string>

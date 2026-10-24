@@ -19,6 +19,10 @@ object FloatingButtonSettings {
     private const val KEY_ENABLED = "floating_enabled"
     private const val KEY_HIDE_REVERSE = "floating_hide_reverse"
     private const val KEY_BUTTONS = "floating_buttons"
+    /** Zone clim pendant Android Auto / CarPlay (2026-10-24) : activée par défaut. */
+    private const val KEY_HVAC_ZONE = "floating_hvac_zone"
+    /** « Montrer la zone » : la colore, pour vérifier qu'elle couvre la barre. Coupé par défaut. */
+    private const val KEY_HVAC_ZONE_SHOW = "floating_hvac_zone_show"
 
     private val gson = Gson()
     private val type = object : TypeToken<List<FloatingButton>>() {}.type
@@ -30,6 +34,12 @@ object FloatingButtonSettings {
 
     fun hideInReverse(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_HIDE_REVERSE, true)
     fun setHideInReverse(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_HIDE_REVERSE, on).apply()
+
+    fun isHvacZoneEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_HVAC_ZONE, true)
+    fun setHvacZoneEnabled(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_HVAC_ZONE, on).apply()
+
+    fun showHvacZone(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_HVAC_ZONE_SHOW, false)
+    fun setShowHvacZone(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_HVAC_ZONE_SHOW, on).apply()
 
     fun buttons(ctx: Context): List<FloatingButton> = try {
         prefs(ctx).getString(KEY_BUTTONS, null)?.let { gson.fromJson<List<FloatingButton>>(it, type) }

@@ -28,6 +28,13 @@
     <uses-permission android:name="android.permission.REAL_GET_TASKS"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.REORDER_TASKS" />
+    <!-- Zone clim pendant Android Auto / CarPlay (2026-10-24) : une fenêtre au-dessus de la barre
+         système (TYPE_STATUS_BAR_SUB_PANEL, repli TYPE_SYSTEM_ERROR). signature|privileged, accordées
+         à l'uid système. -->
+    <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.STATUS_BAR_SERVICE"
+        tools:ignore="ProtectedPermissions" />
     <!-- Vehicle control permissions (Android Automotive / SAIC) -->
     <uses-permission android:name="android.car.permission.CAR_ENERGY" />
     <!-- Capacité de la batterie (INFO_EV_BATTERY_CAPACITY) : propriété statique du véhicule,
