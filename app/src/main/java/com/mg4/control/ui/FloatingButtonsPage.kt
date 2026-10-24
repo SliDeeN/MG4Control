@@ -279,8 +279,9 @@ class FloatingButtonsPage {
             // Aperçu réduit : la taille de la liste, la vraie bulle étant dans l'édition.
             FloatingButtonsOverlay.peindre(ligne.findViewById(R.id.floating_row_chip),
                 b.copy(size = 0, textSp = 14), FloatingButtons.title(b, nom), deplacement = false)
-            ligne.findViewById<TextView>(R.id.floating_row_info).text =
-                ctx.getString(R.string.floating_summary, nom, nomTaille(b.size), b.textSp)
+            ligne.findViewById<TextView>(R.id.floating_row_info).text = ctx.getString(R.string.floating_summary, nom,
+                if (FloatingButtons.inTopBar(b)) ctx.getString(R.string.floating_loc_bar) else nomTaille(b.size),
+                FloatingButtons.textFor(b))
             ligne.findViewById<View>(R.id.btn_floating_row_edit).setOnClickListener {
                 choisi = b.id
                 ouvrirEdition()
@@ -329,6 +330,18 @@ class FloatingButtonsPage {
             val b = bouton(choisi) ?: return@setOnClickListener
             choisirAction(b.action) { action, nom -> modifier(b.copy(action = action.name, actionLabel = nom)) }
         }
+        // Emplacement (2026-10-24) : dans la barre du haut, la place se choisit à la pose — la
+        // première libre — puis au glissé ; de retour sur l'écran, la place d'origine de son rang.
+        racine.findViewById<View>(R.id.btn_floating_loc_screen).setOnClickListener {
+            val b = bouton(choisi)?.takeIf { FloatingButtons.inTopBar(it) } ?: return@setOnClickListener
+            val ctx = fragment?.context ?: return@setOnClickListener
+            val (x, y) = FloatingButtons.defaultPosition(FloatingButtonSettings.buttons(ctx).indexOfFirst { it.id == b.id }.coerceAtLeast(0))
+            modifier(b.copy(topBar = null, x = x, y = y))
+        }
+        racine.findViewById<View>(R.id.btn_floating_loc_bar).setOnClickListener {
+            val b = bouton(choisi)?.takeIf { !FloatingButtons.inTopBar(it) } ?: return@setOnClickListener
+            modifier(b.copy(topBar = true, x = FloatingButtons.TOP_AUTO, textSp = FloatingButtons.textFor(b.copy(topBar = true))))
+        }
         val taille = racine.findViewById<Slider>(R.id.slider_floating_size)
         taille.addOnChangeListener { s, valeur, parUtilisateur ->
             if (!parUtilisateur) return@addOnChangeListener
@@ -348,7 +361,7 @@ class FloatingButtonsPage {
             valueTo = FloatingButtons.TEXT_MAX.toFloat()
             addOnChangeListener { _, valeur, parUtilisateur ->
                 if (!parUtilisateur) return@addOnChangeListener
-                bouton(choisi)?.let { modifier(it.copy(textSp = FloatingButtons.clampText(valeur.toInt()))) }
+                bouton(choisi)?.let { modifier(it.copy(textSp = FloatingButtons.textFor(it.copy(textSp = valeur.toInt())))) }
             }
         }
         racine.findViewById<View>(R.id.btn_floating_close).setOnClickListener {
@@ -392,10 +405,24 @@ class FloatingButtonsPage {
             racine.findViewById<EditText>(R.id.edit_floating_title).setText(FloatingButtons.title(b, nom))
             majTitre = false
             racine.findViewById<Slider>(R.id.slider_floating_size).value = b.size.toFloat()
-            racine.findViewById<Slider>(R.id.slider_floating_text).value = FloatingButtons.clampText(b.textSp).toFloat()
+            // Dans la barre, 14 sp au plus : la valeur d'abord ramenée sous la nouvelle borne, sinon
+            // le curseur refuse sa borne.
+            racine.findViewById<Slider>(R.id.slider_floating_text).apply {
+                val borne = (if (FloatingButtons.inTopBar(b)) FloatingButtons.TOP_TEXT_MAX else FloatingButtons.TEXT_MAX).toFloat()
+                value = value.coerceAtMost(borne)
+                valueTo = borne
+                value = FloatingButtons.textFor(b).toFloat()
+            }
         }
         racine.findViewById<TextView>(R.id.tv_floating_size).text = nomTaille(b.size)
-        racine.findViewById<TextView>(R.id.tv_floating_text).text = ctx.getString(R.string.floating_text_value, b.textSp)
+        racine.findViewById<TextView>(R.id.tv_floating_text).text = ctx.getString(R.string.floating_text_value, FloatingButtons.textFor(b))
+        // Emplacement : la taille de la bulle est celle de la barre du haut, plus de curseur.
+        val enHaut = FloatingButtons.inTopBar(b)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_loc_screen), !enHaut)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_loc_bar), enHaut)
+        racine.findViewById<View>(R.id.row_floating_size).visibility = if (enHaut) View.GONE else View.VISIBLE
+        racine.findViewById<View>(R.id.row_floating_ticks).visibility = if (enHaut) View.GONE else View.VISIBLE
+        racine.findViewById<View>(R.id.row_floating_size_bar).visibility = if (enHaut) View.VISIBLE else View.GONE
         // Le titre suit-il le raccourci ? ↺ n'a de sens que s'il a été modifié.
         racine.findViewById<View>(R.id.btn_floating_title_reset).alpha = if (b.customTitle == null) 0.4f else 1f
         val repere = FloatingButtons.presetIndex(b.size)

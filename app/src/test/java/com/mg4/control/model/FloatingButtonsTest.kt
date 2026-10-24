@@ -52,4 +52,42 @@ class FloatingButtonsTest {
         assertEquals(FloatingButtons.HaloFrame(1698, 578, 222, 142),
             FloatingButtons.haloFrame(1720, 600, 200, 120, 22, 1920, 720))
     }
+
+    // ── Barre du haut (2026-10-24) ───────────────────────────────────────────
+
+    private val barre = 1000f
+    private val languette = FloatingButtons.topBarHvac(barre, 320f)   // 340..660
+
+    @Test fun `barre du haut - la place voulue si elle est libre`() {
+        assertEquals(100f, FloatingButtons.placeInTopBar(100f, 80f, barre, listOf(languette), 6f), 0.01f)
+    }
+
+    @Test fun `barre du haut - jamais sur la languette, poussé du côté le plus proche`() {
+        // Voulu à 360 (dans la languette, plus près de son bord gauche) : collé à gauche.
+        assertEquals(254f, FloatingButtons.placeInTopBar(360f, 80f, barre, listOf(languette), 6f), 0.01f)
+        // Voulu à 620 : collé à droite.
+        assertEquals(666f, FloatingButtons.placeInTopBar(620f, 80f, barre, listOf(languette), 6f), 0.01f)
+    }
+
+    @Test fun `barre du haut - à côté d un voisin plutôt que dessus`() {
+        val voisin = 100f..180f
+        assertEquals(186f, FloatingButtons.placeInTopBar(150f, 60f, barre, listOf(languette, voisin), 6f), 0.01f)
+    }
+
+    @Test fun `barre du haut - gardé entre les bords`() {
+        assertEquals(6f, FloatingButtons.placeInTopBar(-50f, 80f, barre, listOf(languette), 6f), 0.01f)
+        assertEquals(914f, FloatingButtons.placeInTopBar(990f, 80f, barre, listOf(languette), 6f), 0.01f)
+    }
+
+    @Test fun `barre du haut - plus de place libre, ramené dans la barre`() {
+        val pleine = listOf(0f..1000f)
+        assertEquals(920f, FloatingButtons.placeInTopBar(990f, 80f, barre, pleine, 6f), 0.01f)
+    }
+
+    @Test fun `barre du haut - texte limité à 14 sp`() {
+        val b = FloatingButton(id = "a", action = "HVAC_POPUP", textSp = 20)
+        assertEquals(20, FloatingButtons.textFor(b))
+        assertEquals(14, FloatingButtons.textFor(b.copy(topBar = true)))
+        assertEquals(false, FloatingButtons.inTopBar(b))
+    }
 }

@@ -919,6 +919,10 @@
     <string name="floating_field_title">Titolo</string>
     <string name="floating_title_reset">Usa il nome della scorciatoia</string>
     <string name="floating_field_action">Scorciatoia</string>
+    <string name="floating_field_location">Posizione</string>
+    <string name="floating_loc_screen">Sullo schermo</string>
+    <string name="floating_loc_bar">Barra in alto</string>
+    <string name="floating_size_bar">Adattata all’altezza della barra in alto (testo al massimo 14 sp)</string>
     <string name="floating_field_size">Dimensione della bolla</string>
     <string name="floating_size_small">Piccola</string>
     <string name="floating_size_medium">Media</string>

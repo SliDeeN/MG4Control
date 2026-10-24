@@ -919,6 +919,10 @@
     <string name="floating_field_title">Título</string>
     <string name="floating_title_reset">Usar el nombre del acceso directo</string>
     <string name="floating_field_action">Acceso directo</string>
+    <string name="floating_field_location">Ubicación</string>
+    <string name="floating_loc_screen">En la pantalla</string>
+    <string name="floating_loc_bar">Barra superior</string>
+    <string name="floating_size_bar">Ajustada a la altura de la barra superior (texto de 14 sp como máximo)</string>
     <string name="floating_field_size">Tamaño de la burbuja</string>
     <string name="floating_size_small">Pequeño</string>
     <string name="floating_size_medium">Mediano</string>

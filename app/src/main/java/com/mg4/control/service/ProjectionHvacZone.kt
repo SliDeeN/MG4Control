@@ -47,8 +47,11 @@ object ProjectionHvacZone {
     /** Repli : `TYPE_SYSTEM_ERROR`, plus haut encore, si le premier est refusé. */
     private const val TYPE_ZONE_REPLI = 2010
 
-    /** Largeur de la zone : la languette SWI133 fait 220 px, le bloc clim A9 un peu plus. */
-    private const val LARGEUR_DP = 320f
+    /**
+     * Largeur de la zone : la languette SWI133 fait 220 px, le bloc clim A9 un peu plus. La même que
+     * celle que les boutons flottants de la barre du haut laissent libre.
+     */
+    private const val LARGEUR_DP = com.mg4.control.model.FloatingButtons.TOP_HVAC_DP
     /** Sous la barre système, de quoi couvrir une languette qui en dépasse. */
     private const val DEBORD_DP = 16f
 
@@ -148,7 +151,7 @@ object ProjectionHvacZone {
     }
 
     /** Hauteur de la barre système, en px (la valeur d'Android, comme SystemUI la lit). */
-    private fun barreSysteme(ctx: Context): Int {
+    internal fun barreSysteme(ctx: Context): Int {
         val id = ctx.resources.getIdentifier("status_bar_height", "dimen", "android")
         return if (id > 0) ctx.resources.getDimensionPixelSize(id) else (40 * ctx.resources.displayMetrics.density).roundToInt()
     }

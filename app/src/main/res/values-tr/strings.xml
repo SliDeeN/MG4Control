@@ -919,6 +919,10 @@
     <string name="floating_field_title">Başlık</string>
     <string name="floating_title_reset">Kısayolun adını kullan</string>
     <string name="floating_field_action">Kısayol</string>
+    <string name="floating_field_location">Konum</string>
+    <string name="floating_loc_screen">Ekranda</string>
+    <string name="floating_loc_bar">Üst çubuk</string>
+    <string name="floating_size_bar">Üst çubuğun yüksekliğine göre ayarlı (metin en fazla 14 sp)</string>
     <string name="floating_field_size">Baloncuk boyutu</string>
     <string name="floating_size_small">Küçük</string>
     <string name="floating_size_medium">Orta</string>

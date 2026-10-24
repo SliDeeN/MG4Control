@@ -919,6 +919,10 @@
     <string name="floating_field_title">Titel</string>
     <string name="floating_title_reset">Namen der Verknüpfung verwenden</string>
     <string name="floating_field_action">Verknüpfung</string>
+    <string name="floating_field_location">Position</string>
+    <string name="floating_loc_screen">Auf dem Bildschirm</string>
+    <string name="floating_loc_bar">Obere Leiste</string>
+    <string name="floating_size_bar">An die Höhe der oberen Leiste angepasst (Text höchstens 14 sp)</string>
     <string name="floating_field_size">Blasengröße</string>
     <string name="floating_size_small">Klein</string>
     <string name="floating_size_medium">Mittel</string>

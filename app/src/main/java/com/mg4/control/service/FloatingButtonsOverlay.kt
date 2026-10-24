@@ -48,6 +48,13 @@ import kotlin.math.roundToInt
  *
  * Masquées en marche arrière si l'option est cochée (rapport relu toutes les [RAPPORT_MS]), et
  * en Mode Garage. Thread principal, sauf les lectures (fil mg4-float). Journal : [TAG].
+ *
+ * Bouton de la barre du haut (2026-10-24, [FloatingButtons.inTopBar]) : une fenêtre AU-DESSUS de la
+ * barre noire — `TYPE_STATUS_BAR_SUB_PANEL` (2017), repli `TYPE_SYSTEM_ERROR` (2010), types déjà
+ * acceptés pour la zone clim ([ProjectionHvacZone]) — à la hauteur de la barre, glissée de gauche à
+ * droite seulement, jamais sur la languette de la clim ni sur un voisin
+ * ([FloatingButtons.placeInTopBar]). Le type d'une fenêtre ne change pas une fois posée : c'est le
+ * réglage du bouton qui le décide, à la pose. Les deux types refusés : posé juste sous la barre.
  */
 object FloatingButtonsOverlay {
 
@@ -242,12 +249,32 @@ object FloatingButtonsOverlay {
     @Suppress("DEPRECATION")
     private fun ecran(wm: WindowManager): Point = Point().also { wm.defaultDisplay.getSize(it) }
 
+    /** Types essayés pour un bouton de la barre du haut, dans l'ordre (voir l'en-tête). */
+    private val TYPES_BARRE = intArrayOf(2017, 2010)
+
+    /**
+     * Ce qu'un bouton de la barre du haut ne doit pas recouvrir, en px : la languette de la clim et
+     * les autres boutons de la barre déjà posés, [sauf] lui-même.
+     */
+    private fun bloquesHaut(ctx: Context, barW: Int, sauf: String?): List<ClosedFloatingPointRange<Float>> {
+        val d = ctx.resources.displayMetrics.density
+        return listOf(FloatingButtons.topBarHvac(barW.toFloat(), FloatingButtons.TOP_HVAC_DP * d)) +
+            bulles.values.filter { it.bouton.id != sauf && FloatingButtons.inTopBar(it.bouton) && it.params.type != WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY }
+                .map { it.params.x.toFloat()..(it.params.x + it.vue.measuredWidth).toFloat() }
+    }
+
+    /** Bord gauche d'un bouton de la barre de [largeur] px voulu en [voulu] px. */
+    private fun placeHaut(ctx: Context, voulu: Float, largeur: Int, barW: Int, sauf: String?): Int =
+        FloatingButtons.placeInTopBar(voulu, largeur.toFloat(), barW.toFloat(), bloquesHaut(ctx, barW, sauf),
+            FloatingButtons.TOP_GAP_DP * ctx.resources.displayMetrics.density).roundToInt()
+
     @SuppressLint("ClickableViewAccessibility")
     private fun poser(ctx: Context, wm: WindowManager, b: FloatingButton) {
         val vue = TextView(ctx)
         peindre(vue, b, FloatingButtons.title(b, b.actionLabel), deplacement = false)
         vue.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         val taille = ecran(wm)
+        if (FloatingButtons.inTopBar(b) && poserEnHaut(ctx, wm, b, vue, taille.x)) return
         val (x, y) = FloatingButtons.topLeft(b.x, b.y, vue.measuredWidth, vue.measuredHeight, taille.x, taille.y)
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -269,6 +296,49 @@ object FloatingButtonsOverlay {
         } catch (e: Exception) {
             AppLogger.e(TAG, "bouton « ${vue.text} » non posé : ${e.javaClass.simpleName} ${e.message}")
         }
+    }
+
+    /**
+     * Bouton de la barre du haut : au-dessus de la barre, centré dans sa hauteur, à sa place ou à
+     * la première place libre ([FloatingButtons.TOP_AUTO]), alors enregistrée. `false` si les deux
+     * types de fenêtre sont refusés : l'appelant le pose comme les autres, juste sous la barre.
+     */
+    private fun poserEnHaut(ctx: Context, wm: WindowManager, b: FloatingButton, vue: TextView, barW: Int): Boolean {
+        val d = ctx.resources.displayMetrics.density
+        val barre = ProjectionHvacZone.barreSysteme(ctx)
+        val largeur = vue.measuredWidth
+        val auto = b.x < 0f
+        val voulu = if (auto) 0f else b.x * barW - largeur / 2f
+        val x = placeHaut(ctx, voulu, largeur, barW, b.id)
+        val y = ((barre - vue.measuredHeight) / 2).coerceAtLeast(0)
+        for (type in TYPES_BARRE) {
+            val params = WindowManager.LayoutParams(
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                WindowManager.LayoutParams.WRAP_CONTENT,
+                type,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT,
+            ).apply {
+                gravity = Gravity.TOP or Gravity.START
+                this.x = x
+                this.y = y
+                title = "MG4Control bouton flottant (barre du haut)"
+            }
+            val bulle = Bulle(vue, params, b)
+            vue.setOnTouchListener(toucher(ctx, bulle))
+            val ok = runCatching { wm.addView(vue, params) }
+                .onFailure { AppLogger.w(TAG, "« ${vue.text} » refusé dans la barre en type $type : ${it.javaClass.simpleName} ${it.message}") }
+                .isSuccess
+            if (!ok) continue
+            bulles[b.id] = bulle
+            if (auto || x != voulu.roundToInt()) {
+                bulle.bouton = b.copy(x = ((x + largeur / 2f) / barW.coerceAtLeast(1)).coerceIn(0f, 1f))
+                FloatingButtonSettings.update(ctx, bulle.bouton)
+            }
+            AppLogger.i(TAG, "« ${vue.text} » posé dans la barre du haut (type $type, x=$x px, barre ${barre} px, ${(barre / d).roundToInt()} dp)")
+            return true
+        }
+        return false
     }
 
     /** Appui court = raccourci ; appui long = déplacer ; glissé précoce = rien (le doigt passait). */
@@ -308,8 +378,13 @@ object FloatingButtonsOverlay {
                     if (deplacement) {
                         val wm = fenetres ?: return@OnTouchListener true
                         val taille = ecran(wm)
-                        bulle.params.x = (fenetreX + dx).roundToInt().coerceIn(0, (taille.x - bulle.vue.width).coerceAtLeast(0))
-                        bulle.params.y = (fenetreY + dy).roundToInt().coerceIn(0, (taille.y - bulle.vue.height).coerceAtLeast(0))
+                        if (dansLaBarre(bulle)) {
+                            // De gauche à droite seulement, en sautant la languette et les voisins.
+                            bulle.params.x = placeHaut(ctx, fenetreX + dx, bulle.vue.width, taille.x, bulle.bouton.id)
+                        } else {
+                            bulle.params.x = (fenetreX + dx).roundToInt().coerceIn(0, (taille.x - bulle.vue.width).coerceAtLeast(0))
+                            bulle.params.y = (fenetreY + dy).roundToInt().coerceIn(0, (taille.y - bulle.vue.height).coerceAtLeast(0))
+                        }
                         runCatching { wm.updateViewLayout(bulle.vue, bulle.params) }
                     } else if (!annule && hypot(dx, dy) > seuil) {
                         annule = true
@@ -357,14 +432,26 @@ object FloatingButtonsOverlay {
     /** Halo autour de la bulle, à sa place et à sa taille d'origine (l'enfoncement ne compte pas). */
     private fun halo(ctx: Context, bulle: Bulle) {
         val wm = fenetres ?: return
-        FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, ecran(wm), BORDURE)
+        if (dansLaBarre(bulle)) {
+            // Même couche et même repère que la bulle : l'écran entier, barre comprise.
+            val e = ecran(wm).apply { y += ProjectionHvacZone.barreSysteme(ctx) }
+            FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, e, BORDURE,
+                type = bulle.params.type, pleinEcran = true)
+        } else {
+            FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, ecran(wm), BORDURE)
+        }
     }
+
+    /** Bulle posée au-dessus de la barre du haut (et non repliée dessous, faute de type accepté). */
+    private fun dansLaBarre(bulle: Bulle): Boolean =
+        FloatingButtons.inTopBar(bulle.bouton) && bulle.params.type != WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
 
     private fun enregistrerPlace(ctx: Context, bulle: Bulle) {
         val wm = fenetres ?: return
         val taille = ecran(wm)
         val (cx, cy) = FloatingButtons.centre(bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, taille.x, taille.y)
-        bulle.bouton = bulle.bouton.copy(x = cx, y = cy)
+        // Dans la barre, seule la place de gauche à droite compte.
+        bulle.bouton = if (dansLaBarre(bulle)) bulle.bouton.copy(x = cx) else bulle.bouton.copy(x = cx, y = cy)
         FloatingButtonSettings.update(ctx, bulle.bouton)
         AppLogger.i(TAG, "« ${bulle.vue.text} » déplacé en (${"%.2f".format(java.util.Locale.US, cx)}, " +
             "${"%.2f".format(java.util.Locale.US, cy)})")
@@ -389,18 +476,24 @@ object FloatingButtonsOverlay {
      */
     fun peindre(vue: TextView, b: FloatingButton, titre: String, deplacement: Boolean, etat: Boolean? = null) {
         val densite = vue.resources.displayMetrics.density
-        val hauteur = (FloatingButtons.heightDp(b.size) * densite).roundToInt()
+        val enHaut = FloatingButtons.inTopBar(b)
+        // Dans la barre du haut : sa hauteur, moins une petite marge, et une seule ligne.
+        val hauteur = if (enHaut)
+            (ProjectionHvacZone.barreSysteme(vue.context) - 2 * FloatingButtons.TOP_INSET_DP * densite).roundToInt().coerceAtLeast(1)
+        else (FloatingButtons.heightDp(b.size) * densite).roundToInt()
         vue.text = titre
-        vue.setTextSize(TypedValue.COMPLEX_UNIT_SP, FloatingButtons.clampText(b.textSp).toFloat())
+        vue.setTextSize(TypedValue.COMPLEX_UNIT_SP, FloatingButtons.textFor(b).toFloat())
         vue.gravity = Gravity.CENTER
-        vue.maxLines = 2
+        vue.maxLines = if (enHaut) 1 else 2
         vue.ellipsize = TextUtils.TruncateAt.END
         vue.includeFontPadding = false
         vue.minHeight = hauteur
-        vue.minWidth = (FloatingButtons.minWidthDp(b.size) * densite).roundToInt()
+        if (enHaut) vue.height = hauteur
+        vue.minWidth = if (enHaut) (hauteur * 1.6f).roundToInt() else (FloatingButtons.minWidthDp(b.size) * densite).roundToInt()
         vue.maxWidth = (LARGEUR_MAX_DP * densite).roundToInt()
-        val marge = (hauteur * 0.35f).roundToInt()
-        vue.setPadding(marge, (6 * densite).roundToInt(), marge, (6 * densite).roundToInt())
+        val marge = if (enHaut) (10 * densite).roundToInt() else (hauteur * 0.35f).roundToInt()
+        val vertical = if (enHaut) 0 else (6 * densite).roundToInt()
+        vue.setPadding(marge, vertical, marge, vertical)
         habiller(vue, b, deplacement, etat)
         vue.scaleX = if (deplacement) 1.1f else 1f
         vue.scaleY = vue.scaleX

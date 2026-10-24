@@ -75,8 +75,12 @@ object FloatingButtonSettings {
 
     fun remove(ctx: Context, id: String) = save(ctx, buttons(ctx).filter { it.id != id })
 
-    /** Toutes les bulles reprennent leur place d'origine, en colonne sur la droite. */
+    /**
+     * Toutes les bulles reprennent leur place d'origine, en colonne sur la droite ; celles de la
+     * barre du haut, la première place libre de la barre, choisie à la pose.
+     */
     fun resetPositions(ctx: Context) = save(ctx, buttons(ctx).mapIndexed { i, b ->
+        if (FloatingButtons.inTopBar(b)) return@mapIndexed b.copy(x = FloatingButtons.TOP_AUTO)
         val (x, y) = FloatingButtons.defaultPosition(i)
         b.copy(x = x, y = y)
     })

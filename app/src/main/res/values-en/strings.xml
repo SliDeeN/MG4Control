@@ -919,6 +919,10 @@
     <string name="floating_field_title">Title</string>
     <string name="floating_title_reset">Use the shortcut name</string>
     <string name="floating_field_action">Shortcut</string>
+    <string name="floating_field_location">Location</string>
+    <string name="floating_loc_screen">On screen</string>
+    <string name="floating_loc_bar">Top bar</string>
+    <string name="floating_size_bar">Matches the height of the top bar (text 14 sp at most)</string>
     <string name="floating_field_size">Bubble size</string>
     <string name="floating_size_small">Small</string>
     <string name="floating_size_medium">Medium</string>

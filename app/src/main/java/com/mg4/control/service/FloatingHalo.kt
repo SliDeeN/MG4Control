@@ -36,8 +36,15 @@ object FloatingHalo {
     private const val MARGE_DP = 22f
     private const val TRAIT_DP = 2f
 
-    /** Bulle posée en ([x], [y]) px, de [largeur] × [hauteur] px, sur un écran de taille [ecran]. */
-    fun jouer(ctx: Context, wm: WindowManager, x: Int, y: Int, largeur: Int, hauteur: Int, ecran: Point, couleur: Int) {
+    /**
+     * Bulle posée en ([x], [y]) px, de [largeur] × [hauteur] px, sur un écran de taille [ecran]. Une
+     * bulle de la barre du haut passe son [type] de fenêtre et [pleinEcran] : le halo doit être dans
+     * la même couche et le même repère qu'elle, sinon il serait dessiné sous la barre.
+     */
+    fun jouer(
+        ctx: Context, wm: WindowManager, x: Int, y: Int, largeur: Int, hauteur: Int, ecran: Point, couleur: Int,
+        type: Int = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, pleinEcran: Boolean = false,
+    ) {
         if (largeur <= 0 || hauteur <= 0) return
         val d = ctx.resources.displayMetrics.density
         val cadre = FloatingButtons.haloFrame(x, y, largeur, hauteur, (MARGE_DP * d).roundToInt(), ecran.x, ecran.y)
@@ -45,8 +52,9 @@ object FloatingHalo {
         val params = WindowManager.LayoutParams(
             cadre.width,
             cadre.height,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
+            type,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                if (pleinEcran) WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN else 0,
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START

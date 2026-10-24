@@ -1783,7 +1783,43 @@
 
                             </LinearLayout>
 
+                            <!-- Emplacement (2026-10-24) : sur l'écran, ou dans la barre noire du haut — à
+                                 sa hauteur, glissé de gauche à droite, jamais sur la languette clim. -->
                             <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_location"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_loc_screen"
+                                    android:layout_width="0dp"
+                                    android:layout_height="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="@string/floating_loc_screen"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_loc_bar"
+                                    android:layout_width="0dp"
+                                    android:layout_height="52dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/floating_loc_bar"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/row_floating_size"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="10dp"
@@ -1825,6 +1861,7 @@
 
                             <!-- Repères du curseur : touchés, ils y mènent tout droit. -->
                             <LinearLayout
+                                android:id="@+id/row_floating_ticks"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:orientation="horizontal"
@@ -1859,6 +1896,33 @@
                                     android:paddingEnd="8dp"
                                     android:text="@string/floating_size_large"
                                     android:textSize="14sp" />
+
+                            </LinearLayout>
+
+                            <!-- Dans la barre du haut, la taille est celle de la barre : à la place du curseur. -->
+                            <LinearLayout
+                                android:id="@+id/row_floating_size_bar"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:visibility="gone">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_size"
+                                    android:textColor="@color/dash_text_lo"
+                                    android:textSize="16sp" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/floating_size_bar"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="15sp" />
 
                             </LinearLayout>
 

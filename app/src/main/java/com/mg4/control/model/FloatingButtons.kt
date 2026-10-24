@@ -31,6 +31,13 @@ data class FloatingButton(
     val textSp: Int = FloatingButtons.TEXT_DEFAULT,
     val x: Float = 0.92f,
     val y: Float = 0.5f,
+    /**
+     * Bouton de la barre noire du haut (2026-10-24) : à la hauteur de la barre, déplacé de gauche
+     * à droite seulement, jamais sur la languette de la clim. [x] est alors le centre en proportion
+     * de la largeur de la barre ([FloatingButtons.TOP_AUTO] : place à choisir à la pose), [y] ne
+     * sert plus. `null` = bouton sur l'écran (Gson : un bouton d'avant la fonction n'en a pas).
+     */
+    val topBar: Boolean? = null,
 )
 
 object FloatingButtons {
@@ -64,6 +71,55 @@ object FloatingButtons {
     fun minWidthDp(size: Int): Float = heightDp(size) * 1.6f
 
     fun clampText(sp: Int): Int = sp.coerceIn(TEXT_MIN, TEXT_MAX)
+
+    // ── Barre du haut (2026-10-24) ───────────────────────────────────────────
+
+    /** Texte au plus, dans la barre : la bulle n'y a que la hauteur de la barre (36 dp sur SWI133). */
+    const val TOP_TEXT_MAX = 14
+    /**
+     * Largeur gardée libre au centre de la barre : la languette de la clim — la même que la zone
+     * clim pendant Android Auto / CarPlay, pour qu'ils ne se gênent jamais.
+     */
+    const val TOP_HVAC_DP = 320f
+    /** Écart gardé avec les bords de la barre, la languette et les boutons voisins. */
+    const val TOP_GAP_DP = 6f
+    /** Marge en haut et en bas de la bulle, dans la barre. */
+    const val TOP_INSET_DP = 2f
+    /** [FloatingButton.x] d'un bouton dont la place dans la barre est à choisir à la pose. */
+    const val TOP_AUTO = -1f
+
+    fun inTopBar(button: FloatingButton): Boolean = button.topBar == true
+
+    /** Taille du texte affichée : bornée, et [TOP_TEXT_MAX] au plus dans la barre. */
+    fun textFor(button: FloatingButton): Int =
+        clampText(button.textSp).let { if (inTopBar(button)) it.coerceAtMost(TOP_TEXT_MAX) else it }
+
+    /** La languette de la clim, en px, dans une barre de [barW] px : [zoneW] px au centre. */
+    fun topBarHvac(barW: Float, zoneW: Float): ClosedFloatingPointRange<Float> =
+        (barW / 2f - zoneW / 2f)..(barW / 2f + zoneW / 2f)
+
+    /**
+     * Bord gauche (px) d'un bouton de [w] px dans une barre de [barW] px : au plus près de [want],
+     * sans toucher [bloques] (la languette, les boutons voisins) ni les bords, à [gap] près. Pendant
+     * le glissé, le bouton saute ainsi par-dessus ce qu'il ne doit pas recouvrir. Plus aucune place
+     * libre : [want] ramené dans la barre — un chevauchement plutôt qu'un bouton perdu.
+     */
+    fun placeInTopBar(
+        want: Float, w: Float, barW: Float, bloques: List<ClosedFloatingPointRange<Float>>, gap: Float,
+    ): Float {
+        val obstacles = bloques.map { (it.start - gap)..(it.endInclusive + gap) }.sortedBy { it.start }
+        val libres = mutableListOf<ClosedFloatingPointRange<Float>>()
+        var debut = gap
+        for (o in obstacles) {
+            if (o.start > debut) libres += debut..o.start
+            debut = maxOf(debut, o.endInclusive)
+        }
+        if (barW - gap > debut) libres += debut..(barW - gap)
+        return libres.filter { it.endInclusive - it.start >= w }
+            .map { want.coerceIn(it.start, it.endInclusive - w) }
+            .minByOrNull { abs(it - want) }
+            ?: want.coerceIn(0f, (barW - w).coerceAtLeast(0f))
+    }
 
     /** Titre affiché : celui saisi, ou le nom du raccourci ([actionLabel]). */
     fun title(button: FloatingButton, actionLabel: String): String =
