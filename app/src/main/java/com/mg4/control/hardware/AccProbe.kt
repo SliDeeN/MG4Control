@@ -22,7 +22,9 @@ import java.util.Locale
  * quatre premiers signaux de la liste sont restés à 0. Soit le VHAL ne les remplit que pour un
  * abonné — personne ne s'y abonnait —, soit ce ne sont pas les bons. D'où cette version : une
  * vingtaine de candidats de la table SWI133 (`YFVehicleProperty`, plage ADAS 0x2140a1xx),
- * ABONNÉS (rappel à chaque changement) ET relus toutes les [SUIVI_MS].
+ * ÉCOUTÉS (rappel à chaque changement) ET relus toutes les [SUIVI_MS]. Le deuxième relevé (même
+ * jour) n'a rien appris : l'écoute avait échoué, faute de la bonne fonction d'Android 9 ([abonner]) ;
+ * seul `AAD_ACC_SWITCH` a bougé, à l'arrêt — c'est le MODE choisi (2 → 1 → 4), pas l'état.
  *
  * Chaque changement pendant READY est noté avec l'heure, le temps depuis le READY, la vitesse et
  * sa source (« évt » = rappel, « lu » = relecture). Une mesure (distance, cible) n'est notée qu'à
@@ -155,18 +157,29 @@ object AccProbe {
     }
 
     /**
-     * Un rappel par signal, au changement (cadence 0). Un signal absent de ce firmware est refusé :
-     * la liste des refus est notée une fois.
+     * Un écouteur par signal. Android 9 : `CarPropertyManager.registerListener(
+     * CarPropertyEventListener, propId, cadence)` — pas de `registerCallback` (premier essai du
+     * 2026-10-24 : « abonnement impossible »). Comme pour la porte ([MG4Hardware]) : l'interface
+     * chargée par le classloader de l'APPLI (android.car est dans le BootClassLoader, où le Proxy
+     * échoue) et une cadence de 5 — à 0, une propriété déclarée CONTINUOUS ne reçoit rien. Un signal
+     * absent de ce firmware est refusé : la liste des refus est notée une fois.
      */
     private fun abonner(cpm: Any) {
         abonne = true
-        val methode = cpm.javaClass.methods.firstOrNull { it.name == "registerCallback" && it.parameterCount == 3 }
-        val type = methode?.parameterTypes?.get(0)
-        if (methode == null || type == null || !type.isInterface) {
-            AppLogger.w(TAG, "abonnement impossible : pas de registerCallback à 3 paramètres")
+        val cl = MG4Hardware.appContext()?.classLoader ?: return
+        val iface = runCatching {
+            cl.loadClass("android.car.hardware.property.CarPropertyManager\$CarPropertyEventListener")
+        }.getOrNull()
+        val methode = iface?.let {
+            runCatching {
+                cpm.javaClass.getMethod("registerListener", it, Int::class.javaPrimitiveType, Float::class.javaPrimitiveType)
+            }.getOrNull()
+        }
+        if (iface == null || methode == null) {
+            AppLogger.w(TAG, "abonnement impossible : pas de registerListener(CarPropertyEventListener, int, float)")
             return
         }
-        val proxy = java.lang.reflect.Proxy.newProxyInstance(type.classLoader, arrayOf(type)) { soi, m, args ->
+        val proxy = java.lang.reflect.Proxy.newProxyInstance(cl, arrayOf(iface)) { soi, m, args ->
             when (m.name) {
                 "onChangeEvent" -> {
                     val v = args?.getOrNull(0)
@@ -177,7 +190,11 @@ object AccProbe {
                     }
                     null
                 }
-                // Le gestionnaire range ses rappels dans des ensembles : ces trois-là doivent répondre.
+                "onErrorEvent" -> {
+                    AppLogger.w(TAG, "erreur d'écoute : ${args?.joinToString()}")
+                    null
+                }
+                // Le gestionnaire range ses écouteurs dans des ensembles : ces trois-là doivent répondre.
                 "hashCode" -> System.identityHashCode(soi)
                 "equals" -> soi === args?.getOrNull(0)
                 "toString" -> "AccProbe"
@@ -187,11 +204,11 @@ object AccProbe {
         rappel = proxy
         val refuses = mutableListOf<String>()
         SIGNAUX.forEach { s ->
-            runCatching { methode.invoke(cpm, proxy, s.id, 0f) as? Boolean }
+            runCatching { methode.invoke(cpm, proxy, s.id, 5f) as? Boolean }
                 .onSuccess { if (it == false) refuses += s.nom }
-                .onFailure { refuses += s.nom }
+                .onFailure { refuses += "${s.nom} (${(it.cause ?: it).javaClass.simpleName})" }
         }
-        AppLogger.i(TAG, "abonné à ${SIGNAUX.size - refuses.size}/${SIGNAUX.size} signaux" +
+        AppLogger.i(TAG, "écoute de ${SIGNAUX.size - refuses.size}/${SIGNAUX.size} signaux" +
             if (refuses.isEmpty()) "" else " — refusés : ${refuses.joinToString()}")
     }
 
