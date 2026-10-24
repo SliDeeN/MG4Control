@@ -15,15 +15,20 @@ import java.util.Locale
  * frein d'une régénération forte au moment où l'ACC rend la main.
  *
  * Ce que l'appli lisait jusque-là (`getAccTjaMode`, `getMixedIntelligentDrive`) est le MODE choisi
- * dans les réglages, pas l'état enclenché. Les signaux suivis ici ont été trouvés dans les
- * firmwares le 2026-10-14, sans leurs valeurs : aucune appli de l'écran central ne les lit, c'est
- * le combiné qui affiche l'ACC. D'où la sonde.
+ * dans les réglages, pas l'état enclenché. Aucune appli de l'écran central ne lit l'état : c'est le
+ * combiné qui affiche l'ACC.
  *
- * Pendant READY, ils sont relus toutes les [SUIVI_MS] et chaque changement est noté avec l'heure,
- * le temps depuis le READY, la vitesse et la régénération : de quoi faire correspondre les valeurs
- * à ce que le conducteur a fait (enclencher, couper au bouton, freiner, reprendre le volant) et
- * mesurer en combien de temps la coupure se voit. Journal : [TAG] ; les derniers changements
- * vont aussi dans le rapport du Diagnostic ([reports]).
+ * Premier relevé SWI133 (2026-10-24, ACC, TJA et ICA enclenchés puis coupés en roulant) : les
+ * quatre premiers signaux de la liste sont restés à 0. Soit le VHAL ne les remplit que pour un
+ * abonné — personne ne s'y abonnait —, soit ce ne sont pas les bons. D'où cette version : une
+ * vingtaine de candidats de la table SWI133 (`YFVehicleProperty`, plage ADAS 0x2140a1xx),
+ * ABONNÉS (rappel à chaque changement) ET relus toutes les [SUIVI_MS].
+ *
+ * Chaque changement pendant READY est noté avec l'heure, le temps depuis le READY, la vitesse et
+ * sa source (« évt » = rappel, « lu » = relecture). Une mesure (distance, cible) n'est notée qu'à
+ * son apparition et à sa disparition ; un autre signal bavard, une fois par [PAUSE_MS] au plus,
+ * avec le nombre de changements tus. Journal : [TAG] ; les derniers
+ * changements vont aussi dans le rapport du Diagnostic ([reports]).
  */
 object AccProbe {
 
@@ -32,20 +37,48 @@ object AccProbe {
     private const val AREA_GLOBAL = 0x1000000
     /** Assez rapide pour mesurer le délai de la coupure, assez lent pour rester discret. */
     private const val SUIVI_MS = 200L
-    private const val MAX_EVENEMENTS = 80
+    private const val PAUSE_MS = 1_000L
+    private const val MAX_EVENEMENTS = 200
 
-    private data class Signal(val nom: String, val id: Int)
+    /**
+     * [mesure] : une grandeur qui bouge sans cesse en suivant une voiture (distance, cible) — seuls
+     * comptent son apparition et sa disparition, notées au passage de 0 à autre chose et retour.
+     */
+    private data class Signal(val nom: String, val id: Int, val mesure: Boolean = false)
 
     private val SIGNAUX = listOf(
-        // SWI133, SWI165, SWI68, SWI69 (pas SWI131).
+        // Premier relevé : toujours 0 sans abonnement.
         Signal("ACC_SYSTEM_STATUS", 0x2140a1d9),
-        // Partout. Valeurs A9 connues : 0 aucune, 1 suivi de véhicule, 2 centrage, 3 combiné.
-        Signal("AAD_LANE_TJAICAOPMD", 0x2140a12a),
-        // Demande de reprise en main : SWI133, SWI165, SWI68, SWI69.
         Signal("ACC_DRIVER_TKOV_REQ", 0x2140a1da),
-        // SWI133, SWI68, SWI69 (pas SWI165, SWI131).
+        Signal("AAD_LANE_TJAICAOPMD", 0x2140a12a),
         Signal("TJA_PILOT_SYS", 0x21407b44),
+        // Régulateur et assistance de vitesse.
+        Signal("ACC_PROMPT_MSG", 0x2140a1cb),
+        Signal("ACC_DET_DISTANCE", 0x21407b48, mesure = true),
+        Signal("AAD_ACC_SWITCH", 0x2140a17f),
+        Signal("AAD_MODE_TYPE", 0x2140a17d),
+        Signal("AAD_ACC_OBJ_ID", 0x2140a12b, mesure = true),
+        Signal("CC_STATUS_CCA_SWA_L", 0x2140a1f6),
+        Signal("FIMC_CC_SW", 0x2140a1e9),
+        Signal("CC_SPDVC_CNFM", 0x2140a1af),
+        Signal("SPD_AST_MDECM_VCU", 0x2140a1f8),
+        Signal("TRAGET_SPEED_SRC_STS_VCU", 0x2140a211),
+        Signal("SPEED_AST_SYS_STS_ECM_VCU", 0x2140a213),
+        // Maintien dans la voie, changement de voie.
+        Signal("LKA_SYS_STATUS", 0x2140a202),
+        Signal("AAD_TJA_SYS_FLT_STS", 0x2140a174),
+        Signal("TJASYS_FLT_SYS", 0x2140a20c),
+        Signal("ILC_ACTIVE_DSP_CMD", 0x21407b45),
+        Signal("ILC_SWITCH", 0x2140a1b8),
+        Signal("SENSOR_ADASAVLBLY", 0x21401599),
+        // Commandes au volant : le levier du régulateur y passe peut-être.
+        Signal("SWSSEL_UP_SWA_L", 0x21407b42),
+        Signal("SWSSEL_L_SWA_L", 0x21407b43),
+        // Le contexte de l'automatisation : régénération et conduite à une pédale.
+        Signal("REGENERATIVE_LEVEL", 0x2140a191),
+        Signal("SIGNAL_PEDAL_ON", 0x2140a193),
     )
+    private val parId = SIGNAUX.associateBy { it.id }
 
     private val evenements = ArrayDeque<String>()
 
@@ -57,25 +90,32 @@ object AccProbe {
     private val handler: Handler by lazy { Handler(HandlerThread("mg4-acc-probe").also { it.start() }.looper) }
     /** Jeton du suivi, arrêté hors READY. */
     private val SUIVI = Any()
-    /** Dernière valeur vue par signal. Fil de la sonde uniquement. */
+
+    // Fil de la sonde uniquement.
     private val derniers = HashMap<Int, String>()
+    private val dernierNote = HashMap<Int, Long>()
+    private val tus = HashMap<Int, Int>()
+    private var enReady = false
     private var debutReadyMs = 0L
+    private var abonne = false
+    /** Référence forte : le gestionnaire ne garde peut-être qu'une référence faible au rappel. */
+    private var rappel: Any? = null
 
     private val suivi = object : Runnable {
         override fun run() {
             val cpm = MG4Hardware.carPropertyManager()
+            if (!abonne && cpm != null) abonner(cpm)
             val debut = derniers.isEmpty()
-            val changements = mutableListOf<String>()
-            SIGNAUX.forEach { s ->
-                val v = lire(cpm, s.id, AREA_GLOBAL)
-                val avant = derniers.put(s.id, v)
-                if (avant != null && avant != v) changements += "${s.nom} : $avant → $v"
-            }
-            when {
-                debut -> evenement("début READY : " +
-                    SIGNAUX.joinToString(" · ") { "${it.nom}=${derniers[it.id]}" } +
-                    " · zone 0 : " + SIGNAUX.joinToString(" · ") { "${it.nom}=${lire(cpm, it.id, 0)}" })
-                changements.isNotEmpty() -> evenement(changements.joinToString(" · "))
+            SIGNAUX.forEach { s -> noter(s, lire(cpm, s.id), "lu", silencieux = debut) }
+            if (debut) evenement("début READY : " + SIGNAUX.joinToString(" · ") { "${it.nom}=${derniers[it.id]}" })
+            // Un signal tu depuis assez longtemps : sa dernière valeur, pour ne pas la perdre.
+            val maintenant = SystemClock.elapsedRealtime()
+            tus.keys.toList().forEach { id ->
+                if (maintenant - (dernierNote[id] ?: 0L) >= PAUSE_MS) {
+                    val n = tus.remove(id) ?: return@forEach
+                    dernierNote[id] = maintenant
+                    evenement("${parId[id]?.nom} : maintenant ${derniers[id]} (+$n changement(s) tu(s))")
+                }
             }
             handler.postDelayed(this, SUIVI, SUIVI_MS)
         }
@@ -83,36 +123,95 @@ object AccProbe {
 
     private val readyListener = ReadyWatcher.Listener { ready, _ ->
         handler.removeCallbacksAndMessages(SUIVI)
-        if (!ready) return@Listener
         handler.post {
-            derniers.clear()
-            debutReadyMs = SystemClock.elapsedRealtime()
+            enReady = ready
+            if (ready) {
+                derniers.clear()
+                dernierNote.clear()
+                tus.clear()
+                debutReadyMs = SystemClock.elapsedRealtime()
+            }
         }
-        handler.postDelayed(suivi, SUIVI, SUIVI_MS)
+        if (ready) handler.postDelayed(suivi, SUIVI, SUIVI_MS)
     }
 
     fun start() {
         ReadyWatcher.add(readyListener)
     }
 
-    /** Une ligne datée : heure, temps depuis le READY (horloge fiable même mal réglée), vitesse, régénération. */
+    /** Fil de la sonde. [silencieux] : première lecture, notée dans la ligne « début READY ». */
+    private fun noter(s: Signal, valeur: String, source: String, silencieux: Boolean = false) {
+        val avant = derniers.put(s.id, valeur)
+        if (silencieux || !enReady || avant == null || avant == valeur) return
+        if (s.mesure && (avant == "0") == (valeur == "0")) return
+        val maintenant = SystemClock.elapsedRealtime()
+        if (maintenant - (dernierNote[s.id] ?: 0L) < PAUSE_MS) {
+            tus[s.id] = (tus[s.id] ?: 0) + 1
+            return
+        }
+        dernierNote[s.id] = maintenant
+        val n = tus.remove(s.id)
+        evenement("${s.nom} : $avant → $valeur [$source]" + (n?.let { " (+$it changement(s) tu(s) avant)" } ?: ""))
+    }
+
+    /**
+     * Un rappel par signal, au changement (cadence 0). Un signal absent de ce firmware est refusé :
+     * la liste des refus est notée une fois.
+     */
+    private fun abonner(cpm: Any) {
+        abonne = true
+        val methode = cpm.javaClass.methods.firstOrNull { it.name == "registerCallback" && it.parameterCount == 3 }
+        val type = methode?.parameterTypes?.get(0)
+        if (methode == null || type == null || !type.isInterface) {
+            AppLogger.w(TAG, "abonnement impossible : pas de registerCallback à 3 paramètres")
+            return
+        }
+        val proxy = java.lang.reflect.Proxy.newProxyInstance(type.classLoader, arrayOf(type)) { soi, m, args ->
+            when (m.name) {
+                "onChangeEvent" -> {
+                    val v = args?.getOrNull(0)
+                    runCatching {
+                        val id = v!!.javaClass.getMethod("getPropertyId").invoke(v) as Int
+                        val valeur = v.javaClass.getMethod("getValue").invoke(v)?.toString() ?: "null"
+                        parId[id]?.let { s -> handler.post { noter(s, valeur, "évt") } }
+                    }
+                    null
+                }
+                // Le gestionnaire range ses rappels dans des ensembles : ces trois-là doivent répondre.
+                "hashCode" -> System.identityHashCode(soi)
+                "equals" -> soi === args?.getOrNull(0)
+                "toString" -> "AccProbe"
+                else -> null
+            }
+        }
+        rappel = proxy
+        val refuses = mutableListOf<String>()
+        SIGNAUX.forEach { s ->
+            runCatching { methode.invoke(cpm, proxy, s.id, 0f) as? Boolean }
+                .onSuccess { if (it == false) refuses += s.nom }
+                .onFailure { refuses += s.nom }
+        }
+        AppLogger.i(TAG, "abonné à ${SIGNAUX.size - refuses.size}/${SIGNAUX.size} signaux" +
+            if (refuses.isEmpty()) "" else " — refusés : ${refuses.joinToString()}")
+    }
+
+    /** Une ligne datée : heure, temps depuis le READY (horloge fiable même mal réglée), vitesse. */
     @Synchronized
     private fun evenement(texte: String) {
         val heure = SimpleDateFormat("HH:mm:ss.SSS", Locale.US).format(Date())
         val depuis = String.format(Locale.US, "+%.1f s", (SystemClock.elapsedRealtime() - debutReadyMs) / 1000f)
         val vitesse = MG4Hardware.getVehicleSpeedKmh()?.let { String.format(Locale.US, "%.0f km/h", it) } ?: "vitesse ?"
-        val regen = runCatching { MG4Hardware.getRegenLevel()?.label }.getOrNull() ?: "?"
-        val ligne = "$heure ($depuis) $texte | $vitesse · régén. $regen"
+        val ligne = "$heure ($depuis) $texte | $vitesse"
         AppLogger.i(TAG, ligne)
         evenements.addLast("  $ligne")
         while (evenements.size > MAX_EVENEMENTS) evenements.removeFirst()
     }
 
-    private fun lire(cpm: Any?, id: Int, area: Int): String {
+    private fun lire(cpm: Any?, id: Int): String {
         cpm ?: return "cpm absent"
         return try {
             cpm.javaClass.getMethod("getIntProperty", Int::class.java, Int::class.java)
-                .invoke(cpm, id, area)?.toString() ?: "null"
+                .invoke(cpm, id, AREA_GLOBAL)?.toString() ?: "null"
         } catch (e: Exception) {
             // Signal absent de ce firmware, ou zone refusée : le nom de l'exception suffit.
             (e.cause ?: e).javaClass.simpleName

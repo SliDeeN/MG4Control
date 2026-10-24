@@ -182,6 +182,10 @@ internal object ClusterModuleOverlay {
         val app = context.applicationContext
         appContext = app
         main.post {
+            // Changement de profil (2026-10-24) : quel profil le combiné suit, et ce qu'il en lit.
+            if (origine.startsWith("profil ")) AppLogger.i(TAG, "$origine : profil suivi " +
+                "${com.mg4.control.util.ClusterProfiles.shownProfileId(app)} → module " +
+                if (ClusterModuleSettings.isEnabled(app)) "activé" else "coupé")
             // Hors des firmwares pris en charge, rien — même si le réglage a été activé pendant les
             // essais sur A9 : sans ça, une fenêtre invisible resterait posée sur l'écran du combiné.
             // Module désactivé : posé quand même le temps d'une pré-climatisation.

@@ -109,7 +109,12 @@ object FloatingButtonsOverlay {
         app = context.applicationContext
         main.post {
             val ctx = app ?: return@post
-            if (aPoser(ctx) != bulles.values.map { it.bouton }) reconstruire()
+            val nouvelles = aPoser(ctx)
+            val change = nouvelles != bulles.values.map { it.bouton }
+            AppLogger.i(TAG, "profil appliqué : bulles du profil ${com.mg4.control.util.FloatingProfiles.target(ctx)?.name}" +
+                (com.mg4.control.util.FloatingProfiles.editingId?.let { " (page des boutons ouverte sur $it)" } ?: "") +
+                " → ${nouvelles.size} bulle(s), ${if (change) "reposées" else "inchangées"}")
+            if (change) reconstruire()
         }
     }
 
