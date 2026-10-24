@@ -24,6 +24,7 @@ import com.mg4.control.profile.ProfileManager
 import com.mg4.control.service.FloatingButtonsOverlay
 import com.mg4.control.service.ProjectionHvacZone
 import com.mg4.control.shortcut.ShortcutAction
+import com.mg4.control.util.CustomShortcutSettings
 import com.mg4.control.util.FloatingButtonSettings
 import com.mg4.control.util.FloatingProfiles
 
@@ -131,7 +132,11 @@ class FloatingButtonsPage {
     /** Le nom de chaque raccourci, dans la langue de l'appli : le service ne connaît pas les libellés. */
     private fun relibeller(ctx: Context) {
         val listeLue = FloatingButtonSettings.buttons(ctx)
-        val relibelles = listeLue.map { b -> libelle(b.action)?.let { b.copy(actionLabel = it) } ?: b }
+        // Un raccourci perso garde son nom à lui (renommé depuis : le nouveau).
+        val relibelles = listeLue.map { b ->
+            val nom = if (b.action == ShortcutAction.CUSTOM.name) CustomShortcutSettings.get(ctx, b.customId)?.name else libelle(b.action)
+            nom?.let { b.copy(actionLabel = it) } ?: b
+        }
         if (relibelles != listeLue) {
             FloatingButtonSettings.save(ctx, relibelles)
             FloatingButtonsOverlay.refresh(ctx)
@@ -237,9 +242,9 @@ class FloatingButtonsPage {
             Toast.makeText(ctx, R.string.floating_full, Toast.LENGTH_SHORT).show()
             return
         }
-        choisirAction(null) { action, nom ->
+        choisirAction(null) { action, nom, perso ->
             val b = FloatingButtonSettings.add(ctx, action.name) ?: return@choisirAction
-            FloatingButtonSettings.update(ctx, b.copy(actionLabel = nom))
+            FloatingButtonSettings.update(ctx, b.copy(actionLabel = nom, customId = perso))
             choisi = b.id
             FloatingButtonsOverlay.refresh(ctx)
             peindreListe()
@@ -247,14 +252,22 @@ class FloatingButtonsPage {
         }
     }
 
-    private fun choisirAction(actuelle: String?, surChoix: (ShortcutAction, String) -> Unit) {
+    /**
+     * Le raccourci d'une bulle. Raccourci perso (issue #172) : on choisit ensuite lequel — ou on le
+     * crée — et son nom devient celui de la bulle ([surChoix] reçoit son identifiant).
+     */
+    private fun choisirAction(actuelle: String?, dejaPerso: String? = null, surChoix: (ShortcutAction, String, String?) -> Unit) {
         val ctx = fragment?.context ?: return
         AppDialog.choisir(ctx, ctx.getString(R.string.floating_choose_action),
             actions.map { AppDialog.Choix(it.first) },
             annuler = ctx.getString(android.R.string.cancel),
             choisi = actions.indexOfFirst { it.second.name == actuelle }) { rang ->
             val (nom, action) = actions[rang]
-            surChoix(action, nom)
+            if (action == ShortcutAction.CUSTOM) {
+                CustomShortcutDialog.choisir(ctx, dejaPerso) { c -> surChoix(action, c.name, c.id) }
+            } else {
+                surChoix(action, nom, null)
+            }
         }
     }
 
@@ -328,7 +341,9 @@ class FloatingButtonsPage {
         }
         racine.findViewById<View>(R.id.btn_floating_action).setOnClickListener {
             val b = bouton(choisi) ?: return@setOnClickListener
-            choisirAction(b.action) { action, nom -> modifier(b.copy(action = action.name, actionLabel = nom)) }
+            choisirAction(b.action, b.customId) { action, nom, perso ->
+                modifier(b.copy(action = action.name, actionLabel = nom, customId = perso))
+            }
         }
         // Emplacement (2026-10-24) : dans la barre du haut, la place se choisit à la pose — la
         // première libre — puis au glissé ; de retour sur l'écran, la place d'origine de son rang.

@@ -21,6 +21,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
+import com.mg4.control.util.CustomShortcutSettings
 import com.mg4.control.accessibility.AdvancedShortcuts
 import com.mg4.control.accessibility.KeyCaptureService
 import com.mg4.control.debug.AppLogger
@@ -62,6 +63,8 @@ class ShortcutsFragment : Fragment() {
 
     /** Page « Boutons flottants » (2026-10-23). */
     private val floatingPage = FloatingButtonsPage()
+    /** Raccourcis perso (issue #172) : leur page, dans le rail. */
+    private val customPage = CustomShortcutsPage()
 
     /** Clés identifiant chaque ligne slot × type de pression. */
     private val slotPressList = listOf(
@@ -220,6 +223,8 @@ class ShortcutsFragment : Fragment() {
             if (allgoPresent()) add(ActionItem(getString(R.string.shortcuts_action_projection), ShortcutAction.PROJECTION))
             add(ActionItem(getString(R.string.shortcuts_action_open_app),       ShortcutAction.OPEN_APP))
             add(ActionItem(getString(R.string.shortcuts_action_open_custom_app),ShortcutAction.OPEN_CUSTOM_APP))
+            // Raccourci perso (issue #172) : appli, fonction d'une autre appli, diffusion, lien, webhook.
+            add(ActionItem(getString(R.string.shortcuts_action_custom),         ShortcutAction.CUSTOM))
             if (MG4Hardware.hasVehiclePowerOff()) {
                 add(ActionItem(getString(R.string.shortcuts_action_vehicle_power_off), ShortcutAction.VEHICLE_POWER_OFF))
             }
@@ -247,6 +252,8 @@ class ShortcutsFragment : Fragment() {
         floatingPage.bind(this, view, baseActionItems
             .filter { it.action !in setOf(ShortcutAction.NONE, ShortcutAction.APPLY_PROFILE, ShortcutAction.OPEN_CUSTOM_APP) }
             .map { it.label to it.action })
+        // Raccourcis perso : un changement repeint les emplacements qui en lancent un.
+        customPage.bind(this, view) { majLibellesPerso() }
         restoreState()
 
         // En dernier : le rail décide quelles pages existent, il lui faut l'état final.
@@ -525,6 +532,7 @@ class ShortcutsFragment : Fragment() {
                 when (action) {
                     ShortcutAction.OPEN_CUSTOM_APP -> choisirAppAvancee(slot, enregistrer)
                     ShortcutAction.APPLY_PROFILE   -> choisirProfilAvance(slot, enregistrer)
+                    ShortcutAction.CUSTOM          -> choisirPersoAvance(slot, enregistrer)
                     else -> enregistrer()
                 }
             }
@@ -669,6 +677,9 @@ class ShortcutsFragment : Fragment() {
             ShortcutAction.APPLY_PROFILE ->
                 prefs.getString("shortcut_${slot}_profile_id", null)
                     ?.let { id -> ProfileManager(requireContext()).getById(id)?.name } ?: generique
+            ShortcutAction.CUSTOM ->
+                CustomShortcutSettings.get(requireContext(), prefs.getString("shortcut_${slot}_custom_id", null))
+                    ?.name ?: generique
             else -> generique
         }
     }
@@ -790,6 +801,7 @@ class ShortcutsFragment : Fragment() {
             when (action) {
                 ShortcutAction.OPEN_CUSTOM_APP -> choisirAppAvancee(slot, enregistrer)
                 ShortcutAction.APPLY_PROFILE   -> choisirProfilAvance(slot, enregistrer)
+                ShortcutAction.CUSTOM          -> choisirPersoAvance(slot, enregistrer)
                 else -> enregistrer()
             }
         }
@@ -1145,6 +1157,7 @@ class ShortcutsFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_sources)  to view.findViewById<ViewGroup>(R.id.page_sc_sources),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_preclim)  to view.findViewById<ViewGroup>(R.id.page_sc_preclim),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_list)     to view.findViewById<ViewGroup>(R.id.page_sc_list),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_custom)   to view.findViewById<ViewGroup>(R.id.page_sc_custom),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_floating) to view.findViewById<ViewGroup>(R.id.page_sc_floating)
         )
         val pageCycle   = tabs[4].second
@@ -1223,6 +1236,7 @@ class ShortcutsFragment : Fragment() {
                 // Idem pour le cycle de profils, qui relit en plus la liste des profils.
                 if (page === pageProfils) rechargerCycleProfils?.invoke()
                 if (page === pageSources) rechargerCycleSources?.invoke()
+                if (page.id == R.id.page_sc_custom) customPage.peindre()
                 scroll?.scrollTo(0, 0)
                 apply()
             }
@@ -1269,6 +1283,7 @@ class ShortcutsFragment : Fragment() {
                             when (action) {
                                 ShortcutAction.OPEN_CUSTOM_APP -> showAppPickerDialog(slotKey)
                                 ShortcutAction.APPLY_PROFILE   -> showProfilePickerDialog(slotKey)
+                                ShortcutAction.CUSTOM          -> showCustomPickerDialog(slotKey)
                                 else -> {}
                             }
                         }
@@ -1306,9 +1321,65 @@ class ShortcutsFragment : Fragment() {
             when (item.action) {
                 ShortcutAction.OPEN_CUSTOM_APP -> customAppLabel
                 ShortcutAction.APPLY_PROFILE   -> profileLabel
+                ShortcutAction.CUSTOM          -> libellePerso(slotKey)
                 else                           -> item.label
             }
         }.toMutableList()
+    }
+
+    // ── Raccourcis perso (issue #172) ────────────────────────────────────────
+
+    /** « Perso : Dashcam : enregistrer », ou le nom générique s'il n'y en a pas (ou plus). */
+    private fun libellePerso(slotKey: String): String =
+        CustomShortcutSettings.get(requireContext(), prefs.getString("shortcut_${slotKey}_custom_id", null))
+            ?.let { getString(R.string.shortcuts_custom_prefix) + " " + it.name }
+            ?: getString(R.string.shortcuts_action_custom)
+
+    /**
+     * Choisir le raccourci perso d'un emplacement du volant — « Créer… » au bout de la liste l'ouvre
+     * et l'attribue aussitôt. Rien de choisi alors que rien ne l'était : retour à « aucune action ».
+     */
+    private fun showCustomPickerDialog(slotKey: String) {
+        val cle = "shortcut_${slotKey}_custom_id"
+        CustomShortcutDialog.choisir(requireContext(), prefs.getString(cle, null),
+            onAnnule = {
+                if (CustomShortcutSettings.get(requireContext(), prefs.getString(cle, null)) == null) {
+                    spinnerViews[slotKey]?.let { spinner ->
+                        spinner.setSelection(0)
+                        saveInt("shortcut_$slotKey", ShortcutAction.NONE.id)
+                    }
+                }
+            },
+        ) { c ->
+            prefs.edit().putString(cle, c.id).apply()
+            majLibellePerso(slotKey)
+            customPage.peindre()
+        }
+    }
+
+    private fun choisirPersoAvance(slot: String, apres: () -> Unit) {
+        val cle = "shortcut_${slot}_custom_id"
+        CustomShortcutDialog.choisir(requireContext(), prefs.getString(cle, null)) { c ->
+            prefs.edit().putString(cle, c.id).apply()
+            customPage.peindre()
+            apres()
+        }
+    }
+
+    /** Le libellé « Perso : … » d'un emplacement, dans sa liste. */
+    private fun majLibellePerso(slotKey: String) {
+        val labels  = spinnerLabelLists[slotKey] ?: return
+        val adapter = spinnerAdapters[slotKey]   ?: return
+        val idx = baseActionItems.indexOfFirst { it.action == ShortcutAction.CUSTOM }
+        if (idx < 0) return
+        labels[idx] = libellePerso(slotKey)
+        adapter.notifyDataSetChanged()
+    }
+
+    /** Un raccourci perso créé, renommé ou supprimé : tous les emplacements, et la liste avancée. */
+    private fun majLibellesPerso() {
+        spinnerLabelLists.keys.forEach { majLibellePerso(it) }
+        rootView?.let { refreshAdvancedList(it) }
     }
 
     /** Retourne le label de l'application (packageName) ou null si introuvable. */

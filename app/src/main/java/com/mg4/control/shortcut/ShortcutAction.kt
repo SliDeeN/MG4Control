@@ -88,7 +88,13 @@ enum class ShortcutAction(val id: Int) {
     // Android Auto / CarPlay (2026-10-23) : ouvre la projection du téléphone en session (AllGo le
     // dit), sinon un message ; projection déjà à l'écran : retour à l'écran d'avant. Voir
     // ProjectionShortcut. N'écrit rien dans la voiture.
-    PROJECTION(47);
+    PROJECTION(47),
+
+    // Raccourci perso (issue #172, 2026-10-25) : ce que l'utilisateur a défini dans la page
+    // « Raccourcis perso » — une appli, la fonction d'une autre appli, une diffusion, un lien ou un
+    // webhook. L'emplacement ne garde que l'identifiant du raccourci perso (shortcut_<slot>_custom_id,
+    // ou FloatingButton.customId) ; voir CustomShortcutRunner.
+    CUSTOM(48);
 
     companion object {
         /**

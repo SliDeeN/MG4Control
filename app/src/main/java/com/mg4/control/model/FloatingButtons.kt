@@ -40,6 +40,8 @@ data class FloatingButton(
     val topBar: Boolean? = null,
     /** Texte en gras (2026-10-24, sa demande) ; `null` = normal. */
     val bold: Boolean? = null,
+    /** Raccourci perso lancé ([action] = CUSTOM, issue #172) ; son nom sert de [actionLabel]. */
+    val customId: String? = null,
 )
 
 object FloatingButtons {

@@ -218,6 +218,22 @@
                 app:strokeColor="@color/dash_border"
                 app:cornerRadius="8dp" />
 
+            <!-- Raccourcis perso (issue #172, 2026-10-25) : destination permanente, juste avant les
+                 boutons flottants qui s'en servent. -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_sc_sub_custom"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/shortcuts_cat_custom"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                android:textAllCaps="true"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
             <!-- Boutons flottants (2026-10-23) : destination permanente, tout en bas du rail. -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_sc_sub_floating"
@@ -1468,6 +1484,84 @@
                             android:paddingStart="14dp"
                             android:paddingEnd="14dp"
                             android:paddingTop="14dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- ══════════ Raccourcis perso (issue #172, 2026-10-25) ══════════
+                     Les actions définies par l'utilisateur, à mettre sur un bouton du volant, un
+                     raccourci avancé ou un bouton flottant. Rempli par CustomShortcutsPage. -->
+                <LinearLayout
+                    android:id="@+id/page_sc_custom"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_card_rounded"
+                        android:layout_marginEnd="5dp"
+                        android:paddingBottom="14dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/shortcuts_cat_custom"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.10"
+                            android:textAllCaps="true"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="8dp" />
+
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/dash_border" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/custom_page_desc"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="14sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp" />
+
+                        <LinearLayout
+                            android:id="@+id/custom_list"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="6dp" />
+
+                        <TextView
+                            android:id="@+id/custom_empty"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/custom_page_empty"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="14sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_custom_add"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:layout_marginStart="14dp"
+                            android:layout_marginEnd="14dp"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/custom_add"
+                            android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
 
                     </LinearLayout>
 

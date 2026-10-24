@@ -33,6 +33,11 @@
          à l'uid système. -->
     <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW"
         tools:ignore="ProtectedPermissions" />
+    <!-- Raccourcis perso (issue #172, 2026-10-25) : lister et lancer les raccourcis que les applis
+         publient pour les launchers (LauncherApps.getShortcuts / startShortcut). signature, accordée
+         à l'appli signée avec la clé de la plateforme. -->
+    <uses-permission android:name="android.permission.ACCESS_SHORTCUTS"
+        tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.STATUS_BAR_SERVICE"
         tools:ignore="ProtectedPermissions" />
     <!-- Vehicle control permissions (Android Automotive / SAIC) -->

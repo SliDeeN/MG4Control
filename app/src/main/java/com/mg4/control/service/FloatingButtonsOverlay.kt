@@ -529,6 +529,7 @@ object FloatingButtonsOverlay {
             action = MG4ControlService.ACTION_ADV_SHORTCUT
             putExtra(MG4ControlService.EXTRA_ADV_ACTION, b.action)
             putExtra(MG4ControlService.EXTRA_ADV_SLOT, "floating:${b.id}")
+            b.customId?.let { putExtra(MG4ControlService.EXTRA_ADV_CUSTOM, it) }
         }
         runCatching { ctx.startForegroundService(i) }
             .onFailure { AppLogger.w(TAG, "relais impossible : ${it.message}") }

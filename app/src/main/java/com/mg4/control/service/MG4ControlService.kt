@@ -113,6 +113,8 @@ class MG4ControlService : Service() {
         const val ACTION_ADV_SHORTCUT = "com.mg4.control.internal.ADV_SHORTCUT"
         const val EXTRA_ADV_ACTION    = "adv_action"
         const val EXTRA_ADV_SLOT      = "adv_slot"
+        /** Raccourci perso d'un bouton flottant (issue #172) ; les emplacements le gardent en préférence. */
+        const val EXTRA_ADV_CUSTOM    = "adv_custom"
 
         /**
          * [T-902] Permission exigée de l'ÉMETTEUR du broadcast hardkey. Déclarée en
@@ -429,7 +431,7 @@ class MG4ControlService : Service() {
             return true
         }
         AppLogger.i(TAG, "raccourci avancé → ${sc.name}")
-        executeToggle(sc, intent.getStringExtra(EXTRA_ADV_SLOT).orEmpty())
+        executeToggle(sc, intent.getStringExtra(EXTRA_ADV_SLOT).orEmpty(), intent.getStringExtra(EXTRA_ADV_CUSTOM))
         return true
     }
 
@@ -1054,8 +1056,17 @@ class MG4ControlService : Service() {
         }
     }
 
-    private fun executeToggle(action: ShortcutAction, pressKey: String = "") {
+    private fun executeToggle(action: ShortcutAction, pressKey: String = "", customId: String? = null) {
         val prefs = getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
+
+        // CUSTOM (issue #172) : le raccourci perso de l'emplacement — donné par le bouton flottant,
+        // sinon gardé sous la clé de l'emplacement, comme l'appli de OPEN_CUSTOM_APP.
+        if (action == ShortcutAction.CUSTOM) {
+            val id = customId ?: prefs.getString("shortcut_${pressKey}_custom_id", null)
+            AppLogger.i(TAG, "SHORTCUT CUSTOM — raccourci perso ${id ?: "non choisi"} (emplacement $pressKey)")
+            CustomShortcutRunner.run(this@MG4ControlService, id)
+            return
+        }
 
         // PROFILE_PICKER : overlay flottant au-dessus du launcher — un second appui le referme
         // (issue #137), comme le pop-up HVAC.
