@@ -3869,12 +3869,6 @@ object MG4Hardware {
             sb.appendLine(it)
             sb.appendLine()
         }
-        // Sonde ACC / TJA / ICA (issue #133) : derniers changements pendant READY.
-        AccProbe.reports.forEach {
-            sb.appendLine(it)
-            sb.appendLine()
-        }
-
         if (gen == FirmwareInfo.Gen.SWI132) {
 
             // ── Binder IVehicleSettingService ─────────────────────────────

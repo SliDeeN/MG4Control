@@ -214,10 +214,7 @@ class MG4ControlService : Service() {
         // vérification — activer l'option suffit, sans redémarrer le service.
         com.mg4.control.automation.BatteryAutomation.start(applicationContext)
         // Sonde lumière/position (étude luminosité auto) : lecture seule, un relevé à chaque READY.
-        com.mg4.control.hardware.LightProbe.start(applicationContext)
-        // Sonde ACC / TJA / ICA (issue #133) : lecture seule, journal des changements pendant READY.
-        com.mg4.control.hardware.AccProbe.start()
-        // Luminosité automatique au démarrage : relit son interrupteur à chaque READY.
+        com.mg4.control.hardware.LightProbe.start(applicationContext)        // Luminosité automatique au démarrage : relit son interrupteur à chaque READY.
         com.mg4.control.automation.AutoBrightness.start(applicationContext)
         // Coupure auto du chauffage de la batterie : relit son interrupteur à chaque passage.
         com.mg4.control.automation.BatteryHeatingAutomation.start(applicationContext)
