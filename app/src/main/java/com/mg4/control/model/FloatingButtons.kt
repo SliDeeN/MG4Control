@@ -38,6 +38,8 @@ data class FloatingButton(
      * sert plus. `null` = bouton sur l'écran (Gson : un bouton d'avant la fonction n'en a pas).
      */
     val topBar: Boolean? = null,
+    /** Texte en gras (2026-10-24, sa demande) ; `null` = normal. */
+    val bold: Boolean? = null,
 )
 
 object FloatingButtons {
@@ -45,7 +47,8 @@ object FloatingButtons {
     const val MAX = 6
     const val SIZE_DEFAULT = 50
     const val TEXT_MIN = 10
-    const val TEXT_MAX = 30
+    /** 40 depuis le 2026-10-24 (30 avant) : texte plus grand demandé après essai. */
+    const val TEXT_MAX = 40
     const val TEXT_DEFAULT = 16
     /** Assez pour « Clim : A/C (ON/OFF) » (19), sur deux lignes au plus. */
     const val TITLE_MAX = 24
@@ -74,8 +77,11 @@ object FloatingButtons {
 
     // ── Barre du haut (2026-10-24) ───────────────────────────────────────────
 
-    /** Texte au plus, dans la barre : la bulle n'y a que la hauteur de la barre (36 dp sur SWI133). */
-    const val TOP_TEXT_MAX = 14
+    /**
+     * Texte au plus, dans la barre : la bulle n'y a que la hauteur de la barre (36 dp sur SWI133,
+     * moins les marges), soit une ligne de 22 sp. 14 au premier essai : trop petit (2026-10-24).
+     */
+    const val TOP_TEXT_MAX = 22
     /**
      * Largeur gardée libre au centre de la barre : la languette de la clim — la même que la zone
      * clim pendant Android Auto / CarPlay, pour qu'ils ne se gênent jamais.

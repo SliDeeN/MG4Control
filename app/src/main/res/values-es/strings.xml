@@ -922,13 +922,14 @@
     <string name="floating_field_location">Ubicación</string>
     <string name="floating_loc_screen">En la pantalla</string>
     <string name="floating_loc_bar">Barra superior</string>
-    <string name="floating_size_bar">Ajustada a la altura de la barra superior (texto de 14 sp como máximo)</string>
+    <string name="floating_size_bar">Ajustada a la altura de la barra superior</string>
     <string name="floating_field_size">Tamaño de la burbuja</string>
     <string name="floating_size_small">Pequeño</string>
     <string name="floating_size_medium">Mediano</string>
     <string name="floating_size_large">Grande</string>
     <string name="floating_size_value">%1$d %%</string>
     <string name="floating_field_text">Tamaño del texto</string>
+    <string name="floating_field_bold">Texto en negrita</string>
     <string name="floating_text_value">%1$d sp</string>
     <string name="floating_close">Cerrar</string>
     <string name="floating_options">Opciones</string>

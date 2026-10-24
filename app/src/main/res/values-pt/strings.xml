@@ -922,13 +922,14 @@
     <string name="floating_field_location">Localização</string>
     <string name="floating_loc_screen">No ecrã</string>
     <string name="floating_loc_bar">Barra superior</string>
-    <string name="floating_size_bar">Ajustada à altura da barra superior (texto de 14 sp no máximo)</string>
+    <string name="floating_size_bar">Ajustada à altura da barra superior</string>
     <string name="floating_field_size">Tamanho da bolha</string>
     <string name="floating_size_small">Pequeno</string>
     <string name="floating_size_medium">Médio</string>
     <string name="floating_size_large">Grande</string>
     <string name="floating_size_value">%1$d %%</string>
     <string name="floating_field_text">Tamanho do texto</string>
+    <string name="floating_field_bold">Texto a negrito</string>
     <string name="floating_text_value">%1$d sp</string>
     <string name="floating_close">Fechar</string>
     <string name="floating_options">Opções</string>

@@ -84,10 +84,10 @@ class FloatingButtonsTest {
         assertEquals(920f, FloatingButtons.placeInTopBar(990f, 80f, barre, pleine, 6f), 0.01f)
     }
 
-    @Test fun `barre du haut - texte limité à 14 sp`() {
-        val b = FloatingButton(id = "a", action = "HVAC_POPUP", textSp = 20)
-        assertEquals(20, FloatingButtons.textFor(b))
-        assertEquals(14, FloatingButtons.textFor(b.copy(topBar = true)))
+    @Test fun `barre du haut - texte limité à 22 sp`() {
+        val b = FloatingButton(id = "a", action = "HVAC_POPUP", textSp = 30)
+        assertEquals(30, FloatingButtons.textFor(b))
+        assertEquals(22, FloatingButtons.textFor(b.copy(topBar = true)))
         assertEquals(false, FloatingButtons.inTopBar(b))
     }
 }

@@ -939,13 +939,14 @@
     <string name="floating_field_location">Emplacement</string>
     <string name="floating_loc_screen">Sur l’écran</string>
     <string name="floating_loc_bar">Barre du haut</string>
-    <string name="floating_size_bar">Réglée sur la hauteur de la barre du haut (texte 14 sp au plus)</string>
+    <string name="floating_size_bar">Réglée sur la hauteur de la barre du haut</string>
     <string name="floating_field_size">Taille de la bulle</string>
     <string name="floating_size_small">Petit</string>
     <string name="floating_size_medium">Moyen</string>
     <string name="floating_size_large">Grand</string>
     <string name="floating_size_value">%1$d %%</string>
     <string name="floating_field_text">Taille du texte</string>
+    <string name="floating_field_bold">Texte en gras</string>
     <string name="floating_text_value">%1$d sp</string>
     <string name="floating_close">Fermer</string>
     <string name="floating_options">Options</string>

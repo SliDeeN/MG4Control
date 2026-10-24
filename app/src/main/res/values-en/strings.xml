@@ -922,13 +922,14 @@
     <string name="floating_field_location">Location</string>
     <string name="floating_loc_screen">On screen</string>
     <string name="floating_loc_bar">Top bar</string>
-    <string name="floating_size_bar">Matches the height of the top bar (text 14 sp at most)</string>
+    <string name="floating_size_bar">Matches the height of the top bar</string>
     <string name="floating_field_size">Bubble size</string>
     <string name="floating_size_small">Small</string>
     <string name="floating_size_medium">Medium</string>
     <string name="floating_size_large">Large</string>
     <string name="floating_size_value">%1$d %%</string>
     <string name="floating_field_text">Text size</string>
+    <string name="floating_field_bold">Bold text</string>
     <string name="floating_text_value">%1$d sp</string>
     <string name="floating_close">Close</string>
     <string name="floating_options">Options</string>

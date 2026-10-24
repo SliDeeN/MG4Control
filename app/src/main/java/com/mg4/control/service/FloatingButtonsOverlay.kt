@@ -55,6 +55,14 @@ import kotlin.math.roundToInt
  * droite seulement, jamais sur la languette de la clim ni sur un voisin
  * ([FloatingButtons.placeInTopBar]). Le type d'une fenêtre ne change pas une fois posée : c'est le
  * réglage du bouton qui le décide, à la pose. Les deux types refusés : posé juste sous la barre.
+ *
+ * Repère (corrigé le 2026-10-24 après essai) : la languette grise est centrée sur l'écran RÉEL,
+ * rail compris, alors que la fenêtre d'une bulle commence après le rail quand il est affiché (au
+ * bord quand il est caché, en Android Auto / CarPlay). Centrer sur la fenêtre décalait la zone
+ * interdite vers la droite sur le launcher, vers la gauche en projection, et la bulle bougeait d'un
+ * mode à l'autre. Tout se compte donc en px de l'écran réel ; l'origine de la fenêtre
+ * ([Bulle.decalage]) est mesurée sur la vue posée, et relue toutes les [RECALAGE_MS] pour recaler
+ * la bulle quand le rail apparaît ou disparaît.
  */
 object FloatingButtonsOverlay {
 
@@ -100,6 +108,19 @@ object FloatingButtonsOverlay {
         /** Fin de l'affichage d'une valeur en cours, ou `null`. */
         var eclair: Runnable? = null
         var enDeplacement = false
+        /** Barre du haut : bord gauche de la fenêtre sur l'écran réel (le rail, quand il est affiché). */
+        var decalage = 0
+    }
+
+    /** Relecture de l'origine des fenêtres de la barre du haut (rail affiché ou caché). */
+    private const val RECALAGE_MS = 500L
+    private val recalage = object : Runnable {
+        override fun run() {
+            val enHaut = bulles.values.filter { dansLaBarre(it) }
+            if (enHaut.isEmpty()) return
+            enHaut.forEach { recaler(it) }
+            main.postDelayed(this, RECALAGE_MS)
+        }
     }
 
     /** Au démarrage du service et à chaque changement de réglage. */
@@ -142,6 +163,7 @@ object FloatingButtonsOverlay {
         val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         fenetres = wm
         boutons.forEach { poser(ctx, wm, it) }
+        if (bulles.values.any { dansLaBarre(it) }) main.postDelayed(recalage, RECALAGE_MS)
         val surveiller = FloatingButtonSettings.hideInReverse(ctx)
         if (!surveiller) marcheArriere = false
         appliquerVisibilite()
@@ -243,6 +265,7 @@ object FloatingButtonsOverlay {
         bulles.values.forEach { b -> b.eclair?.let(main::removeCallbacks) }
         bulles.values.forEach { b -> runCatching { wm?.removeViewImmediate(b.vue) } }
         bulles.clear()
+        main.removeCallbacks(recalage)
     }
 
     /** Taille de l'écran disponible pour les fenêtres (sans la barre d'état ni le rail). */
@@ -252,21 +275,52 @@ object FloatingButtonsOverlay {
     /** Types essayés pour un bouton de la barre du haut, dans l'ordre (voir l'en-tête). */
     private val TYPES_BARRE = intArrayOf(2017, 2010)
 
+    /** Taille réelle de l'écran, rail compris : le repère des boutons de la barre du haut. */
+    @Suppress("DEPRECATION")
+    private fun ecranReel(wm: WindowManager): Point = Point().also { wm.defaultDisplay.getRealSize(it) }
+
     /**
-     * Ce qu'un bouton de la barre du haut ne doit pas recouvrir, en px : la languette de la clim et
-     * les autres boutons de la barre déjà posés, [sauf] lui-même.
+     * Ce qu'un bouton de la barre du haut ne doit pas recouvrir, en px de l'écran réel : la languette
+     * de la clim (au centre de l'écran réel), le début de la barre que sa fenêtre n'atteint pas (le
+     * rail affiché, [decalage]) et les autres boutons de la barre, [sauf] lui-même.
      */
-    private fun bloquesHaut(ctx: Context, barW: Int, sauf: String?): List<ClosedFloatingPointRange<Float>> {
+    private fun bloquesHaut(ctx: Context, largeurEcran: Int, decalage: Int, sauf: String?): List<ClosedFloatingPointRange<Float>> {
         val d = ctx.resources.displayMetrics.density
-        return listOf(FloatingButtons.topBarHvac(barW.toFloat(), FloatingButtons.TOP_HVAC_DP * d)) +
-            bulles.values.filter { it.bouton.id != sauf && FloatingButtons.inTopBar(it.bouton) && it.params.type != WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY }
-                .map { it.params.x.toFloat()..(it.params.x + it.vue.measuredWidth).toFloat() }
+        val liste = mutableListOf(FloatingButtons.topBarHvac(largeurEcran.toFloat(), FloatingButtons.TOP_HVAC_DP * d))
+        if (decalage > 0) liste += -1f..decalage.toFloat()
+        bulles.values.filter { it.bouton.id != sauf && dansLaBarre(it) }
+            .mapTo(liste) { (it.params.x + it.decalage).toFloat()..(it.params.x + it.decalage + it.vue.measuredWidth).toFloat() }
+        return liste
     }
 
-    /** Bord gauche d'un bouton de la barre de [largeur] px voulu en [voulu] px. */
-    private fun placeHaut(ctx: Context, voulu: Float, largeur: Int, barW: Int, sauf: String?): Int =
-        FloatingButtons.placeInTopBar(voulu, largeur.toFloat(), barW.toFloat(), bloquesHaut(ctx, barW, sauf),
-            FloatingButtons.TOP_GAP_DP * ctx.resources.displayMetrics.density).roundToInt()
+    /**
+     * Position de fenêtre (`params.x`) d'un bouton de la barre de [largeur] px, voulu au bord gauche
+     * [voulu] (px de l'écran réel), dans une fenêtre qui commence à [decalage].
+     */
+    private fun placeHaut(ctx: Context, voulu: Float, largeur: Int, largeurEcran: Int, decalage: Int, sauf: String?): Int =
+        (FloatingButtons.placeInTopBar(voulu, largeur.toFloat(), largeurEcran.toFloat(),
+            bloquesHaut(ctx, largeurEcran, decalage, sauf),
+            FloatingButtons.TOP_GAP_DP * ctx.resources.displayMetrics.density) - decalage).roundToInt()
+
+    /**
+     * Mesure où la fenêtre d'un bouton de la barre commence vraiment ; si le rail est apparu ou a
+     * disparu depuis, le bouton est remis à sa place sur l'écran réel. Rien pendant un appui.
+     */
+    private fun recaler(bulle: Bulle) {
+        val wm = fenetres ?: return
+        val ctx = app ?: return
+        if (!bulle.vue.isAttachedToWindow || bulle.enDeplacement || bulle.vue.scaleX != 1f) return
+        val loc = IntArray(2).also { bulle.vue.getLocationOnScreen(it) }
+        val decalage = loc[0] - bulle.params.x
+        if (decalage == bulle.decalage) return
+        bulle.decalage = decalage
+        val largeurEcran = ecranReel(wm).x
+        val voulu = bulle.bouton.x * largeurEcran - bulle.vue.width / 2f
+        bulle.params.x = placeHaut(ctx, voulu, bulle.vue.width, largeurEcran, decalage, bulle.bouton.id)
+        runCatching { wm.updateViewLayout(bulle.vue, bulle.params) }
+        AppLogger.i(TAG, "« ${bulle.vue.text} » recalé dans la barre : fenêtre à $decalage px du bord de l'écran " +
+            "(rail ${if (decalage > 0) "affiché" else "caché"})")
+    }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun poser(ctx: Context, wm: WindowManager, b: FloatingButton) {
@@ -274,7 +328,7 @@ object FloatingButtonsOverlay {
         peindre(vue, b, FloatingButtons.title(b, b.actionLabel), deplacement = false)
         vue.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         val taille = ecran(wm)
-        if (FloatingButtons.inTopBar(b) && poserEnHaut(ctx, wm, b, vue, taille.x)) return
+        if (FloatingButtons.inTopBar(b) && poserEnHaut(ctx, wm, b, vue)) return
         val (x, y) = FloatingButtons.topLeft(b.x, b.y, vue.measuredWidth, vue.measuredHeight, taille.x, taille.y)
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -303,13 +357,16 @@ object FloatingButtonsOverlay {
      * la première place libre ([FloatingButtons.TOP_AUTO]), alors enregistrée. `false` si les deux
      * types de fenêtre sont refusés : l'appelant le pose comme les autres, juste sous la barre.
      */
-    private fun poserEnHaut(ctx: Context, wm: WindowManager, b: FloatingButton, vue: TextView, barW: Int): Boolean {
+    private fun poserEnHaut(ctx: Context, wm: WindowManager, b: FloatingButton, vue: TextView): Boolean {
         val d = ctx.resources.displayMetrics.density
         val barre = ProjectionHvacZone.barreSysteme(ctx)
         val largeur = vue.measuredWidth
+        val largeurEcran = ecranReel(wm).x
+        // Origine de la fenêtre supposée : après le rail (launcher). Mesurée une fois posée ([recaler]).
+        val decalage = (largeurEcran - ecran(wm).x).coerceAtLeast(0)
         val auto = b.x < 0f
-        val voulu = if (auto) 0f else b.x * barW - largeur / 2f
-        val x = placeHaut(ctx, voulu, largeur, barW, b.id)
+        val voulu = if (auto) 0f else b.x * largeurEcran - largeur / 2f
+        val x = placeHaut(ctx, voulu, largeur, largeurEcran, decalage, b.id)
         val y = ((barre - vue.measuredHeight) / 2).coerceAtLeast(0)
         for (type in TYPES_BARRE) {
             val params = WindowManager.LayoutParams(
@@ -324,17 +381,19 @@ object FloatingButtonsOverlay {
                 this.y = y
                 title = "MG4Control bouton flottant (barre du haut)"
             }
-            val bulle = Bulle(vue, params, b)
+            val bulle = Bulle(vue, params, b).also { it.decalage = decalage }
             vue.setOnTouchListener(toucher(ctx, bulle))
             val ok = runCatching { wm.addView(vue, params) }
                 .onFailure { AppLogger.w(TAG, "« ${vue.text} » refusé dans la barre en type $type : ${it.javaClass.simpleName} ${it.message}") }
                 .isSuccess
             if (!ok) continue
             bulles[b.id] = bulle
-            if (auto || x != voulu.roundToInt()) {
-                bulle.bouton = b.copy(x = ((x + largeur / 2f) / barW.coerceAtLeast(1)).coerceIn(0f, 1f))
+            if (auto || x + decalage != voulu.roundToInt()) {
+                bulle.bouton = b.copy(x = ((x + decalage + largeur / 2f) / largeurEcran.coerceAtLeast(1)).coerceIn(0f, 1f))
                 FloatingButtonSettings.update(ctx, bulle.bouton)
             }
+            // L'origine supposée vérifiée sur la vue posée.
+            vue.post { recaler(bulle) }
             AppLogger.i(TAG, "« ${vue.text} » posé dans la barre du haut (type $type, x=$x px, barre ${barre} px, ${(barre / d).roundToInt()} dp)")
             return true
         }
@@ -380,7 +439,8 @@ object FloatingButtonsOverlay {
                         val taille = ecran(wm)
                         if (dansLaBarre(bulle)) {
                             // De gauche à droite seulement, en sautant la languette et les voisins.
-                            bulle.params.x = placeHaut(ctx, fenetreX + dx, bulle.vue.width, taille.x, bulle.bouton.id)
+                            bulle.params.x = placeHaut(ctx, fenetreX + bulle.decalage + dx, bulle.vue.width,
+                                ecranReel(wm).x, bulle.decalage, bulle.bouton.id)
                         } else {
                             bulle.params.x = (fenetreX + dx).roundToInt().coerceIn(0, (taille.x - bulle.vue.width).coerceAtLeast(0))
                             bulle.params.y = (fenetreY + dy).roundToInt().coerceIn(0, (taille.y - bulle.vue.height).coerceAtLeast(0))
@@ -433,8 +493,10 @@ object FloatingButtonsOverlay {
     private fun halo(ctx: Context, bulle: Bulle) {
         val wm = fenetres ?: return
         if (dansLaBarre(bulle)) {
-            // Même couche et même repère que la bulle : l'écran entier, barre comprise.
-            val e = ecran(wm).apply { y += ProjectionHvacZone.barreSysteme(ctx) }
+            // Même couche et même repère que la bulle : sa fenêtre, de la fin du rail au bord droit,
+            // barre comprise.
+            val reel = ecranReel(wm)
+            val e = Point(reel.x - bulle.decalage, reel.y)
             FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, e, BORDURE,
                 type = bulle.params.type, pleinEcran = true)
         } else {
@@ -450,8 +512,11 @@ object FloatingButtonsOverlay {
         val wm = fenetres ?: return
         val taille = ecran(wm)
         val (cx, cy) = FloatingButtons.centre(bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, taille.x, taille.y)
-        // Dans la barre, seule la place de gauche à droite compte.
-        bulle.bouton = if (dansLaBarre(bulle)) bulle.bouton.copy(x = cx) else bulle.bouton.copy(x = cx, y = cy)
+        // Dans la barre, seule la place de gauche à droite compte, sur l'écran réel.
+        bulle.bouton = if (dansLaBarre(bulle)) {
+            val largeurEcran = ecranReel(wm).x.coerceAtLeast(1)
+            bulle.bouton.copy(x = ((bulle.params.x + bulle.decalage + bulle.vue.width / 2f) / largeurEcran).coerceIn(0f, 1f))
+        } else bulle.bouton.copy(x = cx, y = cy)
         FloatingButtonSettings.update(ctx, bulle.bouton)
         AppLogger.i(TAG, "« ${bulle.vue.text} » déplacé en (${"%.2f".format(java.util.Locale.US, cx)}, " +
             "${"%.2f".format(java.util.Locale.US, cy)})")
@@ -483,6 +548,7 @@ object FloatingButtonsOverlay {
         else (FloatingButtons.heightDp(b.size) * densite).roundToInt()
         vue.text = titre
         vue.setTextSize(TypedValue.COMPLEX_UNIT_SP, FloatingButtons.textFor(b).toFloat())
+        vue.setTypeface(null, if (b.bold == true) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
         vue.gravity = Gravity.CENTER
         vue.maxLines = if (enHaut) 1 else 2
         vue.ellipsize = TextUtils.TruncateAt.END

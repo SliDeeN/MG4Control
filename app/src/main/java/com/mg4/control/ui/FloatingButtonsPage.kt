@@ -364,6 +364,11 @@ class FloatingButtonsPage {
                 bouton(choisi)?.let { modifier(it.copy(textSp = FloatingButtons.textFor(it.copy(textSp = valeur.toInt())))) }
             }
         }
+        // Texte en gras (2026-10-24) : l'interrupteur est remis à l'état du bouton par le code.
+        racine.findViewById<Switch>(R.id.switch_floating_bold).setOnCheckedChangeListener { _, on ->
+            if (majTitre) return@setOnCheckedChangeListener
+            bouton(choisi)?.let { modifier(it.copy(bold = if (on) true else null), repeindreChamps = false) }
+        }
         racine.findViewById<View>(R.id.btn_floating_close).setOnClickListener {
             fermerEdition()
             peindreListe()
@@ -403,6 +408,7 @@ class FloatingButtonsPage {
         if (repeindreChamps) {
             majTitre = true
             racine.findViewById<EditText>(R.id.edit_floating_title).setText(FloatingButtons.title(b, nom))
+            racine.findViewById<Switch>(R.id.switch_floating_bold).isChecked = b.bold == true
             majTitre = false
             racine.findViewById<Slider>(R.id.slider_floating_size).value = b.size.toFloat()
             // Dans la barre, 14 sp au plus : la valeur d'abord ramenée sous la nouvelle borne, sinon

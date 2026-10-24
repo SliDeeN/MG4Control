@@ -922,13 +922,14 @@
     <string name="floating_field_location">Position</string>
     <string name="floating_loc_screen">Auf dem Bildschirm</string>
     <string name="floating_loc_bar">Obere Leiste</string>
-    <string name="floating_size_bar">An die Höhe der oberen Leiste angepasst (Text höchstens 14 sp)</string>
+    <string name="floating_size_bar">An die Höhe der oberen Leiste angepasst</string>
     <string name="floating_field_size">Blasengröße</string>
     <string name="floating_size_small">Klein</string>
     <string name="floating_size_medium">Mittel</string>
     <string name="floating_size_large">Groß</string>
     <string name="floating_size_value">%1$d %%</string>
     <string name="floating_field_text">Textgröße</string>
+    <string name="floating_field_bold">Fetter Text</string>
     <string name="floating_text_value">%1$d sp</string>
     <string name="floating_close">Schließen</string>
     <string name="floating_options">Optionen</string>
