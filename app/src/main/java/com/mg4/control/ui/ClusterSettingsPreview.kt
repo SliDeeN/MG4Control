@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.TextView
 import com.mg4.control.hardware.VehicleDistanceUnit
+import com.mg4.control.model.ClusterConfig
 import com.mg4.control.model.ClusterGauge
 import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ClusterTab
@@ -16,6 +17,7 @@ import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.ui.widget.ClusterGaugeView
 import com.mg4.control.util.ClusterModuleSettings
+import com.mg4.control.util.ClusterProfiles
 import com.mg4.control.util.LocaleHelper
 import java.util.Locale
 import kotlin.math.sin
@@ -28,6 +30,9 @@ import kotlin.math.sin
  *
  * Rien n'est lu sur la voiture : ni appel binder sur le fil principal, ni valeur réelle mêlée au
  * trajet simulé. Seul le profil actif est lu, pour la pastille.
+ *
+ * Depuis le 2026-10-24, les réglages sont ceux d'un profil ([reglages]) : la carte y met ceux du
+ * premier profil sélectionné, et son nom dans la pastille ([profilMontre]).
  */
 class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: TextView) {
 
@@ -37,6 +42,12 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
     }
     private val handler = Handler(Looper.getMainLooper())
     private var actif = false
+
+    /** Réglages montrés : ceux du premier profil sélectionné dans la carte. */
+    var reglages: ClusterConfig = ClusterProfiles.effective(ctx)
+
+    /** Profil nommé dans la pastille ; `null` = le profil en cours. */
+    var profilMontre: DrivingProfile? = null
 
     /** Onglet du combiné montré dans l'aperçu. */
     var onglet: ClusterTab = ClusterTab.NAVIGATION
@@ -79,7 +90,7 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
             dernierMs = maintenant
             avancer(dt)
             montrer(dt)
-            handler.postDelayed(this, ClusterModuleSettings.refreshMs(ctx).toLong())
+            handler.postDelayed(this, ClusterModuleSettings.refreshMs(reglages).toLong())
         }
     }
 
@@ -91,7 +102,7 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
         kmh += ((vitesse - kmh) * (dt * 2).coerceAtMost(1.0)).toFloat()
         val bruit = if (kotlin.math.abs(kwCible) > 5f) 4f else 0.5f
         val kw = kwCible + ((Math.random() * 2 - 1) * bruit).toFloat()
-        val style = ClusterModuleSettings.style(ctx)
+        val style = ClusterModuleSettings.style(reglages)
         kwLisse = if (style == ClusterGaugeStyle.DISCREET) ClusterGauge.smoothTime(kwLisse, kw, dtMs)
             else ClusterGauge.smooth(kwLisse, kw)
         if (kmh >= ClusterGauge.STOP_KMH && kw > 0f) {
@@ -101,7 +112,7 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
     }
 
     private fun montrer(dtMs: Long) {
-        val module = ClusterModuleSettings.moduleFor(ctx, onglet)
+        val module = ClusterModuleSettings.moduleFor(reglages, onglet)
         if (module == null) {
             vue.visibility = View.INVISIBLE
             vide.visibility = View.VISIBLE
@@ -109,22 +120,22 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
         }
         vue.visibility = View.VISIBLE
         vide.visibility = View.GONE
-        val p = profil
-        val unite = ClusterModuleSettings.consumptionUnit(ctx)
+        val p = profilMontre ?: profil
+        val unite = ClusterModuleSettings.consumptionUnit(reglages)
         vue.montrer(ClusterGaugeView.Contenu(
             module = module,
             kw = kwLisse,
             kmh = kmh,
             // Le mode de la voiture n'est pas lu ici : Normal, comme sur la maquette.
-            pastille = ClusterGauge.pill(ClusterModuleSettings.pill(ctx), DriveMode.NORMAL, p?.name,
+            pastille = ClusterGauge.pill(ClusterModuleSettings.pill(reglages), DriveMode.NORMAL, p?.name,
                 p?.takeIf { it.appliesDrive }?.driveMode, Locale.forLanguageTag(LocaleHelper.getLanguage(ctx))),
             moyenneWhKm = moyenne,
             recupWh = recupWh,
             unite = unite,
-            uniteMoyenne = ClusterModuleSettings.averageUnit(ctx),
-            distance = ClusterModuleSettings.distanceUnit(ctx, VehicleDistanceUnit.connue()),
-            style = ClusterModuleSettings.style(ctx),
-        ), if (dtMs == 0L) 0L else ClusterModuleSettings.animationMs(ctx).toLong())
+            uniteMoyenne = ClusterModuleSettings.averageUnit(reglages),
+            distance = ClusterModuleSettings.distanceUnit(reglages, VehicleDistanceUnit.connue()),
+            style = ClusterModuleSettings.style(reglages),
+        ), if (dtMs == 0L) 0L else ClusterModuleSettings.animationMs(reglages).toLong())
     }
 
     private companion object {

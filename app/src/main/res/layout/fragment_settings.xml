@@ -805,6 +805,80 @@
                     android:orientation="vertical"
                     android:padding="12dp">
 
+                    <!-- Écran conducteur par profil (2026-10-24) : les réglages de la carte sont ceux
+                         des profils sélectionnés ici, un ou plusieurs (jusqu'à dix, en rangées de cinq
+                         posées par le code). Caché sans aucun profil : la carte règle alors les
+                         réglages communs. -->
+                    <LinearLayout
+                        android:id="@+id/row_cluster_profiles"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginBottom="12dp"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_cluster_profiles_title"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp" />
+
+                            <TextView
+                                android:id="@+id/tv_cluster_profiles_info"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="12dp"
+                                android:textColor="@color/dash_text_lo"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/btn_cluster_profiles_all"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:minHeight="52dp"
+                                android:gravity="center"
+                                android:paddingHorizontal="12dp"
+                                android:background="?attr/selectableItemBackground"
+                                android:text="@string/settings_cluster_profiles_all"
+                                android:textColor="@color/dash_accent"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/btn_cluster_profiles_current"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:minHeight="52dp"
+                                android:gravity="center"
+                                android:paddingHorizontal="12dp"
+                                android:background="?attr/selectableItemBackground"
+                                android:text="@string/settings_cluster_profiles_current_only"
+                                android:textColor="@color/dash_accent"
+                                android:textSize="13sp" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/grid_cluster_profiles"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginTop="12dp"
+                            android:background="@color/dash_border" />
+
+                    </LinearLayout>
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -837,6 +911,17 @@
                         android:text="@string/settings_cluster_module_desc"
                         android:textColor="@color/dash_text_lo"
                         android:textSize="13sp" />
+
+                    <!-- Profils sélectionnés dont le module n'est pas dans le même état. -->
+                    <TextView
+                        android:id="@+id/tv_cluster_module_mixed"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/settings_cluster_mixed"
+                        android:textColor="@color/dash_warn"
+                        android:textSize="13sp"
+                        android:visibility="gone" />
 
                     <!-- Refonte A (2026-10-17) : à gauche l'aperçu du combiné, animé sur un trajet
                          simulé et fidèle aux réglages ; à droite les réglages groupés (Modules,
@@ -969,6 +1054,7 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_nav"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_nav"
@@ -1041,6 +1127,7 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_media"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_media"
@@ -1133,6 +1220,7 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_style"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_style"
@@ -1189,6 +1277,7 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_pill"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_pill"
@@ -1283,6 +1372,7 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_distance"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_distance"
@@ -1356,6 +1446,7 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_gauge"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_gauge"
@@ -1412,6 +1503,7 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_average"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_average"

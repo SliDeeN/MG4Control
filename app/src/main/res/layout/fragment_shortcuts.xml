@@ -1508,6 +1508,58 @@
 
                         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/dash_border" />
 
+                        <!-- Boutons flottants par profil (2026-10-24, proposition B) : un profil à la fois ;
+                             tant que la page est ouverte, l'écran montre ses bulles pour les placer.
+                             Caché sans aucun profil : la page règle alors les bulles communes. -->
+                        <LinearLayout
+                            android:id="@+id/row_floating_profiles"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp"
+                            android:visibility="gone">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_profiles_title"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="12dp"
+                                    android:text="@string/floating_profiles_info"
+                                    android:textColor="@color/dash_text_lo"
+                                    android:textSize="13sp" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/grid_floating_profiles"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:orientation="vertical" />
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginTop="12dp"
+                                android:background="@color/dash_border" />
+
+                        </LinearLayout>
+
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1555,15 +1607,98 @@
                             android:paddingEnd="14dp"
                             android:paddingTop="10dp" />
 
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_floating_add"
+                        <LinearLayout
                             android:layout_width="match_parent"
-                            android:layout_height="52dp"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
                             android:layout_marginStart="14dp"
                             android:layout_marginEnd="14dp"
-                            android:layout_marginTop="10dp"
-                            android:text="@string/floating_add"
-                            android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+                            android:layout_marginTop="10dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_floating_add"
+                                android:layout_width="0dp"
+                                android:layout_height="52dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="8dp"
+                                android:text="@string/floating_add"
+                                android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                            <!-- Copie vers d'autres profils : affichée dès qu'il y en a au moins deux. -->
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_floating_copy"
+                                android:layout_width="0dp"
+                                android:layout_height="52dp"
+                                android:layout_weight="1"
+                                android:text="@string/floating_copy"
+                                android:visibility="gone"
+                                android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                        <!-- Les bulles du profil réglé remplacent celles des profils choisis ici. -->
+                        <LinearLayout
+                            android:id="@+id/floating_copy_panel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
+                            android:layout_marginEnd="14dp"
+                            android:layout_marginTop="12dp"
+                            android:orientation="vertical"
+                            android:background="@drawable/bg_sound_slot"
+                            android:padding="12dp"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:id="@+id/tv_floating_copy_info"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/text_primary"
+                                android:textSize="15sp" />
+
+                            <LinearLayout
+                                android:id="@+id/grid_floating_copy"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:orientation="vertical" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_copy_go"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="52dp"
+                                    android:paddingHorizontal="20dp"
+                                    android:text="@string/floating_copy_go"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_copy_cancel"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="52dp"
+                                    android:layout_marginStart="8dp"
+                                    android:paddingHorizontal="20dp"
+                                    android:text="@android:string/cancel"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="12dp"
+                                    android:text="@string/floating_copy_note"
+                                    android:textColor="@color/dash_text_lo"
+                                    android:textSize="13sp" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
 
                         <!-- Édition de la bulle choisie : titre, raccourci, tailles. Pas d'aperçu
                              (retiré le 2026-10-24, sa demande) : la vraie bulle suit à l'écran. -->

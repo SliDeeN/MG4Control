@@ -101,11 +101,26 @@ object FloatingButtonsOverlay {
         main.post { reconstruire() }
     }
 
+    /**
+     * Un profil vient d'être appliqué (2026-10-24) : ses bulles remplacent celles à l'écran — sans
+     * rien reposer si ce sont les mêmes, pour qu'elles ne clignotent pas à chaque passage en READY.
+     */
+    fun suivreProfil(context: Context) {
+        app = context.applicationContext
+        main.post {
+            val ctx = app ?: return@post
+            if (aPoser(ctx) != bulles.values.map { it.bouton }) reconstruire()
+        }
+    }
+
+    /** Bulles à poser : celles du profil à l'écran, si elles sont affichées (et hors Mode Garage). */
+    private fun aPoser(ctx: Context): List<FloatingButton> =
+        if (FloatingButtonSettings.isEnabled(ctx) && !GarageMode.isOn(ctx)) FloatingButtonSettings.buttons(ctx) else emptyList()
+
     private fun reconstruire() {
         val ctx = app ?: return
         retirerTout()
-        val boutons = if (FloatingButtonSettings.isEnabled(ctx) && !GarageMode.isOn(ctx))
-            FloatingButtonSettings.buttons(ctx) else emptyList()
+        val boutons = aPoser(ctx)
         if (boutons.isEmpty()) {
             rapportTour = 0
             etatTour = 0

@@ -1,5 +1,6 @@
 package com.mg4.control.ui
 
+import android.content.Context
 import android.content.res.ColorStateList
 import android.text.Editable
 import android.text.TextWatcher
@@ -14,12 +15,17 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.R
+import com.mg4.control.model.ClusterConfigs
+import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.FloatingButton
 import com.mg4.control.model.FloatingButtons
+import com.mg4.control.profile.ActiveProfile
+import com.mg4.control.profile.ProfileManager
 import com.mg4.control.service.FloatingButtonsOverlay
 import com.mg4.control.service.ProjectionHvacZone
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.FloatingButtonSettings
+import com.mg4.control.util.FloatingProfiles
 
 /**
  * Page « Boutons flottants » de l'onglet Raccourcis (2026-10-23, maquette v2) : la liste, l'ajout
@@ -28,6 +34,11 @@ import com.mg4.control.util.FloatingButtonSettings
  * et du texte — et les options. Chaque changement est enregistré ; les bulles à l'écran suivent
  * après un court délai, pour ne pas les reposer à chaque lettre tapée. Pas d'aperçu dans
  * l'édition (retiré le 2026-10-24) : la vraie bulle, à l'écran, en tient lieu.
+ *
+ * Par profil depuis le 2026-10-24 (proposition B) : « Boutons de : » choisit le profil réglé, un
+ * à la fois — à l'ouverture, celui que suit l'écran conducteur. Tant que la page est à l'écran
+ * ([surPageVisible]), les bulles montrées sont les siennes, pour les placer ; « Copier ces boutons
+ * vers… » les donne à d'autres profils, dont les bulles sont remplacées.
  */
 class FloatingButtonsPage {
 
@@ -37,6 +48,19 @@ class FloatingButtonsPage {
     private var choisi: String? = null
     private var majTitre = false
 
+    /** Profil dont la page règle les bulles ; `null` sans aucun profil (bulles communes). */
+    private var profilRegle: String? = null
+    /** Page à l'écran : les bulles montrées sont alors celles de [profilRegle]. */
+    private var visible = false
+    /** L'interrupteur est remis à l'état du profil par le code : ce n'est pas un choix. */
+    private var majInterrupteur = false
+    private var profils: List<DrivingProfile> = emptyList()
+    /** Profil que suit l'écran conducteur : sa puce dit « en cours ». */
+    private var enCours: String? = null
+    private var puces: List<Pair<String, MaterialButton>> = emptyList()
+    private var pucesCopie: List<Pair<String, MaterialButton>> = emptyList()
+    private var copieVers: Set<String> = emptySet()
+
     private val rafraichir = Runnable { fragment?.context?.let { FloatingButtonsOverlay.refresh(it) } }
 
     /** [actions] : celles des raccourcis du volant, sans celles qui demandent un réglage à part. */
@@ -45,18 +69,14 @@ class FloatingButtonsPage {
         racine = view
         this.actions = actions
         val ctx = f.requireContext()
-
-        // Le nom de chaque raccourci, dans la langue de l'appli : le service ne connaît pas les libellés.
-        val listeLue = FloatingButtonSettings.buttons(ctx)
-        val relibelles = listeLue.map { b -> libelle(b.action)?.let { b.copy(actionLabel = it) } ?: b }
-        if (relibelles != listeLue) {
-            FloatingButtonSettings.save(ctx, relibelles)
-            FloatingButtonsOverlay.refresh(ctx)
-        }
+        // Page encore cachée : les bulles lues et écrites sont celles du profil à l'écran.
+        profilRegle = FloatingProfiles.target(ctx)?.id
+        relibeller(ctx)
 
         view.findViewById<Switch>(R.id.switch_floating).apply {
             isChecked = FloatingButtonSettings.isEnabled(ctx)
             setOnCheckedChangeListener { _, on ->
+                if (majInterrupteur) return@setOnCheckedChangeListener
                 FloatingButtonSettings.setEnabled(ctx, on)
                 FloatingButtonsOverlay.refresh(ctx)
             }
@@ -82,8 +102,126 @@ class FloatingButtonsPage {
             Toast.makeText(ctx, R.string.floating_reset_done, Toast.LENGTH_SHORT).show()
         }
         view.findViewById<MaterialButton>(R.id.btn_floating_add).setOnClickListener { ajouter() }
+        view.findViewById<MaterialButton>(R.id.btn_floating_copy).setOnClickListener { ouvrirCopie() }
+        view.findViewById<MaterialButton>(R.id.btn_floating_copy_cancel).setOnClickListener { fermerCopie() }
+        view.findViewById<MaterialButton>(R.id.btn_floating_copy_go).setOnClickListener { copier() }
         brancherEdition()
+        construirePuces()
         peindreListe()
+    }
+
+    /**
+     * L'onglet Raccourcis montre ou cache la page. Montrée, les bulles à l'écran deviennent celles
+     * du profil réglé ; cachée, celles du profil en cours reviennent.
+     */
+    fun surPageVisible(v: Boolean) {
+        if (v == visible) return
+        visible = v
+        FloatingProfiles.editingId = if (v) profilRegle else null
+        val ctx = fragment?.context ?: return
+        if (!v) FloatingProfiles.flush(ctx)
+        FloatingButtonsOverlay.suivreProfil(ctx)
+        if (v) {
+            // Un profil a pu changer entre-temps (créé, supprimé, appliqué).
+            construirePuces()
+            peindreProfil(ctx)
+        }
+    }
+
+    /** Le nom de chaque raccourci, dans la langue de l'appli : le service ne connaît pas les libellés. */
+    private fun relibeller(ctx: Context) {
+        val listeLue = FloatingButtonSettings.buttons(ctx)
+        val relibelles = listeLue.map { b -> libelle(b.action)?.let { b.copy(actionLabel = it) } ?: b }
+        if (relibelles != listeLue) {
+            FloatingButtonSettings.save(ctx, relibelles)
+            FloatingButtonsOverlay.refresh(ctx)
+        }
+    }
+
+    // ── Profils ──────────────────────────────────────────────────────────────
+
+    private fun construirePuces() {
+        val ctx = fragment?.context ?: return
+        profils = ProfileManager(ctx).getAll()
+        enCours = ClusterConfigs.shown(profils, ActiveProfile.id(ctx), ProfileManager.defaultIdOf(ctx))?.id
+        if (profils.none { it.id == profilRegle }) {
+            // Profil réglé supprimé depuis : celui que suit l'écran conducteur.
+            profilRegle = enCours
+            if (visible) FloatingProfiles.editingId = profilRegle
+        }
+        racine.findViewById<View>(R.id.row_floating_profiles).visibility = if (profils.isEmpty()) View.GONE else View.VISIBLE
+        racine.findViewById<View>(R.id.btn_floating_copy).visibility = if (profils.size >= 2) View.VISIBLE else View.GONE
+        puces = ProfileChips.construire(racine.findViewById(R.id.grid_floating_profiles), profils,
+            texte = { p -> textePuce(ctx, p, FloatingProfiles.buttonsOf(p).size) }) { id -> choisirProfil(id) }
+        puces.forEach { (id, btn) -> ProfileChips.peindre(btn, id == profilRegle) }
+    }
+
+    /** Le nom, « en cours » pour le profil que suit l'écran conducteur, et le nombre de bulles (2/6). */
+    private fun textePuce(ctx: Context, p: DrivingProfile, nombre: Int): CharSequence = ProfileChips.texte(p.name,
+        listOfNotNull(ctx.getString(R.string.settings_cluster_profile_current).takeIf { p.id == enCours },
+            "$nombre/${FloatingButtons.MAX}").joinToString(" · "))
+
+    private fun choisirProfil(id: String) {
+        val ctx = fragment?.context ?: return
+        if (id == profilRegle) return
+        FloatingProfiles.flush(ctx)
+        profilRegle = id
+        if (visible) FloatingProfiles.editingId = id
+        fermerCopie()
+        fermerEdition()
+        relibeller(ctx)
+        puces.forEach { (pid, btn) -> ProfileChips.peindre(btn, pid == profilRegle) }
+        peindreProfil(ctx)
+        FloatingButtonsOverlay.suivreProfil(ctx)
+    }
+
+    /** L'interrupteur et la liste du profil réglé. */
+    private fun peindreProfil(ctx: Context) {
+        majInterrupteur = true
+        racine.findViewById<Switch>(R.id.switch_floating).isChecked = FloatingButtonSettings.isEnabled(ctx)
+        majInterrupteur = false
+        peindreListe()
+    }
+
+    // ── Copie vers d'autres profils ──────────────────────────────────────────
+
+    private fun ouvrirCopie() {
+        val ctx = fragment?.context ?: return
+        val source = profils.firstOrNull { it.id == profilRegle } ?: return
+        if (FloatingButtonSettings.buttons(ctx).isEmpty()) {
+            Toast.makeText(ctx, R.string.floating_copy_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+        FloatingProfiles.flush(ctx)
+        copieVers = emptySet()
+        racine.findViewById<TextView>(R.id.tv_floating_copy_info).text = ctx.getString(R.string.floating_copy_info, source.name)
+        pucesCopie = ProfileChips.construire(racine.findViewById(R.id.grid_floating_copy), profils.filter { it.id != source.id },
+            texte = { p -> ProfileChips.texte(p.name, null) }) { id ->
+            copieVers = if (id in copieVers) copieVers - id else copieVers + id
+            pucesCopie.forEach { (pid, btn) -> ProfileChips.peindre(btn, pid in copieVers) }
+        }
+        pucesCopie.forEach { (_, btn) -> ProfileChips.peindre(btn, false) }
+        racine.findViewById<View>(R.id.floating_copy_panel).visibility = View.VISIBLE
+    }
+
+    private fun fermerCopie() {
+        copieVers = emptySet()
+        racine.findViewById<View>(R.id.floating_copy_panel).visibility = View.GONE
+    }
+
+    private fun copier() {
+        val ctx = fragment?.context ?: return
+        val source = profilRegle ?: return
+        if (copieVers.isEmpty()) {
+            Toast.makeText(ctx, R.string.floating_copy_choose, Toast.LENGTH_SHORT).show()
+            return
+        }
+        val noms = profils.filter { it.id in copieVers }.joinToString { it.name }
+        FloatingProfiles.copyTo(ctx, source, copieVers)
+        Toast.makeText(ctx, ctx.getString(R.string.floating_copy_done, noms), Toast.LENGTH_SHORT).show()
+        fermerCopie()
+        // Les puces disent combien de bulles a chaque profil.
+        construirePuces()
     }
 
     private fun libelle(action: String): String? = actions.firstOrNull { it.second.name == action }?.first
@@ -126,6 +264,9 @@ class FloatingButtonsPage {
         val f = fragment ?: return
         val ctx = f.requireContext()
         val liste = FloatingButtonSettings.buttons(ctx)
+        profils.firstOrNull { it.id == profilRegle }?.let { p ->
+            puces.firstOrNull { it.first == p.id }?.second?.text = textePuce(ctx, p, liste.size)
+        }
         val boite = racine.findViewById<LinearLayout>(R.id.floating_list)
         boite.removeAllViews()
         racine.findViewById<View>(R.id.floating_empty).visibility = if (liste.isEmpty()) View.VISIBLE else View.GONE

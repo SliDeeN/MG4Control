@@ -282,6 +282,13 @@ class ShortcutsFragment : Fragment() {
         // L utilisateur revient peut-etre des reglages d accessibilite : l etat affiche doit
         // suivre, sinon il resterait sur "inactif" apres avoir active le service.
         advancedRefresh?.invoke()
+        floatingPage.surPageVisible(rootView?.findViewById<View>(R.id.page_sc_floating)?.visibility == View.VISIBLE)
+    }
+
+    override fun onPause() {
+        // Hors de l'écran, les bulles redeviennent celles du profil en cours.
+        floatingPage.surPageVisible(false)
+        super.onPause()
     }
 
     override fun onDestroyView() {
@@ -1198,6 +1205,8 @@ class ShortcutsFragment : Fragment() {
                 btn.setTextColor(if (on) railOn else textOff)
                 btn.strokeColor = ColorStateList.valueOf(if (on) railOn else border)
             }
+            // Page des boutons flottants à l'écran : les bulles montrées sont celles du profil qu'elle règle.
+            floatingPage.surPageVisible(isResumed && tabs.last().second.visibility == View.VISIBLE)
             // Aucune entrée n'est masquée par le CONTEXTE : la liste reste atteignable depuis
             // n'importe quel onglet, et les pages de réglage ne dépendent que de l'attribution
             // de leur fonction. La règle de contexte qui cachait la liste hors de l'onglet

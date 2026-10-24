@@ -64,6 +64,15 @@ object ProfileApplier {
         // raccourcis associés à un profil — voir [ActiveProfile], et surtout la distinction avec
         // [lastManualProfileId] juste en dessous, qui répond à une question différente.
         ActiveProfile.set(MG4Hardware.appContext(), profile.id)
+        // L'écran conducteur suit les réglages du profil (2026-10-24) : posé, retiré ou relu tout
+        // de suite, sans attendre son relevé suivant.
+        // Boutons flottants du profil (2026-10-24), sur tous les firmwares.
+        MG4Hardware.appContext()?.let { com.mg4.control.service.FloatingButtonsOverlay.suivreProfil(it) }
+        // Rien sur les firmwares où le combiné ne montre pas l'écran central (A9).
+        MG4Hardware.appContext()?.takeIf { com.mg4.control.util.ClusterModuleSettings.isSupported() }?.let {
+            com.mg4.control.service.ClusterModuleOverlay.refresh(it, "profil « ${profile.name} »")
+            com.mg4.control.service.ClusterModuleOverlay.relire()
+        }
         // Sons d'automatisation (issue #161) : l'événement « profil appliqué », pour ce profil-ci.
         com.mg4.control.automation.SoundAutomation.profilApplique(profile.id)
 

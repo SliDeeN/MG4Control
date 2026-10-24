@@ -45,5 +45,11 @@ class MG4App : Application() {
         }
 
         AppCompatDelegate.setDefaultNightMode(ThemeHelper.resolveNightMode(this))
+
+        // Écran conducteur par profil (2026-10-24) : une fois, les profils existants reprennent
+        // les réglages communs, avant que le service ou les Réglages ne les lisent.
+        com.mg4.control.util.ClusterProfiles.migrateIfNeeded(this)
+        // Même chose pour les boutons flottants : chaque profil reprend les bulles communes.
+        com.mg4.control.util.FloatingProfiles.migrateIfNeeded(this)
     }
 }

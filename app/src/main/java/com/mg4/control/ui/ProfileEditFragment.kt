@@ -829,7 +829,12 @@ class ProfileEditFragment : Fragment() {
                 driveEnabled     = driveCatSel,
                 safetyEnabled    = safetyCatSel,
                 comfortEnabled   = comfortCatSel,
-                btDeviceMac    = selectedBtMac   // [BT-PROFILES]
+                btDeviceMac    = selectedBtMac,  // [BT-PROFILES]
+                // Écran conducteur et boutons flottants : réglés ailleurs (Réglages › Interface,
+                // Raccourcis), pas ici — gardés tels quels. Nouveau profil : rien, donc module
+                // coupé et aucune bulle.
+                cluster        = existing?.cluster,
+                floating       = existing?.floating
             )
             manager.save(profile)
             if (swDefault.isChecked) manager.setDefault(profile.id)

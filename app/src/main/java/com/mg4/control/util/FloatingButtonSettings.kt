@@ -11,6 +11,11 @@ import java.util.UUID
  * Boutons flottants (2026-10-23) : interrupteur d'affichage (activé, la liste est vide au départ),
  * masquage en marche arrière (activé : la caméra de recul ne doit jamais être cachée) et les
  * boutons eux-mêmes, en JSON.
+ *
+ * Depuis le 2026-10-24, l'interrupteur et les boutons appartiennent à chaque profil
+ * ([FloatingProfiles]) : les fonctions ci-dessous lisent et écrivent ceux du profil dont les bulles
+ * sont à l'écran. Les clés communes ne valent plus que tant qu'il n'existe aucun profil. Le
+ * masquage en marche arrière et la zone clim restent communs.
  */
 object FloatingButtonSettings {
 
@@ -27,8 +32,10 @@ object FloatingButtonSettings {
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    fun isEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_ENABLED, true)
-    fun setEnabled(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_ENABLED, on).apply()
+    fun isEnabled(ctx: Context): Boolean = FloatingProfiles.isEnabled(ctx) ?: legacyEnabled(ctx)
+    fun setEnabled(ctx: Context, on: Boolean) {
+        if (!FloatingProfiles.setEnabled(ctx, on)) prefs(ctx).edit().putBoolean(KEY_ENABLED, on).apply()
+    }
 
     fun hideInReverse(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_HIDE_REVERSE, true)
     fun setHideInReverse(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_HIDE_REVERSE, on).apply()
@@ -36,15 +43,23 @@ object FloatingButtonSettings {
     fun isHvacZoneEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_HVAC_ZONE, true)
     fun setHvacZoneEnabled(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_HVAC_ZONE, on).apply()
 
-    fun buttons(ctx: Context): List<FloatingButton> = try {
+    fun buttons(ctx: Context): List<FloatingButton> = FloatingProfiles.buttons(ctx) ?: legacyButtons(ctx)
+
+    fun save(ctx: Context, list: List<FloatingButton>) {
+        if (!FloatingProfiles.save(ctx, list))
+            prefs(ctx).edit().putString(KEY_BUTTONS, gson.toJson(list.take(FloatingButtons.MAX))).apply()
+    }
+
+    /** L'interrupteur commun d'avant les profils (ou sans aucun profil). */
+    fun legacyEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_ENABLED, true)
+
+    /** Les bulles communes d'avant les profils (ou sans aucun profil). */
+    fun legacyButtons(ctx: Context): List<FloatingButton> = try {
         prefs(ctx).getString(KEY_BUTTONS, null)?.let { gson.fromJson<List<FloatingButton>>(it, type) }
             ?.filterNotNull()?.take(FloatingButtons.MAX) ?: emptyList()
     } catch (_: Exception) {
         emptyList()
     }
-
-    fun save(ctx: Context, list: List<FloatingButton>) =
-        prefs(ctx).edit().putString(KEY_BUTTONS, gson.toJson(list.take(FloatingButtons.MAX))).apply()
 
     /** Nouveau bouton pour [action], posé sous les précédents ; `null` si la liste est pleine. */
     fun add(ctx: Context, action: String): FloatingButton? {

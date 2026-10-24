@@ -130,7 +130,15 @@ data class DrivingProfile(
     // chauffages : un profil enregistré avant la fonction rend `null`, lu « appliquée ».
     val regenEnabled: Boolean? = null,
     // [BT-PROFILES] MAC de l'appareil Bluetooth associé à ce profil (null = aucun)
-    val btDeviceMac: String? = null
+    val btDeviceMac: String? = null,
+    // Écran conducteur de ce profil (2026-10-24), réglé dans Réglages › Interface et non dans
+    // l'éditeur. `null` = jamais réglé : module coupé (voir [ClusterConfigs.of]). Les profils
+    // existants ont reçu les réglages communs d'avant à la mise à jour (ClusterProfiles).
+    val cluster: ClusterConfig? = null,
+    // Boutons flottants de ce profil (2026-10-24), réglés dans Raccourcis › Boutons flottants.
+    // `null` = jamais réglés : aucune bulle (voir [FloatingSets]). Les profils existants ont reçu
+    // les bulles communes d'avant à la mise à jour (FloatingProfiles).
+    val floating: FloatingSet? = null
 ) {
     /** Volant chauffant à appliquer ? (profil d'avant la fonction → oui, comportement inchangé) */
     val appliesSteeringHeat: Boolean get() = steeringHeatEnabled ?: true
