@@ -45,11 +45,17 @@
         android:background="@color/dash_border"
         android:layout_marginTop="10dp" />
 
+    <!-- Le contenu prend toute la hauteur ; « Fermer » flotte en bas à droite, par-dessus (2026-10-25) :
+         sa rangée à part prenait une bande sur toute la largeur et obligeait à faire défiler le rail. -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
     <LinearLayout
         android:id="@+id/shortcuts_content"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:orientation="horizontal">
 
         <!-- Le rail défile : avec toutes les fonctions à réglage attribuées, il a neuf entrées. -->
@@ -218,14 +224,13 @@
                 app:strokeColor="@color/dash_border"
                 app:cornerRadius="8dp" />
 
-            <!-- Raccourcis perso (issue #172, 2026-10-25) : destination permanente, juste avant les
-                 boutons flottants qui s'en servent. -->
+            <!-- Boutons flottants (2026-10-23) : destination permanente, en bas du rail. -->
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_sc_sub_custom"
+                android:id="@+id/btn_sc_sub_floating"
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
                 android:layout_marginBottom="8dp"
-                android:text="@string/shortcuts_cat_custom"
+                android:text="@string/shortcuts_cat_floating"
                 android:textColor="@color/text_secondary"
                 android:textSize="16sp"
                 android:textAllCaps="true"
@@ -234,13 +239,14 @@
                 app:strokeColor="@color/dash_border"
                 app:cornerRadius="8dp" />
 
-            <!-- Boutons flottants (2026-10-23) : destination permanente, tout en bas du rail. -->
+            <!-- Raccourcis perso (issue #172, 2026-10-25) : destination permanente, tout en bas du
+                 rail, après les boutons flottants (sa demande). -->
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_sc_sub_floating"
+                android:id="@+id/btn_sc_sub_custom"
                 android:layout_width="match_parent"
                 android:layout_height="64dp"
                 android:layout_marginBottom="8dp"
-                android:text="@string/shortcuts_cat_floating"
+                android:text="@string/shortcuts_cat_custom"
                 android:textColor="@color/text_secondary"
                 android:textSize="16sp"
                 android:textAllCaps="true"
@@ -258,11 +264,14 @@
             android:layout_height="match_parent"
             android:background="@color/dash_border" />
 
+        <!-- Marge du bas : le bas d'une page défile au-dessus du bouton « Fermer » qui flotte. -->
         <ScrollView
             android:id="@+id/scroll_shortcuts"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:paddingBottom="64dp"
+            android:clipToPadding="false"
             android:overScrollMode="ifContentScrolls">
 
             <LinearLayout
@@ -2218,14 +2227,12 @@
 
     </LinearLayout>
 
-    <!-- Fermer — persistant sur les deux onglets -->
-    <!-- ── Bouton Fermer ─────────────────────────────────────────────── -->
+    <!-- Fermer — persistant sur tous les sous-onglets, par-dessus le contenu en bas à droite -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_shortcuts_close"
         android:layout_width="wrap_content"
         android:layout_height="52dp"
-        android:layout_gravity="end"
-        android:layout_marginTop="8dp"
+        android:layout_gravity="bottom|end"
         android:text="@string/nav_close"
         android:textColor="@color/text_secondary"
         android:textSize="16sp"
@@ -2233,5 +2240,7 @@
         app:strokeWidth="1dp"
         app:strokeColor="@color/dash_border"
         app:cornerRadius="8dp" />
+
+    </FrameLayout>
 
 </LinearLayout>

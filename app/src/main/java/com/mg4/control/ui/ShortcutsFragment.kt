@@ -1157,8 +1157,8 @@ class ShortcutsFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_sources)  to view.findViewById<ViewGroup>(R.id.page_sc_sources),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_preclim)  to view.findViewById<ViewGroup>(R.id.page_sc_preclim),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_list)     to view.findViewById<ViewGroup>(R.id.page_sc_list),
-            view.findViewById<MaterialButton>(R.id.btn_sc_sub_custom)   to view.findViewById<ViewGroup>(R.id.page_sc_custom),
-            view.findViewById<MaterialButton>(R.id.btn_sc_sub_floating) to view.findViewById<ViewGroup>(R.id.page_sc_floating)
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_floating) to view.findViewById<ViewGroup>(R.id.page_sc_floating),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_custom)   to view.findViewById<ViewGroup>(R.id.page_sc_custom)
         )
         val pageCycle   = tabs[4].second
         val pageProfils = tabs[5].second
@@ -1219,7 +1219,7 @@ class ShortcutsFragment : Fragment() {
                 btn.strokeColor = ColorStateList.valueOf(if (on) railOn else border)
             }
             // Page des boutons flottants à l'écran : les bulles montrées sont celles du profil qu'elle règle.
-            floatingPage.surPageVisible(isResumed && tabs.last().second.visibility == View.VISIBLE)
+            floatingPage.surPageVisible(isResumed && tabs.first { it.second.id == R.id.page_sc_floating }.second.visibility == View.VISIBLE)
             // Aucune entrée n'est masquée par le CONTEXTE : la liste reste atteignable depuis
             // n'importe quel onglet, et les pages de réglage ne dépendent que de l'attribution
             // de leur fonction. La règle de contexte qui cachait la liste hors de l'onglet

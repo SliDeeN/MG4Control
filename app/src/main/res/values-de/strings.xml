@@ -55,6 +55,7 @@
     <string name="shortcuts_pick_app_title">App auswählen</string>
     <string name="choice_count_apps">Apps: %1$d</string>
     <string name="choice_count_profiles">Profile: %1$d</string>
+    <string name="choice_count_functions">Funktionen: %1$d</string>
     <string name="shortcuts_open_custom_prefix">Starten</string>
     <string name="shortcuts_warning_title">Lenkrad-Kurzbefehle</string>
     <string name="shortcuts_warning_message">⚠ Wenn der offizielle Launcher einer Taste zugewiesen ist, hat er Vorrang vor MG4Control.\n\nBeispiel: Wenn die 360°-Kamera im Launcher auf einfaches Drücken eingestellt ist, kann MG4Control diese Taste nicht abfangen und die Kamera wird stattdessen aktiviert.\n\nEs wird empfohlen, die Kurzbefehle des offiziellen Launchers zu deaktivieren, um Konflikte zu vermeiden.</string>

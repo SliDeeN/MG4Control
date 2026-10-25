@@ -55,6 +55,7 @@
     <string name="shortcuts_pick_app_title">Choisir une application</string>
     <string name="choice_count_apps">Applications : %1$d</string>
     <string name="choice_count_profiles">Profils : %1$d</string>
+    <string name="choice_count_functions">Fonctions : %1$d</string>
     <string name="shortcuts_open_custom_prefix">Lancer</string>
     <string name="shortcuts_warning_title">Raccourcis au volant</string>
     <string name="shortcuts_warning_message">⚠ Si le launcher officiel est configuré sur un bouton, il sera prioritaire sur MG4Control.\n\nExemple : si la caméra 360° est assignée en appui simple sur le launcher, MG4Control ne pourra pas intercepter ce bouton et la caméra s\'activera à la place.\n\nIl est recommandé de désactiver les raccourcis du launcher officiel pour éviter les conflits.</string>

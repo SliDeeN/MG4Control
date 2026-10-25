@@ -172,8 +172,13 @@ object CustomShortcutRunner {
     )
 
     /** Les fonctions déclarées pour MG4Control d'abord, puis les raccourcis des applis ; triées par appli. */
-    fun fonctions(ctx: Context): List<Offre> =
-        (declarees(ctx) + raccourcisDesApplis(ctx)).sortedWith(compareBy({ it.appLabel.lowercase() }, { it.label.lowercase() }))
+    fun fonctions(ctx: Context): List<Offre> {
+        val declarees = declarees(ctx)
+        val raccourcis = raccourcisDesApplis(ctx)
+        AppLogger.i(TAG, "fonctions trouvées : ${declarees.size} déclarée(s) pour MG4Control, " +
+            "${raccourcis.size} raccourci(s) d'applis (${raccourcis.map { it.appLabel }.distinct().joinToString()})")
+        return (declarees + raccourcis).sortedWith(compareBy({ it.appLabel.lowercase() }, { it.label.lowercase() }))
+    }
 
     /** Convention [CustomShortcuts.DISCOVERY_ACTION] : un récepteur par fonction, son label pour nom. */
     private fun declarees(ctx: Context): List<Offre> = runCatching {

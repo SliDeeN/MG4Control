@@ -171,6 +171,8 @@ object CustomShortcutDialog {
             val texte = ctx.getColor(R.color.dash_accent)
             AppDialog.choisir(ctx,
                 titre = ctx.getString(R.string.custom_pick_function),
+                // Le nombre, comme pour les applis : la grille ne défile qu'au-delà de 12 tuiles.
+                sousTitre = ctx.getString(R.string.choice_count_functions, offres.size),
                 choix = offres.map { o ->
                     AppDialog.Choix("${o.appLabel} · ${o.label}", icone = o.icone,
                         pastille = ctx.getString(if (o.kind == CustomKind.FUNCTION) R.string.custom_tag_declared else R.string.custom_tag_shortcut),

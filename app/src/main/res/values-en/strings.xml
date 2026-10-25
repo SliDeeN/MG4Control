@@ -55,6 +55,7 @@
     <string name="shortcuts_pick_app_title">Choose an app</string>
     <string name="choice_count_apps">Apps: %1$d</string>
     <string name="choice_count_profiles">Profiles: %1$d</string>
+    <string name="choice_count_functions">Functions: %1$d</string>
     <string name="shortcuts_open_custom_prefix">Launch</string>
     <string name="shortcuts_warning_title">Steering wheel shortcuts</string>
     <string name="shortcuts_warning_message">⚠ If the official launcher is configured on a button, it will take priority over MG4Control.\n\nExample: if the 360° camera is assigned to a single press in the launcher, MG4Control will not be able to intercept that button and the camera will activate instead.\n\nIt is recommended to disable the official launcher\'s shortcuts to avoid conflicts.</string>

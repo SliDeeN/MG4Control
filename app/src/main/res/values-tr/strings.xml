@@ -55,6 +55,7 @@
     <string name="shortcuts_pick_app_title">Bir uygulama seçin</string>
     <string name="choice_count_apps">Uygulamalar: %1$d</string>
     <string name="choice_count_profiles">Profiller: %1$d</string>
+    <string name="choice_count_functions">İşlevler: %1$d</string>
     <string name="shortcuts_open_custom_prefix">Başlat</string>
     <string name="shortcuts_warning_title">Direksiyon kısayolları</string>
     <string name="shortcuts_warning_message">⚠ Bir düğmeye resmî başlatıcıdan bir işlev atanmışsa, o işlev MG4Control\'ün önüne geçer.\n\nÖrnek: başlatıcıda tek basışa 360° kamera atanmışsa, MG4Control o düğmeyi yakalayamaz ve onun yerine kamera açılır.\n\nÇakışmaları önlemek için resmî başlatıcının kısayollarını kapatmanız önerilir.</string>
