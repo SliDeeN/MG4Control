@@ -22,7 +22,6 @@ import com.mg4.control.model.FloatingButtons
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.service.FloatingButtonsOverlay
-import com.mg4.control.service.ProjectionHvacZone
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.CustomShortcutSettings
 import com.mg4.control.util.FloatingButtonSettings
@@ -87,14 +86,6 @@ class FloatingButtonsPage {
             setOnCheckedChangeListener { _, on ->
                 FloatingButtonSettings.setHideInReverse(ctx, on)
                 FloatingButtonsOverlay.refresh(ctx)
-            }
-        }
-        // Zone clim pendant la projection : indépendante des bulles, elle a son propre interrupteur.
-        view.findViewById<Switch>(R.id.switch_floating_hvac_zone).apply {
-            isChecked = FloatingButtonSettings.isHvacZoneEnabled(ctx)
-            setOnCheckedChangeListener { _, on ->
-                FloatingButtonSettings.setHvacZoneEnabled(ctx, on)
-                ProjectionHvacZone.refresh(ctx)
             }
         }
         view.findViewById<MaterialButton>(R.id.btn_floating_reset).setOnClickListener {

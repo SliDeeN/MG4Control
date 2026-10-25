@@ -56,6 +56,8 @@ import com.mg4.control.service.OverlayKit
 import com.mg4.control.util.GarageMode
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.FullScreen
+import com.mg4.control.util.FloatingButtonSettings
+import com.mg4.control.service.ProjectionHvacZone
 import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.ChargePopupSettings
 import com.mg4.control.util.ClusterModuleSettings
@@ -272,6 +274,17 @@ class SettingsFragment : Fragment() {
                 FullScreen.setEnabled(requireContext(), checked)
                 FullScreen.apply(requireActivity().window, checked)
                 AppLogger.i("MG4_SETTINGS", "Plein écran ${if (checked) "activé" else "désactivé"}")
+            }
+        }
+
+        // ── Barre clim pendant Android Auto / CarPlay (2026-10-24) : activée par défaut, la zone est
+        // posée ou retirée aussitôt. Ici depuis le 2026-10-25 (avant : page des boutons flottants).
+        view.findViewById<Switch>(R.id.switch_hvac_zone).apply {
+            isChecked = FloatingButtonSettings.isHvacZoneEnabled(requireContext())
+            setOnCheckedChangeListener { _, checked ->
+                FloatingButtonSettings.setHvacZoneEnabled(requireContext(), checked)
+                ProjectionHvacZone.refresh(requireContext())
+                AppLogger.i("MG4_SETTINGS", "Barre clim pendant la projection ${if (checked) "activée" else "désactivée"}")
             }
         }
 

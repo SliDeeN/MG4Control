@@ -616,6 +616,63 @@
 
             </LinearLayout>
 
+            <!-- ── Section BARRE CLIM PENDANT ANDROID AUTO / CARPLAY (2026-10-24) ──
+                 La barre du haut n'ouvre plus la clim pendant la projection ; une zone invisible
+                 par-dessus ouvre notre pop-up HVAC. Activée par défaut. Déplacée ici depuis les
+                 boutons flottants le 2026-10-25 (sa demande) : même réglage enregistré. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card_rounded"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/floating_hvac_zone"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    android:textAllCaps="true"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="7dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/floating_hvac_zone_desc"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="16sp" />
+
+                    <Switch
+                        android:scaleX="1.3"
+                        android:scaleY="1.3"
+                        android:layout_marginHorizontal="8dp"
+                        android:id="@+id/switch_hvac_zone"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
             <!-- ── Section DELAI DE FERMETURE DES POP-UPS ───────────────────── -->
             <LinearLayout
                 android:layout_width="match_parent"
