@@ -142,6 +142,11 @@
     <string name="profile_hvac_unchanged">Inalterado</string>
     <string name="clim_eco">ECO</string>
     <string name="profile_hvac_row_eco">ECO</string>
+    <string name="profile_hvac_row_autovol">Fluxo</string>
+    <string name="clim_section_autovol">Fluxo em AUTO</string>
+    <string name="clim_autovol_low">Baixo</string>
+    <string name="clim_autovol_medium">Médio</string>
+    <string name="clim_autovol_high">Alto</string>
     <string name="profile_hvac_eco_on">Ativado</string>
     <string name="profile_hvac_eco_off">Desativado</string>
     <string name="profile_hvac_temp_value">%1$d °C</string>
@@ -596,6 +601,7 @@
     <string name="shortcuts_action_defrost_front">Desembaciamento dianteiro (ON/OFF)</string>
     <string name="shortcuts_action_defrost_rear">Desembaciamento traseiro (ON/OFF)</string>
     <string name="shortcuts_action_hvac_recirc">Recirculação: ciclo</string>
+    <string name="shortcuts_action_hvac_autovol">Fluxo em AUTO: ciclo</string>
     <string name="shortcuts_action_hvac_popup">Pop-up HVAC</string>
     <string name="hvac_popup_temp_up">Temp. +</string>
     <string name="hvac_popup_temp_down">Temp. −</string>
@@ -604,6 +610,9 @@
     <string name="hvac_popup_compressor">Compressor</string>
     <string name="hvac_popup_heating">Aquecimento</string>
     <string name="hvac_popup_joystick_title">Joystick direito</string>
+    <string name="hvac_popup_joy_choose">Escolher</string>
+    <string name="hvac_popup_joy_cancel">Cancelar</string>
+    <string name="hvac_popup_autovol_unreadable">Fluxo em AUTO indisponível neste carro</string>
     <string name="hvac_popup_joystick_off_title">Joystick inativo</string>
     <string name="hvac_popup_joystick_off_text">Ative a acessibilidade ou use o ecrã</string>
     <string name="shortcuts_action_brightness_up">Brilho +</string>
@@ -954,6 +963,7 @@
     <string name="floating_unknown_action">Atalho indisponível</string>
     <string name="floating_summary">%1$s · %2$s · texto %3$d sp</string>
     <string name="floating_value_fan">Ventilação %1$s</string>
+    <string name="floating_value_autovol">Fluxo %1$s</string>
     <string name="floating_value_volume">Volume %1$d</string>
     <string name="preclim_cfg_hint">Inicia-se com o atalho no volante. O modo, os horários e as definições do clima escolhem-se na sua janela, que abre sempre em «Agora». No fim, o clima volta às definições que tinha antes.</string>
     <string name="preclim_cfg_lock">Trancar as portas após</string>

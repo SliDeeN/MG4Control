@@ -132,6 +132,7 @@ class ProfileEditFragment : Fragment() {
         var hvacFanSel      = data.hvacFan.coerceIn(HVAC_FAN_MIN, HVAC_FAN_MAX)
         var hvacLoopSel     = data.hvacLoopMode
         var hvacEcoSel      = data.hvacEco
+        var hvacAutoVolSel  = data.hvacAutoVolume?.takeIf { MG4Hardware.AutoVolume.isValid(it) }
         var hvacAirSel      = data.hvacAirFlow   // bits AirFlow, null = inchangé
         // Index 0/1/2, ou null quand le profil ne s'est jamais prononcé (créé avant la
         // fonctionnalité). L'éditeur propose alors Normal, mais rien n'est enregistré tant que
@@ -334,6 +335,13 @@ class ProfileEditFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_hvac_eco_off),
             view.findViewById<MaterialButton>(R.id.btn_hvac_eco_none)
         )
+        // Ligne « Débit » (issue #178) : débit en AUTO, Faible / Moyen / Fort / Inchangé.
+        val autoVolBtns = listOf(
+            view.findViewById<MaterialButton>(R.id.btn_hvac_autovol_low),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_autovol_medium),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_autovol_high),
+            view.findViewById<MaterialButton>(R.id.btn_hvac_autovol_none)
+        )
 
         /**
          * Trois grisages en cascade, qui reproduisent des règles du véhicule et non des choix
@@ -341,7 +349,8 @@ class ProfileEditFragment : Fragment() {
          *  • interrupteur sur OFF → le profil ne touche pas à la clim, rien n'est modifiable ;
          *  • clim éteinte → consigne, ventilation et le reste n'ont plus de sens ;
          *  • mode AUTO → la ventilation manuelle est exclue, régler une vitesse ferait sortir
-         *    du mode auto (voir MG4Hardware.applyProfileClimate).
+         *    du mode auto (voir MG4Hardware.applyProfileClimate) ; à l'inverse, le débit en AUTO
+         *    n'a de sens qu'en AUTO.
          */
         fun majHvac() {
             val actif  = hvacEnabledSel
@@ -350,6 +359,7 @@ class ProfileEditFragment : Fragment() {
             setBtnsEnabled(listOf(btnAc, btnAuto) + loopBtns + ecoBtns +
                 airBtns.map { it.first } + btnAirNone, allume)
             listOf(sldTemp, sldFan).forEach { it.isEnabled = allume }
+            setBtnsEnabled(autoVolBtns, allume && hvacAutoSel)
             sldFan.isEnabled = allume && !hvacAutoSel
             sldTemp.alpha = if (allume) 1f else 0.35f
             sldFan.alpha  = if (allume && !hvacAutoSel) 1f else 0.35f
@@ -366,6 +376,12 @@ class ProfileEditFragment : Fragment() {
         bindGroup(listOf<Pair<MaterialButton, Boolean?>>(
             ecoBtns[0] to true, ecoBtns[1] to false, ecoBtns[2] to null
         ), hvacEcoSel) { hvacEcoSel = it }
+        bindGroup(listOf(
+            autoVolBtns[0] to MG4Hardware.AutoVolume.LOW,
+            autoVolBtns[1] to MG4Hardware.AutoVolume.MEDIUM,
+            autoVolBtns[2] to MG4Hardware.AutoVolume.HIGH,
+            autoVolBtns[3] to null
+        ), hvacAutoVolSel) { hvacAutoVolSel = it }
 
         /**
          * Ligne « Air » : « Inchangé » allumé ⇔ aucun bouton coché (null). Hors « Inchangé », le
@@ -825,6 +841,7 @@ class ProfileEditFragment : Fragment() {
                 hvacLoopMode     = hvacLoopSel,
                 hvacAirFlow      = hvacAirSel,
                 hvacEco          = hvacEcoSel,
+                hvacAutoVolume   = hvacAutoVolSel,
                 autoHighBeam     = if (highBeamEnabledSel) highBeamOnSel else null,
                 driveEnabled     = driveCatSel,
                 safetyEnabled    = safetyCatSel,

@@ -80,7 +80,7 @@ class MG4ControlService : Service() {
             ShortcutAction.REGEN_CYCLE, ShortcutAction.SEAT_HEAT_LEFT_CYCLE,
             ShortcutAction.SEAT_HEAT_RIGHT_CYCLE, ShortcutAction.STEERING_HEAT_TOGGLE,
             ShortcutAction.DEFROST_FRONT_TOGGLE, ShortcutAction.DEFROST_REAR_TOGGLE,
-            ShortcutAction.HVAC_RECIRC_CYCLE,
+            ShortcutAction.HVAC_RECIRC_CYCLE, ShortcutAction.HVAC_AUTO_VOLUME_CYCLE,
             ShortcutAction.BRIGHTNESS_UP, ShortcutAction.BRIGHTNESS_DOWN,
             ShortcutAction.AUTO_HIGH_BEAM_TOGGLE, ShortcutAction.BATTERY_HEAT_TOGGLE,
             ShortcutAction.MEDIA_NEXT, ShortcutAction.MEDIA_PREVIOUS,
@@ -956,7 +956,8 @@ class MG4ControlService : Service() {
             ShortcutAction.HVAC_TOGGLE, ShortcutAction.HVAC_AC_TOGGLE, ShortcutAction.HVAC_TEMP_UP,
             ShortcutAction.HVAC_TEMP_DOWN, ShortcutAction.HVAC_FAN_UP,
             ShortcutAction.HVAC_FAN_DOWN, ShortcutAction.DEFROST_FRONT_TOGGLE,
-            ShortcutAction.DEFROST_REAR_TOGGLE, ShortcutAction.HVAC_RECIRC_CYCLE -> {
+            ShortcutAction.DEFROST_REAR_TOGGLE, ShortcutAction.HVAC_RECIRC_CYCLE,
+            ShortcutAction.HVAC_AUTO_VOLUME_CYCLE -> {
                 // Un SEUL getClimateState() : c'est une lecture binder, pas un champ, et les
                 // bornes viennent du véhicule — jamais de valeurs codées en dur.
                 val etat = MG4Hardware.getClimateState()
@@ -1047,6 +1048,24 @@ class MG4ControlService : Service() {
                             actuel, MG4Hardware.LoopMode.INNER, MG4Hardware.LoopMode.AUTO, 1)
                         AppLogger.i(TAG, "SHORTCUT recirculation : $actuel → $suivant")
                         MG4Hardware.setClimateLoopMode(suivant)
+                    }
+                    // Débit en AUTO (issue #178) : faible → moyen → fort → faible, l'ordre de
+                    // l'issue. On BOUCLE, comme la recirculation : trois réglages sans danger.
+                    // Réglable même hors AUTO : la voiture le garde pour le prochain AUTO.
+                    ShortcutAction.HVAC_AUTO_VOLUME_CYCLE -> {
+                        val actuel = etat.autoVolume
+                        if (actuel == null) {
+                            AppLogger.w(TAG, "SHORTCUT débit en AUTO — réglage illisible, aucune action")
+                            return
+                        }
+                        val suivant = when (actuel) {
+                            MG4Hardware.AutoVolume.LOW    -> MG4Hardware.AutoVolume.MEDIUM
+                            MG4Hardware.AutoVolume.MEDIUM -> MG4Hardware.AutoVolume.HIGH
+                            else                          -> MG4Hardware.AutoVolume.LOW
+                        }
+                        AppLogger.i(TAG, "SHORTCUT débit en AUTO : ${MG4Hardware.AutoVolume.label(actuel)} → " +
+                            MG4Hardware.AutoVolume.label(suivant))
+                        MG4Hardware.setClimateAutoVolume(suivant)
                     }
                     else -> {}
                 }

@@ -94,7 +94,11 @@ enum class ShortcutAction(val id: Int) {
     // « Raccourcis perso » — une appli, la fonction d'une autre appli, une diffusion, un lien ou un
     // webhook. L'emplacement ne garde que l'identifiant du raccourci perso (shortcut_<slot>_custom_id,
     // ou FloatingButton.customId) ; voir CustomShortcutRunner.
-    CUSTOM(48);
+    CUSTOM(48),
+
+    // Débit d'air en mode AUTO (issue #178, 2026-10-29) : « lue puis écrite », faible → moyen →
+    // fort → faible. Le réglage se change aussi dans l'écran clim d'origine.
+    HVAC_AUTO_VOLUME_CYCLE(49);
 
     companion object {
         /**

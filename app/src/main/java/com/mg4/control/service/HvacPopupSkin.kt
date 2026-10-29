@@ -4,8 +4,12 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.RelativeSizeSpan
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -66,6 +70,12 @@ internal class HvacPopupSkin(
         val siegeNiveau: (gauche: Boolean, niveau: Int) -> Unit,
         val volant: () -> Unit,
         val fermer: () -> Unit,
+        /** AUTO enfoncé : tenu, il ouvre le choix du débit (issue #178). */
+        val autoEnfonce: () -> Unit = {},
+        /** AUTO relâché ; [annule] = doigt sorti du bouton, rien ne se joue. */
+        val autoRelache: (annule: Boolean) -> Unit = {},
+        /** Débit touché dans le choix ouvert ([MG4Hardware.AutoVolume]). */
+        val debit: (Int) -> Unit = {},
     )
 
 
@@ -95,6 +105,15 @@ internal class HvacPopupSkin(
     private val tempPlus: ImageView     = view.findViewById(R.id.hvac_temp_up)
 
     private val ventilation: TextView   = view.findViewById(R.id.hvac_fan_value)
+    private val libelleVentilation: TextView = view.findViewById(R.id.hvac_fan_label)
+    /** Rangée « − AUTO + », et le choix du débit qui la remplace quand il est ouvert (issue #178). */
+    private val rangeeCrans: View       = view.findViewById(R.id.hvac_fan_row)
+    private val rangeeDebit: View       = view.findViewById(R.id.hvac_autovol_row)
+    private val debits: Map<Int, TextView> = mapOf(
+        MG4Hardware.AutoVolume.LOW    to view.findViewById<TextView>(R.id.hvac_autovol_low),
+        MG4Hardware.AutoVolume.MEDIUM to view.findViewById<TextView>(R.id.hvac_autovol_medium),
+        MG4Hardware.AutoVolume.HIGH   to view.findViewById<TextView>(R.id.hvac_autovol_high),
+    )
     private val barre: SegmentBarView   = view.findViewById(R.id.hvac_fan_bar)
     private val fanMoins: ImageView     = view.findViewById(R.id.hvac_fan_down)
     private val fanPlus: ImageView      = view.findViewById(R.id.hvac_fan_up)
@@ -191,6 +210,11 @@ internal class HvacPopupSkin(
     /** Dernier état peint : de quoi rendre son aspect à un bouton après un éclair. */
     private var dernier: MG4Hardware.ClimateState? = null
     private var eclair: JoystickFocus.Commande? = null
+    /** AUTO tenu enfoncé : cerclé comme un éclair, jusqu'au relâchement ou à l'ouverture du choix. */
+    private var autoTenu = false
+    /** Curseur du choix du débit ; null = choix fermé, la rangée « − AUTO + » est là. */
+    private var curseurDebit: Int? = null
+    private var joystickUtilisable = true
 
     init {
         // Ce qui ne change pas avec l'état de la clim.
@@ -208,12 +232,33 @@ internal class HvacPopupSkin(
         fond(siegeDroit.selecteur, bouton)
         fond(volant, bouton, bordure, traitFin)
         fond(curseur, blanc, ovale = true)
+        fond(rangeeDebit, bouton)
+        // AUTO porte son débit sur une seconde ligne, plus petite : la mise en majuscules d'Android
+        // perdrait cette taille, « AUTO » est donc écrit en capitales à la main.
+        auto.isAllCaps = false
+        auto.maxLines = 2
     }
 
     /** À appeler une fois, avant le premier [peindre]. [avecChauffages] rend leur colonne visible. */
     fun brancher(gestes: Gestes, avecChauffages: Boolean) {
         // Même chemin au doigt qu'au joystick : mêmes bornes, même anti-rebond.
-        cellules.forEach { (commande, vue) -> vue.setOnClickListener { gestes.commande(commande) } }
+        cellules.forEach { (commande, vue) ->
+            if (commande != JoystickFocus.Commande.VALIDER) vue.setOnClickListener { gestes.commande(commande) }
+        }
+        // AUTO se joue au relâchement : tenu, il ouvre le choix du débit (issue #178).
+        auto.setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> gestes.autoEnfonce()
+                MotionEvent.ACTION_UP -> {
+                    val dedans = e.x >= 0f && e.y >= 0f && e.x <= v.width && e.y <= v.height
+                    gestes.autoRelache(!dedans)
+                    if (dedans) v.performClick()
+                }
+                MotionEvent.ACTION_CANCEL -> gestes.autoRelache(true)
+            }
+            true
+        }
+        debits.forEach { (valeur, vue) -> vue.setOnClickListener { gestes.debit(valeur) } }
         airFace.setOnClickListener       { gestes.air(AirFlow.FACE) }
         airFeet.setOnClickListener       { gestes.air(AirFlow.FEET) }
         airWindshield.setOnClickListener { gestes.air(AirFlow.WINDSHIELD) }
@@ -236,6 +281,7 @@ internal class HvacPopupSkin(
      * gauche / droite la ventilation, le clic AUTO. Sinon l'avertissement, seul, au même endroit.
      */
     fun repereJoystick(utilisable: Boolean) {
+        joystickUtilisable = utilisable
         val couleur = if (utilisable) accent else chaud
         puceTitre.text =
             if (utilisable) localized.getString(R.string.hvac_popup_joystick_title)
@@ -249,6 +295,30 @@ internal class HvacPopupSkin(
             geste.compoundDrawableTintList = ColorStateList.valueOf(accent)
         }
         fond(puce, if (utilisable) accentDoux else chaudDoux, rayon = rayonPilule)
+        if (utilisable) textesRepere()
+    }
+
+    /** Ce que fait le joystick : réglages d'ordinaire, navigation dans le choix du débit. */
+    private fun textesRepere() {
+        val choix = curseurDebit != null
+        puceTitre.text = localized.getString(
+            if (choix) R.string.clim_section_autovol else R.string.hvac_popup_joystick_title)
+        puceGestes[0].text = localized.getString(if (choix) R.string.hvac_popup_joy_cancel else R.string.clim_temperature)
+        puceGestes[1].text = localized.getString(if (choix) R.string.hvac_popup_joy_choose else R.string.clim_fan)
+        puceGestes[2].text = localized.getString(if (choix) R.string.overlay_joy_validate else R.string.clim_auto)
+    }
+
+    /** Ouvre ([curseur] non null), déplace ou referme le choix du débit en AUTO. */
+    fun choix(curseur: Int?) {
+        curseurDebit = curseur
+        if (joystickUtilisable) textesRepere()
+        dernier?.let { peindreDebit(it) }
+    }
+
+    /** AUTO tenu enfoncé ou relâché. */
+    fun appuiAuto(tenu: Boolean) {
+        autoTenu = tenu
+        dernier?.let { peindreCroix(it) }
     }
 
     /**
@@ -291,6 +361,7 @@ internal class HvacPopupSkin(
         barre.total = etat.fanMax
         barre.allumes = (niveau ?: 0).coerceIn(0, etat.fanMax)
         peindreCroix(etat)
+        peindreDebit(etat)
 
         val compresseur = etat.acOn == true
         if (compresseur) fond(ac, accent) else fond(ac, bouton, bordure, traitFin)
@@ -356,9 +427,52 @@ internal class HvacPopupSkin(
         boutonCran(fanMoins, eclair == JoystickFocus.Commande.GAUCHE)
         boutonCran(fanPlus, eclair == JoystickFocus.Commande.DROITE)
         val r = etat.reglages()
+        auto.text = texteAuto(etat.autoVolume)
         tuile(auto, if (r.enAuto) true else etat.autoOn, plein = true)
-        if (eclair == JoystickFocus.Commande.VALIDER) {
+        if (eclair == JoystickFocus.Commande.VALIDER || autoTenu) {
             (auto.background as? GradientDrawable)?.setStroke(traitEpais, textePrincipal)
+        }
+    }
+
+    /** « AUTO », et dessous, plus petit, le débit réglé pour l'AUTO quand la voiture le donne. */
+    private fun texteAuto(debit: Int?): CharSequence {
+        val locale = localized.resources.configuration.locales[0]
+        val titre = localized.getString(R.string.clim_auto).uppercase(locale)
+        val libelle = debit?.let { libelleDebit(it) } ?: return titre
+        return SpannableStringBuilder(titre).append('\n').apply {
+            val debut = length
+            append(libelle)
+            setSpan(RelativeSizeSpan(0.75f), debut, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+    }
+
+    private fun libelleDebit(debit: Int): String? = when (debit) {
+        MG4Hardware.AutoVolume.LOW    -> localized.getString(R.string.clim_autovol_low)
+        MG4Hardware.AutoVolume.MEDIUM -> localized.getString(R.string.clim_autovol_medium)
+        MG4Hardware.AutoVolume.HIGH   -> localized.getString(R.string.clim_autovol_high)
+        else -> null
+    }
+
+    /**
+     * Choix du débit (maquette B) : il prend la place de la rangée « − AUTO + ». Le débit réglé
+     * sur la voiture est plein d'accent ; le curseur du joystick est cerclé, comme un éclair.
+     */
+    private fun peindreDebit(etat: MG4Hardware.ClimateState) {
+        val ouvert = curseurDebit != null
+        rangeeCrans.visibility = if (ouvert) View.GONE else View.VISIBLE
+        rangeeDebit.visibility = if (ouvert) View.VISIBLE else View.GONE
+        libelleVentilation.text = localized.getString(if (ouvert) R.string.clim_section_autovol else R.string.clim_fan)
+        if (!ouvert) return
+        debits.forEach { (valeur, vue) ->
+            val regle = etat.autoVolume == valeur
+            val vise = curseurDebit == valeur
+            val trait = if (vise) (if (regle) textePrincipal else accent) else Color.TRANSPARENT
+            val epaisseur = if (vise) traitEpais else 0
+            when {
+                regle -> { fond(vue, accent, trait, epaisseur, rayon = rayonSegment); vue.setTextColor(surAccent) }
+                vise  -> { fond(vue, accentDoux, trait, epaisseur, rayon = rayonSegment); vue.setTextColor(textePrincipal) }
+                else  -> { fond(vue, Color.TRANSPARENT, rayon = rayonSegment); vue.setTextColor(texteSecondaire) }
+            }
         }
     }
 

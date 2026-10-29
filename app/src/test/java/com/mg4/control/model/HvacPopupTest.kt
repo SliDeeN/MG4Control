@@ -323,4 +323,22 @@ class HvacPopupTest {
         // Renvoi après relecture (aucun anti-rebond) : seulement l'espacement restant.
         assertEquals(0L, HvacPopup.attenteEnvoi(10_700L, 10_000L, 0L))
     }
+
+    // ── Choix du débit en AUTO (issue #178) : 2 = faible, 1 = moyen, 0 = fort ──
+
+    @Test fun `le choix du debit va de faible a fort de gauche a droite`() {
+        assertEquals(HvacPopup.Choix.Curseur(0), HvacPopup.choix(Commande.DROITE, 1))
+        assertEquals(HvacPopup.Choix.Curseur(2), HvacPopup.choix(Commande.GAUCHE, 1))
+    }
+
+    @Test fun `le choix du debit ne reboucle pas aux bords`() {
+        assertEquals(HvacPopup.Choix.Curseur(0), HvacPopup.choix(Commande.DROITE, 0))
+        assertEquals(HvacPopup.Choix.Curseur(2), HvacPopup.choix(Commande.GAUCHE, 2))
+    }
+
+    @Test fun `clic valide le curseur, haut et bas annulent`() {
+        assertEquals(HvacPopup.Choix.Valider(1), HvacPopup.choix(Commande.VALIDER, 1))
+        assertEquals(HvacPopup.Choix.Annuler, HvacPopup.choix(Commande.HAUT, 1))
+        assertEquals(HvacPopup.Choix.Annuler, HvacPopup.choix(Commande.BAS, 1))
+    }
 }

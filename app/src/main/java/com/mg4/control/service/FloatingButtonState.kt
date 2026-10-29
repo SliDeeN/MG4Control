@@ -59,6 +59,12 @@ object FloatingButtonState {
                 MG4Hardware.LoopMode.AUTO -> loc.getString(R.string.recirc_auto)
                 else -> null
             }
+            ShortcutAction.HVAC_AUTO_VOLUME_CYCLE -> when (MG4Hardware.getClimateState()?.autoVolume) {
+                MG4Hardware.AutoVolume.LOW -> loc.getString(R.string.clim_autovol_low)
+                MG4Hardware.AutoVolume.MEDIUM -> loc.getString(R.string.clim_autovol_medium)
+                MG4Hardware.AutoVolume.HIGH -> loc.getString(R.string.clim_autovol_high)
+                else -> null
+            }?.let { loc.getString(R.string.floating_value_autovol, it) }
             ShortcutAction.HVAC_TEMP_UP, ShortcutAction.HVAC_TEMP_DOWN ->
                 MG4Hardware.getClimateState()?.tempC?.let { loc.getString(R.string.preclim_value_celsius, it) }
             ShortcutAction.HVAC_FAN_UP, ShortcutAction.HVAC_FAN_DOWN -> MG4Hardware.getClimateState()?.let { etat ->

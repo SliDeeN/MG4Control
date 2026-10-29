@@ -16,7 +16,8 @@ class FloatingButtonStyleTest {
 
     @Test fun `cycles et reglages pas a pas montrent leur valeur`() {
         for (a in listOf(ShortcutAction.REGEN_CYCLE, ShortcutAction.SEAT_HEAT_LEFT_CYCLE,
-                ShortcutAction.HVAC_TEMP_UP, ShortcutAction.HVAC_FAN_DOWN, ShortcutAction.VOLUME_UP)) {
+                ShortcutAction.HVAC_TEMP_UP, ShortcutAction.HVAC_FAN_DOWN, ShortcutAction.VOLUME_UP,
+                ShortcutAction.HVAC_AUTO_VOLUME_CYCLE)) {
             assertEquals(a.name, FloatingKind.VALUE, FloatingButtonStyle.kind(a))
         }
     }

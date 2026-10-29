@@ -91,6 +91,12 @@ class KeyCaptureService : AccessibilityService() {
     private val attentes = mutableMapOf<Int, Attente>()
 
     /**
+     * Clic central enfoncé dans le pop-up HVAC (issue #178) : il se joue au RELÂCHEMENT, et tenu
+     * une seconde il ouvre le choix du débit en AUTO — d'où l'enfoncement ET le relâchement transmis.
+     */
+    private val centresHvac = mutableSetOf<Int>()
+
+    /**
      * Touches interceptées pour un raccourci avancé, entre leur DOWN et leur UP.
      *
      * La décision est prise UNE fois, au DOWN, puis tenue jusqu'au UP : elle dépend du profil actif,
@@ -157,6 +163,7 @@ class KeyCaptureService : AccessibilityService() {
             if (code in navigationEnCours) {
                 if (event.action == KeyEvent.ACTION_UP) {
                     navigationEnCours.remove(code)
+                    if (centresHvac.remove(code)) HvacPopupOverlay.centreRelache()
                     // Relâchée avant le seuil : ce n'était pas le raccourci, c'était un déplacement.
                     attentes.remove(code)?.let { a ->
                         handler.removeCallbacks(a.minuterie)
@@ -198,6 +205,15 @@ class KeyCaptureService : AccessibilityService() {
                 val preclim = PreClimatePopupOverlay.isShowing()
                 if (confirmation || profils || preclim || HvacPopupOverlay.isShowing()) {
                     navigationEnCours.add(code)
+                    // Pop-up HVAC, clic central : l'appui maintenu ouvre le choix du débit en AUTO.
+                    // Il passe avant l'appui long qui refermerait le pop-up par son raccourci : une
+                    // même touche ne peut pas faire les deux, et le pop-up se ferme aussi autrement.
+                    if (!confirmation && !profils && !preclim && commande == JoystickFocus.Commande.VALIDER) {
+                        AppLogger.i(TAG, "touche $code — pop-up HVAC → clic central enfoncé")
+                        centresHvac.add(code)
+                        HvacPopupOverlay.centreEnfonce()
+                        return true
+                    }
                     val naviguer: () -> Unit = {
                         when {
                             confirmation -> {
@@ -444,6 +460,8 @@ class KeyCaptureService : AccessibilityService() {
         longDeclenche.clear()
         doubleDeclenche.clear()
         navigationEnCours.clear()
+        if (centresHvac.isNotEmpty()) HvacPopupOverlay.centreAnnule()
+        centresHvac.clear()
         attentes.clear()
         touchesPrises.clear()
         modeles.clear()

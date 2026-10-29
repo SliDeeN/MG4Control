@@ -2520,6 +2520,71 @@
 
             </LinearLayout>
 
+            <!-- ── Colonne 3 : débit d'air en mode AUTO (issue #178) ─ -->
+            <LinearLayout
+                android:id="@+id/clim_autovol_section"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:background="@drawable/bg_section_rounded"
+                android:padding="9dp"
+                android:layout_marginStart="5dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/clim_section_autovol"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.08"
+                    android:textAllCaps="true"
+                    android:layout_marginBottom="6dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/clim_btn_autovol_high"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/clim_autovol_high"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="16sp"
+                    android:textAllCaps="true"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/clim_btn_autovol_medium"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginBottom="4dp"
+                    android:text="@string/clim_autovol_medium"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="16sp"
+                    android:textAllCaps="true"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="8dp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/clim_btn_autovol_low"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:text="@string/clim_autovol_low"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="16sp"
+                    android:textAllCaps="true"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="8dp" />
+
+            </LinearLayout>
+
         </LinearLayout>
 
     </LinearLayout>

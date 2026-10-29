@@ -142,6 +142,11 @@
     <string name="profile_hvac_unchanged">Unverändert</string>
     <string name="clim_eco">ECO</string>
     <string name="profile_hvac_row_eco">ECO</string>
+    <string name="profile_hvac_row_autovol">Gebläse</string>
+    <string name="clim_section_autovol">Gebläse in AUTO</string>
+    <string name="clim_autovol_low">Niedrig</string>
+    <string name="clim_autovol_medium">Mittel</string>
+    <string name="clim_autovol_high">Hoch</string>
     <string name="profile_hvac_eco_on">An</string>
     <string name="profile_hvac_eco_off">Aus</string>
     <string name="profile_hvac_temp_value">%1$d °C</string>
@@ -596,6 +601,7 @@
     <string name="shortcuts_action_defrost_front">Entfrosten vorne (ON/OFF)</string>
     <string name="shortcuts_action_defrost_rear">Entfrosten hinten (ON/OFF)</string>
     <string name="shortcuts_action_hvac_recirc">Umluft: Wechsel</string>
+    <string name="shortcuts_action_hvac_autovol">Gebläse in AUTO: Wechsel</string>
     <string name="shortcuts_action_hvac_popup">HVAC-Pop-up</string>
     <string name="hvac_popup_temp_up">Temp. +</string>
     <string name="hvac_popup_temp_down">Temp. −</string>
@@ -604,6 +610,9 @@
     <string name="hvac_popup_compressor">Kompressor</string>
     <string name="hvac_popup_heating">Heizung</string>
     <string name="hvac_popup_joystick_title">Rechter Joystick</string>
+    <string name="hvac_popup_joy_choose">Wählen</string>
+    <string name="hvac_popup_joy_cancel">Abbrechen</string>
+    <string name="hvac_popup_autovol_unreadable">Gebläse in AUTO auf diesem Fahrzeug nicht verfügbar</string>
     <string name="hvac_popup_joystick_off_title">Joystick inaktiv</string>
     <string name="hvac_popup_joystick_off_text">Bedienungshilfe aktivieren oder Bildschirm nutzen</string>
     <string name="shortcuts_action_brightness_up">Helligkeit +</string>
@@ -954,6 +963,7 @@
     <string name="floating_unknown_action">Verknüpfung nicht verfügbar</string>
     <string name="floating_summary">%1$s · %2$s · Text %3$d sp</string>
     <string name="floating_value_fan">Gebläse %1$s</string>
+    <string name="floating_value_autovol">AUTO-Gebläse %1$s</string>
     <string name="floating_value_volume">Lautstärke %1$d</string>
     <string name="preclim_cfg_hint">Wird über die Lenkradtaste gestartet. Modus, Zeiten und Klimaeinstellungen werden in ihrem Fenster gewählt, das sich immer auf „Jetzt“ öffnet. Am Ende kehrt die Klimaanlage zu ihren vorherigen Einstellungen zurück.</string>
     <string name="preclim_cfg_lock">Türen verriegeln nach</string>

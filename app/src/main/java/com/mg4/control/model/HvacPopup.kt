@@ -229,4 +229,41 @@ object HvacPopup {
         actuel ?: return null
         return (actuel + sens).coerceIn(min, max).takeIf { it != actuel }
     }
+
+    // ── Débit en mode AUTO (issue #178, maquette B choisie le 2026-10-29) ─────
+    // Un appui maintenu sur AUTO — au doigt ou au clic central — remplace la rangée « − AUTO + »
+    // par un choix Faible | Moyen | Fort. Gauche / droite déplacent le curseur, le clic valide
+    // (débit écrit, AUTO allumé), haut / bas annulent, comme quelques secondes sans geste.
+
+    /** Appui maintenu sur AUTO au-delà duquel le choix du débit s'ouvre. */
+    const val APPUI_LONG_MS = 1_000L
+
+    /** Choix du débit ouvert sans geste pendant ce temps : il se referme sans rien changer. */
+    const val CHOIX_DELAI_MS = 6_000L
+
+    /**
+     * Débits de gauche à droite, comme à l'écran : faible, moyen, fort — dans l'encodage de la
+     * voiture (MG4Hardware.AutoVolume : 2 = faible, 1 = moyen, 0 = fort).
+     */
+    val DEBITS = listOf(2, 1, 0)
+
+    sealed class Choix {
+        data class Curseur(val debit: Int) : Choix()
+        data class Valider(val debit: Int) : Choix()
+        object Annuler : Choix()
+    }
+
+    /**
+     * Geste du joystick pendant le choix du débit. Pas de rebouclage aux bords, comme ailleurs :
+     * pousser encore à droite sur « Fort » y reste.
+     */
+    fun choix(commande: JoystickFocus.Commande, curseur: Int): Choix {
+        val i = DEBITS.indexOf(curseur).coerceAtLeast(0)
+        return when (commande) {
+            JoystickFocus.Commande.GAUCHE  -> Choix.Curseur(DEBITS[(i - 1).coerceAtLeast(0)])
+            JoystickFocus.Commande.DROITE  -> Choix.Curseur(DEBITS[(i + 1).coerceAtMost(DEBITS.lastIndex)])
+            JoystickFocus.Commande.VALIDER -> Choix.Valider(DEBITS[i])
+            JoystickFocus.Commande.HAUT, JoystickFocus.Commande.BAS -> Choix.Annuler
+        }
+    }
 }

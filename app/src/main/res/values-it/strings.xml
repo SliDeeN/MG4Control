@@ -142,6 +142,11 @@
     <string name="profile_hvac_unchanged">Invariato</string>
     <string name="clim_eco">ECO</string>
     <string name="profile_hvac_row_eco">ECO</string>
+    <string name="profile_hvac_row_autovol">Portata</string>
+    <string name="clim_section_autovol">Portata in AUTO</string>
+    <string name="clim_autovol_low">Bassa</string>
+    <string name="clim_autovol_medium">Media</string>
+    <string name="clim_autovol_high">Alta</string>
     <string name="profile_hvac_eco_on">Attivo</string>
     <string name="profile_hvac_eco_off">Disattivo</string>
     <string name="profile_hvac_temp_value">%1$d °C</string>
@@ -596,6 +601,7 @@
     <string name="shortcuts_action_defrost_front">Sbrinamento anteriore (ON/OFF)</string>
     <string name="shortcuts_action_defrost_rear">Sbrinamento posteriore (ON/OFF)</string>
     <string name="shortcuts_action_hvac_recirc">Ricircolo: ciclo</string>
+    <string name="shortcuts_action_hvac_autovol">Portata in AUTO: ciclo</string>
     <string name="shortcuts_action_hvac_popup">Pop-up HVAC</string>
     <string name="hvac_popup_temp_up">Temp. +</string>
     <string name="hvac_popup_temp_down">Temp. −</string>
@@ -604,6 +610,9 @@
     <string name="hvac_popup_compressor">Compressore</string>
     <string name="hvac_popup_heating">Riscaldamento</string>
     <string name="hvac_popup_joystick_title">Joystick destro</string>
+    <string name="hvac_popup_joy_choose">Scegli</string>
+    <string name="hvac_popup_joy_cancel">Annulla</string>
+    <string name="hvac_popup_autovol_unreadable">Portata in AUTO non disponibile su questa auto</string>
     <string name="hvac_popup_joystick_off_title">Joystick inattivo</string>
     <string name="hvac_popup_joystick_off_text">Attiva l’accessibilità o usa lo schermo</string>
     <string name="shortcuts_action_brightness_up">Luminosità +</string>
@@ -954,6 +963,7 @@
     <string name="floating_unknown_action">Scorciatoia non disponibile</string>
     <string name="floating_summary">%1$s · %2$s · testo %3$d sp</string>
     <string name="floating_value_fan">Ventilazione %1$s</string>
+    <string name="floating_value_autovol">Portata %1$s</string>
     <string name="floating_value_volume">Volume %1$d</string>
     <string name="preclim_cfg_hint">Si avvia con la scorciatoia al volante. Modalità, orari e impostazioni del clima si scelgono nella sua finestra, che si apre sempre su «Adesso». Alla fine, il clima ritrova le impostazioni che aveva prima.</string>
     <string name="preclim_cfg_lock">Blocca le porte dopo</string>

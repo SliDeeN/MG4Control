@@ -190,7 +190,8 @@ object ProfileApplier {
                     fanLevel     = profile.hvacFan,
                     loopMode     = profile.hvacLoopMode,
                     airFlow      = profile.hvacAirFlow,
-                    eco          = profile.hvacEco
+                    eco          = profile.hvacEco,
+                    autoVolume   = profile.hvacAutoVolume
                 )
                 AppLogger.i(TAG, "  Climatisation du profil appliquée → $climOk")
             }

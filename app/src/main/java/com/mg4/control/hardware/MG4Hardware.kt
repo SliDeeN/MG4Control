@@ -5970,6 +5970,26 @@ object MG4Hardware {
         const val AUTO    = 2
     }
 
+    /**
+     * Débit d'air en mode AUTO (issue #178), encodage de la voiture. Relevé dans l'appli clim A9
+     * (HvacAS32SettingDialog : 0 = bouton Fort, 1 = Standard, 2 = Confort) ; MG4Dash emploie le
+     * même. Une CONSIGNE, pas une bascule : les écrans d'origine écrivent la valeur voulue.
+     */
+    object AutoVolume {
+        const val HIGH   = 0
+        const val MEDIUM = 1
+        const val LOW    = 2
+
+        fun isValid(v: Int?): Boolean = v != null && v in HIGH..LOW
+
+        fun label(v: Int): String = when (v) {
+            HIGH   -> "fort"
+            MEDIUM -> "moyen"
+            LOW    -> "faible"
+            else   -> "?$v"
+        }
+    }
+
     /** Mode de recirculation — seule source fiable (l'OEM getLoopMode n'est pas vérifié). */
     private const val PROP_HVAC_LOOP_MODE = 0x15402507
     /**
@@ -5983,6 +6003,12 @@ object MG4Hardware {
     private const val PROP_HVAC_AC_ON = 0x15402500
     /** Mode ECO de la clim (`HVAC_ECON_ON`, 1 = actif) : même propriété sur les 6 firmwares. */
     private const val PROP_HVAC_ECON_ON = 0x15402504
+    /**
+     * Débit d'air en mode AUTO ([AutoVolume]), zone 117. SWI133 : le service de réglages
+     * (VehicleSettingBinder.get/setAutoModeAirVolume) lit et écrit cette propriété telle quelle ;
+     * A9 : l'adaptateur (CarAdapterHvacManager.get/setCustomAutoModeBlowerConfig) aussi.
+     */
+    private const val PROP_HVAC_AUTO_VOLUME = 0x15402508
 
     /**
      * Amène une commande **cyclique** du HVAC SAIC jusqu'à un état voulu.
@@ -6039,6 +6065,8 @@ object MG4Hardware {
         val lastManualFan: Int? = null,
         /** Mode ECO de la clim ([setClimateEco]) ; null si illisible. */
         val ecoOn: Boolean? = null,
+        /** Débit d'air en mode AUTO ([AutoVolume]) ; null si illisible. */
+        val autoVolume: Int? = null,
     ) {
         /**
          * Température et ventilation vues par la logique commune au pop-up HVAC, à la page Clim
@@ -6141,7 +6169,8 @@ object MG4Hardware {
                 ?: acInt("getBlowerDirectionMode")?.takeIf { it in 0..7 },
             // Getter OEM d'abord (le panneau clim d'origine le lit), propriété en repli.
             ecoOn        = (acInt("getEconStatus")?.takeIf { it >= 0 }
-                ?: getIntPropertyHvac(PROP_HVAC_ECON_ON, AREA_HVAC).takeIf { it >= 0 })?.let { it == 1 }
+                ?: getIntPropertyHvac(PROP_HVAC_ECON_ON, AREA_HVAC).takeIf { it >= 0 })?.let { it == 1 },
+            autoVolume   = autoVolumeOldSdk()
         )
     }
 
@@ -6186,7 +6215,8 @@ object MG4Hardware {
             defrostFront = a9Get("getFrontDefrostStatus") as? Boolean,
             defrostRear  = a9Get("getRearDefrostStatus") as? Boolean,
             airFlow      = (a9Get("getFanDirection") as? Int)?.takeIf { it in 0..7 },
-            ecoOn        = a9Get("getEcoStatus") as? Boolean
+            ecoOn        = a9Get("getEcoStatus") as? Boolean,
+            autoVolume   = (a9Get("getCustomAutoModeBlowerConfig") as? Int)?.takeIf { AutoVolume.isValid(it) }
         )
     }
 
@@ -6274,6 +6304,47 @@ object MG4Hardware {
         }
         climLog("eco=$on NON atteint", false)
         return false
+    }
+
+    /**
+     * Débit d'air en mode AUTO (issue #178) : [AutoVolume.LOW] / [AutoVolume.MEDIUM] /
+     * [AutoVolume.HIGH]. Un réglage de la voiture, qu'elle garde même hors AUTO : il servira au
+     * prochain passage en AUTO, comme dans l'écran de réglages de la clim d'origine.
+     */
+    fun setClimateAutoVolume(level: Int): Boolean {
+        if (!AutoVolume.isValid(level)) return false
+        val ok = when {
+            isClimateA9()           -> a9Set("setCustomAutoModeBlowerConfig", level)
+            sCarHvacManager != null -> setIntPropertyHvac(PROP_HVAC_AUTO_VOLUME, AREA_HVAC, level)
+            // Repli : la voie de l'écran de réglages d'origine, si la propriété n'est pas joignable.
+            else -> vsmClim()?.let { vsm ->
+                try {
+                    vsm.javaClass.getMethod("setAutoModeAirVolume", Int::class.javaPrimitiveType).invoke(vsm, level)
+                    true
+                } catch (e: Exception) {
+                    AppLogger.w(CLIM_TAG, "setAutoModeAirVolume($level) échec : ${(e.cause ?: e).message}")
+                    false
+                }
+            } ?: false
+        }
+        climLog("débitAuto=${AutoVolume.label(level)} ($level)", ok)
+        return ok
+    }
+
+    /** Gestionnaire de réglages de l'ancien SDK : SWI133 a le sien, SWI68/165 partagent [sVsm]. */
+    private fun vsmClim(): Any? =
+        if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133) sVsm133 else sVsm
+
+    /**
+     * Ancien SDK : la propriété d'abord (ce que lit le service de réglages SWI133), puis le getter
+     * du VehicleSettingManager. Sans journal : la page Clim relit l'état toutes les 2 s.
+     */
+    private fun autoVolumeOldSdk(): Int? {
+        getIntPropertyHvac(PROP_HVAC_AUTO_VOLUME, AREA_HVAC).takeIf { AutoVolume.isValid(it) }?.let { return it }
+        val vsm = vsmClim() ?: return null
+        return try {
+            (vsm.javaClass.getMethod("getAutoModeAirVolume").invoke(vsm) as? Int)?.takeIf { AutoVolume.isValid(it) }
+        } catch (_: Exception) { null }
     }
 
     /**
@@ -6461,7 +6532,8 @@ object MG4Hardware {
         fanLevel: Int,
         loopMode: Int?,
         airFlow: Int?,
-        eco: Boolean? = null
+        eco: Boolean? = null,
+        autoVolume: Int? = null
     ): Boolean {
         val state = getClimateState() ?: run {
             AppLogger.w(CLIM_TAG, "Profil : état clim illisible → abandon")
@@ -6482,6 +6554,9 @@ object MG4Hardware {
         // mode auto, et activer le mode auto reprend la main sur la vitesse. Appliquer les deux
         // donnerait un état final décidé par le seul ordre des appels, pas par l'utilisateur.
         if (autoMode) {
+            // Débit en AUTO (issue #178) avant le passage en AUTO : la voiture démarre l'AUTO
+            // directement au bon débit. Ignoré hors AUTO, comme l'éditeur qui grise la ligne.
+            if (autoVolume != null) ok = setClimateAutoVolume(autoVolume) && ok
             ok = setClimateAuto(true) && ok
         } else {
             ok = setClimateFan(fanLevel.coerceIn(state.fanMin, state.fanMax)) && ok
@@ -6510,7 +6585,8 @@ object MG4Hardware {
         }
 
         AppLogger.i(CLIM_TAG, "Profil : clim=ON A/C=$ac consigne=$targetTemp " +
-            (if (autoMode) "ventilation=AUTO" else "vent=$fanLevel") +
+            (if (autoMode) "ventilation=AUTO débit=${autoVolume?.let { AutoVolume.label(it) } ?: "inchangé"}"
+             else "vent=$fanLevel") +
             " recyclage=${loopMode ?: "inchangé"} eco=${eco ?: "inchangé"} " +
             "air=${airFlow?.let { "boutons=$it valeur=${AirFlow.directionForMask(it)}" } ?: "inchangé"} → ok=$ok")
         return ok

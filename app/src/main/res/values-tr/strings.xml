@@ -142,6 +142,11 @@
     <string name="profile_hvac_unchanged">Değişmez</string>
     <string name="clim_eco">ECO</string>
     <string name="profile_hvac_row_eco">ECO</string>
+    <string name="profile_hvac_row_autovol">Debi</string>
+    <string name="clim_section_autovol">AUTO hava debisi</string>
+    <string name="clim_autovol_low">Düşük</string>
+    <string name="clim_autovol_medium">Orta</string>
+    <string name="clim_autovol_high">Yüksek</string>
     <string name="profile_hvac_eco_on">Açık</string>
     <string name="profile_hvac_eco_off">Kapalı</string>
     <string name="profile_hvac_temp_value">%1$d °C</string>
@@ -596,6 +601,7 @@
     <string name="shortcuts_action_defrost_front">Ön cam buz çözme (AÇ/KAPA)</string>
     <string name="shortcuts_action_defrost_rear">Arka cam buz çözme (AÇ/KAPA)</string>
     <string name="shortcuts_action_hvac_recirc">Sirkülasyon: döngü</string>
+    <string name="shortcuts_action_hvac_autovol">AUTO hava debisi: döngü</string>
     <string name="shortcuts_action_hvac_popup">HVAC açılır penceresi</string>
     <string name="hvac_popup_temp_up">Sıcaklık +</string>
     <string name="hvac_popup_temp_down">Sıcaklık −</string>
@@ -604,6 +610,9 @@
     <string name="hvac_popup_compressor">Kompresör</string>
     <string name="hvac_popup_heating">Isıtma</string>
     <string name="hvac_popup_joystick_title">Sağ joystick</string>
+    <string name="hvac_popup_joy_choose">Seç</string>
+    <string name="hvac_popup_joy_cancel">İptal</string>
+    <string name="hvac_popup_autovol_unreadable">AUTO hava debisi bu araçta kullanılamıyor</string>
     <string name="hvac_popup_joystick_off_title">Joystick devre dışı</string>
     <string name="hvac_popup_joystick_off_text">Erişilebilirliği açın veya ekranı kullanın</string>
     <string name="shortcuts_action_brightness_up">Parlaklık +</string>
@@ -954,6 +963,7 @@
     <string name="floating_unknown_action">Kısayol kullanılamıyor</string>
     <string name="floating_summary">%1$s · %2$s · metin %3$d sp</string>
     <string name="floating_value_fan">Fan %1$s</string>
+    <string name="floating_value_autovol">Debi %1$s</string>
     <string name="floating_value_volume">Ses %1$d</string>
     <string name="preclim_cfg_hint">Direksiyondaki kısayolla başlatılır. Mod, saatler ve klima ayarları, her zaman «Şimdi» sekmesinde açılan penceresinden seçilir. Sonunda klima önceki ayarlarına döner.</string>
     <string name="preclim_cfg_lock">Kapıları şu süre sonra kilitle</string>

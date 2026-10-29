@@ -42,7 +42,7 @@ object FloatingButtonStyle {
     private val VALUES = setOf(
         ShortcutAction.REGEN_CYCLE, ShortcutAction.DROWSINESS_SEN_CYCLE,
         ShortcutAction.SEAT_HEAT_LEFT_CYCLE, ShortcutAction.SEAT_HEAT_RIGHT_CYCLE,
-        ShortcutAction.HVAC_RECIRC_CYCLE,
+        ShortcutAction.HVAC_RECIRC_CYCLE, ShortcutAction.HVAC_AUTO_VOLUME_CYCLE,
         ShortcutAction.HVAC_TEMP_UP, ShortcutAction.HVAC_TEMP_DOWN,
         ShortcutAction.HVAC_FAN_UP, ShortcutAction.HVAC_FAN_DOWN,
         ShortcutAction.BRIGHTNESS_UP, ShortcutAction.BRIGHTNESS_DOWN,
