@@ -68,38 +68,59 @@ object SoundImport {
     }
 
     /**
-     * Copie [f] comme son [index] (l'ancien fichier est remplacé) ; volume et événements sont
-     * gardés. Rend le son mis à jour, ou `null` si la copie a échoué.
+     * Copie [f] dans l'appli : comme son [index] (son fichier est remplacé, volume et événements
+     * gardés), ou — [index] nul — comme nouveau son en fin de liste, s'il reste de la place sous
+     * [max]. Rend le rang du son, ou `null` si la copie a échoué ou la liste est pleine.
+     *
+     * Chaque copie a un nom UNIQUE : les rangs bougent quand un son est retiré, un nom tiré du
+     * rang (`son2.mp3`) écraserait le fichier d'un autre son.
      */
-    fun importer(ctx: Context, index: Int, f: Fichier): SoundSlot? = try {
+    fun importer(ctx: Context, index: Int?, f: Fichier, max: Int): Int? = try {
         val dossier = SoundAutomationSettings.dossier(ctx)
-        val cible = File(dossier, "son${index + 1}.${f.file.extension.lowercase()}")
-        dossier.listFiles()?.filter { it.nameWithoutExtension == "son${index + 1}" && it != cible }?.forEach { it.delete() }
-        oublierCopiePartagee(index)
+        val cible = File(dossier, "son_${System.currentTimeMillis()}.${f.file.extension.lowercase()}")
         f.file.inputStream().use { entree -> cible.outputStream().use { entree.copyTo(it) } }
-        val s = SoundAutomationSettings.slot(ctx, index).copy(path = cible.path, title = f.file.name, durationMs = f.durationMs)
-        SoundAutomationSettings.saveSlot(ctx, index, s)
-        AppLogger.i(TAG, "son ${index + 1} importé : ${f.file.name} (${f.durationMs} ms, ${cible.length()} o)")
-        s
+        val rang = if (index == null) {
+            SoundAutomationSettings.ajouter(ctx, SoundSlot(path = cible.path, title = f.file.name, durationMs = f.durationMs), max)
+        } else {
+            val s = SoundAutomationSettings.slot(ctx, index).copy(path = cible.path, title = f.file.name, durationMs = f.durationMs)
+            SoundAutomationSettings.saveSlot(ctx, index, s)
+            index
+        }
+        nettoyer(ctx)
+        if (rang == null) {
+            AppLogger.w(TAG, "import de ${f.file.name} refusé : déjà $max son(s)")
+        } else {
+            AppLogger.i(TAG, "son ${rang + 1} ${if (index == null) "ajouté" else "remplacé"} : ${f.file.name} " +
+                "(${f.durationMs} ms, ${cible.length()} o)")
+        }
+        rang
     } catch (e: Exception) {
-        AppLogger.w(TAG, "import du son ${index + 1} impossible : ${e.javaClass.simpleName}: ${e.message}")
+        AppLogger.w(TAG, "import ${index?.let { "du son ${it + 1}" } ?: "d'un nouveau son"} impossible : " +
+            "${e.javaClass.simpleName}: ${e.message}")
         null
     }
 
-    /** Retire le fichier du son [index] ; ses événements et son volume restent. */
+    /** Retire le son [index] de la liste, avec son fichier ; les sons suivants remontent d'un rang. */
     fun retirer(ctx: Context, index: Int) {
-        SoundAutomationSettings.slot(ctx, index).path?.let { File(it).delete() }
-        oublierCopiePartagee(index)
-        SoundAutomationSettings.saveSlot(ctx, index,
-            SoundAutomationSettings.slot(ctx, index).copy(path = null, title = null, durationMs = 0L))
+        SoundAutomationSettings.supprimer(ctx, index)
+        nettoyer(ctx)
         AppLogger.i(TAG, "son ${index + 1} retiré")
     }
 
-    /** La copie de repli du lecteur (mémoire partagée, voir SoundAutomation) suit le son importé. */
-    private fun oublierCopiePartagee(index: Int) {
+    /**
+     * Efface tout fichier de son qu'aucun son de la liste ne désigne plus — l'ancien fichier d'un
+     * son remplacé, celui d'un son retiré —, et sa copie de repli dans la mémoire partagée (voir
+     * SoundAutomation). Rien ne reste dans la mémoire de la voiture.
+     */
+    private fun nettoyer(ctx: Context) {
+        val gardes = SoundAutomationSettings.slots(ctx).mapNotNull { it.path?.let { p -> File(p).name } }.toSet()
         @Suppress("DEPRECATION")
-        File(android.os.Environment.getExternalStorageDirectory(), "MG4Control/sounds").listFiles()
-            ?.filter { it.nameWithoutExtension == "son${index + 1}" }?.forEach { it.delete() }
+        val partage = File(android.os.Environment.getExternalStorageDirectory(), "MG4Control/sounds")
+        listOf(SoundAutomationSettings.dossier(ctx), partage).forEach { dossier ->
+            dossier.listFiles()?.filter { it.isFile && it.name !in gardes }?.forEach {
+                if (it.delete()) AppLogger.i(TAG, "fichier effacé : ${it.parentFile?.name}/${it.name}")
+            }
+        }
     }
 
     private fun f(path: String) = File(path).name

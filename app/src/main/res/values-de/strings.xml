@@ -1058,6 +1058,11 @@
     <string name="sound_title">Töne</string>
     <string name="sound_desc">Einen von einem USB-Stick importierten Ton zu gewählten Momenten abspielen, in der gewünschten Lautstärke.</string>
     <string name="sound_slot">Ton %1$d</string>
+    <string name="sound_add">Ton hinzufügen</string>
+    <string name="sound_add_count">%1$d / %2$d · höchstens ein Ton pro Moment</string>
+    <string name="sound_add_full">Maximum erreicht: ein Ton pro Moment (%1$d)</string>
+    <string name="sound_no_event">Kein Moment</string>
+    <string name="sound_row_volume">Lautstärke %1$d</string>
     <string name="sound_no_file">Keine Datei</string>
     <string name="sound_duration">Dauer %1$s</string>
     <string name="sound_seconds">%1$s s</string>

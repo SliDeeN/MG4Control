@@ -2429,26 +2429,45 @@
                     android:layout_marginTop="12dp"
                     android:layout_marginBottom="12dp" />
 
+                <!-- Liste des sons (2026-10-29) : une ligne dépliable par son, posée par SoundCard ;
+                     autant de sons que de moments possibles sur ce firmware. -->
+                <LinearLayout
+                    android:id="@+id/sound_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
-                    android:baselineAligned="false">
+                    android:gravity="center_vertical">
 
-                    <include
-                        android:id="@+id/sound_slot_1"
-                        layout="@layout/item_sound_slot"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_sound_add"
+                        android:layout_width="wrap_content"
+                        android:layout_height="52dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="20dp"
+                        android:paddingEnd="20dp"
+                        android:text="@string/sound_add"
+                        android:textAllCaps="false"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="8dp" />
 
-                    <include
-                        android:id="@+id/sound_slot_2"
-                        layout="@layout/item_sound_slot"
+                    <TextView
+                        android:id="@+id/sound_add_hint"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginStart="12dp" />
+                        android:layout_marginStart="12dp"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp" />
 
                 </LinearLayout>
 

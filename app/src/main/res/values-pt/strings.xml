@@ -1058,6 +1058,11 @@
     <string name="sound_title">Sons</string>
     <string name="sound_desc">Reproduzir um som importado de uma pen USB em momentos escolhidos, ao volume pretendido.</string>
     <string name="sound_slot">Som %1$d</string>
+    <string name="sound_add">Adicionar um som</string>
+    <string name="sound_add_count">%1$d / %2$d · no máximo um som por momento</string>
+    <string name="sound_add_full">Máximo atingido: um som por momento (%1$d)</string>
+    <string name="sound_no_event">Nenhum momento</string>
+    <string name="sound_row_volume">Volume %1$d</string>
     <string name="sound_no_file">Nenhum ficheiro</string>
     <string name="sound_duration">duração %1$s</string>
     <string name="sound_seconds">%1$s s</string>

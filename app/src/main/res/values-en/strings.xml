@@ -1058,6 +1058,11 @@
     <string name="sound_title">Sounds</string>
     <string name="sound_desc">Play a sound imported from a USB drive at chosen moments, at the volume you want.</string>
     <string name="sound_slot">Sound %1$d</string>
+    <string name="sound_add">Add a sound</string>
+    <string name="sound_add_count">%1$d / %2$d · at most one sound per moment</string>
+    <string name="sound_add_full">Maximum reached: one sound per moment (%1$d)</string>
+    <string name="sound_no_event">No moment</string>
+    <string name="sound_row_volume">Volume %1$d</string>
     <string name="sound_no_file">No file</string>
     <string name="sound_duration">length %1$s</string>
     <string name="sound_seconds">%1$s s</string>

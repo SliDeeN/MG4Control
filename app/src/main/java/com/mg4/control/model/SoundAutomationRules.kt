@@ -3,8 +3,9 @@ package com.mg4.control.model
 /**
  * Sons d'automatisation (issue #161, 2026-10-23) — les règles, sans Android.
  *
- * Deux sons importés par l'utilisateur (aucun n'est fourni), chacun joué à un ou plusieurs
- * [SoundEvent]. Un événement n'appartient qu'à un son : sinon les deux voudraient partir ensemble
+ * Des sons importés par l'utilisateur (aucun n'est fourni), chacun joué à un ou plusieurs
+ * [SoundEvent] — deux au départ, autant que d'événements depuis le 2026-10-29 ([maxSounds]).
+ * Un événement n'appartient qu'à un son : sinon deux sons voudraient partir ensemble
  * et le garde-fou en jetterait toujours un. Le garde-fou ([SoundGuard]) ignore tout déclenchement
  * pendant qu'un son joue, sur toute sa durée : démarrage de l'appli puis READY une seconde plus
  * tard ne donnent qu'un son.
@@ -41,7 +42,15 @@ data class SoundSlot(
 
 object SoundAutomationRules {
 
-    const val SLOTS = 2
+    /**
+     * Autant de sons que d'événements possibles sur ce firmware : un événement n'appartenant qu'à
+     * un son, un son de plus ne pourrait plus rien jouer. La porte n'est lisible que sur SWI132/133.
+     */
+    fun maxSounds(doorReadable: Boolean): Int =
+        SoundEvent.entries.count { it != SoundEvent.FRONT_DOOR || doorReadable }
+
+    /** Plafond absolu, porte comprise : borne de ce qui est enregistré. */
+    val MAX_SOUNDS: Int get() = SoundEvent.entries.size
     /** Au-delà, l'import est refusé : une musique bloquerait les autres événements pendant des minutes. */
     const val MAX_DURATION_MS = 30_000L
 

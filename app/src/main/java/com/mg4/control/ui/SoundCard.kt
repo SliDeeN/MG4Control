@@ -1,6 +1,8 @@
 package com.mg4.control.ui
 
 import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.LinearLayout
@@ -25,17 +27,17 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Carte « Sons » de l'onglet Automatisation (issue #161, maquette du 2026-10-23) : les deux sons
- * côte à côte — fichier, Importer / Changer, Écouter / Arrêter, Retirer, volume de la voiture
- * pendant le son, événements (un événement pris par l'autre son est grisé) —, puis les profils.
- * L'interrupteur et le dépliage restent à [AutomationFragment], comme pour les autres cartes.
+ * Carte « Sons » de l'onglet Automatisation (issue #161). Depuis la maquette A du 2026-10-29, une
+ * LISTE de sons — autant que de moments possibles sur ce firmware ([SoundAutomationRules.maxSounds]) :
+ * une ligne par son (nom, fichier, durée, moments, volume), dépliée pour le régler — Changer,
+ * Écouter / Arrêter, Retirer, volume de la voiture pendant le son, moments (un moment pris par un
+ * autre son est grisé). Une seule ligne ouverte à la fois. « Ajouter un son » sous la liste, puis
+ * les profils. L'interrupteur et le dépliage de la carte restent à [AutomationFragment].
  */
 class SoundCard {
 
+    /** Les réglages d'un son : le corps déplié d'une ligne (item_sound_slot). */
     private class Emplacement(racine: View) {
-        val titre: TextView = racine.findViewById(R.id.sound_slot_title)
-        val duree: TextView = racine.findViewById(R.id.sound_slot_duration)
-        val fichier: TextView = racine.findViewById(R.id.sound_slot_file)
         val importer: MaterialButton = racine.findViewById(R.id.btn_sound_import)
         val ecouter: MaterialButton = racine.findViewById(R.id.btn_sound_play)
         val retirer: MaterialButton = racine.findViewById(R.id.btn_sound_remove)
@@ -44,18 +46,37 @@ class SoundCard {
         val evenements: LinearLayout = racine.findViewById(R.id.sound_slot_events)
     }
 
+    private class Ligne(val racine: View) {
+        val entete: View = racine.findViewById(R.id.sound_row_header)
+        val titre: TextView = racine.findViewById(R.id.sound_row_title)
+        val fichier: TextView = racine.findViewById(R.id.sound_row_file)
+        val duree: TextView = racine.findViewById(R.id.sound_row_duration)
+        val moments: TextView = racine.findViewById(R.id.sound_row_events)
+        val volume: TextView = racine.findViewById(R.id.sound_row_volume)
+        val chevron: TextView = racine.findViewById(R.id.sound_row_chevron)
+        val corps: View = racine.findViewById(R.id.sound_row_body)
+        val reglages = Emplacement(corps)
+    }
+
     private var fragment: Fragment? = null
     private var contenu: View? = null
-    private var emplacements: List<Emplacement> = emptyList()
+    private var liste: LinearLayout? = null
+    private var ajouter: MaterialButton? = null
+    private var indication: TextView? = null
+    private var lignes: List<Ligne> = emptyList()
     private var profils: LinearLayout? = null
     private var max = 0
+    /** Ligne dépliée, -1 = aucune. */
+    private var ouverte = -1
 
     fun bind(f: Fragment, view: View, actif: Boolean) {
         fragment = f
         contenu = view.findViewById(R.id.row_sound_config)
+        liste = view.findViewById(R.id.sound_list)
+        ajouter = view.findViewById<MaterialButton>(R.id.btn_sound_add).apply { setOnClickListener { importer(f, null) } }
+        indication = view.findViewById(R.id.sound_add_hint)
         profils = view.findViewById(R.id.sound_profiles)
-        emplacements = listOf(R.id.sound_slot_1, R.id.sound_slot_2).map { Emplacement(view.findViewById(it)) }
-        emplacements.forEachIndexed { i, e -> brancher(f, i, e) }
+        lignes = emptyList()
         peindre()
         griser(actif)
         SoundAutomation.surChangement = { peindre() }
@@ -81,54 +102,123 @@ class SoundCard {
         contenu?.alpha = if (actif) 1f else 0.4f
     }
 
-    private fun brancher(f: Fragment, i: Int, e: Emplacement) {
+    /** Autant de sons que de moments possibles ici : la porte n'est lisible que sur SWI132/133. */
+    private fun maxSons(): Int = SoundAutomationRules.maxSounds(MG4Hardware.hasDoorDetection())
+
+    /**
+     * Pose une ligne par son. Les lignes ne sont refaites que si leur NOMBRE change (ajout,
+     * retrait) : refaites à chaque peinture, elles couperaient le glissement d'un curseur de volume.
+     */
+    private fun poserLignes(f: Fragment, nombre: Int) {
+        val boite = liste ?: return
+        if (lignes.size == nombre) return
+        boite.removeAllViews()
+        val gonfleur = LayoutInflater.from(boite.context)
+        val ecart = AppDialog.dp(boite.context, 8f)
+        lignes = (0 until nombre).map { i ->
+            val racine = gonfleur.inflate(R.layout.item_sound_row, boite, false)
+            (racine.layoutParams as LinearLayout.LayoutParams).bottomMargin = ecart
+            boite.addView(racine)
+            Ligne(racine).also { brancher(f, i, it) }
+        }
+    }
+
+    private fun brancher(f: Fragment, i: Int, l: Ligne) {
         val ctx = f.requireContext()
-        e.titre.text = ctx.getString(R.string.sound_slot, i + 1)
+        // Le corps reprend les réglages d'un son ; son en-tête et son fichier font doublon avec la ligne.
+        l.corps.findViewById<View>(R.id.sound_slot_head).visibility = View.GONE
+        l.corps.findViewById<View>(R.id.sound_slot_file).visibility = View.GONE
+        l.corps.background = null
+        l.corps.setPadding(l.corps.paddingLeft, 0, l.corps.paddingRight, l.corps.paddingBottom)
+        l.entete.setOnClickListener {
+            ouverte = if (ouverte == i) -1 else i
+            peindre()
+        }
+        val e = l.reglages
         e.importer.setOnClickListener { importer(f, i) }
         e.ecouter.setOnClickListener {
             if (SoundAutomation.enLecture == i) SoundAutomation.arreter() else SoundAutomation.ecouter(ctx, i)
         }
         e.retirer.setOnClickListener {
-            if (SoundAutomation.enLecture == i) SoundAutomation.arreter()
+            // Les rangs des sons suivants vont changer : un son en cours ne doit plus être désigné.
+            if (SoundAutomation.enLecture != null) SoundAutomation.arreter()
             f.viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
                 SoundImport.retirer(ctx, i)
-                withContext(Dispatchers.Main) { if (f.isAdded) peindre() }
+                withContext(Dispatchers.Main) {
+                    if (!f.isAdded) return@withContext
+                    ouverte = -1
+                    peindre()
+                }
             }
         }
         e.curseur.addOnChangeListener { _, valeur, parUtilisateur ->
             e.volume.text = ctx.getString(R.string.door_volume_level_value, valeur.toInt(), e.curseur.valueTo.toInt())
+            l.volume.text = ctx.getString(R.string.sound_row_volume, valeur.toInt())
             if (parUtilisateur) {
                 SoundAutomationSettings.saveSlot(ctx, i, SoundAutomationSettings.slot(ctx, i).copy(volume = valeur.toInt()))
             }
         }
     }
 
-    /** Tout ce qui dépend des réglages : fichiers, boutons, volumes, événements, profils. */
+    /** Tout ce qui dépend des réglages : lignes, fichiers, boutons, volumes, moments, profils. */
     private fun peindre() {
         val f = fragment ?: return
         if (!f.isAdded) return
         val ctx = f.requireContext()
         val sons = SoundAutomationSettings.slots(ctx)
-        emplacements.forEachIndexed { i, e ->
+        poserLignes(f, sons.size)
+        if (ouverte !in sons.indices) ouverte = -1
+        lignes.forEachIndexed { i, l ->
             val s = sons[i]
-            e.fichier.text = s.title?.takeIf { s.hasFile } ?: ctx.getString(R.string.sound_no_file)
-            e.fichier.setTextColor(ctx.getColor(if (s.hasFile) R.color.text_primary else R.color.text_secondary))
-            e.duree.text = if (s.hasFile) ctx.getString(R.string.sound_duration, secondes(s.durationMs)) else ""
+            val e = l.reglages
+            val ouvert = ouverte == i
+            cadre(l.racine, ouvert)
+            l.titre.text = ctx.getString(R.string.sound_slot, i + 1)
+            l.fichier.text = s.title?.takeIf { s.hasFile } ?: ctx.getString(R.string.sound_no_file)
+            l.duree.text = if (s.hasFile) secondes(s.durationMs) else ""
+            if (s.events.isEmpty()) {
+                l.moments.text = ctx.getString(R.string.sound_no_event)
+                l.moments.setTextColor(ctx.getColor(R.color.dash_warn))
+            } else {
+                l.moments.text = s.events.sortedBy { it.ordinal }.joinToString(" · ") { ctx.getString(libelle(it)) }
+                l.moments.setTextColor(ctx.getColor(R.color.text_primary))
+            }
+            l.chevron.text = if (ouvert) "▾" else "▸"
+            l.corps.visibility = if (ouvert) View.VISIBLE else View.GONE
+
             e.importer.text = ctx.getString(if (s.hasFile) R.string.sound_change else R.string.sound_import)
             e.ecouter.visibility = if (s.hasFile) View.VISIBLE else View.INVISIBLE
-            e.retirer.visibility = if (s.hasFile) View.VISIBLE else View.INVISIBLE
             e.ecouter.text = ctx.getString(if (SoundAutomation.enLecture == i) R.string.sound_stop else R.string.sound_play)
             if (max > 0) {
                 e.curseur.valueTo = max.toFloat()
                 e.curseur.value = SoundAutomationRules.volumeFor(s, max).toFloat()
             }
             e.volume.text = ctx.getString(R.string.door_volume_level_value, e.curseur.value.toInt(), e.curseur.valueTo.toInt())
-            evenements(f, i, e, sons)
+            l.volume.text = ctx.getString(R.string.sound_row_volume, e.curseur.value.toInt())
+            if (ouvert) evenements(f, i, e, sons)
         }
+        val plafond = maxSons()
+        val plein = sons.size >= plafond
+        ajouter?.apply {
+            isEnabled = !plein
+            alpha = if (plein) 0.4f else 1f
+        }
+        indication?.text = if (plein) ctx.getString(R.string.sound_add_full, plafond)
+            else ctx.getString(R.string.sound_add_count, sons.size, plafond)
         peindreProfils(f)
     }
 
-    /** Les événements du son [i], deux par ligne ; ceux de l'autre son grisés et nommés. */
+    /** Cadre de la ligne : accent et plus épais quand elle est ouverte. */
+    private fun cadre(v: View, ouvert: Boolean) {
+        val ctx = v.context
+        val fond = (v.background as? GradientDrawable) ?: GradientDrawable().also { v.background = it }
+        fond.cornerRadius = AppDialog.dp(ctx, 12f).toFloat()
+        fond.setColor(Color.TRANSPARENT)
+        fond.setStroke(AppDialog.dp(ctx, if (ouvert) 2f else 1f),
+            ctx.getColor(if (ouvert) R.color.dash_accent else R.color.dash_border))
+    }
+
+    /** Les moments du son [i], deux par ligne ; ceux d'un autre son grisés et nommés. */
     private fun evenements(f: Fragment, i: Int, e: Emplacement, sons: List<SoundSlot>) {
         val ctx = f.requireContext()
         val dispo = SoundEvent.entries.filter { it != SoundEvent.FRONT_DOOR || MG4Hardware.hasDoorDetection() }
@@ -226,25 +316,29 @@ class SoundCard {
 
     // ── Import ───────────────────────────────────────────────────────────────
 
-    private fun importer(f: Fragment, i: Int) {
+    /** [i] : le son à remplacer, ou `null` pour en ajouter un en fin de liste. */
+    private fun importer(f: Fragment, i: Int?) {
         val ctx = f.requireContext()
+        val rang = i ?: SoundAutomationSettings.count(ctx)
+        if (i == null && rang >= maxSons()) return
+        val titre = ctx.getString(R.string.sound_import_title, rang + 1)
         Toast.makeText(ctx, R.string.sound_import_searching, Toast.LENGTH_SHORT).show()
         f.viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
             val r = SoundImport.chercher()
             withContext(Dispatchers.Main) {
                 if (!f.isAdded) return@withContext
                 when {
-                    r.cles == 0 -> AppDialog.confirmer(ctx, ctx.getString(R.string.sound_import_title, i + 1),
+                    r.cles == 0 -> AppDialog.confirmer(ctx, titre,
                         ctx.getString(R.string.sound_import_no_usb), oui = ctx.getString(android.R.string.ok))
-                    r.fichiers.isEmpty() -> AppDialog.confirmer(ctx, ctx.getString(R.string.sound_import_title, i + 1),
+                    r.fichiers.isEmpty() -> AppDialog.confirmer(ctx, titre,
                         ctx.getString(R.string.sound_import_none), oui = ctx.getString(android.R.string.ok))
-                    else -> choisir(f, i, r)
+                    else -> choisir(f, i, titre, r)
                 }
             }
         }
     }
 
-    private fun choisir(f: Fragment, i: Int, r: SoundImport.Resultat) {
+    private fun choisir(f: Fragment, i: Int?, titre: String, r: SoundImport.Resultat) {
         val ctx = f.requireContext()
         val choix = r.fichiers.map {
             AppDialog.Choix(
@@ -256,16 +350,19 @@ class SoundCard {
         }
         val sousTitre = if (r.tropLongs > 0) ctx.getString(R.string.sound_import_subtitle_skipped, r.tropLongs)
             else ctx.getString(R.string.sound_import_subtitle)
-        AppDialog.choisir(ctx, ctx.getString(R.string.sound_import_title, i + 1), choix,
+        AppDialog.choisir(ctx, titre, choix,
             annuler = ctx.getString(android.R.string.cancel), sousTitre = sousTitre, icone = R.drawable.ic_source_usb) { rang ->
             val choisi = r.fichiers[rang]
-            if (SoundAutomation.enLecture == i) SoundAutomation.arreter()
+            if (i != null && SoundAutomation.enLecture == i) SoundAutomation.arreter()
+            val plafond = maxSons()
             f.viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-                val s = SoundImport.importer(ctx, i, choisi)
+                val pose = SoundImport.importer(ctx, i, choisi, plafond)
                 withContext(Dispatchers.Main) {
                     if (!f.isAdded) return@withContext
-                    Toast.makeText(ctx, if (s != null) ctx.getString(R.string.sound_import_done, choisi.file.name)
+                    Toast.makeText(ctx, if (pose != null) ctx.getString(R.string.sound_import_done, choisi.file.name)
                         else ctx.getString(R.string.sound_import_failed), Toast.LENGTH_LONG).show()
+                    // Un son ajouté s'ouvre : il reste à lui choisir ses moments.
+                    if (pose != null && i == null) ouverte = pose
                     peindre()
                 }
             }

@@ -21,6 +21,12 @@ class SoundAutomationRulesTest {
         assertNull(SoundAutomationRules.slotFor(SoundEvent.READY_OFF, listOf(demarrage, extinction.copy(path = null))))
     }
 
+    @Test fun `autant de sons que d'evenements possibles`() {
+        assertEquals(7, SoundAutomationRules.maxSounds(doorReadable = true))
+        assertEquals(6, SoundAutomationRules.maxSounds(doorReadable = false))
+        assertEquals(7, SoundAutomationRules.MAX_SOUNDS)
+    }
+
     @Test fun `un evenement n'appartient qu'a un son`() {
         val sons = listOf(demarrage, extinction)
         // Pris par le son 1 : le son 2 ne peut pas le cocher.
