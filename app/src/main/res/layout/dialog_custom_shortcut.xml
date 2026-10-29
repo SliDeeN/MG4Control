@@ -212,6 +212,7 @@
 
                     <EditText
                         android:id="@+id/cs_action"
+                        android:imeOptions="actionNext"
                         android:layout_width="0dp"
                         android:layout_height="52dp"
                         android:layout_weight="1"
@@ -300,6 +301,7 @@
 
                 <EditText
                     android:id="@+id/cs_link"
+                    android:imeOptions="actionDone"
                     android:layout_width="0dp"
                     android:layout_height="52dp"
                     android:layout_weight="1"
@@ -334,6 +336,7 @@
 
                     <EditText
                         android:id="@+id/cs_url"
+                        android:imeOptions="actionNext"
                         android:layout_width="0dp"
                         android:layout_height="52dp"
                         android:layout_weight="1"
