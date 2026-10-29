@@ -7,7 +7,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.EditText
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import com.mg4.control.BuildConfig
 import com.mg4.control.R
@@ -81,9 +80,9 @@ object CustomShortcutDialog {
     fun ouvrir(ctx: Context, existant: CustomShortcut?, onAnnule: () -> Unit = {}, onEnregistre: (CustomShortcut) -> Unit) {
         val vue = LayoutInflater.from(ctx).inflate(R.layout.dialog_custom_shortcut, null)
         val dialog = AppDialog.afficher(ctx, vue, LARGEUR_DP)
-        // Le clavier prend la moitié de l'écran : la fenêtre se range au-dessus, et se referme
-        // seulement par ses boutons (2026-10-29).
-        AppDialog.saisie(dialog, vue, vue.findViewById<ScrollView>(R.id.cs_scroll))
+        // Le clavier prend la moitié de l'écran : toucher à côté le referme, la fenêtre ne se
+        // ferme que par ses boutons (2026-10-29).
+        AppDialog.saisie(dialog, vue)
         var enregistre = false
         dialog.setOnDismissListener { if (!enregistre) onAnnule() }
 

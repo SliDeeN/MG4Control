@@ -4,7 +4,6 @@ import android.app.AlertDialog
 import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
-import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.util.TypedValue
@@ -24,7 +23,6 @@ import android.widget.ScrollView
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import com.mg4.control.R
-import com.mg4.control.debug.AppLogger
 import com.mg4.control.service.OverlayKit
 
 /**
@@ -64,32 +62,20 @@ internal object AppDialog {
     }
 
     /**
-     * Part de l'écran laissée à une fenêtre de saisie quand le clavier est ouvert : le clavier de
-     * la voiture en prend environ la moitié (constaté par l'utilisateur, 2026-10-29).
-     */
-    private const val PART_AU_DESSUS_DU_CLAVIER = 0.48f
-    private const val MARGE_HAUT_DP = 8f
-    /** En deçà, la zone des champs ne servirait plus à rien : on garde au moins ça. */
-    private const val CHAMPS_MIN_DP = 110f
-
-    /**
      * Fenêtre de SAISIE (2026-10-29, retour d'un utilisateur de la beta) : le clavier de la voiture
-     * prend la moitié de l'écran et cachait Enregistrer ; un champ multiligne n'a qu'« Entrée »,
-     * qui ne le referme pas ; et toucher à côté fermait la fenêtre en perdant la saisie. Ici :
-     *  • un champ a le focus (clavier ouvert) → la fenêtre monte en haut de l'écran et sa zone
-     *    [defilement] est bornée pour que le tout tienne dans la moitié du haut — boutons compris.
-     *    Ça ne dépend pas de ce que le clavier annonce à Android ; s'il annonce sa hauteur, le
-     *    redimensionnement d'Android sert en plus de filet ;
-     *  • toucher à côté de la fenêtre, ou ailleurs que dans le champ, REFERME LE CLAVIER — la
-     *    fenêtre ne se ferme plus que par ses boutons ;
-     *  • « OK » d'un champ d'une ligne referme le clavier.
+     * prend la moitié de l'écran et cache les boutons, et un champ multiligne n'a qu'« Entrée »,
+     * qui ne le referme pas. Toucher à côté de la fenêtre REFERME LE CLAVIER, au lieu de fermer la
+     * fenêtre en perdant la saisie : elle ne se ferme plus que par ses boutons. « OK » d'un champ
+     * d'une ligne referme aussi le clavier.
+     *
+     * Essayé puis retiré le même jour (sa décision) : remonter la fenêtre et la réduire à la moitié
+     * du haut tant que le clavier est ouvert — trop tassé.
      */
-    fun saisie(dialog: AlertDialog, racine: View, defilement: ScrollView) {
+    fun saisie(dialog: AlertDialog, racine: View) {
         val window = dialog.window ?: return
         val ctx = racine.context
         dialog.setCanceledOnTouchOutside(false)
-        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
-            WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
         // Le focus repose sur la carte quand le clavier est fermé : sans ça, Android le rendrait
         // au premier champ, et le clavier pourrait revenir.
         racine.isFocusableInTouchMode = true
@@ -101,51 +87,7 @@ internal object AppDialog {
             if (racine.findFocus() is EditText) racine.requestFocus()
         }
 
-        var compacte = false
-        fun compacter(oui: Boolean) {
-            if (oui == compacte) return
-            compacte = oui
-            val ecran = ctx.resources.displayMetrics.heightPixels
-            val place = window.attributes
-            place.gravity = if (oui) Gravity.TOP or Gravity.CENTER_HORIZONTAL else Gravity.CENTER
-            place.y = if (oui) dp(ctx, MARGE_HAUT_DP) else 0
-            window.attributes = place
-            val lp = defilement.layoutParams
-            if (oui) {
-                val fixe = racine.height - defilement.height
-                val dispo = (ecran * PART_AU_DESSUS_DU_CLAVIER).toInt() - dp(ctx, MARGE_HAUT_DP) - fixe
-                val naturelle = defilement.getChildAt(0)?.height ?: defilement.height
-                lp.height = minOf(naturelle, dispo.coerceAtLeast(dp(ctx, CHAMPS_MIN_DP)))
-                AppLogger.i("MG4_UI", "saisie : clavier ouvert → fenêtre en haut, zone des champs " +
-                    "${lp.height} px (écran $ecran px, boutons et titre $fixe px)")
-            } else {
-                lp.height = ViewGroup.LayoutParams.WRAP_CONTENT
-            }
-            defilement.layoutParams = lp
-            // Le champ qui a le clavier reste visible dans la zone réduite.
-            if (oui) defilement.post {
-                val champ = racine.findFocus() ?: return@post
-                val r = Rect()
-                champ.getDrawingRect(r)
-                defilement.offsetDescendantRectToMyCoords(champ, r)
-                defilement.smoothScrollTo(0, (r.top - dp(ctx, 12f)).coerceAtLeast(0))
-            }
-        }
-        racine.viewTreeObserver.addOnGlobalFocusChangeListener { _, nouveau -> compacter(nouveau is EditText) }
-
-        // Hauteur réellement laissée par le clavier, pour le journal : dit si le clavier de la
-        // voiture se déclare à Android.
-        var dernierVisible = -1
-        racine.viewTreeObserver.addOnGlobalLayoutListener {
-            val r = Rect()
-            window.decorView.getWindowVisibleDisplayFrame(r)
-            if (r.height() != dernierVisible) {
-                dernierVisible = r.height()
-                AppLogger.d("MG4_UI", "saisie : zone visible ${r.width()}×${r.height()} px")
-            }
-        }
-
-        // « OK » d'un champ d'une ligne : clavier refermé, la carte reprend sa place.
+        // « OK » d'un champ d'une ligne : clavier refermé.
         fun brancherOk(v: View) {
             if (v is EditText) {
                 v.setOnEditorActionListener { _, action, _ ->
@@ -157,8 +99,7 @@ internal object AppDialog {
         }
         brancherOk(racine)
 
-        // Un toucher hors du champ en cours referme le clavier ; hors de la fenêtre, il ne fait
-        // plus que ça. Les boutons touchés reçoivent quand même leur appui.
+        // Un toucher hors de la fenêtre ne fait plus que refermer le clavier.
         val origine = window.callback
         window.callback = object : Window.Callback by origine {
             override fun dispatchTouchEvent(e: MotionEvent): Boolean {
@@ -168,24 +109,10 @@ internal object AppDialog {
                         fermerClavier()
                         return true
                     }
-                    val champ = racine.findFocus() as? EditText
-                    if (champ != null && !dedans(champ, e)) {
-                        val rendu = origine.dispatchTouchEvent(e)
-                        // Un autre champ touché garde le clavier ; tout le reste le referme.
-                        decor.post { if (racine.findFocus() === champ || racine.findFocus() !is EditText) fermerClavier() }
-                        return rendu
-                    }
                 }
                 return origine.dispatchTouchEvent(e)
             }
         }
-    }
-
-    /** Le toucher [e] (coordonnées de la fenêtre) tombe-t-il dans [v] ? */
-    private fun dedans(v: View, e: MotionEvent): Boolean {
-        val ou = IntArray(2)
-        v.getLocationInWindow(ou)
-        return e.x >= ou[0] && e.x <= ou[0] + v.width && e.y >= ou[1] && e.y <= ou[1] + v.height
     }
 
     /** Affiche [vue] et rend la fenêtre, à refermer par `dismiss()`. */
