@@ -49,3 +49,27 @@ android.permission.READ_NETWORK_USAGE_HISTORY
 # Ce qu'elle NE fait pas : lire le contenu, le micro, ou agir sur une source à l'arrêt — le
 # code ne commande qu'une session dont l'état déclaré est « en lecture ».
 android.permission.MEDIA_CONTENT_CONTROL
+# --- raccourci « Android Auto / CarPlay » (2.6.10, les DEUX variantes) ---
+# REAL_GET_TASKS (signature|privileged, obtenue en android.uid.system) : lire quelle application
+# est au premier plan, pour savoir si la projection est déjà affichée et quel écran la précédait
+# (service/ProjectionShortcut.kt), et pour la zone clim ci-dessous (service/ProjectionHvacZone.kt).
+# Lecture seule de la liste des tâches : aucun contenu d'application, aucune commande au véhicule.
+android.permission.REAL_GET_TASKS
+# REORDER_TASKS (normal) : ramener devant l'écran d'avant la projection au second appui
+# (ActivityManager.moveTaskToFront). Change seulement l'ordre des écrans.
+android.permission.REORDER_TASKS
+# --- fenêtres au-dessus de la barre système (2.6.10, les DEUX variantes) ---
+# Zone clim pendant Android Auto / CarPlay et boutons flottants posés dans la barre du haut :
+# une fenêtre TYPE_STATUS_BAR_SUB_PANEL (repli TYPE_SYSTEM_ERROR), seul moyen de dessiner et de
+# recevoir un toucher par-dessus la barre (service/ProjectionHvacZone.kt, FloatingButtonsOverlay.kt).
+# signature|privileged, obtenues en android.uid.system. Elles n'ouvrent que l'AFFICHAGE de nos
+# propres fenêtres : aucune lecture d'écran, aucune commande au véhicule. Tout est coupé en
+# Mode Garage.
+android.permission.INTERNAL_SYSTEM_WINDOW
+android.permission.STATUS_BAR_SERVICE
+# --- raccourcis perso, issue #172 (2.6.10, les DEUX variantes) ---
+# ACCESS_SHORTCUTS (signature, obtenue avec la clé plateforme) : lister et lancer les raccourcis
+# que les applications publient pour les launchers (LauncherApps.getShortcuts / startShortcut,
+# service/CustomShortcutRunner.kt). Ne lance que ce que l'utilisateur a choisi lui-même dans la
+# fenêtre « Raccourci perso » ; les cibles système sont refusées par CustomShortcuts.problem.
+android.permission.ACCESS_SHORTCUTS
