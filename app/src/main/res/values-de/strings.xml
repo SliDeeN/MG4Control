@@ -930,11 +930,11 @@
     <string name="charge_state_history_empty">Noch keine Änderung</string>
     <string name="charge_state_hint">Lass das Fenster während eines Ladevorgangs offen: Einstecken, Beginn, Ende, Ausstecken. Jede Änderung wird auch im Diagnoseprotokoll vermerkt.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
-    <string name="shortcuts_action_preclim">Vorklimatisierung</string>
+    <string name="shortcuts_action_preclim">Fahrzeugwächter</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
     <string name="projection_no_phone">Kein Telefon verbunden (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">%1$s lässt sich nicht öffnen</string>
-    <string name="shortcuts_cat_preclim">Vorklimatisierung</string>
+    <string name="shortcuts_cat_preclim">Fahrzeugwächter</string>
     <string name="shortcuts_cat_floating">Schwebende Tasten</string>
     <string name="floating_desc">Verknüpfungsblasen über allen Apps. Kurz drücken: die Verknüpfung. Lang drücken: die Blase verschieben.</string>
     <string name="floating_empty">Noch keine Taste. Fügen Sie eine hinzu: Verknüpfung wählen, der Titel folgt.</string>
@@ -981,7 +981,7 @@
     <string name="floating_value_fan">Gebläse %1$s</string>
     <string name="floating_value_autovol">AUTO-Gebläse %1$s</string>
     <string name="floating_value_volume">Lautstärke %1$d</string>
-    <string name="preclim_cfg_hint">Wird über die Lenkradtaste gestartet. Modus, Zeiten und Klimaeinstellungen werden in ihrem Fenster gewählt, das sich immer auf „Jetzt“ öffnet. Am Ende kehrt die Klimaanlage zu ihren vorherigen Einstellungen zurück.</string>
+    <string name="preclim_cfg_hint">Wird über die Lenkradtaste gestartet. Drei Modi, das Auto bleibt eingeschaltet und verriegelt: Vorklimatisierung, Hundemodus und Überwachung. Die Einstellungen werden in ihrem Fenster gewählt, das sich immer auf „Jetzt“ öffnet. Am Ende kehrt die Klimaanlage zu ihren vorherigen Einstellungen zurück.</string>
     <string name="preclim_cfg_lock">Türen verriegeln nach</string>
     <string name="preclim_cfg_soc">Stopp unter diesem Akkustand</string>
     <string name="preclim_cfg_screen">Bildschirm während des Wartens</string>

@@ -930,11 +930,11 @@
     <string name="charge_state_history_empty">Ningún cambio por ahora</string>
     <string name="charge_state_hint">Deja la ventana abierta durante una carga: conexión, inicio, fin, desconexión. Cada cambio también se anota en el registro del Diagnóstico.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
-    <string name="shortcuts_action_preclim">Preclimatización</string>
+    <string name="shortcuts_action_preclim">Guardián del coche</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
     <string name="projection_no_phone">Ningún teléfono conectado (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">No se puede abrir %1$s</string>
-    <string name="shortcuts_cat_preclim">Preclimatización</string>
+    <string name="shortcuts_cat_preclim">Guardián del coche</string>
     <string name="shortcuts_cat_floating">Botones flotantes</string>
     <string name="floating_desc">Burbujas de acceso directo sobre todas las aplicaciones. Pulsación corta: el acceso directo. Pulsación larga: mover la burbuja.</string>
     <string name="floating_empty">Aún no hay botones. Añade uno: elige su acceso directo, el título lo sigue.</string>
@@ -981,7 +981,7 @@
     <string name="floating_value_fan">Ventilación %1$s</string>
     <string name="floating_value_autovol">Caudal %1$s</string>
     <string name="floating_value_volume">Volumen %1$d</string>
-    <string name="preclim_cfg_hint">Se inicia con el atajo del volante. El modo, los horarios y los ajustes del clima se eligen en su ventana, que siempre se abre en «Ahora». Al final, el clima recupera los ajustes que tenía antes.</string>
+    <string name="preclim_cfg_hint">Se inicia con el atajo del volante. Tres modos, con el coche encendido y bloqueado: preclimatización, modo perro y vigilancia. Los ajustes se eligen en su ventana, que siempre se abre en «Ahora». Al final, el clima recupera los ajustes que tenía antes.</string>
     <string name="preclim_cfg_lock">Bloquear las puertas tras</string>
     <string name="preclim_cfg_soc">Parar por debajo de este nivel de batería</string>
     <string name="preclim_cfg_screen">Pantalla durante la espera</string>

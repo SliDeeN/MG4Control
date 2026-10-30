@@ -947,11 +947,11 @@
     <string name="charge_state_history_empty">Aucun changement pour l’instant</string>
     <string name="charge_state_hint">Laisse la fenêtre ouverte pendant une charge : branchement, début, fin, débranchement. Chaque changement est aussi noté dans le journal du Diagnostic.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
-    <string name="shortcuts_action_preclim">Pré-climatisation</string>
+    <string name="shortcuts_action_preclim">Garde-voiture</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
     <string name="projection_no_phone">Aucun téléphone connecté (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">Impossible d’ouvrir %1$s</string>
-    <string name="shortcuts_cat_preclim">Pré-climatisation</string>
+    <string name="shortcuts_cat_preclim">Garde-voiture</string>
     <string name="shortcuts_cat_floating">Boutons flottants</string>
     <string name="floating_desc">Des bulles de raccourci par-dessus toutes les applications. Appui court : le raccourci. Appui long : déplacer la bulle.</string>
     <string name="floating_empty">Aucun bouton pour l’instant. Ajoutez-en un : choisissez son raccourci, le titre suit.</string>
@@ -998,7 +998,7 @@
     <string name="floating_value_fan">Ventilation %1$s</string>
     <string name="floating_value_autovol">Débit %1$s</string>
     <string name="floating_value_volume">Volume %1$d</string>
-    <string name="preclim_cfg_hint">Se lance avec le raccourci au volant. Le mode, les horaires et les réglages de la clim se choisissent dans sa fenêtre, qui s’ouvre toujours sur « Maintenant ». À la fin, la clim retrouve les réglages qu’elle avait avant.</string>
+    <string name="preclim_cfg_hint">Se lance avec le raccourci au volant. Trois modes, voiture laissée allumée et verrouillée : pré-climatisation, mode chien et surveillance. Les réglages se choisissent dans sa fenêtre, qui s’ouvre toujours sur « Maintenant ». À la fin, la clim retrouve les réglages qu’elle avait avant.</string>
     <string name="preclim_cfg_lock">Verrouillage des portes après</string>
     <string name="preclim_cfg_soc">Arrêt sous ce niveau de batterie</string>
     <string name="preclim_cfg_screen">Écran pendant l’attente</string>

@@ -930,11 +930,11 @@
     <string name="charge_state_history_empty">Nessuna modifica per ora</string>
     <string name="charge_state_hint">Lascia la finestra aperta durante una ricarica: collegamento, inizio, fine, scollegamento. Ogni modifica viene anche annotata nel registro della Diagnostica.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
-    <string name="shortcuts_action_preclim">Preclimatizzazione</string>
+    <string name="shortcuts_action_preclim">Custode dell’auto</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
     <string name="projection_no_phone">Nessun telefono collegato (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">Impossibile aprire %1$s</string>
-    <string name="shortcuts_cat_preclim">Preclimatizzazione</string>
+    <string name="shortcuts_cat_preclim">Custode dell’auto</string>
     <string name="shortcuts_cat_floating">Pulsanti mobili</string>
     <string name="floating_desc">Bolle di scorciatoia sopra tutte le app. Pressione breve: la scorciatoia. Pressione lunga: spostare la bolla.</string>
     <string name="floating_empty">Ancora nessun pulsante. Aggiungine uno: scegli la scorciatoia, il titolo la segue.</string>
@@ -981,7 +981,7 @@
     <string name="floating_value_fan">Ventilazione %1$s</string>
     <string name="floating_value_autovol">Portata %1$s</string>
     <string name="floating_value_volume">Volume %1$d</string>
-    <string name="preclim_cfg_hint">Si avvia con la scorciatoia al volante. Modalità, orari e impostazioni del clima si scelgono nella sua finestra, che si apre sempre su «Adesso». Alla fine, il clima ritrova le impostazioni che aveva prima.</string>
+    <string name="preclim_cfg_hint">Si avvia con la scorciatoia al volante. Tre modalità, con l’auto accesa e chiusa: preclimatizzazione, modalità cane e sorveglianza. Le impostazioni si scelgono nella sua finestra, che si apre sempre su «Adesso». Alla fine, il clima ritrova le impostazioni che aveva prima.</string>
     <string name="preclim_cfg_lock">Blocca le porte dopo</string>
     <string name="preclim_cfg_soc">Stop sotto questo livello di batteria</string>
     <string name="preclim_cfg_screen">Schermo durante l’attesa</string>

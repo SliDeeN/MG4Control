@@ -930,11 +930,11 @@
     <string name="charge_state_history_empty">No change yet</string>
     <string name="charge_state_hint">Leave the window open during a charge: plugging in, start, end, unplugging. Each change is also written to the Diagnostic log.</string>
     <!-- Pré-climatisation (issue #130, 2026-10-23) -->
-    <string name="shortcuts_action_preclim">Pre-conditioning</string>
+    <string name="shortcuts_action_preclim">Car keeper</string>
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
     <string name="projection_no_phone">No phone connected (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">Couldn’t open %1$s</string>
-    <string name="shortcuts_cat_preclim">Pre-conditioning</string>
+    <string name="shortcuts_cat_preclim">Car keeper</string>
     <string name="shortcuts_cat_floating">Floating buttons</string>
     <string name="floating_desc">Shortcut bubbles on top of every app. Short press: the shortcut. Long press: move the bubble.</string>
     <string name="floating_empty">No button yet. Add one: choose its shortcut, the title follows.</string>
@@ -981,7 +981,7 @@
     <string name="floating_value_fan">Fan %1$s</string>
     <string name="floating_value_autovol">Auto air %1$s</string>
     <string name="floating_value_volume">Volume %1$d</string>
-    <string name="preclim_cfg_hint">Starts from the steering-wheel shortcut. The mode, times and climate settings are chosen in its window, which always opens on “Now”. At the end, the climate goes back to the settings it had before.</string>
+    <string name="preclim_cfg_hint">Starts from the steering-wheel shortcut. Three modes, with the car left on and locked: pre-conditioning, dog mode and surveillance. The settings are chosen in its window, which always opens on “Now”. At the end, the climate goes back to the settings it had before.</string>
     <string name="preclim_cfg_lock">Lock the doors after</string>
     <string name="preclim_cfg_soc">Stop below this battery level</string>
     <string name="preclim_cfg_screen">Screen while waiting</string>
