@@ -270,6 +270,17 @@
     <string name="settings_auto_apply">Ajustes adicionales</string>
     <string name="settings_garage_mode">Modo taller</string>
     <string name="settings_garage_mode_desc">Pone MG4Control en reposo total: sin atajos (los botones recuperan su función original), sin perfil al arrancar, sin automatizaciones. Útil para dejar el vehículo en el taller sin desinstalar la aplicación. Sus ajustes se conservan y vuelven en cuanto se desactiva el modo.</string>
+    <string name="settings_auto_scope_title">Climatización · lo que regula AUTO</string>
+    <string name="settings_auto_scope_desc">En AUTO, el coche regula por sí mismo la ventilación, la dirección del aire y la recirculación. Desmarca lo que quieras controlar tú.</string>
+    <string name="settings_auto_scope_fan">Ventilación</string>
+    <string name="settings_auto_scope_fan_desc">Siempre: es la función de AUTO.</string>
+    <string name="settings_auto_scope_air">Dirección del aire</string>
+    <string name="settings_auto_scope_loop">Recirculación</string>
+    <string name="settings_auto_scope_air_car">La elige el coche</string>
+    <string name="settings_auto_scope_air_kept">Se mantiene la tuya</string>
+    <string name="settings_auto_scope_loop_car">La elige el coche</string>
+    <string name="settings_auto_scope_loop_kept">Se mantiene la tuya</string>
+    <string name="settings_auto_scope_note">Todo marcado = comportamiento del coche. Desmarcado: MG4Control vuelve a poner tu ajuste justo después de activar AUTO (ventana HVAC, página Clima, perfiles y automatización A/C).</string>
     <string name="settings_ready_default">Volver al perfil predeterminado cada vez que el coche pasa a READY</string>
     <string name="settings_ready_default_desc">De forma predeterminada, un perfil elegido a mano se mantiene hasta que se apaga el coche. Con esta opción, se olvida cada vez que el coche pasa a READY, incluso tras una parada corta, y se vuelve a aplicar el perfil predeterminado. Si debe aplicarse un perfil vinculado a la temperatura exterior o a un teléfono Bluetooth, conserva la prioridad, como al arrancar.</string>
     <string name="notif_service_active">Servicio activo</string>

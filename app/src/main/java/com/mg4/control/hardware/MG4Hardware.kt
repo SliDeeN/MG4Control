@@ -28,6 +28,7 @@ import com.mg4.control.model.HvacPopup
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.model.SeatHeat
 import com.mg4.control.shortcut.AudioSource
+import com.mg4.control.util.ClimateAutoScope
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.GarageMode
 import com.saicmotor.common.CommandParcelable
@@ -6365,8 +6366,47 @@ object MG4Hardware {
      * niveau de ventilation, le dernier réglé à la main. On fait pareil.
      *
      * On n'appuie pas si AUTO est déjà actif : rien ne dit qu'un second appui ne le couperait pas.
+     *
+     * En AUTO la voiture choisit aussi le sens de l'air et la recirculation, un instant après
+     * l'appui (issue #160). Ceux que l'utilisateur garde à sa main ([ClimateAutoScope]) sont relus
+     * avant et remis après ([garderApresAuto]). [ecraseAir] / [ecraseRecirc] : l'appelant (profil,
+     * automatisation A/C) écrit lui-même ce réglage juste après — inutile de le remettre.
+     * ⚠️ Avec un réglage gardé, bloquant ~1,5 s de plus → hors du fil principal.
      */
-    fun setClimateAuto(on: Boolean): Boolean {
+    fun setClimateAuto(on: Boolean, ecraseAir: Boolean = false, ecraseRecirc: Boolean = false): Boolean {
+        if (!on) return basculerAuto(false)
+        val ctx = sAppContext
+        val garderAir = !ecraseAir && !ClimateAutoScope.carSetsAir(ctx)
+        val garderRecirc = !ecraseRecirc && !ClimateAutoScope.carSetsLoop(ctx)
+        // Déjà en AUTO : la voiture ne rechoisit rien, il n'y a rien à remettre.
+        val avant = if (garderAir || garderRecirc) getClimateState()?.takeIf { !it.reglages().enAuto } else null
+        val ok = basculerAuto(true)
+        if (ok && avant != null) garderApresAuto(avant, garderAir, garderRecirc)
+        return ok
+    }
+
+    /** Le temps que la voiture fasse ses choix d'AUTO avant de remettre ceux de l'utilisateur. */
+    private const val AUTO_REPRISE_MS = 1_500L
+
+    /** Remet le sens de l'air et / ou la recirculation d'avant AUTO, s'ils ont changé. Une fois. */
+    private fun garderApresAuto(avant: ClimateState, air: Boolean, recirc: Boolean) {
+        SystemClock.sleep(AUTO_REPRISE_MS)
+        val lu = getClimateState() ?: return
+        val direction = avant.airFlow?.takeIf { air && it in 0..6 }
+        val mode = avant.loopMode?.takeIf { recirc }
+        val remettreAir = direction != null && lu.airFlow != direction
+        val remettreRecirc = mode != null && lu.loopMode != mode
+        if (remettreAir) setClimateAirFlow(direction!!)
+        if (remettreRecirc) setClimateLoopMode(mode!!)
+        AppLogger.i(CLIM_TAG, "AUTO : gardés à la main ${listOfNotNull(if (air) "sens de l'air" else null,
+            if (recirc) "recirculation" else null).joinToString(" et ")} — " +
+            if (!remettreAir && !remettreRecirc) "la voiture n'y a pas touché"
+            else "remis : " + listOfNotNull(
+                if (remettreAir) "air ${lu.airFlow} → $direction" else null,
+                if (remettreRecirc) "recyclage ${lu.loopMode} → $mode" else null).joinToString(", "))
+    }
+
+    private fun basculerAuto(on: Boolean): Boolean {
         if (isClimateA9()) {
             // Bascule relue, validée sur SWI131 ; si elle ne suffit pas à couper, même repli.
             if (a9CycleTo("auto", "getAutoStatus", if (on) 1 else 0, 2, "switchAutoStatus")) return true
@@ -6565,7 +6605,8 @@ object MG4Hardware {
             // Débit en AUTO (issue #178) avant le passage en AUTO : la voiture démarre l'AUTO
             // directement au bon débit. Ignoré hors AUTO, comme l'éditeur qui grise la ligne.
             if (autoVolume != null) ok = setClimateAutoVolume(autoVolume) && ok
-            ok = setClimateAuto(true) && ok
+            ok = setClimateAuto(true, ecraseAir = airFlow?.let { AirFlow.directionForMask(it) } != null,
+                ecraseRecirc = loopMode != null) && ok
         } else {
             ok = setClimateFan(fanLevel.coerceIn(state.fanMin, state.fanMax)) && ok
         }
@@ -6605,7 +6646,8 @@ object MG4Hardware {
         // mode auto, et activer le mode auto reprend la main sur la vitesse. Appliquer les deux
         // donnerait un état final décidé par le seul ordre des appels, pas par l'utilisateur.
         if (autoMode) {
-            ok = setClimateAuto(true) && ok
+            ok = setClimateAuto(true, ecraseAir = airFlow?.let { AirFlow.directionForMask(it) } != null,
+                ecraseRecirc = loopMode != null) && ok
         } else {
             ok = setClimateFan(fanLevel.coerceIn(state.fanMin, state.fanMax)) && ok
         }

@@ -270,6 +270,17 @@
     <string name="settings_auto_apply">Ek ayarlar</string>
     <string name="settings_garage_mode">Garaj modu</string>
     <string name="settings_garage_mode_desc">MG4Control’ü tamamen uyutur: kısayol yok (düğmeler özgün işlevlerine döner), açılışta profil uygulanmaz, otomasyon çalışmaz. Aracı servise bırakırken uygulamayı kaldırmak zorunda kalmamak için kullanışlıdır. Ayarlarınız korunur ve mod kapatılır kapatılmaz geri gelir.</string>
+    <string name="settings_auto_scope_title">Klima · AUTO neyi ayarlar</string>
+    <string name="settings_auto_scope_desc">AUTO modunda araç fanı, hava yönünü ve sirkülasyonu kendisi ayarlar. Kendiniz belirlemek istediklerinizin işaretini kaldırın.</string>
+    <string name="settings_auto_scope_fan">Fan</string>
+    <string name="settings_auto_scope_fan_desc">Her zaman: AUTO’nun görevi budur.</string>
+    <string name="settings_auto_scope_air">Hava yönü</string>
+    <string name="settings_auto_scope_loop">Sirkülasyon</string>
+    <string name="settings_auto_scope_air_car">Araç seçer</string>
+    <string name="settings_auto_scope_air_kept">Sizinki korunur</string>
+    <string name="settings_auto_scope_loop_car">Araç seçer</string>
+    <string name="settings_auto_scope_loop_kept">Sizinki korunur</string>
+    <string name="settings_auto_scope_note">Hepsi işaretli = aracın davranışı. İşaretsiz: MG4Control, AUTO açıldıktan hemen sonra ayarınızı geri koyar (HVAC açılır penceresi, Klima sayfası, profiller ve A/C otomasyonu).</string>
     <string name="settings_ready_default">Araç her READY konumuna geçtiğinde varsayılan profile dön</string>
     <string name="settings_ready_default_desc">Varsayılan olarak, elle seçilen profil araç kapatılana kadar geçerli kalır. Bu seçenekle, kısa bir duruştan sonra bile araç her READY konumuna geçtiğinde unutulur ve varsayılan profil yeniden uygulanır. Dış sıcaklığa veya bir Bluetooth telefona bağlı bir profil uygulanacaksa, açılışta olduğu gibi önceliğini korur.</string>
     <string name="notif_service_active">Hizmet çalışıyor</string>

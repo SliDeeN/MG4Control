@@ -270,6 +270,17 @@
     <string name="settings_auto_apply">Additional settings</string>
     <string name="settings_garage_mode">Garage mode</string>
     <string name="settings_garage_mode_desc">Puts MG4Control fully to sleep: no shortcuts (buttons regain their original function), no profile applied at startup, no automation. Useful when leaving the car at a workshop without uninstalling the app. Your settings are kept and come back as soon as the mode is turned off.</string>
+    <string name="settings_auto_scope_title">Climate · what AUTO controls</string>
+    <string name="settings_auto_scope_desc">In AUTO, the car sets the fan, the air direction and the recirculation itself. Untick what you want to keep under your control.</string>
+    <string name="settings_auto_scope_fan">Fan</string>
+    <string name="settings_auto_scope_fan_desc">Always: that is what AUTO does.</string>
+    <string name="settings_auto_scope_air">Air direction</string>
+    <string name="settings_auto_scope_loop">Recirculation</string>
+    <string name="settings_auto_scope_air_car">Chosen by the car</string>
+    <string name="settings_auto_scope_air_kept">Yours is kept</string>
+    <string name="settings_auto_scope_loop_car">Chosen by the car</string>
+    <string name="settings_auto_scope_loop_kept">Yours is kept</string>
+    <string name="settings_auto_scope_note">All ticked = the car’s behaviour. Unticked: MG4Control puts your setting back right after AUTO turns on (HVAC pop-up, Climate page, profiles and A/C automation).</string>
     <string name="settings_ready_default">Return to the default profile each time the car enters READY</string>
     <string name="settings_ready_default_desc">By default, a profile chosen by hand stays in place until the car is switched off. With this option, it is forgotten each time the car enters READY, including after a short stop, and the default profile is applied again. If a profile tied to the outside temperature or to a Bluetooth phone should apply, it keeps priority, as at start-up.</string>
     <string name="notif_service_active">Service running</string>

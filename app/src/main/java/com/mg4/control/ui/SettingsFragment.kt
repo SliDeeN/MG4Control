@@ -54,6 +54,7 @@ import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.service.MG4ControlService
 import com.mg4.control.service.OverlayKit
 import com.mg4.control.util.GarageMode
+import com.mg4.control.util.ClimateAutoScope
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.FullScreen
 import com.mg4.control.util.FloatingButtonSettings
@@ -668,6 +669,27 @@ class SettingsFragment : Fragment() {
                 AppLogger.i(ExternalApi.LOG_TAG, "API externe ACTIVÉE par l'utilisateur (confirmée)")
             }
         }
+
+        // ── Ce que règle AUTO (issue #160) : coché = la voiture choisit (défaut) ──
+        view.findViewById<View>(R.id.card_hvac_auto_scope).visibility =
+            if (MG4Hardware.hasClimateControl()) View.VISIBLE else View.GONE
+        fun portee(sw: Int, tv: Int, lit: (android.content.Context) -> Boolean,
+                   ecrit: (android.content.Context, Boolean) -> Unit, voiture: Int, garde: Int, nom: String) {
+            val texte = view.findViewById<TextView>(tv)
+            view.findViewById<Switch>(sw).apply {
+                isChecked = lit(requireContext())
+                texte.setText(if (isChecked) voiture else garde)
+                setOnCheckedChangeListener { _, checked ->
+                    ecrit(requireContext(), checked)
+                    texte.setText(if (checked) voiture else garde)
+                    AppLogger.i("MG4_SETTINGS", "AUTO : $nom ${if (checked) "laissé à la voiture" else "gardé à la main"}")
+                }
+            }
+        }
+        portee(R.id.switch_auto_scope_air, R.id.tv_auto_scope_air, ClimateAutoScope::carSetsAir, ClimateAutoScope::setCarSetsAir,
+            R.string.settings_auto_scope_air_car, R.string.settings_auto_scope_air_kept, "sens de l'air")
+        portee(R.id.switch_auto_scope_loop, R.id.tv_auto_scope_loop, ClimateAutoScope::carSetsLoop, ClimateAutoScope::setCarSetsLoop,
+            R.string.settings_auto_scope_loop_car, R.string.settings_auto_scope_loop_kept, "recirculation")
 
         // ── Mode Garage — MG4Control en veille complète ──────────────────────
         val switchGarage = view.findViewById<Switch>(R.id.switch_garage_mode)

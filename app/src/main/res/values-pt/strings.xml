@@ -270,6 +270,17 @@
     <string name="settings_auto_apply">Definições adicionais</string>
     <string name="settings_garage_mode">Modo oficina</string>
     <string name="settings_garage_mode_desc">Coloca o MG4Control totalmente em pausa: sem atalhos (os botões recuperam a função original), sem perfil ao arrancar, sem automações. Útil para deixar o veículo na oficina sem desinstalar a aplicação. As suas definições são mantidas e voltam assim que o modo for desativado.</string>
+    <string name="settings_auto_scope_title">Climatização · o que o AUTO regula</string>
+    <string name="settings_auto_scope_desc">Em AUTO, o carro regula sozinho a ventilação, a direção do ar e a recirculação. Desmarque o que quer controlar.</string>
+    <string name="settings_auto_scope_fan">Ventilação</string>
+    <string name="settings_auto_scope_fan_desc">Sempre: é a função do AUTO.</string>
+    <string name="settings_auto_scope_air">Direção do ar</string>
+    <string name="settings_auto_scope_loop">Recirculação</string>
+    <string name="settings_auto_scope_air_car">Escolhida pelo carro</string>
+    <string name="settings_auto_scope_air_kept">A sua é mantida</string>
+    <string name="settings_auto_scope_loop_car">Escolhida pelo carro</string>
+    <string name="settings_auto_scope_loop_kept">A sua é mantida</string>
+    <string name="settings_auto_scope_note">Tudo marcado = comportamento do carro. Desmarcado: o MG4Control repõe a sua definição logo após ativar o AUTO (pop-up HVAC, página Clima, perfis e automatização A/C).</string>
     <string name="settings_ready_default">Voltar ao perfil padrão sempre que o carro passa a READY</string>
     <string name="settings_ready_default_desc">Por predefinição, um perfil escolhido à mão mantém-se até o carro ser desligado. Com esta opção, é esquecido sempre que o carro passa a READY, mesmo após uma paragem curta, e o perfil padrão volta a ser aplicado. Se um perfil ligado à temperatura exterior ou a um telemóvel Bluetooth tiver de ser aplicado, mantém a prioridade, como no arranque.</string>
     <string name="notif_service_active">Serviço ativo</string>
