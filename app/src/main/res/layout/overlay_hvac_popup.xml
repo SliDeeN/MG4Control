@@ -602,23 +602,6 @@
 
                         </LinearLayout>
 
-                        <!-- Choix du débit en AUTO (issue #178, maquette B) : remplace la rangée
-                             « − AUTO + » quand AUTO est tenu 1 s. Faible → Fort de gauche à droite. -->
-                        <LinearLayout
-                            android:id="@+id/hvac_autovol_row"
-                            android:layout_width="match_parent"
-                            android:layout_height="58dp"
-                            android:layout_marginTop="14dp"
-                            android:orientation="horizontal"
-                            android:padding="4dp"
-                            android:visibility="gone"
-                            android:baselineAligned="false">
-
-                            <TextView android:id="@+id/hvac_autovol_low" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center" android:text="@string/clim_autovol_low" android:textSize="14sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-                            <TextView android:id="@+id/hvac_autovol_medium" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="4dp" android:gravity="center" android:text="@string/clim_autovol_medium" android:textSize="14sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-                            <TextView android:id="@+id/hvac_autovol_high" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="4dp" android:gravity="center" android:text="@string/clim_autovol_high" android:textSize="14sp" android:textStyle="bold" android:maxLines="1" android:ellipsize="end" />
-
-                        </LinearLayout>
 
                     </LinearLayout>
 

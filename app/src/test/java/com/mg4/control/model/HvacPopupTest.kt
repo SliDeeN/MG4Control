@@ -324,21 +324,22 @@ class HvacPopupTest {
         assertEquals(0L, HvacPopup.attenteEnvoi(10_700L, 10_000L, 0L))
     }
 
-    // ── Choix du débit en AUTO (issue #178) : 2 = faible, 1 = moyen, 0 = fort ──
+    // ── Débit en AUTO (issue #178, variante A) : 2 = faible, 1 = moyen, 0 = fort ──
 
-    @Test fun `le choix du debit va de faible a fort de gauche a droite`() {
-        assertEquals(HvacPopup.Choix.Curseur(0), HvacPopup.choix(Commande.DROITE, 1))
-        assertEquals(HvacPopup.Choix.Curseur(2), HvacPopup.choix(Commande.GAUCHE, 1))
+    @Test fun `l'appui long fait tourner le debit de faible a fort puis revient`() {
+        assertEquals(1, HvacPopup.debitSuivant(2))
+        assertEquals(0, HvacPopup.debitSuivant(1))
+        assertEquals(2, HvacPopup.debitSuivant(0))
     }
 
-    @Test fun `le choix du debit ne reboucle pas aux bords`() {
-        assertEquals(HvacPopup.Choix.Curseur(0), HvacPopup.choix(Commande.DROITE, 0))
-        assertEquals(HvacPopup.Choix.Curseur(2), HvacPopup.choix(Commande.GAUCHE, 2))
+    @Test fun `un debit inconnu repart de faible`() {
+        assertEquals(2, HvacPopup.debitSuivant(7))
     }
 
-    @Test fun `clic valide le curseur, haut et bas annulent`() {
-        assertEquals(HvacPopup.Choix.Valider(1), HvacPopup.choix(Commande.VALIDER, 1))
-        assertEquals(HvacPopup.Choix.Annuler, HvacPopup.choix(Commande.HAUT, 1))
-        assertEquals(HvacPopup.Choix.Annuler, HvacPopup.choix(Commande.BAS, 1))
+    @Test fun `les crans sous AUTO comptent un pour faible, trois pour fort`() {
+        assertEquals(1, HvacPopup.crans(2))
+        assertEquals(2, HvacPopup.crans(1))
+        assertEquals(3, HvacPopup.crans(0))
+        assertEquals(0, HvacPopup.crans(null))
     }
 }

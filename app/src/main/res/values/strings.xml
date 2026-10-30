@@ -630,8 +630,6 @@
     <string name="hvac_popup_compressor">Compresseur</string>
     <string name="hvac_popup_heating">Chauffages</string>
     <string name="hvac_popup_joystick_title">Joystick droit</string>
-    <string name="hvac_popup_joy_choose">Choisir</string>
-    <string name="hvac_popup_joy_cancel">Annuler</string>
     <string name="hvac_popup_autovol_unreadable">Débit en AUTO non disponible sur cette voiture</string>
     <string name="hvac_popup_joystick_off_title">Joystick inactif</string>
     <string name="hvac_popup_joystick_off_text">Activez l’accessibilité ou utilisez l’écran</string>

@@ -93,7 +93,7 @@ class KeyCaptureService : AccessibilityService() {
 
     /**
      * Clic central enfoncé dans le pop-up HVAC (issue #178) : il se joue au RELÂCHEMENT, et tenu
-     * une seconde il ouvre le choix du débit en AUTO — d'où l'enfoncement ET le relâchement transmis.
+     * une seconde il fait avancer le débit en AUTO d'un cran — d'où l'enfoncement ET le relâchement transmis.
      */
     private val centresHvac = mutableSetOf<Int>()
 
@@ -234,7 +234,7 @@ class KeyCaptureService : AccessibilityService() {
                 val preclim = PreClimatePopupOverlay.isShowing()
                 if (confirmation || profils || preclim || HvacPopupOverlay.isShowing()) {
                     navigationEnCours.add(code)
-                    // Pop-up HVAC, clic central : l'appui maintenu ouvre le choix du débit en AUTO.
+                    // Pop-up HVAC, clic central : l'appui maintenu fait avancer le débit en AUTO.
                     // Il passe avant l'appui long qui refermerait le pop-up par son raccourci : une
                     // même touche ne peut pas faire les deux, et le pop-up se ferme aussi autrement.
                     if (!confirmation && !profils && !preclim && commande == JoystickFocus.Commande.VALIDER) {

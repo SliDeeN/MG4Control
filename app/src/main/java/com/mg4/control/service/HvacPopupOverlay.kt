@@ -137,15 +137,12 @@ object HvacPopupOverlay {
     private val consigneTemp = Consigne("température", { MG4Hardware.setClimateTemp(it) }, { it.tempC })
     private val consigneVentilation = Consigne("ventilation", { MG4Hardware.setClimateFan(it) }, { it.fanLevel })
 
-    // ── Appui maintenu sur AUTO et choix du débit (issue #178) ───────────────
+    // ── Appui maintenu sur AUTO : débit suivant (issue #178, variante A) ──────
     /** Un appui sur AUTO est en cours (doigt ou clic central) : il se jouera au relâchement. */
     private var appuiAuto = false
-    /** L'appui en cours a déjà ouvert le choix : son relâchement ne fait rien d'autre. */
+    /** L'appui en cours a déjà fait avancer le débit : son relâchement ne fait rien d'autre. */
     private var appuiLongPasse = false
     private var minuterieAppui: Runnable? = null
-    /** Curseur du choix du débit ([MG4Hardware.AutoVolume]) ; null = choix fermé. */
-    private var choixDebit: Int? = null
-    private var expirationChoix: Runnable? = null
 
     /** Une consigne attend d'être envoyée ou confirmée : la relecture d'entretien ne doit pas l'écraser. */
     private fun consignesEnCours(): Boolean = consigneTemp.cible != null || consigneVentilation.cible != null
@@ -169,7 +166,7 @@ object HvacPopupOverlay {
         handler.post { enfoncerAuto() }
     }
 
-    /** Clic central relâché : AUTO bascule, ou le choix du débit valide son curseur. */
+    /** Clic central relâché : AUTO bascule, sauf si l'appui a déjà fait avancer le débit. */
     fun centreRelache() {
         handler.post { relacherAuto(annule = false) }
     }
@@ -327,23 +324,19 @@ object HvacPopupOverlay {
         handler.post(t)
     }
 
-    /**
-     * Ce que les vues remontent : même chemin au doigt qu'au joystick. Toucher une autre commande
-     * pendant le choix du débit l'annule, puis fait ce que la commande fait.
-     */
+    /** Ce que les vues remontent : même chemin au doigt qu'au joystick. */
     private val gestes = HvacPopupSkin.Gestes(
-        commande      = { annulerChoix("autre commande touchée"); surCommande(it) },
-        air           = { annulerChoix("autre commande touchée"); basculerAir(it) },
-        lunette       = { annulerChoix("autre commande touchée"); basculerLunette() },
-        ac            = { annulerChoix("autre commande touchée"); basculerAc() },
-        eco           = { annulerChoix("autre commande touchée"); basculerEco() },
-        recirculation = { annulerChoix("autre commande touchée"); choisirRecirculation(it) },
-        siegeNiveau   = { g, n -> annulerChoix("autre commande touchée"); choisirSiege(g, n) },
-        volant        = { annulerChoix("autre commande touchée"); basculerVolant() },
+        commande      = ::surCommande,
+        air           = ::basculerAir,
+        lunette       = ::basculerLunette,
+        ac            = ::basculerAc,
+        eco           = ::basculerEco,
+        recirculation = ::choisirRecirculation,
+        siegeNiveau   = ::choisirSiege,
+        volant        = ::basculerVolant,
         fermer        = ::fermer,
         autoEnfonce   = ::enfoncerAuto,
         autoRelache   = ::relacherAuto,
-        debit         = ::validerChoix,
     )
 
     /** Chaque geste, au joystick comme au doigt, redonne le délai complet. */
@@ -355,19 +348,6 @@ object HvacPopupOverlay {
         val s = etat ?: return
         if (overlayView == null) return
         relancerDelai()
-        // Choix du débit ouvert : le joystick y navigue, il ne règle plus rien d'autre.
-        choixDebit?.let { curseur ->
-            when (val c = HvacPopup.choix(commande, curseur)) {
-                is HvacPopup.Choix.Curseur -> {
-                    choixDebit = c.debit
-                    armerChoix()
-                    vues?.choix(c.debit)
-                }
-                is HvacPopup.Choix.Valider -> validerChoix(c.debit)
-                HvacPopup.Choix.Annuler -> annulerChoix("joystick ${commande.name}")
-            }
-            return
-        }
         vues?.eclairer(commande)
         when (val action = HvacPopup.action(commande, s.reglages())) {
             // L'état est corrigé TOUT DE SUITE de la valeur demandée : le pas suivant doit en
@@ -412,22 +392,20 @@ object HvacPopupOverlay {
     }
 
     /**
-     * AUTO enfoncé, au doigt ou au clic central. Tenu [HvacPopup.APPUI_LONG_MS], il ouvre le choix
-     * du débit ; relâché avant, il bascule AUTO comme avant. Choix déjà ouvert : le relâchement
-     * validera le curseur.
+     * AUTO enfoncé, au doigt ou au clic central. Tenu [HvacPopup.APPUI_LONG_MS], il fait avancer
+     * le débit d'un cran ([avancerDebit]) ; relâché avant, il bascule AUTO comme avant.
      */
     private fun enfoncerAuto() {
         if (overlayView == null || appuiAuto) return
         appuiAuto = true
         appuiLongPasse = false
         relancerDelai()
-        if (choixDebit != null) return
         vues?.appuiAuto(true)
         val r = Runnable {
             minuterieAppui = null
             appuiLongPasse = true
             vues?.appuiAuto(false)
-            ouvrirChoix()
+            avancerDebit()
         }
         minuterieAppui = r
         handler.postDelayed(r, HvacPopup.APPUI_LONG_MS)
@@ -441,65 +419,35 @@ object HvacPopupOverlay {
         minuterieAppui = null
         vues?.appuiAuto(false)
         if (annule || overlayView == null || appuiLongPasse) return
-        val curseur = choixDebit
-        if (curseur != null) validerChoix(curseur) else surCommande(JoystickFocus.Commande.VALIDER)
+        surCommande(JoystickFocus.Commande.VALIDER)
     }
 
-    private fun ouvrirChoix() {
+    /**
+     * Appui long sur AUTO (variante A) : en AUTO, le débit avance d'un cran — faible → moyen →
+     * fort → faible ; hors AUTO, AUTO s'allume au débit déjà réglé, sans le changer. Les crans sous
+     * le bouton le montrent aussitôt.
+     */
+    private fun avancerDebit() {
         val s = etat ?: return
+        if (overlayView == null) return
+        relancerDelai()
         val actuel = s.autoVolume
         if (actuel == null) {
             AppLogger.i(TAG, "Pop-up HVAC — appui maintenu sur AUTO : débit en AUTO illisible sur ce firmware")
             vues?.let { Toast.makeText(it.localized, R.string.hvac_popup_autovol_unreadable, Toast.LENGTH_SHORT).show() }
             return
         }
-        AppLogger.i(TAG, "Pop-up HVAC — appui maintenu sur AUTO → choix du débit (actuel : " +
-            "${MG4Hardware.AutoVolume.label(actuel)})")
-        choixDebit = actuel
-        armerChoix()
-        vues?.choix(actuel)
-    }
-
-    /** Chaque geste dans le choix redonne le délai complet au choix comme à la fenêtre. */
-    private fun armerChoix() {
-        relancerDelai()
-        expirationChoix?.let { handler.removeCallbacks(it) }
-        val r = Runnable {
-            expirationChoix = null
-            annulerChoix("${HvacPopup.CHOIX_DELAI_MS / 1_000} s sans geste")
-        }
-        expirationChoix = r
-        handler.postDelayed(r, HvacPopup.CHOIX_DELAI_MS)
-    }
-
-    private fun annulerChoix(raison: String) {
-        if (choixDebit == null) return
-        fermerChoix()
-        AppLogger.i(TAG, "Pop-up HVAC — choix du débit annulé ($raison), rien changé")
-    }
-
-    private fun fermerChoix() {
-        choixDebit = null
-        expirationChoix?.let { handler.removeCallbacks(it) }
-        expirationChoix = null
-        vues?.choix(null)
-    }
-
-    /** Débit choisi : écrit, puis AUTO allumé s'il ne l'était pas — c'est ce qu'on vient de régler. */
-    private fun validerChoix(debit: Int) {
-        val s = etat ?: return
-        if (choixDebit == null || overlayView == null) return
-        relancerDelai()
-        fermerChoix()
         val dejaAuto = s.reglages().enAuto
-        AppLogger.i(TAG, "Pop-up HVAC — débit en AUTO : ${s.autoVolume?.let { MG4Hardware.AutoVolume.label(it) }} → " +
-            MG4Hardware.AutoVolume.label(debit) + if (dejaAuto) "" else ", AUTO activé")
-        etat = s.copy(autoVolume = debit, autoOn = true)
+        val cible = if (dejaAuto) HvacPopup.debitSuivant(actuel) else actuel
+        AppLogger.i(TAG, "Pop-up HVAC — appui maintenu sur AUTO : débit " + MG4Hardware.AutoVolume.label(actuel) +
+            (if (dejaAuto) " → " + MG4Hardware.AutoVolume.label(cible) else " gardé, AUTO activé"))
+        etat = s.copy(autoVolume = cible, autoOn = true)
         afficher()
+        vues?.eclairer(JoystickFocus.Commande.VALIDER)
         // Un cran de ventilation encore en attente ferait ressortir d'AUTO.
         abandonner(consigneVentilation)
         ecrire {
-            val ok = MG4Hardware.setClimateAutoVolume(debit)
+            val ok = cible == actuel || MG4Hardware.setClimateAutoVolume(cible)
             (dejaAuto || MG4Hardware.setClimateAuto(true)) && ok
         }
     }
@@ -756,9 +704,6 @@ object HvacPopupOverlay {
         minuterieAppui?.let { handler.removeCallbacks(it) }
         minuterieAppui = null
         appuiAuto = false
-        choixDebit = null
-        expirationChoix?.let { handler.removeCallbacks(it) }
-        expirationChoix = null
         // Une consigne encore retenue par l'anti-rebond part MAINTENANT : fermer ne l'annule pas
         // (un pas de température suivi aussitôt de la fermeture doit être appliqué).
         val restantes = differees.values.toList()

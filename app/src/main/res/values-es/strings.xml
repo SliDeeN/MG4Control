@@ -625,8 +625,6 @@
     <string name="hvac_popup_compressor">Compresor</string>
     <string name="hvac_popup_heating">Calefacción</string>
     <string name="hvac_popup_joystick_title">Joystick derecho</string>
-    <string name="hvac_popup_joy_choose">Elegir</string>
-    <string name="hvac_popup_joy_cancel">Cancelar</string>
     <string name="hvac_popup_autovol_unreadable">Caudal en AUTO no disponible en este coche</string>
     <string name="hvac_popup_joystick_off_title">Joystick inactivo</string>
     <string name="hvac_popup_joystick_off_text">Activa la accesibilidad o usa la pantalla</string>

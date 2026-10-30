@@ -625,8 +625,6 @@
     <string name="hvac_popup_compressor">Kompressor</string>
     <string name="hvac_popup_heating">Heizung</string>
     <string name="hvac_popup_joystick_title">Rechter Joystick</string>
-    <string name="hvac_popup_joy_choose">Wählen</string>
-    <string name="hvac_popup_joy_cancel">Abbrechen</string>
     <string name="hvac_popup_autovol_unreadable">Gebläse in AUTO auf diesem Fahrzeug nicht verfügbar</string>
     <string name="hvac_popup_joystick_off_title">Joystick inaktiv</string>
     <string name="hvac_popup_joystick_off_text">Bedienungshilfe aktivieren oder Bildschirm nutzen</string>

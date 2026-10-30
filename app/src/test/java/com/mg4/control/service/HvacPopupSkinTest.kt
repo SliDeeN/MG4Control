@@ -75,7 +75,7 @@ class HvacPopupSkinTest {
 
     /**
      * Un vrai doigt, posé puis levé sur la vue : AUTO se joue au relâchement, pas au clic, pour
-     * qu'un appui tenu ouvre le choix du débit (issue #178).
+     * qu'un appui tenu fasse avancer le débit (issue #178).
      */
     private fun appuyer(view: View, id: Int) {
         val cible = view.findViewById<View>(id)

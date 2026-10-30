@@ -230,16 +230,15 @@ object HvacPopup {
         return (actuel + sens).coerceIn(min, max).takeIf { it != actuel }
     }
 
-    // ── Débit en mode AUTO (issue #178, maquette B choisie le 2026-10-29) ─────
-    // Un appui maintenu sur AUTO — au doigt ou au clic central — remplace la rangée « − AUTO + »
-    // par un choix Faible | Moyen | Fort. Gauche / droite déplacent le curseur, le clic valide
-    // (débit écrit, AUTO allumé), haut / bas annulent, comme quelques secondes sans geste.
+    // ── Débit en mode AUTO (issue #178) ───────────────────────────────────────
+    // Variante A, choisie le 2026-10-31 sur la proposition de l'issue : un appui COURT sur AUTO
+    // l'allume ou l'éteint, et rien d'autre — l'éteindre reste aussi rapide qu'avant. Un appui
+    // MAINTENU avance le débit d'un cran (Faible → Moyen → Fort → Faible) ; AUTO éteint, il
+    // l'allume au débit déjà réglé. Trois crans sous le bouton montrent le débit en permanence.
+    // Remplace la maquette B (rangée Faible | Moyen | Fort à la place de « − AUTO + »).
 
-    /** Appui maintenu sur AUTO au-delà duquel le choix du débit s'ouvre. */
+    /** Appui maintenu sur AUTO au-delà duquel le débit avance d'un cran. */
     const val APPUI_LONG_MS = 1_000L
-
-    /** Choix du débit ouvert sans geste pendant ce temps : il se referme sans rien changer. */
-    const val CHOIX_DELAI_MS = 6_000L
 
     /**
      * Débits de gauche à droite, comme à l'écran : faible, moyen, fort — dans l'encodage de la
@@ -247,23 +246,9 @@ object HvacPopup {
      */
     val DEBITS = listOf(2, 1, 0)
 
-    sealed class Choix {
-        data class Curseur(val debit: Int) : Choix()
-        data class Valider(val debit: Int) : Choix()
-        object Annuler : Choix()
-    }
+    /** Débit suivant, en boucle : faible → moyen → fort → faible. Inconnu → faible. */
+    fun debitSuivant(debit: Int): Int = DEBITS[(DEBITS.indexOf(debit) + 1) % DEBITS.size]
 
-    /**
-     * Geste du joystick pendant le choix du débit. Pas de rebouclage aux bords, comme ailleurs :
-     * pousser encore à droite sur « Fort » y reste.
-     */
-    fun choix(commande: JoystickFocus.Commande, curseur: Int): Choix {
-        val i = DEBITS.indexOf(curseur).coerceAtLeast(0)
-        return when (commande) {
-            JoystickFocus.Commande.GAUCHE  -> Choix.Curseur(DEBITS[(i - 1).coerceAtLeast(0)])
-            JoystickFocus.Commande.DROITE  -> Choix.Curseur(DEBITS[(i + 1).coerceAtMost(DEBITS.lastIndex)])
-            JoystickFocus.Commande.VALIDER -> Choix.Valider(DEBITS[i])
-            JoystickFocus.Commande.HAUT, JoystickFocus.Commande.BAS -> Choix.Annuler
-        }
-    }
+    /** Crans allumés sous AUTO : 1 = faible, 2 = moyen, 3 = fort ; 0 pour un débit inconnu. */
+    fun crans(debit: Int?): Int = debit?.let { DEBITS.indexOf(it) + 1 } ?: 0
 }
