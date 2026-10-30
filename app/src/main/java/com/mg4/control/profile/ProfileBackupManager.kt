@@ -22,6 +22,15 @@ class ProfileBackupManager {
         private const val TAG = "MG4_PROFILE_BACKUP"
         private const val DIR_NAME  = "MG4Control"
         private const val FILE_NAME = "mg4_profiles_backup.json"
+
+        /**
+         * Verrou de processus, PAS d'instance : chaque ProfileManager (UI, service) a son
+         * ProfileBackupManager et les sauvegardes partent en parallèle sur Dispatchers.IO.
+         * Le move atomique seul ne suffit pas : sous Windows (tests), remplacer un fichier
+         * qu'un autre move remplace au même instant échoue (AccessDenied) et bascule sur la
+         * copie non atomique ci-dessous — deux copies simultanées entrelaçaient alors le JSON.
+         */
+        private val FILE_LOCK = Any()
     }
 
     private val gson = Gson()
@@ -40,8 +49,9 @@ class ProfileBackupManager {
      * qu'une écriture interrompue ne laisse jamais un fichier corrompu. Jamais bloquant :
      * toute erreur (stockage non inscriptible, etc.) est loggée et ignorée.
      */
-    fun writeBackup(profiles: List<DrivingProfile>, defaultId: String?): Boolean {
-        return try {
+    fun writeBackup(profiles: List<DrivingProfile>, defaultId: String?): Boolean = synchronized(FILE_LOCK) {
+        var tmp: File? = null
+        try {
             if (!backupDir.exists()) backupDir.mkdirs()
             val payload = ProfileBackup(
                 schemaVersion = ProfileBackup.CURRENT_SCHEMA_VERSION,
@@ -51,29 +61,33 @@ class ProfileBackupManager {
             val json = gson.toJson(payload)
             // Fichier temporaire UNIQUE : deux sauvegardes concurrentes écrivaient le même
             // ".tmp" et entrelaçaient leur contenu.
-            val tmp = File.createTempFile(FILE_NAME, ".tmp", backupDir)
-            tmp.writeText(json)
+            val written = File.createTempFile(FILE_NAME, ".tmp", backupDir)
+            tmp = written
+            written.writeText(json)
             // Remplacement atomique SANS delete() préalable : l'ancienne sauvegarde reste
             // lisible jusqu'à la seconde près où la nouvelle prend sa place.
             try {
-                Files.move(tmp.toPath(), backupFile.toPath(),
+                Files.move(written.toPath(), backupFile.toPath(),
                     StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
             } catch (_: Exception) {
                 // Systèmes de fichiers sans move atomique : copie puis suppression du tmp.
-                tmp.copyTo(backupFile, overwrite = true)
-                tmp.delete()
+                written.copyTo(backupFile, overwrite = true)
             }
             AppLogger.i(TAG, "writeBackup → ${profiles.size} profil(s) @ ${backupFile.absolutePath}")
             true
         } catch (e: Exception) {
             AppLogger.w(TAG, "writeBackup échec (${backupFile.absolutePath}): ${e.message}")
             false
+        } finally {
+            // Après un move réussi le tmp n'existe plus ; sinon (copie, échec) on ne laisse
+            // pas de ".tmp" orphelin dans le dossier partagé.
+            tmp?.takeIf { it.exists() }?.delete()
         }
     }
 
     /** Lit la sauvegarde, ou null si absente/illisible/corrompue. */
-    fun readBackup(): ProfileBackup? {
-        return try {
+    fun readBackup(): ProfileBackup? = synchronized(FILE_LOCK) {
+        try {
             if (!backupExists()) return null
             val json = backupFile.readText()
             gson.fromJson(json, ProfileBackup::class.java)
