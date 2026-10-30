@@ -1,5 +1,6 @@
 package com.mg4.control.model
 
+import com.mg4.control.shortcut.AudioSource
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -73,5 +74,24 @@ class SoundAutomationRulesTest {
         assertEquals("app_start,profile", SoundAutomationRules.eventsCsv(e))
         assertEquals(e, SoundAutomationRules.parseEvents("app_start, profile,inconnu"))
         assertEquals(emptySet<SoundEvent>(), SoundAutomationRules.parseEvents(null))
+    }
+
+    // ── Issue #190 : le son a fait passer la voiture sur « En ligne » ──
+
+    @Test
+    fun `la source d'avant est relancee quand le son a laisse la voiture sur En ligne`() {
+        assertEquals(AudioSource.RADIO, SoundAutomationRules.sourceToRestore(AudioSource.RADIO, AudioSource.ONLINE))
+        assertEquals(AudioSource.BLUETOOTH, SoundAutomationRules.sourceToRestore(AudioSource.BLUETOOTH, AudioSource.ONLINE))
+    }
+
+    @Test
+    fun `rien n'est relance sans bascule vers En ligne`() {
+        assertNull(SoundAutomationRules.sourceToRestore(AudioSource.RADIO, AudioSource.RADIO))
+        // Le conducteur a choisi une autre source pendant le son : on n'y touche pas.
+        assertNull(SoundAutomationRules.sourceToRestore(AudioSource.RADIO, AudioSource.USB))
+        // Déjà sur « En ligne » avant le son, ou source illisible avant ou après.
+        assertNull(SoundAutomationRules.sourceToRestore(AudioSource.ONLINE, AudioSource.ONLINE))
+        assertNull(SoundAutomationRules.sourceToRestore(null, AudioSource.ONLINE))
+        assertNull(SoundAutomationRules.sourceToRestore(AudioSource.RADIO, null))
     }
 }

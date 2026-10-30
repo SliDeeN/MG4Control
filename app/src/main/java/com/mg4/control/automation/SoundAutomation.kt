@@ -19,6 +19,7 @@ import com.mg4.control.model.SoundEvent
 import com.mg4.control.model.SoundGuard
 import com.mg4.control.model.SoundSlot
 import com.mg4.control.profile.ActiveProfile
+import com.mg4.control.shortcut.AudioSource
 import com.mg4.control.util.GarageMode
 import java.io.File
 
@@ -39,8 +40,17 @@ object SoundAutomation {
 
     const val TAG = "MG4_SOUND"
 
-    /** Le son du démarrage attend que la pile audio de la voiture soit prête. */
+    /**
+     * Le son du démarrage attend que la pile audio de la voiture soit prête : au moins
+     * [DEMARRAGE_MS], puis que la voiture ait remis une source (issue #190 — jouer pendant qu'elle
+     * remet la radio la faisait parfois perdre), relue toutes les [ATTENTE_SOURCE_MS], au plus
+     * [DEMARRAGE_MAX_MS] : passé ce délai, le son part quand même.
+     */
     private const val DEMARRAGE_MS = 4_000L
+    private const val DEMARRAGE_MAX_MS = 15_000L
+    private const val ATTENTE_SOURCE_MS = 1_000L
+    /** Après le son : le temps que la voiture reprenne sa source avant de vérifier laquelle joue. */
+    private const val RETOUR_SOURCE_MS = 1_500L
     private const val RAPPORT_MS = 700L
     /** Fin forcée si le lecteur ne signale rien : durée du son plus cette marge. */
     private const val SECURITE_MS = 3_000L
@@ -60,6 +70,11 @@ object SoundAutomation {
     private var volumeMis = -1
     private var finForcee: Runnable? = null
     private var dernierRapport: Int? = null
+    /** Source qui jouait avant le son en cours (issue #190) ; null = illisible. */
+    private var sourceAvant: AudioSource? = null
+    /** Vérification de la source après le son, et la source à reprendre qu'elle porte. */
+    private var verifSource: Runnable? = null
+    private var sourceAttendue: AudioSource? = null
 
     /** Son en cours (0 ou 1), pour le bouton Écouter / Arrêter de la carte. */
     @Volatile var enLecture: Int? = null
@@ -73,8 +88,20 @@ object SoundAutomation {
         app = context.applicationContext
         fil.post {
             actualiser()
-            if (abonne) fil.postDelayed({ declencherIci(SoundEvent.APP_START, "démarrage de MG4Control") }, DEMARRAGE_MS)
+            if (abonne) fil.postDelayed({ attendreSource(SystemClock.elapsedRealtime() + DEMARRAGE_MAX_MS - DEMARRAGE_MS) }, DEMARRAGE_MS)
         }
+    }
+
+    /** Son du démarrage : dès que la voiture a remis une source, ou à [limite] au plus tard. */
+    private fun attendreSource(limite: Long) {
+        if (!abonne) return
+        val source = MG4Hardware.currentAudioSource()
+        if (source == null && SystemClock.elapsedRealtime() < limite) {
+            fil.postDelayed({ attendreSource(limite) }, ATTENTE_SOURCE_MS)
+            return
+        }
+        AppLogger.i(TAG, "démarrage : source de la voiture ${source?.name ?: "toujours illisible, son joué quand même"}")
+        declencherIci(SoundEvent.APP_START, "démarrage de MG4Control")
     }
 
     /** L'interrupteur ou les événements ont changé (carte de l'onglet Automatisation). */
@@ -193,6 +220,13 @@ object SoundAutomation {
         }
         lecteur = p
         prendreVeille(ctx, s.durationMs)
+        // Source d'avant, AVANT de prendre le focus (issue #190). Un son qui suit de près le
+        // précédent reprend la source que celui-ci devait rendre : la voiture est peut-être encore
+        // sur « En ligne » à cause de lui.
+        verifSource?.let { fil.removeCallbacks(it) }
+        verifSource = null
+        sourceAvant = sourceAttendue ?: MG4Hardware.currentAudioSource()
+        sourceAttendue = null
         demanderFocus(ctx)
         // Volume de la voiture pour ce son ; rendu à la fin s'il n'a pas bougé entre-temps.
         val max = MG4Hardware.getMediaVolumeMax()
@@ -212,7 +246,8 @@ object SoundAutomation {
         enLecture = index
         finForcee = Runnable { terminer("délai dépassé") }.also { fil.postDelayed(it, s.durationMs + SECURITE_MS) }
         AppLogger.i(TAG, "son ${index + 1} « ${s.title} » (${s.durationMs} ms) — $raison — volume " +
-            (if (volumeMis >= 0) "$avant → $volumeMis" else "inchangé ($avant)") + if (ecoute) " — écoute" else "")
+            (if (volumeMis >= 0) "$avant → $volumeMis" else "inchangé ($avant)") +
+            " — source ${sourceAvant?.name ?: "illisible"}" + if (ecoute) " — écoute" else "")
         prevenir()
     }
 
@@ -291,10 +326,36 @@ object SoundAutomation {
         garde.release()
         relacherVeille()
         if (joue) AppLogger.i(TAG, "fin : $raison")
+        if (joue) verifierSource(sourceAvant)
+        sourceAvant = null
         if (enLecture != null) {
             enLecture = null
             prevenir()
         }
+    }
+
+    /**
+     * Après le son (issue #190) : le temps que la voiture reprenne sa source, puis si elle est
+     * restée sur « En ligne » à cause du son, la source d'avant est relancée
+     * ([SoundAutomationRules.sourceToRestore]). Rien si la source d'avant était illisible.
+     */
+    private fun verifierSource(avant: AudioSource?) {
+        if (avant == null) return
+        sourceAttendue = avant
+        val r = Runnable {
+            verifSource = null
+            sourceAttendue = null
+            val apres = MG4Hardware.currentAudioSource()
+            val aRelancer = SoundAutomationRules.sourceToRestore(avant, apres)
+            if (aRelancer == null) {
+                AppLogger.i(TAG, "source après le son : ${apres?.name ?: "illisible"} (avant : ${avant.name}) — rien à faire")
+                return@Runnable
+            }
+            val ok = MG4Hardware.switchAudioSource(aRelancer)
+            AppLogger.i(TAG, "source passée sur ONLINE pendant le son — ${aRelancer.name} relancée ($ok)")
+        }
+        verifSource = r
+        fil.postDelayed(r, RETOUR_SOURCE_MS)
     }
 
     private fun prevenir() {

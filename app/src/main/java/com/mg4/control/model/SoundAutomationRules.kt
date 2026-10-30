@@ -1,5 +1,7 @@
 package com.mg4.control.model
 
+import com.mg4.control.shortcut.AudioSource
+
 /**
  * Sons d'automatisation (issue #161, 2026-10-23) — les règles, sans Android.
  *
@@ -100,6 +102,16 @@ object SoundAutomationRules {
      * conducteur (ou la baisse à l'ouverture de la porte) a la main s'il y a touché entre-temps.
      */
     fun shouldRestore(current: Int, written: Int): Boolean = current == written
+
+    /**
+     * Source à relancer après un son (issue #190) : le son passe par le canal média, et sur l'ancien
+     * SDK le service média SAIC le prend parfois pour l'appli « En ligne » — la voiture y reste après
+     * le son. On relance la source d'avant seulement dans ce cas précis : elle était connue et
+     * n'était pas déjà « En ligne », et la voiture est maintenant sur « En ligne ». Un autre
+     * changement (le conducteur a choisi une source pendant le son) est laissé tel quel.
+     */
+    fun sourceToRestore(before: AudioSource?, after: AudioSource?): AudioSource? =
+        before?.takeIf { it != AudioSource.ONLINE && after == AudioSource.ONLINE }
 
     fun eventsCsv(events: Set<SoundEvent>): String = events.sortedBy { it.ordinal }.joinToString(",") { it.key }
 
