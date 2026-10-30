@@ -6257,13 +6257,50 @@ object MG4Hardware {
         else
             acSet("setDrvTemp", celsius).also { climLog("temp=$celsius", it) }
 
-    /** Écrire un niveau fait aussi SORTIR du mode AUTO (voir [setClimateAuto]). */
-    fun setClimateFan(level: Int): Boolean =
-        (if (isClimateA9())
+    /**
+     * Écrire un niveau fait aussi SORTIR du mode AUTO (voir [setClimateAuto]) : le sens de l'air et
+     * la recirculation d'avant AUTO sont alors remis ([restaurerApresAuto]).
+     */
+    fun setClimateFan(level: Int): Boolean {
+        // Une seule lecture, et seulement si une entrée en AUTO a été notée.
+        val etaitEnAuto = if (sAvantAuto != null) getClimateState()?.reglages()?.enAuto else null
+        // AUTO quitté ailleurs (écran d'origine) : l'instantané ne vaut plus rien.
+        if (etaitEnAuto == false) sAvantAuto = null
+        val ok = (if (isClimateA9())
             a9Set("setFanSpeed", level).also { climLog("A9 fan=$level", it) }
         else
             acSet("setAirVolumeLevel", level).also { climLog("fan=$level", it) })
             .also { if (it) noteManualFan(level) }
+        if (ok && etaitEnAuto == true) restaurerApresAuto()
+        return ok
+    }
+
+    /**
+     * Sens de l'air et recirculation juste avant l'entrée en AUTO (2026-10-30, sa demande) : AUTO les
+     * change, et en sortir les remet. Un réglage changé PENDANT l'AUTO (pop-up, page Clim, profil)
+     * est retiré de l'instantané : c'est ce choix-là qui reste. En mémoire seulement.
+     */
+    private data class AvantAuto(val air: Int?, val recirc: Int?)
+    @Volatile private var sAvantAuto: AvantAuto? = null
+
+    /** Le temps que la voiture quitte AUTO avant de relire ce qu'elle a laissé. */
+    private const val SORTIE_AUTO_MS = 800L
+
+    /** Sortie d'AUTO par MG4Control : remet ce qui avait été noté à l'entrée, s'il a changé. Une fois. */
+    private fun restaurerApresAuto() {
+        val s = sAvantAuto ?: return
+        sAvantAuto = null
+        if (s.air == null && s.recirc == null) return
+        SystemClock.sleep(SORTIE_AUTO_MS)
+        val lu = getClimateState() ?: return
+        val air = s.air?.takeIf { lu.airFlow != it }
+        val recirc = s.recirc?.takeIf { lu.loopMode != it }
+        air?.let { setClimateAirFlow(it) }
+        recirc?.let { setClimateLoopMode(it) }
+        AppLogger.i(CLIM_TAG, "sortie d'AUTO : " + if (air == null && recirc == null) "sens de l'air et recirculation déjà comme avant"
+            else "remis comme avant AUTO — " + listOfNotNull(
+                air?.let { "air ${lu.airFlow} → $it" }, recirc?.let { "recyclage ${lu.loopMode} → $it" }).joinToString(", "))
+    }
 
     /**
      * A/C — bascule, comme la recirculation. L'encodage de lecture (1=ON, 0=OFF) a été mesuré
@@ -6374,14 +6411,24 @@ object MG4Hardware {
      * ⚠️ Avec un réglage gardé, bloquant ~1,5 s de plus → hors du fil principal.
      */
     fun setClimateAuto(on: Boolean, ecraseAir: Boolean = false, ecraseRecirc: Boolean = false): Boolean {
-        if (!on) return basculerAuto(false)
+        if (!on) {
+            // Sortie par la ventilation : [setClimateFan] a déjà tout remis ; sinon (bascule A9), ici.
+            val ok = basculerAuto(false)
+            if (ok) restaurerApresAuto()
+            return ok
+        }
         val ctx = sAppContext
         val garderAir = !ecraseAir && !ClimateAutoScope.carSetsAir(ctx)
         val garderRecirc = !ecraseRecirc && !ClimateAutoScope.carSetsLoop(ctx)
-        // Déjà en AUTO : la voiture ne rechoisit rien, il n'y a rien à remettre.
-        val avant = if (garderAir || garderRecirc) getClimateState()?.takeIf { !it.reglages().enAuto } else null
+        // Déjà en AUTO : la voiture ne rechoisit rien, il n'y a rien à remettre ni à noter.
+        val etatAvant = getClimateState()?.takeIf { !it.reglages().enAuto }
         val ok = basculerAuto(true)
-        if (ok && avant != null) garderApresAuto(avant, garderAir, garderRecirc)
+        if (ok && etatAvant != null) {
+            // Noté pour la sortie d'AUTO ; un réglage écrit ensuite par l'appelant l'en retire.
+            sAvantAuto = AvantAuto(air = etatAvant.airFlow?.takeIf { it in 0..6 }, recirc = etatAvant.loopMode)
+            AppLogger.i(CLIM_TAG, "entrée en AUTO : avant = air ${etatAvant.airFlow}, recyclage ${etatAvant.loopMode} (remis à la sortie)")
+            if (garderAir || garderRecirc) garderApresAuto(etatAvant, garderAir, garderRecirc)
+        }
         return ok
     }
 
@@ -6446,6 +6493,8 @@ object MG4Hardware {
      */
     fun setClimateLoopMode(target: Int): Boolean {
         if (target !in LoopMode.INNER..LoopMode.AUTO) return false
+        // Choisie pendant l'AUTO : c'est elle qui restera à la sortie.
+        sAvantAuto?.let { sAvantAuto = it.copy(recirc = null) }
         // 3 modes ⇒ 2 avances suffisent depuis n'importe quel état.
         return if (isClimateA9())
             a9CycleTo("loopMode", "getAirCirculationStatus", target, 3, "switchAirCirculationStatus")
@@ -6484,6 +6533,8 @@ object MG4Hardware {
      */
     fun setClimateAirFlow(direction: Int): Boolean {
         if (direction !in 0..6) return false
+        // Choisi pendant l'AUTO : c'est lui qui restera à la sortie.
+        sAvantAuto?.let { sAvantAuto = it.copy(air = null) }
         probeAirFlow("avant écriture $direction")
         val ok = if (isClimateA9())
             a9Set("setFanDirection", direction).also { climLog("A9 airFlow=$direction", it) }
