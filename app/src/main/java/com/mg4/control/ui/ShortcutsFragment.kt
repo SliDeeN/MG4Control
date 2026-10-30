@@ -224,6 +224,7 @@ class ShortcutsFragment : Fragment() {
             if (allgoPresent()) add(ActionItem(getString(R.string.shortcuts_action_projection), ShortcutAction.PROJECTION))
             add(ActionItem(getString(R.string.shortcuts_action_open_app),       ShortcutAction.OPEN_APP))
             add(ActionItem(getString(R.string.shortcuts_action_open_custom_app),ShortcutAction.OPEN_CUSTOM_APP))
+            add(ActionItem(getString(R.string.shortcuts_action_android_settings), ShortcutAction.ANDROID_SETTINGS))
             // Raccourci perso (issue #172) : appli, fonction d'une autre appli, diffusion, lien, webhook.
             add(ActionItem(getString(R.string.shortcuts_action_custom),         ShortcutAction.CUSTOM))
             if (MG4Hardware.hasVehiclePowerOff()) {

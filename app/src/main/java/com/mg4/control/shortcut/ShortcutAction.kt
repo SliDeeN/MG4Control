@@ -98,7 +98,11 @@ enum class ShortcutAction(val id: Int) {
 
     // Débit d'air en mode AUTO (issue #178, 2026-10-29) : « lue puis écrite », faible → moyen →
     // fort → faible. Le réglage se change aussi dans l'écran clim d'origine.
-    HVAC_AUTO_VOLUME_CYCLE(49);
+    HVAC_AUTO_VOLUME_CYCLE(49),
+
+    // Paramètres Android (2026-10-31, repris du fork sensoyg) : ouvre l'écran des paramètres
+    // d'Android, que le launcher SAIC ne propose pas. Voir AndroidSettings. N'écrit rien.
+    ANDROID_SETTINGS(50);
 
     companion object {
         /**

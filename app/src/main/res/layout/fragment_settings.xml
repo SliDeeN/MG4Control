@@ -2666,6 +2666,26 @@
                 app:iconTint="@color/dash_text_lo"
                 app:iconGravity="textStart" />
 
+            <!-- ── Bouton PARAMÈTRES ANDROID (2026-10-31) : l'écran d'Android, que le launcher
+                 SAIC ne propose pas. Même aspect que le bouton Infos. ── -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_android_settings"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/btn_android_settings"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                android:letterSpacing="0.06"
+                android:textAllCaps="true"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="10dp"
+                app:icon="@android:drawable/ic_menu_preferences"
+                app:iconTint="@color/dash_text_lo"
+                app:iconGravity="textStart" />
+
             <!-- ── Bouton ÉTAT DE CHARGE : outil de relevé, débloqué avec le Diagnostic
                  (5 appuis sur le logo), juste au-dessus de lui. ── -->
             <com.google.android.material.button.MaterialButton

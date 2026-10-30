@@ -1202,5 +1202,8 @@
     <string name="custom_delete_confirm">Supprimer « %1$s » ? Les boutons qui le lancent ne feront plus rien.</string>
     <string name="custom_delete">Supprimer</string>
     <string name="shortcuts_action_custom">Raccourci perso</string>
+    <string name="shortcuts_action_android_settings">Paramètres Android</string>
+    <string name="btn_android_settings">Paramètres Android</string>
+    <string name="android_settings_open_failed">Impossible d\'ouvrir les paramètres Android</string>
     <string name="shortcuts_custom_prefix">Perso :</string>
 </resources>

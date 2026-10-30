@@ -1124,6 +1124,12 @@ class MG4ControlService : Service() {
             return
         }
 
+        // ANDROID_SETTINGS : ouvre les paramètres Android (ou dit qu'aucun écran n'a été trouvé).
+        if (action == ShortcutAction.ANDROID_SETTINGS) {
+            com.mg4.control.util.AndroidSettings.open(this@MG4ControlService)
+            return
+        }
+
         // APPLY_PROFILE : action directe — pas de toggle d'état, chaque pression applique le profil
         if (action == ShortcutAction.APPLY_PROFILE) {
             val profileId = prefs.getString("shortcut_${pressKey}_profile_id", null) ?: return

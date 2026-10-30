@@ -1185,5 +1185,8 @@
     <string name="custom_delete_confirm">Delete “%1$s”? Buttons that run it will no longer do anything.</string>
     <string name="custom_delete">Delete</string>
     <string name="shortcuts_action_custom">Custom shortcut</string>
+    <string name="shortcuts_action_android_settings">Android settings</string>
+    <string name="btn_android_settings">Android settings</string>
+    <string name="android_settings_open_failed">Couldn\'t open Android settings</string>
     <string name="shortcuts_custom_prefix">Custom:</string>
 </resources>

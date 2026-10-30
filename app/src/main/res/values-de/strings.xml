@@ -1185,5 +1185,8 @@
     <string name="custom_delete_confirm">„%1$s“ löschen? Schaltflächen, die sie starten, tun dann nichts mehr.</string>
     <string name="custom_delete">Löschen</string>
     <string name="shortcuts_action_custom">Eigene Verknüpfung</string>
+    <string name="shortcuts_action_android_settings">Android-Einstellungen</string>
+    <string name="btn_android_settings">Android-Einstellungen</string>
+    <string name="android_settings_open_failed">Android-Einstellungen konnten nicht geöffnet werden</string>
     <string name="shortcuts_custom_prefix">Eigene:</string>
 </resources>

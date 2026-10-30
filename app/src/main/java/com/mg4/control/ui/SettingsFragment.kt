@@ -898,6 +898,11 @@ class SettingsFragment : Fragment() {
             showInfosDialog()
         }
 
+        // ── Bouton Paramètres Android (2026-10-31) ───────────────────────────
+        view.findViewById<MaterialButton>(R.id.btn_android_settings).setOnClickListener {
+            com.mg4.control.util.AndroidSettings.open(requireContext())
+        }
+
         // ── Bouton Fermer ─────────────────────────────────────────────────────
         view.findViewById<MaterialButton>(R.id.btn_close_settings).setOnClickListener {
             findNavController().popBackStack(R.id.dashboardFragment, false)
