@@ -423,9 +423,10 @@ object HvacPopupOverlay {
     }
 
     /**
-     * Appui long sur AUTO (variante A) : en AUTO, le débit avance d'un cran — faible → moyen →
-     * fort → faible ; hors AUTO, AUTO s'allume au débit déjà réglé, sans le changer. Les crans sous
-     * le bouton le montrent aussitôt.
+     * Appui long sur AUTO (variante A) : le débit avance d'un cran — faible → moyen → fort →
+     * faible —, que AUTO soit allumé ou non. Il ne fait QUE régler le débit : AUTO ne s'allume ou ne
+     * s'éteint que par un appui simple (sa demande du 2026-10-31 — l'appui long l'allumait). Les
+     * crans sous le bouton le montrent aussitôt.
      */
     private fun avancerDebit() {
         val s = etat ?: return
@@ -437,19 +438,13 @@ object HvacPopupOverlay {
             vues?.let { Toast.makeText(it.localized, R.string.hvac_popup_autovol_unreadable, Toast.LENGTH_SHORT).show() }
             return
         }
-        val dejaAuto = s.reglages().enAuto
-        val cible = if (dejaAuto) HvacPopup.debitSuivant(actuel) else actuel
+        val cible = HvacPopup.debitSuivant(actuel)
         AppLogger.i(TAG, "Pop-up HVAC — appui maintenu sur AUTO : débit " + MG4Hardware.AutoVolume.label(actuel) +
-            (if (dejaAuto) " → " + MG4Hardware.AutoVolume.label(cible) else " gardé, AUTO activé"))
-        etat = s.copy(autoVolume = cible, autoOn = true)
+            " → " + MG4Hardware.AutoVolume.label(cible) + if (s.reglages().enAuto) "" else " (AUTO reste coupé)")
+        etat = s.copy(autoVolume = cible)
         afficher()
         vues?.eclairer(JoystickFocus.Commande.VALIDER)
-        // Un cran de ventilation encore en attente ferait ressortir d'AUTO.
-        abandonner(consigneVentilation)
-        ecrire {
-            val ok = cible == actuel || MG4Hardware.setClimateAutoVolume(cible)
-            (dejaAuto || MG4Hardware.setClimateAuto(true)) && ok
-        }
+        ecrire { MG4Hardware.setClimateAutoVolume(cible) }
     }
 
     /** Bouton cumulable du sens de l'air — même règle que la page Clim ([AirFlow.toggled]). */

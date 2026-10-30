@@ -233,8 +233,8 @@ object HvacPopup {
     // ── Débit en mode AUTO (issue #178) ───────────────────────────────────────
     // Variante A, choisie le 2026-10-31 sur la proposition de l'issue : un appui COURT sur AUTO
     // l'allume ou l'éteint, et rien d'autre — l'éteindre reste aussi rapide qu'avant. Un appui
-    // MAINTENU avance le débit d'un cran (Faible → Moyen → Fort → Faible) ; AUTO éteint, il
-    // l'allume au débit déjà réglé. Trois crans sous le bouton montrent le débit en permanence.
+    // MAINTENU avance le débit d'un cran (Faible → Moyen → Fort → Faible), sans jamais allumer ni
+    // éteindre AUTO (2026-10-31). Trois crans sous le bouton montrent le débit en permanence.
     // Remplace la maquette B (rangée Faible | Moyen | Fort à la place de « − AUTO + »).
 
     /** Appui maintenu sur AUTO au-delà duquel le débit avance d'un cran. */

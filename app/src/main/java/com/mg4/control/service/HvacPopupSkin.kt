@@ -219,8 +219,10 @@ internal class HvacPopupSkin(
         fond(siegeDroit.selecteur, bouton)
         fond(volant, bouton, bordure, traitFin)
         fond(curseur, blanc, ovale = true)
-        // Les trois crans du débit sont dessinés sous le texte ([Crans]).
-        auto.compoundDrawablePadding = dp(themed, 6f)
+        // « AUTO » et ses trois crans sur deux lignes ([Crans]) : la mise en majuscules d'Android
+        // casserait le dessin des crans, « AUTO » est donc écrit en capitales à la main.
+        auto.isAllCaps = false
+        auto.maxLines = 2
     }
 
     /** À appeler une fois, avant le premier [peindre]. [avecChauffages] rend leur colonne visible. */
@@ -395,20 +397,37 @@ internal class HvacPopupSkin(
         if (eclair == JoystickFocus.Commande.VALIDER || autoTenu) {
             (auto.background as? GradientDrawable)?.setStroke(traitEpais, textePrincipal)
         }
-        // Trois crans sous « AUTO » : le débit réglé, allumés seulement en AUTO (sur le fond plein,
-        // dans la couleur du texte). Débit illisible sur ce firmware : pas de crans.
-        val crans = HvacPopup.crans(etat.autoVolume)
-        auto.setCompoundDrawablesRelativeWithIntrinsicBounds(null, null, null,
-            if (etat.autoVolume == null) null
-            else if (allume == true) Crans(crans, surAccent, Color.argb(90, Color.red(surAccent), Color.green(surAccent), Color.blue(surAccent)), cranLargeur, cranHauteur, cranEcart)
-            else Crans(0, bordure, bordure, cranLargeur, cranHauteur, cranEcart))
+        // Trois crans juste sous « AUTO », sur une seconde ligne du texte : centrés avec lui, et non
+        // collés au bas du bouton (essai SWI133 du 2026-10-31 : trop bas, peu visibles). Le débit
+        // reste lisible AUTO coupé, puisque l'appui long le règle sans allumer AUTO. AUTO allumé
+        // (fond plein) : crans dans la couleur du texte ; coupé : crans d'accent. Débit illisible
+        // sur ce firmware : « AUTO » seul.
+        val locale = localized.resources.configuration.locales[0]
+        val titre = localized.getString(R.string.clim_auto).uppercase(locale)
+        val debit = etat.autoVolume
+        auto.text = if (debit == null) titre else {
+            val plein = allume == true
+            val crans = Crans(HvacPopup.crans(debit),
+                on = if (plein) surAccent else accent,
+                off = if (plein) Color.argb(70, Color.red(surAccent), Color.green(surAccent), Color.blue(surAccent)) else bordure,
+                largeur = cranLargeur, hauteur = cranHauteur, ecart = cranEcart, marge = cranMarge)
+            crans.setBounds(0, 0, crans.intrinsicWidth, crans.intrinsicHeight)
+            SpannableStringBuilder(titre).append('\n').apply {
+                val debut = length
+                append(' ')
+                setSpan(android.text.style.ImageSpan(crans, android.text.style.DynamicDrawableSpan.ALIGN_BASELINE),
+                    debut, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
     }
 
-    private val cranLargeur = dp(themed, 16f)
-    private val cranHauteur = dp(themed, 4f)
-    private val cranEcart = dp(themed, 4f)
+    private val cranLargeur = dp(themed, 20f)
+    private val cranHauteur = dp(themed, 6f)
+    private val cranEcart = dp(themed, 5f)
+    /** Espace entre « AUTO » et les crans. */
+    private val cranMarge = dp(themed, 5f)
 
-    /** Les trois crans du débit : [allumes] en [on], le reste en [off]. */
+    /** Les trois crans du débit : [allumes] en [on], le reste en [off], sous une [marge]. */
     private class Crans(
         private val allumes: Int,
         private val on: Int,
@@ -416,6 +435,7 @@ internal class HvacPopupSkin(
         private val largeur: Int,
         private val hauteur: Int,
         private val ecart: Int,
+        private val marge: Int,
     ) : android.graphics.drawable.Drawable() {
         private val peinture = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
         private val rect = android.graphics.RectF()
@@ -423,16 +443,17 @@ internal class HvacPopupSkin(
         override fun draw(canvas: android.graphics.Canvas) {
             val b = bounds
             val rayon = hauteur / 2f
+            val haut = (b.top + marge).toFloat()
             for (i in 0 until 3) {
                 peinture.color = if (i < allumes) on else off
                 val x = (b.left + i * (largeur + ecart)).toFloat()
-                rect.set(x, b.top.toFloat(), x + largeur, (b.top + hauteur).toFloat())
+                rect.set(x, haut, x + largeur, haut + hauteur)
                 canvas.drawRoundRect(rect, rayon, rayon, peinture)
             }
         }
 
         override fun getIntrinsicWidth() = 3 * largeur + 2 * ecart
-        override fun getIntrinsicHeight() = hauteur
+        override fun getIntrinsicHeight() = marge + hauteur
         override fun setAlpha(alpha: Int) { peinture.alpha = alpha }
         override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { peinture.colorFilter = colorFilter }
         @Deprecated("Requis par Drawable")
