@@ -1366,9 +1366,10 @@ object MG4Hardware {
     }
 
     /** Variante avec recovery — utilisée par vehiclesettings pour les propriétés FCW/AEB. */
-    private fun setIntPropertyVpmRecovery(propId: Int, value: Int): Boolean {
+    /** [verrou] : faux pour un réglage que l'écran d'origine laisse changer en roulant. */
+    private fun setIntPropertyVpmRecovery(propId: Int, value: Int, verrou: Boolean = true): Boolean {
         // [T-904] Écriture véhicule : autorisée uniquement à l'arrêt, refus si vitesse illisible.
-        if (!VehicleWriteGate.allow("VPM-recovery 0x${Integer.toHexString(propId)}")) return false
+        if (verrou && !VehicleWriteGate.allow("VPM-recovery 0x${Integer.toHexString(propId)}")) return false
         val vpm = sVpm ?: return false
         return try {
             vpm.javaClass.getMethod("setIntPropertyRecovery", Int::class.java, Int::class.java)
@@ -1727,9 +1728,10 @@ object MG4Hardware {
         }
     }
 
-    private fun setIntPropertyCPM(propId: Int, areaId: Int, value: Int): Boolean {
+    /** [verrou] : faux pour un réglage que l'écran d'origine laisse changer en roulant. */
+    private fun setIntPropertyCPM(propId: Int, areaId: Int, value: Int, verrou: Boolean = true): Boolean {
         // [T-904] Écriture véhicule : autorisée uniquement à l'arrêt, refus si vitesse illisible.
-        if (!VehicleWriteGate.allow("CPM 0x${Integer.toHexString(propId)}")) return false
+        if (verrou && !VehicleWriteGate.allow("CPM 0x${Integer.toHexString(propId)}")) return false
         val cpm = sCarPropertyManager ?: run {
             AppLogger.w(TAG, "  CPM setInt 0x${Integer.toHexString(propId)} — CPM not ready")
             return false
@@ -2884,19 +2886,26 @@ object MG4Hardware {
     //   • SWI68/165 : VehicleChargingManager.setDrivingBatteryHeat → le service n'écrit que la
     //                 propriété (CarBMSManager.setGlobalProperty) — on l'écrit donc directement ;
     //   • A9        : CarEvClient.setDrivingBatteryHeatStatus → CarAdapter, idem, sans traduction.
-    // Consigne identique partout, voir [BatteryHeating] ; la LECTURE, elle, diffère selon la
-    // plateforme — la sonde [runBatteryHeatingDiag] doit le confirmer sur véhicule.
+    // Consigne et lecture identiques partout, voir [BatteryHeating]. Propriété GLOBALE : zone 0, comme
+    // l'adaptateur A9 d'origine (getGlobalProperty), MG4Dash et DiAuto-MG4 — on écrivait en zone
+    // 0x1000000 jusqu'au 2026-10-30.
+    //
+    // Pas de garde « véhicule à l'arrêt » (2026-10-30, décision de l'utilisateur) : l'écran d'origine
+    // propose ce réglage en roulant, et chauffer la batterie en route vers une borne est justement
+    // son usage.
     // -------------------------------------------------------------------------
 
     private const val VPM_DRVNG_PTC_HEAT  = 0x502001b
     private const val PROP_DRVNG_PTC_HEAT = 0x2140f429
+    /** Zone d'une propriété globale pour CarPropertyManager. */
+    private const val ZONE_BATHEAT = 0
     private const val BATHEAT_TAG = "MG4_BATHEAT"
 
     fun hasBatteryHeating(): Boolean = FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
 
     /** Valeur brute, quelle que soit la voie. -1 si illisible. */
     private fun readBatteryHeatingRaw(): Int =
-        if (FirmwareInfo.isVsmBased()) getIntPropertyCPM(PROP_DRVNG_PTC_HEAT, AREA_GLOBAL)
+        if (FirmwareInfo.isVsmBased()) getIntPropertyCPM(PROP_DRVNG_PTC_HEAT, ZONE_BATHEAT)
         else getIntPropertyVpm(VPM_DRVNG_PTC_HEAT)
 
     /**
@@ -2918,7 +2927,7 @@ object MG4Hardware {
      */
     fun isBatteryHeatingOn(): Boolean? {
         if (!hasBatteryHeating()) return null
-        val lu = BatteryHeating.stateFromRaw(readBatteryHeatingRaw(), isA9Vsm())
+        val lu = BatteryHeating.stateFromRaw(readBatteryHeatingRaw())
         val consigne = batHeatConsigne ?: return lu
         val ecoule = SystemClock.elapsedRealtime() - batHeatConsigneMs
         if (lu != consigne && ecoule < BATHEAT_CONFIRM_MS) return consigne
@@ -2938,8 +2947,8 @@ object MG4Hardware {
     fun setBatteryHeating(on: Boolean): Boolean {
         if (!hasBatteryHeating()) return false
         val v = if (on) BatteryHeating.SET_ON else BatteryHeating.SET_OFF
-        val ok = if (FirmwareInfo.isVsmBased()) setIntPropertyCPM(PROP_DRVNG_PTC_HEAT, AREA_GLOBAL, v)
-                 else setIntPropertyVpmRecovery(VPM_DRVNG_PTC_HEAT, v)
+        val ok = if (FirmwareInfo.isVsmBased()) setIntPropertyCPM(PROP_DRVNG_PTC_HEAT, ZONE_BATHEAT, v, verrou = false)
+                 else setIntPropertyVpmRecovery(VPM_DRVNG_PTC_HEAT, v, verrou = false)
         AppLogger.i(BATHEAT_TAG, "setBatteryHeating(${if (on) "ON" else "OFF"}) écrit $v → $ok")
         if (ok) {
             batHeatConsigneMs = SystemClock.elapsedRealtime()
@@ -2956,15 +2965,14 @@ object MG4Hardware {
     fun runBatteryHeatingDiag() {
         AppLogger.i(BATHEAT_TAG, "── DIAG chauffage intelligent de la batterie ──")
         AppLogger.i(BATHEAT_TAG, "firmware=${FirmwareInfo.getGeneration()} géré=${hasBatteryHeating()} " +
-            "vpm=${sVpm != null} cpm=${sCarPropertyManager != null} lectureA9=${isA9Vsm()}")
+            "vpm=${sVpm != null} cpm=${sCarPropertyManager != null} A9=${isA9Vsm()}")
         val voies = mutableListOf<String>()
         if (sVpm != null) voies += "VPM 0x502001b=${getIntPropertyVpm(VPM_DRVNG_PTC_HEAT)}"
         voies += "CPM 0x2140f429@global=${getIntPropertyCPM(PROP_DRVNG_PTC_HEAT, AREA_GLOBAL)} " +
             "@0=${getIntPropertyCPM(PROP_DRVNG_PTC_HEAT, 0)}"
         val brut = readBatteryHeatingRaw()
         AppLogger.i(BATHEAT_TAG, voies.joinToString(" · ") + " → brut retenu $brut : " +
-            "ancienne plateforme (0=ON) ${BatteryHeating.stateFromRaw(brut, false)}, " +
-            "A9 (1=ON) ${BatteryHeating.stateFromRaw(brut, true)}, affiché ${isBatteryHeatingOn()}")
+            "lu (0=ON, 1=OFF) ${BatteryHeating.stateFromRaw(brut)}, affiché ${isBatteryHeatingOn()}")
         AppLogger.i(BATHEAT_TAG, "── fin DIAG ──")
     }
 
