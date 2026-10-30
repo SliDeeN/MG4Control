@@ -260,8 +260,14 @@ class AutomationFragment : Fragment() {
             val max = MG4Hardware.getMediaVolumeMax()
             withContext(Dispatchers.Main) {
                 if (!isAdded) return@withContext
-                if (max > 0) slider.valueTo = max.toFloat()
+                // La valeur d'abord : un maximum posé sous la valeur affichée fait lever le Slider
+                // (« value must be ≤ valueTo »), ce qui arrive quand la voie du volume a une
+                // échelle plus courte que celle du layout (fork sensoyg, DBI68).
                 val level = prefs.getInt("door_volume_level", 0)
+                if (max > 0) {
+                    slider.value = level.coerceIn(0, minOf(max, slider.valueTo.toInt())).toFloat()
+                    slider.valueTo = max.toFloat()
+                }
                 slider.value = level.coerceIn(0, slider.valueTo.toInt()).toFloat()
                 afficher(slider.value.toInt())
             }

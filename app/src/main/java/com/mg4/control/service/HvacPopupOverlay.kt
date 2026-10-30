@@ -223,12 +223,15 @@ object HvacPopupOverlay {
     }
 
     /**
-     * Même règle que la carte des chauffages du tableau de bord : SWI133, SWI68 et SWI165.
-     * Ailleurs (finitions sans ces équipements, ou firmware sans commande connue) → null.
+     * SWI133, SWI68 et SWI165 (même règle que la carte du tableau de bord), et depuis le 2026-10-30
+     * tout firmware dont la voiture répond à la lecture d'un siège ou du volant (fork sensoyg) :
+     * finitions équipées sous un firmware non reconnu. Rien ne répond → null, pas de colonne.
+     *
+     * ⚠️ À confirmer par des utilisateurs A9 (SWI69/131/132) : si la propriété y répond sans que la
+     * voiture ait ces équipements, la colonne apparaîtrait à tort. La ligne de journal le dira.
      */
     private fun lireChauffages(): HvacPopupSkin.Chauffages? {
-        if (!FirmwareInfo.hasHeatFeatures()) return null
-        return try {
+        val lu = try {
             HvacPopupSkin.Chauffages(
                 siegeGauche = MG4Hardware.getSeatHeatLeftOrNull(),
                 siegeDroit  = MG4Hardware.getSeatHeatRightOrNull(),
@@ -238,6 +241,11 @@ object HvacPopupOverlay {
             AppLogger.w(TAG, "Pop-up HVAC — lecture chauffages : ${e.message}")
             HvacPopupSkin.Chauffages(null, null, null)
         }
+        if (FirmwareInfo.hasHeatFeatures()) return lu
+        val repond = lu.siegeGauche != null || lu.siegeDroit != null || lu.volant != null
+        if (repond) AppLogger.i(TAG, "Pop-up HVAC — chauffages affichés sur ${FirmwareInfo.getGeneration()} : la voiture répond " +
+            "(siège G=${lu.siegeGauche}, siège D=${lu.siegeDroit}, volant=${lu.volant})")
+        return lu.takeIf { repond }
     }
 
     private fun showOnMain(context: Context, lu: MG4Hardware.ClimateState, chauds: HvacPopupSkin.Chauffages?) {

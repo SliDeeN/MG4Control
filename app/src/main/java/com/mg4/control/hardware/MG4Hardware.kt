@@ -560,6 +560,24 @@ object MG4Hardware {
             vpmClass = launcherCtx.classLoader
                 .loadClass("com.saicmotor.sdk.vehiclesettings.manager.VehiclePropertyManager")
         } catch (e: Exception) {
+            // Firmware non reconnu sans VehiclePropertyManager mais avec le VehicleSettingManager
+            // du SWI68 (fork sensoyg, DBI68 turc) : c'est un SWI68, on prend son chemin au lieu de
+            // réessayer pour rien toutes les 5 s. Jamais sur un SWI133 reconnu : un échec passager
+            // au démarrage ne doit pas le faire basculer sur les commandes d'un autre firmware.
+            if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.UNKNOWN && e is ClassNotFoundException) {
+                val vsmPresent = runCatching {
+                    context.createPackageContext(
+                        LAUNCHER68_PKG,
+                        android.content.Context.CONTEXT_INCLUDE_CODE or android.content.Context.CONTEXT_IGNORE_SECURITY
+                    ).classLoader.loadClass(VSM_CLASS)
+                }.isSuccess
+                if (vsmPresent) {
+                    AppLogger.w(TAG, "  Katman4: VehiclePropertyManager absent, $VSM_CLASS présent — firmware inconnu " +
+                        "traité comme un SWI68 (initKatman4Swi68)")
+                    initKatman4Swi68(context)
+                    return
+                }
+            }
             AppLogger.w(TAG, "  Katman4: package/class error: ${e.message} — will retry")
             Handler(Looper.getMainLooper()).postDelayed({ initKatman4(context.applicationContext) }, 5_000)
             return
@@ -926,13 +944,35 @@ object MG4Hardware {
     // Même SDK/pattern que GeneralManager : singleton sInstance + init(Context, ISettingsServiceListener).
     // -------------------------------------------------------------------------
 
-    private fun tryInitSmartSoundManager(launcherCtx: Context, appCtx: Context) {
-        if (sSmartSound != null) return
-        try {
-            val cls = launcherCtx.classLoader.loadClass(SMART_SOUND_MANAGER_CLASS)
+    /**
+     * Autres emplacements possibles du SmartSoundManager, essayés après le nôtre (fork sensoyg,
+     * firmware turc DBI68 : la classe n'y était pas là où on la cherchait). Le premier qui existe
+     * et s'initialise est gardé.
+     */
+    private val SMART_SOUND_CLASSES = listOf(
+        SMART_SOUND_MANAGER_CLASS,
+        "com.saicmotor.sdk.systemsettings.manager.SmartSoundManager",
+        "com.saicmotor.sdk.vehiclesettings.manager.SmartSoundManager",
+        "com.saicmotor.sdk.vehiclesettings.SmartSoundManager",
+        "com.saicmotor.sdk.sound.SmartSoundManager",
+        "com.saicmotor.sdk.sound.manager.SmartSoundManager",
+    )
 
-            // Tentative 1 : singleton déjà initialisé
-            val f = cls.getDeclaredField("sInstance")
+    private fun tryInitSmartSoundManager(launcherCtx: Context, appCtx: Context) {
+        for (nom in SMART_SOUND_CLASSES) {
+            if (sSmartSound != null) return
+            val cls = try { launcherCtx.classLoader.loadClass(nom) } catch (_: ClassNotFoundException) { continue }
+            if (nom != SMART_SOUND_MANAGER_CLASS) AppLogger.i(TAG, "  SmartSoundManager trouvé ailleurs : $nom")
+            tryInitSmartSoundClass(cls, appCtx)
+        }
+    }
+
+    private fun tryInitSmartSoundClass(cls: Class<*>, appCtx: Context) {
+        try {
+            // Tentative 1 : singleton déjà initialisé (sInstance, ou le champ statique du même type)
+            val f = runCatching { cls.getDeclaredField("sInstance") }.getOrNull()
+                ?: cls.declaredFields.firstOrNull { java.lang.reflect.Modifier.isStatic(it.modifiers) && cls.isAssignableFrom(it.type) }
+                ?: throw NoSuchFieldException("sInstance")
             f.isAccessible = true
             f.get(null)?.let {
                 sSmartSound = it
@@ -4142,37 +4182,125 @@ object MG4Hardware {
 
     private const val VOL_TAG = "MG4_VOL"
 
-    /** Max du volume média (borne le slider). -1 si indisponible. */
-    fun getMediaVolumeMax(): Int {
-        val v = when {
+    /**
+     * Voies du volume média, dans l'ordre : SAIC (ancien SDK ou A9), puis le CarAudioManager
+     * d'Android Automotive, puis AudioManager — ces deux replis viennent du fork sensoyg (firmware
+     * turc DBI68, 2026-10-30), dont le SmartSoundManager ne répondait pas.
+     *
+     * Lecture, écriture et maximum passent par la MÊME voie : deux voies n'ont pas la même échelle
+     * (0–30 côté SAIC, autre chose côté Android), un volume lu sur l'une et rendu sur l'autre serait
+     * faux. La voie est la première qui donne un maximum.
+     */
+    enum class VoieVolume { SAIC, CAR_AUDIO, ANDROID }
+
+    private fun voieVolume(): Pair<VoieVolume, Int>? {
+        val saic = when {
             isOldSdkSound() -> smartSoundGetInt("getMaxVolume", VOL_TYPE_MEDIA)
             isA9Sound()     -> audioGetArg(AUDIO_GET_MAX_VOL, VOL_TYPE_MEDIA)
             else            -> -1
         }
-        AppLogger.i(VOL_TAG, "getMediaVolumeMax = $v  [oldSdk=${isOldSdkSound()} a9=${isA9Sound()} smartSound=${sSmartSound != null} audioHelper=${sAudioHelper != null}]")
+        if (saic > 0) return VoieVolume.SAIC to saic
+        val car = carAudioLire("getGroupMaxVolume")
+        if (car > 0) return VoieVolume.CAR_AUDIO to car
+        val android = androidAudioMax()
+        if (android > 0) return VoieVolume.ANDROID to android
+        return null
+    }
+
+    /** Voie du volume en ce moment (null : aucune). Sert à ne rendre un volume que sur sa voie. */
+    fun mediaVolumeVoie(): VoieVolume? = voieVolume()?.first
+
+    /** Max du volume média (borne le slider). -1 si indisponible. */
+    fun getMediaVolumeMax(): Int {
+        val voie = voieVolume()
+        val v = voie?.second ?: -1
+        AppLogger.i(VOL_TAG, "getMediaVolumeMax = $v via ${voie?.first ?: "aucune"}  [oldSdk=${isOldSdkSound()} a9=${isA9Sound()} smartSound=${sSmartSound != null} audioHelper=${sAudioHelper != null}]")
         return v
     }
 
     /** Volume média courant. -1 si indisponible. */
     fun getMediaVolume(): Int {
-        val v = when {
-            isOldSdkSound() -> smartSoundGetInt("getVolume", VOL_TYPE_MEDIA)
-            isA9Sound()     -> audioGetArg(AUDIO_GET_VOLUME, VOL_TYPE_MEDIA)
-            else            -> -1
+        val voie = voieVolume()?.first
+        val v = when (voie) {
+            VoieVolume.SAIC      -> if (isOldSdkSound()) smartSoundGetInt("getVolume", VOL_TYPE_MEDIA)
+                                    else audioGetArg(AUDIO_GET_VOLUME, VOL_TYPE_MEDIA)
+            VoieVolume.CAR_AUDIO -> carAudioLire("getGroupVolume")
+            VoieVolume.ANDROID   -> androidAudioGet()
+            null                 -> -1
         }
-        AppLogger.i(VOL_TAG, "getMediaVolume = $v")
+        AppLogger.i(VOL_TAG, "getMediaVolume = $v via ${voie ?: "aucune"}")
         return v
     }
 
     /** Fixe le volume média. setVolume(type, niveau, flags=0). */
     fun setMediaVolume(level: Int): Boolean {
-        val ok = when {
-            isOldSdkSound() -> smartSoundSetVolume(level)
-            isA9Sound()     -> audioSet3(AUDIO_SET_VOLUME, VOL_TYPE_MEDIA, level, 0)
-            else            -> false
+        val voie = voieVolume()?.first
+        val ok = when (voie) {
+            VoieVolume.SAIC      -> if (isOldSdkSound()) smartSoundSetVolume(level)
+                                    else audioSet3(AUDIO_SET_VOLUME, VOL_TYPE_MEDIA, level, 0)
+            VoieVolume.CAR_AUDIO -> carAudioEcrire(level)
+            VoieVolume.ANDROID   -> androidAudioSet(level)
+            null                 -> false
         }
-        AppLogger.i(VOL_TAG, "setMediaVolume($level) = $ok")
+        AppLogger.i(VOL_TAG, "setMediaVolume($level) = $ok via ${voie ?: "aucune"}")
         return ok
+    }
+
+    // ── Replis Android : CarAudioManager (API Car) et AudioManager ─────────────
+    // Les deux relisent après écriture : sur un AAOS où le son passe par le service du
+    // constructeur, setStreamVolume peut ne rien changer sans lever d'erreur. Un « OK » sans
+    // effet ferait croire que la baisse a eu lieu, et la restauration rendrait un volume faux.
+
+    private fun carAudioManager(): Any? = sCar?.let { car ->
+        runCatching { car.javaClass.getMethod("getCarManager", String::class.java).invoke(car, "audio") }.getOrNull()
+    }
+
+    /** Groupe de volume du média (USAGE_MEDIA = 1) ; 0 si la voiture ne le dit pas. */
+    private fun carAudioGroupeMedia(cam: Any): Int = runCatching {
+        (cam.javaClass.getMethod("getVolumeGroupIdForUsage", Int::class.javaPrimitiveType)
+            .invoke(cam, android.media.AudioAttributes.USAGE_MEDIA) as Number).toInt()
+    }.getOrDefault(0)
+
+    /** getGroupVolume / getGroupMaxVolume : (groupe) sur Android 9, (zone, groupe) ensuite. -1 sinon. */
+    private fun carAudioLire(methode: String): Int {
+        val cam = carAudioManager() ?: return -1
+        val groupe = carAudioGroupeMedia(cam)
+        val i = Int::class.javaPrimitiveType
+        return runCatching { (cam.javaClass.getMethod(methode, i).invoke(cam, groupe) as Number).toInt() }
+            .recoverCatching { (cam.javaClass.getMethod(methode, i, i).invoke(cam, 0, groupe) as Number).toInt() }
+            .getOrDefault(-1)
+    }
+
+    private fun carAudioEcrire(level: Int): Boolean {
+        val cam = carAudioManager() ?: return false
+        val groupe = carAudioGroupeMedia(cam)
+        val i = Int::class.javaPrimitiveType
+        val envoye = runCatching { cam.javaClass.getMethod("setGroupVolume", i, i, i).invoke(cam, groupe, level, 0) }
+            .recoverCatching { cam.javaClass.getMethod("setGroupVolume", i, i, i, i).invoke(cam, 0, groupe, level, 0) }
+            .isSuccess
+        return envoye && carAudioLire("getGroupVolume") == level
+    }
+
+    private fun audioManager(): AudioManager? = sAppContext?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+
+    private fun androidAudioMax(): Int =
+        runCatching { audioManager()?.getStreamMaxVolume(AudioManager.STREAM_MUSIC) }.getOrNull() ?: -1
+
+    private fun androidAudioGet(): Int =
+        runCatching { audioManager()?.getStreamVolume(AudioManager.STREAM_MUSIC) }.getOrNull() ?: -1
+
+    /** setStreamVolume, puis pas à pas si la valeur n'a pas suivi ; vrai seulement si elle y est. */
+    private fun androidAudioSet(level: Int): Boolean {
+        val am = audioManager() ?: return false
+        val cible = level.coerceIn(0, androidAudioMax().takeIf { it > 0 } ?: level)
+        runCatching { am.setStreamVolume(AudioManager.STREAM_MUSIC, cible, 0) }
+        val lu = androidAudioGet()
+        if (lu == cible) return true
+        if (lu < 0) return false
+        val ecart = cible - lu
+        val sens = if (ecart > 0) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER
+        runCatching { repeat(kotlin.math.abs(ecart)) { am.adjustStreamVolume(AudioManager.STREAM_MUSIC, sens, 0) } }
+        return androidAudioGet() == cible
     }
 
     // old-SDK : SmartSoundManager (reflection)
@@ -5629,8 +5757,11 @@ object MG4Hardware {
      * et A9). Déclencheur : la porte là où elle est lisible ([hasDoorDetection]), sinon la sortie du
      * mode READY en P ([ReadyWatcher]), qui correspond sur MG4 à l'ouverture de la porte conducteur
      * ceinture détachée.
+     *
+     * Ailleurs (firmware non reconnu), seulement si une voie de repli répond ([voieVolume]) : la
+     * carte ne s'affiche pas là où rien ne peut baisser le volume.
      */
-    fun hasDoorVolumeFeature(): Boolean = isOldSdkSound() || isA9Sound()
+    fun hasDoorVolumeFeature(): Boolean = isOldSdkSound() || isA9Sound() || voieVolume() != null
 
     private fun doorVolumeEnabled(): Boolean {
         // Mode Garage : une portière qui fait chuter le volume est exactement le genre de
@@ -5710,6 +5841,9 @@ object MG4Hardware {
 
     /** Volume avant la baisse, gardé en préférences : la restauration survit à un redémarrage de l'écran. */
     private const val KEY_VOLUME_BEFORE_DROP = "door_volume_before_drop"
+    /** Voie du volume mémorisé ([VoieVolume]) : il n'est rendu que sur celle-ci. */
+    private const val KEY_VOLUME_DROP_VOIE = "door_volume_drop_voie"
+    @Volatile private var sVolumeDropVoie: VoieVolume? = null
 
     private fun dropMediaVolumeForExit(origin: String) {
         if (doorPauseMode()) {
@@ -5724,9 +5858,15 @@ object MG4Hardware {
         val level = doorVolumeLevel()
         CoroutineScope(Dispatchers.IO).launch {
             val before = getMediaVolume()
+            if (!com.mg4.control.model.ExitVolume.shouldLower(before, level)) {
+                AppLogger.i(DOORWATCH_TAG, "$origin → volume $before déjà ≤ $level : rien à baisser")
+                return@launch
+            }
             sVolumeBeforeDrop = before
+            sVolumeDropVoie = mediaVolumeVoie()
             if (before >= 0) sAppContext?.getSharedPreferences("mg4_settings", 0)?.edit()
-                ?.putInt(KEY_VOLUME_BEFORE_DROP, before)?.apply()
+                ?.putInt(KEY_VOLUME_BEFORE_DROP, before)
+                ?.putString(KEY_VOLUME_DROP_VOIE, sVolumeDropVoie?.name)?.apply()
             val ok = setMediaVolume(level)
             AppLogger.i(DOORWATCH_TAG, "$origin → vol $before→$level = $ok")
         }
@@ -5748,14 +5888,24 @@ object MG4Hardware {
             }
         }
         val restore = sVolumeBeforeDrop.takeIf { it >= 0 } ?: prefs?.getInt(KEY_VOLUME_BEFORE_DROP, -1) ?: -1
+        val voieNotee = sVolumeDropVoie
+            ?: prefs?.getString(KEY_VOLUME_DROP_VOIE, null)?.let { n -> VoieVolume.entries.firstOrNull { it.name == n } }
         sVolumeBeforeDrop = -1
-        prefs?.edit()?.remove(KEY_VOLUME_BEFORE_DROP)?.apply()
+        sVolumeDropVoie = null
+        prefs?.edit()?.remove(KEY_VOLUME_BEFORE_DROP)?.remove(KEY_VOLUME_DROP_VOIE)?.apply()
         if (restore < 0) return
         if (!doorRestoreEnabled()) {
             AppLogger.i(DOORWATCH_TAG, "$origin → restauration désactivée (volume laissé tel quel)")
             return
         }
         CoroutineScope(Dispatchers.IO).launch {
+            // Un volume se rend sur la voie où il a été lu : sur une autre, l'échelle n'est pas la
+            // même (voir voieVolume). Voie inconnue = noté avant cette règle, rendu comme avant.
+            val voie = mediaVolumeVoie()
+            if (voieNotee != null && voie != voieNotee) {
+                AppLogger.w(DOORWATCH_TAG, "$origin → volume $restore lu via $voieNotee, voie actuelle $voie : pas de restauration")
+                return@launch
+            }
             val ok = setMediaVolume(restore)
             AppLogger.i(DOORWATCH_TAG, "$origin → restauration vol $restore = $ok")
         }

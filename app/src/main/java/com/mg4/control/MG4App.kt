@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.debug.CrashLogger
+import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.ThemeHelper
 
@@ -16,6 +17,10 @@ class MG4App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Le mode de compatibilité forcé (firmware non reconnu) vaut pour tout le processus :
+        // service et récepteur de démarrage compris, pas seulement l'écran.
+        FirmwareInfo.initWithContext(this)
 
         // ── Crash handler global ──────────────────────────────────────────────
         // Intercepte toute exception non gérée, écrit la stack trace + les logs

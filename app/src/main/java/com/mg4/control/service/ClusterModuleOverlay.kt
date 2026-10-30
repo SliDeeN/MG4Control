@@ -160,6 +160,7 @@ internal object ClusterModuleOverlay {
     private val readyListener = ReadyWatcher.Listener { ready, firstRead ->
         // Fin de trajet : sa pointe peut faire redescendre l'échelle de puissance (issue #165).
         if (!ready && !firstRead) lecteur.post { finTrajet() }
+        if (ready && !firstRead) verifierEtRecoller("passage en READY")
         if (ready && !firstRead) lecteur.post {
             trajet.reset()
             pointeTrajet = 0f
@@ -180,7 +181,43 @@ internal object ClusterModuleOverlay {
         override fun onDisplayRemoved(displayId: Int) {
             if (displayId == ecranId) masquer("écran $displayId retiré")
         }
-        override fun onDisplayChanged(displayId: Int) {}
+        // Sortie de veille du combiné : la fenêtre a pu s'y détacher sans que l'écran ne soit retiré.
+        override fun onDisplayChanged(displayId: Int) {
+            if (displayId == ecranId) verifierEtRecoller("écran $displayId modifié")
+        }
+    }
+
+    /** Heure de la dernière pose : une fenêtre tout juste posée n'est pas encore attachée. */
+    private var poseeMs = 0L
+    private const val ATTACHE_DELAI_MS = 2_000L
+    /** Nouveaux essais quand l'écran du combiné manque encore au moment d'une vérification. */
+    private val ESSAIS_MS = listOf(1_000L, 2_500L, 5_000L, 10_000L)
+
+    /**
+     * Vérifie que le module est bien posé sur l'écran du combiné, et l'y recolle sinon (fork
+     * sensoyg, 2026-10-30 : sur DBI68, le module disparaissait après une mise en veille). Appelée
+     * au contact (IGNITION_RUN), au passage en READY et quand l'écran du combiné change d'état.
+     * Fenêtre absente, détachée ou sur un autre écran : retirée puis reposée. Sans effet quand le
+     * module n'a pas à être là (réglage coupé, firmware sans combiné).
+     */
+    fun verifierEtRecoller(origine: String) {
+        val app = appContext ?: return
+        main.post {
+            if (!ClusterModuleSettings.isSupported() ||
+                !(ClusterModuleSettings.isEnabled(app) || PreClimate.surLeCombine(app))) return@post
+            val ecran = ecranDuCombine(app)
+            if (ecran == null) {
+                ESSAIS_MS.forEach { delai -> main.postDelayed({ if (vue == null) afficher("$origine (+$delai ms)", signalerAbsence = false) }, delai) }
+                return@post
+            }
+            val v = vue
+            val detachee = v != null && !v.isAttachedToWindow && SystemClock.elapsedRealtime() - poseeMs > ATTACHE_DELAI_MS
+            if (v == null || detachee || ecranId != ecran.displayId) {
+                AppLogger.i(TAG, "$origine : module ${if (v == null) "absent" else if (detachee) "détaché" else "sur un autre écran"} — recollé")
+                masquer(origine)
+                afficher(origine, signalerAbsence = false)
+            }
+        }
     }
 
     /** Au démarrage du service ([origine] le dit) et à chaque changement du réglage. */
@@ -291,6 +328,7 @@ internal object ClusterModuleOverlay {
             vue = v
             fenetres = wm
             ecranId = ecran.displayId
+            poseeMs = SystemClock.elapsedRealtime()
             AppLogger.i(TAG, "$origine : fenêtre posée (navigation=" +
                 "${ClusterModuleSettings.moduleFor(ctx, ClusterTab.NAVIGATION)?.key ?: "aucun"}, musique=" +
                 "${ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA)?.key ?: "aucun"}) sur l'écran " +

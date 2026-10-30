@@ -193,6 +193,8 @@ class MG4ControlService : Service() {
     override fun onCreate() {
         super.onCreate()
         AppLogger.i(TAG, "onCreate")
+        // Relu ici aussi : démarré avant le déverrouillage, MG4App a pu trouver le réglage illisible.
+        FirmwareInfo.initWithContext(applicationContext)
         // AVANT startForeground : la notification annonce le Mode Garage, elle doit donc être
         // construite après que l'ancien réglage a été repris.
         GarageMode.migrateIfNeeded(applicationContext)
@@ -1406,6 +1408,8 @@ class MG4ControlService : Service() {
             when (state) {
                 MG4Hardware.CarIgnitionItem.RUN -> {
                     AppLogger.i(TAG, "Katman5 IGNITION_RUN → application du profil")
+                    // Le combiné se rallume avec le contact : le module a pu s'y détacher.
+                    ClusterModuleOverlay.verifierEtRecoller("IGNITION_RUN")
                     Handler(Looper.getMainLooper()).postDelayed({
                         applyDefaultProfileOnIgnition()
                         tryClimateAutomation("IGNITION_RUN")
