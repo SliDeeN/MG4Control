@@ -150,6 +150,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         val charge: Charge? = null,
         /** Pendant une pré-climatisation : sa fiche, avant la charge et la jauge. */
         val preClim: PreClim? = null,
+        /** Fin de l'échelle de puissance (issue #165) : choisie, ou apprise en roulant. */
+        val pleineEchelleKw: Float = ClusterGauge.POWER_FULL_KW,
     )
 
     private var contenu: Contenu? = null
@@ -211,7 +213,7 @@ class ClusterGaugeView(context: Context) : View(context) {
             return
         }
         val nouveau = c.kw?.let {
-            if (c.module == ClusterModule.POWER) ClusterGauge.power(it) else ClusterGauge.consumption(it, c.kmh, c.distance)
+            if (c.module == ClusterModule.POWER) ClusterGauge.power(it, c.pleineEchelleKw) else ClusterGauge.consumption(it, c.kmh, c.distance)
         }
         etat = nouveau
         animation?.cancel()
@@ -321,8 +323,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         val cx = COTE / 2f
         val cy = 122f
         // Graduations sur l'échelle resserrée : la puissance à droite, la récupération à gauche.
-        ClusterGauge.POWER_TICKS_KW.forEach { kw ->
-            graduation(canvas, cx, cy, RAYON_B, 270f + 120f * ClusterGauge.powerFraction(kw), "${kw.roundToInt()}")
+        ClusterGauge.powerTicks(c.pleineEchelleKw).forEach { kw ->
+            graduation(canvas, cx, cy, RAYON_B, 270f + 120f * ClusterGauge.powerFraction(kw, c.pleineEchelleKw), "${kw.roundToInt()}")
         }
         ClusterGauge.REGEN_TICKS_KW.forEach { kw ->
             graduation(canvas, cx, cy, RAYON_B, 270f - 120f * ClusterGauge.regenFraction(kw), "${kw.roundToInt()}")
@@ -420,13 +422,14 @@ class ClusterGaugeView(context: Context) : View(context) {
         val zero = xBarre(ClusterGauge.DISCREET_ZERO)
         val v = valeurAffichee ?: etat?.value
         if (etat != null && v != null) {
-            val xv = xBarre(ClusterGauge.discreetPowerFraction(v))
+            val xv = xBarre(ClusterGauge.discreetPowerFraction(v, c.pleineEchelleKw))
             if (v < -0.5f) barreDiscrete(canvas, xv, zero, cAccent)
             else if (v > 0.5f) barreDiscrete(canvas, zero, xv, C_CLAIR)
         }
-        ClusterGauge.DISCREET_POWER_TICKS.forEach { k ->
-            cranDiscret(canvas, xBarre(ClusterGauge.discreetPowerFraction(k)),
-                k.roundToInt().toString().takeIf { k in ClusterGauge.DISCREET_POWER_LABELS }, k == 0f)
+        val chiffres = ClusterGauge.discreetPowerLabels(c.pleineEchelleKw)
+        ClusterGauge.discreetPowerTicks(c.pleineEchelleKw).forEach { k ->
+            cranDiscret(canvas, xBarre(ClusterGauge.discreetPowerFraction(k, c.pleineEchelleKw)),
+                k.roundToInt().toString().takeIf { k in chiffres }, k == 0f)
         }
         // Le zéro, repère de toute la barre.
         trait.strokeCap = Paint.Cap.BUTT

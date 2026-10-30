@@ -25,6 +25,8 @@ data class ClusterConfig(
     val pill: String? = null,
     val refreshMs: Int? = null,
     val animationMs: Int? = null,
+    /** Puissance maxi de la jauge (issue #165) : kW de [PowerScale.CHOIX_KW], `null` = Auto. */
+    val powerMax: Int? = null,
 )
 
 object ClusterConfigs {

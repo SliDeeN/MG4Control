@@ -837,6 +837,9 @@
     <string name="settings_cluster_pill_profile">Perfil</string>
     <string name="settings_cluster_pill_none">Ninguna</string>
     <string name="settings_cluster_pill_desc">Perfil: el último perfil aplicado, con el color de su modo de conducción.</string>
+    <string name="settings_cluster_row_power">Potencia máx.</string>
+    <string name="settings_cluster_power_auto">Auto</string>
+    <string name="settings_cluster_power_desc">Auto: escala de %1$d kW, aprendida al conducir. Sube en cuanto un pico la supera y baja tras 5 trayectos más tranquilos.</string>
     <string name="settings_cluster_animation">Duración de la animación</string>
     <string name="settings_cluster_animation_desc">Tiempo que tarda el indicador en pasar de un valor al siguiente. Más largo: más suave, pero sigue más despacio.</string>
     <string name="cluster_regen_kw">REGEN. kW</string>

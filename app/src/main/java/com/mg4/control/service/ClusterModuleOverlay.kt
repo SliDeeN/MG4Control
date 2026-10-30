@@ -45,6 +45,7 @@ import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ClusterTrip
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.DrivingProfile
+import com.mg4.control.model.PowerScale
 import com.mg4.control.model.PreClimateMode
 import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateTrend
@@ -149,14 +150,19 @@ internal object ClusterModuleOverlay {
     private var chargeBrute: EnergyReader.ChargeRaw? = null
     private var chargeFinie = false
     private var batterieDebut: Float? = null
+    /** Plus forte puissance lissée du trajet en cours (issue #165) ; fil du lecteur. */
+    private var pointeTrajet = 0f
 
     /**
      * Un passage en READY ouvre un nouveau trajet. Pas le premier état lu : si la voiture est déjà
      * en READY au démarrage, l'affichage vient de remettre le trajet à zéro.
      */
     private val readyListener = ReadyWatcher.Listener { ready, firstRead ->
+        // Fin de trajet : sa pointe peut faire redescendre l'échelle de puissance (issue #165).
+        if (!ready && !firstRead) lecteur.post { finTrajet() }
         if (ready && !firstRead) lecteur.post {
             trajet.reset()
+            pointeTrajet = 0f
             AppLogger.i(TAG, "passage en READY : moyenne et récupération repartent de zéro")
             // On repart : la charge, finie ou non, rend la place à la jauge.
             if (session.active) finirCharge(SystemClock.elapsedRealtime(), "passage en READY")
@@ -358,6 +364,17 @@ internal object ClusterModuleOverlay {
             } else if (maintenant - dernierKwMs > MANQUE_TOLERE_MS) {
                 kwLisse = null
             }
+            // Échelle de puissance (issue #165) : la pointe du trajet, et le plafond appris qui
+            // monte TOUT DE SUITE quand une valeur le dépasse — la jauge n'est jamais coincée en butée.
+            kwLisse?.takeIf { it > 0f }?.let { k ->
+                if (k > pointeTrajet) pointeTrajet = k
+                val appris = ClusterModuleSettings.learnedPowerKw(ctx)
+                val plafond = PowerScale.apresReleve(appris, k)
+                if (plafond != appris) {
+                    ClusterModuleSettings.saveLearnedPower(ctx, plafond)
+                    AppLogger.i(TAG, "puissance : pointe ${k.toInt()} kW → plafond appris $appris → $plafond kW")
+                }
+            }
             // La charge se détecte à chaque relevé : le module doit changer dès le branchement.
             // Lecture ratée : l'état d'avant, plutôt qu'un « Charge terminée » d'un relevé.
             val enCharge = MODULE_CHARGE &&
@@ -448,6 +465,7 @@ internal object ClusterModuleOverlay {
                     distance = ClusterModuleSettings.distanceUnit(ctx,
                         if (ClusterModuleSettings.distanceChoice(ctx) == null) VehicleDistanceUnit.actualiser() else null),
                     style = style,
+                    pleineEchelleKw = ClusterModuleSettings.fullScaleKw(ctx),
                     // À la place de la jauge réglée pour l'onglet, jamais sur un onglet sans module.
                     charge = if (session.active) vueCharge(maintenant) else null,
                 )
@@ -464,6 +482,23 @@ internal object ClusterModuleOverlay {
             }
             lecteur.postDelayed(this, intervalle)
         }
+    }
+
+    /**
+     * Fin d'un trajet (sortie de READY) : sa pointe rejoint celles des derniers trajets, et le
+     * plafond appris peut redescendre ([PowerScale.apresTrajet]). Fil du lecteur.
+     */
+    private fun finTrajet() {
+        val ctx = appContext ?: return
+        val pointe = pointeTrajet
+        pointeTrajet = 0f
+        if (pointe <= 0f) return
+        val pointes = (ClusterModuleSettings.powerPeaks(ctx) + pointe).takeLast(PowerScale.MEMOIRE_TRAJETS)
+        val avant = ClusterModuleSettings.learnedPowerKw(ctx)
+        val apres = PowerScale.apresTrajet(avant, pointes)
+        ClusterModuleSettings.saveLearnedPower(ctx, apres, pointes)
+        AppLogger.i(TAG, "fin du trajet : pointe ${pointe.toInt()} kW, plafond appris $avant → $apres kW " +
+            "(pointes : ${pointes.joinToString { it.toInt().toString() }})")
     }
 
     /** Langue choisie dans l'application (comme la vue) : le nom du profil s'écrit en capitales dans celle-ci. */

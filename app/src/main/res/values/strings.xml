@@ -854,6 +854,9 @@
     <string name="settings_cluster_pill_profile">Profil</string>
     <string name="settings_cluster_pill_none">Aucune</string>
     <string name="settings_cluster_pill_desc">Profil : le dernier profil appliqué, dans la couleur de son mode de conduite.</string>
+    <string name="settings_cluster_row_power">Puissance maxi</string>
+    <string name="settings_cluster_power_auto">Auto</string>
+    <string name="settings_cluster_power_desc">Auto : échelle à %1$d kW, apprise en roulant. Elle monte dès qu’une pointe la dépasse et redescend après 5 trajets plus calmes.</string>
     <string name="settings_cluster_animation">Durée de l\'animation</string>
     <string name="settings_cluster_animation_desc">Temps que met la jauge pour glisser d\'une valeur à la suivante. Plus long : plus doux, mais elle suit moins vite.</string>
     <string name="cluster_regen_kw">RÉCUP. kW</string>

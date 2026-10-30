@@ -837,6 +837,9 @@
     <string name="settings_cluster_pill_profile">Profile</string>
     <string name="settings_cluster_pill_none">None</string>
     <string name="settings_cluster_pill_desc">Profile: the last applied profile, in the colour of its drive mode.</string>
+    <string name="settings_cluster_row_power">Max power</string>
+    <string name="settings_cluster_power_auto">Auto</string>
+    <string name="settings_cluster_power_desc">Auto: %1$d kW scale, learned while driving. It goes up as soon as a peak exceeds it and comes down after 5 calmer trips.</string>
     <string name="settings_cluster_animation">Animation duration</string>
     <string name="settings_cluster_animation_desc">Time the gauge takes to slide from one value to the next. Longer: smoother, but it follows more slowly.</string>
     <string name="cluster_regen_kw">REGEN kW</string>

@@ -135,6 +135,7 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
             uniteMoyenne = ClusterModuleSettings.averageUnit(reglages),
             distance = ClusterModuleSettings.distanceUnit(reglages, VehicleDistanceUnit.connue()),
             style = ClusterModuleSettings.style(reglages),
+            pleineEchelleKw = ClusterModuleSettings.fullScaleKw(reglages, ClusterModuleSettings.learnedPowerKw(ctx)),
         ), if (dtMs == 0L) 0L else ClusterModuleSettings.animationMs(reglages).toLong())
     }
 

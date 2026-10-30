@@ -9,6 +9,7 @@ import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ConsumptionUnit
 import com.mg4.control.model.DistanceUnit
+import com.mg4.control.model.PowerScale
 import kotlin.math.roundToInt
 
 /**
@@ -114,6 +115,38 @@ object ClusterModuleSettings {
     fun pill(ctx: Context?): ClusterPill = pill(ClusterProfiles.effective(ctx))
 
     fun animationMs(ctx: Context?): Int = animationMs(ClusterProfiles.effective(ctx))
+
+    // ── Fin de l'échelle de puissance (issue #165) ───────────────────────────
+    // Le CHOIX appartient au profil comme le reste de la carte ; le plafond APPRIS est celui de la
+    // voiture, commun à tous les profils.
+
+    const val KEY_POWER_LEARNED = "cluster_power_learned"
+    const val KEY_POWER_PEAKS = "cluster_power_peaks"
+
+    /** Fin de l'échelle pour le profil que suit le combiné. */
+    fun fullScaleKw(ctx: Context?): Float = fullScaleKw(ClusterProfiles.effective(ctx), learnedPowerKw(ctx))
+
+    fun fullScaleKw(c: ClusterConfig, appris: Int): Float = PowerScale.pleineEchelle(powerMaxChoice(c), appris)
+
+    /** Puissance maxi choisie, ou `null` pour Auto. */
+    fun powerMaxChoice(c: ClusterConfig): Int? = c.powerMax?.takeIf { it in PowerScale.CHOIX_KW }
+
+    fun learnedPowerKw(ctx: Context?): Int =
+        ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getInt(KEY_POWER_LEARNED, PowerScale.DEPART_KW)
+            ?.takeIf { it > 0 } ?: PowerScale.DEPART_KW
+
+    /** Pointes des derniers trajets, une par trajet. */
+    fun powerPeaks(ctx: Context): List<Float> =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_POWER_PEAKS, null).orEmpty()
+            .split(',').mapNotNull { it.trim().toFloatOrNull() }
+
+    fun saveLearnedPower(ctx: Context, plafond: Int, pointes: List<Float>? = null) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().apply {
+            putInt(KEY_POWER_LEARNED, plafond)
+            // Nombres pour machine : toujours le point décimal (piège de la virgule sur la voiture).
+            pointes?.let { putString(KEY_POWER_PEAKS, it.joinToString(",") { p -> p.roundToInt().toString() }) }
+        }.apply()
+    }
 
     // ── Réglages communs d'avant les profils ─────────────────────────────────
 

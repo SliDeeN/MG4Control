@@ -837,6 +837,9 @@
     <string name="settings_cluster_pill_profile">Profil</string>
     <string name="settings_cluster_pill_none">Yok</string>
     <string name="settings_cluster_pill_desc">Profil: en son uygulanan profil, sürüş modunun renginde.</string>
+    <string name="settings_cluster_row_power">Maks. güç</string>
+    <string name="settings_cluster_power_auto">Otomatik</string>
+    <string name="settings_cluster_power_desc">Otomatik: %1$d kW ölçek, sürüşte öğrenilir. Bir tepe değeri aştığında hemen yükselir, 5 sakin yolculuktan sonra düşer.</string>
     <string name="settings_cluster_animation">Animasyon süresi</string>
     <string name="settings_cluster_animation_desc">Göstergenin bir değerden diğerine kayma süresi. Daha uzun: daha yumuşak, ancak daha yavaş takip eder.</string>
     <string name="cluster_regen_kw">REJEN. kW</string>

@@ -380,12 +380,22 @@ class SettingsFragment : Fragment() {
             ClusterPill.PROFILE to view.findViewById(R.id.btn_cluster_pill_profile),
             ClusterPill.NONE to view.findViewById(R.id.btn_cluster_pill_none),
         )
+        // Puissance maxi de la jauge (issue #165) : Auto (`null`, apprise) ou une puissance choisie.
+        val powerBtns: List<Pair<Int?, MaterialButton>> = listOf(
+            null to view.findViewById(R.id.btn_cluster_power_auto),
+            125 to view.findViewById(R.id.btn_cluster_power_125),
+            150 to view.findViewById(R.id.btn_cluster_power_150),
+            180 to view.findViewById(R.id.btn_cluster_power_180),
+            320 to view.findViewById(R.id.btn_cluster_power_320),
+        )
+        val tvPowerDesc = view.findViewById<TextView>(R.id.tv_cluster_power_desc)
         // Étiquette de chaque ligne et son texte, pour y écrire « différent selon les profils ».
         fun etiquette(id: Int, texte: Int) = view.findViewById<TextView>(id) to getString(texte)
         val etiqNav = etiquette(R.id.tv_cluster_label_nav, R.string.settings_cluster_row_nav)
         val etiqMedia = etiquette(R.id.tv_cluster_label_media, R.string.settings_cluster_row_media)
         val etiqStyle = etiquette(R.id.tv_cluster_label_style, R.string.settings_cluster_row_style)
         val etiqPill = etiquette(R.id.tv_cluster_label_pill, R.string.settings_cluster_row_pill)
+        val etiqPower = etiquette(R.id.tv_cluster_label_power, R.string.settings_cluster_row_power)
         val etiqDistance = etiquette(R.id.tv_cluster_label_distance, R.string.settings_cluster_row_distance)
         val etiqGauge = etiquette(R.id.tv_cluster_label_gauge, R.string.settings_cluster_row_gauge)
         val etiqAverage = etiquette(R.id.tv_cluster_label_average, R.string.settings_cluster_row_average)
@@ -479,6 +489,8 @@ class SettingsFragment : Fragment() {
             avgBtns.forEach { (u, btn) -> btn.text = u.labelFor(distance) }
             ligne(etiqGauge, choisis.map { ClusterModuleSettings.consumptionUnit(it) }, unitBtns)
             ligne(etiqPill, choisis.map { ClusterModuleSettings.pill(it) }, pillBtns)
+            ligne(etiqPower, choisis.map { ClusterModuleSettings.powerMaxChoice(it) }, powerBtns)
+            tvPowerDesc.text = getString(R.string.settings_cluster_power_desc, ClusterModuleSettings.learnedPowerKw(ctx))
             ligne(etiqStyle, choisis.map { ClusterModuleSettings.style(it) }, styleBtns)
             ligne(etiqAverage, choisis.map { ClusterModuleSettings.averageUnit(it) }, avgBtns)
             ongletsApercu.forEach { (o, btn) -> peindre(btn, o == apercu.onglet) }
@@ -578,6 +590,12 @@ class SettingsFragment : Fragment() {
         pillBtns.forEach { (p, btn) ->
             btn.setOnClickListener {
                 modifier("Pastille du combiné → ${p.key}") { it.copy(pill = p.key) }
+                updateClusterCard()
+            }
+        }
+        powerBtns.forEach { (kw, btn) ->
+            btn.setOnClickListener {
+                modifier("Puissance maxi de la jauge → ${kw?.let { "$it kW" } ?: "Auto"}") { it.copy(powerMax = kw) }
                 updateClusterCard()
             }
         }
