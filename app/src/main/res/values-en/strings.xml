@@ -1074,6 +1074,10 @@
     <string name="cluster_dog_fine">I’m perfectly fine!</string>
     <string name="cluster_dog_set">The climate is set to</string>
     <string name="cluster_dog_since">Since %1$s · battery %2$s</string>
+    <string name="cluster_surv_remaining">Remaining</string>
+    <string name="cluster_surv_stop">stops</string>
+    <string name="cluster_surv_lock_in">Locking in</string>
+    <string name="cluster_surv_state">Climate off · screen on</string>
     <string name="sound_title">Sounds</string>
     <string name="sound_desc">Play a sound imported from a USB drive at chosen moments, at the volume you want.</string>
     <string name="sound_slot">Sound %1$d</string>

@@ -65,6 +65,13 @@
     <!-- Réseau / auto-update : déclarés UNIQUEMENT dans le flavor online
          (src/online/AndroidManifest.xml). Le flavor offline n'en a aucun, par construction. -->
 
+    <!-- Issue #180 : le mode Surveillance n'est proposé que si l'appli caméra 360° est installée
+         (util/DashcamApp). Sans effet sur Android 9 ; déclaré pour la visibilité des paquets. -->
+    <queries>
+        <package android:name="com.tommasov.mg4dashcam" />
+        <package android:name="com.drivehub.kamera" />
+    </queries>
+
     <application
         android:name=".MG4App"
         android:label="@string/app_name"

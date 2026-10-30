@@ -23,6 +23,7 @@ import com.mg4.control.model.PreClimateMode
 import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateRequest
 import com.mg4.control.ui.AppDialog
+import com.mg4.control.util.DashcamApp
 import com.mg4.control.util.PreClimateSettings
 import java.util.Calendar
 import java.util.concurrent.Executors
@@ -64,6 +65,8 @@ object PreClimatePopupOverlay {
     private var vues: Vues? = null
     private var req: PreClimateRequest? = null
     private var navigation: OverlayNavigation? = null
+    /** Appli caméra 360° installée (issue #180) : sans elle, pas de bouton « Surveillance ». Lue à l'ouverture. */
+    private var surveillanceDispo = false
 
     fun isShowing(): Boolean = vue != null
 
@@ -109,9 +112,13 @@ object PreClimatePopupOverlay {
             temp = lu?.tempC, fan = r?.ventilationReelle ?: lu?.lastManualFan, auto = r?.enAuto == true,
             ac = lu?.acOn, on = lu?.powerOn)
         val dernier = PreClimateSettings.lastRequest(app, PreClimate.minuteDuJour(), clim.temp, clim.fan)
+        val camera = DashcamApp.installee(app)
+        surveillanceDispo = camera != null
         req = dernier.copy(
             tempC = dernier.tempC.coerceIn(clim.tempMin, clim.tempMax),
-            fan = dernier.fan.coerceIn(clim.fanMin, clim.fanMax))
+            fan = dernier.fan.coerceIn(clim.fanMin, clim.fanMax),
+            // Surveillance cochée la dernière fois, mais l'appli caméra a été désinstallée depuis.
+            surveillance = dernier.surveillance && surveillanceDispo)
         val c = OverlayKit.contextes(app, LARGEUR_DP, HAUTEUR_DP)
         val v = try {
             val racine = LayoutInflater.from(c.themed).inflate(R.layout.overlay_preclim_setup, null)
@@ -143,7 +150,8 @@ object PreClimatePopupOverlay {
         // Après la mise en page : la navigation lit la position des cases à l'écran.
         v.racine.post { naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, Int.MAX_VALUE)) }
         AppLogger.i(TAG, "Pop-up affiché — clim ${clim.temp ?: "?"} °C, ventilation ${if (clim.auto) "AUTO" else clim.fan ?: "?"}, " +
-            "bornes ${clim.tempMin}–${clim.tempMax} °C / ${clim.fanMin}–${clim.fanMax}")
+            "bornes ${clim.tempMin}–${clim.tempMax} °C / ${clim.fanMin}–${clim.fanMax}, " +
+            "appli caméra ${camera ?: "absente : pas de Surveillance"}")
     }
 
     fun fermer(raison: String) {
@@ -343,7 +351,7 @@ object PreClimatePopupOverlay {
 
         // Surveillance (issue #180) : clim coupée à la place de ses réglages, titre et Démarrer en rouge.
         val surv = maintenant && r.surveillance
-        v.surveillance.visibility = if (maintenant) View.VISIBLE else View.GONE
+        v.surveillance.visibility = if (maintenant && surveillanceDispo) View.VISIBLE else View.GONE
         peindreBascule(v, v.surveillance, surv, v.danger, v.dangerDoux)
         v.titre.text = v.s(if (surv) R.string.preclim_surv else R.string.preclim_title)
         v.icone.setImageResource(if (surv) R.drawable.ic_preclim_cctv else R.drawable.ic_hvac_ac)
@@ -424,7 +432,9 @@ object PreClimatePopupOverlay {
                 add(listOf(v.cycles.moins, v.cycles.plus))
                 add(listOf(v.pause.moins, v.pause.plus))
             }
-            add((if (r.mode == PreClimateMode.NOW) listOf<View>(v.chien, v.surveillance) else emptyList()) + listOf(v.annuler, v.demarrer))
+            add((if (r.mode != PreClimateMode.NOW) emptyList()
+                else if (surveillanceDispo) listOf<View>(v.chien, v.surveillance) else listOf<View>(v.chien)) +
+                listOf(v.annuler, v.demarrer))
         }
         // L'anneau de l'ancienne navigation resterait sur sa case, peut-être d'un autre mode.
         (v.cases + v.puces + listOf(v.premier, v.duree, v.cycles, v.pause, v.temp, v.ventil).flatMap { listOf(it.moins, it.plus) } +

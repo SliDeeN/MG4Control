@@ -111,6 +111,8 @@ class ClusterGaugeView(context: Context) : View(context) {
      */
     data class PreClim(
         val chien: Boolean,
+        /** Surveillance (issue #180) : sa propre fiche, temps restant en grand (maquette C du 2026-10-30). */
+        val surveillance: Boolean = false,
         val tendance: PreClimateTrend,
         val enMarche: Boolean,
         val consigneC: Int,
@@ -173,8 +175,9 @@ class ClusterGaugeView(context: Context) : View(context) {
     private val cVert = sombre.getColor(R.color.dash_eco)
     private val cChaud = sombre.getColor(R.color.preclim_heat)
     private val cAlerte = sombre.getColor(R.color.dash_warn)
+    private val cDanger = sombre.getColor(R.color.dash_danger)
     private val icones = listOf(R.drawable.ic_cluster_bolt, R.drawable.ic_cluster_battery_charging, R.drawable.ic_cluster_clock,
-        R.drawable.ic_hvac_ac, R.drawable.ic_cluster_flame, R.drawable.ic_preclim_paw)
+        R.drawable.ic_hvac_ac, R.drawable.ic_cluster_flame, R.drawable.ic_preclim_paw, R.drawable.ic_preclim_cctv)
         .associateWith { ContextCompat.getDrawable(context, it)?.mutate() }
 
     private val locale: Locale = context.resources.configuration.locales[0]
@@ -495,6 +498,7 @@ class ClusterGaugeView(context: Context) : View(context) {
     // ── Pré-climatisation (maquette C, « fiche ») ────────────────────────────
 
     private fun preClim(canvas: Canvas, p: PreClim) {
+        if (p.surveillance) { surveillance(canvas, p); return }
         val couleur = if (p.tendance == PreClimateTrend.HEATING) cChaud else cAccent
         val d = COTE - MARGE_FICHE
         val consigne = context.getString(R.string.preclim_value_celsius, p.consigneC)
@@ -548,6 +552,59 @@ class ClusterGaugeView(context: Context) : View(context) {
             is Etape.Attente -> context.getString(R.string.cluster_preclim_next, heure(e.prochainMinute))
         }
         aGauche(canvas, ligne, MARGE_FICHE, 181f, 14f, cTexte, Typeface.DEFAULT)
+
+        val verrou = when (p.verrou) {
+            PreClimate.LockState.LOCKED -> context.getString(R.string.preclim_lock_ok)
+            PreClimate.LockState.FAILED -> context.getString(R.string.preclim_lock_failed)
+            PreClimate.LockState.PENDING -> context.getString(R.string.preclim_lock_pending)
+            null -> null
+        }
+        aGauche(canvas, listOfNotNull(context.getString(R.string.preclim_battery, batterie), verrou).joinToString(" · "),
+            MARGE_FICHE, 234f, 13f, if (p.verrou == PreClimate.LockState.FAILED) cAlerte else cTexte2, Typeface.DEFAULT)
+    }
+
+    /**
+     * Surveillance (issue #180, maquette C) : le temps restant en grand, en rouge, et l'heure d'arrêt
+     * à droite ; pendant le décompte, les secondes avant le verrouillage. Ni animation ni
+     * clignotement. Clim coupée : pas de consigne ni de température extérieure.
+     */
+    private fun surveillance(canvas: Canvas, p: PreClim) {
+        val d = COTE - MARGE_FICHE
+        val batterie = p.batterie?.let { context.getString(R.string.preclim_value_percent, it.roundToInt()) } ?: "–"
+        icones[R.drawable.ic_preclim_cctv]?.let {
+            it.setTint(cDanger)
+            it.alpha = 255
+            it.setBounds(18, 21, 40, 43)
+            it.draw(canvas)
+        }
+        aGauche(canvas, context.getString(R.string.preclim_surv), 48f, 38f, 16f, cTexte, moyen)
+
+        when (val e = p.etape) {
+            is Etape.Decompte -> {
+                aGauche(canvas, context.getString(R.string.cluster_surv_lock_in), MARGE_FICHE, 82f, 13f, C_DISCRET, Typeface.DEFAULT)
+                aGauche(canvas, context.getString(R.string.preclim_value_seconds, e.secondes), MARGE_FICHE, 140f, 52f, cTexte, moyen)
+            }
+            is Etape.Restant -> {
+                aGauche(canvas, context.getString(R.string.cluster_surv_remaining), MARGE_FICHE, 82f, 13f, C_DISCRET, Typeface.DEFAULT)
+                aGauche(canvas, duree(e.minutes), MARGE_FICHE, 140f, 52f, cDanger, moyen)
+                aDroite(canvas, context.getString(R.string.cluster_surv_stop), d, 82f, 13f, C_DISCRET, Typeface.DEFAULT)
+                aDroite(canvas, heure(e.finMinute), d, 104f, 18f, cTexte2, moyen)
+            }
+            // La surveillance n'existe qu'en « Maintenant » : ni cycle ni attente.
+            is Etape.Cycle, is Etape.Attente -> Unit
+        }
+
+        // Barre de l'étape, sans reflet : le décompte se vide, le temps écoulé la remplit.
+        plein.color = cPiste
+        cadre.set(MARGE_FICHE, 160f, d, 167f)
+        canvas.drawRoundRect(cadre, 3.5f, 3.5f, plein)
+        val part = p.part.coerceIn(0f, 1f)
+        if (part > 0f) {
+            plein.color = cDanger
+            cadre.set(MARGE_FICHE, 160f, MARGE_FICHE + (d - MARGE_FICHE) * part, 167f)
+            canvas.drawRoundRect(cadre, 3.5f, 3.5f, plein)
+        }
+        aGauche(canvas, context.getString(R.string.cluster_surv_state), MARGE_FICHE, 192f, 13f, cTexte2, Typeface.DEFAULT)
 
         val verrou = when (p.verrou) {
             PreClimate.LockState.LOCKED -> context.getString(R.string.preclim_lock_ok)

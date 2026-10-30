@@ -1091,6 +1091,10 @@
     <string name="cluster_dog_fine">Je vais très bien !</string>
     <string name="cluster_dog_set">La clim est réglée sur</string>
     <string name="cluster_dog_since">Depuis %1$s · batterie %2$s</string>
+    <string name="cluster_surv_remaining">Reste</string>
+    <string name="cluster_surv_stop">arrêt</string>
+    <string name="cluster_surv_lock_in">Verrouillage dans</string>
+    <string name="cluster_surv_state">Clim coupée · écran allumé</string>
     <string name="sound_title">Sons</string>
     <string name="sound_desc">Jouer un son importé depuis une clé USB à des moments choisis, au volume voulu.</string>
     <string name="sound_slot">Son %1$d</string>

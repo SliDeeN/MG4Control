@@ -1074,6 +1074,10 @@
     <string name="cluster_dog_fine">Mir geht es bestens!</string>
     <string name="cluster_dog_set">Die Klimaanlage ist eingestellt auf</string>
     <string name="cluster_dog_since">Seit %1$s · Akku %2$s</string>
+    <string name="cluster_surv_remaining">Verbleibend</string>
+    <string name="cluster_surv_stop">Ende</string>
+    <string name="cluster_surv_lock_in">Verriegelung in</string>
+    <string name="cluster_surv_state">Klima aus · Bildschirm an</string>
     <string name="sound_title">Töne</string>
     <string name="sound_desc">Einen von einem USB-Stick importierten Ton zu gewählten Momenten abspielen, in der gewünschten Lautstärke.</string>
     <string name="sound_slot">Ton %1$d</string>

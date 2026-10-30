@@ -19,6 +19,7 @@ import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateRequest
 import com.mg4.control.model.UnlockWatch
 import com.mg4.control.util.ClusterModuleSettings
+import com.mg4.control.util.DashcamApp
 import com.mg4.control.util.PreClimateSettings
 import java.util.Calendar
 
@@ -146,15 +147,17 @@ object PreClimate {
             }
             PreClimateSettings.saveRequest(app, req)
             appContext = app
+            // Surveillance : seulement avec l'appli caméra 360° (le pop-up ne la propose pas sans elle).
+            val surveillance = req.surveillance && req.mode == PreClimateMode.NOW && DashcamApp.installee(app) != null
             val borne = req.copy(
                 tempC = req.tempC.coerceIn(clim.tempMin, clim.tempMax),
                 fan = req.fan.coerceIn(clim.fanMin, clim.fanMax),
                 // Mode chien : « Maintenant » seulement — en attente, la clim serait coupée — et 2 h.
                 // Le choix de durée enregistré plus haut reste celui de l'utilisateur. Surveillance
                 // (issue #180) : « Maintenant » seulement aussi, et elle l'emporte sur le mode chien.
-                surveillance = req.surveillance && req.mode == PreClimateMode.NOW,
-                dog = req.dog && !req.surveillance && req.mode == PreClimateMode.NOW,
-                maxMin = PreClimatePlan.maxMinutes(req))
+                surveillance = surveillance,
+                dog = req.dog && !surveillance && req.mode == PreClimateMode.NOW,
+                maxMin = PreClimatePlan.maxMinutes(req.copy(surveillance = surveillance)))
             val maintenant = SystemClock.elapsedRealtime()
             val mur = minuteDuJour()
             val cycles = PreClimatePlan.cycles(borne, maintenant, mur)
@@ -201,10 +204,7 @@ object PreClimate {
      * ([ClusterModuleOverlay]) : programme en cours, réglage activé, firmware du module.
      */
     fun surLeCombine(context: Context): Boolean {
-        val e = etat ?: return false
-        // Surveillance : pas de clim à montrer, le combiné garde son module.
-        if (e.req.surveillance) return false
-        val phase = e.phase
+        val phase = etat?.phase ?: return false
         return phase != Phase.ENDED && ClusterModuleSettings.isSupported() && PreClimateSettings.showOnCluster(context)
     }
 

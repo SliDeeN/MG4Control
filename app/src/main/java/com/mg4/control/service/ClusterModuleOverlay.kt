@@ -525,6 +525,7 @@ internal object ClusterModuleOverlay {
             else step?.let { PreClimatePlan.fraction(it, maintenant) } ?: 0f
         return ClusterGaugeView.PreClim(
             chien = e.req.dog,
+            surveillance = e.req.surveillance,
             tendance = if (enMarche) PreClimatePlan.trend(e.req.tempC, e.outsideC) else PreClimateTrend.HOLDING,
             enMarche = enMarche,
             consigneC = e.req.tempC,

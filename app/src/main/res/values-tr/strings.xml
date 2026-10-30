@@ -1074,6 +1074,10 @@
     <string name="cluster_dog_fine">Gayet iyiyim!</string>
     <string name="cluster_dog_set">Klima şu sıcaklığa ayarlı</string>
     <string name="cluster_dog_since">%1$s saatinden beri · batarya %2$s</string>
+    <string name="cluster_surv_remaining">Kalan</string>
+    <string name="cluster_surv_stop">bitiş</string>
+    <string name="cluster_surv_lock_in">Kilitlenmeye</string>
+    <string name="cluster_surv_state">Klima kapalı · ekran açık</string>
     <string name="sound_title">Sesler</string>
     <string name="sound_desc">USB bellekten içe aktarılan bir sesi seçilen anlarda, istenen ses seviyesinde çal.</string>
     <string name="sound_slot">Ses %1$d</string>
