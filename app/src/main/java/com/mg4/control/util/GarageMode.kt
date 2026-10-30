@@ -13,10 +13,14 @@ import com.mg4.control.debug.AppLogger
  * Ce que le mode suspend, ce sont les comportements AUTONOMES — ceux que personne n'a demandés
  * sur le moment :
  *  • les raccourcis, classiques comme avancés (les touches retournent au launcher d'origine) ;
+ *  • les boutons flottants, retirés de l'écran dès l'activation (et la zone clim d'Android Auto) ;
  *  • le profil appliqué au démarrage et au contact, y compris par Bluetooth ;
  *  • les automatisations par température, profil comme climatisation ;
  *  • la baisse de volume à l'ouverture de porte ;
  *  • l'API externe et l'alerte de mise à jour sur l'écran du véhicule.
+ *
+ * Pour rouvrir MG4Control sans icône à portée : le RACCOURCI DE SECOURS ([isRescueOn]) — clic
+ * central du joystick droit tenu 5 s —, qui marche aussi en Mode Garage.
  *
  * Ce qu'il ne touche PAS : l'application elle-même. Ouvrir MG4Control et appliquer un profil à la
  * main reste possible — c'est une action de l'utilisateur, pas un comportement observable par
@@ -38,6 +42,17 @@ object GarageMode {
      */
     private const val OLD_KEY_AUTO_APPLY = "auto_apply_profile"
     private const val KEY_MIGRATED = "garage_mode_migrated"
+
+    /** Raccourci de secours (Réglages › Avancé) : activé par défaut, c'est une porte de sortie. */
+    const val KEY_RESCUE = "rescue_shortcut"
+
+    fun isRescueOn(ctx: Context?): Boolean =
+        ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getBoolean(KEY_RESCUE, true) ?: true
+
+    fun setRescueOn(ctx: Context, actif: Boolean) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_RESCUE, actif).apply()
+        AppLogger.i(TAG, "Raccourci de secours ${if (actif) "activé" else "désactivé"}")
+    }
 
     fun isOn(ctx: Context?): Boolean =
         ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getBoolean(KEY, false) ?: false

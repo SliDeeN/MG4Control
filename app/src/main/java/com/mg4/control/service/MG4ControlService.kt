@@ -347,6 +347,9 @@ class MG4ControlService : Service() {
         // simple appel tiers relancerait l'application du profil par défaut à chaque commande.
         if (intent?.action == ACTION_GARAGE_CHANGED) {
             getSystemService(NotificationManager::class.java).notify(NOTIF_ID, buildNotification())
+            // Les boutons flottants et la zone clim d'Android Auto partent (ou reviennent) tout de suite.
+            FloatingButtonsOverlay.refresh(this)
+            ProjectionHvacZone.refresh(this)
             return START_STICKY
         }
         if (handleAdvancedShortcutIntent(intent)) return START_STICKY

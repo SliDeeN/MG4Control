@@ -271,7 +271,9 @@
     <string name="settings_default_screen_dashboard">Tableau de bord</string>
     <string name="settings_auto_apply">Réglages supplémentaires</string>
     <string name="settings_garage_mode">Mode Garage</string>
-    <string name="settings_garage_mode_desc">Met MG4Control en veille complète : plus de raccourcis (les boutons retrouvent leur fonction d\'origine), plus de profil appliqué au démarrage, plus d\'automatisation. Utile pour laisser le véhicule à l\'atelier sans désinstaller l\'application. Vos réglages sont conservés et reviennent dès que le mode est désactivé.</string>
+    <string name="settings_garage_mode_desc">Met MG4Control en veille complète : plus de raccourcis (les boutons retrouvent leur fonction d\'origine), plus de boutons flottants, plus de profil appliqué au démarrage, plus d\'automatisation. Utile pour laisser le véhicule à l\'atelier sans désinstaller l\'application. Vos réglages sont conservés et reviennent dès que le mode est désactivé.</string>
+    <string name="settings_rescue_shortcut">Raccourci de secours</string>
+    <string name="settings_rescue_shortcut_desc">Maintenir 5 secondes le clic central du joystick droit ouvre MG4Control, même en Mode Garage. Nécessite le service d’accessibilité (raccourcis avancés).</string>
     <string name="settings_auto_scope_title">Climatisation · ce que règle AUTO</string>
     <string name="settings_auto_scope_desc">En AUTO, la voiture règle elle-même la ventilation, le sens de l’air et la recirculation. Décochez ce que vous voulez garder à votre main.</string>
     <string name="settings_auto_scope_fan">Ventilation</string>

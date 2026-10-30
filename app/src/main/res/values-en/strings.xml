@@ -269,7 +269,9 @@
     <string name="settings_default_screen_dashboard">Dashboard</string>
     <string name="settings_auto_apply">Additional settings</string>
     <string name="settings_garage_mode">Garage mode</string>
-    <string name="settings_garage_mode_desc">Puts MG4Control fully to sleep: no shortcuts (buttons regain their original function), no profile applied at startup, no automation. Useful when leaving the car at a workshop without uninstalling the app. Your settings are kept and come back as soon as the mode is turned off.</string>
+    <string name="settings_garage_mode_desc">Puts MG4Control fully to sleep: no shortcuts (buttons regain their original function), no floating buttons, no profile applied at startup, no automation. Useful when leaving the car at a workshop without uninstalling the app. Your settings are kept and come back as soon as the mode is turned off.</string>
+    <string name="settings_rescue_shortcut">Emergency shortcut</string>
+    <string name="settings_rescue_shortcut_desc">Holding the right joystick’s centre click for 5 seconds opens MG4Control, even in Garage mode. Requires the accessibility service (advanced shortcuts).</string>
     <string name="settings_auto_scope_title">Climate · what AUTO controls</string>
     <string name="settings_auto_scope_desc">In AUTO, the car sets the fan, the air direction and the recirculation itself. Untick what you want to keep under your control.</string>
     <string name="settings_auto_scope_fan">Fan</string>

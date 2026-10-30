@@ -269,7 +269,9 @@
     <string name="settings_default_screen_dashboard">Dashboard</string>
     <string name="settings_auto_apply">Impostazioni aggiuntive</string>
     <string name="settings_garage_mode">Modalità officina</string>
-    <string name="settings_garage_mode_desc">Mette MG4Control completamente in pausa: niente scorciatoie (i pulsanti tornano alla loro funzione originale), nessun profilo all\'avvio, nessuna automazione. Utile per lasciare l\'auto in officina senza disinstallare l\'app. Le impostazioni restano e tornano appena la modalità viene disattivata.</string>
+    <string name="settings_garage_mode_desc">Mette MG4Control completamente in pausa: niente scorciatoie (i pulsanti tornano alla loro funzione originale), niente pulsanti mobili, nessun profilo all\'avvio, nessuna automazione. Utile per lasciare l\'auto in officina senza disinstallare l\'app. Le impostazioni restano e tornano appena la modalità viene disattivata.</string>
+    <string name="settings_rescue_shortcut">Scorciatoia di emergenza</string>
+    <string name="settings_rescue_shortcut_desc">Tenere premuto per 5 secondi il clic centrale del joystick destro apre MG4Control, anche in modalità officina. Richiede il servizio di accessibilità (scorciatoie avanzate).</string>
     <string name="settings_auto_scope_title">Clima · cosa regola AUTO</string>
     <string name="settings_auto_scope_desc">In AUTO l’auto regola da sola ventilazione, direzione dell’aria e ricircolo. Deseleziona ciò che vuoi decidere tu.</string>
     <string name="settings_auto_scope_fan">Ventilazione</string>

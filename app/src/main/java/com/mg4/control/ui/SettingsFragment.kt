@@ -691,6 +691,12 @@ class SettingsFragment : Fragment() {
         portee(R.id.switch_auto_scope_loop, R.id.tv_auto_scope_loop, ClimateAutoScope::carSetsLoop, ClimateAutoScope::setCarSetsLoop,
             R.string.settings_auto_scope_loop_car, R.string.settings_auto_scope_loop_kept, "recirculation")
 
+        // ── Raccourci de secours : clic central du joystick droit tenu 5 s → MG4Control ──
+        view.findViewById<Switch>(R.id.switch_rescue_shortcut).apply {
+            isChecked = GarageMode.isRescueOn(requireContext())
+            setOnCheckedChangeListener { _, checked -> GarageMode.setRescueOn(requireContext(), checked) }
+        }
+
         // ── Mode Garage — MG4Control en veille complète ──────────────────────
         val switchGarage = view.findViewById<Switch>(R.id.switch_garage_mode)
         switchGarage.isChecked = GarageMode.isOn(requireContext())

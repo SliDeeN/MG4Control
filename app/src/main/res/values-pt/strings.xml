@@ -269,7 +269,9 @@
     <string name="settings_default_screen_dashboard">Painel</string>
     <string name="settings_auto_apply">Definições adicionais</string>
     <string name="settings_garage_mode">Modo oficina</string>
-    <string name="settings_garage_mode_desc">Coloca o MG4Control totalmente em pausa: sem atalhos (os botões recuperam a função original), sem perfil ao arrancar, sem automações. Útil para deixar o veículo na oficina sem desinstalar a aplicação. As suas definições são mantidas e voltam assim que o modo for desativado.</string>
+    <string name="settings_garage_mode_desc">Coloca o MG4Control totalmente em pausa: sem atalhos (os botões recuperam a função original), sem botões flutuantes, sem perfil ao arrancar, sem automações. Útil para deixar o veículo na oficina sem desinstalar a aplicação. As suas definições são mantidas e voltam assim que o modo for desativado.</string>
+    <string name="settings_rescue_shortcut">Atalho de emergência</string>
+    <string name="settings_rescue_shortcut_desc">Manter 5 segundos o clique central do joystick direito abre o MG4Control, mesmo no modo oficina. Requer o serviço de acessibilidade (atalhos avançados).</string>
     <string name="settings_auto_scope_title">Climatização · o que o AUTO regula</string>
     <string name="settings_auto_scope_desc">Em AUTO, o carro regula sozinho a ventilação, a direção do ar e a recirculação. Desmarque o que quer controlar.</string>
     <string name="settings_auto_scope_fan">Ventilação</string>

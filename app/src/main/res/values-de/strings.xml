@@ -269,7 +269,9 @@
     <string name="settings_default_screen_dashboard">Dashboard</string>
     <string name="settings_auto_apply">Weitere Einstellungen</string>
     <string name="settings_garage_mode">Werkstattmodus</string>
-    <string name="settings_garage_mode_desc">Versetzt MG4Control vollständig in den Ruhezustand: keine Tastenkürzel (die Tasten haben wieder ihre ursprüngliche Funktion), kein Profil beim Start, keine Automatisierung. Praktisch, wenn das Fahrzeug in die Werkstatt kommt, ohne die App zu deinstallieren. Ihre Einstellungen bleiben erhalten und kehren zurück, sobald der Modus ausgeschaltet wird.</string>
+    <string name="settings_garage_mode_desc">Versetzt MG4Control vollständig in den Ruhezustand: keine Tastenkürzel (die Tasten haben wieder ihre ursprüngliche Funktion), keine schwebenden Tasten, kein Profil beim Start, keine Automatisierung. Praktisch, wenn das Fahrzeug in die Werkstatt kommt, ohne die App zu deinstallieren. Ihre Einstellungen bleiben erhalten und kehren zurück, sobald der Modus ausgeschaltet wird.</string>
+    <string name="settings_rescue_shortcut">Notfall-Kurzbefehl</string>
+    <string name="settings_rescue_shortcut_desc">Den mittleren Klick des rechten Joysticks 5 Sekunden lang halten öffnet MG4Control, auch im Werkstattmodus. Erfordert den Bedienungshilfendienst (erweiterte Tastenkürzel).</string>
     <string name="settings_auto_scope_title">Klima · was AUTO regelt</string>
     <string name="settings_auto_scope_desc">In AUTO regelt das Auto Gebläse, Luftrichtung und Umluft selbst. Deaktivieren Sie, was Sie selbst bestimmen möchten.</string>
     <string name="settings_auto_scope_fan">Gebläse</string>
