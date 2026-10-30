@@ -150,8 +150,10 @@ object PreClimate {
                 tempC = req.tempC.coerceIn(clim.tempMin, clim.tempMax),
                 fan = req.fan.coerceIn(clim.fanMin, clim.fanMax),
                 // Mode chien : « Maintenant » seulement — en attente, la clim serait coupée — et 2 h.
-                // Le choix de durée enregistré plus haut reste celui de l'utilisateur.
-                dog = req.dog && req.mode == PreClimateMode.NOW,
+                // Le choix de durée enregistré plus haut reste celui de l'utilisateur. Surveillance
+                // (issue #180) : « Maintenant » seulement aussi, et elle l'emporte sur le mode chien.
+                surveillance = req.surveillance && req.mode == PreClimateMode.NOW,
+                dog = req.dog && !req.surveillance && req.mode == PreClimateMode.NOW,
                 maxMin = PreClimatePlan.maxMinutes(req))
             val maintenant = SystemClock.elapsedRealtime()
             val mur = minuteDuJour()
@@ -175,7 +177,8 @@ object PreClimate {
             AppLogger.i(TAG, "démarrée : ${borne.mode} " + (if (borne.mode == PreClimateMode.NOW)
                 "max ${borne.maxMin} min" else "${borne.runs} × ${borne.runMin} min (pause ${borne.pauseMin} min), " +
                 "1er cycle dans ${"%.0f".format(java.util.Locale.US, PreClimatePlan.minutesUntil(borne.firstMinuteOfDay, mur))} min") +
-                ", clim ${borne.tempC} °C ventil. ${borne.fan}${if (borne.dog) ", mode chien" else ""}, verrouillage dans " +
+                (if (borne.surveillance) ", SURVEILLANCE (clim coupée)" else
+                    ", clim ${borne.tempC} °C ventil. ${borne.fan}${if (borne.dog) ", mode chien" else ""}") + ", verrouillage dans " +
                 "${(e.lockAtMs - maintenant) / 1000} s, arrêt sous ${e.minSoc} % (batterie ${soc ?: "?"} %) ; avant : $snap")
             principal.post {
                 surDepart()
@@ -184,8 +187,11 @@ object PreClimate {
             // La fiche prend la place du module du combiné — posé pour elle s'il est désactivé.
             ClusterModuleOverlay.refresh(app, "pré-climatisation")
             publier(e)
-            // Mode « Maintenant » : la clim prend tout de suite les réglages choisis.
-            if (borne.mode == PreClimateMode.NOW) appliquer(borne)
+            // Mode « Maintenant » : la clim prend tout de suite les réglages choisis — ou, en
+            // surveillance, elle s'arrête : seuls l'écran et les caméras consomment.
+            if (borne.mode == PreClimateMode.NOW) {
+                if (borne.surveillance) couperPourSurveillance() else appliquer(borne)
+            }
             travail.postDelayed(tick, TICK_MS)
         }
     }
@@ -195,7 +201,10 @@ object PreClimate {
      * ([ClusterModuleOverlay]) : programme en cours, réglage activé, firmware du module.
      */
     fun surLeCombine(context: Context): Boolean {
-        val phase = etat?.phase ?: return false
+        val e = etat ?: return false
+        // Surveillance : pas de clim à montrer, le combiné garde son module.
+        if (e.req.surveillance) return false
+        val phase = e.phase
         return phase != Phase.ENDED && ClusterModuleSettings.isSupported() && PreClimateSettings.showOnCluster(context)
     }
 
@@ -297,7 +306,7 @@ object PreClimate {
             when (step) {
                 // « Maintenant » : déjà réglée au démarrage.
                 is PreClimatePlan.Step.Running ->
-                    if (e.req.mode == PreClimateMode.AT_TIME || !presetApplied) {
+                    if (!e.req.surveillance && (e.req.mode == PreClimateMode.AT_TIME || !presetApplied)) {
                         AppLogger.i(TAG, "cycle ${step.index + 1} : clim en marche")
                         appliquer(e.req)
                     }
@@ -310,7 +319,7 @@ object PreClimate {
             }
             lastStepKey = cle
             climOffReads = 0
-        } else if (step is PreClimatePlan.Step.Running && ticks % CLIM_CHECK_TICKS == 0) {
+        } else if (step is PreClimatePlan.Step.Running && !e.req.surveillance && ticks % CLIM_CHECK_TICKS == 0) {
             // La clim doit tourner : relancée si elle s'est arrêtée (voiture, appui sur le bouton…).
             val enMarche = MG4Hardware.getClimateState()?.powerOn
             climOffReads = if (enMarche == false) climOffReads + 1 else 0
@@ -333,6 +342,12 @@ object PreClimate {
         }.all { it }
         presetApplied = true
         AppLogger.i(TAG, "clim réglée : ${req.tempC} °C, ventilation ${req.fan}, A/C → ok=$ok")
+    }
+
+    /** Surveillance : clim arrêtée pour toute la durée ; ses réglages d'avant reviennent à la fin. */
+    private fun couperPourSurveillance() {
+        val ok = MG4Hardware.setClimatePower(false)
+        AppLogger.i(TAG, "surveillance : clim coupée → $ok")
     }
 
     private fun ecrire(pas: ClimateStep): Boolean = try {

@@ -186,6 +186,16 @@ object PreClimatePopupOverlay {
         val actuels: TextView = racine.findViewById(R.id.preclim_current)
         val plan: TextView = racine.findViewById(R.id.preclim_plan)
         val chien: TextView = racine.findViewById(R.id.preclim_dog_toggle)
+        // Surveillance (issue #180).
+        val surveillance: TextView = racine.findViewById(R.id.preclim_surv_toggle)
+        val titre: TextView = racine.findViewById(R.id.preclim_title_text)
+        val legendeMaintenant: TextView = racine.findViewById(R.id.preclim_now_caption)
+        val arretsSurveillance: TextView = racine.findViewById(R.id.preclim_surv_stops)
+        val ligneTemp: View = racine.findViewById(R.id.preclim_row_temp)
+        val ligneVentil: View = racine.findViewById(R.id.preclim_row_fan)
+        val panneauSurveillance: View = racine.findViewById(R.id.preclim_surv_panel)
+        val iconeClimCoupee: ImageView = racine.findViewById(R.id.preclim_surv_off_icon)
+        val avertSurveillance: TextView = racine.findViewById(R.id.preclim_surv_warning)
         val avertChien: TextView = racine.findViewById(R.id.preclim_dog_warning)
         val annuler: TextView = racine.findViewById(R.id.preclim_cancel)
         val demarrer: TextView = racine.findViewById(R.id.preclim_start)
@@ -201,6 +211,10 @@ object PreClimatePopupOverlay {
         val texte2 = themed.getColor(R.color.text_secondary)
         val alerte = themed.getColor(R.color.dash_warn)
         val alerteDoux = themed.getColor(R.color.dash_warn_dim)
+        val danger = themed.getColor(R.color.dash_danger)
+        val dangerDoux = themed.getColor(R.color.dash_danger_dim)
+        val surAccent = themed.getColor(R.color.hvac_on_accent)
+        val blanc = themed.getColor(R.color.text_active)
         fun dp(x: Float) = OverlayKit.dp(themed, x)
 
         fun s(id: Int, vararg args: Any): String = if (args.isEmpty()) loc.getString(id) else loc.getString(id, *args)
@@ -215,6 +229,9 @@ object PreClimatePopupOverlay {
         v.icone.imageTintList = ColorStateList.valueOf(v.accent)
         OverlayKit.fond(v.avertChien, v.alerteDoux, v.alerte, v.dp(1f), v.dp(12f).toFloat())
         v.avertChien.compoundDrawableTintList = ColorStateList.valueOf(v.alerte)
+        OverlayKit.fond(v.avertSurveillance, v.alerteDoux, v.alerte, v.dp(1f), v.dp(12f).toFloat())
+        v.avertSurveillance.compoundDrawableTintList = ColorStateList.valueOf(v.alerte)
+        v.iconeClimCoupee.imageTintList = ColorStateList.valueOf(v.texte2)
         listOf(v.premier, v.duree, v.cycles, v.pause, v.temp, v.ventil).forEach {
             it.moins.imageTintList = ColorStateList.valueOf(v.texte)
             it.plus.imageTintList = ColorStateList.valueOf(v.texte)
@@ -268,9 +285,14 @@ object PreClimatePopupOverlay {
         }
 
         v.chien.setOnClickListener {
-            changer { it.copy(dog = !it.dog) }
+            changer { it.copy(dog = !it.dog, surveillance = false) }
             // Les durées entrent dans la navigation ou en sortent : on la refait, sur ce bouton.
             naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, 0))
+        }
+        // Surveillance : exclusive du mode chien ; la clim sort de la navigation.
+        v.surveillance.setOnClickListener {
+            changer { it.copy(surveillance = !it.surveillance, dog = false) }
+            naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, 1))
         }
         v.demarrer.setOnClickListener { demarrer(app) }
     }
@@ -317,11 +339,29 @@ object PreClimatePopupOverlay {
         v.actuels.text = v.s(R.string.preclim_current, resumeActuel(v))
         v.chien.visibility = if (maintenant) View.VISIBLE else View.GONE
         v.avertChien.visibility = if (maintenant && r.dog) View.VISIBLE else View.GONE
-        OverlayKit.fond(v.chien, if (r.dog) v.accentDoux else v.bouton, if (r.dog) v.accent else v.bordure,
-            v.dp(if (r.dog) 2f else 1f), v.dp(12f).toFloat())
-        v.chien.setTextColor(if (r.dog) v.accent else v.texte2)
-        v.chien.compoundDrawableTintList = ColorStateList.valueOf(if (r.dog) v.accent else v.texte2)
+        peindreBascule(v, v.chien, r.dog, v.accent, v.accentDoux)
+
+        // Surveillance (issue #180) : clim coupée à la place de ses réglages, titre et Démarrer en rouge.
+        val surv = maintenant && r.surveillance
+        v.surveillance.visibility = if (maintenant) View.VISIBLE else View.GONE
+        peindreBascule(v, v.surveillance, surv, v.danger, v.dangerDoux)
+        v.titre.text = v.s(if (surv) R.string.preclim_surv else R.string.preclim_title)
+        v.icone.setImageResource(if (surv) R.drawable.ic_preclim_cctv else R.drawable.ic_hvac_ac)
+        v.icone.imageTintList = ColorStateList.valueOf(if (surv) v.danger else v.accent)
+        v.legendeMaintenant.text = v.s(if (surv) R.string.preclim_surv_caption else R.string.preclim_now_caption)
+        v.arretsSurveillance.visibility = if (surv) View.VISIBLE else View.GONE
+        v.arretsSurveillance.text = v.s(R.string.preclim_surv_stops, PreClimateSettings.minSoc(v.loc))
+        listOf(v.ligneTemp, v.ligneVentil, v.barre, v.actuels).forEach { it.visibility = if (surv) View.GONE else View.VISIBLE }
+        v.panneauSurveillance.visibility = if (surv) View.VISIBLE else View.GONE
+        if (surv) {
+            OverlayKit.fond(v.demarrer, v.danger, rayon = v.dp(12f).toFloat())
+            v.demarrer.setTextColor(v.blanc)
+        } else {
+            v.demarrer.setBackgroundResource(R.drawable.bg_dialog_primary)
+            v.demarrer.setTextColor(v.surAccent)
+        }
         v.plan.text = when {
+            surv -> v.s(R.string.preclim_plan_surv, heure(v, (mur + max).roundToInt()))
             maintenant && r.dog -> v.s(R.string.preclim_plan_dog, heure(v, (mur + max).roundToInt()))
             maintenant -> v.s(R.string.preclim_plan_now, heure(v, (mur + max).roundToInt()))
             else -> {
@@ -331,6 +371,14 @@ object PreClimatePopupOverlay {
                 v.s(R.string.preclim_plan_at, premiers, heure(v, cycles.last().second))
             }
         }
+    }
+
+    /** Bouton à bascule du bas (mode chien, surveillance) : cerclé de [vif] quand il est choisi. */
+    private fun peindreBascule(v: Vues, t: TextView, choisi: Boolean, vif: Int, doux: Int) {
+        OverlayKit.fond(t, if (choisi) doux else v.bouton, if (choisi) vif else v.bordure,
+            v.dp(if (choisi) 2f else 1f), v.dp(12f).toFloat())
+        t.setTextColor(if (choisi) vif else v.texte2)
+        t.compoundDrawableTintList = ColorStateList.valueOf(if (choisi) vif else v.texte2)
     }
 
     /** « 21 °C · ventilation 4 · A/C » de la clim telle qu'elle est maintenant. */
@@ -366,19 +414,21 @@ object PreClimatePopupOverlay {
         val lignes = buildList<List<View>> {
             add(v.cases + v.fermer)
             if (r.mode == PreClimateMode.NOW) {
-                add((if (r.dog) emptyList() else v.puces) + listOf(v.temp.moins, v.temp.plus))
-                add(listOf(v.ventil.moins, v.ventil.plus))
+                // Surveillance : pas de réglages de clim à atteindre.
+                add((if (r.dog) emptyList() else v.puces) +
+                    (if (r.surveillance) emptyList() else listOf(v.temp.moins, v.temp.plus)))
+                if (!r.surveillance) add(listOf(v.ventil.moins, v.ventil.plus))
             } else {
                 add(listOf(v.premier.moins, v.premier.plus, v.temp.moins, v.temp.plus))
                 add(listOf(v.duree.moins, v.duree.plus, v.ventil.moins, v.ventil.plus))
                 add(listOf(v.cycles.moins, v.cycles.plus))
                 add(listOf(v.pause.moins, v.pause.plus))
             }
-            add((if (r.mode == PreClimateMode.NOW) listOf<View>(v.chien) else emptyList()) + listOf(v.annuler, v.demarrer))
+            add((if (r.mode == PreClimateMode.NOW) listOf<View>(v.chien, v.surveillance) else emptyList()) + listOf(v.annuler, v.demarrer))
         }
         // L'anneau de l'ancienne navigation resterait sur sa case, peut-être d'un autre mode.
         (v.cases + v.puces + listOf(v.premier, v.duree, v.cycles, v.pause, v.temp, v.ventil).flatMap { listOf(it.moins, it.plus) } +
-            listOf(v.fermer, v.chien, v.annuler, v.demarrer)).forEach { it.foreground = null }
+            listOf(v.fermer, v.chien, v.surveillance, v.annuler, v.demarrer)).forEach { it.foreground = null }
         val ligne = depart.ligne.coerceIn(0, lignes.lastIndex)
         navigation = OverlayNavigation(
             context = v.themed,

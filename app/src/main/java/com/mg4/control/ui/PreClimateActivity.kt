@@ -151,6 +151,13 @@ class PreClimateActivity : Activity() {
         val chienEtat: TextView = racine.findViewById(R.id.preclim_dog_status)
         val chienMasquer: TextView = racine.findViewById(R.id.preclim_dog_hide)
         val chienArreter: TextView = racine.findViewById(R.id.preclim_dog_stop)
+        val surv: View = racine.findViewById(R.id.preclim_surv)
+        val survCadre: View = racine.findViewById(R.id.preclim_surv_frame)
+        val survIcone: ImageView = racine.findViewById(R.id.preclim_surv_icon)
+        val survTitre: TextView = racine.findViewById(R.id.preclim_surv_title)
+        val survEtat: TextView = racine.findViewById(R.id.preclim_surv_status)
+        val survMasquer: TextView = racine.findViewById(R.id.preclim_surv_hide)
+        val survArreter: TextView = racine.findViewById(R.id.preclim_surv_stop)
         val fin: View = racine.findViewById(R.id.preclim_end)
         val finIcone: TextView = racine.findViewById(R.id.preclim_end_icon)
         val finTitre: TextView = racine.findViewById(R.id.preclim_end_title)
@@ -183,11 +190,17 @@ class PreClimateActivity : Activity() {
         v.arreter.setOnClickListener { PreClimate.arreter() }
         v.chienMasquer.setOnClickListener { PreClimateScreen.fermer("Masquer (mode chien)") }
         v.chienArreter.setOnClickListener { PreClimate.arreter() }
+        v.survMasquer.setOnClickListener { PreClimateScreen.fermer("Masquer (surveillance)") }
+        v.survArreter.setOnClickListener { PreClimate.arreter() }
         v.finFermer.setOnClickListener {
             PreClimate.oublierFin()
             PreClimateScreen.fermer("Fermer")
         }
-        listOf(v.arreter, v.chienArreter).forEach { OverlayKit.fond(it, v.dangerDoux, v.danger, v.dp(1f), v.dp(12f).toFloat()) }
+        listOf(v.arreter, v.chienArreter, v.survArreter).forEach { OverlayKit.fond(it, v.dangerDoux, v.danger, v.dp(1f), v.dp(12f).toFloat()) }
+        // Surveillance (issue #180) : cadre rouge FIXE sur tout l'écran, pictogramme et titre en rouge.
+        OverlayKit.fond(v.survCadre, Color.TRANSPARENT, v.danger, v.dp(8f))
+        v.survIcone.imageTintList = ColorStateList.valueOf(v.danger)
+        v.survTitre.setTextColor(v.danger)
         OverlayKit.fond(v.cdAvertChien, v.alerteDoux, v.alerte, v.dp(1f), v.dp(12f).toFloat())
         v.cdAvertChien.compoundDrawableTintList = ColorStateList.valueOf(v.alerte)
     }
@@ -220,18 +233,21 @@ class PreClimateActivity : Activity() {
     private fun peindre(e: PreClimate.Etat) {
         val maintenant = SystemClock.elapsedRealtime()
         val chien = e.req.dog && e.phase == PreClimate.Phase.ACTIVE
+        val surv = e.req.surveillance && e.phase == PreClimate.Phase.ACTIVE
         v.decompte.visibility = if (e.phase == PreClimate.Phase.COUNTDOWN) View.VISIBLE else View.GONE
-        v.suivi.visibility = if (e.phase == PreClimate.Phase.ACTIVE && !chien) View.VISIBLE else View.GONE
+        v.suivi.visibility = if (e.phase == PreClimate.Phase.ACTIVE && !chien && !surv) View.VISIBLE else View.GONE
         v.chien.visibility = if (chien) View.VISIBLE else View.GONE
+        v.surv.visibility = if (surv) View.VISIBLE else View.GONE
         v.fin.visibility = if (e.phase == PreClimate.Phase.ENDED) View.VISIBLE else View.GONE
         when {
             e.phase == PreClimate.Phase.COUNTDOWN -> peindreDecompte(e, maintenant)
+            surv -> peindreSurveillance(e)
             chien -> peindreChien(e, maintenant)
             e.phase == PreClimate.Phase.ACTIVE -> peindreSuivi(e, maintenant)
             else -> peindreFin(e)
         }
-        // Le mode chien ne s'atténue jamais : les passants doivent pouvoir lire.
-        attenuer(e.phase == PreClimate.Phase.ACTIVE && !chien && maintenant > eveilJusqua)
+        // Le mode chien et la surveillance ne s'atténuent jamais : les passants doivent pouvoir lire.
+        attenuer(e.phase == PreClimate.Phase.ACTIVE && !chien && !surv && maintenant > eveilJusqua)
         peindreParticules(e)
     }
 
@@ -240,7 +256,7 @@ class PreClimateActivity : Activity() {
      * où on ne les verrait plus, et pendant l'attente, où rien ne chauffe ni ne refroidit.
      */
     private fun peindreParticules(e: PreClimate.Etat) {
-        val enMarche = e.phase == PreClimate.Phase.ACTIVE && e.step is PreClimatePlan.Step.Running &&
+        val enMarche = e.phase == PreClimate.Phase.ACTIVE && e.step is PreClimatePlan.Step.Running && !e.req.surveillance &&
             v.voile.visibility != View.VISIBLE
         v.particules.tendance = PreClimatePlan.trend(e.req.tempC, e.outsideC)
         v.particules.intensite = PreClimatePlan.intensity(e.req.tempC, e.outsideC)
@@ -259,9 +275,14 @@ class PreClimateActivity : Activity() {
         v.cdAnneau.anim = PreClimateRingView.Anim.AUCUNE
         v.cdAnneau.fraction = reste.toFloat() / (e.lockAtMs - e.startMs).coerceAtLeast(1L)
         val clim = resumeDemande(e)
-        v.cdClim.text = if (e.req.mode == PreClimateMode.NOW) v.s(R.string.preclim_cd_now, clim)
-            else v.s(R.string.preclim_cd_at, heure(e.wallTimes.firstOrNull()?.first ?: 0), clim)
-        v.cdAvertChien.visibility = if (e.req.dog) View.VISIBLE else View.GONE
+        v.cdClim.text = when {
+            e.req.surveillance -> v.s(R.string.preclim_cd_surv)
+            e.req.mode == PreClimateMode.NOW -> v.s(R.string.preclim_cd_now, clim)
+            else -> v.s(R.string.preclim_cd_at, heure(e.wallTimes.firstOrNull()?.first ?: 0), clim)
+        }
+        // Le même encadré, avec le texte du mode choisi.
+        v.cdAvertChien.visibility = if (e.req.dog || e.req.surveillance) View.VISIBLE else View.GONE
+        v.cdAvertChien.text = v.s(if (e.req.surveillance) R.string.preclim_surv_warning else R.string.preclim_dog_warning)
     }
 
     private fun peindreSuivi(e: PreClimate.Etat, maintenant: Long) {
@@ -323,6 +344,12 @@ class PreClimateActivity : Activity() {
         v.chienEtat.text = v.s(R.string.preclim_dog_status, heure(e.startWallMinute.toInt()), batterie(e))
     }
 
+    /** Surveillance (issue #180) : l'avertissement est fixe ; seule la ligne d'état change. */
+    private fun peindreSurveillance(e: PreClimate.Etat) {
+        v.survEtat.text = v.s(R.string.preclim_surv_status, heure(e.startWallMinute.toInt()), batterie(e),
+            heure((e.startWallMinute + e.req.maxMin).roundToInt()))
+    }
+
     private fun peindreVerrou(e: PreClimate.Etat) = when (e.lock) {
         PreClimate.LockState.PENDING -> pastille(v.verrou, v.s(R.string.preclim_lock_pending), v.bouton, v.texte2)
         PreClimate.LockState.LOCKED -> pastille(v.verrou, v.s(R.string.preclim_lock_ok), v.bouton, v.texte)
@@ -368,23 +395,28 @@ class PreClimateActivity : Activity() {
     private fun peindreFin(e: PreClimate.Etat) {
         val fin = e.end ?: return
         if (fin == PreClimateEnd.CANCELLED) {
-            Toast.makeText(v.loc, v.s(R.string.preclim_cancelled), Toast.LENGTH_SHORT).show()
+            Toast.makeText(v.loc, v.s(if (e.req.surveillance) R.string.preclim_surv_cancelled else R.string.preclim_cancelled),
+                Toast.LENGTH_SHORT).show()
             PreClimate.oublierFin()
             finish()
             return
         }
         val heureFin = heure((e.endWallMinute ?: PreClimate.minuteDuJour()).toInt())
+        val surv = e.req.surveillance
         val (titre, couleur, icone) = when (fin) {
-            PreClimateEnd.DONE -> Triple(v.s(R.string.preclim_end_done), v.vert, "✓")
+            PreClimateEnd.DONE -> Triple(v.s(if (surv) R.string.preclim_surv_end_done else R.string.preclim_end_done), v.vert, "✓")
             PreClimateEnd.BATTERY -> Triple(v.s(R.string.preclim_end_battery, e.minSoc), v.alerte, "!")
             PreClimateEnd.UNLOCKED -> Triple(v.s(R.string.preclim_end_back), v.vert, "✓")
-            PreClimateEnd.DRIVING -> Triple(v.s(R.string.preclim_end_driving), v.accent, "✓")
-            PreClimateEnd.STOPPED, PreClimateEnd.CANCELLED -> Triple(v.s(R.string.preclim_end_stopped), v.accent, "✓")
+            PreClimateEnd.DRIVING -> Triple(v.s(if (surv) R.string.preclim_surv_end_driving else R.string.preclim_end_driving), v.accent, "✓")
+            PreClimateEnd.STOPPED, PreClimateEnd.CANCELLED ->
+                Triple(v.s(if (surv) R.string.preclim_surv_end_stopped else R.string.preclim_end_stopped), v.accent, "✓")
         }
         val texte = buildList {
-            if (fin == PreClimateEnd.DONE) add(
-                if (e.req.mode == PreClimateMode.AT_TIME) v.s(R.string.preclim_end_cycles, e.cycles.size, duree(e.req.runMin))
-                else v.s(R.string.preclim_end_now, duree(e.req.maxMin)))
+            if (fin == PreClimateEnd.DONE) add(when {
+                surv -> v.s(R.string.preclim_surv_end_ran, duree(e.req.maxMin))
+                e.req.mode == PreClimateMode.AT_TIME -> v.s(R.string.preclim_end_cycles, e.cycles.size, duree(e.req.runMin))
+                else -> v.s(R.string.preclim_end_now, duree(e.req.maxMin))
+            })
             if (fin.powersOff) add(if (e.powerOffOk == true) v.s(R.string.preclim_end_off, heureFin) else v.s(R.string.preclim_end_power_failed))
             if (fin == PreClimateEnd.UNLOCKED) add(v.s(R.string.preclim_end_back_text, heureFin))
             add(restauration(e.snapshot))

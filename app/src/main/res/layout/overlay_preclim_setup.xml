@@ -42,6 +42,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:layout_marginStart="10dp"
+                android:id="@+id/preclim_title_text"
                 android:text="@string/preclim_title"
                 android:textColor="@color/text_primary"
                 android:textSize="20sp"
@@ -140,6 +141,7 @@
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:id="@+id/preclim_now_caption"
                         android:text="@string/preclim_now_caption"
                         android:textColor="@color/text_secondary"
                         android:textSize="15sp" />
@@ -150,6 +152,16 @@
                         android:layout_height="56dp"
                         android:layout_marginTop="10dp"
                         android:orientation="horizontal" />
+
+                    <!-- Surveillance (issue #180) : ce qui l'arrête plus tôt. -->
+                    <TextView
+                        android:id="@+id/preclim_surv_stops"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="15sp"
+                        android:visibility="gone" />
 
                 </LinearLayout>
 
@@ -199,6 +211,60 @@
                     android:layout_height="6dp"
                     android:layout_marginTop="6dp"
                     android:orientation="horizontal" />
+
+                <!-- Surveillance (issue #180) : clim coupée, à la place de la température et de la
+                     ventilation ; avertissement aux couleurs d'alerte, peint par le code. -->
+                <LinearLayout
+                    android:id="@+id/preclim_surv_panel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:orientation="vertical"
+                    android:gravity="center_horizontal"
+                    android:visibility="gone">
+
+                    <ImageView
+                        android:id="@+id/preclim_surv_off_icon"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_hvac_ac" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:text="@string/preclim_surv_off_title"
+                        android:textColor="@color/text_primary"
+                        android:textSize="17sp"
+                        android:textStyle="bold"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:gravity="center"
+                        android:text="@string/preclim_surv_off_text"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/preclim_surv_warning"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:padding="10dp"
+                        android:drawableStart="@drawable/ic_dialog_warning"
+                        android:drawablePadding="10dp"
+                        android:gravity="center_vertical"
+                        android:text="@string/preclim_surv_warning"
+                        android:textColor="@color/text_primary"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
 
                 <!-- Mode chien choisi : avertissement (2026-10-23, son texte). Dans ce panneau et non
                      sous les durées : 286 dp de haut pour les deux, celui-ci garde ~15 dp de plus,
@@ -267,6 +333,22 @@
                 android:drawableStart="@drawable/ic_preclim_paw"
                 android:drawablePadding="8dp"
                 android:text="@string/preclim_dog"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <!-- Surveillance (issue #180) : « Maintenant » seulement, exclusive du mode chien ; peinte par le code. -->
+            <TextView
+                android:id="@+id/preclim_surv_toggle"
+                android:layout_width="wrap_content"
+                android:layout_height="52dp"
+                android:layout_marginEnd="10dp"
+                android:gravity="center"
+                android:paddingStart="16dp"
+                android:paddingEnd="18dp"
+                android:drawableStart="@drawable/ic_preclim_cctv"
+                android:drawablePadding="8dp"
+                android:text="@string/preclim_surv"
                 android:textSize="16sp"
                 android:textStyle="bold"
                 android:maxLines="1" />

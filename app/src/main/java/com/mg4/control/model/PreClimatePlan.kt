@@ -34,6 +34,13 @@ data class PreClimateRequest(
      * Durée imposée : [PreClimatePlan.DOG_MAX_MIN] (demande du 2026-10-23).
      */
     val dog: Boolean = false,
+    /**
+     * Surveillance (issue #180, 2026-10-30) : comme le mode chien — voiture allumée et verrouillée,
+     * écran allumé —, mais clim COUPÉE, pour qu'une appli caméra 360° enregistre en boucle ; l'écran
+     * prévient les passants. « Maintenant » seulement, exclusive du mode chien, durée au choix
+     * (2 h au plus).
+     */
+    val surveillance: Boolean = false,
 )
 
 /** L'écran de suivi pendant l'attente, portes verrouillées (page du raccourci). */
@@ -130,9 +137,12 @@ object PreClimatePlan {
     /** Un cycle de clim, en temps monotone. */
     data class Cycle(val startMs: Long, val endMs: Long)
 
-    /** Durée maximale effective en mode [PreClimateMode.NOW] : celle choisie, ou 2 h en mode chien. */
+    /**
+     * Durée maximale effective en mode [PreClimateMode.NOW] : celle choisie, ou 2 h en mode chien.
+     * La surveillance garde la durée choisie, et l'emporte sur un mode chien resté coché.
+     */
     fun maxMinutes(req: PreClimateRequest): Int =
-        if (req.dog && req.mode == PreClimateMode.NOW) DOG_MAX_MIN else clampMax(req.maxMin)
+        if (req.dog && !req.surveillance && req.mode == PreClimateMode.NOW) DOG_MAX_MIN else clampMax(req.maxMin)
 
     /**
      * Cycles de [req], [startMs] étant l'instant (monotone) du démarrage et [nowMinuteOfDay]

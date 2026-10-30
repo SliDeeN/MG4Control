@@ -60,6 +60,9 @@ class PreClimatePlanTest {
         // Sans le mode chien, le choix de l'utilisateur revient.
         assertEquals(15, PreClimatePlan.maxMinutes(chien.copy(dog = false)))
         assertEquals(60, PreClimatePlan.maxMinutes(req(PreClimateMode.AT_TIME, maxMin = 60).copy(dog = true)))
+        // Surveillance (issue #180) : la durée choisie, 2 h au plus, même si le mode chien était coché.
+        assertEquals(30, PreClimatePlan.maxMinutes(chien.copy(maxMin = 30, surveillance = true)))
+        assertEquals(PreClimatePlan.DEFAULT_MAX_MIN, PreClimatePlan.maxMinutes(chien.copy(maxMin = 240, surveillance = true)))
     }
 
     @Test fun `l'etape suit le programme`() {

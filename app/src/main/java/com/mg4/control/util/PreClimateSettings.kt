@@ -30,6 +30,7 @@ object PreClimateSettings {
     private const val KEY_TEMP = "preclim_temp"
     private const val KEY_FAN = "preclim_fan"
     private const val KEY_DOG = "preclim_dog"
+    private const val KEY_SURV = "preclim_surveillance"
     /** Fiche sur l'écran conducteur pendant le programme (2026-10-23) : activée par défaut. */
     private const val KEY_CLUSTER = "preclim_cluster"
 
@@ -74,6 +75,7 @@ object PreClimateSettings {
             tempC = p.getInt(KEY_TEMP, -1).takeIf { it > 0 } ?: tempNow ?: DEFAULT_TEMP,
             fan = p.getInt(KEY_FAN, -1).takeIf { it > 0 } ?: fanNow ?: DEFAULT_FAN,
             dog = p.getBoolean(KEY_DOG, false),
+            surveillance = p.getBoolean(KEY_SURV, false),
         )
     }
 
@@ -87,6 +89,7 @@ object PreClimateSettings {
             .putInt(KEY_TEMP, r.tempC)
             .putInt(KEY_FAN, r.fan)
             .putBoolean(KEY_DOG, r.dog)
+            .putBoolean(KEY_SURV, r.surveillance)
             .apply()
     }
 

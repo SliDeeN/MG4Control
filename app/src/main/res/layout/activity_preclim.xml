@@ -532,6 +532,105 @@
 
     </FrameLayout>
 
+    <!-- ── Surveillance (issue #180) : l'avertissement pour les passants, sur tout l'écran, jamais
+         atténué. Cadre rouge FIXE (pas de clignotement, sa demande), peint par le code. ── -->
+    <FrameLayout
+        android:id="@+id/preclim_surv"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone">
+
+        <View
+            android:id="@+id/preclim_surv_frame"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:paddingBottom="40dp">
+
+            <ImageView
+                android:id="@+id/preclim_surv_icon"
+                android:layout_width="110dp"
+                android:layout_height="110dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_preclim_cctv" />
+
+            <TextView
+                android:id="@+id/preclim_surv_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/preclim_surv_screen_title"
+                android:textSize="58sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.06"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/preclim_surv_screen_text"
+                android:textColor="#FFFFFFFF"
+                android:textSize="28sp"
+                android:maxLines="2"
+                android:gravity="center" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_gravity="bottom"
+            android:layout_marginStart="28dp"
+            android:layout_marginEnd="28dp"
+            android:layout_marginBottom="22dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/preclim_surv_status"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:textColor="@color/dash_text_lo"
+                android:textSize="16sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/preclim_surv_hide"
+                android:layout_width="150dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="16dp"
+                android:background="@drawable/bg_dialog_tile"
+                android:gravity="center"
+                android:text="@string/preclim_hide"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <TextView
+                android:id="@+id/preclim_surv_stop"
+                android:layout_width="150dp"
+                android:layout_height="match_parent"
+                android:layout_marginStart="10dp"
+                android:gravity="center"
+                android:text="@string/preclim_stop"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+        </LinearLayout>
+
+    </FrameLayout>
+
     <!-- Voile de l'attente : atténue (ou éteint) l'écran ; un toucher le lève pour 10 s. -->
     <View
         android:id="@+id/preclim_dim"
