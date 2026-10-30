@@ -1616,8 +1616,7 @@ class MG4ControlService : Service() {
                         val ok = MG4Hardware.applyClimatePreset(
                             targetTemp   = rule.targetTemp,
                             fanLevel     = rule.fanLevel,
-                            defrostFront = rule.defrostFront,
-                            defrostRear  = rule.defrostRear,
+                            airFlow      = rule.airFlow,
                             autoMode     = rule.autoMode,
                             loopMode     = rule.loopMode
                         )

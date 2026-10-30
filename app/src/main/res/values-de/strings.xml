@@ -423,6 +423,8 @@
     <string name="ac_auto_rule_off">Regel deaktiviert</string>
     <string name="ac_auto_def_front">Frontscheibenheizung</string>
     <string name="ac_auto_def_rear">Heckscheibenheizung</string>
+    <string name="ac_auto_air_hint">Zuletzt angewendet, nach dem Gebläse: %1$s</string>
+    <string name="ac_auto_air_unchanged_hint">Unverändert: Die Regel ändert die Luftrichtung nicht.</string>
     <string name="ac_auto_note">Wird beim Start des Fahrzeugs angewendet: Klimaanlage und A/C werden eingeschaltet, dann werden die obigen Einstellungen gesendet.</string>
     <string name="ac_auto_trigger_label">Auslösung</string>
     <string name="ac_auto_trigger_start">Nur beim Start</string>

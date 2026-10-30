@@ -423,6 +423,8 @@
     <string name="ac_auto_rule_off">Rule disabled</string>
     <string name="ac_auto_def_front">Front defrost</string>
     <string name="ac_auto_def_rear">Rear defrost</string>
+    <string name="ac_auto_air_hint">Applied last, after the fan: %1$s</string>
+    <string name="ac_auto_air_unchanged_hint">Unchanged: the rule does not touch the air direction.</string>
     <string name="ac_auto_note">Applied when the vehicle starts: climate control and A/C are turned on, then the settings above are sent.</string>
     <string name="ac_auto_trigger_label">Trigger</string>
     <string name="ac_auto_trigger_start">At start-up only</string>

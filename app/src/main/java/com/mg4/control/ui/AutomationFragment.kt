@@ -23,6 +23,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
+import com.mg4.control.model.AirFlow
 import com.mg4.control.BuildConfig
 import com.mg4.control.R
 import com.mg4.control.automation.AutoBrightness
@@ -635,8 +636,10 @@ class AutomationFragment : Fragment() {
             cible = R.id.slider_ac_hot_target, cibleValeur = R.id.tv_ac_hot_target,
             ventAuto = R.id.btn_ac_hot_fan_auto, ventManuelle = R.id.btn_ac_hot_fan_manual,
             rangeeNiveau = R.id.row_ac_hot_fan, niveau = R.id.slider_ac_hot_fan, niveauValeur = R.id.tv_ac_hot_fan,
-            degivrageAvant = R.id.btn_ac_hot_def_front, degivrageArriere = R.id.btn_ac_hot_def_rear,
-            rangeeVentilation = R.id.row_ac_hot_fan_mode, rangeeDegivrage = R.id.row_ac_hot_defrost,
+            airAucun = R.id.btn_ac_hot_air_none, airBoutons = listOf(R.id.btn_ac_hot_air_face, R.id.btn_ac_hot_air_feet,
+                R.id.btn_ac_hot_air_ws, R.id.btn_ac_hot_air_rear),
+            airLigne1 = R.id.row_ac_hot_air_a, airLigne2 = R.id.row_ac_hot_air_b, airAide = R.id.tv_ac_hot_air_hint,
+            rangeeVentilation = R.id.row_ac_hot_fan_mode,
             recircLigne1 = R.id.row_ac_hot_recirc_a, recircLigne2 = R.id.row_ac_hot_recirc_b,
             recirc = listOf(R.id.btn_ac_hot_recirc_keep, R.id.btn_ac_hot_recirc_inner,
                 R.id.btn_ac_hot_recirc_outside, R.id.btn_ac_hot_recirc_auto)
@@ -647,8 +650,10 @@ class AutomationFragment : Fragment() {
             cible = R.id.slider_ac_cold_target, cibleValeur = R.id.tv_ac_cold_target,
             ventAuto = R.id.btn_ac_cold_fan_auto, ventManuelle = R.id.btn_ac_cold_fan_manual,
             rangeeNiveau = R.id.row_ac_cold_fan, niveau = R.id.slider_ac_cold_fan, niveauValeur = R.id.tv_ac_cold_fan,
-            degivrageAvant = R.id.btn_ac_cold_def_front, degivrageArriere = R.id.btn_ac_cold_def_rear,
-            rangeeVentilation = R.id.row_ac_cold_fan_mode, rangeeDegivrage = R.id.row_ac_cold_defrost,
+            airAucun = R.id.btn_ac_cold_air_none, airBoutons = listOf(R.id.btn_ac_cold_air_face, R.id.btn_ac_cold_air_feet,
+                R.id.btn_ac_cold_air_ws, R.id.btn_ac_cold_air_rear),
+            airLigne1 = R.id.row_ac_cold_air_a, airLigne2 = R.id.row_ac_cold_air_b, airAide = R.id.tv_ac_cold_air_hint,
+            rangeeVentilation = R.id.row_ac_cold_fan_mode,
             recircLigne1 = R.id.row_ac_cold_recirc_a, recircLigne2 = R.id.row_ac_cold_recirc_b,
             recirc = listOf(R.id.btn_ac_cold_recirc_keep, R.id.btn_ac_cold_recirc_inner,
                 R.id.btn_ac_cold_recirc_outside, R.id.btn_ac_cold_recirc_auto)
@@ -677,8 +682,10 @@ class AutomationFragment : Fragment() {
         val cible: Int, val cibleValeur: Int,
         val ventAuto: Int, val ventManuelle: Int,
         val rangeeNiveau: Int, val niveau: Int, val niveauValeur: Int,
-        val degivrageAvant: Int, val degivrageArriere: Int,
-        val rangeeVentilation: Int, val rangeeDegivrage: Int,
+        /** Ligne « Air » (issue #177) : « Inchangé », puis Visage, Pieds, Pare-brise AV, Pare-brise AR. */
+        val airAucun: Int, val airBoutons: List<Int>,
+        val airLigne1: Int, val airLigne2: Int, val airAide: Int,
+        val rangeeVentilation: Int,
         val recircLigne1: Int, val recircLigne2: Int,
         /** Dans l'ordre de [ClimateRuleEditor.recircChoice] : inchangée, intérieur, extérieur, auto. */
         val recirc: List<Int>
@@ -764,19 +771,30 @@ class AutomationFragment : Fragment() {
                 .apply()
         }
 
-        // ── Dégivrages ───────────────────────────────────────────────────────
-        fun bascule(id: Int, cle: String) {
-            val btn = view.findViewById<MaterialButton>(id)
-            var on = prefs.getBoolean(cle, false)
-            peindreChoix(btn, on)
-            btn.setOnClickListener {
-                on = !on
-                prefs.edit().putBoolean(cle, on).apply()
-                peindreChoix(btn, on)
-            }
+        // ── Sens de l'air (issue #177) ───────────────────────────────────────
+        // Boutons cumulables, comme la page Clim et les profils. « Inchangé » ⇔ aucun bouton : la
+        // règle n'y touche pas — c'est le défaut. Tout décocher y revient. Une règle d'avant reprend
+        // ses dégivrages cochés ([ClimateAutomationSettings.airFlowOf]).
+        val airAucun = view.findViewById<MaterialButton>(ids.airAucun)
+        val airBits = listOf(AirFlow.FACE, AirFlow.FEET, AirFlow.WINDSHIELD, AirFlow.REAR_DEFROST)
+        val airBoutons = airBits.zip(ids.airBoutons.map { view.findViewById<MaterialButton>(it) })
+        val airAide = view.findViewById<TextView>(ids.airAide)
+        var air = ClimateAutomationSettings.airFlowOf(prefs, hot)
+        fun majAir() {
+            airBoutons.forEach { (bit, b) -> peindreChoix(b, (air ?: 0) and bit != 0) }
+            peindreChoix(airAucun, air == null)
+            airAide.text = air?.let { m ->
+                getString(R.string.ac_auto_air_hint, airBoutons.filter { m and it.first != 0 }.joinToString(" + ") { it.second.text })
+            } ?: getString(R.string.ac_auto_air_unchanged_hint)
         }
-        bascule(ids.degivrageAvant, ClimateAutomationSettings.keyDefFront(hot))
-        bascule(ids.degivrageArriere, ClimateAutomationSettings.keyDefRear(hot))
+        fun choisirAir(nouveau: Int?) {
+            air = nouveau?.takeIf { it != 0 }
+            prefs.edit().putInt(ClimateAutomationSettings.keyAir(hot), air ?: 0).apply()
+            majAir()
+        }
+        majAir()
+        airAucun.setOnClickListener { choisirAir(null) }
+        airBoutons.forEach { (bit, b) -> b.setOnClickListener { choisirAir((air ?: 0) xor bit) } }
 
         // ── Recirculation ────────────────────────────────────────────────────
         // « Inchangé » = on ne touche PAS au recyclage. C'est le défaut, pour qu'une
@@ -806,9 +824,13 @@ class AutomationFragment : Fragment() {
         // n'est connue qu'une fois la carte dépliée, d'où l'écoute de la mise en page.
         val ligne1  = view.findViewById<LinearLayout>(ids.recircLigne1)
         val ligne2  = view.findViewById<LinearLayout>(ids.recircLigne2)
+        val airLigne1 = view.findViewById<LinearLayout>(ids.airLigne1)
+        val airLigne2 = view.findViewById<LinearLayout>(ids.airLigne2)
         val rangees = listOf(ligne1, ligne2,
-            view.findViewById(ids.rangeeVentilation), view.findViewById(ids.rangeeDegivrage))
+            view.findViewById(ids.rangeeVentilation), airLigne1, airLigne2)
         val dernier = recirc.last()
+        // La ligne « Air » : les n premiers boutons sur la première ligne, le reste sur la seconde.
+        val airTous = listOf(airAucun) + airBoutons.map { it.second }
         var colonnes = 4
         fun ranger(n: Int) {
             if (n == colonnes) return
@@ -817,6 +839,8 @@ class AutomationFragment : Fragment() {
             (dernier.parent as? ViewGroup)?.removeView(dernier)
             (if (n == 4) ligne1 else ligne2).addView(dernier)
             ligne2.visibility = if (n == 4) View.GONE else View.VISIBLE
+            airTous.forEach { (it.parent as? ViewGroup)?.removeView(it) }
+            airTous.forEachIndexed { i, b -> (if (i < n) airLigne1 else airLigne2).addView(b) }
         }
         ligne1.addOnLayoutChangeListener { v, gauche, _, droite, _, _, _, _, _ ->
             val largeurDp = (droite - gauche) / v.resources.displayMetrics.density

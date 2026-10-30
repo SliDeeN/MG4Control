@@ -6570,27 +6570,12 @@ object MG4Hardware {
             ok = setClimateFan(fanLevel.coerceIn(state.fanMin, state.fanMax)) && ok
         }
 
-        if (loopMode != null) {
-            val mode = when (loopMode) {
-                0    -> LoopMode.INNER
-                1    -> LoopMode.OUTSIDE
-                else -> LoopMode.AUTO
-            }
-            ok = setClimateLoopMode(mode) && ok
-        }
-
         if (eco != null) ok = setClimateEco(eco) && ok
 
-        // Ligne « Air » (boutons cumulables) — elle remplace les anciennes lignes Dég. AV / AR
-        // depuis leur validation sur SWI133. « Pare-brise AV » passe par la VALEUR du sens de
-        // l'air, la lunette arrière par le dégivrage arrière. Hors « Inchangé », le profil applique
-        // ce qui est affiché : lunette arrière non cochée = dégivrage arrière ÉTEINT.
-        if (airFlow != null) {
-            AirFlow.directionForMask(airFlow)?.let { ok = setClimateAirFlow(it) && ok }
-            if (state.defrostRear != null) {
-                ok = setClimateDefrostRear(airFlow and AirFlow.REAR_DEFROST != 0) && ok
-            }
-        }
+        // Ligne « Air » puis recirculation, APRÈS la ventilation (issue #177) : voir
+        // [airEtRecirculation]. Hors « Inchangé », le profil applique ce qui est affiché :
+        // lunette arrière non cochée = dégivrage arrière ÉTEINT.
+        ok = airEtRecirculation(state, autoMode, airFlow, loopMode, "Profil") && ok
 
         AppLogger.i(CLIM_TAG, "Profil : clim=ON A/C=$ac consigne=$targetTemp " +
             (if (autoMode) "ventilation=AUTO débit=${autoVolume?.let { AutoVolume.label(it) } ?: "inchangé"}"
@@ -6600,11 +6585,11 @@ object MG4Hardware {
         return ok
     }
 
+    /** [airFlow] : boutons [AirFlow] de la ligne « Air » de la règle, `null` = inchangé (issue #177). */
     fun applyClimatePreset(
         targetTemp: Int,
         fanLevel: Int,
-        defrostFront: Boolean,
-        defrostRear: Boolean,
+        airFlow: Int?,
         autoMode: Boolean = false,
         loopMode: Int? = null
     ): Boolean {
@@ -6625,24 +6610,65 @@ object MG4Hardware {
             ok = setClimateFan(fanLevel.coerceIn(state.fanMin, state.fanMax)) && ok
         }
 
-        if (state.defrostFront != null) ok = setClimateDefrostFront(defrostFront) && ok
-        if (state.defrostRear  != null) ok = setClimateDefrostRear(defrostRear) && ok
+        // Sens de l'air puis recirculation, après la ventilation (issue #177). `null` = la règle
+        // n'y touche pas : plus de « dégivrage éteint » envoyé d'office, qui changeait le sens de
+        // l'air.
+        ok = airEtRecirculation(state, autoMode, airFlow, loopMode, "Préréglage") && ok
 
-        // null = l'utilisateur n'a pas demandé à piloter le recyclage : on n'y touche pas, pour
-        // ne pas modifier le comportement des automatisations déjà configurées.
-        if (loopMode != null) {
-            val mode = when (loopMode) {
+        AppLogger.i(CLIM_TAG, "Préréglage appliqué : consigne=$targetTemp " +
+            (if (autoMode) "ventilation=AUTO" else "vent=$fanLevel") +
+            " air=${airFlow?.let { "boutons=$it valeur=${AirFlow.directionForMask(it)}" } ?: "inchangé"} " +
+            "recyclage=${loopMode ?: "inchangé"} → ok=$ok")
+        return ok
+    }
+
+    /** Le temps que la voiture prenne la main en AUTO, puis celui de relire ce qu'elle en a fait. */
+    private const val AUTO_SETTLE_MS = 1_500L
+    private const val AUTO_VERIFY_MS = 2_000L
+
+    /**
+     * Sens de l'air ([airFlow], boutons [AirFlow]) puis recirculation ([loopMode] 0/1/2), écrits
+     * APRÈS la ventilation (issue #177). En AUTO la voiture reprend la main sur ces réglages un
+     * instant après l'appui : écrite tout de suite, la recirculation était lue « déjà atteinte »
+     * (la voiture affichait encore l'ancien état) puis remplacée par Auto, et le sens de l'air
+     * aussi. D'où, en AUTO, une pause avant d'écrire, et une relecture après qui corrige une fois.
+     * `null` = n'y pas toucher. ⚠️ Bloquant (jusqu'à ~4 s en AUTO) → hors du fil principal.
+     */
+    private fun airEtRecirculation(state: ClimateState, autoMode: Boolean, airFlow: Int?, loopMode: Int?, origine: String): Boolean {
+        if (airFlow == null && loopMode == null) return true
+        val direction = airFlow?.let { AirFlow.directionForMask(it) }
+        val mode = loopMode?.let {
+            when (it) {
                 0    -> LoopMode.INNER
                 1    -> LoopMode.OUTSIDE
                 else -> LoopMode.AUTO
             }
-            ok = setClimateLoopMode(mode) && ok
         }
+        if (autoMode) SystemClock.sleep(AUTO_SETTLE_MS)
+        var ok = true
+        direction?.let { ok = setClimateAirFlow(it) && ok }
+        if (airFlow != null && state.defrostRear != null) {
+            ok = setClimateDefrostRear(airFlow and AirFlow.REAR_DEFROST != 0) && ok
+        }
+        mode?.let { ok = setClimateLoopMode(it) && ok }
+        if (!autoMode) return ok
 
-        AppLogger.i(CLIM_TAG, "Préréglage appliqué : consigne=$targetTemp " +
-            (if (autoMode) "ventilation=AUTO" else "vent=$fanLevel") +
-            " dégAV=$defrostFront dégAR=$defrostRear " +
-            "recyclage=${loopMode ?: "inchangé"} → ok=$ok")
+        SystemClock.sleep(AUTO_VERIFY_MS)
+        val lu = getClimateState()
+        val airChange = direction != null && lu?.airFlow != null && lu.airFlow != direction
+        val recircChange = mode != null && lu?.loopMode != null && lu.loopMode != mode
+        if (!airChange && !recircChange) {
+            AppLogger.i(CLIM_TAG, "$origine : après AUTO, sens de l'air et recirculation tenus " +
+                "(air=${lu?.airFlow} recyclage=${lu?.loopMode})")
+            return ok
+        }
+        AppLogger.i(CLIM_TAG, "$origine : après AUTO la voiture a changé " +
+            listOfNotNull(
+                if (airChange) "le sens de l'air (${lu?.airFlow} au lieu de $direction)" else null,
+                if (recircChange) "la recirculation (${lu?.loopMode} au lieu de $mode)" else null,
+            ).joinToString(" et ") + " → corrigé une fois")
+        if (airChange) ok = setClimateAirFlow(direction!!) && ok
+        if (recircChange) ok = setClimateLoopMode(mode!!) && ok
         return ok
     }
 

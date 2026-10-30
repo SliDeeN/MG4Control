@@ -423,6 +423,8 @@
     <string name="ac_auto_rule_off">Regra desativada</string>
     <string name="ac_auto_def_front">Desembaciamento dianteiro</string>
     <string name="ac_auto_def_rear">Desembaciamento traseiro</string>
+    <string name="ac_auto_air_hint">Aplicado no fim, depois da ventilação: %1$s</string>
+    <string name="ac_auto_air_unchanged_hint">Inalterado: a regra não mexe na direção do ar.</string>
     <string name="ac_auto_note">Aplicado ao arrancar o veículo: a climatização e o A/C são ligados e depois as definições acima são enviadas.</string>
     <string name="ac_auto_trigger_label">Acionamento</string>
     <string name="ac_auto_trigger_start">Apenas ao arrancar</string>

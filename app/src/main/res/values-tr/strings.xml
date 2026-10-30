@@ -423,6 +423,8 @@
     <string name="ac_auto_rule_off">Kural kapalı</string>
     <string name="ac_auto_def_front">Ön cam buz çözme</string>
     <string name="ac_auto_def_rear">Arka cam buz çözme</string>
+    <string name="ac_auto_air_hint">En son, fandan sonra uygulanır: %1$s</string>
+    <string name="ac_auto_air_unchanged_hint">Değişmez: kural hava yönüne dokunmaz.</string>
     <string name="ac_auto_note">Araç çalıştığında uygulanır: klima ve A/C açılır, ardından yukarıdaki ayarlar gönderilir.</string>
     <string name="ac_auto_trigger_label">Tetikleme</string>
     <string name="ac_auto_trigger_start">Yalnızca çalıştırmada</string>

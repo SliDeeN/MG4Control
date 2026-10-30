@@ -423,6 +423,8 @@
     <string name="ac_auto_rule_off">Regla desactivada</string>
     <string name="ac_auto_def_front">Desempañador delantero</string>
     <string name="ac_auto_def_rear">Desempañador trasero</string>
+    <string name="ac_auto_air_hint">Se aplica al final, después de la ventilación: %1$s</string>
+    <string name="ac_auto_air_unchanged_hint">Sin cambios: la regla no toca la dirección del aire.</string>
     <string name="ac_auto_note">Se aplica al arrancar el vehículo: se encienden la climatización y el A/A, y luego se envían los ajustes anteriores.</string>
     <string name="ac_auto_trigger_label">Activación</string>
     <string name="ac_auto_trigger_start">Solo al arrancar</string>

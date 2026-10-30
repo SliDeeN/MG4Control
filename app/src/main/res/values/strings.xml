@@ -428,6 +428,8 @@
     <string name="ac_auto_rule_off">Règle désactivée</string>
     <string name="ac_auto_def_front">Dégivrage avant</string>
     <string name="ac_auto_def_rear">Dégivrage arrière</string>
+    <string name="ac_auto_air_hint">Appliqué en dernier, après la ventilation : %1$s</string>
+    <string name="ac_auto_air_unchanged_hint">Inchangé : la règle ne touche pas au sens de l’air.</string>
     <string name="ac_auto_note">Appliqué au démarrage du véhicule : la climatisation et l\'A/C sont allumés, puis les réglages ci-dessus sont envoyés.</string>
     <string name="ac_auto_trigger_label">Déclenchement</string>
     <string name="ac_auto_trigger_start">Au démarrage seulement</string>
