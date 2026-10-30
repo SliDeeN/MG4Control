@@ -24,7 +24,10 @@ object FloatingButtonSettings {
     private const val KEY_ENABLED = "floating_enabled"
     private const val KEY_HIDE_REVERSE = "floating_hide_reverse"
     private const val KEY_BUTTONS = "floating_buttons"
-    /** Zone clim pendant Android Auto / CarPlay (2026-10-24) : activée par défaut. */
+    /**
+     * Zone clim pendant Android Auto / CarPlay (2026-10-24). DÉSACTIVÉE par défaut depuis le
+     * 2026-10-30 (sa demande) : seul un « ON » mis par l'utilisateur l'active.
+     */
     private const val KEY_HVAC_ZONE = "floating_hvac_zone"
 
     private val gson = Gson()
@@ -40,7 +43,7 @@ object FloatingButtonSettings {
     fun hideInReverse(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_HIDE_REVERSE, true)
     fun setHideInReverse(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_HIDE_REVERSE, on).apply()
 
-    fun isHvacZoneEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_HVAC_ZONE, true)
+    fun isHvacZoneEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_HVAC_ZONE, false)
     fun setHvacZoneEnabled(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_HVAC_ZONE, on).apply()
 
     fun buttons(ctx: Context): List<FloatingButton> = FloatingProfiles.buttons(ctx) ?: legacyButtons(ctx)
