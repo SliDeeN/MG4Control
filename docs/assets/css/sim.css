@@ -1209,9 +1209,10 @@
 .hvp-ac.eco.on { background: var(--dash-eco); }
 .hvp-fanrow .ov-tile.auto { flex-direction: column; justify-content: center; }
 .hvp-fanrow .ov-tile.auto small { display: block; font-size: calc(11px * var(--ts, 1)); font-weight: 500; text-transform: none; }
-.hvp-volrow { margin-top: 10px; }
-.hvp-volrow .ov-seg { height: 52px; }
-.hvp-volrow .ov-seg > button { font-size: calc(15px * var(--ts, 1)); }
+/* Débit en AUTO : trois crans sous le libellé (HvacPopupSkin, 20 × 6, écart 5). */
+.hvp-crans { display: flex; gap: 5px; margin-top: 5px; }
+.hvp-crans i { width: 20px; height: 6px; border-radius: 3px; background: var(--dash-border); }
+.hvp-crans i.on { background: var(--dash-accent); }
 
 /* ── Garde-voiture : fenêtre (PreClimatePopupOverlay) ── */
 .pcp { width: 1108px; }

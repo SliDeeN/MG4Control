@@ -551,8 +551,6 @@ window.MG4_STRINGS = {
     "hvac_popup_compressor": "Compresseur",
     "hvac_popup_heating": "Chauffages",
     "hvac_popup_joystick_title": "Joystick droit",
-    "hvac_popup_joy_choose": "Choisir",
-    "hvac_popup_joy_cancel": "Annuler",
     "hvac_popup_autovol_unreadable": "Débit en AUTO non disponible sur cette voiture",
     "hvac_popup_joystick_off_title": "Joystick inactif",
     "hvac_popup_joystick_off_text": "Activez l’accessibilité ou utilisez l’écran",
@@ -1105,6 +1103,9 @@ window.MG4_STRINGS = {
     "custom_delete_confirm": "Supprimer « %1$s » ? Les boutons qui le lancent ne feront plus rien.",
     "custom_delete": "Supprimer",
     "shortcuts_action_custom": "Raccourci perso",
+    "shortcuts_action_android_settings": "Paramètres Android",
+    "btn_android_settings": "Paramètres Android",
+    "android_settings_open_failed": "Impossible d\u0027ouvrir les paramètres Android",
     "shortcuts_custom_prefix": "Perso :"
   },
   en: {
@@ -1655,8 +1656,6 @@ window.MG4_STRINGS = {
     "hvac_popup_compressor": "Compressor",
     "hvac_popup_heating": "Heating",
     "hvac_popup_joystick_title": "Right joystick",
-    "hvac_popup_joy_choose": "Choose",
-    "hvac_popup_joy_cancel": "Cancel",
     "hvac_popup_autovol_unreadable": "Auto air volume is not available on this car",
     "hvac_popup_joystick_off_title": "Joystick inactive",
     "hvac_popup_joystick_off_text": "Enable accessibility or use the screen",
@@ -2197,6 +2196,9 @@ window.MG4_STRINGS = {
     "custom_delete_confirm": "Delete “%1$s”? Buttons that run it will no longer do anything.",
     "custom_delete": "Delete",
     "shortcuts_action_custom": "Custom shortcut",
+    "shortcuts_action_android_settings": "Android settings",
+    "btn_android_settings": "Android settings",
+    "android_settings_open_failed": "Couldn\u0027t open Android settings",
     "shortcuts_custom_prefix": "Custom:"
   },
   de: {
@@ -2747,8 +2749,6 @@ window.MG4_STRINGS = {
     "hvac_popup_compressor": "Kompressor",
     "hvac_popup_heating": "Heizung",
     "hvac_popup_joystick_title": "Rechter Joystick",
-    "hvac_popup_joy_choose": "Wählen",
-    "hvac_popup_joy_cancel": "Abbrechen",
     "hvac_popup_autovol_unreadable": "Gebläse in AUTO auf diesem Fahrzeug nicht verfügbar",
     "hvac_popup_joystick_off_title": "Joystick inaktiv",
     "hvac_popup_joystick_off_text": "Bedienungshilfe aktivieren oder Bildschirm nutzen",
@@ -3289,6 +3289,9 @@ window.MG4_STRINGS = {
     "custom_delete_confirm": "„%1$s“ löschen? Schaltflächen, die sie starten, tun dann nichts mehr.",
     "custom_delete": "Löschen",
     "shortcuts_action_custom": "Eigene Verknüpfung",
+    "shortcuts_action_android_settings": "Android-Einstellungen",
+    "btn_android_settings": "Android-Einstellungen",
+    "android_settings_open_failed": "Android-Einstellungen konnten nicht geöffnet werden",
     "shortcuts_custom_prefix": "Eigene:"
   },
   es: {
@@ -3839,8 +3842,6 @@ window.MG4_STRINGS = {
     "hvac_popup_compressor": "Compresor",
     "hvac_popup_heating": "Calefacción",
     "hvac_popup_joystick_title": "Joystick derecho",
-    "hvac_popup_joy_choose": "Elegir",
-    "hvac_popup_joy_cancel": "Cancelar",
     "hvac_popup_autovol_unreadable": "Caudal en AUTO no disponible en este coche",
     "hvac_popup_joystick_off_title": "Joystick inactivo",
     "hvac_popup_joystick_off_text": "Activa la accesibilidad o usa la pantalla",
@@ -4381,6 +4382,9 @@ window.MG4_STRINGS = {
     "custom_delete_confirm": "¿Eliminar «%1$s»? Los botones que lo lanzan ya no harán nada.",
     "custom_delete": "Eliminar",
     "shortcuts_action_custom": "Atajo personalizado",
+    "shortcuts_action_android_settings": "Ajustes de Android",
+    "btn_android_settings": "Ajustes de Android",
+    "android_settings_open_failed": "No se pudieron abrir los ajustes de Android",
     "shortcuts_custom_prefix": "Personal:"
   },
   it: {
@@ -4931,8 +4935,6 @@ window.MG4_STRINGS = {
     "hvac_popup_compressor": "Compressore",
     "hvac_popup_heating": "Riscaldamento",
     "hvac_popup_joystick_title": "Joystick destro",
-    "hvac_popup_joy_choose": "Scegli",
-    "hvac_popup_joy_cancel": "Annulla",
     "hvac_popup_autovol_unreadable": "Portata in AUTO non disponibile su questa auto",
     "hvac_popup_joystick_off_title": "Joystick inattivo",
     "hvac_popup_joystick_off_text": "Attiva l’accessibilità o usa lo schermo",
@@ -5473,6 +5475,9 @@ window.MG4_STRINGS = {
     "custom_delete_confirm": "Eliminare «%1$s»? I pulsanti che la avviano non faranno più nulla.",
     "custom_delete": "Elimina",
     "shortcuts_action_custom": "Scorciatoia personalizzata",
+    "shortcuts_action_android_settings": "Impostazioni Android",
+    "btn_android_settings": "Impostazioni Android",
+    "android_settings_open_failed": "Impossibile aprire le impostazioni Android",
     "shortcuts_custom_prefix": "Pers.:"
   },
   pt: {
@@ -6023,8 +6028,6 @@ window.MG4_STRINGS = {
     "hvac_popup_compressor": "Compressor",
     "hvac_popup_heating": "Aquecimento",
     "hvac_popup_joystick_title": "Joystick direito",
-    "hvac_popup_joy_choose": "Escolher",
-    "hvac_popup_joy_cancel": "Cancelar",
     "hvac_popup_autovol_unreadable": "Fluxo em AUTO indisponível neste carro",
     "hvac_popup_joystick_off_title": "Joystick inativo",
     "hvac_popup_joystick_off_text": "Ative a acessibilidade ou use o ecrã",
@@ -6565,6 +6568,9 @@ window.MG4_STRINGS = {
     "custom_delete_confirm": "Eliminar «%1$s»? Os botões que o iniciam deixarão de funcionar.",
     "custom_delete": "Eliminar",
     "shortcuts_action_custom": "Atalho personalizado",
+    "shortcuts_action_android_settings": "Definições do Android",
+    "btn_android_settings": "Definições do Android",
+    "android_settings_open_failed": "Não foi possível abrir as definições do Android",
     "shortcuts_custom_prefix": "Pers.:"
   },
   tr: {
@@ -7115,8 +7121,6 @@ window.MG4_STRINGS = {
     "hvac_popup_compressor": "Kompresör",
     "hvac_popup_heating": "Isıtma",
     "hvac_popup_joystick_title": "Sağ joystick",
-    "hvac_popup_joy_choose": "Seç",
-    "hvac_popup_joy_cancel": "İptal",
     "hvac_popup_autovol_unreadable": "AUTO hava debisi bu araçta kullanılamıyor",
     "hvac_popup_joystick_off_title": "Joystick devre dışı",
     "hvac_popup_joystick_off_text": "Erişilebilirliği açın veya ekranı kullanın",
@@ -7657,6 +7661,9 @@ window.MG4_STRINGS = {
     "custom_delete_confirm": "“%1$s” silinsin mi? Onu başlatan düğmeler artık hiçbir şey yapmaz.",
     "custom_delete": "Sil",
     "shortcuts_action_custom": "Özel kısayol",
+    "shortcuts_action_android_settings": "Android ayarları",
+    "btn_android_settings": "Android ayarları",
+    "android_settings_open_failed": "Android ayarları açılamadı",
     "shortcuts_custom_prefix": "Özel:"
   }
 };

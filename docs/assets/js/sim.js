@@ -157,11 +157,12 @@
                   cluster: false, clusterNav: 'consumption', clusterMedia: 'none', clusterRefresh: 1000, clusterUnit: 'wh',
                   // Style, pastille, unité de la moyenne (null = celle de la jauge), durée de l'animation (ms).
                   clusterStyle: 'dynamic', clusterPill: 'profile', clusterAvg: null, clusterAnim: 800,
-                  // Pop-up de charge (ChargePopupSettings) : activé par défaut.
-                  chargePopup: true,
+                  // Pop-up de charge (ChargePopupSettings) : désactivé par défaut depuis la 2.6.10,
+                  // comme la zone clim pendant la projection.
+                  chargePopup: false,
                   // Plein écran, zone clim pendant Android Auto / CarPlay, raccourci de secours,
                   // « Ce que règle AUTO », distance et fin d'échelle de puissance du combiné.
-                  fullscreen: false, hvacZone: true, rescue: true, scopeAir: true, scopeLoop: true,
+                  fullscreen: false, hvacZone: false, rescue: true, scopeAir: true, scopeLoop: true,
                   clusterDist: 'auto', clusterPowerMax: 'auto' },
       sc: {
         enabled: true,
@@ -928,7 +929,7 @@
     VOLUME_UP: 'shortcuts_action_volume_up', VOLUME_DOWN: 'shortcuts_action_volume_down',
     APPLY_PROFILE: 'shortcuts_action_apply_profile', PROFILE_PICKER: 'shortcuts_action_profile_picker',
     PROFILE_CYCLE: 'shortcuts_action_profile_cycle', AUDIO_SOURCE_CYCLE: 'shortcuts_action_audio_cycle',
-    OPEN_APP: 'shortcuts_action_open_app', OPEN_CUSTOM_APP: 'shortcuts_action_open_custom_app', VEHICLE_POWER_OFF: 'shortcuts_action_vehicle_power_off',
+    OPEN_APP: 'shortcuts_action_open_app', OPEN_CUSTOM_APP: 'shortcuts_action_open_custom_app', ANDROID_SETTINGS: 'shortcuts_action_android_settings', VEHICLE_POWER_OFF: 'shortcuts_action_vehicle_power_off',
     WINDOWS_OPEN_ALL: 'shortcuts_action_windows_open', WINDOWS_CLOSE_ALL: 'shortcuts_action_windows_close',
     HVAC_AUTO_VOLUME_CYCLE: 'shortcuts_action_hvac_autovol', PRE_CLIMATE: 'shortcuts_action_preclim',
     PROJECTION: 'shortcuts_action_projection', CUSTOM: 'shortcuts_action_custom'
@@ -978,7 +979,7 @@
     if (k.beam) a.push('AUTO_HIGH_BEAM_TOGGLE');
     if (k.batHeat) a.push('BATTERY_HEAT_TOGGLE');
     a.push('MEDIA_NEXT', 'MEDIA_PREVIOUS', 'MEDIA_PLAY_PAUSE', 'VOLUME_UP', 'VOLUME_DOWN',
-      'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_PICKER', 'PROFILE_CYCLE', 'AUDIO_SOURCE_CYCLE', 'CHARGE_POPUP', 'OPEN_APP', 'OPEN_CUSTOM_APP');
+      'WINDOWS_OPEN_ALL', 'WINDOWS_CLOSE_ALL', 'APPLY_PROFILE', 'PROFILE_PICKER', 'PROFILE_CYCLE', 'AUDIO_SOURCE_CYCLE', 'CHARGE_POPUP', 'OPEN_APP', 'OPEN_CUSTOM_APP', 'ANDROID_SETTINGS');
     if (k.known && k.clim) a.push('PRE_CLIMATE');
     a.push('PROJECTION', 'CUSTOM');
     if (k.power) a.push('VEHICLE_POWER_OFF');
@@ -1042,6 +1043,13 @@
       case 'HVAC_TEMP_UP': case 'HVAC_TEMP_DOWN':
         c.clim.temp = clamp(c.clim.temp + (action === 'HVAC_TEMP_UP' ? 1 : -1), c.clim.tMin, c.clim.tMax); msg = S('clim_temperature') + ' → ' + c.clim.temp + ' °C'; break;
       case 'HVAC_FAN_UP': case 'HVAC_FAN_DOWN':
+        // Clim éteinte : « plus » la rallume, et la voiture reprend son cran ou AUTO d'avant
+        // l'arrêt ; « moins » ne fait rien.
+        if (!c.clim.power) {
+          if (action === 'HVAC_FAN_DOWN') { msg = L('Clim éteinte : rien à faire', 'Climate off: nothing to do'); break; }
+          c.clim.power = true;
+          msg = S('clim_fan') + ' → ' + (c.clim.auto ? S('clim_auto').toUpperCase() : c.clim.fan) + L(' (état d\'avant l\'arrêt)', ' (state before switch-off)'); break;
+        }
         setClimAuto(false);   // un niveau réglé à la main fait sortir d'AUTO
         c.clim.fan = clamp(c.clim.fan + (action === 'HVAC_FAN_UP' ? 1 : -1), c.clim.fMin, c.clim.fMax); msg = S('clim_fan') + ' → ' + c.clim.fan; break;
       case 'DEFROST_FRONT_TOGGLE': c.clim.defF = !c.clim.defF; msg = S('ac_auto_def_front') + ' → ' + onOff(c.clim.defF); break;
@@ -1099,6 +1107,7 @@
       case 'CHARGE_POPUP': { const s = activeSim(); if (s) s.toggleChargePopup(); return 'charge'; }
       case 'OPEN_APP': { const s = activeSim(); if (s) { if (s.ui.screen === 'closed') s.go(state.settings.defaultScreen); } msg = L('MG4Control au premier plan', 'MG4Control brought to front'); break; }
       case 'OPEN_CUSTOM_APP': msg = L('Lancement de ', 'Launching ') + ((extra && extra.app) || '?'); break;
+      case 'ANDROID_SETTINGS': msg = L('Simulation : sur la voiture, l\'écran des paramètres Android s\'ouvre', 'Simulation: in the car, the Android settings screen opens'); break;
       case 'VEHICLE_POWER_OFF': { const s = activeSim(); if (s) s.askPowerOff(); return 'power'; }
       case 'PRE_CLIMATE': { const s = activeSim(); if (s) s.togglePreclim(); return 'preclim'; }
       case 'PROJECTION': return projectionToggle();
@@ -1185,10 +1194,11 @@
     // Pop-up HVAC ouvert → le joystick y règle directement la clim (même condition).
     const hvac = instances.find((i) => i.ui.overlay && i.ui.overlay.type === 'hvac');
     if (hvac && JOYSTICK[code] && state.sc.advService && !garage()) {
-      // Centre TENU 1 s : le choix du débit en AUTO (maquette B de l'issue #178) ; relâché avant, la bascule AUTO.
-      if (code === 301 && hvac.ui.overlay.vol == null) {
+      // Centre TENU 1 s : le débit en AUTO avance d'un cran, sans toucher à AUTO (issue #178) ;
+      // relâché avant, la bascule AUTO.
+      if (code === 301) {
         const rt = keyRt[code] = { capture: true, pending: () => { hvac.hvacKey('ok'); emit('nav', { code, dir: 'ok', popup: 'hvac' }); } };
-        rt.closeTimer = setTimeout(() => { rt.pending = null; hvac.hvacVolOpen(); }, 1000);
+        rt.closeTimer = setTimeout(() => { rt.pending = null; hvac.hvacVolStep(); }, 1000);
         return;
       }
       popupKey(code, 'HVAC_POPUP', () => { hvac.hvacKey(JOYSTICK[code]); emit('nav', { code, dir: JOYSTICK[code], popup: 'hvac' }); }, () => hvac.toggleHvacPopup());
@@ -2150,6 +2160,7 @@
         .map(([key, v]) => '<div><small>' + esc(S(key)) + '</small><b>' + v + '</b></div>').join('');
       return '<div class="a-sec" data-hl="s-maint"><div class="a-h">' + esc(S('settings_maintenance')) + '</div><div class="a-grid g2">' + upd + apk + '</div>' +
         '<button class="b full" style="margin-top:5px" data-a="about" data-hl="s-about">' + esc(S('btn_infos')) + '</button>' +
+        '<button class="b full" style="margin-top:5px" data-a="androidSet" data-hl="s-androidset">' + esc(S('btn_android_settings')) + '</button>' +
         (state.diagUnlocked ? '<button class="b full warn on" style="margin-top:5px" data-a="diag" data-hl="s-diag">' + esc(S('btn_diagnostic')) + '</button>' : '') + '</div>' +
         '<div class="a-sec" data-hl="s-fw"><div class="a-h">' + esc(S('settings_firmware_version')) + '</div><div class="fw-chips">' + chips + '</div>' +
         (unknownMode ? '<div class="a-desc" style="margin-top:6px">' + esc(L('Firmware non reconnu : touchez une pastille pour forcer un mode de compatibilité.', 'Unrecognised firmware: tap a chip to force a compatibility mode.')) + '</div>' : '') + '</div>' +
@@ -2821,31 +2832,30 @@
       this.openPicker();
     }
     /** Haut/bas : température ; gauche/droite : ventilation ; centre : ventilation AUTO. Au doigt comme au joystick. */
-    /** AUTO tenu 1 s (au doigt ou au joystick) : Faible | Moyen | Fort à la place de la ventilation. */
-    hvacVolOpen() {
+    /**
+     * AUTO tenu 1 s (au doigt ou au joystick) : le débit avance d'un cran, faible → moyen → fort →
+     * faible (HvacPopup.debitSuivant), que AUTO soit allumé ou non ; AUTO ne bascule qu'à l'appui court.
+     */
+    hvacVolStep() {
       const o = this.ui.overlay; if (!o || o.type !== 'hvac') return;
-      o.vol = [2, 1, 0].indexOf(car().clim.autoVol); o.left = o.total;
+      const cl = car().clim, DEBITS = [2, 1, 0];
+      cl.autoVol = DEBITS[(DEBITS.indexOf(cl.autoVol) + 1) % 3];
+      o.left = o.total; o.flash = 'ok';
+      clearTimeout(this._hvFlash);
+      this._hvFlash = setTimeout(() => { const cur = this.ui.overlay; if (cur && cur.type === 'hvac') { cur.flash = null; this.render(); } }, 200);
       commit();
     }
     hvacKey(dir) {
       const o = this.ui.overlay; if (!o || o.type !== 'hvac') return;
       const cl = car().clim;
-      // Choix du débit ouvert : gauche/droite choisissent, le centre valide, haut/bas annulent.
-      if (o.vol != null) {
-        if (dir === 'left' || dir === 'right') o.vol = clamp(o.vol + (dir === 'right' ? 1 : -1), 0, 2);
-        else if (dir === 'ok') { cl.autoVol = [2, 1, 0][o.vol]; setClimAuto(true); o.vol = null; }
-        else o.vol = null;
-        o.left = o.total;
-        return commit();
-      }
       // On clampe, on ne boucle pas : comme dans l'application.
       if (dir === 'ok') setClimAuto(!cl.auto);
       else if (dir === 'up' || dir === 'down') cl.temp = clamp(cl.temp + (dir === 'up' ? 1 : -1), cl.tMin, cl.tMax);
       // Régler la ventilation fait sortir d'AUTO, comme sur l'écran d'origine : on repart du
       // dernier niveau réglé à la main (celui que la maquette garde dans clim.fan).
       // Issue #147 : au cran 1, gauche ÉTEINT la clim ; éteinte, gauche ne la rallume pas et
-      // droite la remet au cran 1 (HvacPopup.pasVentilation).
-      else if (!cl.power) { if (dir === 'right') { cl.power = true; setClimAuto(false); cl.fan = cl.fMin; } }
+      // droite la RALLUME : la voiture reprend son cran ou AUTO d'avant l'arrêt (HvacPopup.Action.Allumer).
+      else if (!cl.power) { if (dir === 'right') cl.power = true; }
       else if (dir === 'left' && !cl.auto && cl.fan <= cl.fMin) cl.power = false;
       else { setClimAuto(false); cl.fan = clamp(cl.fan + (dir === 'right' ? 1 : -1), cl.fMin, cl.fMax); }
       o.left = o.total; o.flash = dir;
@@ -2984,20 +2994,18 @@
         const loop = (nb, key, ico) => '<button class="ov-tile hvp-loop' + (cl.loop === nb ? ' on' : '') + '" data-a="hpLoop" data-v="' + nb + '">' + ico + '<span>' + esc(S(key)) + '</span></button>';
         const zone = '<div class="hvp-zone"><div class="hvp-row">' + round('down', 'cold', MW.minus) + gauge + round('up', 'hot', MW.plus) +
           '<div class="hvp-fan"><small>' + esc(S('clim_fan')) + '</small><div class="hvp-fanv">' + MW.fan + '<b>' + (!cl.power ? esc(S('climate_off').toUpperCase()) : cl.auto ? esc(S('clim_auto').toUpperCase()) : cl.fan) + '</b></div>' + bar +
-          (o.vol != null
-            ? '<div class="hvp-volrow"><div class="ov-seg">' + [2, 1, 0].map((n, i) => '<button class="' + (cl.autoVol === n ? 'on' : '') + (nav && o.vol === i ? ' ov-foc' : '') + '" data-a="hpVol" data-v="' + n + '">' + esc(S(AUTOVOL_KEY[n])) + '</button>').join('') + '</div></div>'
-            : '<div class="hvp-fanrow"><button class="ov-tile' + hit('left') + '" data-a="hpKey" data-v="left">' + MW.minus + '</button>' +
-              '<button class="ov-tile auto' + (cl.auto ? ' on' : '') + hit('ok') + '" data-a="hpKey" data-v="ok" data-hold-auto>' + esc(S('clim_auto')) + (cl.auto ? '<small>' + esc(S(AUTOVOL_KEY[cl.autoVol])) + '</small>' : '') + '</button>' +
-              '<button class="ov-tile' + hit('right') + '" data-a="hpKey" data-v="right">' + MW.plus + '</button></div>') + '</div></div>' +
+          '<div class="hvp-fanrow"><button class="ov-tile' + hit('left') + '" data-a="hpKey" data-v="left">' + MW.minus + '</button>' +
+            // Crans sous AUTO (HvacPopup.crans) : 1 faible, 2 moyen, 3 fort, que AUTO soit allumé ou non.
+            '<button class="ov-tile auto' + (cl.auto ? ' on' : '') + hit('ok') + '" data-a="hpKey" data-v="ok" data-hold-auto title="' + esc(S(AUTOVOL_KEY[cl.autoVol])) + '">' + esc(S('clim_auto')) +
+              '<span class="hvp-crans">' + [0, 1, 2].map((i) => '<i' + (i < [2, 1, 0].indexOf(cl.autoVol) + 1 ? ' class="on"' : '') + '></i>').join('') + '</span></button>' +
+            '<button class="ov-tile' + hit('right') + '" data-a="hpKey" data-v="right">' + MW.plus + '</button></div></div></div>' +
           '<div class="hvp-airs">' + air('face', cl.air.face, 'clim_air_face') + air('feet', cl.air.feet, 'clim_air_feet') +
           air('ws', cl.air.ws, 'clim_air_windshield_front') + air('rear', cl.defR, 'clim_air_windshield_rear') + '</div></div>';
         // A/C et ECO côte à côte (maquette A) ; ECO au toucher seulement.
         const side = '<div class="ov-pan hvp-side"><div class="hvp-acrow"><button class="hvp-ac' + (cl.ac ? ' on' : '') + '" data-a="hpAc">' + MW.ac + '<b>' + esc(S('clim_ac')) + '</b><span>' + esc(S(cl.ac ? 'climate_on' : 'climate_off')) + '</span></button>' +
           '<button class="hvp-ac eco' + (cl.eco ? ' on' : '') + '" data-a="hpEco" data-hl="hvac-eco">' + MW.eco + '<b>' + esc(S('clim_eco')) + '</b><span>' + esc(S(cl.eco ? 'climate_on' : 'climate_off')) + '</span></button></div>' +
           '<div class="ov-cap">' + esc(S('clim_section_loop')) + '</div>' + loop(0, 'clim_loop_inner', MW.loopInner) + loop(1, 'clim_loop_outside', MW.loopOutside) + loop(2, 'clim_loop_auto', MW.loopAuto) + '</div>';
-        const chip = o.vol != null
-          ? this.joyChip(nav, [[MW.stickH, S('clim_section_autovol')], [MW.stickClick, S('hvac_popup_joy_choose')], [MW.stickV, S('hvac_popup_joy_cancel')]])
-          : this.joyChip(nav, [[MW.stickV, S('clim_temperature')], [MW.stickH, S('clim_fan')], [MW.stickClick, S('clim_auto').toUpperCase()]]);
+        const chip = this.joyChip(nav, [[MW.stickV, S('clim_temperature')], [MW.stickH, S('clim_fan')], [MW.stickClick, S('clim_auto').toUpperCase()]]);
         // Le repère est calé au-dessus du cadre bleu ; sans colonne des chauffages le cadre est tout à
         // gauche, sous le titre, qui s'efface alors devant le repère.
         return '<div class="a-scrim" data-a="hpBg"><div class="ov-card hvp' + (heatOn ? ' heat' : '') + '" data-hl="hvac-popup">' +
@@ -3456,11 +3464,11 @@
         };
         window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
       });
-      // Pop-up HVAC : AUTO tenu 1 s ouvre le choix du débit ; le clic qui suit le relâchement est ignoré.
+      // Pop-up HVAC : AUTO tenu 1 s fait avancer le débit ; le clic qui suit le relâchement est ignoré.
       this.app.addEventListener('pointerdown', (e) => {
         if (!e.target.closest('[data-hold-auto]')) return;
         clearTimeout(this._autoT);
-        this._autoT = setTimeout(() => { this._autoHeld = true; this.hvacVolOpen(); }, 1000);
+        this._autoT = setTimeout(() => { this._autoHeld = true; this.hvacVolStep(); }, 1000);
         const stop = () => { clearTimeout(this._autoT); window.removeEventListener('pointerup', stop); window.removeEventListener('pointercancel', stop); };
         window.addEventListener('pointerup', stop); window.addEventListener('pointercancel', stop);
       });
@@ -3725,7 +3733,6 @@
         case 'cgPriceDef': if (c.charge) c.charge.price = null; if (u.overlay) u.overlay.editor = null; return r();
         case 'cgPriceOk': if (c.charge && u.overlay && u.overlay.editor) c.charge.price = u.overlay.editor.val; if (u.overlay) u.overlay.editor = null; return r();
         case 'hpKey': if (v === 'ok' && this._autoHeld) { this._autoHeld = false; return; } return this.hvacKey(v);
-        case 'hpVol': { const o = u.overlay; if (o) { o.vol = null; o.left = o.total; } c.clim.autoVol = n; setClimAuto(true); return r(); }
         case 'hpEco': if (u.overlay) u.overlay.left = u.overlay.total; c.clim.eco = !c.clim.eco; return r();
         case 'projZone': return this.toggleHvacPopup();
         // Garde-voiture : fenêtre
@@ -3835,6 +3842,8 @@
           if (s.fullscreen) this.toast(L('Simulation : sur la voiture, la barre d\'état et la barre de navigation disparaissent.', 'Simulation: in the car, the status and navigation bars disappear.'), 3200);
           return;
         case 'hvacZone': s.hvacZone = !s.hvacZone; return r();
+        case 'androidSet': return this.toast(L('Simulation : sur la voiture, l\'écran des paramètres Android s\'ouvre (le launcher de la voiture n\'y donne pas accès).',
+          'Simulation: in the car, the Android settings screen opens (the car\'s launcher offers no way there).'), 3600);
         case 'rescue': s.rescue = !s.rescue; return r();
         case 'scopeAir': s.scopeAir = !s.scopeAir; return r();
         case 'scopeLoop': s.scopeLoop = !s.scopeLoop; return r();
@@ -4285,7 +4294,10 @@
         case 'hvacEco': u.screen = 'dashboard'; u.tabs.dash = 2; return this.render();
         case 'autoVolPopup':
           if (caps().clim && !this.assigned('HVAC_POPUP')) { state.sc.map.btn2_single = 'HVAC_POPUP'; delete state.sc.extra.btn2_single; }
-          this.openHvacPopup(); return this.hvacVolOpen();
+          this.openHvacPopup();
+          this.toast(L('Appui court sur AUTO : AUTO allumé ou coupé. Tenu 1 s : le débit avance d\'un cran (les crans sous AUTO le montrent).',
+            'Tap AUTO: AUTO on or off. Hold it 1 s: the airflow steps up one notch (the notches under AUTO show it).'), 4200);
+          return;
         case 'autoScope': case 'rescue': u.screen = 'settings'; u.tabs.set = 2; return this.render();
         case 'doorPause': state.door.open = true; state.door.mode = 'pause'; u.screen = 'automation'; return commit();
         case 'clusterProfile': case 'clusterMiles': case 'clusterPower':
@@ -4296,6 +4308,7 @@
           if (name === 'clusterPower') { clSet('clusterNav', 'power'); clSet('clusterPowerMax', 'auto'); }
           return commit();
         case 'fullscreen': u.screen = 'settings'; u.tabs.set = 1; return this.render();
+        case 'androidSettings': u.screen = 'settings'; u.tabs.set = 3; return this.render();
         default: return;
       }
     }

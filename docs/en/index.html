@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/site.css?v=d2d95626">
-  <link rel="stylesheet" href="../assets/css/sim.css?v=3135d1e8">
+  <link rel="stylesheet" href="../assets/css/sim.css?v=a223a126">
   <link rel="stylesheet" href="../assets/css/explorer.css?v=f9d0452c">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="en">New</span> · 2.6.10</span>
-        <b><span data-l="en">19 new things in this release</span></b>
+        <b><span data-l="en">20 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -161,6 +161,7 @@
         <a href="#f-fullscreen" data-feature="f-fullscreen"><span data-l="en">🖥️ Full screen</span></a>
         <a href="#f-autolang" data-feature="f-autolang"><span data-l="en">🌐 Car language on first launch</span></a>
         <a href="#f-rescue" data-feature="f-rescue"><span data-l="en">🆘 Emergency shortcut</span></a>
+        <a href="#f-androidset" data-feature="f-androidset"><span data-l="en">⚙️ Android settings</span></a>
       </div>
     </div>
   </div>
@@ -386,7 +387,7 @@
       <h3><span data-l="en">Airflow in AUTO</span><span class="badge-new"><span data-l="en">New</span> · 2.6.10</span></h3>
       <p data-l="en">In AUTO mode, pick how strong the fan runs: Low, Medium or High.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">The car's setting comes to the dashboard, to profiles, to a shortcut (“Airflow in AUTO: cycle”, floating button included) and to the HVAC pop-up: holding AUTO for 1 s opens the Low / Medium / High choice, by touch or with the joystick. If the car doesn't report this setting, a message says so.</p>
+        <p data-l="en">The car's setting comes to the dashboard, to profiles, to a shortcut (“Airflow in AUTO: cycle”, floating button included) and to the HVAC pop-up. There, a tap on AUTO turns it on or off; held for 1 s, by touch or with the joystick, it steps the airflow one notch (Low → Medium → High → Low) without touching AUTO. Three notches under “AUTO” always show the airflow, even with AUTO off. If the car doesn't report this setting, a message says so.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-autoscope" data-hl-key="s-autoscope" data-demo="autoScope">
@@ -607,7 +608,7 @@
       <h3><span data-l="en">HVAC pop-up</span></h3>
       <p data-l="en">Climate in one move, on top of the current screen: the right joystick sets temperature and fan speed.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">A shortcut action opens the window, including when Android Auto or CarPlay fills the screen and hides the climate bar. Here the joystick moves no focus: up/down change the temperature, left/right the fan speed, the centre toggles AUTO mode (adjusting the fan speed leaves it). At fan level 1, pressing left turns the climate off (the fan shows “OFF”); while it is off, left does nothing and right sets it back to level 1. A hint at the top of the window recalls these gestures, and a gauge shows the temperature between its two limits. A/C, recirculation and the air direction (face, feet, front and rear screen) are chosen by touch; on equipped firmwares (SWI133, SWI68, SWI165), a column adds the heated steering wheel and the seats, whose level is picked with one tap, one colour per level: green, orange, red. The window closes by itself after the set delay (10 s by default) without action, on a second press of the shortcut or with its cross. The joystick needs the accessibility service; without it, the window still works by touch. In the mockup, the right ★ of the virtual vehicle opens and closes it.</p>
+        <p data-l="en">A shortcut action opens the window, including when Android Auto or CarPlay fills the screen and hides the climate bar. Here the joystick moves no focus: up/down change the temperature, left/right the fan speed, the centre toggles AUTO mode (adjusting the fan speed leaves it) and, held for 1 s, steps the airflow in AUTO. At fan level 1, pressing left turns the climate off (the fan shows “OFF”); while it is off, left does nothing, and right turns it back on as it was before, at the same level or in AUTO, like changing the temperature does. The “Climate: fan +” shortcut does the same. A hint at the top of the window recalls these gestures, and a gauge shows the temperature between its two limits. A/C, recirculation and the air direction (face, feet, front and rear screen) are chosen by touch; on equipped firmwares (SWI133, SWI68, SWI165), a column adds the heated steering wheel and the seats, whose level is picked with one tap, one colour per level: green, orange, red. The window closes by itself after the set delay (10 s by default) without action, on a second press of the shortcut or with its cross. The joystick needs the accessibility service; without it, the window still works by touch. In the mockup, the right ★ of the virtual vehicle opens and closes it.</p>
       </details>
     </div>
     <div class="pt" id="f-profilecycle" data-hl-key="sc-profiles" data-demo="profileCycle">
@@ -657,7 +658,7 @@
           <tr><td><span data-l="en">Safety</span></td><td data-l="en">ESC · Drowsiness · Drowsiness: sensitivity · Collision system (mode alternation) · ADAS (alternation) · Traffic signs (TSR) · Overspeed alert · Speed-limit change alert · Sound</td></tr>
           <tr><td><span data-l="en">Comfort</span></td><td data-l="en">Left / right heated seat (cycle) · Heated wheel · Climate ON/OFF · Climate: A/C · Climate: temperature ± · Climate: fan ± · Front / rear defrost · Recirculation (cycle) · Airflow in AUTO (cycle) · Brightness ± (10% steps) · Automatic high beam · HVAC pop-up</td></tr>
           <tr><td><span data-l="en">Media</span></td><td data-l="en">Play / Pause · Next track · Previous track · Volume + · Volume − · Audio source cycle</td></tr>
-          <tr><td><span data-l="en">App and vehicle</span></td><td data-l="en">Apply a profile · Profile picker (popup) · Profile cycle · Charging pop-up · Car keeper · Android Auto / CarPlay · Open MG4Control · Launch an app · Custom shortcut · Power the car off</td></tr>
+          <tr><td><span data-l="en">App and vehicle</span></td><td data-l="en">Apply a profile · Profile picker (popup) · Profile cycle · Charging pop-up · Car keeper · Android Auto / CarPlay · Open MG4Control · Launch an app · Custom shortcut · Android settings · Power the car off</td></tr>
         </tbody>
       </table>
     </div>
@@ -975,7 +976,7 @@
   <div class="grp-head">
     <div class="sec-kicker"><span data-l="en">Pop-up · Settings · Interface</span></div>
     <h2><span data-l="en">Charging</span></h2>
-    <p data-l="en">As soon as a charge starts, a pop-up opens on the head unit: the curve since the start of the charge, the end time, the charge limit to set by touch, and the cost. On every firmware, on by default.</p>
+    <p data-l="en">As soon as a charge starts, a pop-up opens on the head unit: the curve since the start of the charge, the end time, the charge limit to set by touch, and the cost. On every firmware, off by default.</p>
     <div class="demo-bar">
       <span class="lbl"><span data-l="en">Try:</span></span>
       <button type="button" data-demo-btn="chargePopup"><span data-l="en">Plug in a fast charger</span></button>
@@ -987,7 +988,7 @@
       <h3><span data-l="en">Charging pop-up</span></h3>
       <p data-l="en">The battery to a tenth, the power and level curve, then power, energy added, range gained, cost and duration.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">It opens at the start of every charge, AC or fast, even when the app starts in the middle of a charge, and closes on demand or when the car goes to READY: no countdown. The curve starts at the beginning of the charge, not when the pop-up opens: the app logs the charge in the background (a gap if the screen turns off), the kW axis goes up to the highest power reached, and a dotted line joins the current level to the limit at the estimated end time. Range gained is the change in the car's estimated range since the start. The “Charging pop-up” shortcut reopens or closes it; the option is turned off in Settings › Interface. In the mockup, plug in a charger from the virtual vehicle: the charge runs fast-forward, and goes into Statistics when unplugged.</p>
+        <p data-l="en">It opens at the start of every charge, AC or fast, even when the app starts in the middle of a charge, and closes on demand or when the car goes to READY: no countdown. The curve starts at the beginning of the charge, not when the pop-up opens: the app logs the charge in the background (a gap if the screen turns off), the kW axis goes up to the highest power reached, and a dotted line joins the current level to the limit at the estimated end time. Range gained is the change in the car's estimated range since the start. The “Charging pop-up” shortcut reopens or closes it; the option is turned on in Settings › Interface. In the mockup, plug in a charger from the virtual vehicle: the charge runs fast-forward, and goes into Statistics when unplugged.</p>
       </details>
     </div>
     <div class="pt" id="f-chargelimit" data-hl-key="cg-slider" data-demo="chargePopup">
@@ -1158,18 +1159,25 @@
       <p data-l="en">Updates, About, detected firmware, data usage and diagnostics.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
         <ul data-l="en">
-          <li>Check for updates, <b>Clean APK</b> (old downloaded files).</li>
+          <li>Check for updates, <b>Clean APK</b> (old downloaded files). Release notes show in the app's language when the release translates them, otherwise in English.</li>
           <li><b>About</b>: version, exact firmware, GitHub / GitLab QR codes, thanks.</li>
           <li><b>Data usage</b>: today, this week, this month, last 30 days.</li>
           <li><b>Diagnostic</b>, revealed by tapping the logo 5 times: a report to copy or download for bug reports.</li>
         </ul>
       </details>
     </div>
+    <div class="pt is-new" id="f-androidset" data-hl-key="s-androidset" data-demo="androidSettings">
+      <h3><span data-l="en">Android settings</span><span class="badge-new"><span data-l="en">New</span> · 2.6.10</span></h3>
+      <p data-l="en">A button opens the Android settings screen, which the car's launcher does not offer.</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">In Settings › Info, under the Info button, and as an “Android settings” shortcut action (steering wheel, advanced shortcuts, floating buttons). Depending on the firmware, it is the Android or the Android Automotive screen; if neither opens, a message says so. Thanks to @sensoyg, whose fork brought the idea.</p>
+      </details>
+    </div>
     <div class="pt" data-hl-key="s-fw" data-go="settings:3" data-demo="fwUnknown">
       <h3><span data-l="en">Unrecognised firmware</span></h3>
       <p data-l="en">A warning shows, then you can force a compatibility mode.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">The warning shows the raw detected version and offers Close the app or Continue, which opens Settings → Info directly: tap the chip of the firmware closest to yours. The choice is saved and survives restarts.</p>
+        <p data-l="en">The warning shows the raw detected version and offers Close the app or Continue, which opens Settings → Info directly: tap the chip of the firmware closest to yours. The choice is saved, survives restarts and applies from the app's start-up. Distributor firmwares, such as the Turkish DBI68, are recognised on their own: DBI68 counts as SWI68, DBI133 as SWI133.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-fullscreen" data-hl-key="s-fullscreen" data-demo="fullscreen">
@@ -1183,7 +1191,7 @@
       <h3><span data-l="en">Climate during Android Auto / CarPlay</span><span class="badge-new"><span data-l="en">New</span> · 2.6.10</span></h3>
       <p data-l="en">During projection, tapping the climate area of the top bar opens MG4Control's HVAC pop-up.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Android Auto and CarPlay fill the screen: the climate area at the top then opens the HVAC pop-up instead of the stock panel. Switch in Settings › Interface, on by default, suspended in Garage mode.</p>
+        <p data-l="en">Android Auto and CarPlay fill the screen: the climate area at the top then opens the HVAC pop-up instead of the stock panel. Switch in Settings › Interface, off by default, suspended in Garage mode.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-autolang" data-hl-key="s-lang" data-demo="lang">
@@ -1506,8 +1514,8 @@
 <div class="dock" aria-label="Virtual vehicle"></div>
 <button type="button" class="to-top" aria-label="Back to the top of the page" title="Back to the top of the page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="../assets/js/strings.js?v=f53f5597"></script>
-<script src="../assets/js/sim.js?v=06217849"></script>
+<script src="../assets/js/strings.js?v=205bb0ed"></script>
+<script src="../assets/js/sim.js?v=ed84c8cc"></script>
 <script src="../assets/js/site.js?v=eae0ab3a"></script>
 <script src="../assets/js/explorer.js?v=72fb983a"></script>
 </body>

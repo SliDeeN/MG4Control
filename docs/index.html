@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/site.css?v=d2d95626">
-  <link rel="stylesheet" href="assets/css/sim.css?v=3135d1e8">
+  <link rel="stylesheet" href="assets/css/sim.css?v=a223a126">
   <link rel="stylesheet" href="assets/css/explorer.css?v=f9d0452c">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.10</span>
-        <b><span data-l="fr">19 nouveautés dans cette version</span></b>
+        <b><span data-l="fr">20 nouveautés dans cette version</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span></button>
       </div>
       <div class="wn-list">
@@ -161,6 +161,7 @@
         <a href="#f-fullscreen" data-feature="f-fullscreen"><span data-l="fr">🖥️ Plein écran</span></a>
         <a href="#f-autolang" data-feature="f-autolang"><span data-l="fr">🌐 Langue de la voiture au premier lancement</span></a>
         <a href="#f-rescue" data-feature="f-rescue"><span data-l="fr">🆘 Raccourci de secours</span></a>
+        <a href="#f-androidset" data-feature="f-androidset"><span data-l="fr">⚙️ Paramètres Android</span></a>
       </div>
     </div>
   </div>
@@ -386,7 +387,7 @@
       <h3><span data-l="fr">Débit d'air en AUTO</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.10</span></h3>
       <p data-l="fr">En mode AUTO, choisissez la force de la ventilation : Faible, Moyen ou Fort.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Le réglage de la voiture arrive au tableau de bord, dans les profils, en raccourci (« Débit en AUTO : cycle », bouton flottant compris) et dans le pop-up HVAC : un appui tenu 1 s sur AUTO ouvre le choix Faible / Moyen / Fort, au doigt comme au joystick. Si la voiture ne renseigne pas ce réglage, un message le signale.</p>
+        <p data-l="fr">Le réglage de la voiture arrive au tableau de bord, dans les profils, en raccourci (« Débit en AUTO : cycle », bouton flottant compris) et dans le pop-up HVAC. Là, un appui court sur AUTO l'allume ou le coupe ; tenu 1 s, au doigt comme au joystick, il fait avancer le débit d'un cran (Faible → Moyen → Fort → Faible) sans toucher à AUTO. Trois crans sous « AUTO » montrent le débit en permanence, même AUTO coupé. Si la voiture ne renseigne pas ce réglage, un message le signale.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-autoscope" data-hl-key="s-autoscope" data-demo="autoScope">
@@ -607,7 +608,7 @@
       <h3><span data-l="fr">Pop-up HVAC</span></h3>
       <p data-l="fr">La clim en un geste, par-dessus l'écran en cours : le joystick droit règle la température et la ventilation.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Une action de raccourci ouvre la fenêtre, y compris quand Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim. Ici le joystick ne déplace pas de focus : haut/bas changent la température, gauche/droite la ventilation, le centre bascule le mode AUTO (régler la ventilation en fait sortir). Au cran 1, un appui à gauche éteint la clim (la ventilation affiche « OFF ») ; éteinte, gauche ne la rallume pas, droite la remet au cran 1. Un repère en haut de la fenêtre rappelle ces gestes, et une jauge montre la température entre ses deux bornes. L'A/C, la recirculation et le sens de l'air (visage, pieds, pare-brise avant et arrière) se choisissent au doigt ; sur les firmwares équipés (SWI133, SWI68, SWI165), une colonne ajoute le volant chauffant et les sièges, dont le niveau se choisit d'un toucher — une couleur par niveau : vert, orange, rouge. La fenêtre se referme seule après le délai réglé (10 s par défaut) sans action, d'un second appui sur le raccourci ou par sa croix. Le joystick nécessite le service d'accessibilité ; sans lui, la fenêtre reste utilisable au doigt. Dans la maquette, la ★ droite du véhicule virtuel l'ouvre et la referme.</p>
+        <p data-l="fr">Une action de raccourci ouvre la fenêtre, y compris quand Android Auto ou CarPlay occupe tout l'écran et masque le bandeau clim. Ici le joystick ne déplace pas de focus : haut/bas changent la température, gauche/droite la ventilation, le centre bascule le mode AUTO (régler la ventilation en fait sortir) et, tenu 1 s, fait avancer le débit en AUTO. Au cran 1, un appui à gauche éteint la clim (la ventilation affiche « OFF ») ; éteinte, gauche ne la rallume pas, et droite la rallume telle qu'elle était avant l'arrêt, au même cran ou en AUTO, comme quand on change la température. Le raccourci « Clim : ventilation + » fait de même. Un repère en haut de la fenêtre rappelle ces gestes, et une jauge montre la température entre ses deux bornes. L'A/C, la recirculation et le sens de l'air (visage, pieds, pare-brise avant et arrière) se choisissent au doigt ; sur les firmwares équipés (SWI133, SWI68, SWI165), une colonne ajoute le volant chauffant et les sièges, dont le niveau se choisit d'un toucher — une couleur par niveau : vert, orange, rouge. La fenêtre se referme seule après le délai réglé (10 s par défaut) sans action, d'un second appui sur le raccourci ou par sa croix. Le joystick nécessite le service d'accessibilité ; sans lui, la fenêtre reste utilisable au doigt. Dans la maquette, la ★ droite du véhicule virtuel l'ouvre et la referme.</p>
       </details>
     </div>
     <div class="pt" id="f-profilecycle" data-hl-key="sc-profiles" data-demo="profileCycle">
@@ -657,7 +658,7 @@
           <tr><td><span data-l="fr">Sécurité</span></td><td data-l="fr">ESC · Somnolence · Somnolence : sensibilité · Système anticollision (alternance de mode) · ADAS (alternance) · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son</td></tr>
           <tr><td><span data-l="fr">Confort</span></td><td data-l="fr">Siège chauffant gauche / droit (cycle) · Volant chauffant · Clim ON/OFF · Clim : A/C · Clim : température ± · Clim : ventilation ± · Dégivrage avant / arrière · Recirculation (cycle) · Débit en AUTO (cycle) · Luminosité ± (pas de 10 %) · Feux de route automatiques · Pop-up HVAC</td></tr>
           <tr><td><span data-l="fr">Média</span></td><td data-l="fr">Lecture / Pause · Piste suivante · Piste précédente · Volume + · Volume − · Cycle de sources audio</td></tr>
-          <tr><td><span data-l="fr">Application et véhicule</span></td><td data-l="fr">Lancer un profil · Sélecteur de profil (popup) · Cycle de profils · Pop-up de charge · Garde-voiture · Android Auto / CarPlay · Ouvrir MG4Control · Lancer une application · Raccourci perso · Éteindre la voiture</td></tr>
+          <tr><td><span data-l="fr">Application et véhicule</span></td><td data-l="fr">Lancer un profil · Sélecteur de profil (popup) · Cycle de profils · Pop-up de charge · Garde-voiture · Android Auto / CarPlay · Ouvrir MG4Control · Lancer une application · Raccourci perso · Paramètres Android · Éteindre la voiture</td></tr>
         </tbody>
       </table>
     </div>
@@ -975,7 +976,7 @@
   <div class="grp-head">
     <div class="sec-kicker"><span data-l="fr">Pop-up · Réglages · Interface</span></div>
     <h2><span data-l="fr">Recharge</span></h2>
-    <p data-l="fr">Dès qu'une charge commence, un pop-up s'ouvre sur l'écran central : la courbe depuis le début de la charge, l'heure de fin, la limite de charge à régler du doigt et le coût. Sur tous les firmwares, activé par défaut.</p>
+    <p data-l="fr">Dès qu'une charge commence, un pop-up s'ouvre sur l'écran central : la courbe depuis le début de la charge, l'heure de fin, la limite de charge à régler du doigt et le coût. Sur tous les firmwares, désactivé par défaut.</p>
     <div class="demo-bar">
       <span class="lbl"><span data-l="fr">Essayer :</span></span>
       <button type="button" data-demo-btn="chargePopup"><span data-l="fr">Brancher une borne rapide</span></button>
@@ -987,7 +988,7 @@
       <h3><span data-l="fr">Pop-up de charge</span></h3>
       <p data-l="fr">La batterie au dixième, la courbe de la puissance et du niveau, puis la puissance, l'énergie ajoutée, l'autonomie gagnée, le coût et la durée.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Il s'ouvre à chaque début de charge, en AC comme en rapide, même quand l'application démarre en pleine charge, et se ferme à la demande ou au passage en READY : pas de décompte. La courbe part du début de la charge, pas de l'ouverture du pop-up : l'application relève la charge en arrière-plan (un trou si l'écran s'éteint), l'axe des kW monte jusqu'à la puissance maximale atteinte, et un pointillé relie le niveau actuel à la limite, à l'heure de fin estimée. L'autonomie gagnée est l'écart de l'autonomie estimée par la voiture depuis le début. Le raccourci « Pop-up de charge » le rouvre ou le referme ; l'option se coupe dans Réglages › Interface. Dans la maquette, branchez une borne depuis le véhicule virtuel : la charge avance en accéléré, et entre dans les Statistiques au débranchement.</p>
+        <p data-l="fr">Il s'ouvre à chaque début de charge, en AC comme en rapide, même quand l'application démarre en pleine charge, et se ferme à la demande ou au passage en READY : pas de décompte. La courbe part du début de la charge, pas de l'ouverture du pop-up : l'application relève la charge en arrière-plan (un trou si l'écran s'éteint), l'axe des kW monte jusqu'à la puissance maximale atteinte, et un pointillé relie le niveau actuel à la limite, à l'heure de fin estimée. L'autonomie gagnée est l'écart de l'autonomie estimée par la voiture depuis le début. Le raccourci « Pop-up de charge » le rouvre ou le referme ; l'option s'active dans Réglages › Interface. Dans la maquette, branchez une borne depuis le véhicule virtuel : la charge avance en accéléré, et entre dans les Statistiques au débranchement.</p>
       </details>
     </div>
     <div class="pt" id="f-chargelimit" data-hl-key="cg-slider" data-demo="chargePopup">
@@ -1158,18 +1159,25 @@
       <p data-l="fr">Mises à jour, À propos, firmware détecté, données consommées et diagnostic.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <ul data-l="fr">
-          <li>Vérifier les mises à jour, <b>Nettoyer APK</b> (anciens fichiers téléchargés).</li>
+          <li>Vérifier les mises à jour, <b>Nettoyer APK</b> (anciens fichiers téléchargés). Les notes de version s'affichent dans la langue de l'application quand la version les traduit, sinon en anglais.</li>
           <li><b>À propos</b> : version, firmware exact, QR codes GitHub / GitLab, remerciements.</li>
           <li><b>Consommation de données</b> : aujourd'hui, semaine, mois, 30 jours.</li>
           <li><b>Diagnostic</b>, révélé par 5 appuis sur le logo : rapport à copier ou télécharger pour les remontées de bug.</li>
         </ul>
       </details>
     </div>
+    <div class="pt is-new" id="f-androidset" data-hl-key="s-androidset" data-demo="androidSettings">
+      <h3><span data-l="fr">Paramètres Android</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.10</span></h3>
+      <p data-l="fr">Un bouton ouvre l'écran des paramètres d'Android, que le launcher de la voiture ne propose pas.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Dans Réglages › Infos, sous le bouton Infos, et en action de raccourci « Paramètres Android » (volant, raccourcis avancés, boutons flottants). Selon le firmware, c'est l'écran d'Android ou celui d'Android Automotive ; si aucun ne s'ouvre, un message le dit. Merci à @sensoyg, dont le fork a apporté l'idée.</p>
+      </details>
+    </div>
     <div class="pt" data-hl-key="s-fw" data-go="settings:3" data-demo="fwUnknown">
       <h3><span data-l="fr">Firmware non reconnu</span></h3>
       <p data-l="fr">Un avertissement s'affiche, puis vous pouvez forcer un mode de compatibilité.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">L'avertissement affiche la version brute détectée et propose Fermer l'app ou Continuer, qui ouvre directement Réglages → Infos : touchez-y la pastille du firmware le plus proche du vôtre. Le choix est mémorisé et survit aux redémarrages.</p>
+        <p data-l="fr">L'avertissement affiche la version brute détectée et propose Fermer l'app ou Continuer, qui ouvre directement Réglages → Infos : touchez-y la pastille du firmware le plus proche du vôtre. Le choix est mémorisé, survit aux redémarrages et s'applique dès le démarrage de l'application. Les firmwares de distributeur, comme le DBI68 turc, sont reconnus d'eux-mêmes : DBI68 vaut SWI68, DBI133 vaut SWI133.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-fullscreen" data-hl-key="s-fullscreen" data-demo="fullscreen">
@@ -1183,7 +1191,7 @@
       <h3><span data-l="fr">Clim pendant Android Auto / CarPlay</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.6.10</span></h3>
       <p data-l="fr">Pendant la projection, toucher la zone clim de la barre du haut ouvre le pop-up HVAC de MG4Control.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Android Auto et CarPlay occupent tout l'écran : la zone clim du haut ouvre alors le pop-up HVAC à la place du panneau d'origine. Interrupteur dans Réglages › Interface, activé par défaut, suspendu en Mode Garage.</p>
+        <p data-l="fr">Android Auto et CarPlay occupent tout l'écran : la zone clim du haut ouvre alors le pop-up HVAC à la place du panneau d'origine. Interrupteur dans Réglages › Interface, désactivé par défaut, suspendu en Mode Garage.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-autolang" data-hl-key="s-lang" data-demo="lang">
@@ -1506,8 +1514,8 @@
 <div class="dock" aria-label="Véhicule virtuel"></div>
 <button type="button" class="to-top" aria-label="Revenir en haut de la page" title="Revenir en haut de la page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="assets/js/strings.js?v=f53f5597"></script>
-<script src="assets/js/sim.js?v=06217849"></script>
+<script src="assets/js/strings.js?v=205bb0ed"></script>
+<script src="assets/js/sim.js?v=ed84c8cc"></script>
 <script src="assets/js/site.js?v=eae0ab3a"></script>
 <script src="assets/js/explorer.js?v=72fb983a"></script>
 </body>
