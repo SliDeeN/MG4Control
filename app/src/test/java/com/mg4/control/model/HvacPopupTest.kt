@@ -69,10 +69,11 @@ class HvacPopupTest {
     }
 
     @Test
-    fun `clim eteinte, droite la rallume au premier cran`() {
-        assertEquals(Action.Ventilation(1), HvacPopup.action(Commande.DROITE, eteinte))
+    fun `clim eteinte, droite la rallume sans imposer de cran`() {
+        // L'ordre « allumer » : la voiture reprend son état d'avant l'arrêt (2026-10-31).
+        assertEquals(Action.Allumer, HvacPopup.action(Commande.DROITE, eteinte))
         // Éteinte d'après la voiture, même si elle annonce encore son dernier cran.
-        assertEquals(Action.Ventilation(1), HvacPopup.action(Commande.DROITE, milieu.copy(fan = 4, allumee = false)))
+        assertEquals(Action.Allumer, HvacPopup.action(Commande.DROITE, milieu.copy(fan = 4, allumee = false)))
     }
 
     @Test
@@ -93,7 +94,8 @@ class HvacPopupTest {
         // Il ne l'éteint pas non plus au cran 1 : l'action « Clim ON/OFF » existe pour ça.
         assertNull(HvacPopup.pasVentilation(eteinte, -1))
         assertNull(HvacPopup.pasVentilation(milieu.copy(fan = 1), -1))
-        assertEquals(1, HvacPopup.pasVentilation(eteinte, +1))
+        // « Plus » non plus n'écrit pas de cran : l'appelant rallume la clim.
+        assertNull(HvacPopup.pasVentilation(eteinte, +1))
     }
 
     @Test
@@ -115,7 +117,8 @@ class HvacPopupTest {
         // davantage, ni rester coincée faute de pouvoir « faire un pas ».
         val hors = milieu.copy(temp = 35, fan = 0)
         assertEquals(Action.Temperature(32), HvacPopup.action(Commande.BAS, hors))
-        assertEquals(Action.Ventilation(1), HvacPopup.action(Commande.DROITE, hors))
+        // Ventilation à 0 : clim éteinte, droite la rallume.
+        assertEquals(Action.Allumer, HvacPopup.action(Commande.DROITE, hors))
     }
 
     // ── Mode AUTO : la case centrale de la croix ─────────────────────────────

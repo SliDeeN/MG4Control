@@ -378,6 +378,15 @@ object HvacPopupOverlay {
                 abandonner(consigneVentilation)
                 ecrireDiffere("ventilation") { MG4Hardware.setClimatePower(false) }
             }
+            // Droite, clim éteinte : l'ordre « allumer », et la voiture reprend son cran (ou AUTO)
+            // d'avant l'arrêt. Même file que la ventilation ; la relecture montre ce qu'elle a repris.
+            HvacPopup.Action.Allumer -> {
+                AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : climatisation rallumée (état d'avant l'arrêt)")
+                etat = s.copy(powerOn = s.powerOn?.let { true })
+                afficher()
+                abandonner(consigneVentilation)
+                ecrireDiffere("ventilation") { MG4Hardware.setClimatePower(true) }
+            }
             // Clic central hors AUTO. En AUTO, il rend la main : c'est alors une [Ventilation].
             HvacPopup.Action.Auto -> {
                 AppLogger.i(TAG, "Pop-up HVAC — ${commande.name} : mode AUTO activé")

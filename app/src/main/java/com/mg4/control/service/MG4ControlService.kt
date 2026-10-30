@@ -1017,6 +1017,13 @@ class MG4ControlService : Service() {
                         // même pour un « moins » ; on repart du dernier niveau réglé à la main, et
                         // cette écriture fait sortir d'AUTO.
                         val reglages = etat.reglages()
+                        // Clim éteinte : « plus » la rallume, et la voiture reprend son cran (ou AUTO)
+                        // d'avant l'arrêt, comme pour la température — écrire un cran repartait du 1.
+                        if (reglages.eteinte && pas > 0) {
+                            AppLogger.i(TAG, "SHORTCUT clim ventilation : clim éteinte → rallumée (état d'avant l'arrêt)")
+                            MG4Hardware.setClimatePower(true)
+                            return
+                        }
                         val cible = HvacPopup.pasVentilation(reglages, pas)
                         if (cible == null) {
                             AppLogger.w(TAG, "SHORTCUT clim ventilation — rien à écrire " +

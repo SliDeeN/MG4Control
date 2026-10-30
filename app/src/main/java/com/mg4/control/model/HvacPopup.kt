@@ -31,9 +31,13 @@ import com.mg4.control.accessibility.JoystickFocus
  *
  * La MG4 n'a pas de cran 0 : « éteint », c'est l'arrêt de la climatisation, un bouton à part
  * sur l'écran d'origine (`btn_power`), dont le « ventilation − » s'arrête au cran 1. Le pop-up
- * n'a pas ce bouton : au cran 1, gauche ÉTEINT la clim, et droite la rallume au cran 1. Éteinte,
- * la voiture annonce une ventilation à 0 ; gauche ne fait alors plus rien — avant, 0 − 1 ramené
- * au minimum écrivait le cran 1, et rallumait la clim.
+ * n'a pas ce bouton : au cran 1, gauche ÉTEINT la clim, et droite la RALLUME. Éteinte, la
+ * voiture annonce une ventilation à 0 ; gauche ne fait alors plus rien — avant, 0 − 1 ramené au
+ * minimum écrivait le cran 1, et rallumait la clim.
+ *
+ * Rallumer, c'est envoyer l'ordre « allumer » et non un cran (2026-10-31, sa demande) : la voiture
+ * reprend d'elle-même son état d'avant l'arrêt — cran ou AUTO —, comme quand on change la
+ * température. Écrire le cran 1 faisait toujours repartir au plus faible.
  */
 object HvacPopup {
 
@@ -48,6 +52,9 @@ object HvacPopup {
 
         /** Éteindre la climatisation : gauche au cran le plus bas (issue #147). */
         object Arret : Action()
+
+        /** Rallumer la climatisation éteinte : droite. La voiture reprend son état d'avant l'arrêt. */
+        object Allumer : Action()
     }
 
     /** Ce qui est lu sur la voiture ; les bornes en viennent aussi. null = illisible. */
@@ -81,7 +88,9 @@ object HvacPopup {
     fun action(commande: JoystickFocus.Commande, reglages: Reglages): Action? = when (commande) {
         JoystickFocus.Commande.HAUT    -> pas(reglages.temp, reglages.tempMin, reglages.tempMax, +1)?.let { Action.Temperature(it) }
         JoystickFocus.Commande.BAS     -> pas(reglages.temp, reglages.tempMin, reglages.tempMax, -1)?.let { Action.Temperature(it) }
-        JoystickFocus.Commande.DROITE  -> pasVentilation(reglages, +1)?.let { Action.Ventilation(it) }
+        JoystickFocus.Commande.DROITE  ->
+            if (reglages.eteinte) Action.Allumer
+            else pasVentilation(reglages, +1)?.let { Action.Ventilation(it) }
         JoystickFocus.Commande.GAUCHE  -> when {
             // Au cran le plus bas, réglé à la main : on éteint (issue #147). Jamais depuis AUTO,
             // qui sort d'abord au dernier cran moins un.
@@ -105,10 +114,12 @@ object HvacPopup {
      * En AUTO on repart du dernier niveau réglé à la main — surtout pas du 15 annoncé, d'où un
      * « moins » écrirait le MAXIMUM — et on écrit MÊME en butée : c'est cette écriture qui rend
      * la main, et l'utilisateur vient de demander à régler lui-même.
+     *
+     * Clim éteinte : aucun cran à écrire. « Moins » n'a rien à faire (issue #147) ; « plus »
+     * rallume la clim ([Action.Allumer]), ce que l'appelant fait lui-même.
      */
     fun pasVentilation(reglages: Reglages, sens: Int): Int? = when {
-        // Éteinte : « plus » rallume au premier cran, « moins » n'a rien à faire (issue #147).
-        reglages.eteinte -> if (sens > 0) reglages.fanMin else null
+        reglages.eteinte -> null
         reglages.enAuto  -> (niveauDeSortie(reglages) + sens).coerceIn(reglages.fanMin, reglages.fanMax)
         else             -> pas(reglages.fan, reglages.fanMin, reglages.fanMax, sens)
     }
