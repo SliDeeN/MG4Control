@@ -189,6 +189,8 @@ object PreClimate {
             }
             // La fiche prend la place du module du combiné — posé pour elle s'il est désactivé.
             ClusterModuleOverlay.refresh(app, "pré-climatisation")
+            // Plus de boutons flottants jusqu'à la fin du programme.
+            FloatingButtonsOverlay.refresh(app)
             publier(e)
             // Mode « Maintenant » : la clim prend tout de suite les réglages choisis — ou, en
             // surveillance, elle s'arrête : seuls l'écran et les caméras consomment.
@@ -393,7 +395,10 @@ object PreClimate {
             powerOffOk = eteinte, soc = EnergyReader.soc() ?: e.soc)
         etat = fini
         publier(fini)
-        appContext?.let { ClusterModuleOverlay.refresh(it, "fin de la pré-climatisation") }
+        appContext?.let {
+            ClusterModuleOverlay.refresh(it, "fin de la pré-climatisation")
+            FloatingButtonsOverlay.refresh(it)
+        }
         relacherVeille()
         presetApplied = false
         lastStepKey = null

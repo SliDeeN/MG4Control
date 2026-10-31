@@ -47,7 +47,8 @@ import kotlin.math.roundToInt
  * sa nouvelle valeur, relue sur la voiture ([FloatingButtonState]).
  *
  * Masquées en marche arrière si l'option est cochée (rapport relu toutes les [RAPPORT_MS]), et
- * en Mode Garage. Thread principal, sauf les lectures (fil mg4-float). Journal : [TAG].
+ * en Mode Garage et pendant un programme du Garde-voiture. Thread principal, sauf les lectures
+ * (fil mg4-float). Journal : [TAG].
  *
  * Bouton de la barre du haut (2026-10-24, [FloatingButtons.inTopBar]) : une fenêtre AU-DESSUS de la
  * barre noire — `TYPE_STATUS_BAR_SUB_PANEL` (2017), repli `TYPE_SYSTEM_ERROR` (2010), types déjà
@@ -146,9 +147,14 @@ object FloatingButtonsOverlay {
         }
     }
 
-    /** Bulles à poser : celles du profil à l'écran, si elles sont affichées (et hors Mode Garage). */
+    /**
+     * Bulles à poser : celles du profil à l'écran, si elles sont affichées — hors Mode Garage, et
+     * hors Garde-voiture (2026-10-31, sa demande) : retirées du décompte à la fin du programme, sans
+     * réglage, même écran de suivi masqué. [PreClimate] rappelle [refresh] au départ et à la fin.
+     */
     private fun aPoser(ctx: Context): List<FloatingButton> =
-        if (FloatingButtonSettings.isEnabled(ctx) && !GarageMode.isOn(ctx)) FloatingButtonSettings.buttons(ctx) else emptyList()
+        if (FloatingButtonSettings.isEnabled(ctx) && !GarageMode.isOn(ctx) && !PreClimate.actif())
+            FloatingButtonSettings.buttons(ctx) else emptyList()
 
     private fun reconstruire() {
         val ctx = app ?: return
