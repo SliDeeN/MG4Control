@@ -303,7 +303,7 @@ la voiture s'éteint. Tout s'arrête si la voiture est déverrouillée (elle res
 elle roule, ou sous un niveau de batterie réglable. Un écran de suivi plein cadre montre le temps
 restant, le cycle en cours et l'état du verrouillage, avec des particules bleues ou orange selon
 que la clim refroidit ou chauffe ; pendant l'attente, l'écran reste normal, s'atténue (par défaut)
-ou s'éteint. Sur SWI133, SWI68 et SWI165, une fiche sur l'écran conducteur montre aussi le décompte,
+ou s'éteint. Les boutons flottants disparaissent du décompte jusqu'à la fin du programme. Sur SWI133, SWI68 et SWI165, une fiche sur l'écran conducteur montre aussi le décompte,
 le temps restant et la consigne, ou la surveillance en cours. Les réglages (délai de verrouillage
 10–60 s, seuil de batterie 10–40 %, écran, fiche du combiné) sont sur la page *Garde-voiture* de
 l'onglet Raccourcis.
@@ -324,7 +324,7 @@ taille, une taille de texte et du gras au choix. Une bascule s'affiche pleine qu
 activée ; une valeur (température, ventilation, régénération…) s'affiche un instant après l'appui,
 et un halo confirme le toucher. Une bulle peut aussi se loger dans la **barre noire du haut** de
 l'écran. **Chaque profil a ses propres bulles**, copiables vers d'autres profils. Elles se cachent
-en marche arrière et en Mode Garage.
+en marche arrière, en Mode Garage et pendant le Garde-voiture.
 
 #### Raccourcis perso
 Onglet Raccourcis, page *Raccourcis perso* (#172, 20 au plus), avec un bouton **Tester**. Un
@@ -1720,7 +1720,7 @@ settings and the car switches off. Everything stops if the car is unlocked (it t
 it moves, or below an adjustable battery level. A full-frame follow-up screen shows the time left,
 the current cycle and the lock state, with blue or orange particles depending on whether the
 climate is cooling or heating; while waiting, the screen stays normal, dims (the default) or turns
-off. On SWI133, SWI68 and SWI165, a card on the driver display also shows the countdown, the time
+off. The floating buttons disappear from the countdown until the end of the program. On SWI133, SWI68 and SWI165, a card on the driver display also shows the countdown, the time
 left and the setpoint, or the surveillance in progress. The settings (lock delay 10–60 s, battery
 threshold 10–40 %, screen, cluster card) are on the *Car keeper* page of the Shortcuts tab.
 
@@ -1738,7 +1738,7 @@ actions, with a title (the shortcut's name by default), a size, a text size and 
 A toggle shows filled when it is on; a value (temperature, fan, regeneration…) shows briefly after
 the press, and a halo confirms the tap. A bubble can also sit in the **black bar at the top** of the
 screen. **Each profile has its own bubbles**, which can be copied to other profiles. They hide in
-reverse and in Garage mode.
+reverse, in Garage mode and while Car keeper is running.
 
 #### Custom shortcuts
 Shortcuts tab, *Custom shortcuts* page (#172, 20 at most), with a **Test** button. A custom

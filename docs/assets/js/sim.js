@@ -1558,7 +1558,8 @@
     }
     floatHtml() {
       const id = this.floatProfileId();
-      if (!id || garage() || this.ui.screen === 'closed') return '';
+      // Garde-voiture : plus de bulles du décompte à la fin du programme (PreClimate.actif).
+      if (!id || garage() || this.ui.screen === 'closed' || (state.pc && state.pc.phase !== 'end')) return '';
       const set = flSet(id);
       if (!set.on || !set.list.length) return '';
       return '<div class="a-floats">' + set.list.map((b) => {
