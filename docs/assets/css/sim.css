@@ -780,6 +780,7 @@
 .pkp-slider { flex: 1; display: flex; align-items: center; border-radius: 12px; padding: 0 14px; }
 .pkp-slider .a-slider { width: 100%; }
 .pkp-acts { flex-direction: row; gap: 10px; }
+.pkp-acts.three { width: 600px; }
 .pkp-acts.two { width: 430px; }
 .pkp-acts.one { width: 230px; }
 .pkp-acts.wide { flex: 1; }
@@ -791,6 +792,8 @@
 .pkp-act .mw-ico { color: var(--dash-accent); }
 .pkp-act.danger { background: var(--dash-danger-dim); border-color: var(--dash-danger); }
 .pkp-act.danger .mw-ico { color: var(--dash-danger); }
+.pkp-act.warn { background: var(--dash-warn-dim); border-color: var(--dash-warn); }
+.pkp-act.warn .mw-ico { color: var(--dash-warn); }
 
 /* Pop-up HVAC (overlay_hvac_popup.xml) : chauffages, cadre du joystick, compresseur et recirculation */
 .hvp:not(.heat) .ov-title { visibility: hidden; }

@@ -2761,7 +2761,7 @@
       const k = caps(), rows = [];
       const ids = this.pickerList().map((p) => 'p:' + p.id);
       if (ids.length) rows.push(ids);
-      rows.push((k.bri ? ['bri:15', 'bri:50', 'bri:100'] : []).concat(['open'], k.power ? ['power'] : []));
+      rows.push((k.bri ? ['bri:15', 'bri:50', 'bri:100'] : []).concat(['open'], k.known ? ['keeper'] : [], k.power ? ['power'] : []));
       if (k.bri) rows.push(['slider']);
       return rows;
     }
@@ -2957,9 +2957,12 @@
           presets.map(([v, key]) => '<button class="' + (c.brightness === v ? 'on' : '') + kf('bri:' + v) + '" data-a="pkBri" data-v="' + v + '"' + at('bri:' + v) + '>' + esc(S(key)) + '</button>').join('') +
           '</div><span class="pkp-val" data-out="pkBri">' + c.brightness + '%</span></div>' +
           '<div class="pkp-slider' + kf('slider') + '"' + at('slider') + '>' + range('pkBri', 5, 100, c.brightness, false, 'big') + '</div></div>' : '';
-        const tile = (cell, a, label, ico, danger) => '<button class="pkp-act' + (danger ? ' danger' : '') + kf(cell) + '" data-a="' + a + '"' + at(cell) + '>' + ico + '<span>' + esc(label) + '</span></button>';
-        const actions = '<div class="ov-pan pkp-acts' + (!k.bri ? ' wide' : k.power ? ' two' : ' one') + '" data-hl="pk-foot">' + tile('open', 'pkOpen', S('overlay_open_app'), MW.open) +
-          (k.power ? tile('power', 'pkPower', S('shortcuts_action_vehicle_power_off'), MW.power, true) : '') + '</div>';
+        const tile = (cell, a, label, ico, tone) => '<button class="pkp-act' + (tone ? ' ' + tone : '') + kf(cell) + '" data-a="' + a + '"' + at(cell) + '>' + ico + '<span>' + esc(label) + '</span></button>';
+        // Trois actions au plus : 600 dp, 430 à deux, 230 seule ; sans luminosité, tout le bandeau.
+        const nAct = 1 + (k.known ? 1 : 0) + (k.power ? 1 : 0);
+        const actions = '<div class="ov-pan pkp-acts' + (!k.bri ? ' wide' : ['', ' one', ' two', ' three'][nAct]) + '" data-hl="pk-foot">' + tile('open', 'pkOpen', S('overlay_open_app'), MW.open) +
+          (k.known ? tile('keeper', 'pkKeeper', S('shortcuts_action_preclim'), MW.keeper, 'warn') : '') +
+          (k.power ? tile('power', 'pkPower', S('shortcuts_action_vehicle_power_off'), MW.power, 'danger') : '') + '</div>';
         const chip = this.joyChip(nav, [[MW.stickMove, S('overlay_joy_navigate')], [MW.stickClick, S('overlay_joy_validate')]]);
         return '<div class="a-scrim" data-a="pkBg"><div class="ov-card pkp" data-hl="picker">' +
           this.ovHead(MW.profiles, S('overlay_profile_title'), o, 'pkClose', chip, 'left:0;right:0') +
@@ -3779,6 +3782,8 @@
         case 'pkBri': c.brightness = n; if (u.overlay) u.overlay.left = popupDelay(); return r();
         case 'pkProfile': { const p = state.profiles.find((x) => x.id === v); this.closeOverlay(); if (p) applyProfile(p, { manual: true }); return; }
         case 'pkPower': this.closeOverlay(); return this.askPowerOff();
+        // Garde-voiture : comme le raccourci — la fenêtre, ou l'écran de suivi pendant un programme.
+        case 'pkKeeper': this.closeOverlay(); return this.togglePreclim();
         case 'pkOpen': this.closeOverlay(); u.screen = state.settings.defaultScreen; return this.render();
         case 'cfYes': { const o = u.overlay; const p = state.profiles.find((x) => x.id === o.profileId); this.closeOverlay(); if (p) applyProfile(p, { via: o.battery ? L('batterie', 'battery') : L('température', 'temperature') }); return; }
         case 'cfNo': { const o = u.overlay; this.closeOverlay(); if (o && o.onNo) o.onNo(); return; }
@@ -4417,6 +4422,7 @@
     profiles: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3,12 a9,9 0 1,0 18,0 a9,9 0 1,0 -18,0 M9.8,12 a2.2,2.2 0 1,0 4.4,0 a2.2,2.2 0 1,0 -4.4,0 M3.4,10.6 H9.9 M14.1,10.6 H20.6 M12,14.2 V21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     brightness: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8,12 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 M12,2.5 V5 M12,19 V21.5 M2.5,12 H5 M19,12 H21.5 M5.3,5.3 L7,7 M17,17 L18.7,18.7 M5.3,18.7 L7,17 M17,7 L18.7,5.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     open: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10,5 H6 a1,1 0 0 0 -1,1 V18 a1,1 0 0 0 1,1 H18 a1,1 0 0 0 1,-1 V14 M13.5,5 H19 V10.5 M19,5 L11,13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    keeper: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,3 a12,12 0 0 0 8.5,3 a12,12 0 0 1 -8.5,15 a12,12 0 0 1 -8.5,-15 a12,12 0 0 0 8.5,-3 M11,11 a1,1 0 1 0 2,0 a1,1 0 1 0 -2,0 M12,12 v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     power: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,3.5 V11.5 M7.4,6.7 a7,7 0 1,0 9.2,0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     temperature: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14,14.8 V5 a2,2 0 0 0 -4,0 V14.8 a4,4 0 1 0 4,0 z M12,9 V17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     battery: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,8 H18 a1,1 0 0 1 1,1 V15 a1,1 0 0 1 -1,1 H4 a1,1 0 0 1 -1,-1 V9 a1,1 0 0 1 1,-1 z M21.5,10.5 V13.5 M6,11 V13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',

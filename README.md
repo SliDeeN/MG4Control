@@ -623,7 +623,7 @@ gros boutons, et plus aucune saisie au clavier.
 
 | Élément | Présentation |
 |---|---|
-| Sélecteur de profils | Plein cadre : une carte par profil (mode de conduite en couleur, profil en cours marqué « Actif »), luminosité (Nuit / Moyen / Jour et curseur), Ouvrir MG4Control, Éteindre la voiture |
+| Sélecteur de profils | Plein cadre : une carte par profil (mode de conduite en couleur, profil en cours marqué « Actif »), luminosité (Nuit / Moyen / Jour et curseur), Ouvrir MG4Control, Garde-voiture, Éteindre la voiture |
 | Pop-up HVAC | Plein cadre : chauffages, température et ventilation au joystick, AUTO et son débit, A/C, ECO et recirculation |
 | Garde-voiture | Fenêtre de lancement (Maintenant / À une heure, mode chien, surveillance), puis écran de suivi plein cadre |
 | Pop-up de charge | Plein cadre : niveau et limite de charge, courbe depuis le début, heure de fin, puissance, énergie, autonomie gagnée, coût, durée |
@@ -2024,7 +2024,7 @@ no more keyboard input.
 
 | Item | Layout |
 |---|---|
-| Profile picker | Full frame: one card per profile (drive mode in colour, current profile marked "Active"), brightness (Night / Medium / Day and a slider), Open MG4Control, Power the car off |
+| Profile picker | Full frame: one card per profile (drive mode in colour, current profile marked "Active"), brightness (Night / Medium / Day and a slider), Open MG4Control, Car keeper, Power the car off |
 | HVAC pop-up | Full frame: heating, temperature and fan speed on the joystick, AUTO and its airflow, A/C, ECO and recirculation |
 | Car keeper | Start window (Now / At a time, dog mode, surveillance), then a full-frame follow-up screen |
 | Charging pop-up | Full frame: level and charge limit, curve since the start, end time, power, energy, range gained, cost, duration |
