@@ -101,6 +101,17 @@ data class DrivingProfile(
      */
     val hvacAirFlow: Int? = null,
     /**
+     * Mode ECO de la clim (2026-10-23). `null` = inchangé — c'est aussi ce que Gson rend pour un
+     * profil enregistré avant l'ajout du champ : un profil existant n'y touche pas.
+     */
+    val hvacEco: Boolean? = null,
+    /**
+     * Débit d'air en mode AUTO (issue #178), encodage de la voiture : 0 = fort, 1 = moyen,
+     * 2 = faible (MG4Hardware.AutoVolume). Écrit seulement si le profil passe en AUTO. `null` =
+     * inchangé — c'est aussi ce que Gson rend pour un profil enregistré avant l'ajout du champ.
+     */
+    val hvacAutoVolume: Int? = null,
+    /**
      * Feux de route automatiques. `null` = le profil n'y touche pas : interrupteur de l'éditeur
      * sur OFF, et c'est aussi ce que Gson rend pour un profil enregistré avant la fonctionnalité.
      * Un seul champ suffit, contrairement aux chauffages : la valeur n'existe que si elle s'applique.
@@ -125,7 +136,15 @@ data class DrivingProfile(
     // chauffages : un profil enregistré avant la fonction rend `null`, lu « appliquée ».
     val regenEnabled: Boolean? = null,
     // [BT-PROFILES] MAC de l'appareil Bluetooth associé à ce profil (null = aucun)
-    val btDeviceMac: String? = null
+    val btDeviceMac: String? = null,
+    // Écran conducteur de ce profil (2026-10-24), réglé dans Réglages › Interface et non dans
+    // l'éditeur. `null` = jamais réglé : module coupé (voir [ClusterConfigs.of]). Les profils
+    // existants ont reçu les réglages communs d'avant à la mise à jour (ClusterProfiles).
+    val cluster: ClusterConfig? = null,
+    // Boutons flottants de ce profil (2026-10-24), réglés dans Raccourcis › Boutons flottants.
+    // `null` = jamais réglés : aucune bulle (voir [FloatingSets]). Les profils existants ont reçu
+    // les bulles communes d'avant à la mise à jour (FloatingProfiles).
+    val floating: FloatingSet? = null
 ) {
     /** Volant chauffant à appliquer ? (profil d'avant la fonction → oui, comportement inchangé) */
     val appliesSteeringHeat: Boolean get() = steeringHeatEnabled ?: true

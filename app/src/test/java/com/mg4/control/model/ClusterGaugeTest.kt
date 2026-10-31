@@ -321,6 +321,13 @@ class ClusterGaugeTest {
         assertEquals(ClusterGauge.regenFraction(20f), ClusterGauge.discreetRegenFraction(20f), delta)
         // Chaque chiffre a son cran.
         assertTrue(ClusterGauge.DISCREET_POWER_TICKS.containsAll(ClusterGauge.DISCREET_POWER_LABELS))
+        // Échelle adaptée (issue #165) : crans entiers, la fin de l'échelle toujours chiffrée.
+        for (full in PowerScale.PALIERS_KW.map { it.toFloat() }) {
+            val crans = ClusterGauge.discreetPowerTicks(full)
+            assertTrue(crans.all { it == Math.round(it).toFloat() })
+            assertTrue(crans.containsAll(ClusterGauge.discreetPowerLabels(full)))
+            assertTrue(full in ClusterGauge.discreetPowerLabels(full))
+        }
         assertTrue(ClusterGauge.DISCREET_CONSUMPTION_TICKS_WH.containsAll(ClusterGauge.DISCREET_CONSUMPTION_LABELS_WH))
     }
 
@@ -340,5 +347,15 @@ class ClusterGaugeTest {
         assertEquals(ClusterPill.PROFILE, ClusterPill.fromKey(null))
         assertEquals(ClusterPill.DRIVE_MODE, ClusterPill.fromKey("mode"))
         assertEquals(ClusterPill.PROFILE, ClusterPill.fromKey("inconnu"))
+    }
+    @Test fun `les graduations suivent la fin de l'echelle`() {
+        assertEquals(listOf(20f, 50f, 100f, 200f, 320f), ClusterGauge.powerTicks(320f))
+        assertEquals(listOf(20f, 50f, 100f, 150f), ClusterGauge.powerTicks(150f))
+        assertEquals(listOf(20f, 50f, 125f), ClusterGauge.powerTicks(125f))
+        assertEquals(listOf(20f, 50f, 100f, 250f), ClusterGauge.powerTicks(250f))
+        assertEquals(1f, ClusterGauge.power(150f, 150f).fraction, 0.001f)
+        assertEquals(1f, ClusterGauge.discreetPowerFraction(180f, 180f), 0.001f)
+        // Les anciennes valeurs, à 320 kW, restent celles d'avant.
+        assertEquals(setOf(-60f, -20f, 0f, 20f, 50f, 100f, 320f), ClusterGauge.discreetPowerLabels(320f))
     }
 }

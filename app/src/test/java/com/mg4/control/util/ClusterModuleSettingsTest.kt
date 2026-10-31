@@ -103,4 +103,46 @@ class ClusterModuleSettingsTest {
         assertEquals(600, ClusterModuleSettings.animationFromSlider(5.9999f))
         assertEquals(8f, ClusterModuleSettings.animationToSlider(800), 0f)
     }
+
+    // ── Écran conducteur par profil (2026-10-24) ─────────────────────────────
+
+    private fun communs(
+        enabled: Boolean = false, navigation: String? = null, media: String? = null, legacyModule: String? = null,
+    ) = ClusterModuleSettings.legacyConfig(enabled, navigation, media, legacyModule,
+        unit = "kwh_100km", distance = null, style = "discreet", average = null, pill = "none",
+        refreshMs = 300, animationMs = null)
+
+    @Test fun `les reglages communs passent tels quels dans le profil`() {
+        val c = communs(enabled = true, navigation = "power", media = "consumption")
+        assertTrue(ClusterModuleSettings.isEnabled(c))
+        assertEquals(ClusterModule.POWER, ClusterModuleSettings.moduleFor(c, ClusterTab.NAVIGATION))
+        assertEquals(ClusterModule.CONSUMPTION, ClusterModuleSettings.moduleFor(c, ClusterTab.MEDIA))
+        assertEquals("discreet", c.style)
+        assertEquals("none", c.pill)
+        assertEquals(300, ClusterModuleSettings.refreshMs(c))
+        assertEquals(ClusterModuleSettings.DEFAULT_ANIMATION_MS, ClusterModuleSettings.animationMs(c))
+    }
+
+    @Test fun `l ancien reglage unique vaut pour la navigation du profil`() {
+        val c = communs(legacyModule = "power")
+        assertEquals(ClusterModule.POWER, ClusterModuleSettings.moduleFor(c, ClusterTab.NAVIGATION))
+        assertNull(ClusterModuleSettings.moduleFor(c, ClusterTab.MEDIA))
+        // Résolu une fois pour toutes : le profil n'a plus besoin de l'ancien réglage.
+        assertEquals("power", c.navigation)
+        assertEquals(ClusterModuleSettings.NONE, c.media)
+    }
+
+    @Test fun `aucun module choisi reste aucun dans le profil`() {
+        val c = communs(navigation = ClusterModuleSettings.NONE, legacyModule = "power")
+        assertNull(ClusterModuleSettings.moduleFor(c, ClusterTab.NAVIGATION))
+    }
+
+    @Test fun `changer le module d un onglet ne touche pas l autre`() {
+        val c = communs(navigation = "power", media = "consumption")
+        val sansMusique = ClusterModuleSettings.withModule(c, ClusterTab.MEDIA, null)
+        assertNull(ClusterModuleSettings.moduleFor(sansMusique, ClusterTab.MEDIA))
+        assertEquals(ClusterModule.POWER, ClusterModuleSettings.moduleFor(sansMusique, ClusterTab.NAVIGATION))
+        // Un onglet dessiné par le combiné : rien ne change.
+        assertEquals(c, ClusterModuleSettings.withModule(c, ClusterTab.SETTINGS, ClusterModule.POWER))
+    }
 }

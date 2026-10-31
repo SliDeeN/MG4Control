@@ -13,12 +13,17 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ForegroundColorSpan
+import android.text.style.RelativeSizeSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Switch
 import android.widget.TextView
@@ -36,6 +41,7 @@ import com.mg4.control.util.DataUsage
 import com.mg4.control.debug.CrashLogger
 import com.mg4.control.hardware.EnergyProbe
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.hardware.VehicleDistanceUnit
 import com.mg4.control.hardware.VehicleWriteGate
 import com.mg4.control.profile.ReadyProfilePolicy
 import com.mg4.control.update.ApkCleanup
@@ -48,16 +54,26 @@ import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.service.MG4ControlService
 import com.mg4.control.service.OverlayKit
 import com.mg4.control.util.GarageMode
+import com.mg4.control.util.ClimateAutoScope
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.FullScreen
+import com.mg4.control.util.FloatingButtonSettings
+import com.mg4.control.service.ProjectionHvacZone
 import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.ChargePopupSettings
 import com.mg4.control.util.ClusterModuleSettings
+import com.mg4.control.util.ClusterProfiles
+import com.mg4.control.model.ClusterConfig
+import com.mg4.control.model.ClusterConfigs
+import com.mg4.control.model.DrivingProfile
+import com.mg4.control.profile.ProfileManager
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.AverageUnit
 import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ConsumptionUnit
+import com.mg4.control.model.DistanceUnit
 import com.mg4.control.service.ChargeMonitor
 import com.mg4.control.service.ClusterModuleOverlay
 import com.mg4.control.util.TextSize
@@ -78,6 +94,12 @@ class SettingsFragment : Fragment() {
     private var apercuCombine: ClusterSettingsPreview? = null
     /** Panneau « Avancé » de la carte Écran conducteur : replié à l'ouverture des Réglages. */
     private var avanceOuvert = false
+    /** Profils réglés par la carte Écran conducteur (« Réglage de : »), par identifiant. */
+    private var selectionCombine: Set<String> = emptySet()
+    /** Réglages de la carte dépliés (un profil sélectionné au moins a le module) : l'aperçu tourne. */
+    private var combineDeplie = false
+    /** Refait la rangée de profils et repeint la carte, au retour sur l'écran. */
+    private var majCarteCombine: (() -> Unit)? = null
 
     companion object {
         private const val STATE_CATEGORY = "settings_category"
@@ -246,6 +268,27 @@ class SettingsFragment : Fragment() {
             })
         }
 
+        // ── Plein écran (2026-10-23) : désactivé par défaut, appliqué aussitôt.
+        view.findViewById<Switch>(R.id.switch_fullscreen).apply {
+            isChecked = FullScreen.isEnabled(requireContext())
+            setOnCheckedChangeListener { _, checked ->
+                FullScreen.setEnabled(requireContext(), checked)
+                FullScreen.apply(requireActivity().window, checked)
+                AppLogger.i("MG4_SETTINGS", "Plein écran ${if (checked) "activé" else "désactivé"}")
+            }
+        }
+
+        // ── Barre clim pendant Android Auto / CarPlay (2026-10-24) : activée par défaut, la zone est
+        // posée ou retirée aussitôt. Ici depuis le 2026-10-25 (avant : page des boutons flottants).
+        view.findViewById<Switch>(R.id.switch_hvac_zone).apply {
+            isChecked = FloatingButtonSettings.isHvacZoneEnabled(requireContext())
+            setOnCheckedChangeListener { _, checked ->
+                FloatingButtonSettings.setHvacZoneEnabled(requireContext(), checked)
+                ProjectionHvacZone.refresh(requireContext())
+                AppLogger.i("MG4_SETTINGS", "Barre clim pendant la projection ${if (checked) "activée" else "désactivée"}")
+            }
+        }
+
         // ── Pop-up de charge (2026-10-16) : activé par défaut. Le suivi démarre ou s'arrête aussitôt.
         view.findViewById<Switch>(R.id.switch_charge_popup).apply {
             isChecked = ChargePopupSettings.isEnabled(requireContext())
@@ -260,6 +303,11 @@ class SettingsFragment : Fragment() {
         // Désactivé par défaut ; activer déplie le choix. Le service relit l'interrupteur aussitôt
         // (ClusterModuleOverlay.refresh), et les modules à chaque relevé : rien à redémarrer.
         // Réservé aux firmwares où le combiné montre l'écran central : SWI133, SWI68, SWI165.
+        //
+        // Par profil depuis le 2026-10-24 : tout ce que règle la carte appartient aux profils
+        // choisis dans « Réglage de : », un ou plusieurs à la fois. À l'ouverture, celui que suit le
+        // combiné. Profils sélectionnés en désaccord : aucun bouton allumé et l'étiquette le dit ;
+        // un choix les aligne tous. Sans aucun profil, la carte règle les réglages communs d'avant.
         view.findViewById<View>(R.id.card_cluster_module).visibility =
             if (ClusterModuleSettings.isSupported()) View.VISIBLE else View.GONE
         val switchCluster = view.findViewById<Switch>(R.id.switch_cluster_module)
@@ -275,15 +323,26 @@ class SettingsFragment : Fragment() {
         )
         val tvAvance = view.findViewById<TextView>(R.id.tv_cluster_advanced)
         val tvChevron = view.findViewById<TextView>(R.id.tv_cluster_advanced_chevron)
+        val tvClusterRefresh = view.findViewById<TextView>(R.id.tv_cluster_refresh)
+        val tvClusterAnimation = view.findViewById<TextView>(R.id.tv_cluster_animation)
+        val sliderRefresh = view.findViewById<Slider>(R.id.slider_cluster_refresh).apply {
+            valueFrom = ClusterModuleSettings.refreshToSlider(ClusterModuleSettings.MIN_REFRESH_MS)
+            valueTo   = ClusterModuleSettings.refreshToSlider(ClusterModuleSettings.MAX_REFRESH_MS)
+        }
+        val sliderAnimation = view.findViewById<Slider>(R.id.slider_cluster_animation).apply {
+            valueFrom = ClusterModuleSettings.animationToSlider(ClusterModuleSettings.MIN_ANIMATION_MS)
+            valueTo   = ClusterModuleSettings.animationToSlider(ClusterModuleSettings.MAX_ANIMATION_MS)
+        }
+        val rowProfils = view.findViewById<View>(R.id.row_cluster_profiles)
+        val grilleProfils = view.findViewById<LinearLayout>(R.id.grid_cluster_profiles)
+        val tvProfilsInfo = view.findViewById<TextView>(R.id.tv_cluster_profiles_info)
+        val tvModuleMixte = view.findViewById<TextView>(R.id.tv_cluster_module_mixed)
+        val mixte = getString(R.string.settings_cluster_mixed)
+        val mixteCourt = getString(R.string.settings_cluster_mixed_short)
+        val couleurMixte = requireContext().getColor(R.color.dash_warn)
         // Le nombre est écrit dans la langue de l'application (0,5 s / 0.5 s), jamais Locale.ROOT.
         val langue = requireContext().resources.configuration.locales[0]
         fun texteActualisation(ms: Int) = String.format(langue, "%.1f s", ms / 1000f)
-        fun resumeAvance() {
-            val ctx = requireContext()
-            tvAvance.text = getString(R.string.settings_cluster_advanced,
-                texteActualisation(ClusterModuleSettings.refreshMs(ctx)), texteActualisation(ClusterModuleSettings.animationMs(ctx)))
-            tvChevron.text = if (avanceOuvert) "▴" else "▾"
-        }
         // Pour chaque onglet : « Aucun » (null), Consommation, Puissance.
         val clusterBtns: List<Triple<ClusterTab, ClusterModule?, MaterialButton>> = listOf(
             Triple(ClusterTab.NAVIGATION, null, view.findViewById(R.id.btn_cluster_nav_none)),
@@ -297,6 +356,13 @@ class SettingsFragment : Fragment() {
         val unitBtns: List<Pair<ConsumptionUnit, MaterialButton>> = listOf(
             ConsumptionUnit.WH_PER_KM to view.findViewById(R.id.btn_cluster_unit_wh),
             ConsumptionUnit.KWH_PER_100KM to view.findViewById(R.id.btn_cluster_unit_kwh),
+        )
+        // Distance : Auto (comme la voiture, `null`), km ou miles pour tout le module (2026-10-23).
+        val btnDistAuto = view.findViewById<MaterialButton>(R.id.btn_cluster_dist_auto)
+        val distBtns: List<Pair<DistanceUnit?, MaterialButton>> = listOf(
+            null to btnDistAuto,
+            DistanceUnit.KM to view.findViewById(R.id.btn_cluster_dist_km),
+            DistanceUnit.MILES to view.findViewById(R.id.btn_cluster_dist_mi),
         )
         // Style des modules (issue #153) : dynamique ou discret.
         val styleBtns: List<Pair<ClusterGaugeStyle, MaterialButton>> = listOf(
@@ -315,36 +381,154 @@ class SettingsFragment : Fragment() {
             ClusterPill.PROFILE to view.findViewById(R.id.btn_cluster_pill_profile),
             ClusterPill.NONE to view.findViewById(R.id.btn_cluster_pill_none),
         )
+        // Puissance maxi de la jauge (issue #165) : Auto (`null`, apprise) ou une puissance choisie.
+        val powerBtns: List<Pair<Int?, MaterialButton>> = listOf(
+            null to view.findViewById(R.id.btn_cluster_power_auto),
+            125 to view.findViewById(R.id.btn_cluster_power_125),
+            150 to view.findViewById(R.id.btn_cluster_power_150),
+            180 to view.findViewById(R.id.btn_cluster_power_180),
+            320 to view.findViewById(R.id.btn_cluster_power_320),
+        )
+        val tvPowerDesc = view.findViewById<TextView>(R.id.tv_cluster_power_desc)
+        // Étiquette de chaque ligne et son texte, pour y écrire « différent selon les profils ».
+        fun etiquette(id: Int, texte: Int) = view.findViewById<TextView>(id) to getString(texte)
+        val etiqNav = etiquette(R.id.tv_cluster_label_nav, R.string.settings_cluster_row_nav)
+        val etiqMedia = etiquette(R.id.tv_cluster_label_media, R.string.settings_cluster_row_media)
+        val etiqStyle = etiquette(R.id.tv_cluster_label_style, R.string.settings_cluster_row_style)
+        val etiqPill = etiquette(R.id.tv_cluster_label_pill, R.string.settings_cluster_row_pill)
+        val etiqPower = etiquette(R.id.tv_cluster_label_power, R.string.settings_cluster_row_power)
+        val etiqDistance = etiquette(R.id.tv_cluster_label_distance, R.string.settings_cluster_row_distance)
+        val etiqGauge = etiquette(R.id.tv_cluster_label_gauge, R.string.settings_cluster_row_gauge)
+        val etiqAverage = etiquette(R.id.tv_cluster_label_average, R.string.settings_cluster_row_average)
+
+        selectionCombine = emptySet()
+        var profils: List<DrivingProfile> = emptyList()
+        var puces: List<Pair<String, MaterialButton>> = emptyList()
+        // L'interrupteur est remis à l'état des profils sélectionnés par le code : ce n'est pas un choix.
+        var majInterrupteur = false
+
+        fun peindre(btn: MaterialButton, active: Boolean) {
+            btn.backgroundTintList = ColorStateList.valueOf(if (active) accentDim else inactiveColor)
+            btn.setTextColor(if (active) textActive else textInactive)
+            btn.strokeColor = ColorStateList.valueOf(
+                if (active) accentColor else requireContext().getColor(R.color.dash_border)
+            )
+        }
+        fun reglagesChoisis(): List<ClusterConfig> = ClusterProfiles.configs(requireContext(), selectionCombine)
+        fun nomsChoisis(): String =
+            profils.filter { it.id in selectionCombine }.joinToString { it.name }.ifEmpty { "réglages communs" }
+        fun modifier(quoi: String, transform: (ClusterConfig) -> ClusterConfig) {
+            if (ClusterProfiles.update(requireContext(), selectionCombine, transform)) {
+                AppLogger.i(ClusterModuleOverlay.TAG, "$quoi (${nomsChoisis()})")
+            }
+        }
+        /** Boutons d'une ligne : allumé celui de la valeur commune ; en désaccord, aucun, et l'étiquette le dit. */
+        fun <T> ligne(etiq: Pair<TextView, String>, valeurs: List<T>, boutons: List<Pair<T, MaterialButton>>) {
+            val v = valeurs.distinct()
+            boutons.forEach { (x, btn) -> peindre(btn, v.size == 1 && x == v[0]) }
+            val (tv, texte) = etiq
+            tv.text = if (v.size == 1) texte else SpannableString("$texte\n$mixte").apply {
+                setSpan(ForegroundColorSpan(couleurMixte), texte.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                setSpan(RelativeSizeSpan(0.8f), texte.length + 1, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+        fun texteAvance(valeurs: List<Int>): String =
+            valeurs.distinct().singleOrNull()?.let { texteActualisation(it) } ?: mixteCourt
         fun updateClusterCard() {
             val ctx = requireContext()
             // Le combiné suit tout de suite, sans attendre son relevé suivant.
             ClusterModuleOverlay.relire()
-            val actif = ClusterModuleSettings.isEnabled(ctx)
+            val choisis = reglagesChoisis()
+            val premier = choisis.first()
+            val etats = choisis.map { ClusterModuleSettings.isEnabled(it) }.distinct()
+            // Déplié dès qu'un des profils sélectionnés a le module : il y a quelque chose à régler.
+            val actif = true in etats
+            combineDeplie = actif
+            majInterrupteur = true
+            switchCluster.isChecked = etats == listOf(true)
+            majInterrupteur = false
+            tvModuleMixte.visibility = if (etats.size > 1) View.VISIBLE else View.GONE
             rowClusterChoice.visibility = if (actif) View.VISIBLE else View.GONE
             rowClusterRefresh.visibility = if (actif && avanceOuvert) View.VISIBLE else View.GONE
-            resumeAvance()
+
+            // « Réglage de : »
+            puces.forEach { (id, btn) -> ProfileChips.peindre(btn, id in selectionCombine) }
+            val noms = profils.filter { it.id in selectionCombine }
+            tvProfilsInfo.text = if (noms.size == 1) getString(R.string.settings_cluster_profiles_one, noms[0].name)
+                else getString(R.string.settings_cluster_profiles_many, noms.size)
+
+            // L'aperçu montre le premier profil sélectionné.
+            apercu.reglages = premier
+            apercu.profilMontre = noms.firstOrNull()
             if (actif && isResumed) apercu.demarrer() else if (!actif) apercu.arreter()
             apercu.rafraichir()
-            fun peindre(btn: MaterialButton, active: Boolean) {
-                btn.backgroundTintList = ColorStateList.valueOf(if (active) accentDim else inactiveColor)
-                btn.setTextColor(if (active) textActive else textInactive)
-                btn.strokeColor = ColorStateList.valueOf(
-                    if (active) accentColor else ctx.getColor(R.color.dash_border)
-                )
-            }
-            clusterBtns.forEach { (onglet, module, btn) ->
-                peindre(btn, module == ClusterModuleSettings.moduleFor(ctx, onglet))
-            }
-            val unite = ClusterModuleSettings.consumptionUnit(ctx)
-            unitBtns.forEach { (u, btn) -> peindre(btn, u == unite) }
-            val pastille = ClusterModuleSettings.pill(ctx)
-            pillBtns.forEach { (p, btn) -> peindre(btn, p == pastille) }
-            val style = ClusterModuleSettings.style(ctx)
-            styleBtns.forEach { (st, btn) -> peindre(btn, st == style) }
-            val moyenne = ClusterModuleSettings.averageUnit(ctx)
-            avgBtns.forEach { (u, btn) -> peindre(btn, u == moyenne) }
+
+            val refresh = choisis.map { ClusterModuleSettings.refreshMs(it) }
+            val animation = choisis.map { ClusterModuleSettings.animationMs(it) }
+            tvAvance.text = getString(R.string.settings_cluster_advanced, texteAvance(refresh), texteAvance(animation))
+            tvChevron.text = if (avanceOuvert) "▴" else "▾"
+            // Les curseurs partent du premier profil ; leur valeur dit « variable » en désaccord.
+            sliderRefresh.value = ClusterModuleSettings.refreshToSlider(refresh.first())
+            tvClusterRefresh.text = texteAvance(refresh)
+            sliderAnimation.value = ClusterModuleSettings.animationToSlider(animation.first())
+            tvClusterAnimation.text = texteAvance(animation)
+
+            ligne(etiqNav, choisis.map { ClusterModuleSettings.moduleFor(it, ClusterTab.NAVIGATION) },
+                clusterBtns.filter { it.first == ClusterTab.NAVIGATION }.map { it.second to it.third })
+            ligne(etiqMedia, choisis.map { ClusterModuleSettings.moduleFor(it, ClusterTab.MEDIA) },
+                clusterBtns.filter { it.first == ClusterTab.MEDIA }.map { it.second to it.third })
+            val voiture = VehicleDistanceUnit.connue()
+            val distance = ClusterModuleSettings.distanceUnit(premier, voiture)
+            ligne(etiqDistance, choisis.map { ClusterModuleSettings.distanceChoice(it) }, distBtns)
+            // « Auto (miles) » : ce que la voiture dit, dès qu'on l'a lu.
+            btnDistAuto.text = voiture?.let {
+                getString(R.string.cluster_distance_auto_value, getString(
+                    if (it == DistanceUnit.MILES) R.string.cluster_distance_miles else R.string.cluster_distance_km))
+            } ?: getString(R.string.cluster_distance_auto)
+            // Les unités se lisent dans la distance choisie : « Wh/mi », « mi/kWh »…
+            unitBtns.forEach { (u, btn) -> btn.text = u.labelFor(distance) }
+            avgBtns.forEach { (u, btn) -> btn.text = u.labelFor(distance) }
+            ligne(etiqGauge, choisis.map { ClusterModuleSettings.consumptionUnit(it) }, unitBtns)
+            ligne(etiqPill, choisis.map { ClusterModuleSettings.pill(it) }, pillBtns)
+            ligne(etiqPower, choisis.map { ClusterModuleSettings.powerMaxChoice(it) }, powerBtns)
+            tvPowerDesc.text = getString(R.string.settings_cluster_power_desc, ClusterModuleSettings.learnedPowerKw(ctx))
+            ligne(etiqStyle, choisis.map { ClusterModuleSettings.style(it) }, styleBtns)
+            ligne(etiqAverage, choisis.map { ClusterModuleSettings.averageUnit(it) }, avgBtns)
             ongletsApercu.forEach { (o, btn) -> peindre(btn, o == apercu.onglet) }
         }
+        /** Rangées de cinq puces, refaites à chaque retour sur l'écran : un profil a pu changer. */
+        fun construirePuces() {
+            val ctx = requireContext()
+            profils = ProfileManager(ctx).getAll()
+            val montre = ClusterProfiles.shownProfileId(ctx)
+            selectionCombine = ClusterConfigs.keepSelection(selectionCombine, profils.map { it.id }, montre)
+            rowProfils.visibility = if (profils.isEmpty()) View.GONE else View.VISIBLE
+            val enCours = getString(R.string.settings_cluster_profile_current)
+            puces = ProfileChips.construire(grilleProfils, profils,
+                texte = { p -> ProfileChips.texte(p.name, enCours.takeIf { p.id == montre }) }) { id ->
+                selectionCombine = when {
+                    id !in selectionCombine -> selectionCombine + id
+                    selectionCombine.size > 1 -> selectionCombine - id
+                    else -> selectionCombine   // il en reste toujours un
+                }
+                updateClusterCard()
+            }
+        }
+        view.findViewById<View>(R.id.btn_cluster_profiles_all).setOnClickListener {
+            selectionCombine = profils.map { it.id }.toSet()
+            updateClusterCard()
+        }
+        view.findViewById<View>(R.id.btn_cluster_profiles_current).setOnClickListener {
+            selectionCombine = setOfNotNull(ClusterProfiles.shownProfileId(requireContext()) ?: profils.firstOrNull()?.id)
+            updateClusterCard()
+        }
+        majCarteCombine = {
+            construirePuces()
+            updateClusterCard()
+        }
+        construirePuces()
+        updateClusterCard()
+
         ongletsApercu.forEach { (o, btn) ->
             btn.setOnClickListener {
                 apercu.onglet = o
@@ -355,101 +539,92 @@ class SettingsFragment : Fragment() {
             avanceOuvert = !avanceOuvert
             updateClusterCard()
         }
-        switchCluster.isChecked = ClusterModuleSettings.isEnabled(requireContext())
-        updateClusterCard()
         switchCluster.setOnCheckedChangeListener { _, checked ->
-            ClusterModuleSettings.setEnabled(requireContext(), checked)
-            AppLogger.i(ClusterModuleOverlay.TAG, "Module sur le combiné ${if (checked) "activé" else "désactivé"}")
+            if (majInterrupteur) return@setOnCheckedChangeListener
+            modifier("Module sur le combiné ${if (checked) "activé" else "désactivé"}") { it.copy(enabled = checked) }
             ClusterModuleOverlay.refresh(requireContext())
             updateClusterCard()
         }
         clusterBtns.forEach { (onglet, module, btn) ->
             btn.setOnClickListener {
-                if (module == ClusterModuleSettings.moduleFor(requireContext(), onglet)) return@setOnClickListener
-                ClusterModuleSettings.setModuleFor(requireContext(), onglet, module)
-                AppLogger.i(ClusterModuleOverlay.TAG, "Module du combiné, onglet ${onglet.name} → ${module?.key ?: "aucun"}")
+                modifier("Module du combiné, onglet ${onglet.name} → ${module?.key ?: "aucun"}") {
+                    ClusterModuleSettings.withModule(it, onglet, module)
+                }
                 // L'aperçu montre l'onglet qu'on vient de régler.
                 apercu.onglet = onglet
                 updateClusterCard()
             }
         }
+        distBtns.forEach { (d, btn) ->
+            btn.setOnClickListener {
+                modifier("Distance des modules du combiné → ${d?.key ?: DistanceUnit.AUTO}") {
+                    it.copy(distance = d?.key ?: DistanceUnit.AUTO)
+                }
+                updateClusterCard()
+            }
+        }
+        // L'unité de la voiture, lue hors du fil principal (binder) : le bouton Auto la montre,
+        // et l'aperçu la suit si Auto est choisi.
+        if (ClusterModuleSettings.isSupported()) Thread {
+            val avant = VehicleDistanceUnit.connue()
+            val lue = VehicleDistanceUnit.actualiser()
+            if (lue != avant) view.post { if (isAdded) updateClusterCard() }
+        }.start()
         unitBtns.forEach { (u, btn) ->
             btn.setOnClickListener {
-                if (u == ClusterModuleSettings.consumptionUnit(requireContext())) return@setOnClickListener
-                ClusterModuleSettings.setConsumptionUnit(requireContext(), u)
-                AppLogger.i(ClusterModuleOverlay.TAG, "Unité de consommation du combiné → ${u.label}")
+                modifier("Unité de consommation du combiné → ${u.label}") { it.copy(unit = u.key) }
                 updateClusterCard()
             }
         }
         styleBtns.forEach { (st, btn) ->
             btn.setOnClickListener {
-                if (st == ClusterModuleSettings.style(requireContext())) return@setOnClickListener
-                ClusterModuleSettings.setStyle(requireContext(), st)
-                AppLogger.i(ClusterModuleOverlay.TAG, "Style des modules du combiné → ${st.key}")
+                modifier("Style des modules du combiné → ${st.key}") { it.copy(style = st.key) }
                 updateClusterCard()
             }
         }
         avgBtns.forEach { (u, btn) ->
             btn.setOnClickListener {
-                if (u == ClusterModuleSettings.averageUnit(requireContext())) return@setOnClickListener
-                ClusterModuleSettings.setAverageUnit(requireContext(), u)
-                AppLogger.i(ClusterModuleOverlay.TAG, "Unité de la moyenne du trajet → ${u.label}")
+                modifier("Unité de la moyenne du trajet → ${u.label}") { it.copy(average = u.key) }
                 updateClusterCard()
             }
         }
         pillBtns.forEach { (p, btn) ->
             btn.setOnClickListener {
-                if (p == ClusterModuleSettings.pill(requireContext())) return@setOnClickListener
-                ClusterModuleSettings.setPill(requireContext(), p)
-                AppLogger.i(ClusterModuleOverlay.TAG, "Pastille du combiné → ${p.key}")
+                modifier("Pastille du combiné → ${p.key}") { it.copy(pill = p.key) }
                 updateClusterCard()
             }
         }
-        // Actualisation de la jauge, 0,1 à 1 s : relue à chaque relevé, rien à redémarrer.
-        val tvClusterRefresh = view.findViewById<TextView>(R.id.tv_cluster_refresh)
-        view.findViewById<Slider>(R.id.slider_cluster_refresh).apply {
-            valueFrom = ClusterModuleSettings.refreshToSlider(ClusterModuleSettings.MIN_REFRESH_MS)
-            valueTo   = ClusterModuleSettings.refreshToSlider(ClusterModuleSettings.MAX_REFRESH_MS)
-            val actuel = ClusterModuleSettings.refreshMs(requireContext())
-            value = ClusterModuleSettings.refreshToSlider(actuel)
-            tvClusterRefresh.text = texteActualisation(actuel)
-            addOnChangeListener { _, v, _ ->
-                val ms = ClusterModuleSettings.refreshFromSlider(v)
-                tvClusterRefresh.text = texteActualisation(ms)
-                ClusterModuleSettings.setRefreshMs(requireContext(), ms)
-                resumeAvance()
+        powerBtns.forEach { (kw, btn) ->
+            btn.setOnClickListener {
+                modifier("Puissance maxi de la jauge → ${kw?.let { "$it kW" } ?: "Auto"}") { it.copy(powerMax = kw) }
+                updateClusterCard()
             }
-            addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
-                override fun onStartTrackingTouch(slider: Slider) {}
-                override fun onStopTrackingTouch(slider: Slider) {
-                    AppLogger.i(ClusterModuleOverlay.TAG,
-                        "Actualisation de la jauge → ${ClusterModuleSettings.refreshFromSlider(slider.value)} ms")
-                }
-            })
         }
-        // Durée de l'animation, 0,2 à 2 s, à part de l'actualisation (issue #152) : relue à chaque
-        // relevé, comme elle.
-        val tvClusterAnimation = view.findViewById<TextView>(R.id.tv_cluster_animation)
-        view.findViewById<Slider>(R.id.slider_cluster_animation).apply {
-            valueFrom = ClusterModuleSettings.animationToSlider(ClusterModuleSettings.MIN_ANIMATION_MS)
-            valueTo   = ClusterModuleSettings.animationToSlider(ClusterModuleSettings.MAX_ANIMATION_MS)
-            val actuel = ClusterModuleSettings.animationMs(requireContext())
-            value = ClusterModuleSettings.animationToSlider(actuel)
-            tvClusterAnimation.text = texteActualisation(actuel)
-            addOnChangeListener { _, v, _ ->
-                val ms = ClusterModuleSettings.animationFromSlider(v)
-                tvClusterAnimation.text = texteActualisation(ms)
-                ClusterModuleSettings.setAnimationMs(requireContext(), ms)
-                resumeAvance()
+        // Actualisation de la jauge, 0,1 à 1 s, et durée de l'animation, 0,2 à 2 s (issue #152) :
+        // relues à chaque relevé, rien à redémarrer. Le chiffre suit le doigt ; l'enregistrement,
+        // pour tous les profils sélectionnés, se fait au relâchement.
+        sliderRefresh.addOnChangeListener { _, v, fromUser ->
+            if (fromUser) tvClusterRefresh.text = texteActualisation(ClusterModuleSettings.refreshFromSlider(v))
+        }
+        sliderRefresh.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+            override fun onStartTrackingTouch(slider: Slider) {}
+            override fun onStopTrackingTouch(slider: Slider) {
+                val ms = ClusterModuleSettings.refreshFromSlider(slider.value)
+                modifier("Actualisation de la jauge → $ms ms") { it.copy(refreshMs = ms) }
+                updateClusterCard()
             }
-            addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
-                override fun onStartTrackingTouch(slider: Slider) {}
-                override fun onStopTrackingTouch(slider: Slider) {
-                    AppLogger.i(ClusterModuleOverlay.TAG,
-                        "Animation de la jauge → ${ClusterModuleSettings.animationFromSlider(slider.value)} ms")
-                }
-            })
+        })
+        sliderAnimation.addOnChangeListener { _, v, fromUser ->
+            if (fromUser) tvClusterAnimation.text = texteActualisation(ClusterModuleSettings.animationFromSlider(v))
         }
+        sliderAnimation.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+            override fun onStartTrackingTouch(slider: Slider) {}
+            override fun onStopTrackingTouch(slider: Slider) {
+                val ms = ClusterModuleSettings.animationFromSlider(slider.value)
+                modifier("Animation de la jauge → $ms ms") { it.copy(animationMs = ms) }
+                updateClusterCard()
+            }
+        })
 
         // ── Canal de mise a jour beta ────────────────────────────────────────
         // Aucun avertissement bloquant : une beta ne donne pas le controle du vehicule a un
@@ -493,6 +668,33 @@ class SettingsFragment : Fragment() {
                 apiSwitchProgrammatic = false
                 AppLogger.i(ExternalApi.LOG_TAG, "API externe ACTIVÉE par l'utilisateur (confirmée)")
             }
+        }
+
+        // ── Ce que règle AUTO (issue #160) : coché = la voiture choisit (défaut) ──
+        view.findViewById<View>(R.id.card_hvac_auto_scope).visibility =
+            if (MG4Hardware.hasClimateControl()) View.VISIBLE else View.GONE
+        fun portee(sw: Int, tv: Int, lit: (android.content.Context) -> Boolean,
+                   ecrit: (android.content.Context, Boolean) -> Unit, voiture: Int, garde: Int, nom: String) {
+            val texte = view.findViewById<TextView>(tv)
+            view.findViewById<Switch>(sw).apply {
+                isChecked = lit(requireContext())
+                texte.setText(if (isChecked) voiture else garde)
+                setOnCheckedChangeListener { _, checked ->
+                    ecrit(requireContext(), checked)
+                    texte.setText(if (checked) voiture else garde)
+                    AppLogger.i("MG4_SETTINGS", "AUTO : $nom ${if (checked) "laissé à la voiture" else "gardé à la main"}")
+                }
+            }
+        }
+        portee(R.id.switch_auto_scope_air, R.id.tv_auto_scope_air, ClimateAutoScope::carSetsAir, ClimateAutoScope::setCarSetsAir,
+            R.string.settings_auto_scope_air_car, R.string.settings_auto_scope_air_kept, "sens de l'air")
+        portee(R.id.switch_auto_scope_loop, R.id.tv_auto_scope_loop, ClimateAutoScope::carSetsLoop, ClimateAutoScope::setCarSetsLoop,
+            R.string.settings_auto_scope_loop_car, R.string.settings_auto_scope_loop_kept, "recirculation")
+
+        // ── Raccourci de secours : clic central du joystick droit tenu 5 s → MG4Control ──
+        view.findViewById<Switch>(R.id.switch_rescue_shortcut).apply {
+            isChecked = GarageMode.isRescueOn(requireContext())
+            setOnCheckedChangeListener { _, checked -> GarageMode.setRescueOn(requireContext(), checked) }
         }
 
         // ── Mode Garage — MG4Control en veille complète ──────────────────────
@@ -618,11 +820,11 @@ class SettingsFragment : Fragment() {
         // Bouton Diagnostic débloqué via 5 clics sur le logo (cf. MainActivity)
         btnDiagnostic.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
 
-        // Onglet du combiné : outil de relevé, débloqué avec le Diagnostic (même principe) — remis
-        // le 2026-10-18 pour les relevés d'un testeur SWI165.
-        val btnClusterTab = view.findViewById<MaterialButton>(R.id.btn_cluster_tab)
-        btnClusterTab.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
-        btnClusterTab.setOnClickListener { ClusterTabDialog.afficher(requireContext()) }
+        // État de charge : outil de relevé, débloqué avec le Diagnostic (même principe) — à la
+        // place de « Onglet du combiné » depuis le 2026-10-23.
+        val btnChargeState = view.findViewById<MaterialButton>(R.id.btn_charge_state)
+        btnChargeState.visibility = if (MainActivity.diagnosticUnlocked) View.VISIBLE else View.GONE
+        btnChargeState.setOnClickListener { ChargeStateDialog.afficher(requireContext()) }
 
         btnUpdate.setOnClickListener {
             btnUpdate.isEnabled = false
@@ -696,6 +898,11 @@ class SettingsFragment : Fragment() {
             showInfosDialog()
         }
 
+        // ── Bouton Paramètres Android (2026-10-31) ───────────────────────────
+        view.findViewById<MaterialButton>(R.id.btn_android_settings).setOnClickListener {
+            com.mg4.control.util.AndroidSettings.open(requireContext())
+        }
+
         // ── Bouton Fermer ─────────────────────────────────────────────────────
         view.findViewById<MaterialButton>(R.id.btn_close_settings).setOnClickListener {
             findNavController().popBackStack(R.id.dashboardFragment, false)
@@ -711,7 +918,8 @@ class SettingsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        if (ClusterModuleSettings.isEnabled(requireContext())) apercuCombine?.demarrer()
+        majCarteCombine?.invoke()
+        if (combineDeplie) apercuCombine?.demarrer()
     }
 
     override fun onPause() {
@@ -722,6 +930,7 @@ class SettingsFragment : Fragment() {
     override fun onDestroyView() {
         apercuCombine?.arreter()
         apercuCombine = null
+        majCarteCombine = null
         super.onDestroyView()
     }
 

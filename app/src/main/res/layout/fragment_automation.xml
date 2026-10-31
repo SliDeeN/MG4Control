@@ -1331,73 +1331,165 @@
 
                             </LinearLayout>
 
+                            <!-- Sens de l'air (issue #177), à la place des dégivrages : mêmes boutons
+                                 cumulables que la page Clim et les profils. « Inchangé » = aucun bouton : la
+                                 règle n'y touche pas. Le code répartit les cinq boutons sur deux lignes, au
+                                 nombre de colonnes de la recirculation (4 ou 3). -->
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="6dp"
                                 android:orientation="horizontal"
-                                android:gravity="center_vertical"
                                 android:baselineAligned="false">
 
                                 <TextView
                                     android:layout_width="170dp"
                                     android:layout_height="wrap_content"
-                                    android:text="@string/ac_auto_defrost"
+                                    android:minHeight="52dp"
+                                    android:gravity="center_vertical"
+                                    android:text="@string/profile_hvac_row_air"
                                     android:textColor="@color/text_secondary"
                                     android:textSize="16sp" />
 
                                 <LinearLayout
-                                    android:id="@+id/row_ac_hot_defrost"
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:orientation="horizontal"
-                                    android:baselineAligned="false"
-                                    android:weightSum="4">
+                                    android:orientation="vertical">
 
-                                    <com.google.android.material.button.MaterialButton
-                                        android:id="@+id/btn_ac_hot_def_front"
-                                        android:layout_width="0dp"
-                                        android:layout_height="52dp"
-                                        android:layout_weight="1"
-                                        android:insetTop="0dp"
-                                        android:insetBottom="0dp"
-                                        android:insetRight="6dp"
-                                        android:paddingStart="2dp"
-                                        android:paddingEnd="8dp"
-                                        android:maxLines="2"
-                                        android:text="@string/ac_auto_defrost_front"
-                                        android:textColor="@color/text_secondary"
-                                        android:textSize="16sp"
-                                        android:textAllCaps="true"
-                                        app:backgroundTint="@color/dash_btn"
-                                        app:strokeWidth="1dp"
-                                        app:strokeColor="@color/dash_border"
-                                        app:cornerRadius="8dp" />
+                                    <LinearLayout
+                                        android:id="@+id/row_ac_hot_air_a"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:baselineAligned="false"
+                                        android:weightSum="4">
 
-                                    <com.google.android.material.button.MaterialButton
-                                        android:id="@+id/btn_ac_hot_def_rear"
-                                        android:layout_width="0dp"
-                                        android:layout_height="52dp"
-                                        android:layout_weight="1"
-                                        android:insetTop="0dp"
-                                        android:insetBottom="0dp"
-                                        android:insetRight="6dp"
-                                        android:paddingStart="2dp"
-                                        android:paddingEnd="8dp"
-                                        android:maxLines="2"
-                                        android:text="@string/ac_auto_defrost_rear"
-                                        android:textColor="@color/text_secondary"
-                                        android:textSize="16sp"
-                                        android:textAllCaps="true"
-                                        app:backgroundTint="@color/dash_btn"
-                                        app:strokeWidth="1dp"
-                                        app:strokeColor="@color/dash_border"
-                                        app:cornerRadius="8dp" />
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_hot_air_none"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/profile_hvac_unchanged"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_hot_air_face"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/clim_air_face"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_hot_air_feet"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/clim_air_feet"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_hot_air_ws"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/clim_air_windshield_front"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                    </LinearLayout>
+
+                                    <LinearLayout
+                                        android:id="@+id/row_ac_hot_air_b"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="6dp"
+                                        android:orientation="horizontal"
+                                        android:baselineAligned="false"
+                                        android:weightSum="4">
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_hot_air_rear"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/clim_air_windshield_rear"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                    </LinearLayout>
 
                                 </LinearLayout>
 
                             </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tv_ac_hot_air_hint"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:layout_marginStart="170dp"
+                                android:textColor="@color/dash_text_lo"
+                                android:textSize="13sp" />
 
                             <!-- Recirculation : quatre boutons sur une ligne quand la place le permet. Sinon le
                                  code fait passer « Auto » sur la seconde ligne, sous le premier bouton. -->
@@ -1782,73 +1874,165 @@
 
                             </LinearLayout>
 
+                            <!-- Sens de l'air (issue #177), à la place des dégivrages : mêmes boutons
+                                 cumulables que la page Clim et les profils. « Inchangé » = aucun bouton : la
+                                 règle n'y touche pas. Le code répartit les cinq boutons sur deux lignes, au
+                                 nombre de colonnes de la recirculation (4 ou 3). -->
                             <LinearLayout
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="6dp"
                                 android:orientation="horizontal"
-                                android:gravity="center_vertical"
                                 android:baselineAligned="false">
 
                                 <TextView
                                     android:layout_width="170dp"
                                     android:layout_height="wrap_content"
-                                    android:text="@string/ac_auto_defrost"
+                                    android:minHeight="52dp"
+                                    android:gravity="center_vertical"
+                                    android:text="@string/profile_hvac_row_air"
                                     android:textColor="@color/text_secondary"
                                     android:textSize="16sp" />
 
                                 <LinearLayout
-                                    android:id="@+id/row_ac_cold_defrost"
                                     android:layout_width="0dp"
                                     android:layout_height="wrap_content"
                                     android:layout_weight="1"
-                                    android:orientation="horizontal"
-                                    android:baselineAligned="false"
-                                    android:weightSum="4">
+                                    android:orientation="vertical">
 
-                                    <com.google.android.material.button.MaterialButton
-                                        android:id="@+id/btn_ac_cold_def_front"
-                                        android:layout_width="0dp"
-                                        android:layout_height="52dp"
-                                        android:layout_weight="1"
-                                        android:insetTop="0dp"
-                                        android:insetBottom="0dp"
-                                        android:insetRight="6dp"
-                                        android:paddingStart="2dp"
-                                        android:paddingEnd="8dp"
-                                        android:maxLines="2"
-                                        android:text="@string/ac_auto_defrost_front"
-                                        android:textColor="@color/text_secondary"
-                                        android:textSize="16sp"
-                                        android:textAllCaps="true"
-                                        app:backgroundTint="@color/dash_btn"
-                                        app:strokeWidth="1dp"
-                                        app:strokeColor="@color/dash_border"
-                                        app:cornerRadius="8dp" />
+                                    <LinearLayout
+                                        android:id="@+id/row_ac_cold_air_a"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:orientation="horizontal"
+                                        android:baselineAligned="false"
+                                        android:weightSum="4">
 
-                                    <com.google.android.material.button.MaterialButton
-                                        android:id="@+id/btn_ac_cold_def_rear"
-                                        android:layout_width="0dp"
-                                        android:layout_height="52dp"
-                                        android:layout_weight="1"
-                                        android:insetTop="0dp"
-                                        android:insetBottom="0dp"
-                                        android:insetRight="6dp"
-                                        android:paddingStart="2dp"
-                                        android:paddingEnd="8dp"
-                                        android:maxLines="2"
-                                        android:text="@string/ac_auto_defrost_rear"
-                                        android:textColor="@color/text_secondary"
-                                        android:textSize="16sp"
-                                        android:textAllCaps="true"
-                                        app:backgroundTint="@color/dash_btn"
-                                        app:strokeWidth="1dp"
-                                        app:strokeColor="@color/dash_border"
-                                        app:cornerRadius="8dp" />
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_cold_air_none"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/profile_hvac_unchanged"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_cold_air_face"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/clim_air_face"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_cold_air_feet"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/clim_air_feet"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_cold_air_ws"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/clim_air_windshield_front"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                    </LinearLayout>
+
+                                    <LinearLayout
+                                        android:id="@+id/row_ac_cold_air_b"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="6dp"
+                                        android:orientation="horizontal"
+                                        android:baselineAligned="false"
+                                        android:weightSum="4">
+
+                                        <com.google.android.material.button.MaterialButton
+                                            android:id="@+id/btn_ac_cold_air_rear"
+                                            android:layout_width="0dp"
+                                            android:layout_height="52dp"
+                                            android:layout_weight="1"
+                                            android:insetTop="0dp"
+                                            android:insetBottom="0dp"
+                                            android:insetRight="6dp"
+                                            android:paddingStart="2dp"
+                                            android:paddingEnd="8dp"
+                                            android:maxLines="2"
+                                            android:text="@string/clim_air_windshield_rear"
+                                            android:textColor="@color/text_secondary"
+                                            android:textSize="16sp"
+                                            android:textAllCaps="true"
+                                            app:backgroundTint="@color/dash_btn"
+                                            app:strokeWidth="1dp"
+                                            app:strokeColor="@color/dash_border"
+                                            app:cornerRadius="8dp" />
+
+                                    </LinearLayout>
 
                                 </LinearLayout>
 
                             </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/tv_ac_cold_air_hint"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:layout_marginStart="170dp"
+                                android:textColor="@color/dash_text_lo"
+                                android:textSize="13sp" />
 
                             <!-- Recirculation : quatre boutons sur une ligne quand la place le permet. Sinon le
                                  code fait passer « Auto » sur la seconde ligne, sous le premier bouton. -->
@@ -2194,8 +2378,52 @@
                     android:layout_marginTop="12dp"
                     android:layout_marginBottom="12dp" />
 
+                <!-- Baisser le volume ou mettre en pause (2026-10-23, demande d'un utilisateur) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginBottom="12dp"
+                    android:orientation="horizontal">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_door_mode_volume"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="4dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="@string/door_media_mode_volume"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="16sp"
+                        android:textAllCaps="false"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="8dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_door_mode_pause"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="@string/door_media_mode_pause"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="16sp"
+                        android:textAllCaps="false"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="8dp" />
+
+                </LinearLayout>
+
                 <!-- Niveau cible : le maximum du curseur est celui de la voiture, posé par le code -->
                 <LinearLayout
+                    android:id="@+id/row_door_volume_level"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
@@ -2298,6 +2526,157 @@
                         android:textSize="16sp" />
 
                 </LinearLayout>
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- ══════════ Carte 5 : sons d'automatisation (issue #161) ══════════
+             Deux sons importés depuis une clé USB, joués à des événements choisis ; volume de la
+             voiture réglé pendant le son puis rendu. Le contenu des sons est posé par le code. -->
+        <LinearLayout
+            android:id="@+id/card_sound"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical"
+            android:background="@drawable/bg_card_rounded"
+            android:padding="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/sound_title"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_sound_expand"
+                    android:layout_width="60dp"
+                    android:layout_height="52dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="20sp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="8dp" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/sound_desc"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="16sp" />
+
+                <Switch
+                    android:scaleX="1.3"
+                    android:scaleY="1.3"
+                    android:layout_marginHorizontal="8dp"
+                    android:id="@+id/switch_sound"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="false" />
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/row_sound_config"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border"
+                    android:layout_marginTop="12dp"
+                    android:layout_marginBottom="12dp" />
+
+                <!-- Liste des sons (2026-10-29) : une ligne dépliable par son, posée par SoundCard ;
+                     autant de sons que de moments possibles sur ce firmware. -->
+                <LinearLayout
+                    android:id="@+id/sound_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_sound_add"
+                        android:layout_width="wrap_content"
+                        android:layout_height="52dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:paddingStart="20dp"
+                        android:paddingEnd="20dp"
+                        android:text="@string/sound_add"
+                        android:textAllCaps="false"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="8dp" />
+
+                    <TextView
+                        android:id="@+id/sound_add_hint"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="12dp"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="14sp" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:text="@string/sound_profiles"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="16sp" />
+
+                <LinearLayout
+                    android:id="@+id/sound_profiles"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:orientation="vertical" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/sound_guard"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp" />
 
             </LinearLayout>
 

@@ -10,4 +10,13 @@
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
     </style>
+
+    <!-- Pré-climatisation (issue #130) : écran de suivi plein écran, fond noir dès l'ouverture. -->
+    <style name="Theme.MG4Control.PreClimate">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
 </resources>

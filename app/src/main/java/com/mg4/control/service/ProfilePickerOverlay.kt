@@ -33,6 +33,7 @@ import com.mg4.control.model.ProfileSections
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.PopupDelay
 import com.mg4.control.util.ThemeHelper
@@ -276,7 +277,7 @@ object ProfilePickerOverlay {
 
         // ── Bouton « Ouvrir MG4Control » (toujours visible) ───────────────
         val ouvrir = view.findViewById<TextView>(R.id.overlay_btn_open_app)
-        tuileAction(ouvrir, p, danger = false)
+        tuileAction(ouvrir, p, Ton.NEUTRE)
         ouvrir.setOnClickListener {
             AppLogger.i(TAG, "Ouverture de MG4Control depuis l'overlay")
             runCatching {
@@ -288,6 +289,22 @@ object ProfilePickerOverlay {
             dismissOnMainThread(context)
         }
 
+        // ── Bouton « Garde-voiture » (firmware connu, comme son raccourci) ─
+        // Même chemin que le raccourci du volant : la fenêtre de lancement, ou l'écran de suivi
+        // si un programme tourne déjà.
+        val garder = view.findViewById<TextView>(R.id.overlay_btn_preclim)
+        val peutGarder = FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
+        if (!peutGarder) {
+            garder.visibility = View.GONE
+        } else {
+            tuileAction(garder, p, Ton.ALERTE)
+            garder.setOnClickListener {
+                AppLogger.i(TAG, "Garde-voiture depuis l'overlay")
+                dismissOnMainThread(context)              // ferme le popup profils
+                PreClimate.raccourci(context)
+            }
+        }
+
         // ── Bouton « Éteindre la voiture » (gated firmware) ───────────────
         val eteindre = view.findViewById<TextView>(R.id.overlay_btn_poweroff)
         val actions  = view.findViewById<View>(R.id.overlay_actions)
@@ -295,7 +312,7 @@ object ProfilePickerOverlay {
         if (!peutEteindre) {
             eteindre.visibility = View.GONE
         } else {
-            tuileAction(eteindre, p, danger = true)
+            tuileAction(eteindre, p, Ton.DANGER)
             eteindre.setOnClickListener {
                 dismissOnMainThread(context)              // ferme le popup profils
                 VehiclePowerOffOverlay.demander(context, "sélecteur de profils")
@@ -314,8 +331,11 @@ object ProfilePickerOverlay {
                 place.width = 0
                 place.weight = 1f
             }
-            // Une seule action : un panneau moitié moins large suffit, la luminosité prend le reste.
-            !peutEteindre -> place.width = OverlayKit.dp(themedContext, 230f)
+            // Moins de trois actions : le panneau rétrécit, la luminosité prend le reste.
+            else -> when (1 + listOf(peutGarder, peutEteindre).count { it }) {
+                1 -> place.width = OverlayKit.dp(themedContext, 230f)
+                2 -> place.width = OverlayKit.dp(themedContext, 430f)
+            }
         }
         actions.layoutParams = place
 
@@ -472,6 +492,7 @@ object ProfilePickerOverlay {
         val lignes = buildList<List<View>> {
             add(cartes)
             add((if (briVisible) prereglages else emptyList<View>()) + listOf(ouvrir) +
+                (if (peutGarder) listOf(garder) else emptyList<View>()) +
                 (if (peutEteindre) listOf(eteindre) else emptyList<View>()))
             if (briVisible) add(listOf(ligneCurseur))
         }
@@ -559,12 +580,22 @@ object ProfilePickerOverlay {
         action.setTextColor(if (actif) p.texteSecondaire else p.accent)
     }
 
-    /** Tuile d'action du bandeau ; [danger] pour celle qui éteint la voiture. */
-    private fun tuileAction(tuile: TextView, p: Palette, danger: Boolean) {
-        if (danger) OverlayKit.fond(tuile, p.dangerDoux, p.danger, p.traitFin, p.rayonTuile)
-        else OverlayKit.fond(tuile, p.bouton, p.bordure, p.traitFin, p.rayonTuile)
+    /** Teinte d'une tuile d'action : ALERTE pour le Garde-voiture, DANGER pour l'extinction. */
+    private enum class Ton { NEUTRE, ALERTE, DANGER }
+
+    /** Tuile d'action du bandeau. */
+    private fun tuileAction(tuile: TextView, p: Palette, ton: Ton) {
+        when (ton) {
+            Ton.NEUTRE -> OverlayKit.fond(tuile, p.bouton, p.bordure, p.traitFin, p.rayonTuile)
+            Ton.ALERTE -> OverlayKit.fond(tuile, p.alerteDoux, p.alerte, p.traitFin, p.rayonTuile)
+            Ton.DANGER -> OverlayKit.fond(tuile, p.dangerDoux, p.danger, p.traitFin, p.rayonTuile)
+        }
         tuile.setTextColor(p.textePrincipal)
-        tuile.compoundDrawableTintList = ColorStateList.valueOf(if (danger) p.danger else p.accent)
+        tuile.compoundDrawableTintList = ColorStateList.valueOf(when (ton) {
+            Ton.NEUTRE -> p.accent
+            Ton.ALERTE -> p.alerte
+            Ton.DANGER -> p.danger
+        })
     }
 
     /**

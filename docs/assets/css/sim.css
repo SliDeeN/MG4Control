@@ -40,6 +40,12 @@
   transform-origin: 0 0;
   transform: scale(var(--k, .6));
 }
+/* Réduite par zoom quand le navigateur le permet : la mise en page se fait à la taille affichée.
+   Avec transform, certains navigateurs (zoom de Windows, carte graphique) dessinaient un second
+   coin carré à l'intérieur des bordures arrondies. */
+@supports (zoom: 1) {
+  .sim-screen { transform: none; zoom: var(--k, .6); }
+}
 
 /* ── Jetons de l'application (clair / sombre) ─────────────────────────── */
 .app {
@@ -774,6 +780,7 @@
 .pkp-slider { flex: 1; display: flex; align-items: center; border-radius: 12px; padding: 0 14px; }
 .pkp-slider .a-slider { width: 100%; }
 .pkp-acts { flex-direction: row; gap: 10px; }
+.pkp-acts.three { width: 600px; }
 .pkp-acts.two { width: 430px; }
 .pkp-acts.one { width: 230px; }
 .pkp-acts.wide { flex: 1; }
@@ -785,6 +792,8 @@
 .pkp-act .mw-ico { color: var(--dash-accent); }
 .pkp-act.danger { background: var(--dash-danger-dim); border-color: var(--dash-danger); }
 .pkp-act.danger .mw-ico { color: var(--dash-danger); }
+.pkp-act.warn { background: var(--dash-warn-dim); border-color: var(--dash-warn); }
+.pkp-act.warn .mw-ico { color: var(--dash-warn); }
 
 /* Pop-up HVAC (overlay_hvac_popup.xml) : chauffages, cadre du joystick, compresseur et recirculation */
 .hvp:not(.heat) .ov-title { visibility: hidden; }
@@ -1120,6 +1129,184 @@
 .cls-adv i { font-style: normal; }
 .cls-advbox { display: flex; flex-direction: column; gap: 4px; }
 
+/* ── 2.6.10 : boutons flottants (FloatingButtonsOverlay) ──────────────────
+   Des pilules par-dessus tout, bordure bleue ; une bascule activée est pleine, coupée presque transparente. */
+.a-floats { position: absolute; inset: 0; z-index: 15; pointer-events: none; }
+.a-fl {
+  position: absolute; transform: translate(-50%, -50%); pointer-events: auto; touch-action: none;
+  min-width: 64px; max-width: 360px; padding: 0 18px; border-radius: 999px;
+  background: rgba(28,28,32,.72); color: #fff; border: 2px solid var(--dash-accent);
+  font-family: inherit; font-weight: 500; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  box-shadow: 0 6px 16px rgba(0,0,0,.35); cursor: pointer;
+}
+.a-fl.bar { transform: translateX(-50%); padding: 0 12px; border-width: 1px; }
+.a-fl.bold { font-weight: 800; }
+.a-fl.lit { background: var(--dash-accent); color: #0B1220; }
+.a-fl.off { background: rgba(28,28,32,.35); }
+.a-fl.flash { color: var(--dash-accent); }
+.a-fl.lit.flash { color: #0B1220; }
+.a-fl:active { transform: translate(-50%, -50%) scale(.95); }
+.a-fl.bar:active { transform: translateX(-50%) scale(.95); }
+.a-fl.moving { border-color: var(--dash-warn); transform: translate(-50%, -50%) scale(1.1); }
+.a-fl.bar.moving { transform: translateX(-50%) scale(1.1); }
+/* Halo (variante D) : un anneau bleu qui sort de la bulle et s'efface. */
+.a-fl.halo { animation: flhalo .55s ease-out; }
+@keyframes flhalo {
+  from { box-shadow: 0 0 0 0 rgba(56,189,248,.85), 0 6px 16px rgba(0,0,0,.35); }
+  to { box-shadow: 0 0 0 18px rgba(56,189,248,0), 0 6px 16px rgba(0,0,0,.35); }
+}
+.fl-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 10px; }
+.fl-row + .fl-row, .fl-edit + .fl-row { margin-top: 6px; }
+.fl-row .b { flex: none; height: 38px; padding: 0 14px; font-size: calc(13px * var(--ts, 1)); }
+.fl-row .lbl { flex: 1; min-width: 0; font-size: calc(16px * var(--ts, 1)); color: var(--text-primary); }
+.fl-row .lbl small { display: block; font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); margin-top: 2px; }
+.fl-dot {
+  flex: none; max-width: 130px; height: 30px; padding: 0 10px; border-radius: 15px; border: 2px solid var(--dash-accent);
+  background: rgba(28,28,32,.85); color: #fff; display: inline-flex; align-items: center; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.fl-dot.bold { font-weight: 800; }
+.fl-edit { margin-top: 6px; padding: 10px 12px; border: 1px solid var(--dash-accent); border-radius: 10px; background: var(--dash-accent-dim); }
+.fl-edit .b.sm { height: 40px; }
+
+/* Puces : profils (écran conducteur, boutons flottants, sons) et moments des sons */
+.cl-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0; }
+.cl-chip {
+  height: 38px; padding: 0 14px; border-radius: 19px; border: 1px solid var(--dash-border); background: var(--dash-btn);
+  color: var(--text-primary); font-family: inherit; font-size: calc(14px * var(--ts, 1)); cursor: pointer; white-space: nowrap;
+}
+.cl-chip.on { background: var(--dash-accent-dim); border-color: var(--dash-accent); color: var(--dash-accent); font-weight: 700; }
+.cl-chip.dis { opacity: .45; cursor: default; }
+.cl-chip small { font-size: .8em; opacity: .8; }
+.cl-chip.all { border-style: dashed; }
+.cls-profs { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.cls-profs .cl-chips { flex: 1; margin: 0; }
+
+/* Sons d'automatisation */
+.snd-slot { margin-top: 8px; padding: 8px 12px; border: 1px solid var(--dash-border); border-radius: 10px; background: var(--dash-section); }
+.snd-n { flex: none; min-width: 70px; font-size: calc(15px * var(--ts, 1)); }
+.snd-slot .b.sm { flex: none; height: 38px; padding: 0 14px; }
+
+/* Raccourci perso : champs de la fenêtre */
+.cs-f { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.cs-f .a-input, .cs-f .a-select { width: 100%; height: 48px; font-size: calc(16px * var(--ts, 1)); }
+.cs-note { font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); }
+
+/* Projection simulée et zone clim du haut (type 2017 dans l'app) */
+.a-proj { position: absolute; inset: 0; z-index: 12; background: linear-gradient(135deg, #1B2735, #090A0F); display: flex; align-items: center; justify-content: center; }
+.a-proj-in { text-align: center; color: #E5E7EB; padding: 0 60px; }
+.a-proj-in b { display: block; font-size: 44px; margin-bottom: 10px; }
+.a-proj-in span { font-size: 15px; color: #9CA3AF; }
+.a-proj-zone {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 320px; height: 52px; padding: 0;
+  border: 2px dashed #38BDF8; border-top: 0; border-radius: 0 0 14px 14px; background: rgba(56,189,248,.15);
+  color: #fff; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; font-size: 14px; cursor: pointer;
+}
+.a-proj-zone .mw-ico { width: 22px; height: 22px; }
+
+/* Pop-up HVAC : A/C et ECO côte à côte, débit en AUTO */
+.hvp-acrow { display: flex; gap: 8px; }
+.hvp-acrow .hvp-ac { flex: 1; min-width: 0; height: 64px; padding: 0 8px; flex-direction: column; justify-content: center; gap: 1px; }
+.hvp-acrow .hvp-ac b { flex: none; margin: 0; font-size: calc(15px * var(--ts, 1)); }
+.hvp-acrow .hvp-ac span { font-size: calc(11px * var(--ts, 1)); }
+.hvp-acrow .hvp-ac .mw-ico { width: 20px; height: 20px; }
+.hvp-ac.eco.on { background: var(--dash-eco); }
+.hvp-fanrow .ov-tile.auto { flex-direction: column; justify-content: center; }
+.hvp-fanrow .ov-tile.auto small { display: block; font-size: calc(11px * var(--ts, 1)); font-weight: 500; text-transform: none; }
+/* Débit en AUTO : trois crans sous le libellé (HvacPopupSkin, 20 × 6, écart 5). */
+.hvp-crans { display: flex; gap: 5px; margin-top: 5px; }
+.hvp-crans i { width: 20px; height: 6px; border-radius: 3px; background: var(--dash-border); }
+.hvp-crans i.on { background: var(--dash-accent); }
+
+/* ── Garde-voiture : fenêtre (PreClimatePopupOverlay) ── */
+.pcp { width: 1108px; }
+.pcp.surv { border-color: var(--dash-danger); }
+.pcp.surv .ov-head > .mw-ico { color: var(--dash-danger); }
+.pcp-body { display: flex; gap: 12px; height: 300px; }
+.pcp-left { width: 470px; gap: 10px; }
+.pcp-right { flex: 1; min-width: 0; gap: 10px; }
+.pcp-tabs { flex: none; height: 48px; }
+.pcp-durs { flex: none; height: 52px; }
+.pcp-modes { display: flex; gap: 10px; }
+.pcp-mode { flex: 1; height: 64px; justify-content: center; gap: 10px; font-size: calc(15px * var(--ts, 1)); font-weight: 700; }
+.pcp-mode .mw-ico { width: 24px; height: 24px; }
+.pcp-mode.surv .mw-ico { color: var(--dash-danger); }
+.pcp-mode.surv.on { background: var(--dash-danger-dim); border-color: var(--dash-danger); }
+.pcp-step { display: flex; align-items: center; gap: 10px; }
+.pcp-step span { flex: 1; font-size: calc(16px * var(--ts, 1)); }
+.pcp-step b { min-width: 100px; text-align: center; font-size: calc(20px * var(--ts, 1)); }
+.pcp-text { font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); white-space: pre-line; }
+.pcp-warn {
+  display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 10px;
+  background: var(--dash-warn-dim); border: 1px solid var(--dash-warn); color: var(--text-primary); font-size: calc(13px * var(--ts, 1));
+}
+.pcp-warn .mw-ico { flex: none; width: 20px; height: 20px; color: var(--dash-warn); }
+.pcp-warn.red { background: var(--dash-danger-dim); border-color: var(--dash-danger); }
+.pcp-warn.red .mw-ico { color: var(--dash-danger); }
+.pcp-foot { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.pcp-foot > span { flex: 1; font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); }
+.pcp-foot .mw-b { flex: none; width: 200px; }
+
+/* ── Garde-voiture : écran de suivi (PreClimateActivity), toujours sombre ── */
+.a-pcs {
+  position: absolute; inset: 0; z-index: 35; background: #000; color: #F4F4F5; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; --pc: #38BDF8;
+}
+.a-pcs.heat { --pc: #F59E0B; }
+.a-pcs .pcs-t { font-size: 26px; font-weight: 700; }
+.a-pcs .pcs-p { font-size: 15px; color: #A1A1AA; margin-top: 4px; }
+.a-pcs .pcs-p.acc { color: var(--pc); }
+.a-pcs .pcp-warn { margin-top: 12px; color: #F4F4F5; background: rgba(245,158,11,.12); }
+.a-pcs .pcp-warn.red { background: rgba(244,63,94,.14); }
+.pcs-btns { position: absolute; right: 22px; bottom: 18px; display: flex; gap: 10px; z-index: 4; }
+.pcs-btns .mw-b { flex: none; width: 150px; height: 48px; font-size: 15px; background: #1C1C20; border-color: #333; color: #fff; }
+.pcs-btns .mw-b.d { background: #E11D48; border-color: transparent; }
+.pcs-cd { display: flex; align-items: center; gap: 44px; max-width: 1040px; position: relative; z-index: 1; }
+.pcs-sec { text-align: center; min-width: 200px; }
+.pcs-sec b { display: block; font-size: 120px; font-weight: 300; line-height: 1; color: var(--pc); }
+.pcs-sec span { font-size: 15px; color: #A1A1AA; }
+.pcs-cdtxt { max-width: 600px; }
+.pcs-cdtxt .pcs-p { white-space: pre-line; }
+.pcs-live { display: flex; align-items: center; gap: 48px; position: relative; z-index: 1; }
+.pcs-ring { position: relative; width: 220px; height: 220px; flex: none; }
+.pcs-ring svg { width: 220px; height: 220px; display: block; }
+.pcs-ring .tr { fill: #000; stroke: #27272A; stroke-width: 10; }
+.pcs-ring .pv { fill: none; stroke: var(--pc); stroke-width: 10; stroke-linecap: round; }
+.pcs-ring.wait .pv { stroke: #71717A; }
+.pcs-rin { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.pcs-rin b { font-size: 34px; font-weight: 600; margin: 4px 0; color: var(--pc); }
+.pcs-ring.wait .pcs-rin b { color: #F4F4F5; }
+.pcs-rin small { font-size: 13px; color: #A1A1AA; }
+.pcs-info { max-width: 560px; }
+.pcs-info .pcs-p.dimtxt { margin-top: 14px; font-size: 13px; color: #71717A; }
+/* Atténué au bout de 10 s (voile), ou éteint ; un toucher le rallume. */
+.a-pcs.dim::after, .a-pcs.black::after { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; background: rgba(0,0,0,.82); }
+.a-pcs.black::after { background: #000; }
+.pcs-dog { text-align: center; position: relative; z-index: 1; max-width: 920px; }
+.pcs-dog > .mw-ico { width: 52px; height: 52px; color: var(--pc); }
+.pcs-dog .pcs-t { font-size: 34px; margin-top: 6px; }
+.pcs-temp { font-size: 96px; font-weight: 300; color: var(--pc); line-height: 1.05; margin-top: 6px; }
+.pcs-temp span { font-size: 32px; }
+.pcs-status { margin-top: 14px; font-size: 13px; color: #71717A; }
+/* Surveillance : cadre rouge fixe, pas de ligne REC. */
+.a-pcs.surv { box-shadow: inset 0 0 0 8px #F43F5E; }
+.pcs-surv { text-align: center; position: relative; z-index: 1; }
+.pcs-surv > .mw-ico { width: 110px; height: 110px; color: #F43F5E; }
+.pcs-st { font-size: 58px; font-weight: 800; color: #F43F5E; letter-spacing: .02em; }
+.pcs-end { text-align: center; max-width: 900px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.pcs-end .mw-b { flex: none; width: 220px; height: 52px; margin-top: 18px; }
+/* Particules : fines traînées sur tout l'écran, bleues (refroidit) ou orange (chauffe). */
+.pcs-parts { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.pcs-parts i {
+  position: absolute; width: var(--s); height: var(--s); border-radius: 50%; background: var(--pc); opacity: 0;
+  box-shadow: 0 0 6px var(--pc); animation: pcdrift var(--d) linear infinite; animation-delay: var(--l);
+}
+@keyframes pcdrift {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15% { opacity: var(--o); }
+  85% { opacity: var(--o); }
+  100% { transform: translate(160px, -110px); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .ov-card, .a-banner, .mw, .cgp-shine { animation: none !important; }
+  .ov-card, .a-banner, .mw, .cgp-shine, .a-fl, .pcs-parts i { animation: none !important; }
 }

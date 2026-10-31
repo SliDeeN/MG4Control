@@ -9,8 +9,14 @@ import android.graphics.drawable.Drawable
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
+import android.view.Window
 import android.view.WindowManager
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -53,6 +59,60 @@ internal object AppDialog {
         ALERTE,
         /** Efface ou éteint : ne se rattrape pas. */
         DANGER,
+    }
+
+    /**
+     * Fenêtre de SAISIE (2026-10-29, retour d'un utilisateur de la beta) : le clavier de la voiture
+     * prend la moitié de l'écran et cache les boutons, et un champ multiligne n'a qu'« Entrée »,
+     * qui ne le referme pas. Toucher à côté de la fenêtre REFERME LE CLAVIER, au lieu de fermer la
+     * fenêtre en perdant la saisie : elle ne se ferme plus que par ses boutons. « OK » d'un champ
+     * d'une ligne referme aussi le clavier.
+     *
+     * Essayé puis retiré le même jour (sa décision) : remonter la fenêtre et la réduire à la moitié
+     * du haut tant que le clavier est ouvert — trop tassé.
+     */
+    fun saisie(dialog: AlertDialog, racine: View) {
+        val window = dialog.window ?: return
+        val ctx = racine.context
+        dialog.setCanceledOnTouchOutside(false)
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+        // Le focus repose sur la carte quand le clavier est fermé : sans ça, Android le rendrait
+        // au premier champ, et le clavier pourrait revenir.
+        racine.isFocusableInTouchMode = true
+        racine.requestFocus()
+
+        fun fermerClavier() {
+            val imm = ctx.getSystemService(InputMethodManager::class.java)
+            imm?.hideSoftInputFromWindow(window.decorView.windowToken, 0)
+            if (racine.findFocus() is EditText) racine.requestFocus()
+        }
+
+        // « OK » d'un champ d'une ligne : clavier refermé.
+        fun brancherOk(v: View) {
+            if (v is EditText) {
+                v.setOnEditorActionListener { _, action, _ ->
+                    if (action == EditorInfo.IME_ACTION_DONE) { fermerClavier(); true } else false
+                }
+            } else if (v is ViewGroup) {
+                for (i in 0 until v.childCount) brancherOk(v.getChildAt(i))
+            }
+        }
+        brancherOk(racine)
+
+        // Un toucher hors de la fenêtre ne fait plus que refermer le clavier.
+        val origine = window.callback
+        window.callback = object : Window.Callback by origine {
+            override fun dispatchTouchEvent(e: MotionEvent): Boolean {
+                if (e.actionMasked == MotionEvent.ACTION_DOWN) {
+                    val decor = window.decorView
+                    if (e.x < 0 || e.y < 0 || e.x > decor.width || e.y > decor.height) {
+                        fermerClavier()
+                        return true
+                    }
+                }
+                return origine.dispatchTouchEvent(e)
+            }
+        }
     }
 
     /** Affiche [vue] et rend la fenêtre, à refermer par `dismiss()`. */

@@ -69,10 +69,11 @@ class HvacPopupTest {
     }
 
     @Test
-    fun `clim eteinte, droite la rallume au premier cran`() {
-        assertEquals(Action.Ventilation(1), HvacPopup.action(Commande.DROITE, eteinte))
+    fun `clim eteinte, droite la rallume sans imposer de cran`() {
+        // L'ordre « allumer » : la voiture reprend son état d'avant l'arrêt (2026-10-31).
+        assertEquals(Action.Allumer, HvacPopup.action(Commande.DROITE, eteinte))
         // Éteinte d'après la voiture, même si elle annonce encore son dernier cran.
-        assertEquals(Action.Ventilation(1), HvacPopup.action(Commande.DROITE, milieu.copy(fan = 4, allumee = false)))
+        assertEquals(Action.Allumer, HvacPopup.action(Commande.DROITE, milieu.copy(fan = 4, allumee = false)))
     }
 
     @Test
@@ -93,7 +94,8 @@ class HvacPopupTest {
         // Il ne l'éteint pas non plus au cran 1 : l'action « Clim ON/OFF » existe pour ça.
         assertNull(HvacPopup.pasVentilation(eteinte, -1))
         assertNull(HvacPopup.pasVentilation(milieu.copy(fan = 1), -1))
-        assertEquals(1, HvacPopup.pasVentilation(eteinte, +1))
+        // « Plus » non plus n'écrit pas de cran : l'appelant rallume la clim.
+        assertNull(HvacPopup.pasVentilation(eteinte, +1))
     }
 
     @Test
@@ -115,7 +117,8 @@ class HvacPopupTest {
         // davantage, ni rester coincée faute de pouvoir « faire un pas ».
         val hors = milieu.copy(temp = 35, fan = 0)
         assertEquals(Action.Temperature(32), HvacPopup.action(Commande.BAS, hors))
-        assertEquals(Action.Ventilation(1), HvacPopup.action(Commande.DROITE, hors))
+        // Ventilation à 0 : clim éteinte, droite la rallume.
+        assertEquals(Action.Allumer, HvacPopup.action(Commande.DROITE, hors))
     }
 
     // ── Mode AUTO : la case centrale de la croix ─────────────────────────────
@@ -299,5 +302,47 @@ class HvacPopupTest {
         // Bornes illisibles rendues égales, ou inversées : rien à situer.
         assertNull(HvacPopup.part(20, 20, 20))
         assertNull(HvacPopup.part(20, 33, 17))
+    }
+
+    // ── Consignes vérifiées (2026-10-23) ─────────────────────────────────────
+
+    @Test fun `une consigne que la voiture n a pas prise est renvoyee, trois fois au plus`() {
+        // Exemple du signalement : 2 → 4 en deux crans, la voiture reste sur 3.
+        assertEquals(HvacPopup.Suite.RENVOYER, HvacPopup.suiteConsigne(vu = 3, cible = 4, renvois = 0))
+        assertEquals(HvacPopup.Suite.RENVOYER, HvacPopup.suiteConsigne(vu = 3, cible = 4, renvois = 2))
+        assertEquals(HvacPopup.Suite.ABANDON, HvacPopup.suiteConsigne(vu = 3, cible = 4, renvois = 3))
+        assertEquals(HvacPopup.Suite.CONFIRMEE, HvacPopup.suiteConsigne(vu = 4, cible = 4, renvois = 1))
+        // Relecture illisible : on n'insiste pas.
+        assertEquals(HvacPopup.Suite.ABANDON, HvacPopup.suiteConsigne(vu = null, cible = 4, renvois = 0))
+    }
+
+    @Test fun `deux ecritures du meme reglage restent espacees`() {
+        // Première écriture : l'anti-rebond seul.
+        assertEquals(200L, HvacPopup.attenteEnvoi(maintenantMs = 10_000L, derniereMs = 0L, antiRebondMs = 200L))
+        // 50 ms après une écriture : on attend d'avoir 500 ms d'écart.
+        assertEquals(450L, HvacPopup.attenteEnvoi(10_050L, 10_000L, 200L))
+        // Longtemps après : l'anti-rebond suffit.
+        assertEquals(200L, HvacPopup.attenteEnvoi(12_000L, 10_000L, 200L))
+        // Renvoi après relecture (aucun anti-rebond) : seulement l'espacement restant.
+        assertEquals(0L, HvacPopup.attenteEnvoi(10_700L, 10_000L, 0L))
+    }
+
+    // ── Débit en AUTO (issue #178, variante A) : 2 = faible, 1 = moyen, 0 = fort ──
+
+    @Test fun `l'appui long fait tourner le debit de faible a fort puis revient`() {
+        assertEquals(1, HvacPopup.debitSuivant(2))
+        assertEquals(0, HvacPopup.debitSuivant(1))
+        assertEquals(2, HvacPopup.debitSuivant(0))
+    }
+
+    @Test fun `un debit inconnu repart de faible`() {
+        assertEquals(2, HvacPopup.debitSuivant(7))
+    }
+
+    @Test fun `les crans sous AUTO comptent un pour faible, trois pour fort`() {
+        assertEquals(1, HvacPopup.crans(2))
+        assertEquals(2, HvacPopup.crans(1))
+        assertEquals(3, HvacPopup.crans(0))
+        assertEquals(0, HvacPopup.crans(null))
     }
 }

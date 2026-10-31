@@ -11,9 +11,11 @@ import android.os.SystemClock
 import android.provider.Settings
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
+import com.mg4.control.MainActivity
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.service.HvacPopupOverlay
 import com.mg4.control.service.MG4ControlService
+import com.mg4.control.service.PreClimatePopupOverlay
 import com.mg4.control.service.ProfileConfirmOverlay
 import com.mg4.control.service.ProfilePickerOverlay
 import com.mg4.control.shortcut.PressType
@@ -90,6 +92,12 @@ class KeyCaptureService : AccessibilityService() {
     private val attentes = mutableMapOf<Int, Attente>()
 
     /**
+     * Clic central enfoncé dans le pop-up HVAC (issue #178) : il se joue au RELÂCHEMENT, et tenu
+     * une seconde il fait avancer le débit en AUTO d'un cran — d'où l'enfoncement ET le relâchement transmis.
+     */
+    private val centresHvac = mutableSetOf<Int>()
+
+    /**
      * Touches interceptées pour un raccourci avancé, entre leur DOWN et leur UP.
      *
      * La décision est prise UNE fois, au DOWN, puis tenue jusqu'au UP : elle dépend du profil actif,
@@ -113,6 +121,30 @@ class KeyCaptureService : AccessibilityService() {
     /** `Instrumentation.sendKeySync` refuse le thread principal : les renvois ont leur propre fil. */
     private val injecteur = Executors.newSingleThreadExecutor()
 
+    /**
+     * Raccourci de secours (Réglages › Avancé) : le clic central du joystick droit TENU
+     * [SECOURS_MS] ouvre MG4Control — de quoi revenir à l'appli sans icône à portée, en Mode Garage
+     * notamment. La touche n'est pas prise : elle suit son chemin habituel.
+     */
+    private val ouvrirApp = Runnable {
+        AppLogger.i(TAG, "raccourci de secours : clic central tenu ${SECOURS_MS / 1000} s → ouverture de MG4Control")
+        runCatching {
+            startActivity(Intent(this, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+        }.onFailure { AppLogger.w(TAG, "raccourci de secours : ouverture impossible — ${it.message}") }
+    }
+
+    private fun secours(event: KeyEvent) {
+        if (event.keyCode != CODE_SECOURS) return
+        when {
+            event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 -> {
+                handler.removeCallbacks(ouvrirApp)
+                if (GarageMode.isRescueOn(this)) handler.postDelayed(ouvrirApp, SECOURS_MS)
+            }
+            event.action == KeyEvent.ACTION_UP -> handler.removeCallbacks(ouvrirApp)
+        }
+    }
+
     override fun onKeyEvent(event: KeyEvent?): Boolean {
         // Tout est encapsulé : une exception qui remonterait d'ici déciderait à notre place du
         // sort de la touche. On ne laisse jamais une erreur avaler une commande du volant.
@@ -122,6 +154,10 @@ class KeyCaptureService : AccessibilityService() {
 
             // Notre propre renvoi : il appartient au système, on n'y touche pas.
             if (rejeux[event.downTime] == code) return false
+
+            // Raccourci de secours : suivi en parallèle de tout le reste, sans jamais prendre la
+            // touche — Mode Garage compris, où rien d'autre n'est intercepté.
+            secours(event)
 
             if (event.action == KeyEvent.ACTION_DOWN) {
                 AppLogger.i(TAG, "TOUCHE keycode=$code (${KeyEvent.keyCodeToString(code)}) " +
@@ -156,6 +192,7 @@ class KeyCaptureService : AccessibilityService() {
             if (code in navigationEnCours) {
                 if (event.action == KeyEvent.ACTION_UP) {
                     navigationEnCours.remove(code)
+                    if (centresHvac.remove(code)) HvacPopupOverlay.centreRelache()
                     // Relâchée avant le seuil : ce n'était pas le raccourci, c'était un déplacement.
                     attentes.remove(code)?.let { a ->
                         handler.removeCallbacks(a.minuterie)
@@ -194,8 +231,18 @@ class KeyCaptureService : AccessibilityService() {
             if (commande != null && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 val confirmation = ProfileConfirmOverlay.isShowing()
                 val profils = ProfilePickerOverlay.isShowing()
-                if (confirmation || profils || HvacPopupOverlay.isShowing()) {
+                val preclim = PreClimatePopupOverlay.isShowing()
+                if (confirmation || profils || preclim || HvacPopupOverlay.isShowing()) {
                     navigationEnCours.add(code)
+                    // Pop-up HVAC, clic central : l'appui maintenu fait avancer le débit en AUTO.
+                    // Il passe avant l'appui long qui refermerait le pop-up par son raccourci : une
+                    // même touche ne peut pas faire les deux, et le pop-up se ferme aussi autrement.
+                    if (!confirmation && !profils && !preclim && commande == JoystickFocus.Commande.VALIDER) {
+                        AppLogger.i(TAG, "touche $code — pop-up HVAC → clic central enfoncé")
+                        centresHvac.add(code)
+                        HvacPopupOverlay.centreEnfonce()
+                        return true
+                    }
                     val naviguer: () -> Unit = {
                         when {
                             confirmation -> {
@@ -205,6 +252,10 @@ class KeyCaptureService : AccessibilityService() {
                             profils -> {
                                 AppLogger.i(TAG, "touche $code — navigation popup profils → ${commande.name}")
                                 ProfilePickerOverlay.naviguer(commande)
+                            }
+                            preclim -> {
+                                AppLogger.i(TAG, "touche $code — pop-up pré-climatisation → ${commande.name}")
+                                PreClimatePopupOverlay.naviguer(commande)
                             }
                             else -> {
                                 AppLogger.i(TAG, "touche $code — pop-up HVAC → ${commande.name}")
@@ -217,6 +268,9 @@ class KeyCaptureService : AccessibilityService() {
                         confirmation -> null
                         profils -> if (ouvreEnAppuiLong(code, ShortcutAction.PROFILE_PICKER)) {
                             { ProfilePickerOverlay.fermerParRaccourci(this) }
+                        } else null
+                        preclim -> if (ouvreEnAppuiLong(code, ShortcutAction.PRE_CLIMATE)) {
+                            { PreClimatePopupOverlay.fermerParRaccourci() }
                         } else null
                         else -> if (ouvreEnAppuiLong(code, ShortcutAction.HVAC_POPUP)) {
                             { HvacPopupOverlay.fermerParRaccourci() }
@@ -435,6 +489,8 @@ class KeyCaptureService : AccessibilityService() {
         longDeclenche.clear()
         doubleDeclenche.clear()
         navigationEnCours.clear()
+        if (centresHvac.isNotEmpty()) HvacPopupOverlay.centreAnnule()
+        centresHvac.clear()
         attentes.clear()
         touchesPrises.clear()
         modeles.clear()
@@ -445,6 +501,10 @@ class KeyCaptureService : AccessibilityService() {
     }
 
     companion object {
+        /** Raccourci de secours : clic central du joystick droit, tenu 5 s. */
+        private const val CODE_SECOURS = 301
+        private const val SECOURS_MS = 5_000L
+
         private const val TAG = "MG4_KEYCAP"
 
         /**

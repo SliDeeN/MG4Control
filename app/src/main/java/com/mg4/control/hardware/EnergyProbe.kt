@@ -131,6 +131,9 @@ object EnergyProbe {
         Signal("Trajet combiné : conso moyenne", 0x21407b82, null),
         Signal("Autonomie restante (SENSOR)", 0x21401565, null),
         Signal("Autonomie restante (BMS)", 0x2140f41c, BMS_SERVICE),
+        // Unité choisie dans la voiture, suivie par « Auto » sur l'écran conducteur (2026-10-23) :
+        // 1 = miles d'après MG4Dash et carapi A9, à confirmer sur une voiture réglée en miles.
+        Signal("Unité de distance (0 km, 1 miles)", 0x2140f439, BMS_SERVICE),
 
         // ── Les six drapeaux « V » de la famille BMS ────────────────────────
         // Relevé du 2026-09-18 : le SoC était JUSTE avec son drapeau à false, et deux sentinelles

@@ -21,13 +21,18 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
+import com.mg4.control.util.CustomShortcutSettings
 import com.mg4.control.accessibility.AdvancedShortcuts
 import com.mg4.control.accessibility.KeyCaptureService
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.DrivingProfile
+import com.mg4.control.model.PreClimatePlan
+import com.mg4.control.model.PreClimateScreenMode
 import com.mg4.control.model.RegenLevel
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.service.ClusterModuleOverlay
 import com.mg4.control.service.OverlayKit
+import com.mg4.control.service.PreClimate
 import com.mg4.control.shortcut.AudioSource
 import com.mg4.control.shortcut.AudioSourceCycle
 import com.mg4.control.shortcut.PressType
@@ -35,7 +40,9 @@ import com.mg4.control.shortcut.ProfileCycle
 import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.util.FirmwareInfo
+import com.mg4.control.util.PreClimateSettings
 
 class ShortcutsFragment : Fragment() {
 
@@ -53,6 +60,11 @@ class ShortcutsFragment : Fragment() {
 
     /** Liste de base (sans label custom) — partagée pour tous les spinners. */
     private var baseActionItems: List<ActionItem> = emptyList()
+
+    /** Page « Boutons flottants » (2026-10-23). */
+    private val floatingPage = FloatingButtonsPage()
+    /** Raccourcis perso (issue #172) : leur page, dans le rail. */
+    private val customPage = CustomShortcutsPage()
 
     /** Clés identifiant chaque ligne slot × type de pression. */
     private val slotPressList = listOf(
@@ -168,6 +180,7 @@ class ShortcutsFragment : Fragment() {
                 add(ActionItem(getString(R.string.shortcuts_action_defrost_front),   ShortcutAction.DEFROST_FRONT_TOGGLE))
                 add(ActionItem(getString(R.string.shortcuts_action_defrost_rear),    ShortcutAction.DEFROST_REAR_TOGGLE))
                 add(ActionItem(getString(R.string.shortcuts_action_hvac_recirc),     ShortcutAction.HVAC_RECIRC_CYCLE))
+                add(ActionItem(getString(R.string.shortcuts_action_hvac_autovol),    ShortcutAction.HVAC_AUTO_VOLUME_CYCLE))
                 add(ActionItem(getString(R.string.shortcuts_action_hvac_popup),      ShortcutAction.HVAC_POPUP))
             }
             // Feux de route automatiques : même condition que la carte Éclairage du Dashboard.
@@ -203,8 +216,17 @@ class ShortcutsFragment : Fragment() {
             add(ActionItem(getString(R.string.shortcuts_action_audio_cycle),    ShortcutAction.AUDIO_SOURCE_CYCLE))
             // Pop-up de charge : toujours proposé (2026-10-17) ; option coupée, il dit où l'activer.
             add(ActionItem(getString(R.string.shortcuts_action_charge_popup),  ShortcutAction.CHARGE_POPUP))
+            // Pré-climatisation (issue #130) : verrouillage, clim et extinction existent sur tout
+            // firmware connu.
+            if (isKnown) add(ActionItem(getString(R.string.shortcuts_action_preclim), ShortcutAction.PRE_CLIMATE))
+            // Android Auto / CarPlay : le service AllGo est sur les six firmwares ; vérifié quand même,
+            // un raccourci qui ne trouverait personne ne dirait que « aucun téléphone ».
+            if (allgoPresent()) add(ActionItem(getString(R.string.shortcuts_action_projection), ShortcutAction.PROJECTION))
             add(ActionItem(getString(R.string.shortcuts_action_open_app),       ShortcutAction.OPEN_APP))
             add(ActionItem(getString(R.string.shortcuts_action_open_custom_app),ShortcutAction.OPEN_CUSTOM_APP))
+            add(ActionItem(getString(R.string.shortcuts_action_android_settings), ShortcutAction.ANDROID_SETTINGS))
+            // Raccourci perso (issue #172) : appli, fonction d'une autre appli, diffusion, lien, webhook.
+            add(ActionItem(getString(R.string.shortcuts_action_custom),         ShortcutAction.CUSTOM))
             if (MG4Hardware.hasVehiclePowerOff()) {
                 add(ActionItem(getString(R.string.shortcuts_action_vehicle_power_off), ShortcutAction.VEHICLE_POWER_OFF))
             }
@@ -226,6 +248,14 @@ class ShortcutsFragment : Fragment() {
         setupRegenCycle(view)
         setupProfileCycle(view)
         setupSourceCycle(view)
+        setupPreClimatePage(view)
+        // Boutons flottants : les actions du volant, sans celles qui demandent un réglage à part
+        // (profil ou appli à choisir) — la bulle n'a que son raccourci.
+        floatingPage.bind(this, view, baseActionItems
+            .filter { it.action !in setOf(ShortcutAction.NONE, ShortcutAction.APPLY_PROFILE, ShortcutAction.OPEN_CUSTOM_APP) }
+            .map { it.label to it.action })
+        // Raccourcis perso : un changement repeint les emplacements qui en lancent un.
+        customPage.bind(this, view) { majLibellesPerso() }
         restoreState()
 
         // En dernier : le rail décide quelles pages existent, il lui faut l'état final.
@@ -261,6 +291,13 @@ class ShortcutsFragment : Fragment() {
         // L utilisateur revient peut-etre des reglages d accessibilite : l etat affiche doit
         // suivre, sinon il resterait sur "inactif" apres avoir active le service.
         advancedRefresh?.invoke()
+        floatingPage.surPageVisible(rootView?.findViewById<View>(R.id.page_sc_floating)?.visibility == View.VISIBLE)
+    }
+
+    override fun onPause() {
+        // Hors de l'écran, les bulles redeviennent celles du profil en cours.
+        floatingPage.surPageVisible(false)
+        super.onPause()
     }
 
     override fun onDestroyView() {
@@ -497,6 +534,7 @@ class ShortcutsFragment : Fragment() {
                 when (action) {
                     ShortcutAction.OPEN_CUSTOM_APP -> choisirAppAvancee(slot, enregistrer)
                     ShortcutAction.APPLY_PROFILE   -> choisirProfilAvance(slot, enregistrer)
+                    ShortcutAction.CUSTOM          -> choisirPersoAvance(slot, enregistrer)
                     else -> enregistrer()
                 }
             }
@@ -541,6 +579,12 @@ class ShortcutsFragment : Fragment() {
      * rafraîchissent les spinners de l'écran classique et remettraient un emplacement à NONE en
      * cas d'annulation. Les réutiliser ici aurait modifié les raccourcis classiques au passage.
      */
+    /** Service AllGo du raccourci Android Auto / CarPlay (`com.allgo.rui`), sur les six firmwares connus. */
+    private fun allgoPresent(): Boolean = runCatching {
+        requireContext().packageManager.getPackageInfo("com.allgo.rui", 0)
+        true
+    }.getOrDefault(false)
+
     private fun choisirAppAvancee(slot: String, apres: () -> Unit) {
         val cle = "shortcut_${slot}_custom_app"
         choisirUneApp(dejaChoisie = prefs.getString(cle, null)) { paquet, _ ->
@@ -635,6 +679,9 @@ class ShortcutsFragment : Fragment() {
             ShortcutAction.APPLY_PROFILE ->
                 prefs.getString("shortcut_${slot}_profile_id", null)
                     ?.let { id -> ProfileManager(requireContext()).getById(id)?.name } ?: generique
+            ShortcutAction.CUSTOM ->
+                CustomShortcutSettings.get(requireContext(), prefs.getString("shortcut_${slot}_custom_id", null))
+                    ?.name ?: generique
             else -> generique
         }
     }
@@ -756,6 +803,7 @@ class ShortcutsFragment : Fragment() {
             when (action) {
                 ShortcutAction.OPEN_CUSTOM_APP -> choisirAppAvancee(slot, enregistrer)
                 ShortcutAction.APPLY_PROFILE   -> choisirProfilAvance(slot, enregistrer)
+                ShortcutAction.CUSTOM          -> choisirPersoAvance(slot, enregistrer)
                 else -> enregistrer()
             }
         }
@@ -1109,7 +1157,10 @@ class ShortcutsFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_regen)    to view.findViewById<ViewGroup>(R.id.page_sc_regen),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_profiles) to view.findViewById<ViewGroup>(R.id.page_sc_profiles),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_sources)  to view.findViewById<ViewGroup>(R.id.page_sc_sources),
-            view.findViewById<MaterialButton>(R.id.btn_sc_sub_list)     to view.findViewById<ViewGroup>(R.id.page_sc_list)
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_preclim)  to view.findViewById<ViewGroup>(R.id.page_sc_preclim),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_list)     to view.findViewById<ViewGroup>(R.id.page_sc_list),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_floating) to view.findViewById<ViewGroup>(R.id.page_sc_floating),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_custom)   to view.findViewById<ViewGroup>(R.id.page_sc_custom)
         )
         val pageCycle   = tabs[4].second
         val pageProfils = tabs[5].second
@@ -1123,7 +1174,8 @@ class ShortcutsFragment : Fragment() {
             tabs[3].second to ShortcutAction.ADAS_CYCLE,
             tabs[4].second to ShortcutAction.REGEN_CYCLE,
             tabs[5].second to ShortcutAction.PROFILE_CYCLE,
-            tabs[6].second to ShortcutAction.AUDIO_SOURCE_CYCLE
+            tabs[6].second to ShortcutAction.AUDIO_SOURCE_CYCLE,
+            tabs[7].second to ShortcutAction.PRE_CLIMATE
         )
         setupAdvancedShortcuts(view)
         val scroll = view.findViewById<ScrollView>(R.id.scroll_shortcuts)
@@ -1168,6 +1220,8 @@ class ShortcutsFragment : Fragment() {
                 btn.setTextColor(if (on) railOn else textOff)
                 btn.strokeColor = ColorStateList.valueOf(if (on) railOn else border)
             }
+            // Page des boutons flottants à l'écran : les bulles montrées sont celles du profil qu'elle règle.
+            floatingPage.surPageVisible(isResumed && tabs.first { it.second.id == R.id.page_sc_floating }.second.visibility == View.VISIBLE)
             // Aucune entrée n'est masquée par le CONTEXTE : la liste reste atteignable depuis
             // n'importe quel onglet, et les pages de réglage ne dépendent que de l'attribution
             // de leur fonction. La règle de contexte qui cachait la liste hors de l'onglet
@@ -1184,6 +1238,7 @@ class ShortcutsFragment : Fragment() {
                 // Idem pour le cycle de profils, qui relit en plus la liste des profils.
                 if (page === pageProfils) rechargerCycleProfils?.invoke()
                 if (page === pageSources) rechargerCycleSources?.invoke()
+                if (page.id == R.id.page_sc_custom) customPage.peindre()
                 scroll?.scrollTo(0, 0)
                 apply()
             }
@@ -1230,6 +1285,7 @@ class ShortcutsFragment : Fragment() {
                             when (action) {
                                 ShortcutAction.OPEN_CUSTOM_APP -> showAppPickerDialog(slotKey)
                                 ShortcutAction.APPLY_PROFILE   -> showProfilePickerDialog(slotKey)
+                                ShortcutAction.CUSTOM          -> showCustomPickerDialog(slotKey)
                                 else -> {}
                             }
                         }
@@ -1267,9 +1323,65 @@ class ShortcutsFragment : Fragment() {
             when (item.action) {
                 ShortcutAction.OPEN_CUSTOM_APP -> customAppLabel
                 ShortcutAction.APPLY_PROFILE   -> profileLabel
+                ShortcutAction.CUSTOM          -> libellePerso(slotKey)
                 else                           -> item.label
             }
         }.toMutableList()
+    }
+
+    // ── Raccourcis perso (issue #172) ────────────────────────────────────────
+
+    /** « Perso : Dashcam : enregistrer », ou le nom générique s'il n'y en a pas (ou plus). */
+    private fun libellePerso(slotKey: String): String =
+        CustomShortcutSettings.get(requireContext(), prefs.getString("shortcut_${slotKey}_custom_id", null))
+            ?.let { getString(R.string.shortcuts_custom_prefix) + " " + it.name }
+            ?: getString(R.string.shortcuts_action_custom)
+
+    /**
+     * Choisir le raccourci perso d'un emplacement du volant — « Créer… » au bout de la liste l'ouvre
+     * et l'attribue aussitôt. Rien de choisi alors que rien ne l'était : retour à « aucune action ».
+     */
+    private fun showCustomPickerDialog(slotKey: String) {
+        val cle = "shortcut_${slotKey}_custom_id"
+        CustomShortcutDialog.choisir(requireContext(), prefs.getString(cle, null),
+            onAnnule = {
+                if (CustomShortcutSettings.get(requireContext(), prefs.getString(cle, null)) == null) {
+                    spinnerViews[slotKey]?.let { spinner ->
+                        spinner.setSelection(0)
+                        saveInt("shortcut_$slotKey", ShortcutAction.NONE.id)
+                    }
+                }
+            },
+        ) { c ->
+            prefs.edit().putString(cle, c.id).apply()
+            majLibellePerso(slotKey)
+            customPage.peindre()
+        }
+    }
+
+    private fun choisirPersoAvance(slot: String, apres: () -> Unit) {
+        val cle = "shortcut_${slot}_custom_id"
+        CustomShortcutDialog.choisir(requireContext(), prefs.getString(cle, null)) { c ->
+            prefs.edit().putString(cle, c.id).apply()
+            customPage.peindre()
+            apres()
+        }
+    }
+
+    /** Le libellé « Perso : … » d'un emplacement, dans sa liste. */
+    private fun majLibellePerso(slotKey: String) {
+        val labels  = spinnerLabelLists[slotKey] ?: return
+        val adapter = spinnerAdapters[slotKey]   ?: return
+        val idx = baseActionItems.indexOfFirst { it.action == ShortcutAction.CUSTOM }
+        if (idx < 0) return
+        labels[idx] = libellePerso(slotKey)
+        adapter.notifyDataSetChanged()
+    }
+
+    /** Un raccourci perso créé, renommé ou supprimé : tous les emplacements, et la liste avancée. */
+    private fun majLibellesPerso() {
+        spinnerLabelLists.keys.forEach { majLibellePerso(it) }
+        rootView?.let { refreshAdvancedList(it) }
     }
 
     /** Retourne le label de l'application (packageName) ou null si introuvable. */
@@ -1447,6 +1559,59 @@ class ShortcutsFragment : Fragment() {
         if (v is ViewGroup) {
             for (i in 0 until v.childCount) setChildrenEnabled(v.getChildAt(i), enabled)
         }
+    }
+
+    /**
+     * Page « Pré-climatisation » (issue #130) : décompte avant verrouillage, seuil de batterie et
+     * écran pendant l'attente. Enregistré à chaque appui — rien à valider.
+     */
+    private fun setupPreClimatePage(view: View) {
+        val ctx = requireContext()
+        val tvLock = view.findViewById<TextView>(R.id.tv_preclim_lock)
+        val tvSoc = view.findViewById<TextView>(R.id.tv_preclim_soc)
+        val choix = mapOf(
+            PreClimateScreenMode.NORMAL to view.findViewById<MaterialButton>(R.id.btn_preclim_screen_normal),
+            PreClimateScreenMode.DIM to view.findViewById(R.id.btn_preclim_screen_dim),
+            PreClimateScreenMode.OFF to view.findViewById(R.id.btn_preclim_screen_off),
+        )
+        fun peindre() {
+            tvLock.text = getString(R.string.preclim_value_seconds, PreClimateSettings.lockSeconds(ctx))
+            tvSoc.text = getString(R.string.preclim_value_percent, PreClimateSettings.minSoc(ctx))
+            highlightConfig(choix.mapKeys { it.key.ordinal }, PreClimateSettings.screenMode(ctx).ordinal)
+        }
+        AppDialog.repeter(view.findViewById(R.id.btn_preclim_lock_minus)) {
+            PreClimateSettings.setLockSeconds(ctx, PreClimateSettings.lockSeconds(ctx) - PreClimatePlan.LOCK_STEP_S); peindre()
+        }
+        AppDialog.repeter(view.findViewById(R.id.btn_preclim_lock_plus)) {
+            PreClimateSettings.setLockSeconds(ctx, PreClimateSettings.lockSeconds(ctx) + PreClimatePlan.LOCK_STEP_S); peindre()
+        }
+        AppDialog.repeter(view.findViewById(R.id.btn_preclim_soc_minus)) {
+            PreClimateSettings.setMinSoc(ctx, PreClimateSettings.minSoc(ctx) - PreClimatePlan.SOC_STEP); peindre()
+        }
+        AppDialog.repeter(view.findViewById(R.id.btn_preclim_soc_plus)) {
+            PreClimateSettings.setMinSoc(ctx, PreClimateSettings.minSoc(ctx) + PreClimatePlan.SOC_STEP); peindre()
+        }
+        choix.forEach { (mode, bouton) -> bouton.setOnClickListener { PreClimateSettings.setScreenMode(ctx, mode); peindre() } }
+        // Fiche sur l'écran conducteur : réservée aux firmwares où le combiné montre l'écran central.
+        view.findViewById<View>(R.id.row_preclim_cluster).visibility =
+            if (ClusterModuleSettings.isSupported()) View.VISIBLE else View.GONE
+        view.findViewById<Switch>(R.id.switch_preclim_cluster).apply {
+            isChecked = PreClimateSettings.showOnCluster(ctx)
+            setOnCheckedChangeListener { _, coche ->
+                PreClimateSettings.setShowOnCluster(ctx, coche)
+                AppLogger.i(PreClimate.TAG, "fiche sur l'écran conducteur ${if (coche) "activée" else "désactivée"}")
+                // Programme en cours : la fiche apparaît ou part tout de suite.
+                ClusterModuleOverlay.refresh(ctx, "réglage de la pré-climatisation")
+            }
+        }
+        view.findViewById<Switch>(R.id.switch_preclim_unlock).apply {
+            isChecked = PreClimateSettings.unlockReminder(ctx)
+            setOnCheckedChangeListener { _, coche ->
+                PreClimateSettings.setUnlockReminder(ctx, coche)
+                AppLogger.i(PreClimate.TAG, "rappel avant le départ ${if (coche) "activé" else "désactivé"}")
+            }
+        }
+        peindre()
     }
 
     private fun highlightConfig(map: Map<Int, MaterialButton?>, active: Int) {

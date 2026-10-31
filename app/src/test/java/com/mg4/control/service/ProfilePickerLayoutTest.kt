@@ -63,6 +63,7 @@ class ProfilePickerLayoutTest {
         assertNotNull(view.findViewById<Slider>(R.id.overlay_bri_slider))
         assertNotNull(view.findViewById<View>(R.id.overlay_actions))
         assertNotNull(view.findViewById<TextView>(R.id.overlay_btn_open_app))
+        assertNotNull(view.findViewById<TextView>(R.id.overlay_btn_preclim))
         assertNotNull(view.findViewById<TextView>(R.id.overlay_btn_poweroff))
     }
 

@@ -2,11 +2,14 @@ package com.mg4.control.util
 
 import android.content.Context
 import com.mg4.control.model.AverageUnit
+import com.mg4.control.model.ClusterConfig
 import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ConsumptionUnit
+import com.mg4.control.model.DistanceUnit
+import com.mg4.control.model.PowerScale
 import kotlin.math.roundToInt
 
 /**
@@ -14,6 +17,11 @@ import kotlin.math.roundToInt
  * défaut, et un module par onglet du combiné — Navigation et Musique, les seuls qui montrent
  * l'écran central (2026-10-14). Relu à chaque relevé : en changer vaut tout de suite, sans
  * réafficher la fenêtre.
+ *
+ * Depuis le 2026-10-24, ces réglages appartiennent à chaque profil ([ClusterConfig]) : les lectures
+ * à partir d'un `Context` rendent ceux du profil que suit le combiné ([ClusterProfiles.effective]).
+ * Les clés ci-dessous ne gardent que les réglages communs d'avant : repris par chaque profil à la
+ * mise à jour, ils ne valent plus que tant qu'il n'existe aucun profil.
  */
 object ClusterModuleSettings {
 
@@ -41,6 +49,11 @@ object ClusterModuleSettings {
     const val KEY_REFRESH = "cluster_refresh_ms"
     /** Unité de la consommation (2026-10-15), Wh/km par défaut. */
     const val KEY_UNIT = "cluster_consumption_unit"
+    /**
+     * Unité de distance de tout le module : km, miles (2026-10-23) ou « auto » = comme la voiture
+     * — le défaut quand rien n'est enregistré, depuis le même jour.
+     */
+    const val KEY_DISTANCE = "cluster_distance_unit"
 
     /**
      * Actualisation de la puissance, de la vitesse et de la jauge, en ms : 0,1 à 1 s par pas de
@@ -73,82 +86,156 @@ object ClusterModuleSettings {
     const val STEP_ANIMATION_MS = 100
     const val DEFAULT_ANIMATION_MS = 800
 
-    fun isEnabled(ctx: Context?): Boolean =
-        ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getBoolean(KEY_ENABLED, false) ?: false
+    // ── Réglages du profil que suit le combiné, relus à chaque relevé ────────
+
+    fun isEnabled(ctx: Context?): Boolean = isEnabled(ClusterProfiles.effective(ctx))
 
     /** Module de [tab], ou `null` pour « Aucun » et pour un onglet dessiné par le combiné. */
-    fun moduleFor(ctx: Context?, tab: ClusterTab): ClusterModule? {
-        val prefs = ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val cle = keyFor(tab) ?: return null
-        return resolveTab(tab, prefs?.getString(cle, null), prefs?.getString(KEY_MODULE, null))
+    fun moduleFor(ctx: Context?, tab: ClusterTab): ClusterModule? = moduleFor(ClusterProfiles.effective(ctx), tab)
+
+    fun consumptionUnit(ctx: Context?): ConsumptionUnit = consumptionUnit(ClusterProfiles.effective(ctx))
+
+    fun refreshMs(ctx: Context?): Int = refreshMs(ClusterProfiles.effective(ctx))
+
+    fun style(ctx: Context?): ClusterGaugeStyle = style(ClusterProfiles.effective(ctx))
+
+    /** Choix enregistré : km ou miles, `null` = Auto (« auto » enregistré, ou aucun choix). */
+    fun distanceChoice(ctx: Context?): DistanceUnit? = distanceChoice(ClusterProfiles.effective(ctx))
+
+    /**
+     * Le choix, sinon [vehicle] — l'unité de la voiture, que l'appelant tient de
+     * `VehicleDistanceUnit.connue()` — et km si elle n'est pas connue.
+     */
+    fun distanceUnit(ctx: Context?, vehicle: DistanceUnit?): DistanceUnit =
+        distanceUnit(ClusterProfiles.effective(ctx), vehicle)
+
+    /** Sans choix, l'unité de la jauge. */
+    fun averageUnit(ctx: Context?): AverageUnit = averageUnit(ClusterProfiles.effective(ctx))
+
+    fun pill(ctx: Context?): ClusterPill = pill(ClusterProfiles.effective(ctx))
+
+    fun animationMs(ctx: Context?): Int = animationMs(ClusterProfiles.effective(ctx))
+
+    // ── Fin de l'échelle de puissance (issue #165) ───────────────────────────
+    // Le CHOIX appartient au profil comme le reste de la carte ; le plafond APPRIS est celui de la
+    // voiture, commun à tous les profils.
+
+    const val KEY_POWER_LEARNED = "cluster_power_learned"
+    const val KEY_POWER_PEAKS = "cluster_power_peaks"
+
+    /** Fin de l'échelle pour le profil que suit le combiné. */
+    fun fullScaleKw(ctx: Context?): Float = fullScaleKw(ClusterProfiles.effective(ctx), learnedPowerKw(ctx))
+
+    fun fullScaleKw(c: ClusterConfig, appris: Int): Float = PowerScale.pleineEchelle(powerMaxChoice(c), appris)
+
+    /** Puissance maxi choisie, ou `null` pour Auto. */
+    fun powerMaxChoice(c: ClusterConfig): Int? = c.powerMax?.takeIf { it in PowerScale.CHOIX_KW }
+
+    fun learnedPowerKw(ctx: Context?): Int =
+        ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getInt(KEY_POWER_LEARNED, PowerScale.DEPART_KW)
+            ?.takeIf { it > 0 } ?: PowerScale.DEPART_KW
+
+    /** Pointes des derniers trajets, une par trajet. */
+    fun powerPeaks(ctx: Context): List<Float> =
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_POWER_PEAKS, null).orEmpty()
+            .split(',').mapNotNull { it.trim().toFloatOrNull() }
+
+    fun saveLearnedPower(ctx: Context, plafond: Int, pointes: List<Float>? = null) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().apply {
+            putInt(KEY_POWER_LEARNED, plafond)
+            // Nombres pour machine : toujours le point décimal (piège de la virgule sur la voiture).
+            pointes?.let { putString(KEY_POWER_PEAKS, it.joinToString(",") { p -> p.roundToInt().toString() }) }
+        }.apply()
     }
 
-    fun setModuleFor(ctx: Context, tab: ClusterTab, module: ClusterModule?) {
-        val cle = keyFor(tab) ?: return
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(cle, module?.key ?: NONE).apply()
+    // ── Réglages communs d'avant les profils ─────────────────────────────────
+
+    /** Les réglages communs, tels qu'enregistrés avant le 2026-10-24 (ou sans aucun profil). */
+    fun legacy(ctx: Context): ClusterConfig {
+        val p = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return legacyConfig(
+            enabled = p.getBoolean(KEY_ENABLED, false),
+            navigation = p.getString(KEY_TAB_NAVIGATION, null),
+            media = p.getString(KEY_TAB_MEDIA, null),
+            legacyModule = p.getString(KEY_MODULE, null),
+            unit = p.getString(KEY_UNIT, null),
+            distance = p.getString(KEY_DISTANCE, null),
+            style = p.getString(KEY_STYLE, null),
+            average = p.getString(KEY_AVG_UNIT, null),
+            pill = p.getString(KEY_PILL, null),
+            refreshMs = if (p.contains(KEY_REFRESH)) p.getInt(KEY_REFRESH, DEFAULT_REFRESH_MS) else null,
+            animationMs = if (p.contains(KEY_ANIMATION)) p.getInt(KEY_ANIMATION, DEFAULT_ANIMATION_MS) else null,
+        )
     }
 
-    fun setEnabled(ctx: Context, on: Boolean) {
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ENABLED, on).apply()
-    }
-
-    /** Relue à chaque relevé, comme le reste. */
-    fun consumptionUnit(ctx: Context?): ConsumptionUnit =
-        ConsumptionUnit.fromKey(ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_UNIT, null))
-
-    fun setConsumptionUnit(ctx: Context, unit: ConsumptionUnit) {
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_UNIT, unit.key).apply()
-    }
-
-    /** Relu à chaque relevé : changer le curseur vaut tout de suite. */
-    fun refreshMs(ctx: Context?): Int =
-        sanitizeRefresh(ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getInt(KEY_REFRESH, DEFAULT_REFRESH_MS))
-
-    fun setRefreshMs(ctx: Context, ms: Int) {
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_REFRESH, sanitizeRefresh(ms)).apply()
-    }
-
-    /** Relu à chaque relevé : changer de style vaut tout de suite. */
-    fun style(ctx: Context?): ClusterGaugeStyle =
-        ClusterGaugeStyle.fromKey(ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_STYLE, null))
-
-    fun setStyle(ctx: Context, style: ClusterGaugeStyle) {
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_STYLE, style.key).apply()
-    }
-
-    /** Relue à chaque relevé ; sans choix, l'unité de la jauge. */
-    fun averageUnit(ctx: Context?): AverageUnit = AverageUnit.resolve(
-        ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_AVG_UNIT, null), consumptionUnit(ctx))
-
-    fun setAverageUnit(ctx: Context, unit: AverageUnit) {
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_AVG_UNIT, unit.key).apply()
-    }
-
-    /** Relu à chaque relevé, comme le reste. */
-    fun pill(ctx: Context?): ClusterPill =
-        ClusterPill.fromKey(ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getString(KEY_PILL, null))
-
-    fun setPill(ctx: Context, pill: ClusterPill) {
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_PILL, pill.key).apply()
-    }
-
-    /** Relue à chaque relevé : changer le curseur vaut au relevé suivant. */
-    fun animationMs(ctx: Context?): Int =
-        sanitizeAnimation(ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getInt(KEY_ANIMATION, DEFAULT_ANIMATION_MS))
-
-    fun setAnimationMs(ctx: Context, ms: Int) {
-        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putInt(KEY_ANIMATION, sanitizeAnimation(ms)).apply()
+    /** Sans aucun profil, la carte règle les réglages communs : ils sont réécrits en entier. */
+    fun saveLegacy(ctx: Context, c: ClusterConfig) {
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().apply {
+            putBoolean(KEY_ENABLED, c.enabled == true)
+            putString(KEY_TAB_NAVIGATION, c.navigation)
+            putString(KEY_TAB_MEDIA, c.media)
+            putString(KEY_UNIT, c.unit)
+            putString(KEY_DISTANCE, c.distance)
+            putString(KEY_STYLE, c.style)
+            putString(KEY_AVG_UNIT, c.average)
+            putString(KEY_PILL, c.pill)
+            c.refreshMs?.let { putInt(KEY_REFRESH, it) } ?: remove(KEY_REFRESH)
+            c.animationMs?.let { putInt(KEY_ANIMATION, it) } ?: remove(KEY_ANIMATION)
+        }.apply()
     }
 
     // ── Sans Android ─────────────────────────────────────────────────────────
 
     fun supportedOn(gen: FirmwareInfo.Gen): Boolean = gen in SUPPORTED
 
-    private fun keyFor(tab: ClusterTab): String? = when (tab) {
-        ClusterTab.NAVIGATION -> KEY_TAB_NAVIGATION
-        ClusterTab.MEDIA -> KEY_TAB_MEDIA
+    fun isEnabled(c: ClusterConfig): Boolean = c.enabled == true
+
+    fun moduleFor(c: ClusterConfig, tab: ClusterTab): ClusterModule? = when (tab) {
+        ClusterTab.NAVIGATION -> resolveTab(tab, c.navigation, null)
+        ClusterTab.MEDIA -> resolveTab(tab, c.media, null)
         else -> null
     }
+
+    fun consumptionUnit(c: ClusterConfig): ConsumptionUnit = ConsumptionUnit.fromKey(c.unit)
+
+    fun refreshMs(c: ClusterConfig): Int = sanitizeRefresh(c.refreshMs)
+
+    fun style(c: ClusterConfig): ClusterGaugeStyle = ClusterGaugeStyle.fromKey(c.style)
+
+    fun distanceChoice(c: ClusterConfig): DistanceUnit? =
+        c.distance?.let { k -> DistanceUnit.entries.firstOrNull { it.key == k } }
+
+    fun distanceUnit(c: ClusterConfig, vehicle: DistanceUnit?): DistanceUnit = DistanceUnit.resolve(c.distance, vehicle)
+
+    fun averageUnit(c: ClusterConfig): AverageUnit = AverageUnit.resolve(c.average, consumptionUnit(c))
+
+    fun pill(c: ClusterConfig): ClusterPill = ClusterPill.fromKey(c.pill)
+
+    fun animationMs(c: ClusterConfig): Int = sanitizeAnimation(c.animationMs)
+
+    /** [c] avec [module] pour [tab] (`null` = Aucun) ; un onglet sans module possible ne change rien. */
+    fun withModule(c: ClusterConfig, tab: ClusterTab, module: ClusterModule?): ClusterConfig = when (tab) {
+        ClusterTab.NAVIGATION -> c.copy(navigation = module?.key ?: NONE)
+        ClusterTab.MEDIA -> c.copy(media = module?.key ?: NONE)
+        else -> c
+    }
+
+    /**
+     * Réglages communs d'avant les profils, rendus dans la forme d'un profil. Le module de chaque
+     * onglet est résolu une fois pour toutes, l'ancien réglage unique ([legacyModule]) compris :
+     * le profil n'a pas à le connaître.
+     */
+    fun legacyConfig(
+        enabled: Boolean, navigation: String?, media: String?, legacyModule: String?,
+        unit: String?, distance: String?, style: String?, average: String?, pill: String?,
+        refreshMs: Int?, animationMs: Int?,
+    ): ClusterConfig = ClusterConfig(
+        enabled = enabled,
+        navigation = resolveTab(ClusterTab.NAVIGATION, navigation, legacyModule)?.key ?: NONE,
+        media = resolveTab(ClusterTab.MEDIA, media, null)?.key ?: NONE,
+        unit = unit, distance = distance, style = style, average = average, pill = pill,
+        refreshMs = refreshMs, animationMs = animationMs,
+    )
 
     /**
      * Module d'un onglet d'après ce qui est enregistré. Sans choix pour lui : l'ancien réglage

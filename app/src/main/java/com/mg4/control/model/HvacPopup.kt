@@ -31,9 +31,13 @@ import com.mg4.control.accessibility.JoystickFocus
  *
  * La MG4 n'a pas de cran 0 : « éteint », c'est l'arrêt de la climatisation, un bouton à part
  * sur l'écran d'origine (`btn_power`), dont le « ventilation − » s'arrête au cran 1. Le pop-up
- * n'a pas ce bouton : au cran 1, gauche ÉTEINT la clim, et droite la rallume au cran 1. Éteinte,
- * la voiture annonce une ventilation à 0 ; gauche ne fait alors plus rien — avant, 0 − 1 ramené
- * au minimum écrivait le cran 1, et rallumait la clim.
+ * n'a pas ce bouton : au cran 1, gauche ÉTEINT la clim, et droite la RALLUME. Éteinte, la
+ * voiture annonce une ventilation à 0 ; gauche ne fait alors plus rien — avant, 0 − 1 ramené au
+ * minimum écrivait le cran 1, et rallumait la clim.
+ *
+ * Rallumer, c'est envoyer l'ordre « allumer » et non un cran (2026-10-31, sa demande) : la voiture
+ * reprend d'elle-même son état d'avant l'arrêt — cran ou AUTO —, comme quand on change la
+ * température. Écrire le cran 1 faisait toujours repartir au plus faible.
  */
 object HvacPopup {
 
@@ -48,6 +52,9 @@ object HvacPopup {
 
         /** Éteindre la climatisation : gauche au cran le plus bas (issue #147). */
         object Arret : Action()
+
+        /** Rallumer la climatisation éteinte : droite. La voiture reprend son état d'avant l'arrêt. */
+        object Allumer : Action()
     }
 
     /** Ce qui est lu sur la voiture ; les bornes en viennent aussi. null = illisible. */
@@ -81,7 +88,9 @@ object HvacPopup {
     fun action(commande: JoystickFocus.Commande, reglages: Reglages): Action? = when (commande) {
         JoystickFocus.Commande.HAUT    -> pas(reglages.temp, reglages.tempMin, reglages.tempMax, +1)?.let { Action.Temperature(it) }
         JoystickFocus.Commande.BAS     -> pas(reglages.temp, reglages.tempMin, reglages.tempMax, -1)?.let { Action.Temperature(it) }
-        JoystickFocus.Commande.DROITE  -> pasVentilation(reglages, +1)?.let { Action.Ventilation(it) }
+        JoystickFocus.Commande.DROITE  ->
+            if (reglages.eteinte) Action.Allumer
+            else pasVentilation(reglages, +1)?.let { Action.Ventilation(it) }
         JoystickFocus.Commande.GAUCHE  -> when {
             // Au cran le plus bas, réglé à la main : on éteint (issue #147). Jamais depuis AUTO,
             // qui sort d'abord au dernier cran moins un.
@@ -105,10 +114,12 @@ object HvacPopup {
      * En AUTO on repart du dernier niveau réglé à la main — surtout pas du 15 annoncé, d'où un
      * « moins » écrirait le MAXIMUM — et on écrit MÊME en butée : c'est cette écriture qui rend
      * la main, et l'utilisateur vient de demander à régler lui-même.
+     *
+     * Clim éteinte : aucun cran à écrire. « Moins » n'a rien à faire (issue #147) ; « plus »
+     * rallume la clim ([Action.Allumer]), ce que l'appelant fait lui-même.
      */
     fun pasVentilation(reglages: Reglages, sens: Int): Int? = when {
-        // Éteinte : « plus » rallume au premier cran, « moins » n'a rien à faire (issue #147).
-        reglages.eteinte -> if (sens > 0) reglages.fanMin else null
+        reglages.eteinte -> null
         reglages.enAuto  -> (niveauDeSortie(reglages) + sens).coerceIn(reglages.fanMin, reglages.fanMax)
         else             -> pas(reglages.fan, reglages.fanMin, reglages.fanMax, sens)
     }
@@ -121,6 +132,38 @@ object HvacPopup {
     fun niveauDeSortie(reglages: Reglages): Int =
         (reglages.dernierNiveau ?: ((reglages.fanMin + reglages.fanMax) / 2))
             .coerceIn(reglages.fanMin, reglages.fanMax)
+
+    // ── Consignes vérifiées : température et ventilation (2026-10-23) ─────────
+    //
+    // Deux crans rapides (2 → 4) laissaient la ventilation sur 3 : la voiture semble ignorer un
+    // niveau qui arrive trop tôt après le précédent. La consigne demandée fait donc foi jusqu'à ce
+    // que la voiture l'ait prise : écritures espacées, relecture, renvoi si besoin.
+
+    /** Écart minimal entre deux écritures du même réglage, en ms. */
+    const val ESPACEMENT_MS = 500L
+    /** Renvois au plus d'une consigne que la voiture n'a pas prise. */
+    const val RENVOIS_MAX = 3
+
+    /** Ce qu'il faut faire d'une consigne après relecture. */
+    enum class Suite { CONFIRMEE, RENVOYER, ABANDON }
+
+    /**
+     * Après relecture : [vu] est la valeur de la voiture (`null` si illisible), [cible] la consigne,
+     * [renvois] ceux déjà faits. Illisible : on n'insiste pas, l'écran reprendra la voiture.
+     */
+    fun suiteConsigne(vu: Int?, cible: Int, renvois: Int): Suite = when {
+        vu == cible -> Suite.CONFIRMEE
+        vu == null || renvois >= RENVOIS_MAX -> Suite.ABANDON
+        else -> Suite.RENVOYER
+    }
+
+    /**
+     * Attente avant d'envoyer une consigne : l'anti-rebond [antiRebondMs], et au moins
+     * [ESPACEMENT_MS] après la dernière écriture du même réglage ([derniereMs], 0 = jamais).
+     */
+    fun attenteEnvoi(maintenantMs: Long, derniereMs: Long, antiRebondMs: Long): Long =
+        if (derniereMs == 0L) antiRebondMs
+        else maxOf(antiRebondMs, ESPACEMENT_MS - (maintenantMs - derniereMs))
 
     // ── Taille de la fenêtre ─────────────────────────────────────────────────
     const val LARGEUR_DP = 864f      // la carte de overlay_hvac_popup.xml, sans chauffages
@@ -197,4 +240,26 @@ object HvacPopup {
         actuel ?: return null
         return (actuel + sens).coerceIn(min, max).takeIf { it != actuel }
     }
+
+    // ── Débit en mode AUTO (issue #178) ───────────────────────────────────────
+    // Variante A, choisie le 2026-10-31 sur la proposition de l'issue : un appui COURT sur AUTO
+    // l'allume ou l'éteint, et rien d'autre — l'éteindre reste aussi rapide qu'avant. Un appui
+    // MAINTENU avance le débit d'un cran (Faible → Moyen → Fort → Faible), sans jamais allumer ni
+    // éteindre AUTO (2026-10-31). Trois crans sous le bouton montrent le débit en permanence.
+    // Remplace la maquette B (rangée Faible | Moyen | Fort à la place de « − AUTO + »).
+
+    /** Appui maintenu sur AUTO au-delà duquel le débit avance d'un cran. */
+    const val APPUI_LONG_MS = 1_000L
+
+    /**
+     * Débits de gauche à droite, comme à l'écran : faible, moyen, fort — dans l'encodage de la
+     * voiture (MG4Hardware.AutoVolume : 2 = faible, 1 = moyen, 0 = fort).
+     */
+    val DEBITS = listOf(2, 1, 0)
+
+    /** Débit suivant, en boucle : faible → moyen → fort → faible. Inconnu → faible. */
+    fun debitSuivant(debit: Int): Int = DEBITS[(DEBITS.indexOf(debit) + 1) % DEBITS.size]
+
+    /** Crans allumés sous AUTO : 1 = faible, 2 = moyen, 3 = fort ; 0 pour un débit inconnu. */
+    fun crans(debit: Int?): Int = debit?.let { DEBITS.indexOf(it) + 1 } ?: 0
 }

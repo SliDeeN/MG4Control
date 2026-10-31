@@ -1407,7 +1407,10 @@ class DashboardFragment : Fragment() {
     private var climBtnPower: MaterialButton? = null
     private var climBtnAc: MaterialButton? = null
     private var climBtnAuto: MaterialButton? = null
+    private var climBtnEco: MaterialButton? = null
     private var climLoopButtons: Map<Int, MaterialButton?> = emptyMap()
+    /** Débit en AUTO (issue #178) : valeur de la voiture ([MG4Hardware.AutoVolume]) → bouton. */
+    private var climAutoVolButtons: Map<Int, MaterialButton?> = emptyMap()
     private var climBtnAirFace: MaterialButton? = null
     private var climBtnAirFeet: MaterialButton? = null
     private var climBtnAirWindshield: MaterialButton? = null
@@ -1446,10 +1449,16 @@ class DashboardFragment : Fragment() {
         climBtnPower       = view.findViewById(R.id.clim_btn_power)
         climBtnAc          = view.findViewById(R.id.clim_btn_ac)
         climBtnAuto        = view.findViewById(R.id.clim_btn_auto)
+        climBtnEco         = view.findViewById(R.id.clim_btn_eco)
         climLoopButtons = mapOf(
             MG4Hardware.LoopMode.INNER   to view.findViewById<MaterialButton>(R.id.clim_btn_loop_inner),
             MG4Hardware.LoopMode.OUTSIDE to view.findViewById<MaterialButton>(R.id.clim_btn_loop_outside),
             MG4Hardware.LoopMode.AUTO    to view.findViewById<MaterialButton>(R.id.clim_btn_loop_auto)
+        )
+        climAutoVolButtons = mapOf(
+            MG4Hardware.AutoVolume.HIGH   to view.findViewById<MaterialButton>(R.id.clim_btn_autovol_high),
+            MG4Hardware.AutoVolume.MEDIUM to view.findViewById<MaterialButton>(R.id.clim_btn_autovol_medium),
+            MG4Hardware.AutoVolume.LOW    to view.findViewById<MaterialButton>(R.id.clim_btn_autovol_low)
         )
         climBtnAirFace       = view.findViewById(R.id.clim_btn_air_face)
         climBtnAirFeet       = view.findViewById(R.id.clim_btn_air_feet)
@@ -1517,6 +1526,9 @@ class DashboardFragment : Fragment() {
         climBtnAc?.setOnClickListener {
             climLastState?.acOn?.let { cur -> climateWrite { MG4Hardware.setClimateAc(!cur) } }
         }
+        climBtnEco?.setOnClickListener {
+            climLastState?.ecoOn?.let { cur -> climateWrite { MG4Hardware.setClimateEco(!cur) } }
+        }
         climBtnAuto?.setOnClickListener {
             // « Actif » au sens des écrans d'origine : le drapeau, ou le niveau 15 qui le trahit.
             climLastState?.let { s ->
@@ -1526,6 +1538,13 @@ class DashboardFragment : Fragment() {
         }
         climLoopButtons.forEach { (mode, btn) ->
             btn?.setOnClickListener { climateWrite { MG4Hardware.setClimateLoopMode(mode) } }
+        }
+        // Débit en AUTO : une consigne, réglable même hors AUTO (la voiture la garde).
+        climAutoVolButtons.forEach { (level, btn) ->
+            btn?.setOnClickListener {
+                AppLogger.i(CLIM_UI_TAG, "Débit en AUTO : appui → ${MG4Hardware.AutoVolume.label(level)}")
+                climateWrite { MG4Hardware.setClimateAutoVolume(level) }
+            }
         }
 
         // ── Sens de l'air : boutons CUMULABLES ──
@@ -1601,6 +1620,7 @@ class DashboardFragment : Fragment() {
                 bindClimToggle(climBtnPower, s.powerOn)
                 bindClimToggle(climBtnAc, s.acOn)
                 bindClimToggle(climBtnAuto, if (reglages.enAuto) true else s.autoOn)
+                bindClimToggle(climBtnEco, s.ecoOn, colorEcoBg, colorEcoText)
 
                 // Valeur illisible → boutons grisés. Valeur lue mais hors échelle (7 « aucun »)
                 // → boutons actifs, aucun allumé : l'utilisateur peut choisir un sens.
@@ -1615,6 +1635,10 @@ class DashboardFragment : Fragment() {
                     btn?.backgroundTintList = ColorStateList.valueOf(if (active) colorActive else colorInactive)
                     btn?.setTextColor(if (active) colorTextActive else colorTextInactive)
                 }
+                // Illisible sur ce firmware → boutons grisés, comme les autres réglages.
+                climAutoVolButtons.forEach { (level, btn) ->
+                    bindClimToggle(btn, s.autoVolume?.let { it == level })
+                }
 
                 isRefreshing = false
             }
@@ -1625,12 +1649,16 @@ class DashboardFragment : Fragment() {
      * Bouton bascule : accentué quand actif, comme les boutons de recirculation.
      * Un état null = non lisible sur ce firmware → bouton grisé et inerte, plutôt que menteur.
      */
-    private fun bindClimToggle(btn: MaterialButton?, state: Boolean?) {
+    /** [fondActif] / [texteActif] : le bleu de l'appli, ou le vert pour ECO. */
+    private fun bindClimToggle(
+        btn: MaterialButton?, state: Boolean?,
+        fondActif: Int = colorActive, texteActif: Int = colorTextActive,
+    ) {
         val active = state == true
-        btn?.backgroundTintList = ColorStateList.valueOf(if (active) colorActive else colorInactive)
-        btn?.setTextColor(if (active) colorTextActive else colorTextInactive)
+        btn?.backgroundTintList = ColorStateList.valueOf(if (active) fondActif else colorInactive)
+        btn?.setTextColor(if (active) texteActif else colorTextInactive)
         // Sans effet sur un bouton sans icône ; les boutons « Sens de l'air » en portent une.
-        btn?.iconTint = ColorStateList.valueOf(if (active) colorTextActive else colorTextInactive)
+        btn?.iconTint = ColorStateList.valueOf(if (active) texteActif else colorTextInactive)
         btn?.isEnabled = state != null
         btn?.alpha = if (state != null) 1f else 0.35f
     }

@@ -45,16 +45,29 @@
         android:background="@color/dash_border"
         android:layout_marginTop="10dp" />
 
+    <!-- Le contenu prend toute la hauteur ; « Fermer » flotte en bas à droite, par-dessus (2026-10-25) :
+         sa rangée à part prenait une bande sur toute la largeur et obligeait à faire défiler le rail. -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
     <LinearLayout
         android:id="@+id/shortcuts_content"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
+        android:layout_height="match_parent"
         android:orientation="horizontal">
 
-        <LinearLayout
+        <!-- Le rail défile : avec toutes les fonctions à réglage attribuées, il a neuf entrées. -->
+        <ScrollView
             android:layout_width="180dp"
             android:layout_height="match_parent"
+            android:scrollbars="none"
+            android:overScrollMode="never">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingTop="14dp"
             android:paddingEnd="14dp">
@@ -176,6 +189,24 @@
                 app:strokeColor="@color/dash_border"
                 app:cornerRadius="8dp" />
 
+            <!-- Pré-climatisation (issue #130) : même règle, l'entrée n'existe que si la fonction
+                 est attribuée à un bouton. -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_sc_sub_preclim"
+                android:layout_marginStart="16dp"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/shortcuts_cat_preclim"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                android:textAllCaps="true"
+                android:visibility="gone"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
             <!-- Pas de retrait, contrairement aux quatre réglages : la liste n'est pas
                  conditionnelle, c'est une destination permanente au même rang que les deux
                  premiers onglets. -->
@@ -193,18 +224,54 @@
                 app:strokeColor="@color/dash_border"
                 app:cornerRadius="8dp" />
 
+            <!-- Boutons flottants (2026-10-23) : destination permanente, en bas du rail. -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_sc_sub_floating"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/shortcuts_cat_floating"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                android:textAllCaps="true"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
+            <!-- Raccourcis perso (issue #172, 2026-10-25) : destination permanente, tout en bas du
+                 rail, après les boutons flottants (sa demande). -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_sc_sub_custom"
+                android:layout_width="match_parent"
+                android:layout_height="64dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/shortcuts_cat_custom"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                android:textAllCaps="true"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="8dp" />
+
         </LinearLayout>
+
+        </ScrollView>
 
         <View
             android:layout_width="1dp"
             android:layout_height="match_parent"
             android:background="@color/dash_border" />
 
+        <!-- Marge du bas : le bas d'une page défile au-dessus du bouton « Fermer » qui flotte. -->
         <ScrollView
             android:id="@+id/scroll_shortcuts"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
+            android:paddingBottom="64dp"
+            android:clipToPadding="false"
             android:overScrollMode="ifContentScrolls">
 
             <LinearLayout
@@ -1153,6 +1220,1006 @@
 
                 </LinearLayout>
 
+                <!-- ═══ Pré-climatisation (issue #130) — réglages qui ne changent pas d'une fois sur l'autre ═══ -->
+                <!-- Le mode, les horaires et la clim se choisissent dans le pop-up du raccourci. -->
+                <LinearLayout
+                    android:id="@+id/page_sc_preclim"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_card_rounded"
+                        android:layout_marginEnd="5dp"
+                        android:paddingBottom="14dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/shortcuts_action_preclim"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.10"
+                            android:textAllCaps="true"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="8dp" />
+
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/dash_border" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/preclim_cfg_hint"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/preclim_cfg_lock"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_lock_minus"
+                                android:layout_width="64dp"
+                                android:layout_height="52dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="−"
+                                android:textColor="@color/text_primary"
+                                android:textSize="20sp"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <TextView
+                                android:id="@+id/tv_preclim_lock"
+                                android:layout_width="96dp"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:textColor="@color/text_primary"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_lock_plus"
+                                android:layout_width="64dp"
+                                android:layout_height="52dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="+"
+                                android:textColor="@color/text_primary"
+                                android:textSize="20sp"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/preclim_cfg_soc"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_soc_minus"
+                                android:layout_width="64dp"
+                                android:layout_height="52dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="−"
+                                android:textColor="@color/text_primary"
+                                android:textSize="20sp"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <TextView
+                                android:id="@+id/tv_preclim_soc"
+                                android:layout_width="96dp"
+                                android:layout_height="wrap_content"
+                                android:gravity="center"
+                                android:textColor="@color/text_primary"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_soc_plus"
+                                android:layout_width="64dp"
+                                android:layout_height="52dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="+"
+                                android:textColor="@color/text_primary"
+                                android:textSize="20sp"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/preclim_cfg_screen"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_screen_normal"
+                                android:layout_width="150dp"
+                                android:layout_height="52dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="@string/preclim_screen_normal"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                android:maxLines="1"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_screen_dim"
+                                android:layout_width="150dp"
+                                android:layout_height="52dp"
+                                android:layout_marginStart="8dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="@string/preclim_screen_dim"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                android:maxLines="1"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_preclim_screen_off"
+                                android:layout_width="150dp"
+                                android:layout_height="52dp"
+                                android:layout_marginStart="8dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:text="@string/preclim_screen_off"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp"
+                                android:maxLines="1"
+                                app:backgroundTint="@color/bg_button"
+                                app:strokeWidth="1dp"
+                                app:strokeColor="@color/dash_border"
+                                app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                        <!-- Fiche sur l'écran conducteur : SWI133, SWI68 et SWI165 seulement (le code la masque ailleurs). -->
+                        <LinearLayout
+                            android:id="@+id/row_preclim_cluster"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp"
+                            android:visibility="gone">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:minHeight="52dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/preclim_cfg_cluster"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp" />
+
+                                <Switch
+                                    android:id="@+id/switch_preclim_cluster"
+                                    android:scaleX="1.3"
+                                    android:scaleY="1.3"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content" />
+
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/preclim_cfg_cluster_desc"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+
+                        </LinearLayout>
+
+                        <!-- Rappel avant le départ (2026-10-31) : réactive le pop-up « gardez la clé
+                             sur vous » après un « Ne plus me rappeler ». -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:minHeight="52dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/preclim_cfg_unlock"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp" />
+
+                                <Switch
+                                    android:id="@+id/switch_preclim_unlock"
+                                    android:scaleX="1.3"
+                                    android:scaleY="1.3"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content" />
+
+                            </LinearLayout>
+
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:text="@string/preclim_cfg_unlock_desc"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="13sp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/preclim_cfg_warning"
+                            android:textColor="@color/dash_warn"
+                            android:textSize="13sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="14dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- ══════════ Raccourcis perso (issue #172, 2026-10-25) ══════════
+                     Les actions définies par l'utilisateur, à mettre sur un bouton du volant, un
+                     raccourci avancé ou un bouton flottant. Rempli par CustomShortcutsPage. -->
+                <LinearLayout
+                    android:id="@+id/page_sc_custom"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_card_rounded"
+                        android:layout_marginEnd="5dp"
+                        android:paddingBottom="14dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/shortcuts_cat_custom"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.10"
+                            android:textAllCaps="true"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="8dp" />
+
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/dash_border" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/custom_page_desc"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="14sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp" />
+
+                        <LinearLayout
+                            android:id="@+id/custom_list"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="6dp" />
+
+                        <TextView
+                            android:id="@+id/custom_empty"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/custom_page_empty"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="14sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_custom_add"
+                            android:layout_width="match_parent"
+                            android:layout_height="52dp"
+                            android:layout_marginStart="14dp"
+                            android:layout_marginEnd="14dp"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/custom_add"
+                            android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- ══════════ Boutons flottants (2026-10-23) ══════════
+                     Bulles de raccourci par-dessus toutes les applications : la liste, l'ajout,
+                     l'édition d'une bulle (titre, raccourci, tailles) et deux options. Rempli
+                     par FloatingButtonsPage. -->
+                <LinearLayout
+                    android:id="@+id/page_sc_floating"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_card_rounded"
+                        android:layout_marginEnd="5dp"
+                        android:paddingBottom="14dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/shortcuts_cat_floating"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.10"
+                            android:textAllCaps="true"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="8dp" />
+
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/dash_border" />
+
+                        <!-- Boutons flottants par profil (2026-10-24, proposition B) : un profil à la fois ;
+                             tant que la page est ouverte, l'écran montre ses bulles pour les placer.
+                             Caché sans aucun profil : la page règle alors les bulles communes. -->
+                        <LinearLayout
+                            android:id="@+id/row_floating_profiles"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp"
+                            android:visibility="gone">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_profiles_title"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="12dp"
+                                    android:text="@string/floating_profiles_info"
+                                    android:textColor="@color/dash_text_lo"
+                                    android:textSize="13sp" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/grid_floating_profiles"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:orientation="vertical" />
+
+                            <View
+                                android:layout_width="match_parent"
+                                android:layout_height="1dp"
+                                android:layout_marginTop="12dp"
+                                android:background="@color/dash_border" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/floating_desc"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="14sp" />
+
+                            <Switch
+                                android:id="@+id/switch_floating"
+                                android:scaleX="1.3"
+                                android:scaleY="1.3"
+                                android:layout_marginHorizontal="8dp"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/floating_list"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="6dp" />
+
+                        <TextView
+                            android:id="@+id/floating_empty"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/floating_empty"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="14sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:layout_marginStart="14dp"
+                            android:layout_marginEnd="14dp"
+                            android:layout_marginTop="10dp">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_floating_add"
+                                android:layout_width="0dp"
+                                android:layout_height="52dp"
+                                android:layout_weight="1"
+                                android:layout_marginEnd="8dp"
+                                android:text="@string/floating_add"
+                                android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                            <!-- Copie vers d'autres profils : affichée dès qu'il y en a au moins deux. -->
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_floating_copy"
+                                android:layout_width="0dp"
+                                android:layout_height="52dp"
+                                android:layout_weight="1"
+                                android:text="@string/floating_copy"
+                                android:visibility="gone"
+                                android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                        <!-- Les bulles du profil réglé remplacent celles des profils choisis ici. -->
+                        <LinearLayout
+                            android:id="@+id/floating_copy_panel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
+                            android:layout_marginEnd="14dp"
+                            android:layout_marginTop="12dp"
+                            android:orientation="vertical"
+                            android:background="@drawable/bg_sound_slot"
+                            android:padding="12dp"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:id="@+id/tv_floating_copy_info"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/text_primary"
+                                android:textSize="15sp" />
+
+                            <LinearLayout
+                                android:id="@+id/grid_floating_copy"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:orientation="vertical" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_copy_go"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="52dp"
+                                    android:paddingHorizontal="20dp"
+                                    android:text="@string/floating_copy_go"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_copy_cancel"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="52dp"
+                                    android:layout_marginStart="8dp"
+                                    android:paddingHorizontal="20dp"
+                                    android:text="@android:string/cancel"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="12dp"
+                                    android:text="@string/floating_copy_note"
+                                    android:textColor="@color/dash_text_lo"
+                                    android:textSize="13sp" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                        <!-- Édition de la bulle choisie : titre, raccourci, tailles. Pas d'aperçu
+                             (retiré le 2026-10-24, sa demande) : la vraie bulle suit à l'écran. -->
+                        <LinearLayout
+                            android:id="@+id/floating_edit"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="14dp"
+                            android:layout_marginEnd="14dp"
+                            android:layout_marginTop="12dp"
+                            android:orientation="vertical"
+                            android:background="@drawable/bg_sound_slot"
+                            android:padding="12dp"
+                            android:visibility="gone">
+
+                            <TextView
+                                android:id="@+id/floating_edit_heading"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:textColor="@color/text_primary"
+                                android:textSize="18sp"
+                                android:textStyle="bold" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_title"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <EditText
+                                    android:id="@+id/edit_floating_title"
+                                    android:layout_width="0dp"
+                                    android:layout_height="52dp"
+                                    android:layout_weight="1"
+                                    android:inputType="text"
+                                    android:imeOptions="actionDone"
+                                    android:maxLines="1"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_title_reset"
+                                    android:layout_width="64dp"
+                                    android:layout_height="52dp"
+                                    android:layout_marginStart="8dp"
+                                    android:text="↺"
+                                    android:contentDescription="@string/floating_title_reset"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_action"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_action"
+                                    android:layout_width="0dp"
+                                    android:layout_height="52dp"
+                                    android:layout_weight="1"
+                                    android:maxLines="1"
+                                    android:ellipsize="end"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                            </LinearLayout>
+
+                            <!-- Emplacement (2026-10-24) : sur l'écran, ou dans la barre noire du haut — à
+                                 sa hauteur, glissé de gauche à droite, jamais sur la languette clim. -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_location"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_loc_screen"
+                                    android:layout_width="0dp"
+                                    android:layout_height="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="@string/floating_loc_screen"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_loc_bar"
+                                    android:layout_width="0dp"
+                                    android:layout_height="52dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/floating_loc_bar"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:id="@+id/row_floating_size"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_size"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.slider.Slider
+                                    android:id="@+id/slider_floating_size"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:valueFrom="0"
+                                    android:valueTo="100"
+                                    android:value="50"
+                                    android:stepSize="1"
+                                    app:labelBehavior="gone"
+                                    app:thumbRadius="14dp"
+                                    app:trackHeight="10dp"
+                                    app:thumbColor="@color/dash_accent"
+                                    app:trackColorActive="@color/dash_accent"
+                                    app:trackColorInactive="@color/dash_border" />
+
+                                <TextView
+                                    android:id="@+id/tv_floating_size"
+                                    android:layout_width="96dp"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="end"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp" />
+
+                            </LinearLayout>
+
+                            <!-- Repères du curseur : touchés, ils y mènent tout droit. -->
+                            <LinearLayout
+                                android:id="@+id/row_floating_ticks"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal"
+                                android:paddingStart="170dp"
+                                android:paddingEnd="96dp">
+
+                                <TextView
+                                    android:id="@+id/tick_floating_small"
+                                    android:layout_width="0dp"
+                                    android:layout_height="40dp"
+                                    android:layout_weight="1"
+                                    android:gravity="start|center_vertical"
+                                    android:paddingStart="8dp"
+                                    android:text="@string/floating_size_small"
+                                    android:textSize="14sp" />
+
+                                <TextView
+                                    android:id="@+id/tick_floating_medium"
+                                    android:layout_width="0dp"
+                                    android:layout_height="40dp"
+                                    android:layout_weight="1"
+                                    android:gravity="center"
+                                    android:text="@string/floating_size_medium"
+                                    android:textSize="14sp" />
+
+                                <TextView
+                                    android:id="@+id/tick_floating_large"
+                                    android:layout_width="0dp"
+                                    android:layout_height="40dp"
+                                    android:layout_weight="1"
+                                    android:gravity="end|center_vertical"
+                                    android:paddingEnd="8dp"
+                                    android:text="@string/floating_size_large"
+                                    android:textSize="14sp" />
+
+                            </LinearLayout>
+
+                            <!-- Dans la barre du haut, la taille est celle de la barre : à la place du curseur. -->
+                            <LinearLayout
+                                android:id="@+id/row_floating_size_bar"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical"
+                                android:visibility="gone">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_size"
+                                    android:textColor="@color/dash_text_lo"
+                                    android:textSize="16sp" />
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/floating_size_bar"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="15sp" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_text"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <com.google.android.material.slider.Slider
+                                    android:id="@+id/slider_floating_text"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:valueFrom="10"
+                                    android:valueTo="30"
+                                    android:value="16"
+                                    android:stepSize="1"
+                                    app:labelBehavior="gone"
+                                    app:thumbRadius="14dp"
+                                    app:trackHeight="10dp"
+                                    app:thumbColor="@color/dash_accent"
+                                    app:trackColorActive="@color/dash_accent"
+                                    app:trackColorInactive="@color/dash_border" />
+
+                                <TextView
+                                    android:id="@+id/tv_floating_text"
+                                    android:layout_width="96dp"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="end"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="16sp" />
+
+                            </LinearLayout>
+
+                            <!-- Texte en gras (2026-10-24), sur l'écran comme dans la barre du haut. -->
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:text="@string/floating_field_bold"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp" />
+
+                                <Switch
+                                    android:id="@+id/switch_floating_bold"
+                                    android:scaleX="1.3"
+                                    android:scaleY="1.3"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content" />
+
+                            </LinearLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_floating_close"
+                                android:layout_width="180dp"
+                                android:layout_height="52dp"
+                                android:layout_gravity="end"
+                                android:layout_marginTop="8dp"
+                                android:text="@string/floating_close"
+                                android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/floating_options"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.10"
+                            android:textAllCaps="true"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="16dp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="8dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/floating_hide_reverse"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                            <Switch
+                                android:id="@+id/switch_floating_reverse"
+                                android:scaleX="1.3"
+                                android:scaleY="1.3"
+                                android:layout_marginHorizontal="8dp"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp">
+
+                            <TextView
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="@string/floating_reset"
+                                android:textColor="@color/text_primary"
+                                android:textSize="16sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_floating_reset"
+                                android:layout_width="180dp"
+                                android:layout_height="52dp"
+                                android:text="@string/floating_reset_btn"
+                                android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="15sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="8dp" />
+
+                        </LinearLayout>
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
 
             </LinearLayout>
 
@@ -1160,14 +2227,12 @@
 
     </LinearLayout>
 
-    <!-- Fermer — persistant sur les deux onglets -->
-    <!-- ── Bouton Fermer ─────────────────────────────────────────────── -->
+    <!-- Fermer — persistant sur tous les sous-onglets, par-dessus le contenu en bas à droite -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_shortcuts_close"
         android:layout_width="wrap_content"
         android:layout_height="52dp"
-        android:layout_gravity="end"
-        android:layout_marginTop="8dp"
+        android:layout_gravity="bottom|end"
         android:text="@string/nav_close"
         android:textColor="@color/text_secondary"
         android:textSize="16sp"
@@ -1175,5 +2240,7 @@
         app:strokeWidth="1dp"
         app:strokeColor="@color/dash_border"
         app:cornerRadius="8dp" />
+
+    </FrameLayout>
 
 </LinearLayout>

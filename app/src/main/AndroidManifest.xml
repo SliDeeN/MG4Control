@@ -22,6 +22,24 @@
          android.uid.system. -->
     <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL"
         tools:ignore="ProtectedPermissions" />
+    <!-- Raccourci « Android Auto / CarPlay » (2026-10-23) : voir les tâches des autres applis et
+         ramener devant l'écran d'avant la projection. REAL_GET_TASKS est signature|privileged,
+         obtenue parce que l'app tourne en android.uid.system. -->
+    <uses-permission android:name="android.permission.REAL_GET_TASKS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.REORDER_TASKS" />
+    <!-- Zone clim pendant Android Auto / CarPlay (2026-10-24) : une fenêtre au-dessus de la barre
+         système (TYPE_STATUS_BAR_SUB_PANEL, repli TYPE_SYSTEM_ERROR). signature|privileged, accordées
+         à l'uid système. -->
+    <uses-permission android:name="android.permission.INTERNAL_SYSTEM_WINDOW"
+        tools:ignore="ProtectedPermissions" />
+    <!-- Raccourcis perso (issue #172, 2026-10-25) : lister et lancer les raccourcis que les applis
+         publient pour les launchers (LauncherApps.getShortcuts / startShortcut). signature, accordée
+         à l'appli signée avec la clé de la plateforme. -->
+    <uses-permission android:name="android.permission.ACCESS_SHORTCUTS"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.STATUS_BAR_SERVICE"
+        tools:ignore="ProtectedPermissions" />
     <!-- Vehicle control permissions (Android Automotive / SAIC) -->
     <uses-permission android:name="android.car.permission.CAR_ENERGY" />
     <!-- Capacité de la batterie (INFO_EV_BATTERY_CAPACITY) : propriété statique du véhicule,
@@ -47,6 +65,13 @@
     <!-- Réseau / auto-update : déclarés UNIQUEMENT dans le flavor online
          (src/online/AndroidManifest.xml). Le flavor offline n'en a aucun, par construction. -->
 
+    <!-- Issue #180 : le mode Surveillance n'est proposé que si l'appli caméra 360° est installée
+         (util/DashcamApp). Sans effet sur Android 9 ; déclaré pour la visibilité des paquets. -->
+    <queries>
+        <package android:name="com.tommasov.mg4dashcam" />
+        <package android:name="com.drivehub.kamera" />
+    </queries>
+
     <application
         android:name=".MG4App"
         android:label="@string/app_name"
@@ -68,6 +93,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Pré-climatisation (issue #130) : l'écran de suivi, en plein écran immersif comme
+             DiAuto-MG4 — une fenêtre superposée reste sous la barre du haut et le rail de gauche.
+             Sa propre tâche, hors des récents : le fermer rend la main à ce qui était au premier plan. -->
+        <activity
+            android:name=".ui.PreClimateActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:taskAffinity="com.mg4.control.preclimate"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.MG4Control.PreClimate" />
 
         <!-- [T-910] foregroundServiceType est OBLIGATOIRE à partir d'API 34 : sans lui,
              startForeground() lève MissingForegroundServiceTypeException. Sans effet sur

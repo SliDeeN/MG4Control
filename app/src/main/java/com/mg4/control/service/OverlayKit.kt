@@ -41,10 +41,14 @@ internal object OverlayKit {
      * densité corrigée pour qu'elles prennent la même part de l'écran partout — dp et sp suivent
      * d'un bloc, pictos et texte restent nets ([HvacPopup.echelle]).
      */
-    fun contextes(context: Context, largeurDp: Float, hauteurDp: Float): Contextes {
+    fun contextes(
+        context: Context, largeurDp: Float, hauteurDp: Float,
+        partLargeur: Float = HvacPopup.PART_LARGEUR, partHauteur: Float = HvacPopup.PART_HAUTEUR,
+    ): Contextes {
         val localized = LocaleHelper.applyLocale(context)
         val mesures = localized.resources.displayMetrics
-        val echelle = HvacPopup.echelle(mesures.widthPixels, mesures.heightPixels, mesures.density, largeurDp, hauteurDp)
+        val echelle = HvacPopup.echelle(mesures.widthPixels, mesures.heightPixels, mesures.density, largeurDp, hauteurDp,
+            partLargeur, partHauteur)
         val auTheme = ThemeHelper.withAppTheme(localized)
         val agrandi = auTheme.createConfigurationContext(
             Configuration(auTheme.resources.configuration).apply {
@@ -124,9 +128,11 @@ internal object OverlayKit {
      *
      * @param marge espace à garder autour de la carte quand il faut la réduire, en pixels
      * @param nom   de quel pop-up parle le journal
+     * @param carte la vue à réduire : par défaut le premier enfant de [racine]
      */
-    fun tenirDansLaFenetre(racine: View, marge: Int, nom: String) {
-        val carte = (racine as? ViewGroup)?.getChildAt(0) ?: return
+    fun tenirDansLaFenetre(racine: View, marge: Int, nom: String,
+                           carte: View? = (racine as? ViewGroup)?.getChildAt(0)) {
+        if (carte == null) return
         val libre = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
         carte.measure(libre, libre)
         val largeur = carte.measuredWidth

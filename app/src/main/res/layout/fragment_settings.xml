@@ -545,6 +545,134 @@
 
             </LinearLayout>
 
+            <!-- ── Section PLEIN ÉCRAN (2026-10-23) ─────────────────────────────
+                 Désactivé par défaut. Même méthode que l'écran de suivi de la pré-climatisation. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card_rounded"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_fullscreen"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    android:textAllCaps="true"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="7dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/settings_fullscreen_switch"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <Switch
+                            android:scaleX="1.3"
+                            android:scaleY="1.3"
+                            android:layout_marginHorizontal="8dp"
+                            android:id="@+id/switch_fullscreen"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="false" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/settings_fullscreen_desc"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- ── Section BARRE CLIM PENDANT ANDROID AUTO / CARPLAY (2026-10-24) ──
+                 La barre du haut n'ouvre plus la clim pendant la projection ; une zone invisible
+                 par-dessus ouvre notre pop-up HVAC. Activée par défaut. Déplacée ici depuis les
+                 boutons flottants le 2026-10-25 (sa demande) : même réglage enregistré. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card_rounded"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/floating_hvac_zone"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    android:textAllCaps="true"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="7dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/floating_hvac_zone_desc"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="16sp" />
+
+                    <Switch
+                        android:scaleX="1.3"
+                        android:scaleY="1.3"
+                        android:layout_marginHorizontal="8dp"
+                        android:id="@+id/switch_hvac_zone"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
             <!-- ── Section DELAI DE FERMETURE DES POP-UPS ───────────────────── -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -680,8 +808,7 @@
                             android:layout_marginHorizontal="8dp"
                             android:id="@+id/switch_charge_popup"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:checked="true" />
+                            android:layout_height="wrap_content" />
 
                     </LinearLayout>
 
@@ -734,6 +861,80 @@
                     android:orientation="vertical"
                     android:padding="12dp">
 
+                    <!-- Écran conducteur par profil (2026-10-24) : les réglages de la carte sont ceux
+                         des profils sélectionnés ici, un ou plusieurs (jusqu'à dix, en rangées de cinq
+                         posées par le code). Caché sans aucun profil : la carte règle alors les
+                         réglages communs. -->
+                    <LinearLayout
+                        android:id="@+id/row_cluster_profiles"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:layout_marginBottom="12dp"
+                        android:visibility="gone">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_cluster_profiles_title"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp" />
+
+                            <TextView
+                                android:id="@+id/tv_cluster_profiles_info"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:layout_marginStart="12dp"
+                                android:textColor="@color/dash_text_lo"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/btn_cluster_profiles_all"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:minHeight="52dp"
+                                android:gravity="center"
+                                android:paddingHorizontal="12dp"
+                                android:background="?attr/selectableItemBackground"
+                                android:text="@string/settings_cluster_profiles_all"
+                                android:textColor="@color/dash_accent"
+                                android:textSize="13sp" />
+
+                            <TextView
+                                android:id="@+id/btn_cluster_profiles_current"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:minHeight="52dp"
+                                android:gravity="center"
+                                android:paddingHorizontal="12dp"
+                                android:background="?attr/selectableItemBackground"
+                                android:text="@string/settings_cluster_profiles_current_only"
+                                android:textColor="@color/dash_accent"
+                                android:textSize="13sp" />
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:id="@+id/grid_cluster_profiles"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
+
+                        <View
+                            android:layout_width="match_parent"
+                            android:layout_height="1dp"
+                            android:layout_marginTop="12dp"
+                            android:background="@color/dash_border" />
+
+                    </LinearLayout>
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -766,6 +967,17 @@
                         android:text="@string/settings_cluster_module_desc"
                         android:textColor="@color/dash_text_lo"
                         android:textSize="13sp" />
+
+                    <!-- Profils sélectionnés dont le module n'est pas dans le même état. -->
+                    <TextView
+                        android:id="@+id/tv_cluster_module_mixed"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/settings_cluster_mixed"
+                        android:textColor="@color/dash_warn"
+                        android:textSize="13sp"
+                        android:visibility="gone" />
 
                     <!-- Refonte A (2026-10-17) : à gauche l'aperçu du combiné, animé sur un trajet
                          simulé et fidèle aux réglages ; à droite les réglages groupés (Modules,
@@ -898,6 +1110,7 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_nav"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_nav"
@@ -970,6 +1183,7 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_media"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_media"
@@ -1062,6 +1276,7 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_style"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_style"
@@ -1118,6 +1333,7 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_pill"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_pill"
@@ -1191,6 +1407,126 @@
                             android:textColor="@color/dash_text_lo"
                             android:textSize="13sp" />
 
+                        <!-- Puissance maxi de la jauge Puissance (issue #165) : Auto (apprise) ou choisie. -->
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:id="@+id/tv_cluster_label_power"
+                                android:layout_width="150dp"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_cluster_row_power"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_cluster_power_auto"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="@string/settings_cluster_power_auto"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp"
+                                    android:maxLines="1"
+                                    app:backgroundTint="@color/dash_btn"
+                                    app:strokeWidth="1dp"
+                                    app:strokeColor="@color/dash_border"
+                                    app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_cluster_power_125"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginHorizontal="4dp"
+                                    android:text="125 kW"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp"
+                                    android:maxLines="1"
+                                    app:backgroundTint="@color/dash_btn"
+                                    app:strokeWidth="1dp"
+                                    app:strokeColor="@color/dash_border"
+                                    app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_cluster_power_150"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginHorizontal="4dp"
+                                    android:text="150 kW"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp"
+                                    android:maxLines="1"
+                                    app:backgroundTint="@color/dash_btn"
+                                    app:strokeWidth="1dp"
+                                    app:strokeColor="@color/dash_border"
+                                    app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_cluster_power_180"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginHorizontal="4dp"
+                                    android:text="180 kW"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp"
+                                    android:maxLines="1"
+                                    app:backgroundTint="@color/dash_btn"
+                                    app:strokeWidth="1dp"
+                                    app:strokeColor="@color/dash_border"
+                                    app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_cluster_power_320"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="4dp"
+                                    android:text="320 kW"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp"
+                                    android:maxLines="1"
+                                    app:backgroundTint="@color/dash_btn"
+                                    app:strokeWidth="1dp"
+                                    app:strokeColor="@color/dash_border"
+                                    app:cornerRadius="8dp" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_cluster_power_desc"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:layout_marginStart="150dp"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp" />
+
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1202,6 +1538,8 @@
                             android:letterSpacing="0.12"
                             android:textAllCaps="true" />
 
+                        <!-- Distance : Auto (comme la voiture), km ou miles pour tout le module
+                             (2026-10-23, variante B ; Auto le même jour). -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1210,6 +1548,81 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_distance"
+                                android:layout_width="150dp"
+                                android:layout_height="wrap_content"
+                                android:text="@string/settings_cluster_row_distance"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="16sp" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_cluster_dist_auto"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="@string/cluster_distance_auto"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp"
+                                    app:backgroundTint="@color/dash_btn"
+                                    app:strokeWidth="1dp"
+                                    app:strokeColor="@color/dash_border"
+                                    app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_cluster_dist_km"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="4dp"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="@string/cluster_distance_km"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp"
+                                    app:backgroundTint="@color/dash_btn"
+                                    app:strokeWidth="1dp"
+                                    app:strokeColor="@color/dash_border"
+                                    app:cornerRadius="8dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_cluster_dist_mi"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:minHeight="52dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginStart="4dp"
+                                    android:text="@string/cluster_distance_miles"
+                                    android:textAllCaps="false"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="16sp"
+                                    app:backgroundTint="@color/dash_btn"
+                                    app:strokeWidth="1dp"
+                                    app:strokeColor="@color/dash_border"
+                                    app:cornerRadius="8dp" />
+
+                            </LinearLayout>
+
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical">
+
+                            <TextView
+                                android:id="@+id/tv_cluster_label_gauge"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_gauge"
@@ -1266,6 +1679,7 @@
                             android:gravity="center_vertical">
 
                             <TextView
+                                android:id="@+id/tv_cluster_label_average"
                                 android:layout_width="150dp"
                                 android:layout_height="wrap_content"
                                 android:text="@string/settings_cluster_row_average"
@@ -1498,6 +1912,203 @@
                     android:orientation="vertical"
                     android:visibility="gone">
 
+            <!-- ── Section CE QUE RÈGLE AUTO (issue #160) ─────────────────────────────
+                 En AUTO la voiture règle ventilation, sens de l'air et recirculation ; les deux
+                 derniers peuvent rester à la main de l'utilisateur (remis juste après AUTO).
+                 Masquée sans clim pilotable. -->
+            <LinearLayout
+                android:id="@+id/card_hvac_auto_scope"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/bg_card_rounded"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/settings_auto_scope_title"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.12"
+                    android:textAllCaps="true"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="7dp" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="10dp"
+                    android:text="@string/settings_auto_scope_desc"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="15sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_auto_scope_fan"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/settings_auto_scope_fan_desc"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp" />
+
+                    </LinearLayout>
+
+                    <Switch
+                        android:id="@+id/switch_auto_scope_fan"
+                        android:scaleX="1.3"
+                        android:scaleY="1.3"
+                        android:layout_marginHorizontal="8dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:enabled="false" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_auto_scope_air"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/tv_auto_scope_air"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp" />
+
+                    </LinearLayout>
+
+                    <Switch
+                        android:id="@+id/switch_auto_scope_air"
+                        android:scaleX="1.3"
+                        android:scaleY="1.3"
+                        android:layout_marginHorizontal="8dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="10dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/settings_auto_scope_loop"
+                            android:textColor="@color/text_primary"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/tv_auto_scope_loop"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="13sp" />
+
+                    </LinearLayout>
+
+                    <Switch
+                        android:id="@+id/switch_auto_scope_loop"
+                        android:scaleX="1.3"
+                        android:scaleY="1.3"
+                        android:layout_marginHorizontal="8dp"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="12dp"
+                    android:text="@string/settings_auto_scope_note"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="13sp" />
+
+            </LinearLayout>
+
             <!-- ── Section RÉGLAGES SUPPLÉMENTAIRES ───────────────────────── -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -1565,6 +2176,54 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
                         android:text="@string/settings_garage_mode_desc"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="13sp" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/dash_border" />
+
+                <!-- Raccourci de secours : rouvrir MG4Control en tenant 5 s le clic central du joystick
+                     droit, Mode Garage compris. Activé par défaut. -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/settings_rescue_shortcut"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="16sp" />
+
+                        <Switch
+                            android:scaleX="1.3"
+                            android:scaleY="1.3"
+                            android:layout_marginHorizontal="8dp"
+                            android:id="@+id/switch_rescue_shortcut"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="@string/settings_rescue_shortcut_desc"
                         android:textColor="@color/dash_text_lo"
                         android:textSize="13sp" />
 
@@ -2007,15 +2666,35 @@
                 app:iconTint="@color/dash_text_lo"
                 app:iconGravity="textStart" />
 
-            <!-- ── Bouton ONGLET DU COMBINÉ : outil de relevé, débloqué avec le Diagnostic
+            <!-- ── Bouton PARAMÈTRES ANDROID (2026-10-31) : l'écran d'Android, que le launcher
+                 SAIC ne propose pas. Même aspect que le bouton Infos. ── -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_android_settings"
+                android:layout_width="match_parent"
+                android:layout_height="52dp"
+                android:layout_marginBottom="8dp"
+                android:text="@string/btn_android_settings"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp"
+                android:letterSpacing="0.06"
+                android:textAllCaps="true"
+                app:backgroundTint="@color/dash_btn"
+                app:strokeWidth="1dp"
+                app:strokeColor="@color/dash_border"
+                app:cornerRadius="10dp"
+                app:icon="@android:drawable/ic_menu_preferences"
+                app:iconTint="@color/dash_text_lo"
+                app:iconGravity="textStart" />
+
+            <!-- ── Bouton ÉTAT DE CHARGE : outil de relevé, débloqué avec le Diagnostic
                  (5 appuis sur le logo), juste au-dessus de lui. ── -->
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_cluster_tab"
+                android:id="@+id/btn_charge_state"
                 android:layout_width="match_parent"
                 android:layout_height="52dp"
                 android:layout_marginBottom="8dp"
                 android:visibility="gone"
-                android:text="@string/btn_cluster_tab"
+                android:text="@string/btn_charge_state"
                 android:textColor="@color/dash_warn"
                 android:textSize="16sp"
                 android:letterSpacing="0.06"
