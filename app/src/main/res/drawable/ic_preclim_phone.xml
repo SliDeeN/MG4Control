@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Garde-voiture, rappel avant le départ : le téléphone de l'application iSmart (contour de
+     Tabler Icons, MIT). Blanc : c'est la vue qui colore le pictogramme. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="2"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M8,3h8a2,2 0,0 1,2 2v14a2,2 0,0 1,-2 2h-8a2,2 0,0 1,-2 -2v-14a2,2 0,0 1,2 -2z M11,4h2 M12,17v0.01"/>
+</vector>

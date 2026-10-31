@@ -297,7 +297,8 @@ votre absence. Sa fenêtre démarre toujours sur « Maintenant » ; la voiture d
   l'écran affiche un avertissement rouge fixe « SURVEILLANCE CAMÉRA ».
 
 Sortez avec la clé : après un décompte réglable, **MG4Control verrouille lui-même les portes** —
-verrouiller avec la clé éteindrait la voiture. À la fin, la clim retrouve ses réglages d'avant et
+verrouiller avec la clé éteindrait la voiture. Avant de sortir, mettez **vous-même** les feux et
+les essuie-glaces sur OFF : l'application ne s'en charge pas (l'écran de décompte le rappelle). À la fin, la clim retrouve ses réglages d'avant et
 la voiture s'éteint. Tout s'arrête si la voiture est déverrouillée (elle reste alors allumée), si
 elle roule, ou sous un niveau de batterie réglable. Un écran de suivi plein cadre montre le temps
 restant, le cycle en cours et l'état du verrouillage, avec des particules bleues ou orange selon
@@ -1713,7 +1714,8 @@ window always starts on "Now"; the car must be in P.
   red "CAMERA SURVEILLANCE" warning.
 
 Get out with the key: after an adjustable countdown, **MG4Control locks the doors itself** —
-locking with the key would switch the car off. At the end, the climate goes back to its previous
+locking with the key would switch the car off. Before getting out, switch the lights and wipers to
+OFF **yourself**: the app doesn't do it (the countdown screen reminds you). At the end, the climate goes back to its previous
 settings and the car switches off. Everything stops if the car is unlocked (it then stays on), if
 it moves, or below an adjustable battery level. A full-frame follow-up screen shows the time left,
 the current cycle and the lock state, with blue or orange particles depending on whether the

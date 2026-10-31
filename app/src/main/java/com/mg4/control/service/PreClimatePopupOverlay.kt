@@ -207,6 +207,10 @@ object PreClimatePopupOverlay {
         val avertChien: TextView = racine.findViewById(R.id.preclim_dog_warning)
         val annuler: TextView = racine.findViewById(R.id.preclim_cancel)
         val demarrer: TextView = racine.findViewById(R.id.preclim_start)
+        // Rappel avant le départ (2026-10-31), par-dessus la carte.
+        val rappel: View = racine.findViewById(R.id.preclim_unlock_layer)
+        val rappelJamais: TextView = racine.findViewById(R.id.preclim_unlock_never)
+        val rappelOk: TextView = racine.findViewById(R.id.preclim_unlock_ok)
         val cases = mutableListOf<TextView>()
         val puces = mutableListOf<TextView>()
         val crans = mutableListOf<View>()
@@ -219,6 +223,8 @@ object PreClimatePopupOverlay {
         val texte2 = themed.getColor(R.color.text_secondary)
         val alerte = themed.getColor(R.color.dash_warn)
         val alerteDoux = themed.getColor(R.color.dash_warn_dim)
+        val surAlerte = themed.getColor(R.color.hvac_on_heat)
+        val section = themed.getColor(R.color.dash_section)
         val danger = themed.getColor(R.color.dash_danger)
         val dangerDoux = themed.getColor(R.color.dash_danger_dim)
         val surAccent = themed.getColor(R.color.hvac_on_accent)
@@ -303,7 +309,41 @@ object PreClimatePopupOverlay {
             naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, 1))
         }
         v.demarrer.setOnClickListener { demarrer(app) }
+        brancherRappel(app, v)
     }
+
+    /**
+     * Rappel avant le départ (2026-10-31) : la pastille, les pictogrammes et OK aux couleurs d'un
+     * avertissement, comme AppDialog. Toucher à côté de sa carte ramène au réglage sans démarrer.
+     */
+    private fun brancherRappel(app: Context, v: Vues) {
+        OverlayKit.fond(v.racine.findViewById(R.id.preclim_unlock_badge), v.alerteDoux, ovale = true)
+        v.racine.findViewById<ImageView>(R.id.preclim_unlock_icon).imageTintList = ColorStateList.valueOf(v.alerte)
+        val lignes = listOf(
+            listOf(R.id.preclim_unlock_row1, R.id.preclim_unlock_ic1, R.id.preclim_unlock_t1, R.id.preclim_unlock_d1,
+                R.string.preclim_unlock_handle, R.string.preclim_unlock_handle_desc),
+            listOf(R.id.preclim_unlock_row2, R.id.preclim_unlock_ic2, R.id.preclim_unlock_t2, R.id.preclim_unlock_d2,
+                R.string.preclim_unlock_key, R.string.preclim_unlock_key_desc),
+            listOf(R.id.preclim_unlock_row3, R.id.preclim_unlock_ic3, R.id.preclim_unlock_t3, R.id.preclim_unlock_d3,
+                R.string.preclim_unlock_app, R.string.preclim_unlock_app_desc),
+        )
+        lignes.forEach { (rangee, icone, titre, texte, chaineTitre, chaineTexte) ->
+            OverlayKit.fond(v.racine.findViewById(rangee), v.section, rayon = v.dp(12f).toFloat())
+            v.racine.findViewById<ImageView>(icone).imageTintList = ColorStateList.valueOf(v.alerte)
+            v.racine.findViewById<TextView>(titre).text = v.s(chaineTitre)
+            v.racine.findViewById<TextView>(texte).text = v.s(chaineTexte)
+        }
+        OverlayKit.fond(v.rappelOk, v.alerte, rayon = v.dp(12f).toFloat())
+        v.rappelOk.setTextColor(v.surAlerte)
+        v.rappel.setOnClickListener { cacherRappel("toucher hors du rappel") }
+        v.rappelOk.setOnClickListener { partir(app, "OK") }
+        v.rappelJamais.setOnClickListener {
+            PreClimateSettings.setUnlockReminder(app, false)
+            partir(app, "Ne plus me rappeler — rappel désactivé")
+        }
+    }
+
+    private operator fun <T> List<T>.component6(): T = this[5]
 
     /** Branche − et + d'une ligne ; maintenus, ils répètent le pas. */
     private fun pas(l: Ligne, f: (PreClimateRequest, Int) -> PreClimateRequest) {
@@ -397,17 +437,71 @@ object PreClimatePopupOverlay {
         return v.s(if (c.ac == true) R.string.preclim_summary_ac else R.string.preclim_summary, temp, ventil)
     }
 
+    /**
+     * « Démarrer ». Rappel activé : il passe avant le décompte, mais seulement si le départ est
+     * possible — pas en P, le refus vient tout de suite, sans faire lire le rappel pour rien.
+     */
     private fun demarrer(app: Context) {
+        if (req == null || demarrage) return
+        AppLogger.i(TAG, "Pop-up — Démarrer")
+        if (!PreClimateSettings.unlockReminder(app)) { lancer(app); return }
+        demarrage = true
+        lecture.execute {
+            val enP = runCatching { MG4Hardware.isVehicleInPark() }.getOrNull() == true
+            handler.post {
+                demarrage = false
+                val v = vues ?: return@post
+                if (enP) montrerRappel(v)
+                else {
+                    AppLogger.w(TAG, "refusée avant le rappel : levier pas confirmé en P")
+                    Toast.makeText(app, v.s(R.string.preclim_need_park), Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    /** OK ou « Ne plus me rappeler » : le départ, le rappel restant affiché jusqu'au décompte. */
+    private fun partir(app: Context, bouton: String) {
+        AppLogger.i(TAG, "Rappel avant le départ — $bouton")
+        lancer(app)
+    }
+
+    private fun lancer(app: Context) {
         val r = req ?: return
         if (demarrage) return
         demarrage = true
-        AppLogger.i(TAG, "Pop-up — Démarrer")
         PreClimate.demarrer(app, r,
             surRefus = { texte ->
                 demarrage = false
+                cacherRappel("départ refusé")
                 vues?.let { Toast.makeText(app, it.s(texte), Toast.LENGTH_LONG).show() }
             },
             surDepart = { fermer("démarrage") })
+    }
+
+    /** Joystick sur OK au départ, anneau orange : gauche et droite passent d'un bouton à l'autre. */
+    private fun montrerRappel(v: Vues) {
+        effacerAnneaux(v)
+        v.rappel.visibility = View.VISIBLE
+        navigation = OverlayNavigation(
+            context = v.themed,
+            grille = listOf(listOf<View>(v.rappelJamais, v.rappelOk)),
+            depart = JoystickFocus.Position(0, 1),
+            surDeplacement = {},
+            couleurAnneau = v.alerte,
+        ).also { it.afficher() }
+        AppLogger.i(TAG, "Rappel avant le départ affiché")
+    }
+
+    /** Retour au réglage, joystick sur « Démarrer ». */
+    private fun cacherRappel(raison: String) {
+        val v = vues ?: return
+        if (v.rappel.visibility != View.VISIBLE) return
+        v.rappel.visibility = View.GONE
+        v.rappelJamais.foreground = null
+        v.rappelOk.foreground = null
+        naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, Int.MAX_VALUE))
+        AppLogger.i(TAG, "Rappel avant le départ fermé ($raison)")
     }
 
     // ── Joystick ─────────────────────────────────────────────────────────────
@@ -436,9 +530,7 @@ object PreClimatePopupOverlay {
                 else if (surveillanceDispo) listOf<View>(v.chien, v.surveillance) else listOf<View>(v.chien)) +
                 listOf(v.annuler, v.demarrer))
         }
-        // L'anneau de l'ancienne navigation resterait sur sa case, peut-être d'un autre mode.
-        (v.cases + v.puces + listOf(v.premier, v.duree, v.cycles, v.pause, v.temp, v.ventil).flatMap { listOf(it.moins, it.plus) } +
-            listOf(v.fermer, v.chien, v.surveillance, v.annuler, v.demarrer)).forEach { it.foreground = null }
+        effacerAnneaux(v)
         val ligne = depart.ligne.coerceIn(0, lignes.lastIndex)
         navigation = OverlayNavigation(
             context = v.themed,
@@ -446,6 +538,12 @@ object PreClimatePopupOverlay {
             depart = JoystickFocus.Position(ligne, depart.colonne.coerceIn(0, lignes[ligne].lastIndex)),
             surDeplacement = {},
         ).also { it.afficher() }
+    }
+
+    /** L'anneau de l'ancienne navigation resterait sur sa case, peut-être d'un autre mode. */
+    private fun effacerAnneaux(v: Vues) {
+        (v.cases + v.puces + listOf(v.premier, v.duree, v.cycles, v.pause, v.temp, v.ventil).flatMap { listOf(it.moins, it.plus) } +
+            listOf(v.fermer, v.chien, v.surveillance, v.annuler, v.demarrer)).forEach { it.foreground = null }
     }
 
     /** Repère de l'en-tête, comme celui du sélecteur de profils. */

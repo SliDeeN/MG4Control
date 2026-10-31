@@ -1604,6 +1604,13 @@ class ShortcutsFragment : Fragment() {
                 ClusterModuleOverlay.refresh(ctx, "réglage de la pré-climatisation")
             }
         }
+        view.findViewById<Switch>(R.id.switch_preclim_unlock).apply {
+            isChecked = PreClimateSettings.unlockReminder(ctx)
+            setOnCheckedChangeListener { _, coche ->
+                PreClimateSettings.setUnlockReminder(ctx, coche)
+                AppLogger.i(PreClimate.TAG, "rappel avant le départ ${if (coche) "activé" else "désactivé"}")
+            }
+        }
         peindre()
     }
 

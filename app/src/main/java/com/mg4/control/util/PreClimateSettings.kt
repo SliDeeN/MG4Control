@@ -33,6 +33,8 @@ object PreClimateSettings {
     private const val KEY_SURV = "preclim_surveillance"
     /** Fiche sur l'écran conducteur pendant le programme (2026-10-23) : activée par défaut. */
     private const val KEY_CLUSTER = "preclim_cluster"
+    /** Rappel « gardez la clé sur vous » avant le décompte (2026-10-31) : activé par défaut. */
+    private const val KEY_UNLOCK = "preclim_unlock_reminder"
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -56,6 +58,10 @@ object PreClimateSettings {
     /** Réglage seul : la fiche ne s'affiche en plus que sur les firmwares du module (`ClusterModuleSettings.isSupported`). */
     fun showOnCluster(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_CLUSTER, true)
     fun setShowOnCluster(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_CLUSTER, on).apply()
+
+    /** Coupé par « Ne plus me rappeler », rallumé par l'interrupteur de la page Garde-voiture. */
+    fun unlockReminder(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_UNLOCK, true)
+    fun setUnlockReminder(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_UNLOCK, on).apply()
 
     /**
      * Derniers choix du pop-up, mode « Maintenant ». Jamais vus : durée 1 h, premier cycle dans une
