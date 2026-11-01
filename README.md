@@ -4,7 +4,6 @@
 [![Release](https://github.com/SliDeeN/MG4Control/actions/workflows/release.yml/badge.svg)](https://github.com/SliDeeN/MG4Control/actions/workflows/release.yml)
 [![Demo](https://img.shields.io/badge/Demo-Essayer%20%C2%B7%20Try%20it-1f6feb?logo=github)](https://slideen.github.io/MG4Control/)
 [![Downloads](https://img.shields.io/github/downloads/SliDeeN/MG4Control/total?label=Downloads&logo=github)](https://github.com/SliDeeN/MG4Control/releases)
-[![Latest release downloads](https://img.shields.io/github/downloads/SliDeeN/MG4Control/latest/total?label=Latest%20release&logo=github)](https://github.com/SliDeeN/MG4Control/releases/latest)
 [![Stars](https://img.shields.io/github/stars/SliDeeN/MG4Control?label=Stars&logo=github)](https://github.com/SliDeeN/MG4Control/stargazers)
 
 > Application Android Automotive pour le contrôle avancé des paramètres de conduite du MG4 électrique.
@@ -14,14 +13,6 @@
 You enjoy MG4Control and want to support its development ?  
 [![PayPal](https://img.shields.io/badge/Donate-PayPal-blue?logo=paypal)](https://www.paypal.com/paypalme/pfauquembergue)
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?logo=buy-me-a-coffee&logoColor=black)](https://buymeacoffee.com/slideen)
-
-<a href="https://star-history.com/#SliDeeN/MG4Control&Date">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=slideen/mg4control&type=Date&theme=dark" />
-    <img alt="Star history · Historique des étoiles" src="https://api.star-history.com/svg?repos=slideen/mg4control&type=Date" width="600" />
-  </picture>
-</a>
-
 ---
 
 <details open>
@@ -2860,3 +2851,10 @@ prototype des sons d'automatisation 🙏
 [![GitHub](https://img.shields.io/badge/GitHub-SliDeeN%2FMG4Control-181717?logo=github)](https://github.com/SliDeeN/MG4Control)
 
 </details>
+
+<a href="https://star-history.com/#SliDeeN/MG4Control&Date">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=slideen/mg4control&type=Date&theme=dark" />
+    <img alt="Star history · Historique des étoiles" src="https://api.star-history.com/svg?repos=slideen/mg4control&type=Date" width="600" />
+  </picture>
+</a>
