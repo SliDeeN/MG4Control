@@ -4,8 +4,12 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.RelativeSizeSpan
 import android.util.TypedValue
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -58,12 +62,18 @@ internal class HvacPopupSkin(
         val air: (part: Int) -> Unit,
         val lunette: () -> Unit,
         val ac: () -> Unit,
+        /** Mode ECO de la clim (2026-10-23). */
+        val eco: () -> Unit = {},
         /** Choix direct d'un mode ([MG4Hardware.LoopMode]). */
         val recirculation: (mode: Int) -> Unit,
         /** Siège chauffant : un niveau précis, de 0 (éteint) à 3. */
         val siegeNiveau: (gauche: Boolean, niveau: Int) -> Unit,
         val volant: () -> Unit,
         val fermer: () -> Unit,
+        /** AUTO enfoncé : tenu, il fait avancer le débit d'un cran (issue #178). */
+        val autoEnfonce: () -> Unit = {},
+        /** AUTO relâché ; [annule] = doigt sorti du bouton, rien ne se joue. */
+        val autoRelache: (annule: Boolean) -> Unit = {},
     )
 
 
@@ -93,6 +103,7 @@ internal class HvacPopupSkin(
     private val tempPlus: ImageView     = view.findViewById(R.id.hvac_temp_up)
 
     private val ventilation: TextView   = view.findViewById(R.id.hvac_fan_value)
+    private val libelleVentilation: TextView = view.findViewById(R.id.hvac_fan_label)
     private val barre: SegmentBarView   = view.findViewById(R.id.hvac_fan_bar)
     private val fanMoins: ImageView     = view.findViewById(R.id.hvac_fan_down)
     private val fanPlus: ImageView      = view.findViewById(R.id.hvac_fan_up)
@@ -107,6 +118,10 @@ internal class HvacPopupSkin(
     private val acIcone: ImageView      = view.findViewById(R.id.hvac_ac_icon)
     private val acTitre: TextView       = view.findViewById(R.id.hvac_ac_title)
     private val acEtat: TextView        = view.findViewById(R.id.hvac_ac_state)
+
+    private val eco: View               = view.findViewById(R.id.hvac_eco)
+    private val ecoIcone: ImageView     = view.findViewById(R.id.hvac_eco_icon)
+    private val ecoTitre: TextView      = view.findViewById(R.id.hvac_eco_title)
 
     private val recirculation: Map<Int, TextView> = mapOf(
         MG4Hardware.LoopMode.INNER   to view.findViewById<TextView>(R.id.hvac_loop_inner),
@@ -150,6 +165,8 @@ internal class HvacPopupSkin(
     private val chaud           = themed.getColor(R.color.dash_warn)
     private val chaudDoux       = themed.getColor(R.color.dash_warn_dim)
     private val surChaud        = themed.getColor(R.color.hvac_on_heat)
+    private val vert            = themed.getColor(R.color.dash_eco)
+    private val surVert         = themed.getColor(R.color.hvac_on_eco)
     private val bouton          = themed.getColor(R.color.dash_btn)
     private val bordure         = themed.getColor(R.color.dash_border)
     private val segmentChoisi   = themed.getColor(R.color.hvac_segment_on)
@@ -183,6 +200,8 @@ internal class HvacPopupSkin(
     /** Dernier état peint : de quoi rendre son aspect à un bouton après un éclair. */
     private var dernier: MG4Hardware.ClimateState? = null
     private var eclair: JoystickFocus.Commande? = null
+    /** AUTO tenu enfoncé : cerclé comme un éclair, jusqu'au relâchement ou à l'avance du débit. */
+    private var autoTenu = false
 
     init {
         // Ce qui ne change pas avec l'état de la clim.
@@ -200,17 +219,37 @@ internal class HvacPopupSkin(
         fond(siegeDroit.selecteur, bouton)
         fond(volant, bouton, bordure, traitFin)
         fond(curseur, blanc, ovale = true)
+        // « AUTO » et ses trois crans sur deux lignes ([Crans]) : la mise en majuscules d'Android
+        // casserait le dessin des crans, « AUTO » est donc écrit en capitales à la main.
+        auto.isAllCaps = false
+        auto.maxLines = 2
     }
 
     /** À appeler une fois, avant le premier [peindre]. [avecChauffages] rend leur colonne visible. */
     fun brancher(gestes: Gestes, avecChauffages: Boolean) {
         // Même chemin au doigt qu'au joystick : mêmes bornes, même anti-rebond.
-        cellules.forEach { (commande, vue) -> vue.setOnClickListener { gestes.commande(commande) } }
+        cellules.forEach { (commande, vue) ->
+            if (commande != JoystickFocus.Commande.VALIDER) vue.setOnClickListener { gestes.commande(commande) }
+        }
+        // AUTO se joue au relâchement : tenu, il fait avancer le débit (issue #178).
+        auto.setOnTouchListener { v, e ->
+            when (e.actionMasked) {
+                MotionEvent.ACTION_DOWN -> gestes.autoEnfonce()
+                MotionEvent.ACTION_UP -> {
+                    val dedans = e.x >= 0f && e.y >= 0f && e.x <= v.width && e.y <= v.height
+                    gestes.autoRelache(!dedans)
+                    if (dedans) v.performClick()
+                }
+                MotionEvent.ACTION_CANCEL -> gestes.autoRelache(true)
+            }
+            true
+        }
         airFace.setOnClickListener       { gestes.air(AirFlow.FACE) }
         airFeet.setOnClickListener       { gestes.air(AirFlow.FEET) }
         airWindshield.setOnClickListener { gestes.air(AirFlow.WINDSHIELD) }
         airRear.setOnClickListener       { gestes.lunette() }
         ac.setOnClickListener            { gestes.ac() }
+        eco.setOnClickListener           { gestes.eco() }
         recirculation.forEach { (mode, vue) -> vue.setOnClickListener { gestes.recirculation(mode) } }
         fermer.setOnClickListener        { gestes.fermer() }
         placerRepere(avecChauffages)
@@ -240,6 +279,12 @@ internal class HvacPopupSkin(
             geste.compoundDrawableTintList = ColorStateList.valueOf(accent)
         }
         fond(puce, if (utilisable) accentDoux else chaudDoux, rayon = rayonPilule)
+    }
+
+    /** AUTO tenu enfoncé ou relâché. */
+    fun appuiAuto(tenu: Boolean) {
+        autoTenu = tenu
+        dernier?.let { peindreCroix(it) }
     }
 
     /**
@@ -294,6 +339,13 @@ internal class HvacPopupSkin(
         }
         inerte(ac, etat.acOn == null)
 
+        // ECO : plein et vert quand il est actif, comme le compresseur l'est en bleu.
+        val economie = etat.ecoOn == true
+        if (economie) fond(eco, vert) else fond(eco, bouton, bordure, traitFin)
+        ecoIcone.imageTintList = ColorStateList.valueOf(if (economie) surVert else texteSecondaire)
+        ecoTitre.setTextColor(if (economie) surVert else textePrincipal)
+        inerte(eco, etat.ecoOn == null)
+
         recirculation.forEach { (mode, vue) -> tuile(vue, etat.loopMode?.let { it == mode }) }
         // Valeur illisible → tuiles grisées. Valeur lue mais hors échelle (7 « aucun »)
         // → tuiles actives, aucune allumée : l'utilisateur peut choisir un sens.
@@ -340,10 +392,72 @@ internal class HvacPopupSkin(
         boutonCran(fanMoins, eclair == JoystickFocus.Commande.GAUCHE)
         boutonCran(fanPlus, eclair == JoystickFocus.Commande.DROITE)
         val r = etat.reglages()
-        tuile(auto, if (r.enAuto) true else etat.autoOn, plein = true)
-        if (eclair == JoystickFocus.Commande.VALIDER) {
+        val allume = if (r.enAuto) true else etat.autoOn
+        tuile(auto, allume, plein = true)
+        if (eclair == JoystickFocus.Commande.VALIDER || autoTenu) {
             (auto.background as? GradientDrawable)?.setStroke(traitEpais, textePrincipal)
         }
+        // Trois crans juste sous « AUTO », sur une seconde ligne du texte : centrés avec lui, et non
+        // collés au bas du bouton (essai SWI133 du 2026-10-31 : trop bas, peu visibles). Le débit
+        // reste lisible AUTO coupé, puisque l'appui long le règle sans allumer AUTO. AUTO allumé
+        // (fond plein) : crans dans la couleur du texte ; coupé : crans d'accent. Débit illisible
+        // sur ce firmware : « AUTO » seul.
+        val locale = localized.resources.configuration.locales[0]
+        val titre = localized.getString(R.string.clim_auto).uppercase(locale)
+        val debit = etat.autoVolume
+        auto.text = if (debit == null) titre else {
+            val plein = allume == true
+            val crans = Crans(HvacPopup.crans(debit),
+                on = if (plein) surAccent else accent,
+                off = if (plein) Color.argb(70, Color.red(surAccent), Color.green(surAccent), Color.blue(surAccent)) else bordure,
+                largeur = cranLargeur, hauteur = cranHauteur, ecart = cranEcart, marge = cranMarge)
+            crans.setBounds(0, 0, crans.intrinsicWidth, crans.intrinsicHeight)
+            SpannableStringBuilder(titre).append('\n').apply {
+                val debut = length
+                append(' ')
+                setSpan(android.text.style.ImageSpan(crans, android.text.style.DynamicDrawableSpan.ALIGN_BASELINE),
+                    debut, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+        }
+    }
+
+    private val cranLargeur = dp(themed, 20f)
+    private val cranHauteur = dp(themed, 6f)
+    private val cranEcart = dp(themed, 5f)
+    /** Espace entre « AUTO » et les crans. */
+    private val cranMarge = dp(themed, 5f)
+
+    /** Les trois crans du débit : [allumes] en [on], le reste en [off], sous une [marge]. */
+    private class Crans(
+        private val allumes: Int,
+        private val on: Int,
+        private val off: Int,
+        private val largeur: Int,
+        private val hauteur: Int,
+        private val ecart: Int,
+        private val marge: Int,
+    ) : android.graphics.drawable.Drawable() {
+        private val peinture = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+        private val rect = android.graphics.RectF()
+
+        override fun draw(canvas: android.graphics.Canvas) {
+            val b = bounds
+            val rayon = hauteur / 2f
+            val haut = (b.top + marge).toFloat()
+            for (i in 0 until 3) {
+                peinture.color = if (i < allumes) on else off
+                val x = (b.left + i * (largeur + ecart)).toFloat()
+                rect.set(x, haut, x + largeur, haut + hauteur)
+                canvas.drawRoundRect(rect, rayon, rayon, peinture)
+            }
+        }
+
+        override fun getIntrinsicWidth() = 3 * largeur + 2 * ecart
+        override fun getIntrinsicHeight() = marge + hauteur
+        override fun setAlpha(alpha: Int) { peinture.alpha = alpha }
+        override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) { peinture.colorFilter = colorFilter }
+        @Deprecated("Requis par Drawable")
+        override fun getOpacity() = android.graphics.PixelFormat.TRANSLUCENT
     }
 
     private fun boutonRond(vue: ImageView, couleur: Int, doux: Int, eclaire: Boolean) {

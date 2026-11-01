@@ -64,6 +64,23 @@ object ProfileApplier {
         // raccourcis associés à un profil — voir [ActiveProfile], et surtout la distinction avec
         // [lastManualProfileId] juste en dessous, qui répond à une question différente.
         ActiveProfile.set(MG4Hardware.appContext(), profile.id)
+        // Ce que le profil demande à l'écran (2026-10-24) : de quoi vérifier, dans le journal, qu'un
+        // profil jamais réglé coupe bien le module et n'a aucune bulle.
+        AppLogger.i(TAG, "  Écran conducteur : module " +
+            "${if (com.mg4.control.model.ClusterConfigs.of(profile).enabled == true) "activé" else "coupé"} · " +
+            "boutons flottants : ${com.mg4.control.model.FloatingSets.buttonsOf(profile).size}" +
+            if (com.mg4.control.model.FloatingSets.enabledOf(profile)) "" else " (masqués)")
+        // Boutons flottants du profil, sur tous les firmwares : reposés s'ils changent.
+        MG4Hardware.appContext()?.let { com.mg4.control.service.FloatingButtonsOverlay.suivreProfil(it) }
+        // L'écran conducteur suit les réglages du profil : posé, retiré ou relu tout de suite, sans
+        // attendre son relevé suivant. Rien sur les firmwares où le combiné ne montre pas l'écran
+        // central (A9).
+        MG4Hardware.appContext()?.takeIf { com.mg4.control.util.ClusterModuleSettings.isSupported() }?.let {
+            com.mg4.control.service.ClusterModuleOverlay.refresh(it, "profil « ${profile.name} »")
+            com.mg4.control.service.ClusterModuleOverlay.relire()
+        }
+        // Sons d'automatisation (issue #161) : l'événement « profil appliqué », pour ce profil-ci.
+        com.mg4.control.automation.SoundAutomation.profilApplique(profile.id)
 
         // Application manuelle (popup volant / app / raccourci) → on mémorise le choix de l'utilisateur
         // pour que le passage en READY le respecte au lieu de ré-appliquer le profil par défaut.
@@ -172,7 +189,9 @@ object ProfileApplier {
                     targetTemp   = profile.hvacTemp,
                     fanLevel     = profile.hvacFan,
                     loopMode     = profile.hvacLoopMode,
-                    airFlow      = profile.hvacAirFlow
+                    airFlow      = profile.hvacAirFlow,
+                    eco          = profile.hvacEco,
+                    autoVolume   = profile.hvacAutoVolume
                 )
                 AppLogger.i(TAG, "  Climatisation du profil appliquée → $climOk")
             }

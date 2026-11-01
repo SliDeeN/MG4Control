@@ -34,6 +34,7 @@ import com.mg4.control.hardware.EnergyReader
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.ChargeProbe
 import com.mg4.control.hardware.ReadyWatcher
+import com.mg4.control.hardware.VehicleDistanceUnit
 import com.mg4.control.model.ChargeDisplay
 import com.mg4.control.model.ChargeEnCours
 import com.mg4.control.model.ClusterGauge
@@ -44,12 +45,17 @@ import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ClusterTrip
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.DrivingProfile
+import com.mg4.control.model.PowerScale
+import com.mg4.control.model.PreClimateMode
+import com.mg4.control.model.PreClimatePlan
+import com.mg4.control.model.PreClimateTrend
 import com.mg4.control.model.StatsTracker
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.ui.widget.ClusterGaugeView
 import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.util.LocaleHelper
+import kotlin.math.roundToInt
 
 /**
  * Module MG4Control sur le combiné (Réglages › Interface, 2026-10-14).
@@ -78,6 +84,10 @@ import com.mg4.control.util.LocaleHelper
  * propre avertissement à la place du carré et bloque les onglets (essai du 2026-10-16) ; coupé
  * pour cela, le module a été remis en service le 2026-10-17 : l'utilisateur a trouvé comment faire
  * revenir l'affichage du combiné ([MODULE_CHARGE]).
+ *
+ * Pendant une pré-climatisation (issue #130, 2026-10-23), sa fiche passe avant tout, sur les onglets
+ * Navigation et Musique, même réglés sur « Aucun » ; la fenêtre est posée pour elle si le module est
+ * désactivé, et retirée à la fin ([PreClimate.surLeCombine]).
  *
  * Vu sur le combiné le 2026-10-14 (SWI133) : la fenêtre s'y affiche bien. La place du carré vient
  * de la mise en page de l'appli SAIC ([ClusterGauge.placement]) ; le journal ([TAG]) donne l'écran
@@ -124,6 +134,7 @@ internal object ClusterModuleOverlay {
     /** Dernier onglet et dernier module annoncés au journal : un mot par changement, pas par relevé. */
     private var dernierOnglet: Int? = -1
     private var dernierModule: ClusterModule? = null
+    private var dernierPreClim = false
     private var mode: DriveMode? = null
     /**
      * Profil de la pastille (issue #152) : relu quand le profil actif change, et avec les valeurs
@@ -139,14 +150,20 @@ internal object ClusterModuleOverlay {
     private var chargeBrute: EnergyReader.ChargeRaw? = null
     private var chargeFinie = false
     private var batterieDebut: Float? = null
+    /** Plus forte puissance lissée du trajet en cours (issue #165) ; fil du lecteur. */
+    private var pointeTrajet = 0f
 
     /**
      * Un passage en READY ouvre un nouveau trajet. Pas le premier état lu : si la voiture est déjà
      * en READY au démarrage, l'affichage vient de remettre le trajet à zéro.
      */
     private val readyListener = ReadyWatcher.Listener { ready, firstRead ->
+        // Fin de trajet : sa pointe peut faire redescendre l'échelle de puissance (issue #165).
+        if (!ready && !firstRead) lecteur.post { finTrajet() }
+        if (ready && !firstRead) verifierEtRecoller("passage en READY")
         if (ready && !firstRead) lecteur.post {
             trajet.reset()
+            pointeTrajet = 0f
             AppLogger.i(TAG, "passage en READY : moyenne et récupération repartent de zéro")
             // On repart : la charge, finie ou non, rend la place à la jauge.
             if (session.active) finirCharge(SystemClock.elapsedRealtime(), "passage en READY")
@@ -164,7 +181,43 @@ internal object ClusterModuleOverlay {
         override fun onDisplayRemoved(displayId: Int) {
             if (displayId == ecranId) masquer("écran $displayId retiré")
         }
-        override fun onDisplayChanged(displayId: Int) {}
+        // Sortie de veille du combiné : la fenêtre a pu s'y détacher sans que l'écran ne soit retiré.
+        override fun onDisplayChanged(displayId: Int) {
+            if (displayId == ecranId) verifierEtRecoller("écran $displayId modifié")
+        }
+    }
+
+    /** Heure de la dernière pose : une fenêtre tout juste posée n'est pas encore attachée. */
+    private var poseeMs = 0L
+    private const val ATTACHE_DELAI_MS = 2_000L
+    /** Nouveaux essais quand l'écran du combiné manque encore au moment d'une vérification. */
+    private val ESSAIS_MS = listOf(1_000L, 2_500L, 5_000L, 10_000L)
+
+    /**
+     * Vérifie que le module est bien posé sur l'écran du combiné, et l'y recolle sinon (fork
+     * sensoyg, 2026-10-30 : sur DBI68, le module disparaissait après une mise en veille). Appelée
+     * au contact (IGNITION_RUN), au passage en READY et quand l'écran du combiné change d'état.
+     * Fenêtre absente, détachée ou sur un autre écran : retirée puis reposée. Sans effet quand le
+     * module n'a pas à être là (réglage coupé, firmware sans combiné).
+     */
+    fun verifierEtRecoller(origine: String) {
+        val app = appContext ?: return
+        main.post {
+            if (!ClusterModuleSettings.isSupported() ||
+                !(ClusterModuleSettings.isEnabled(app) || PreClimate.surLeCombine(app))) return@post
+            val ecran = ecranDuCombine(app)
+            if (ecran == null) {
+                ESSAIS_MS.forEach { delai -> main.postDelayed({ if (vue == null) afficher("$origine (+$delai ms)", signalerAbsence = false) }, delai) }
+                return@post
+            }
+            val v = vue
+            val detachee = v != null && !v.isAttachedToWindow && SystemClock.elapsedRealtime() - poseeMs > ATTACHE_DELAI_MS
+            if (v == null || detachee || ecranId != ecran.displayId) {
+                AppLogger.i(TAG, "$origine : module ${if (v == null) "absent" else if (detachee) "détaché" else "sur un autre écran"} — recollé")
+                masquer(origine)
+                afficher(origine, signalerAbsence = false)
+            }
+        }
     }
 
     /** Au démarrage du service ([origine] le dit) et à chaque changement du réglage. */
@@ -172,9 +225,15 @@ internal object ClusterModuleOverlay {
         val app = context.applicationContext
         appContext = app
         main.post {
+            // Changement de profil (2026-10-24) : quel profil le combiné suit, et ce qu'il en lit.
+            if (origine.startsWith("profil ")) AppLogger.i(TAG, "$origine : profil suivi " +
+                "${com.mg4.control.util.ClusterProfiles.shownProfileId(app)} → module " +
+                if (ClusterModuleSettings.isEnabled(app)) "activé" else "coupé")
             // Hors des firmwares pris en charge, rien — même si le réglage a été activé pendant les
             // essais sur A9 : sans ça, une fenêtre invisible resterait posée sur l'écran du combiné.
-            if (ClusterModuleSettings.isEnabled(app) && ClusterModuleSettings.isSupported()) {
+            // Module désactivé : posé quand même le temps d'une pré-climatisation.
+            if (ClusterModuleSettings.isSupported() &&
+                (ClusterModuleSettings.isEnabled(app) || PreClimate.surLeCombine(app))) {
                 if (!abonne) {
                     abonne = true
                     ReadyWatcher.add(readyListener)
@@ -184,7 +243,7 @@ internal object ClusterModuleOverlay {
                 afficher(origine)
             } else {
                 desabonner()
-                masquer("réglage désactivé")
+                masquer(if (origine == "réglage") "réglage désactivé" else "$origine, module désactivé")
             }
         }
     }
@@ -269,6 +328,7 @@ internal object ClusterModuleOverlay {
             vue = v
             fenetres = wm
             ecranId = ecran.displayId
+            poseeMs = SystemClock.elapsedRealtime()
             AppLogger.i(TAG, "$origine : fenêtre posée (navigation=" +
                 "${ClusterModuleSettings.moduleFor(ctx, ClusterTab.NAVIGATION)?.key ?: "aucun"}, musique=" +
                 "${ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA)?.key ?: "aucun"}) sur l'écran " +
@@ -304,6 +364,7 @@ internal object ClusterModuleOverlay {
             dernierLentMs = 0L
             dernierOnglet = -1
             dernierModule = null
+            dernierPreClim = false
             session.terminer()
             chargeBrute = null
             chargeFinie = false
@@ -340,6 +401,17 @@ internal object ClusterModuleOverlay {
                 dernierKwMs = maintenant
             } else if (maintenant - dernierKwMs > MANQUE_TOLERE_MS) {
                 kwLisse = null
+            }
+            // Échelle de puissance (issue #165) : la pointe du trajet, et le plafond appris qui
+            // monte TOUT DE SUITE quand une valeur le dépasse — la jauge n'est jamais coincée en butée.
+            kwLisse?.takeIf { it > 0f }?.let { k ->
+                if (k > pointeTrajet) pointeTrajet = k
+                val appris = ClusterModuleSettings.learnedPowerKw(ctx)
+                val plafond = PowerScale.apresReleve(appris, k)
+                if (plafond != appris) {
+                    ClusterModuleSettings.saveLearnedPower(ctx, plafond)
+                    AppLogger.i(TAG, "puissance : pointe ${k.toInt()} kW → plafond appris $appris → $plafond kW")
+                }
             }
             // La charge se détecte à chaque relevé : le module doit changer dès le branchement.
             // Lecture ratée : l'état d'avant, plutôt qu'un « Charge terminée » d'un relevé.
@@ -401,7 +473,21 @@ internal object ClusterModuleOverlay {
                 dernierOnglet = onglet
                 dernierModule = module
             }
-            val contenu = module?.let {
+            // Pré-climatisation : sa fiche sur les onglets qui portent l'image de l'écran central,
+            // quel que soit le module réglé pour eux.
+            val preClim = PreClimate.etat?.takeIf { PreClimate.surLeCombine(ctx) }
+                ?.takeIf { onglet == null || onglet == ClusterTab.NAVIGATION.value || onglet == ClusterTab.MEDIA.value }
+                ?.let { vuePreClim(it, maintenant) }
+            if ((preClim != null) != dernierPreClim) {
+                dernierPreClim = preClim != null
+                AppLogger.i(TAG, if (preClim != null) "pré-climatisation : sa fiche remplace le module"
+                    else "pré-climatisation : la fiche se retire")
+            }
+            val contenu = if (preClim != null) ClusterGaugeView.Contenu(
+                // Ni jauge ni pastille tant que la fiche est là.
+                module = module ?: ClusterModule.CONSUMPTION, kw = null, kmh = null, pastille = null,
+                moyenneWhKm = null, recupWh = null, preClim = preClim,
+            ) else module?.let {
                 ClusterGaugeView.Contenu(
                     module = it,
                     kw = kwLisse,
@@ -413,7 +499,11 @@ internal object ClusterModuleOverlay {
                     recupWh = trajet.regenWh(),
                     unite = ClusterModuleSettings.consumptionUnit(ctx),
                     uniteMoyenne = ClusterModuleSettings.averageUnit(ctx),
+                    // Auto : l'unité de la voiture, relue au plus une fois par minute (binder, ce fil).
+                    distance = ClusterModuleSettings.distanceUnit(ctx,
+                        if (ClusterModuleSettings.distanceChoice(ctx) == null) VehicleDistanceUnit.actualiser() else null),
                     style = style,
+                    pleineEchelleKw = ClusterModuleSettings.fullScaleKw(ctx),
                     // À la place de la jauge réglée pour l'onglet, jamais sur un onglet sans module.
                     charge = if (session.active) vueCharge(maintenant) else null,
                 )
@@ -432,8 +522,62 @@ internal object ClusterModuleOverlay {
         }
     }
 
+    /**
+     * Fin d'un trajet (sortie de READY) : sa pointe rejoint celles des derniers trajets, et le
+     * plafond appris peut redescendre ([PowerScale.apresTrajet]). Fil du lecteur.
+     */
+    private fun finTrajet() {
+        val ctx = appContext ?: return
+        val pointe = pointeTrajet
+        pointeTrajet = 0f
+        if (pointe <= 0f) return
+        val pointes = (ClusterModuleSettings.powerPeaks(ctx) + pointe).takeLast(PowerScale.MEMOIRE_TRAJETS)
+        val avant = ClusterModuleSettings.learnedPowerKw(ctx)
+        val apres = PowerScale.apresTrajet(avant, pointes)
+        ClusterModuleSettings.saveLearnedPower(ctx, apres, pointes)
+        AppLogger.i(TAG, "fin du trajet : pointe ${pointe.toInt()} kW, plafond appris $avant → $apres kW " +
+            "(pointes : ${pointes.joinToString { it.toInt().toString() }})")
+    }
+
     /** Langue choisie dans l'application (comme la vue) : le nom du profil s'écrit en capitales dans celle-ci. */
     private fun langue(ctx: Context): java.util.Locale = java.util.Locale.forLanguageTag(LocaleHelper.getLanguage(ctx))
+
+    /** Ce que montre la fiche de la pré-climatisation à cet instant (fil du lecteur). */
+    private fun vuePreClim(e: PreClimate.Etat, maintenant: Long): ClusterGaugeView.PreClim {
+        val step = e.step
+        val decompte = e.phase == PreClimate.Phase.COUNTDOWN
+        // « Maintenant » : la clim tourne dès le décompte, réglée au démarrage.
+        val enMarche = (e.phase == PreClimate.Phase.ACTIVE && step is PreClimatePlan.Step.Running) ||
+            (decompte && e.req.mode == PreClimateMode.NOW)
+        val etape = when {
+            decompte -> ClusterGaugeView.Etape.Decompte(((e.lockAtMs - maintenant).coerceAtLeast(0L) + 999).div(1000).toInt())
+            step is PreClimatePlan.Step.Waiting -> ClusterGaugeView.Etape.Attente(e.wallTimes.getOrNull(step.index)?.first ?: 0)
+            step is PreClimatePlan.Step.Running && e.req.mode == PreClimateMode.AT_TIME ->
+                ClusterGaugeView.Etape.Cycle(step.index + 1, e.cycles.size, e.wallTimes.getOrNull(step.index)?.second ?: 0)
+            else -> ClusterGaugeView.Etape.Restant(
+                minutes = if (step is PreClimatePlan.Step.Running) minutesRestantes(step.untilMs - maintenant) else e.req.maxMin,
+                finMinute = (e.startWallMinute + e.req.maxMin).roundToInt())
+        }
+        // Comme l'écran central : le décompte se vide, le reste se remplit.
+        val part = if (decompte) (e.lockAtMs - maintenant).coerceAtLeast(0L).toFloat() / (e.lockAtMs - e.startMs).coerceAtLeast(1L)
+            else step?.let { PreClimatePlan.fraction(it, maintenant) } ?: 0f
+        return ClusterGaugeView.PreClim(
+            chien = e.req.dog,
+            surveillance = e.req.surveillance,
+            tendance = if (enMarche) PreClimatePlan.trend(e.req.tempC, e.outsideC) else PreClimateTrend.HOLDING,
+            enMarche = enMarche,
+            consigneC = e.req.tempC,
+            dehorsC = e.outsideC,
+            part = part,
+            etape = etape,
+            batterie = e.soc,
+            verrou = if (decompte) null else e.lock,
+            debutMinute = e.startWallMinute.toInt(),
+        )
+    }
+
+    /** Minutes jusqu'à l'échéance, arrondies au-dessus : « 1 min » jusqu'à la dernière seconde. */
+    private fun minutesRestantes(ms: Long): Int = ((ms.coerceAtLeast(0L) + 59_999L) / 60_000L).toInt()
 
     /** Ce que montre le module « charge » à cet instant (fil du lecteur). */
     private fun vueCharge(maintenant: Long): ClusterGaugeView.Charge {

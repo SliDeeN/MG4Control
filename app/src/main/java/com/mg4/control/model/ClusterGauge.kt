@@ -45,6 +45,12 @@ enum class ConsumptionUnit(val key: String, val label: String) {
     WH_PER_KM("wh_km", "Wh/km"),
     KWH_PER_100KM("kwh_100km", "kWh/100 km");
 
+    /** Libellé dans l'unité de distance réglée ([DistanceUnit]) : « Wh/mi », « kWh/100 mi »… */
+    fun labelFor(distance: DistanceUnit): String = when (this) {
+        WH_PER_KM -> "Wh/${distance.short}"
+        KWH_PER_100KM -> "kWh/100 ${distance.short}"
+    }
+
     companion object {
         /** Wh/km par défaut : l'affichage d'avant le choix, pour qui utilisait déjà le module. */
         fun fromKey(key: String?): ConsumptionUnit = entries.firstOrNull { it.key == key } ?: WH_PER_KM
@@ -61,6 +67,13 @@ enum class AverageUnit(val key: String, val label: String) {
     KWH_PER_100KM("kwh_100km", "kWh/100 km"),
     KM_PER_KWH("km_kwh", "km/kWh");
 
+    /** Libellé dans l'unité de distance réglée : « Wh/mi », « kWh/100 mi », « mi/kWh »… */
+    fun labelFor(distance: DistanceUnit): String = when (this) {
+        WH_PER_KM -> "Wh/${distance.short}"
+        KWH_PER_100KM -> "kWh/100 ${distance.short}"
+        KM_PER_KWH -> "${distance.short}/kWh"
+    }
+
     companion object {
         fun of(gauge: ConsumptionUnit): AverageUnit = when (gauge) {
             ConsumptionUnit.WH_PER_KM -> WH_PER_KM
@@ -68,6 +81,43 @@ enum class AverageUnit(val key: String, val label: String) {
         }
 
         fun resolve(key: String?, gauge: ConsumptionUnit): AverageUnit = entries.firstOrNull { it.key == key } ?: of(gauge)
+    }
+}
+
+/**
+ * Unité de distance des modules (2026-10-23, demande d'un utilisateur, variante B) : en miles,
+ * TOUT le module passe en miles — jauge, graduations (mêmes chiffres, lus en Wh/mi ou kWh/100 mi)
+ * et moyenne du trajet —, jamais de mélange avec les km. [factor] convertit une valeur « par km »
+ * en valeur « par unité » : Wh/mi = Wh/km × 1,609344. Les calculs restent en Wh/km.
+ */
+enum class DistanceUnit(val key: String, val short: String, val factor: Float) {
+    KM("km", "km", 1f),
+    MILES("mi", "mi", 1.609344f);
+
+    companion object {
+        /** Choix « Auto » enregistré : comme la voiture. */
+        const val AUTO = "auto"
+
+        /** km par défaut : l'affichage d'avant le choix. */
+        fun fromKey(key: String?): DistanceUnit = entries.firstOrNull { it.key == key } ?: KM
+
+        /**
+         * Unité affichée (2026-10-23) : celle choisie, sinon — « Auto » ou aucun choix — celle de la
+         * voiture, et km si la voiture ne la donne pas.
+         */
+        fun resolve(key: String?, vehicle: DistanceUnit?): DistanceUnit =
+            entries.firstOrNull { it.key == key } ?: vehicle ?: KM
+
+        /**
+         * Unité réglée dans la voiture, d'après `DISTANCE_UNITS_ADJUST` 0x2140f439 : 0 = km, 1 = miles
+         * (`DistanceUnit` de carapi sur A9 ; le service SAIC de SWI133 la lit pour le combiné,
+         * `getClstrDistUnit`). Toute autre valeur : inconnue.
+         */
+        fun fromVehicle(raw: Int?): DistanceUnit? = when (raw) {
+            0 -> KM
+            1 -> MILES
+            else -> null
+        }
     }
 }
 
@@ -155,8 +205,10 @@ object ClusterGauge {
     /** Anneau plein à l'arrêt : la clim à fond et le chauffage n'y arrivent pas. */
     const val STOPPED_FULL_KW = 20f
     /**
-     * Arc plein du module B : la puissance de la XPower, la plus puissante des MG4. Premier essai à
-     * 150 kW, où l'arc d'une XPower restait plein en accélération franche (2026-10-14).
+     * Arc plein du module B par défaut : la puissance de la XPower, la plus puissante des MG4.
+     * Premier essai à 150 kW, où l'arc d'une XPower restait plein en accélération franche
+     * (2026-10-14). Depuis l'issue #165 la fin de l'échelle est passée par la vue ([PowerScale]) :
+     * cette valeur ne sert plus que par défaut.
      */
     const val POWER_FULL_KW = 320f
     /**
@@ -169,7 +221,7 @@ object ClusterGauge {
 
     /** Graduations : consommation en Wh/km (libellées selon l'unité), puissance et récupération en kW. */
     val CONSUMPTION_TICKS_WH = listOf(0f, 100f, 200f, 500f, 1000f, 3000f)
-    val POWER_TICKS_KW = listOf(20f, 50f, 100f, 200f, 320f)
+    val POWER_TICKS_KW: List<Float> get() = powerTicks()
     val REGEN_TICKS_KW = listOf(10f, 30f, 60f)
 
     /** Poids de la nouvelle valeur dans le lissage : assez vif pour suivre un freinage. */
@@ -177,9 +229,10 @@ object ClusterGauge {
 
     // ── Module A ─────────────────────────────────────────────────────────────
 
-    fun consumption(kw: Float, kmh: Float?): GaugeState {
+    /** [distance] : la valeur et la part de l'anneau sont dans son unité (Wh/mi en miles). */
+    fun consumption(kw: Float, kmh: Float?, distance: DistanceUnit = DistanceUnit.KM): GaugeState {
         if (kw < 0f) return GaugeState(part(-kw / REGEN_FULL_KW), GaugeLevel.REGEN, -kw, GaugeUnit.KW_REGEN)
-        val wh = whPerKm(kw, kmh)
+        val wh = whPerKm(kw, kmh)?.times(distance.factor)
             ?: return GaugeState(part(kw / STOPPED_FULL_KW), GaugeLevel.CONSUMPTION, kw, GaugeUnit.KW_STOPPED)
         return GaugeState(consumptionFraction(wh), GaugeLevel.CONSUMPTION, wh, GaugeUnit.WH_PER_KM)
     }
@@ -196,14 +249,23 @@ object ClusterGauge {
 
     // ── Module B ─────────────────────────────────────────────────────────────
 
-    fun power(kw: Float): GaugeState {
+    /** [full] : fin de l'échelle de puissance ([PowerScale]). */
+    fun power(kw: Float, full: Float = POWER_FULL_KW): GaugeState {
         if (kw < 0f) return GaugeState(-regenFraction(-kw), GaugeLevel.REGEN, kw, GaugeUnit.KW)
-        return GaugeState(powerFraction(kw), GaugeLevel.CONSUMPTION, kw, GaugeUnit.KW)
+        return GaugeState(powerFraction(kw, full), GaugeLevel.CONSUMPTION, kw, GaugeUnit.KW)
     }
 
-    /** Part du côté droit de l'arc pour [kw] consommés, échelle logarithmique jusqu'à [POWER_FULL_KW]. */
-    fun powerFraction(kw: Float): Float =
-        part((ln(1.0 + kw.coerceAtLeast(0f) / POWER_CURVE_KW) / ln(1.0 + POWER_FULL_KW / POWER_CURVE_KW)).toFloat())
+    /** Part du côté droit de l'arc pour [kw] consommés, échelle logarithmique jusqu'à [full]. */
+    fun powerFraction(kw: Float, full: Float = POWER_FULL_KW): Float =
+        part((ln(1.0 + kw.coerceAtLeast(0f) / POWER_CURVE_KW) / ln(1.0 + full / POWER_CURVE_KW)).toFloat())
+
+    /**
+     * Graduations du côté puissance pour une échelle pleine à [full] kW (issue #165) : 20, 50, 100,
+     * 200 en dessous de [full], puis [full]. Toutes entières. Une graduation à moins de 10 % de
+     * l'arc de la fin est retirée : son chiffre chevaucherait celui de la fin (100 sur 125, 200 sur 250).
+     */
+    fun powerTicks(full: Float = POWER_FULL_KW): List<Float> =
+        listOf(20f, 50f, 100f, 200f).filter { it < full && 1f - powerFraction(it, full) >= 0.1f } + full
 
     /** Part du côté gauche pour [kw] récupérés (positifs), jusqu'à [REGEN_FULL_KW]. */
     fun regenFraction(kw: Float): Float =
@@ -263,10 +325,15 @@ object ClusterGauge {
      * Moyenne du trajet [whPerKm] dans [unit] : comme [formatConsumption], ou des km/kWh à une
      * décimale. `null` sans consommation positive (les km/kWh y seraient infinis).
      */
-    fun formatAverage(whPerKm: Float, unit: AverageUnit, locale: Locale): String? = when (unit) {
-        AverageUnit.WH_PER_KM -> formatConsumption(whPerKm, ConsumptionUnit.WH_PER_KM, locale)
-        AverageUnit.KWH_PER_100KM -> formatConsumption(whPerKm, ConsumptionUnit.KWH_PER_100KM, locale)
-        AverageUnit.KM_PER_KWH -> whPerKm.takeIf { it > 0f }?.let { String.format(locale, "%.1f", 1000f / it) }
+    fun formatAverage(
+        whPerKm: Float, unit: AverageUnit, locale: Locale, distance: DistanceUnit = DistanceUnit.KM,
+    ): String? {
+        val parUnite = whPerKm * distance.factor
+        return when (unit) {
+            AverageUnit.WH_PER_KM -> formatConsumption(parUnite, ConsumptionUnit.WH_PER_KM, locale)
+            AverageUnit.KWH_PER_100KM -> formatConsumption(parUnite, ConsumptionUnit.KWH_PER_100KM, locale)
+            AverageUnit.KM_PER_KWH -> parUnite.takeIf { it > 0f }?.let { String.format(locale, "%.1f", 1000f / it) }
+        }
     }
 
     // ── Style discret : une barre fine graduée (issue #153, variante A) ────────
@@ -277,23 +344,28 @@ object ClusterGauge {
 
     /** Place du zéro sur la barre de puissance : la récupération en occupe les 30 premiers %. */
     const val DISCREET_ZERO = 0.3f
-    /** Crans de la barre de puissance (kW, négatifs = récupération). */
-    val DISCREET_POWER_TICKS = listOf(-60f, -20f, 0f, 20f, 50f, 100f, 200f, 320f)
+    /** Crans de la barre de puissance pour une échelle pleine à [full] kW (négatifs = récupération). */
+    fun discreetPowerTicks(full: Float = POWER_FULL_KW): List<Float> = listOf(-60f, -20f, 0f) + powerTicks(full)
+
     /**
-     * Ceux qui portent un chiffre : sur l'échelle logarithmique, 200 et 320 (comme −30 et −60)
-     * tombent trop près l'un de l'autre pour deux chiffres — 200 garde son trait seul.
+     * Ceux qui portent un chiffre : sur la barre, plus courte que l'arc, un cran à moins de 20 % de
+     * la fin garde son trait seul (200 sur 320, 100 sur 150) — deux chiffres s'y chevaucheraient.
      */
-    val DISCREET_POWER_LABELS = setOf(-60f, -20f, 0f, 20f, 50f, 100f, 320f)
+    fun discreetPowerLabels(full: Float = POWER_FULL_KW): Set<Float> =
+        (listOf(-60f, -20f, 0f) + powerTicks(full).filter { it == full || 1f - powerFraction(it, full) >= 0.2f }).toSet()
+
+    val DISCREET_POWER_TICKS: List<Float> get() = discreetPowerTicks()
+    val DISCREET_POWER_LABELS: Set<Float> get() = discreetPowerLabels()
     /** Crans de la barre de consommation (Wh/km), ceux de l'anneau dynamique. */
     val DISCREET_CONSUMPTION_TICKS_WH = CONSUMPTION_TICKS_WH
     /** Ceux qui portent un chiffre : 100 et 200 sont trop proches, 200 garde son trait seul. */
     val DISCREET_CONSUMPTION_LABELS_WH = setOf(0f, 100f, 500f, 1000f, 3000f)
 
     /** Position de [kw] (signé, négatif en récupération) sur la barre de puissance, de 0 à 1. */
-    fun discreetPowerFraction(kw: Float): Float = if (kw < 0f)
+    fun discreetPowerFraction(kw: Float, full: Float = POWER_FULL_KW): Float = if (kw < 0f)
         DISCREET_ZERO * (1f - regenFraction(-kw))
     else
-        DISCREET_ZERO + (1f - DISCREET_ZERO) * powerFraction(kw)
+        DISCREET_ZERO + (1f - DISCREET_ZERO) * powerFraction(kw, full)
 
     /** Position d'une consommation [whPerKm] sur la barre de consommation, de 0 à 1. */
     fun discreetConsumptionFraction(whPerKm: Float): Float = consumptionFraction(whPerKm)

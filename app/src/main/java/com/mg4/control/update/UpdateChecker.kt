@@ -3,6 +3,8 @@ package com.mg4.control.update
 import android.content.Context
 import androidx.annotation.VisibleForTesting
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.AppLanguage
+import com.mg4.control.util.LocaleHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
@@ -66,7 +68,7 @@ object UpdateChecker {
     private data class RawRelease(
         val tagName: String,
         val apkUrl: String,
-        val releaseNotes: String,
+        val releaseNotes: String,   // texte brut : la langue se choisit dans check()
         val source: String          // "GitHub" ou "GitLab" — pour les logs
     )
 
@@ -135,7 +137,7 @@ object UpdateChecker {
                     }
                     val info = UpdateInfo(
                         versionName, rel.tagName, rel.apkUrl,
-                        rel.releaseNotes
+                        cleanNotes(rel.releaseNotes, LocaleHelper.getLanguage(context))
                     )
                     withContext(Dispatchers.Main) { onUpdateAvailable(info) }
                 } else {
@@ -187,7 +189,7 @@ object UpdateChecker {
             }
 
             val tagName = json.getString("tag_name")
-            val notes   = cleanNotes(json.optString("body", ""))
+            val notes   = json.optString("body", "")
             val assets  = json.optJSONArray("assets") ?: return null
             val apks = mutableListOf<Pair<String, String>>()
             for (i in 0 until assets.length()) {
@@ -233,7 +235,7 @@ object UpdateChecker {
             conn.disconnect()
 
             val tagName = json.getString("tag_name")
-            val notes   = cleanNotes(json.optString("description", ""))
+            val notes   = json.optString("description", "")
 
             // Structure GitLab : assets.links[] (contrairement à assets[] sur GitHub)
             // Le champ "name" est un libellé libre (ex: "MG4Control v1.2.0") — pas forcément
@@ -334,17 +336,33 @@ object UpdateChecker {
      */
     private const val VARIANTS_BLOCK = "Two variants are provided"
 
+    /** Même tableau, sans phrase d'introduction, sous les notes d'une beta (`beta.yml`). */
+    private val VARIANTS_TABLE = Regex("(?m)^\\|\\s*Variant\\s*\\|")
+
     /**
-     * Notes de version telles qu'on les montre : sans le bloc des variantes, sans les marques
-     * Markdown qu'un TextView afficherait littéralement, et coupées proprement si elles sont
-     * démesurées — jamais au milieu d'une ligne.
+     * Début de la section d'une langue dans les notes (issue #191, 2026-10-30) : un commentaire
+     * HTML, invisible sur GitHub, suivi d'un bloc `<details>` replié. Tout ce qui précède la
+     * première marque est la version anglaise.
+     */
+    private val LANG_MARK = Regex("<!--\\s*lang:([A-Za-z]{2})\\s*-->")
+
+    /** Lignes de mise en forme HTML des sections repliées : sans contenu pour le popup. */
+    private val HTML_LINE = Regex("^\\s*(?:(?:</?details>|<summary>.*?</summary>|<!--.*?-->)\\s*)+$")
+
+    /**
+     * Notes de version telles qu'on les montre : dans la langue [lang] si la release en a une
+     * section (sinon en anglais), sans le bloc des variantes, sans les marques Markdown qu'un
+     * TextView afficherait littéralement, et coupées proprement si elles sont démesurées —
+     * jamais au milieu d'une ligne.
      */
     @VisibleForTesting
-    internal fun cleanNotes(raw: String): String {
+    internal fun cleanNotes(raw: String, lang: String = AppLanguage.FALLBACK): String {
         var text = raw.replace("\r", "")
         val fin = text.indexOf(VARIANTS_BLOCK)
         if (fin >= 0) text = text.substring(0, fin)
-        text = text.lines().joinToString("\n") { ligne ->
+        VARIANTS_TABLE.find(text)?.let { text = text.substring(0, it.range.first) }
+        text = notesForLanguage(text, lang)
+        text = text.lines().filterNot { HTML_LINE.matches(it) }.joinToString("\n") { ligne ->
             ligne.replace(Regex("^#{1,6}\\s+"), "")
                 .replace("**", "")
                 .replace("`", "")
@@ -353,6 +371,25 @@ object UpdateChecker {
         val coupe = text.take(MAX_NOTES_CHARS)
         val derniereLigne = coupe.lastIndexOf('\n').takeIf { it > MAX_NOTES_CHARS / 2 } ?: coupe.length
         return coupe.substring(0, derniereLigne).trimEnd() + "\n…"
+    }
+
+    /**
+     * La section de [lang], délimitée par sa marque et la suivante ; à défaut — langue absente,
+     * section vide, anglais demandé, notes à l'ancienne sans marque — la partie anglaise.
+     * Une marque `lang:en` explicite, si quelqu'un l'écrit, est respectée.
+     */
+    @VisibleForTesting
+    internal fun notesForLanguage(text: String, lang: String): String {
+        val marques = LANG_MARK.findAll(text).toList()
+        if (marques.isEmpty()) return text
+        fun section(code: String): String? {
+            val i = marques.indexOfFirst { it.groupValues[1].equals(code, ignoreCase = true) }
+            if (i < 0) return null
+            val fin = marques.getOrNull(i + 1)?.range?.first ?: text.length
+            return text.substring(marques[i].range.last + 1, fin)
+                .takeIf { s -> s.lines().any { it.isNotBlank() && !HTML_LINE.matches(it) } }
+        }
+        return section(lang) ?: section("en") ?: text.substring(0, marques.first().range.first)
     }
 
     @VisibleForTesting

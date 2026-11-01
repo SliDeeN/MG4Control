@@ -53,8 +53,12 @@ object ClimateAutomationSettings {
         val threshold: Int,
         val targetTemp: Int,
         val fanLevel: Int,
-        val defrostFront: Boolean,
-        val defrostRear: Boolean,
+        /**
+         * Sens de l'air (issue #177) : boutons cochés, en bits [com.mg4.control.model.AirFlow] —
+         * comme la ligne « Air » des profils. `null` = inchangé : la règle n'y touche pas. Il
+         * remplace les anciens « Dégivrage avant / arrière », repris à la lecture ([airFlowFrom]).
+         */
+        val airFlow: Int?,
         /**
          * Mode automatique de la ventilation. Quand il est actif, [fanLevel] n'est PAS appliqué :
          * choisir une vitesse manuelle fait sortir du mode auto sur ce véhicule, donc appliquer
@@ -121,8 +125,7 @@ object ClimateAutomationSettings {
             threshold    = p.getInt(prefix + "threshold", defThreshold),
             targetTemp   = p.getInt(prefix + "target", defTarget),
             fanLevel     = p.getInt(prefix + "fan", DEFAULT_FAN),
-            defrostFront = p.getBoolean(prefix + "def_front", false),
-            defrostRear  = p.getBoolean(prefix + "def_rear", false),
+            airFlow      = airFlowOf(p, prefix == HOT),
             autoMode     = p.getBoolean(prefix + "auto", false),
             loopMode     = if (p.getBoolean(prefix + "recirc_force", false))
                                p.getInt(prefix + "recirc", DEFAULT_LOOP).coerceIn(0, 2)
@@ -144,8 +147,25 @@ object ClimateAutomationSettings {
     fun keyThreshold(hot: Boolean) = (if (hot) HOT else COLD) + "threshold"
     fun keyTarget(hot: Boolean)    = (if (hot) HOT else COLD) + "target"
     fun keyFan(hot: Boolean)       = (if (hot) HOT else COLD) + "fan"
-    fun keyDefFront(hot: Boolean)  = (if (hot) HOT else COLD) + "def_front"
-    fun keyDefRear(hot: Boolean)   = (if (hot) HOT else COLD) + "def_rear"
+    fun keyAir(hot: Boolean)       = (if (hot) HOT else COLD) + "air"
+    private fun keyDefFront(hot: Boolean)  = (if (hot) HOT else COLD) + "def_front"
+    private fun keyDefRear(hot: Boolean)   = (if (hot) HOT else COLD) + "def_rear"
+
+    /** Sens de l'air d'une règle : la ligne « Air », ou à défaut ses anciens dégivrages. */
+    fun airFlowOf(p: android.content.SharedPreferences, hot: Boolean): Int? = airFlowFrom(
+        stored = if (p.contains(keyAir(hot))) p.getInt(keyAir(hot), 0) else null,
+        legacyFront = p.getBoolean(keyDefFront(hot), false),
+        legacyRear = p.getBoolean(keyDefRear(hot), false))
+
+    /**
+     * [stored] : la ligne « Air » enregistrée (0 = Inchangé), `null` si elle ne l'a jamais été —
+     * alors un ancien dégivrage coché devient son bouton (Pare-brise AV / AR), comme pour les
+     * profils ; aucun coché = Inchangé. Avant, une règle envoyait aussi « dégivrage éteint », ce
+     * qui touchait au sens de l'air (issue #177) : ce n'est plus le cas.
+     */
+    fun airFlowFrom(stored: Int?, legacyFront: Boolean, legacyRear: Boolean): Int? =
+        if (stored != null) stored.takeIf { it > 0 }
+        else com.mg4.control.model.AirFlow.fromLegacyDefrost(legacyFront, legacyRear)
     fun keyAuto(hot: Boolean)      = (if (hot) HOT else COLD) + "auto"
     fun keyRecircForce(hot: Boolean) = (if (hot) HOT else COLD) + "recirc_force"
     fun keyRecirc(hot: Boolean)    = (if (hot) HOT else COLD) + "recirc"

@@ -15,6 +15,11 @@ import android.content.Context
  * SWI165 : "SWI165-xxxxx" — ADAS via VehicleSettingManager (même SDK que SWI68), AEB via setFcwAlarmMode
  *                            sièges+volant chauffants disponibles
  * UNKNOWN : firmware non reconnu — l'utilisateur peut forcer un mode de compatibilité
+ *
+ * Firmwares de distributeur : même logiciel, autre préfixe. « DBI68-29558-1X00RXX-20250530 »
+ * (Doğan Trend, Turquie — fork sensoyg, 2026-10-30) est un SWI68. Liste EXPLICITE de préfixes, pas
+ * de motif générique « 2 à 4 lettres + numéro » : un numéro de build quelconque passerait pour
+ * un firmware, et l'appli piloterait la voiture avec les commandes d'un autre.
  */
 object FirmwareInfo {
 
@@ -27,33 +32,57 @@ object FirmwareInfo {
     @Volatile private var detectedString: String? = null
 
     /**
-     * À appeler en premier dans MainActivity.onCreate(), avant toute inflation de fragment.
-     * Lit le choix forcé éventuel depuis les SharedPreferences et l'applique au cache.
+     * Lit le choix forcé éventuel et l'applique au cache. À appeler AU PLUS TÔT dans chaque point
+     * d'entrée du processus : MG4App, BootReceiver, MG4ControlService, MainActivity. Avant le
+     * 2026-10-30, seule MainActivity le faisait : au démarrage de la voiture, le service tournait en
+     * UNKNOWN chez qui avait forcé un mode, tant que l'écran de l'appli n'avait pas été ouvert
+     * (MG4Hardware.init prenait le chemin SWI133 et réessayait en boucle).
+     *
+     * Le service et le récepteur de démarrage tournent aussi avant le déverrouillage (directBootAware) :
+     * les réglages y sont illisibles, la lecture ne doit pas faire planter le démarrage. L'appel
+     * suivant (service, écran) refera la lecture.
      */
     fun initWithContext(context: Context) {
-        val forced = context.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-            .getString(PREF_FORCED_GEN, null) ?: return
+        val forced = runCatching {
+            context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
+                .getString(PREF_FORCED_GEN, null)
+        }.getOrNull() ?: return
         cached = runCatching { Gen.valueOf(forced) }.getOrDefault(Gen.UNKNOWN)
     }
 
     /** Retourne la génération active (forcée ou détectée automatiquement). */
     fun getGeneration(): Gen {
+        // UNKNOWN aussi est gardé en cache : la génération est demandée à chaque lecture ou écriture
+        // véhicule, relire les propriétés système à chaque fois coûterait pour rien.
         cached?.let { return it }
         val version = readProp("ro.build.mt2712.version")
             ?: readProp("ro.build.version.incremental")
         detectedString = version
-        val gen = when {
-            version == null               -> Gen.UNKNOWN
-            version.startsWith("SWI165")  -> Gen.SWI165
-            version.startsWith("SWI133")  -> Gen.SWI133
-            version.startsWith("SWI132")  -> Gen.SWI132   // avant SWI131 — startsWith("SWI13") serait ambigu
-            version.startsWith("SWI131")  -> Gen.SWI131
-            version.startsWith("SWI68")   -> Gen.SWI68
-            version.startsWith("SWI69")   -> Gen.SWI69
-            else                          -> Gen.UNKNOWN
-        }
+        val gen = parseGeneration(version)
         cached = gen
         return gen
+    }
+
+    /** Préfixes reconnus : SAIC (SWI) et distributeurs connus (DBI, Turquie). */
+    private val PREFIXES = listOf("SWI", "DBI")
+
+    /**
+     * Génération d'après la chaîne de version, « SWI133-xxxxx » comme « DBI68-xxxxx ». Le numéro doit
+     * être suivi d'un caractère non numérique (ou de la fin) : « SWI1330 » n'est pas un SWI133.
+     */
+    fun parseGeneration(version: String?): Gen {
+        val v = version?.trim()?.uppercase() ?: return Gen.UNKNOWN
+        val prefix = PREFIXES.firstOrNull { v.startsWith(it) } ?: return Gen.UNKNOWN
+        val numero = v.substring(prefix.length).takeWhile { it.isDigit() }
+        return when (numero) {
+            "165" -> Gen.SWI165
+            "133" -> Gen.SWI133
+            "132" -> Gen.SWI132
+            "131" -> Gen.SWI131
+            "68"  -> Gen.SWI68
+            "69"  -> Gen.SWI69
+            else  -> Gen.UNKNOWN
+        }
     }
 
     /**

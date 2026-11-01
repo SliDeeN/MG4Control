@@ -24,19 +24,12 @@ class BatteryHeatingTest {
     }
 
     @Test
-    fun `lecture de l ancienne plateforme 0 active`() {
-        assertEquals(true, BatteryHeating.stateFromRaw(0, a9 = false))
-        assertEquals(false, BatteryHeating.stateFromRaw(1, a9 = false))
-        assertEquals(false, BatteryHeating.stateFromRaw(2, a9 = false))
-        assertNull(BatteryHeating.stateFromRaw(-1, a9 = false))
-    }
-
-    @Test
-    fun `lecture A9 1 active`() {
-        assertEquals(true, BatteryHeating.stateFromRaw(1, a9 = true))
-        assertEquals(false, BatteryHeating.stateFromRaw(0, a9 = true))
-        assertEquals(false, BatteryHeating.stateFromRaw(2, a9 = true))
-        assertNull(BatteryHeating.stateFromRaw(-1, a9 = true))
+    fun `lecture 0 active sur tous les firmwares`() {
+        // A9 compris : relevé sur une SWI69 (MG4Dash, 2026-10-15) — on lisait 1 = activé, à tort.
+        assertEquals(true, BatteryHeating.stateFromRaw(0))
+        assertEquals(false, BatteryHeating.stateFromRaw(1))
+        assertEquals(false, BatteryHeating.stateFromRaw(2))
+        assertNull(BatteryHeating.stateFromRaw(-1))
     }
 
     @Test

@@ -15,7 +15,7 @@ on:
   workflow_dispatch:
     inputs:
       label:
-        description: "Identifiant de la beta (ex: beta1, rc2)"
+        description: "Libelle de la pre-release (beta, rc...) : le numero s'ajoute tout seul"
         type: string
         default: beta
       notes:
@@ -29,6 +29,11 @@ on:
 
 permissions:
   contents: write
+
+# Deux betas lancees en meme temps calculeraient le meme numero : elles passent l'une apres l'autre.
+concurrency:
+  group: beta-release
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -60,17 +65,46 @@ jobs:
           fi
           echo "MG4_KEYSTORE=$RUNNER_TEMP/platform.keystore" >> "$GITHUB_ENV"
 
-      # Suffixe unique et croissant : le numero de run garantit qu'une beta publiee apres une
-      # autre est bien vue comme posterieure, meme si le libelle saisi est identique.
+      # Numero par version : la premiere beta de 2.7.0 est 2.7.0-beta.1, puis beta.2, etc.
+      # Il vaut le plus grand numero deja publie pour ce versionName et ce libelle, plus un. On le
+      # cherche dans les releases ET dans les tags du depot : une release supprimee a la main sans
+      # son tag ne doit pas liberer son numero (deux APK differents sous le meme nom).
+      # L'OTA compare d'abord le numero de version, puis le suffixe en nombres
+      # (UpdateChecker.isNewer) : 2.7.0-beta.1 passe bien devant 2.6.10-beta.49.
       - name: Compute version
         id: ver
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LABEL: ${{ inputs.label }}
         run: |
+          set -euo pipefail
           # sed plutot que grep -oP : PCRE depend de la locale du runner, sed non.
           BASE=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
           if [ -z "$BASE" ]; then
             echo "::error::versionName introuvable dans app/build.gradle.kts"; exit 1
           fi
-          SUFFIX="-${{ inputs.label }}.${{ github.run_number }}"
+          if ! printf '%s' "$LABEL" | grep -qE '^[a-z]+$'; then
+            echo "::error::Libelle '$LABEL' invalide : lettres minuscules seulement (beta, rc...), le numero est ajoute tout seul."
+            exit 1
+          fi
+
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" > releases.json
+          # Une beta de 2.6.10 publiee APRES la stable 2.6.10 serait anterieure a celle-ci : aucun
+          # testeur ne la recevrait. Il faut d'abord monter versionName.
+          if jq -e --arg t "v$BASE" '.[] | select(.prerelease==false and .draft==false and .tag_name==$t)' releases.json > /dev/null; then
+            echo "::error::La version stable $BASE est deja publiee : montez versionName dans app/build.gradle.kts avant de publier une beta."
+            exit 1
+          fi
+
+          PREFIX="v$BASE-$LABEL."
+          { jq -r '.[].tag_name' releases.json
+            git ls-remote --tags origin | sed 's#.*refs/tags/##; s#\^{}$##'
+          } | awk -v p="$PREFIX" 'index($0, p) == 1 { n = substr($0, length(p) + 1); if (n ~ /^[0-9]+$/) print n }' \
+            | sort -n | tail -1 > last.txt
+          LAST=$(cat last.txt)
+          N=$(( ${LAST:-0} + 1 ))
+          echo "Dernier numero publie pour $BASE ($LABEL) : ${LAST:-aucun} -> $N"
+          SUFFIX="-$LABEL.$N"
           echo "base=$BASE"                >> "$GITHUB_OUTPUT"
           echo "suffix=$SUFFIX"            >> "$GITHUB_OUTPUT"
           echo "full=${BASE}${SUFFIX}"     >> "$GITHUB_OUTPUT"

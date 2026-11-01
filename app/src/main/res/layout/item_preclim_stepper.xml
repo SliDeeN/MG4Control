@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pré-climatisation (issue #130) : une ligne du pop-up — intitulé, puis − valeur +. Les boutons
+     se touchent ou se visent au joystick ; maintenus, ils répètent le pas (AppDialog.repeter). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="46dp"
+    android:layout_marginTop="2dp"
+    android:orientation="horizontal"
+    android:gravity="center_vertical">
+
+    <TextView
+        android:id="@+id/stepper_label"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:textColor="@color/text_primary"
+        android:textSize="16sp"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <ImageView
+        android:id="@+id/stepper_minus"
+        android:layout_width="46dp"
+        android:layout_height="46dp"
+        android:background="@drawable/bg_dialog_tile"
+        android:contentDescription="@string/preclim_minus"
+        android:scaleType="center"
+        android:src="@drawable/ic_hvac_minus" />
+
+    <TextView
+        android:id="@+id/stepper_value"
+        android:layout_width="104dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textColor="@color/text_primary"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:maxLines="1" />
+
+    <ImageView
+        android:id="@+id/stepper_plus"
+        android:layout_width="46dp"
+        android:layout_height="46dp"
+        android:background="@drawable/bg_dialog_tile"
+        android:contentDescription="@string/preclim_plus"
+        android:scaleType="center"
+        android:src="@drawable/ic_hvac_plus" />
+
+</LinearLayout>

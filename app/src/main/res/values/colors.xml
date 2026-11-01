@@ -55,4 +55,10 @@
          les teintes de la palette ; Snow a la sienne. -->
     <color name="mode_snow">#FF6366F1</color>
     <color name="mode_on_snow">#FFFFFFFF</color>
+
+    <!-- Pré-climatisation : particules, anneau et température de l'écran de suivi (toujours sombre).
+         Refroidit = dash_accent ; chauffe = orange. Les « vif » font les points les plus brillants. -->
+    <color name="preclim_heat">#FFF97316</color>
+    <color name="preclim_heat_bright">#FFFDBA74</color>
+    <color name="preclim_cool_bright">#FFBAE6FD</color>
 </resources>

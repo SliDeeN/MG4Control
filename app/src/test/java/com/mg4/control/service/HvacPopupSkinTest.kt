@@ -3,6 +3,7 @@ package com.mg4.control.service
 import android.content.Context
 import android.view.ContextThemeWrapper
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.View.MeasureSpec
 import android.view.ViewGroup
@@ -57,6 +58,8 @@ class HvacPopupSkinTest {
         siegeNiveau   = { gauche, niveau -> recus += "siège ${if (gauche) "gauche" else "droit"} niveau $niveau" },
         volant        = { recus += "volant" },
         fermer        = { recus += "fermer" },
+        autoEnfonce   = { recus += "auto enfoncé" },
+        autoRelache   = { annule -> recus += if (annule) "auto annulé" else "auto relâché" },
     )
 
     private fun gonfler(): Pair<View, HvacPopupSkin> {
@@ -68,6 +71,19 @@ class HvacPopupSkinTest {
     private fun toucher(view: View, id: Int) {
         val cible = view.findViewById<View>(id)
         if (cible.isEnabled && cible.isClickable) cible.performClick()
+    }
+
+    /**
+     * Un vrai doigt, posé puis levé sur la vue : AUTO se joue au relâchement, pas au clic, pour
+     * qu'un appui tenu fasse avancer le débit (issue #178).
+     */
+    private fun appuyer(view: View, id: Int) {
+        val cible = view.findViewById<View>(id)
+        listOf(MotionEvent.ACTION_DOWN, MotionEvent.ACTION_UP).forEach { action ->
+            val e = MotionEvent.obtain(0L, 0L, action, 0f, 0f, 0)
+            cible.dispatchTouchEvent(e)
+            e.recycle()
+        }
     }
 
     @Test
@@ -104,7 +120,7 @@ class HvacPopupSkinTest {
         toucher(view, R.id.hvac_temp_down)
         toucher(view, R.id.hvac_fan_down)
         toucher(view, R.id.hvac_fan_up)
-        toucher(view, R.id.hvac_auto)
+        appuyer(view, R.id.hvac_auto)
         toucher(view, R.id.hvac_air_face)
         toucher(view, R.id.hvac_air_feet)
         toucher(view, R.id.hvac_air_windshield_front)
@@ -119,7 +135,8 @@ class HvacPopupSkinTest {
         toucher(view, R.id.hvac_close)
 
         assertEquals(listOf(
-            "commande HAUT", "commande BAS", "commande GAUCHE", "commande DROITE", "commande VALIDER",
+            // AUTO remonte l'appui et le relâchement : c'est l'overlay qui en fait la bascule AUTO.
+            "commande HAUT", "commande BAS", "commande GAUCHE", "commande DROITE", "auto enfoncé", "auto relâché",
             "air ${AirFlow.FACE}", "air ${AirFlow.FEET}", "air ${AirFlow.WINDSHIELD}", "lunette",
             "ac",
             "recirculation ${MG4Hardware.LoopMode.INNER}", "recirculation ${MG4Hardware.LoopMode.OUTSIDE}",

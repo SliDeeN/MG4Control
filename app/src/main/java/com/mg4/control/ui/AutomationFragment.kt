@@ -23,6 +23,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
+import com.mg4.control.model.AirFlow
 import com.mg4.control.BuildConfig
 import com.mg4.control.R
 import com.mg4.control.automation.AutoBrightness
@@ -32,6 +33,8 @@ import com.mg4.control.automation.BatteryAutomationSettings
 import com.mg4.control.automation.BatteryHeatingSettings
 import com.mg4.control.automation.ClimateAutomationSettings
 import com.mg4.control.automation.ClimateRuleEditor
+import com.mg4.control.automation.SoundAutomation
+import com.mg4.control.automation.SoundAutomationSettings
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.model.DrivingProfile
@@ -49,6 +52,9 @@ class AutomationFragment : Fragment() {
 
     /** Carte des vitres : le panneau survit à la vue, comme au tableau de bord avant le déplacement. */
     private val windowsPanel = WindowsPanel()
+
+    /** Carte des sons (issue #161). */
+    private val soundCard = SoundCard()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -121,6 +127,40 @@ class AutomationFragment : Fragment() {
         bindBatteryHeatingAutomation(view, prefs)
         bindClimateAutomation(view, prefs)
         bindDoorVolume(view, prefs)
+        bindSounds(view)
+    }
+
+    // ══════════ Sons d'automatisation (issue #161) ══════════
+
+    /**
+     * Interrupteur général et dépliage ici, comme les autres cartes ; le contenu (deux sons,
+     * profils) dans [SoundCard]. Cachée là où le volume de la voiture n'est pas pilotable : le son
+     * se joue au volume choisi, réglé sur la voiture le temps du son.
+     */
+    private fun bindSounds(view: View) {
+        val card = view.findViewById<View>(R.id.card_sound)
+        if (!MG4Hardware.hasDoorVolumeFeature()) {
+            card.visibility = View.GONE
+            return
+        }
+        val ctx = requireContext()
+        val toggle = view.findViewById<Switch>(R.id.switch_sound)
+        val content = view.findViewById<View>(R.id.row_sound_config)
+        val enabled = SoundAutomationSettings.isEnabled(ctx)
+        toggle.isChecked = enabled
+        soundCard.bind(this, view, enabled)
+        val deplier = bindExpander(view.findViewById(R.id.btn_sound_expand), content, expanded = enabled)
+        toggle.setOnCheckedChangeListener { _, checked ->
+            SoundAutomationSettings.setEnabled(ctx, checked)
+            soundCard.griser(checked)
+            deplier(checked)
+            SoundAutomation.refresh(ctx)
+        }
+    }
+
+    override fun onDestroyView() {
+        soundCard.detacher()
+        super.onDestroyView()
     }
 
     // ══════════ Baisse du volume en quittant la voiture ══════════
@@ -148,12 +188,48 @@ class AutomationFragment : Fragment() {
         val cbLeft  = view.findViewById<CheckBox>(R.id.cb_door_left)
         val cbRight = view.findViewById<CheckBox>(R.id.cb_door_right)
 
-        if (!MG4Hardware.hasDoorDetection()) {
-            view.findViewById<TextView>(R.id.door_volume_desc_text).setText(R.string.door_volume_desc_ready)
-            view.findViewById<TextView>(R.id.door_volume_restore_label).setText(R.string.door_volume_restore_ready_title)
+        val porte = MG4Hardware.hasDoorDetection()
+        if (!porte) {
             view.findViewById<View>(R.id.door_volume_doors_label).visibility = View.GONE
             view.findViewById<View>(R.id.door_volume_doors_row).visibility = View.GONE
         }
+
+        // Baisser le volume ou mettre en pause (2026-10-23) : le niveau ne sert qu'à la baisse,
+        // et la description comme l'option de restauration disent ce que fait le mode choisi.
+        val btnVolume = view.findViewById<MaterialButton>(R.id.btn_door_mode_volume)
+        val btnPause  = view.findViewById<MaterialButton>(R.id.btn_door_mode_pause)
+        val rowLevel  = view.findViewById<View>(R.id.row_door_volume_level)
+        fun peindreMode() {
+            val pause = prefs.getString(MG4Hardware.KEY_DOOR_MODE, null) == MG4Hardware.DOOR_MODE_PAUSE
+            listOf(btnVolume to !pause, btnPause to pause).forEach { (b, on) ->
+                b.backgroundTintList = ColorStateList.valueOf(requireContext().getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn))
+                b.strokeColor = ColorStateList.valueOf(requireContext().getColor(if (on) R.color.dash_accent else R.color.dash_border))
+                b.setTextColor(requireContext().getColor(if (on) R.color.text_primary else R.color.text_secondary))
+            }
+            rowLevel.visibility = if (pause) View.GONE else View.VISIBLE
+            slider.visibility = if (pause) View.GONE else View.VISIBLE
+            view.findViewById<TextView>(R.id.door_volume_desc_text).setText(when {
+                pause && porte -> R.string.door_media_pause_desc
+                pause -> R.string.door_media_pause_desc_ready
+                porte -> R.string.door_volume_desc
+                else -> R.string.door_volume_desc_ready
+            })
+            view.findViewById<TextView>(R.id.door_volume_restore_label).setText(when {
+                pause && porte -> R.string.door_media_resume_title
+                pause -> R.string.door_media_resume_ready_title
+                porte -> R.string.door_volume_restore_title
+                else -> R.string.door_volume_restore_ready_title
+            })
+        }
+        btnVolume.setOnClickListener {
+            prefs.edit().putString(MG4Hardware.KEY_DOOR_MODE, MG4Hardware.DOOR_MODE_VOLUME).apply()
+            peindreMode()
+        }
+        btnPause.setOnClickListener {
+            prefs.edit().putString(MG4Hardware.KEY_DOOR_MODE, MG4Hardware.DOOR_MODE_PAUSE).apply()
+            peindreMode()
+        }
+        peindreMode()
 
         val enabled = prefs.getBoolean("door_volume_enabled", false)
         toggle.isChecked  = enabled
@@ -164,6 +240,7 @@ class AutomationFragment : Fragment() {
         fun griser(actif: Boolean) {
             content.alpha = if (actif) 1f else 0.4f
             slider.isEnabled = actif; restore.isEnabled = actif
+            btnVolume.isEnabled = actif; btnPause.isEnabled = actif
             cbLeft.isEnabled = actif; cbRight.isEnabled = actif
         }
         griser(enabled)
@@ -183,8 +260,14 @@ class AutomationFragment : Fragment() {
             val max = MG4Hardware.getMediaVolumeMax()
             withContext(Dispatchers.Main) {
                 if (!isAdded) return@withContext
-                if (max > 0) slider.valueTo = max.toFloat()
+                // La valeur d'abord : un maximum posé sous la valeur affichée fait lever le Slider
+                // (« value must be ≤ valueTo »), ce qui arrive quand la voie du volume a une
+                // échelle plus courte que celle du layout (fork sensoyg, DBI68).
                 val level = prefs.getInt("door_volume_level", 0)
+                if (max > 0) {
+                    slider.value = level.coerceIn(0, minOf(max, slider.valueTo.toInt())).toFloat()
+                    slider.valueTo = max.toFloat()
+                }
                 slider.value = level.coerceIn(0, slider.valueTo.toInt()).toFloat()
                 afficher(slider.value.toInt())
             }
@@ -559,8 +642,10 @@ class AutomationFragment : Fragment() {
             cible = R.id.slider_ac_hot_target, cibleValeur = R.id.tv_ac_hot_target,
             ventAuto = R.id.btn_ac_hot_fan_auto, ventManuelle = R.id.btn_ac_hot_fan_manual,
             rangeeNiveau = R.id.row_ac_hot_fan, niveau = R.id.slider_ac_hot_fan, niveauValeur = R.id.tv_ac_hot_fan,
-            degivrageAvant = R.id.btn_ac_hot_def_front, degivrageArriere = R.id.btn_ac_hot_def_rear,
-            rangeeVentilation = R.id.row_ac_hot_fan_mode, rangeeDegivrage = R.id.row_ac_hot_defrost,
+            airAucun = R.id.btn_ac_hot_air_none, airBoutons = listOf(R.id.btn_ac_hot_air_face, R.id.btn_ac_hot_air_feet,
+                R.id.btn_ac_hot_air_ws, R.id.btn_ac_hot_air_rear),
+            airLigne1 = R.id.row_ac_hot_air_a, airLigne2 = R.id.row_ac_hot_air_b, airAide = R.id.tv_ac_hot_air_hint,
+            rangeeVentilation = R.id.row_ac_hot_fan_mode,
             recircLigne1 = R.id.row_ac_hot_recirc_a, recircLigne2 = R.id.row_ac_hot_recirc_b,
             recirc = listOf(R.id.btn_ac_hot_recirc_keep, R.id.btn_ac_hot_recirc_inner,
                 R.id.btn_ac_hot_recirc_outside, R.id.btn_ac_hot_recirc_auto)
@@ -571,8 +656,10 @@ class AutomationFragment : Fragment() {
             cible = R.id.slider_ac_cold_target, cibleValeur = R.id.tv_ac_cold_target,
             ventAuto = R.id.btn_ac_cold_fan_auto, ventManuelle = R.id.btn_ac_cold_fan_manual,
             rangeeNiveau = R.id.row_ac_cold_fan, niveau = R.id.slider_ac_cold_fan, niveauValeur = R.id.tv_ac_cold_fan,
-            degivrageAvant = R.id.btn_ac_cold_def_front, degivrageArriere = R.id.btn_ac_cold_def_rear,
-            rangeeVentilation = R.id.row_ac_cold_fan_mode, rangeeDegivrage = R.id.row_ac_cold_defrost,
+            airAucun = R.id.btn_ac_cold_air_none, airBoutons = listOf(R.id.btn_ac_cold_air_face, R.id.btn_ac_cold_air_feet,
+                R.id.btn_ac_cold_air_ws, R.id.btn_ac_cold_air_rear),
+            airLigne1 = R.id.row_ac_cold_air_a, airLigne2 = R.id.row_ac_cold_air_b, airAide = R.id.tv_ac_cold_air_hint,
+            rangeeVentilation = R.id.row_ac_cold_fan_mode,
             recircLigne1 = R.id.row_ac_cold_recirc_a, recircLigne2 = R.id.row_ac_cold_recirc_b,
             recirc = listOf(R.id.btn_ac_cold_recirc_keep, R.id.btn_ac_cold_recirc_inner,
                 R.id.btn_ac_cold_recirc_outside, R.id.btn_ac_cold_recirc_auto)
@@ -601,8 +688,10 @@ class AutomationFragment : Fragment() {
         val cible: Int, val cibleValeur: Int,
         val ventAuto: Int, val ventManuelle: Int,
         val rangeeNiveau: Int, val niveau: Int, val niveauValeur: Int,
-        val degivrageAvant: Int, val degivrageArriere: Int,
-        val rangeeVentilation: Int, val rangeeDegivrage: Int,
+        /** Ligne « Air » (issue #177) : « Inchangé », puis Visage, Pieds, Pare-brise AV, Pare-brise AR. */
+        val airAucun: Int, val airBoutons: List<Int>,
+        val airLigne1: Int, val airLigne2: Int, val airAide: Int,
+        val rangeeVentilation: Int,
         val recircLigne1: Int, val recircLigne2: Int,
         /** Dans l'ordre de [ClimateRuleEditor.recircChoice] : inchangée, intérieur, extérieur, auto. */
         val recirc: List<Int>
@@ -688,19 +777,30 @@ class AutomationFragment : Fragment() {
                 .apply()
         }
 
-        // ── Dégivrages ───────────────────────────────────────────────────────
-        fun bascule(id: Int, cle: String) {
-            val btn = view.findViewById<MaterialButton>(id)
-            var on = prefs.getBoolean(cle, false)
-            peindreChoix(btn, on)
-            btn.setOnClickListener {
-                on = !on
-                prefs.edit().putBoolean(cle, on).apply()
-                peindreChoix(btn, on)
-            }
+        // ── Sens de l'air (issue #177) ───────────────────────────────────────
+        // Boutons cumulables, comme la page Clim et les profils. « Inchangé » ⇔ aucun bouton : la
+        // règle n'y touche pas — c'est le défaut. Tout décocher y revient. Une règle d'avant reprend
+        // ses dégivrages cochés ([ClimateAutomationSettings.airFlowOf]).
+        val airAucun = view.findViewById<MaterialButton>(ids.airAucun)
+        val airBits = listOf(AirFlow.FACE, AirFlow.FEET, AirFlow.WINDSHIELD, AirFlow.REAR_DEFROST)
+        val airBoutons = airBits.zip(ids.airBoutons.map { view.findViewById<MaterialButton>(it) })
+        val airAide = view.findViewById<TextView>(ids.airAide)
+        var air = ClimateAutomationSettings.airFlowOf(prefs, hot)
+        fun majAir() {
+            airBoutons.forEach { (bit, b) -> peindreChoix(b, (air ?: 0) and bit != 0) }
+            peindreChoix(airAucun, air == null)
+            airAide.text = air?.let { m ->
+                getString(R.string.ac_auto_air_hint, airBoutons.filter { m and it.first != 0 }.joinToString(" + ") { it.second.text })
+            } ?: getString(R.string.ac_auto_air_unchanged_hint)
         }
-        bascule(ids.degivrageAvant, ClimateAutomationSettings.keyDefFront(hot))
-        bascule(ids.degivrageArriere, ClimateAutomationSettings.keyDefRear(hot))
+        fun choisirAir(nouveau: Int?) {
+            air = nouveau?.takeIf { it != 0 }
+            prefs.edit().putInt(ClimateAutomationSettings.keyAir(hot), air ?: 0).apply()
+            majAir()
+        }
+        majAir()
+        airAucun.setOnClickListener { choisirAir(null) }
+        airBoutons.forEach { (bit, b) -> b.setOnClickListener { choisirAir((air ?: 0) xor bit) } }
 
         // ── Recirculation ────────────────────────────────────────────────────
         // « Inchangé » = on ne touche PAS au recyclage. C'est le défaut, pour qu'une
@@ -730,9 +830,13 @@ class AutomationFragment : Fragment() {
         // n'est connue qu'une fois la carte dépliée, d'où l'écoute de la mise en page.
         val ligne1  = view.findViewById<LinearLayout>(ids.recircLigne1)
         val ligne2  = view.findViewById<LinearLayout>(ids.recircLigne2)
+        val airLigne1 = view.findViewById<LinearLayout>(ids.airLigne1)
+        val airLigne2 = view.findViewById<LinearLayout>(ids.airLigne2)
         val rangees = listOf(ligne1, ligne2,
-            view.findViewById(ids.rangeeVentilation), view.findViewById(ids.rangeeDegivrage))
+            view.findViewById(ids.rangeeVentilation), airLigne1, airLigne2)
         val dernier = recirc.last()
+        // La ligne « Air » : les n premiers boutons sur la première ligne, le reste sur la seconde.
+        val airTous = listOf(airAucun) + airBoutons.map { it.second }
         var colonnes = 4
         fun ranger(n: Int) {
             if (n == colonnes) return
@@ -741,6 +845,8 @@ class AutomationFragment : Fragment() {
             (dernier.parent as? ViewGroup)?.removeView(dernier)
             (if (n == 4) ligne1 else ligne2).addView(dernier)
             ligne2.visibility = if (n == 4) View.GONE else View.VISIBLE
+            airTous.forEach { (it.parent as? ViewGroup)?.removeView(it) }
+            airTous.forEachIndexed { i, b -> (if (i < n) airLigne1 else airLigne2).addView(b) }
         }
         ligne1.addOnLayoutChangeListener { v, gauche, _, droite, _, _, _, _, _ ->
             val largeurDp = (droite - gauche) / v.resources.displayMetrics.density

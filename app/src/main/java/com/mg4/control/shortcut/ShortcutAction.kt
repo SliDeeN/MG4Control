@@ -79,7 +79,30 @@ enum class ShortcutAction(val id: Int) {
 
     // Pop-up de charge (2026-10-16) : le rouvre s'il a été fermé pendant une charge, ou le referme.
     // Comme HVAC_POPUP, l'action n'écrit rien elle-même. Option coupée : un message dit où l'activer.
-    CHARGE_POPUP(45);
+    CHARGE_POPUP(45),
+
+    // Pré-climatisation (issue #130, 2026-10-23) : ouvre son pop-up de réglage, ou réaffiche l'écran
+    // de suivi pendant un programme. N'écrit rien elle-même : c'est « Démarrer » qui lance.
+    PRE_CLIMATE(46),
+
+    // Android Auto / CarPlay (2026-10-23) : ouvre la projection du téléphone en session (AllGo le
+    // dit), sinon un message ; projection déjà à l'écran : retour à l'écran d'avant. Voir
+    // ProjectionShortcut. N'écrit rien dans la voiture.
+    PROJECTION(47),
+
+    // Raccourci perso (issue #172, 2026-10-25) : ce que l'utilisateur a défini dans la page
+    // « Raccourcis perso » — une appli, la fonction d'une autre appli, une diffusion, un lien ou un
+    // webhook. L'emplacement ne garde que l'identifiant du raccourci perso (shortcut_<slot>_custom_id,
+    // ou FloatingButton.customId) ; voir CustomShortcutRunner.
+    CUSTOM(48),
+
+    // Débit d'air en mode AUTO (issue #178, 2026-10-29) : « lue puis écrite », faible → moyen →
+    // fort → faible. Le réglage se change aussi dans l'écran clim d'origine.
+    HVAC_AUTO_VOLUME_CYCLE(49),
+
+    // Paramètres Android (2026-10-31, repris du fork sensoyg) : ouvre l'écran des paramètres
+    // d'Android, que le launcher SAIC ne propose pas. Voir AndroidSettings. N'écrit rien.
+    ANDROID_SETTINGS(50);
 
     companion object {
         /**

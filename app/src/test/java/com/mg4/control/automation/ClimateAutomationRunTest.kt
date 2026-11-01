@@ -20,7 +20,7 @@ class ClimateAutomationRunTest {
 
     private fun rule() = ClimateAutomationSettings.Rule(
         active = true, threshold = 20, targetTemp = 21, fanLevel = 4,
-        defrostFront = false, defrostRear = false, autoMode = false, loopMode = null
+        airFlow = null, autoMode = false, loopMode = null
     )
 
     private fun cfg(trigger: Trigger) = ClimateAutomationSettings.Config(true, rule(), rule(), trigger = trigger)

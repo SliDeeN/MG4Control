@@ -11,17 +11,19 @@ object BatteryHeating {
     const val SET_OFF = 2
 
     /**
-     * État lu ; null = illisible.
+     * État lu ; null = illisible. **0 = activé, 1 = désactivé, sur les 6 firmwares.**
      *
-     * ⚠️ Les écrans d'origine se contredisent. L'ancienne plateforme lit 0 = activé, 1 = désactivé :
-     * constantes `DRIVING_BATTERY_GET_ON = 0` des Réglages SWI68/165, et SystemUI SWI133/165 qui
-     * propose l'activation quand l'état vaut 1. Les Réglages A9 cochent l'option quand il vaut 1.
-     * On suit chaque écran d'origine ; la sonde du Diagnostic (MG4_BATHEAT) doit trancher.
+     * Ancienne plateforme : constantes `DRIVING_BATTERY_GET_ON = 0` des Réglages SWI68/165, SystemUI
+     * SWI133/165 qui propose l'activation quand l'état vaut 1, et validé sur SWI133 (2026-10-02).
+     * A9 : relevé sur une SWI69 par l'auteur de MG4Dash (2026-10-15), repris par DiAuto-MG4 ; et
+     * l'adaptateur A9 d'origine (`CarAdapterPhevManager`) rend la propriété telle quelle. Jusqu'au
+     * 2026-10-30 on lisait 1 = activé sur A9, d'après les Réglages A9 décompilés : l'état était
+     * inversé, et le bouton renvoyait toujours l'état déjà en place (signalé sur A9).
      */
-    fun stateFromRaw(raw: Int, a9: Boolean): Boolean? = if (a9) {
-        when (raw) { 1 -> true; 0, 2 -> false; else -> null }
-    } else {
-        when (raw) { 0 -> true; 1, 2 -> false; else -> null }
+    fun stateFromRaw(raw: Int): Boolean? = when (raw) {
+        0 -> true
+        1, 2 -> false
+        else -> null
     }
 }
 

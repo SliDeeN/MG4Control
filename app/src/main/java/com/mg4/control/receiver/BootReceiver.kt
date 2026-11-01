@@ -21,6 +21,8 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val action = intent.action ?: return
         if (action !in BOOT_ACTIONS) return
+        // Avant le service : il démarre avec le mode de compatibilité forcé, s'il y en a un.
+        com.mg4.control.util.FirmwareInfo.initWithContext(context)
 
         AppLogger.i(TAG, "onReceive: $action — démarrage MG4ControlService")
 

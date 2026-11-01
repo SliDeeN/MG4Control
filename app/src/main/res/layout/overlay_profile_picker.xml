@@ -273,10 +273,12 @@
 
             </LinearLayout>
 
-            <!-- Actions : ouvrir l'application, et éteindre la voiture sur les firmwares qui le savent -->
+            <!-- Actions : ouvrir l'application, puis le Garde-voiture et l'extinction sur les
+                 firmwares qui les savent. Largeur pour les trois ; ProfilePickerOverlay la réduit
+                 quand il y en a moins. -->
             <LinearLayout
                 android:id="@+id/overlay_actions"
-                android:layout_width="430dp"
+                android:layout_width="600dp"
                 android:layout_height="match_parent"
                 android:orientation="horizontal"
                 android:baselineAligned="false"
@@ -296,6 +298,25 @@
                     android:drawableTop="@drawable/ic_overlay_open"
                     android:drawablePadding="6dp"
                     android:text="@string/overlay_open_app"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    android:maxLines="2" />
+
+                <!-- Garde-voiture : la fenêtre de lancement, ou l'écran de suivi pendant un programme -->
+                <TextView
+                    android:id="@+id/overlay_btn_preclim"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:gravity="center"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="10dp"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp"
+                    android:drawableTop="@drawable/ic_overlay_preclim"
+                    android:drawablePadding="6dp"
+                    android:text="@string/shortcuts_action_preclim"
                     android:textSize="14sp"
                     android:textStyle="bold"
                     android:maxLines="2" />

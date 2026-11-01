@@ -14,7 +14,7 @@ class ClimateAutomationDecisionTest {
     private fun rule(active: Boolean, threshold: Int) =
         ClimateAutomationSettings.Rule(
             active = active, threshold = threshold, targetTemp = 21, fanLevel = 4,
-            defrostFront = false, defrostRear = false, autoMode = false, loopMode = null
+            airFlow = null, autoMode = false, loopMode = null
         )
 
     private fun cfg(

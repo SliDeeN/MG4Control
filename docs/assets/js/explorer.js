@@ -219,6 +219,7 @@
     function groupsForView(u) {
       const o = u.overlay && u.overlay.type, d = u.dialog && u.dialog.type;
       if (o === 'picker') return ['selecteur'];
+      if (o === 'preclim') return ['garde-voiture'];
       if (o === 'confirm') return ['automatisation'];
       if (o === 'update' || d === 'update') return ['mises-a-jour'];
       if (d === 'powerOff') return ['verrou'];
@@ -228,7 +229,7 @@
       switch (u.screen) {
         case 'dashboard': return [['conduite', 'securite', 'confort'][u.tabs.dash] || 'conduite'];
         case 'profiles': case 'profileEdit': return ['profils'];
-        case 'shortcuts': return (u.tabs.sc === 'adv' || u.tabs.sc === 'list') ? ['raccourcis-avances'] : ['raccourcis'];
+        case 'shortcuts': return u.tabs.sc === 'preclim' ? ['garde-voiture'] : (u.tabs.sc === 'adv' || u.tabs.sc === 'list') ? ['raccourcis-avances'] : ['raccourcis'];
         case 'automation': return u.winOpen ? ['vitres', 'automatisation'] : ['automatisation', 'vitres'];
         case 'stats': return ['statistiques'];
         case 'audio': return ['audio'];

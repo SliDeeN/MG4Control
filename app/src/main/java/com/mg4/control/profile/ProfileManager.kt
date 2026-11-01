@@ -48,6 +48,17 @@ class ProfileManager(private val context: Context) {
 
         /** Scope unique pour les sauvegardes en arrière-plan (un seul par processus). */
         private val backupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+        /**
+         * Le blob des profils tel qu'enregistré, sans le décoder : l'écran conducteur le relit à
+         * chaque relevé pour savoir si ses réglages ont changé (ClusterProfiles), sans payer un
+         * ProfileManager ni un décodage JSON à chaque fois.
+         */
+        fun rawJson(ctx: Context): String? =
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(KEY_PROFILES, null)
+
+        fun defaultIdOf(ctx: Context): String? =
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getString(KEY_DEFAULT_ID, null)
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -96,6 +107,21 @@ class ProfileManager(private val context: Context) {
         }
         triggerBackup()
         return true
+    }
+
+    /**
+     * Réécrit tous les profils par [transform], en une seule écriture et une seule sauvegarde —
+     * l'écran conducteur réglé pour plusieurs profils à la fois. Rien n'est écrit si rien ne
+     * change. Retourne `true` si quelque chose a changé.
+     */
+    fun updateAll(transform: (DrivingProfile) -> DrivingProfile): Boolean {
+        val change = synchronized(MUTATION_LOCK) {
+            val avant = getAll()
+            val apres = avant.map(transform)
+            (apres != avant).also { if (it) persist(apres) }
+        }
+        if (change) triggerBackup()
+        return change
     }
 
     fun delete(profileId: String) {

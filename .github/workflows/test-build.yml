@@ -5,7 +5,9 @@ name: Test build
 # L'OTA interroge /releases/latest, qui ignore artifacts, drafts et prereleases :
 # ce workflow ne peut donc PAS perturber les mises à jour des utilisateurs.
 #
-# NOMMAGE — la version dérive de la DERNIÈRE beta publiée : "2.6.6-beta.13.test.42".
+# NOMMAGE — la version dérive de la DERNIÈRE beta publiée : "2.6.6-beta.13.test.2".
+# Le numéro de test repart à 1 après chaque beta publiée (et à chaque nouvelle version) :
+# beta.13.test.1, beta.13.test.2, puis beta.14.test.1…
 # Ce format n'est pas cosmétique, il conditionne l'OTA du testeur :
 #   • il est POSTÉRIEUR à beta.13 (plus d'identifiants à préfixe égal) → s'installe par-dessus ;
 #   • il reste ANTÉRIEUR à beta.14 (13 < 14 au 2ᵉ identifiant) → la prochaine beta publique est
@@ -28,6 +30,7 @@ on:
 
 permissions:
   contents: read
+  actions: read     # compter les Test build déjà lancés depuis la dernière beta
 
 jobs:
   build:
@@ -73,18 +76,29 @@ jobs:
           if [ -z "$BASE" ]; then
             echo "::error::versionName introuvable dans app/build.gradle.kts"; exit 1
           fi
-          LAST=$(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=50" \
-                 | jq -r '.[] | select(.prerelease==true) | .tag_name' \
-                 | sed 's/^v//' \
-                 | awk -v base="$BASE" '{ c=$0; sub(/-.*/,"",c); if (c==base) { print; exit } }')
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=50" > releases.json
+          # Dernière prerelease de ce versionName (l'API liste de la plus récente à la plus ancienne).
+          read -r LAST REF < <(jq -r --arg b "$BASE" \
+            '[.[] | select(.prerelease==true and .draft==false) | select((.tag_name | ltrimstr("v") | split("-")[0]) == $b)]
+             | first | "\(.tag_name // "") \(.published_at // "")"' releases.json)
           if [ -n "$LAST" ]; then
-            PRE="${LAST#$BASE-}"
-            echo "Dernière beta de $BASE : $LAST"
+            PRE="${LAST#v$BASE-}"
+            echo "Dernière beta de $BASE : $LAST (publiée le $REF)"
           else
             PRE="beta.0"
-            echo "Aucune beta pour $BASE → repli sur beta.0"
+            # Pas encore de beta pour cette version : on compte depuis la dernière release publiée,
+            # quelle qu'elle soit (la stable précédente, en général).
+            REF=$(jq -r '[.[] | select(.draft==false)] | first | .published_at // "1970-01-01T00:00:00Z"' releases.json)
+            echo "Aucune beta pour $BASE → repli sur beta.0 (compté depuis $REF)"
           fi
-          SUFFIX="-${PRE}.test.${{ github.run_number }}"
+
+          # Numéro de test = rang de ce run parmi les Test build lancés depuis REF, lui compris.
+          # Les runs échoués comptent aussi : un numéro n'est jamais réutilisé.
+          N=$(gh api -X GET "repos/$GITHUB_REPOSITORY/actions/workflows/test-build.yml/runs" \
+                -f per_page=100 -f created=">$REF" \
+                --jq "[.workflow_runs[] | select(.run_number <= ${{ github.run_number }})] | length")
+          [ "${N:-0}" -ge 1 ] || N=1
+          SUFFIX="-${PRE}.test.${N}"
           echo "suffix=$SUFFIX"          >> "$GITHUB_OUTPUT"
           echo "full=${BASE}${SUFFIX}"   >> "$GITHUB_OUTPUT"
           echo "Version de test : ${BASE}${SUFFIX}"

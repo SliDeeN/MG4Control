@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.debug.CrashLogger
+import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.ThemeHelper
 
@@ -16,6 +17,10 @@ class MG4App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Le mode de compatibilité forcé (firmware non reconnu) vaut pour tout le processus :
+        // service et récepteur de démarrage compris, pas seulement l'écran.
+        FirmwareInfo.initWithContext(this)
 
         // ── Crash handler global ──────────────────────────────────────────────
         // Intercepte toute exception non gérée, écrit la stack trace + les logs
@@ -45,5 +50,11 @@ class MG4App : Application() {
         }
 
         AppCompatDelegate.setDefaultNightMode(ThemeHelper.resolveNightMode(this))
+
+        // Écran conducteur par profil (2026-10-24) : une fois, les profils existants reprennent
+        // les réglages communs, avant que le service ou les Réglages ne les lisent.
+        com.mg4.control.util.ClusterProfiles.migrateIfNeeded(this)
+        // Même chose pour les boutons flottants : chaque profil reprend les bulles communes.
+        com.mg4.control.util.FloatingProfiles.migrateIfNeeded(this)
     }
 }

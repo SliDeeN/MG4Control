@@ -48,13 +48,20 @@ class ChargeModuleTest {
     }
 
     @Test
-    fun `les etats en charge sont ceux de SAIC`() {
+    fun `les etats en charge sont ceux relevés en voiture`() {
         assertEquals(true, ChargeDisplay.enCharge(1))    // alternatif, 2026-09-19
         assertEquals(true, ChargeDisplay.enCharge(10))   // continu, 2026-10-16
-        for (e in listOf(2, 3, 11, 12)) assertEquals(true, ChargeDisplay.enCharge(e))
+        for (e in listOf(11, 12)) assertEquals(true, ChargeDisplay.enCharge(e))
         assertEquals(false, ChargeDisplay.enCharge(0))
         assertEquals(false, ChargeDisplay.enCharge(5))   // branché sur borne rapide, pas encore lancée
         assertNull(ChargeDisplay.enCharge(null))
+    }
+
+    @Test
+    fun `une charge alternative s arrete a l equilibrage et ne reprend pas a charge terminee`() {
+        // Séquence relevée sur SWI133 le 2026-10-23 : 0 → 5 → 7 → 1 → 3 → 2 → 0
+        val vue = listOf(0, 5, 7, 1, 3, 2, 0).map { ChargeDisplay.enCharge(it) }
+        assertEquals(listOf(false, false, false, true, false, false, false), vue)
     }
 
     @Test

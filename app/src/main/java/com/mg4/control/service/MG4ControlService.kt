@@ -80,7 +80,7 @@ class MG4ControlService : Service() {
             ShortcutAction.REGEN_CYCLE, ShortcutAction.SEAT_HEAT_LEFT_CYCLE,
             ShortcutAction.SEAT_HEAT_RIGHT_CYCLE, ShortcutAction.STEERING_HEAT_TOGGLE,
             ShortcutAction.DEFROST_FRONT_TOGGLE, ShortcutAction.DEFROST_REAR_TOGGLE,
-            ShortcutAction.HVAC_RECIRC_CYCLE,
+            ShortcutAction.HVAC_RECIRC_CYCLE, ShortcutAction.HVAC_AUTO_VOLUME_CYCLE,
             ShortcutAction.BRIGHTNESS_UP, ShortcutAction.BRIGHTNESS_DOWN,
             ShortcutAction.AUTO_HIGH_BEAM_TOGGLE, ShortcutAction.BATTERY_HEAT_TOGGLE,
             ShortcutAction.MEDIA_NEXT, ShortcutAction.MEDIA_PREVIOUS,
@@ -113,6 +113,8 @@ class MG4ControlService : Service() {
         const val ACTION_ADV_SHORTCUT = "com.mg4.control.internal.ADV_SHORTCUT"
         const val EXTRA_ADV_ACTION    = "adv_action"
         const val EXTRA_ADV_SLOT      = "adv_slot"
+        /** Raccourci perso d'un bouton flottant (issue #172) ; les emplacements le gardent en préférence. */
+        const val EXTRA_ADV_CUSTOM    = "adv_custom"
 
         /**
          * [T-902] Permission exigée de l'ÉMETTEUR du broadcast hardkey. Déclarée en
@@ -191,6 +193,8 @@ class MG4ControlService : Service() {
     override fun onCreate() {
         super.onCreate()
         AppLogger.i(TAG, "onCreate")
+        // Relu ici aussi : démarré avant le déverrouillage, MG4App a pu trouver le réglage illisible.
+        FirmwareInfo.initWithContext(applicationContext)
         // AVANT startForeground : la notification annonce le Mode Garage, elle doit donc être
         // construite après que l'ancien réglage a été repris.
         GarageMode.migrateIfNeeded(applicationContext)
@@ -214,11 +218,17 @@ class MG4ControlService : Service() {
         // vérification — activer l'option suffit, sans redémarrer le service.
         com.mg4.control.automation.BatteryAutomation.start(applicationContext)
         // Sonde lumière/position (étude luminosité auto) : lecture seule, un relevé à chaque READY.
-        com.mg4.control.hardware.LightProbe.start(applicationContext)
-        // Luminosité automatique au démarrage : relit son interrupteur à chaque READY.
+        com.mg4.control.hardware.LightProbe.start(applicationContext)        // Luminosité automatique au démarrage : relit son interrupteur à chaque READY.
         com.mg4.control.automation.AutoBrightness.start(applicationContext)
         // Coupure auto du chauffage de la batterie : relit son interrupteur à chaque passage.
         com.mg4.control.automation.BatteryHeatingAutomation.start(applicationContext)
+        // Sons d'automatisation (issue #161) : rien tant que l'option est coupée ; sinon le son
+        // du démarrage de MG4Control, puis les événements choisis.
+        com.mg4.control.automation.SoundAutomation.start(applicationContext)
+        // Boutons flottants : rien tant qu'aucun bouton n'est créé.
+        FloatingButtonsOverlay.refresh(applicationContext)
+        // Barre clim pendant Android Auto / CarPlay : surveille la projection, pose la zone au besoin.
+        ProjectionHvacZone.refresh(applicationContext)
         // Module sur le combiné : rien tant que l'interrupteur des Réglages est coupé.
         ClusterModuleOverlay.refresh(applicationContext, "démarrage du service")
         // Pop-up de charge : suit la charge si l'option (cachée par défaut) est active.
@@ -339,6 +349,9 @@ class MG4ControlService : Service() {
         // simple appel tiers relancerait l'application du profil par défaut à chaque commande.
         if (intent?.action == ACTION_GARAGE_CHANGED) {
             getSystemService(NotificationManager::class.java).notify(NOTIF_ID, buildNotification())
+            // Les boutons flottants et la zone clim d'Android Auto partent (ou reviennent) tout de suite.
+            FloatingButtonsOverlay.refresh(this)
+            ProjectionHvacZone.refresh(this)
             return START_STICKY
         }
         if (handleAdvancedShortcutIntent(intent)) return START_STICKY
@@ -423,7 +436,7 @@ class MG4ControlService : Service() {
             return true
         }
         AppLogger.i(TAG, "raccourci avancé → ${sc.name}")
-        executeToggle(sc, intent.getStringExtra(EXTRA_ADV_SLOT).orEmpty())
+        executeToggle(sc, intent.getStringExtra(EXTRA_ADV_SLOT).orEmpty(), intent.getStringExtra(EXTRA_ADV_CUSTOM))
         return true
     }
 
@@ -948,7 +961,8 @@ class MG4ControlService : Service() {
             ShortcutAction.HVAC_TOGGLE, ShortcutAction.HVAC_AC_TOGGLE, ShortcutAction.HVAC_TEMP_UP,
             ShortcutAction.HVAC_TEMP_DOWN, ShortcutAction.HVAC_FAN_UP,
             ShortcutAction.HVAC_FAN_DOWN, ShortcutAction.DEFROST_FRONT_TOGGLE,
-            ShortcutAction.DEFROST_REAR_TOGGLE, ShortcutAction.HVAC_RECIRC_CYCLE -> {
+            ShortcutAction.DEFROST_REAR_TOGGLE, ShortcutAction.HVAC_RECIRC_CYCLE,
+            ShortcutAction.HVAC_AUTO_VOLUME_CYCLE -> {
                 // Un SEUL getClimateState() : c'est une lecture binder, pas un champ, et les
                 // bornes viennent du véhicule — jamais de valeurs codées en dur.
                 val etat = MG4Hardware.getClimateState()
@@ -1003,6 +1017,13 @@ class MG4ControlService : Service() {
                         // même pour un « moins » ; on repart du dernier niveau réglé à la main, et
                         // cette écriture fait sortir d'AUTO.
                         val reglages = etat.reglages()
+                        // Clim éteinte : « plus » la rallume, et la voiture reprend son cran (ou AUTO)
+                        // d'avant l'arrêt, comme pour la température — écrire un cran repartait du 1.
+                        if (reglages.eteinte && pas > 0) {
+                            AppLogger.i(TAG, "SHORTCUT clim ventilation : clim éteinte → rallumée (état d'avant l'arrêt)")
+                            MG4Hardware.setClimatePower(true)
+                            return
+                        }
                         val cible = HvacPopup.pasVentilation(reglages, pas)
                         if (cible == null) {
                             AppLogger.w(TAG, "SHORTCUT clim ventilation — rien à écrire " +
@@ -1040,6 +1061,24 @@ class MG4ControlService : Service() {
                         AppLogger.i(TAG, "SHORTCUT recirculation : $actuel → $suivant")
                         MG4Hardware.setClimateLoopMode(suivant)
                     }
+                    // Débit en AUTO (issue #178) : faible → moyen → fort → faible, l'ordre de
+                    // l'issue. On BOUCLE, comme la recirculation : trois réglages sans danger.
+                    // Réglable même hors AUTO : la voiture le garde pour le prochain AUTO.
+                    ShortcutAction.HVAC_AUTO_VOLUME_CYCLE -> {
+                        val actuel = etat.autoVolume
+                        if (actuel == null) {
+                            AppLogger.w(TAG, "SHORTCUT débit en AUTO — réglage illisible, aucune action")
+                            return
+                        }
+                        val suivant = when (actuel) {
+                            MG4Hardware.AutoVolume.LOW    -> MG4Hardware.AutoVolume.MEDIUM
+                            MG4Hardware.AutoVolume.MEDIUM -> MG4Hardware.AutoVolume.HIGH
+                            else                          -> MG4Hardware.AutoVolume.LOW
+                        }
+                        AppLogger.i(TAG, "SHORTCUT débit en AUTO : ${MG4Hardware.AutoVolume.label(actuel)} → " +
+                            MG4Hardware.AutoVolume.label(suivant))
+                        MG4Hardware.setClimateAutoVolume(suivant)
+                    }
                     else -> {}
                 }
             }
@@ -1048,8 +1087,17 @@ class MG4ControlService : Service() {
         }
     }
 
-    private fun executeToggle(action: ShortcutAction, pressKey: String = "") {
+    private fun executeToggle(action: ShortcutAction, pressKey: String = "", customId: String? = null) {
         val prefs = getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
+
+        // CUSTOM (issue #172) : le raccourci perso de l'emplacement — donné par le bouton flottant,
+        // sinon gardé sous la clé de l'emplacement, comme l'appli de OPEN_CUSTOM_APP.
+        if (action == ShortcutAction.CUSTOM) {
+            val id = customId ?: prefs.getString("shortcut_${pressKey}_custom_id", null)
+            AppLogger.i(TAG, "SHORTCUT CUSTOM — raccourci perso ${id ?: "non choisi"} (emplacement $pressKey)")
+            CustomShortcutRunner.run(this@MG4ControlService, id)
+            return
+        }
 
         // PROFILE_PICKER : overlay flottant au-dessus du launcher — un second appui le referme
         // (issue #137), comme le pop-up HVAC.
@@ -1067,6 +1115,25 @@ class MG4ControlService : Service() {
         // CHARGE_POPUP : même famille — rouvre le pop-up de charge, ou le referme.
         if (action == ShortcutAction.CHARGE_POPUP) {
             ChargePopupOverlay.toggle(this@MG4ControlService)
+            return
+        }
+
+        // PRE_CLIMATE : même famille — pop-up de réglage, ou écran de suivi pendant un programme.
+        if (action == ShortcutAction.PRE_CLIMATE) {
+            PreClimate.raccourci(this@MG4ControlService)
+            return
+        }
+
+        // PROJECTION : Android Auto ou CarPlay selon le téléphone en session, ou retour à l'écran
+        // d'avant si la projection est déjà affichée.
+        if (action == ShortcutAction.PROJECTION) {
+            ProjectionShortcut.press(this@MG4ControlService)
+            return
+        }
+
+        // ANDROID_SETTINGS : ouvre les paramètres Android (ou dit qu'aucun écran n'a été trouvé).
+        if (action == ShortcutAction.ANDROID_SETTINGS) {
+            com.mg4.control.util.AndroidSettings.open(this@MG4ControlService)
             return
         }
 
@@ -1354,6 +1421,8 @@ class MG4ControlService : Service() {
             when (state) {
                 MG4Hardware.CarIgnitionItem.RUN -> {
                     AppLogger.i(TAG, "Katman5 IGNITION_RUN → application du profil")
+                    // Le combiné se rallume avec le contact : le module a pu s'y détacher.
+                    ClusterModuleOverlay.verifierEtRecoller("IGNITION_RUN")
                     Handler(Looper.getMainLooper()).postDelayed({
                         applyDefaultProfileOnIgnition()
                         tryClimateAutomation("IGNITION_RUN")
@@ -1567,8 +1636,7 @@ class MG4ControlService : Service() {
                         val ok = MG4Hardware.applyClimatePreset(
                             targetTemp   = rule.targetTemp,
                             fanLevel     = rule.fanLevel,
-                            defrostFront = rule.defrostFront,
-                            defrostRear  = rule.defrostRear,
+                            airFlow      = rule.airFlow,
                             autoMode     = rule.autoMode,
                             loopMode     = rule.loopMode
                         )

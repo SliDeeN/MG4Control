@@ -56,9 +56,87 @@ class UpdateCheckerTest {
         assertTrue("jamais au milieu d'une ligne", propre.removeSuffix("\n…").lines().last().startsWith("Ligne de changelog"))
     }
 
+    // ── Notes en plusieurs langues (issue #191) ──────────────────────────────
+
+    /** Forme convenue : l'anglais d'abord, puis une section repliée par langue. */
+    private val notesMulti = """
+        ## MG4Control v2.6.11
+
+        Added : Android settings shortcut
+        Fixed : AUTO notches in the HVAC popup
+
+        <!-- lang:fr -->
+        <details><summary>Français</summary>
+
+        Ajouté : raccourci vers les paramètres Android
+        Corrigé : crans d'AUTO dans le popup HVAC
+
+        </details>
+        <!-- lang:de -->
+        <details><summary>Deutsch</summary>
+
+        Neu : Verknüpfung zu den Android-Einstellungen
+
+        </details>
+        <!-- lang:it -->
+        <details><summary>Italiano</summary>
+
+        </details>
+
+        Two variants are provided — **pick one**:
+
+        | Variant | File | Network |
+    """.trimIndent()
+
+    @Test
+    fun `la section de la langue de l'appli est choisie`() {
+        assertEquals(
+            "Ajouté : raccourci vers les paramètres Android\nCorrigé : crans d'AUTO dans le popup HVAC",
+            UpdateChecker.cleanNotes(notesMulti, "fr"))
+        assertEquals("Neu : Verknüpfung zu den Android-Einstellungen", UpdateChecker.cleanNotes(notesMulti, "de"))
+    }
+
+    @Test
+    fun `l'anglais par defaut, et pour une langue absente ou vide`() {
+        val anglais = "MG4Control v2.6.11\n\nAdded : Android settings shortcut\nFixed : AUTO notches in the HVAC popup"
+        assertEquals(anglais, UpdateChecker.cleanNotes(notesMulti))
+        assertEquals(anglais, UpdateChecker.cleanNotes(notesMulti, "en"))
+        assertEquals("pas de section turque", anglais, UpdateChecker.cleanNotes(notesMulti, "tr"))
+        assertEquals("section italienne vide", anglais, UpdateChecker.cleanNotes(notesMulti, "it"))
+    }
+
+    @Test
+    fun `aucune balise HTML ni bloc de variantes dans la derniere section`() {
+        for (lang in listOf("en", "fr", "de")) {
+            val propre = UpdateChecker.cleanNotes(notesMulti, lang)
+            assertFalse(propre.contains("<"))
+            assertFalse(propre.contains("Two variants"))
+            assertFalse(propre.contains("|"))
+        }
+    }
+
+    @Test
+    fun `le tableau des betas, sans phrase d'introduction, est retire`() {
+        val beta = "## MG4Control 2.6.11-beta.1 — test build\n\nAdded : x\n\n| Variant | File |\n|---|---|"
+        assertEquals("MG4Control 2.6.11-beta.1 — test build\n\nAdded : x", UpdateChecker.cleanNotes(beta))
+    }
+
+    @Test
+    fun `des notes a l'ancienne restent entieres quelle que soit la langue`() {
+        assertEquals(UpdateChecker.cleanNotes(notes267), UpdateChecker.cleanNotes(notes267, "fr"))
+    }
+
     @Test
     fun `remote patch superieur est plus recent`() {
         assertTrue(UpdateChecker.isNewer("2.6.5", "2.6.4"))
+    }
+
+    @Test
+    fun `un patch a deux chiffres se compare en nombre, pas en texte`() {
+        // 2.6.10 : premier numéro à deux chiffres. En texte, « 10 » passerait avant « 9 ».
+        assertTrue(UpdateChecker.isNewer("2.6.10", "2.6.9"))
+        assertFalse(UpdateChecker.isNewer("2.6.9", "2.6.10"))
+        assertTrue(UpdateChecker.isNewer("2.6.10-beta.43", "2.6.9"))
     }
 
     @Test
