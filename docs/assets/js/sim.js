@@ -206,7 +206,7 @@
       floating: { hideReverse: true, sets: {} },
       // Garde-voiture : derniers choix de la fenêtre et réglages de sa page (PreClimateSettings).
       preclim: { mode: 'now', dur: 60, temp: 21, fan: 4, dog: false, surv: false, at: { h: 7, m: 30, run: 15, runs: 2, pause: 10 },
-                 lock: 20, soc: 20, screen: 'dim', cluster: true },
+                 lock: 20, soc: 20, screen: 'dim', cluster: true, unlock: true },
       pc: null,                    // programme en cours (pcStart)
       // Sons d'automatisation : un son par moment au plus (SoundAutomationSettings).
       sound: { on: false, open: false, slots: [{ file: null, dur: 0, vol: 15, events: [] }], profiles: null, busyUntil: 0 },
@@ -2282,6 +2282,7 @@
         sl('pcLock', S('preclim_cfg_lock'), 10, 60, p.lock, 5) + sl('pcSoc', S('preclim_cfg_soc'), 10, 40, p.soc, 5) +
         '<div class="a-row"><span class="lbl" style="flex:0 0 300px">' + esc(S('preclim_cfg_screen')) + '</span><div class="a-grid g3" style="flex:1">' + scr('normal', 'preclim_screen_normal') + scr('dim', 'preclim_screen_dim') + scr('off', 'preclim_screen_off') + '</div></div>' +
         (k.cluster ? '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_cluster')) + '<small>' + esc(S('preclim_cfg_cluster_desc')) + '</small></span>' + sw(p.cluster, 'pcCluster') + '</div>' : '') +
+        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_unlock')) + '<small>' + esc(S('preclim_cfg_unlock_desc')) + '</small></span>' + sw(p.unlock, 'pcUnlockSw') + '</div>' +
         '<div class="a-desc" style="margin-top:8px;color:var(--dash-warn)">⚠ ' + esc(S('preclim_cfg_warning')) + '</div></div>';
     }
     /** Page « Boutons flottants » : un profil à la fois, ses bulles, l'édition, la copie, les options. */
@@ -3037,6 +3038,12 @@
      * surveillance) ou « À une heure » (cycles) à gauche ; la clim, ou la surveillance clim coupée, à droite.
      * La maquette suppose l'application caméra 360° installée : sans elle, le bouton Surveillance n'existe pas.
      */
+    /** « Démarrer » validé : la fenêtre se ferme, le décompte part. */
+    pcLaunch() {
+      const p = state.preclim, now = p.mode === 'now';
+      clearInterval(this._cd); this.ui.overlay = null;
+      pcStart(Object.assign({}, p, { surv: now && p.surv, dog: now && p.dog && !p.surv }));
+    }
     preclimPopupHtml() {
       const p = state.preclim, cl = car().clim, now = p.mode === 'now';
       const surv = now && p.surv, dog = now && p.dog && !surv;
@@ -3284,6 +3291,14 @@
           return confirm({ tone: 'warn', title: S('shortcuts_warning_title'), msg: S('shortcuts_warning_message'), yes: S('shortcuts_warning_ok') });
         case 'noProfiles':
           return confirm({ tone: 'warn', title: S('shortcuts_no_profiles'), yes: S('nav_close') });
+        case 'pcUnlock': {
+          const row = (ico, t, dsc) => '<div class="mw-unl"><span class="mw-badge warn">' + ico + '</span><div><b>' + esc(S(t)) + '</b><span>' + esc(S(dsc)) + '</span></div></div>';
+          return win(780, '<span class="mw-badge big warn">' + MW.key + '</span><div class="mw-ct">' + esc(S('preclim_unlock_title')) + '</div>' +
+            '<div class="mw-cm">' + esc(S('preclim_unlock_intro')) + '</div><div class="mw-unls">' +
+            row(MW.handle, 'preclim_unlock_handle', 'preclim_unlock_handle_desc') + row(MW.key, 'preclim_unlock_key', 'preclim_unlock_key_desc') +
+            row(MW.phone, 'preclim_unlock_app', 'preclim_unlock_app_desc') + '</div>' +
+            '<div class="mw-acts tall">' + B(S('preclim_unlock_never'), 'pcUnlockNever') + B(S('preclim_unlock_ok'), 'pcUnlockOk', 'w') + '</div>', 'c', 'pc-unlock');
+        }
         case 'powerOff':
           return confirm({ tone: 'danger', ico: MW.power, title: S('vehicle_power_dialog_title'), msg: S('vehicle_power_dialog_msg'), yes: S('vehicle_power_dialog_confirm'), no: S('vehicle_power_dialog_cancel'), yesAct: 'powerOk' });
         case 'pickApp': case 'pickProfile': {
@@ -3753,11 +3768,13 @@
         case 'pcAtPause': state.preclim.at.pause = clamp(state.preclim.at.pause + n * 5, 5, 60); return r();
         case 'pcGo': {
           if (c.speed > 0) return this.toast(S('preclim_need_park'), 3000);
-          const p = state.preclim, now = p.mode === 'now';
-          clearInterval(this._cd); u.overlay = null;
-          pcStart(Object.assign({}, p, { surv: now && p.surv, dog: now && p.dog && !p.surv }));
-          return;
+          // Rappel avant le départ : la clé, et les trois façons de déverrouiller.
+          if (state.preclim.unlock) { u.dialog = { type: 'pcUnlock' }; return r(); }
+          return this.pcLaunch();
         }
+        case 'pcUnlockNever': state.preclim.unlock = false; u.dialog = null; return this.pcLaunch();
+        case 'pcUnlockOk': u.dialog = null; return this.pcLaunch();
+        case 'pcUnlockSw': state.preclim.unlock = !state.preclim.unlock; return r();
         // Garde-voiture : écran de suivi
         case 'pcHide': if (state.pc) state.pc.hidden = true; return r();
         case 'pcStop': if (state.pc) pcEnd(state.pc.phase === 'cd' ? 'cancelled' : 'stopped'); return;
@@ -4423,6 +4440,9 @@
     brightness: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8,12 a4,4 0 1,0 8,0 a4,4 0 1,0 -8,0 M12,2.5 V5 M12,19 V21.5 M2.5,12 H5 M19,12 H21.5 M5.3,5.3 L7,7 M17,17 L18.7,18.7 M5.3,18.7 L7,17 M17,7 L18.7,5.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     open: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10,5 H6 a1,1 0 0 0 -1,1 V18 a1,1 0 0 0 1,1 H18 a1,1 0 0 0 1,-1 V14 M13.5,5 H19 V10.5 M19,5 L11,13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     keeper: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,3 a12,12 0 0 0 8.5,3 a12,12 0 0 1 -8.5,15 a12,12 0 0 1 -8.5,-15 a12,12 0 0 0 8.5,-3 M11,11 a1,1 0 1 0 2,0 a1,1 0 1 0 -2,0 M12,12 v2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    key: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M16.555,3.843l3.602,3.602a2.877,2.877 0,0 1,0 4.069l-2.643,2.643a2.877,2.877 0,0 1,-4.069 0l-0.301,-0.301l-6.558,6.558a2,2 0,0 1,-1.239 0.578l-0.175,0.008h-1.172a1,1 0,0 1,-0.993 -0.883l-0.007,-0.117v-1.172a2,2 0,0 1,0.467 -1.284l0.119,-0.13l0.414,-0.414h2v-2h2v-2l2.144,-2.144l-0.301,-0.301a2.877,2.877 0,0 1,0 -4.069l2.643,-2.643a2.877,2.877 0,0 1,4.069 0z M15,9h0.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    handle: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8,13V4.5a1.5,1.5 0,0 1,3 0V12 M11,11.5v-2a1.5,1.5 0,1 1,3 0V12 M14,10.5a1.5,1.5 0,0 1,3 0V12 M17,11.5a1.5,1.5 0,0 1,3 0V16a6,6 0,0 1,-6 6h-2h0.208a6,6 0,0 1,-5.012 -2.7l-0.196,-0.3c-0.312,-0.479 -1.407,-2.388 -3.286,-5.728a1.5,1.5 0,0 1,0.536 -2.022a1.867,1.867 0,0 1,2.28 0.28L8,13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    phone: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8,3h8a2,2 0,0 1,2 2v14a2,2 0,0 1,-2 2h-8a2,2 0,0 1,-2 -2v-14a2,2 0,0 1,2 -2z M11,4h2 M12,17v0.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     power: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12,3.5 V11.5 M7.4,6.7 a7,7 0 1,0 9.2,0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     temperature: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14,14.8 V5 a2,2 0 0 0 -4,0 V14.8 a4,4 0 1 0 4,0 z M12,9 V17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     battery: '<svg class="mw-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4,8 H18 a1,1 0 0 1 1,1 V15 a1,1 0 0 1 -1,1 H4 a1,1 0 0 1 -1,-1 V9 a1,1 0 0 1 1,-1 z M21.5,10.5 V13.5 M6,11 V13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',

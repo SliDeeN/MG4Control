@@ -946,6 +946,12 @@
 .mw-ct { margin-top: 14px; text-align: center; font-size: calc(23px * var(--ts, 1)); font-weight: 700; }
 .mw-cm { margin-top: 8px; text-align: center; font-size: calc(16px * var(--ts, 1)); color: var(--text-secondary); white-space: pre-line; min-height: 0; overflow: auto; }
 .mw-cm.left { text-align: left; }
+/* Garde-voiture, rappel avant le départ : trois façons de déverrouiller */
+.mw-unls { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.mw-unl { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; background: var(--dash-section); border: 1px solid var(--dash-border); }
+.mw-unl > div { display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.mw-unl b { font-size: calc(17px * var(--ts, 1)); }
+.mw-unl span:not(.mw-badge) { font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); }
 .mw-cm .red { color: var(--dash-danger); }
 .mw-fw { align-self: center; height: 32px; margin-top: 10px; padding: 0 14px; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); display: flex; align-items: center; gap: 8px; font-size: calc(14px * var(--ts, 1)); }
 .mw-fw span { color: var(--text-secondary); }

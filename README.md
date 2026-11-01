@@ -296,6 +296,11 @@ votre absence. Sa fenêtre démarre toujours sur « Maintenant » ; la voiture d
   et verrouillée pour que les caméras filment, **clim coupée** (environ 0,2 kW), jusqu'à 2 h ;
   l'écran affiche un avertissement rouge fixe « SURVEILLANCE CAMÉRA ».
 
+Avant le décompte, un **rappel** dit de garder la clé sur soi et donne les trois façons de
+déverrouiller la voiture : le petit bouton d'une poignée de porte avant, la clé (verrouiller puis
+déverrouiller, même si la voiture l'est déjà) et l'application iSmart. « Ne plus me rappeler » le
+coupe ; l'interrupteur *Rappel avant le départ* de la page *Garde-voiture* le remet.
+
 Sortez avec la clé : après un décompte réglable, **MG4Control verrouille lui-même les portes** —
 verrouiller avec la clé éteindrait la voiture. Avant de sortir, mettez **vous-même** les feux et
 les essuie-glaces sur OFF : l'application ne s'en charge pas (l'écran de décompte le rappelle). À la fin, la clim retrouve ses réglages d'avant et
@@ -305,7 +310,7 @@ restant, le cycle en cours et l'état du verrouillage, avec des particules bleue
 que la clim refroidit ou chauffe ; pendant l'attente, l'écran reste normal, s'atténue (par défaut)
 ou s'éteint. Les boutons flottants disparaissent du décompte jusqu'à la fin du programme. Sur SWI133, SWI68 et SWI165, une fiche sur l'écran conducteur montre aussi le décompte,
 le temps restant et la consigne, ou la surveillance en cours. Les réglages (délai de verrouillage
-10–60 s, seuil de batterie 10–40 %, écran, fiche du combiné) sont sur la page *Garde-voiture* de
+10–60 s, seuil de batterie 10–40 %, écran, fiche du combiné, rappel avant le départ) sont sur la page *Garde-voiture* de
 l'onglet Raccourcis.
 
 > [!WARNING]
@@ -1713,6 +1718,11 @@ window always starts on "Now"; the car must be in P.
   so the cameras can record, **climate off** (about 0.2 kW), for up to 2 h; the screen shows a fixed
   red "CAMERA SURVEILLANCE" warning.
 
+Before the countdown, a **reminder** tells you to keep the key with you and gives the three ways to
+unlock the car: the small button on a front door handle, the key (lock, then unlock, even if the
+car is already locked) and the iSmart app. "Don't remind me again" turns it off; the *Reminder
+before leaving* switch on the *Car keeper* page turns it back on.
+
 Get out with the key: after an adjustable countdown, **MG4Control locks the doors itself** —
 locking with the key would switch the car off. Before getting out, switch the lights and wipers to
 OFF **yourself**: the app doesn't do it (the countdown screen reminds you). At the end, the climate goes back to its previous
@@ -1722,7 +1732,7 @@ the current cycle and the lock state, with blue or orange particles depending on
 climate is cooling or heating; while waiting, the screen stays normal, dims (the default) or turns
 off. The floating buttons disappear from the countdown until the end of the program. On SWI133, SWI68 and SWI165, a card on the driver display also shows the countdown, the time
 left and the setpoint, or the surveillance in progress. The settings (lock delay 10–60 s, battery
-threshold 10–40 %, screen, cluster card) are on the *Car keeper* page of the Shortcuts tab.
+threshold 10–40 %, screen, cluster card, reminder before leaving) are on the *Car keeper* page of the Shortcuts tab.
 
 > [!WARNING]
 > Never leave a child alone in the car. Dog mode does not replace supervision: a battery that is too
