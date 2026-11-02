@@ -16,7 +16,7 @@
 
     <!-- Raccourcis au volant -->
     <string name="shortcuts_enabled_label">Activer les raccourcis au volant</string>
-    <string name="shortcuts_enabled_short">Au volant</string>
+    <string name="shortcuts_enabled_short">Activer</string>
     <string name="shortcuts_btn1_label">★ Bouton Gauche</string>
     <string name="shortcuts_btn2_label">★ Bouton Droite</string>
     <string name="shortcuts_action_none">Aucune</string>

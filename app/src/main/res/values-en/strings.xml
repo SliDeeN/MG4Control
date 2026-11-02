@@ -16,7 +16,7 @@
 
     <!-- Steering wheel shortcuts -->
     <string name="shortcuts_enabled_label">Enable steering wheel shortcuts</string>
-    <string name="shortcuts_enabled_short">Steering wheel</string>
+    <string name="shortcuts_enabled_short">Enable</string>
     <string name="shortcuts_btn1_label">★ Left Button</string>
     <string name="shortcuts_btn2_label">★ Right Button</string>
     <string name="shortcuts_action_none">None</string>

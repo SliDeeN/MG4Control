@@ -16,7 +16,7 @@
 
     <!-- Scorciatoie al volante -->
     <string name="shortcuts_enabled_label">Attiva scorciatoie al volante</string>
-    <string name="shortcuts_enabled_short">Al volante</string>
+    <string name="shortcuts_enabled_short">Attiva</string>
     <string name="shortcuts_btn1_label">★ Pulsante Sinistro</string>
     <string name="shortcuts_btn2_label">★ Pulsante Destro</string>
     <string name="shortcuts_action_none">Nessuna</string>

@@ -16,7 +16,7 @@
 
     <!-- Lenkrad-Kurzbefehle -->
     <string name="shortcuts_enabled_label">Lenkrad-Kurzbefehle aktivieren</string>
-    <string name="shortcuts_enabled_short">Am Lenkrad</string>
+    <string name="shortcuts_enabled_short">Aktivieren</string>
     <string name="shortcuts_btn1_label">★ Linke Taste</string>
     <string name="shortcuts_btn2_label">★ Rechte Taste</string>
     <string name="shortcuts_action_none">Keine</string>

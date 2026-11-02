@@ -9,7 +9,7 @@
     android:padding="14dp">
 
     <!-- Refonte B : sous-onglets en pastilles (la rangée défile si elle dépasse), puis au bout
-         l'interrupteur général « Au volant » (proposition A, 2026-11-02) : il commande toute la
+         l'interrupteur général « Activer » (proposition A, 2026-11-02) : il commande toute la
          fonctionnalité et reste actif quand le reste est grisé, d'où sa place hors du contenu. -->
     <LinearLayout
         android:layout_width="match_parent"

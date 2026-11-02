@@ -16,7 +16,7 @@
 
     <!-- Atalhos do volante -->
     <string name="shortcuts_enabled_label">Ativar atalhos do volante</string>
-    <string name="shortcuts_enabled_short">No volante</string>
+    <string name="shortcuts_enabled_short">Ativar</string>
     <string name="shortcuts_btn1_label">★ Botão Esquerdo</string>
     <string name="shortcuts_btn2_label">★ Botão Direito</string>
     <string name="shortcuts_action_none">Nenhuma</string>
