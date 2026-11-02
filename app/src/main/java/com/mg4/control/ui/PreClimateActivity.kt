@@ -261,6 +261,7 @@ class PreClimateActivity : Activity() {
     // ── Peinture ─────────────────────────────────────────────────────────────
 
     private fun peindre(e: PreClimate.Etat) {
+        if (e.phase == PreClimate.Phase.ENDED && e.end == PreClimateEnd.CANCELLED) { quitterAnnule(e); return }
         val maintenant = SystemClock.elapsedRealtime()
         val chien = e.req.dog && e.phase == PreClimate.Phase.ACTIVE
         val surv = e.req.surveillance && e.phase == PreClimate.Phase.ACTIVE
@@ -422,15 +423,22 @@ class PreClimateActivity : Activity() {
         }
     }
 
+    /**
+     * Annulé pendant le décompte : pas d'écran de fin, un simple toast. Avant (2026-11-02), la vue
+     * de fin était rendue visible avant d'être remplie, et le temps que l'activité se ferme on
+     * voyait un « Fermer » seul sur fond noir. Écran vidé, puis fermé.
+     */
+    private fun quitterAnnule(e: PreClimate.Etat) {
+        if (isFinishing) return
+        v.racine.visibility = View.INVISIBLE
+        Toast.makeText(v.loc, v.s(if (e.req.surveillance) R.string.preclim_surv_cancelled else R.string.preclim_cancelled),
+            Toast.LENGTH_SHORT).show()
+        PreClimate.oublierFin()
+        finish()
+    }
+
     private fun peindreFin(e: PreClimate.Etat) {
         val fin = e.end ?: return
-        if (fin == PreClimateEnd.CANCELLED) {
-            Toast.makeText(v.loc, v.s(if (e.req.surveillance) R.string.preclim_surv_cancelled else R.string.preclim_cancelled),
-                Toast.LENGTH_SHORT).show()
-            PreClimate.oublierFin()
-            finish()
-            return
-        }
         val heureFin = heure((e.endWallMinute ?: PreClimate.minuteDuJour()).toInt())
         val surv = e.req.surveillance
         val (titre, couleur, icone) = when (fin) {
