@@ -61,6 +61,9 @@ class AutomationFragment : Fragment() {
     /** Carte des sons (issue #161). */
     private val soundCard = SoundCard()
 
+    /** Page « Mes automatisations » (issue #201). */
+    private val customRules = CustomRulesPage()
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View = inflater.inflate(R.layout.fragment_automation, container, false)
@@ -133,6 +136,7 @@ class AutomationFragment : Fragment() {
         bindClimateAutomation(view, prefs)
         bindDoorVolume(view, prefs)
         bindSounds(view)
+        customRules.bind(this, view)
         // En dernier : les cartes masquées par firmware sont alors connues (garde d'onglet vide).
         bindCategoryRail(view)
     }
@@ -140,7 +144,7 @@ class AutomationFragment : Fragment() {
     // ══════════ Rail de catégories (refonte 2.7.0) ══════════
 
     /**
-     * Cinq pages, une seule visible. Un onglet dont la page n'a plus aucune carte visible
+     * Six pages, une seule visible. Un onglet dont la page n'a plus aucune carte visible
      * (firmware sans l'équipement) est masqué. L'onglet choisi est retenu le temps de la session :
      * revenir sur Automatisation rouvre la même page.
      */
@@ -151,6 +155,7 @@ class AutomationFragment : Fragment() {
             R.id.btn_auto_cat_screen   to R.id.page_auto_screen,
             R.id.btn_auto_cat_leave    to R.id.page_auto_leave,
             R.id.btn_auto_cat_sounds   to R.id.page_auto_sounds,
+            R.id.btn_auto_cat_custom   to R.id.page_auto_custom,
         ).map { (b, p) -> root.findViewById<MaterialButton>(b) to root.findViewById<ViewGroup>(p) }
         val scroll  = root.findViewById<android.widget.ScrollView>(R.id.scroll_automation)
         val ctx     = requireContext()
@@ -210,6 +215,7 @@ class AutomationFragment : Fragment() {
 
     override fun onDestroyView() {
         soundCard.detacher()
+        customRules.detacher()
         super.onDestroyView()
     }
 
@@ -957,6 +963,7 @@ class AutomationFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         // Les profils peuvent avoir changé dans l'onglet Profils → on recharge la liste.
+        customRules.refresh()
         val prefs = requireContext().getSharedPreferences(AutomationSettings.PREFS, Context.MODE_PRIVATE)
         view?.findViewById<Spinner>(R.id.spinner_automation_profile)?.let { sp ->
             setupSpinner(sp, prefs, AutomationSettings.KEY_PROFILE_ID)

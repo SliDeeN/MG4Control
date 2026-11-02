@@ -1,0 +1,313 @@
+package com.mg4.control.model
+
+import com.mg4.control.api.ExternalApi
+import com.mg4.control.automation.CustomRuleStore
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * Mes automatisations (issue #201, étape 1) : conditions à trois valeurs, déclencheurs, garde de
+ * lancement, exécution, enregistrement et modèles.
+ *
+ * L'enjeu : ne toucher la voiture que sur un VRAI franc, une fois, et jamais en boucle.
+ */
+class CustomRuleTest {
+
+    private fun cmp(s: RuleSignal, op: RuleOp, n: Double? = null, t: String? = null) =
+        RuleCondition(RuleCondition.Type.COMPARE, signal = s, op = op, number = n, text = t)
+
+    private fun groupe(type: RuleCondition.Type, vararg c: RuleCondition) = RuleCondition(type, children = c.toList())
+
+    private fun etat(vararg v: Pair<RuleSignal, Any?>, minute: Int? = null, jour: Int? = null) =
+        RuleState(mapOf(*v), minute, jour)
+
+    // ── Conditions ──────────────────────────────────────────────────────────
+
+    @Test
+    fun `comparaisons numeriques et booleennes`() {
+        val s = etat(RuleSignal.OUTSIDE_TEMP to 3.0, RuleSignal.READY to true)
+        assertEquals(true, RuleLogic.evaluate(cmp(RuleSignal.OUTSIDE_TEMP, RuleOp.BELOW, 5.0), s))
+        assertEquals(false, RuleLogic.evaluate(cmp(RuleSignal.OUTSIDE_TEMP, RuleOp.ABOVE, 5.0), s))
+        assertEquals(true, RuleLogic.evaluate(cmp(RuleSignal.READY, RuleOp.IS_TRUE), s))
+        assertEquals(false, RuleLogic.evaluate(cmp(RuleSignal.READY, RuleOp.IS_FALSE), s))
+    }
+
+    @Test
+    fun `un signal illisible rend la condition inconnue`() {
+        val s = etat(RuleSignal.OUTSIDE_TEMP to null)
+        assertNull(RuleLogic.evaluate(cmp(RuleSignal.OUTSIDE_TEMP, RuleOp.BELOW, 5.0), s))
+        assertNull("signal absent", RuleLogic.evaluate(cmp(RuleSignal.SOC, RuleOp.BELOW, 5.0), s))
+    }
+
+    @Test
+    fun `logique a trois valeurs des groupes`() {
+        val vrai = cmp(RuleSignal.READY, RuleOp.IS_TRUE)
+        val faux = cmp(RuleSignal.READY, RuleOp.IS_FALSE)
+        val inconnu = cmp(RuleSignal.SOC, RuleOp.BELOW, 20.0)
+        val s = etat(RuleSignal.READY to true)
+        assertEquals("ET : un faux suffit", false, RuleLogic.evaluate(groupe(RuleCondition.Type.ALL, inconnu, faux), s))
+        assertNull("ET : inconnu sans faux", RuleLogic.evaluate(groupe(RuleCondition.Type.ALL, vrai, inconnu), s))
+        assertEquals("OU : un vrai suffit", true, RuleLogic.evaluate(groupe(RuleCondition.Type.ANY, inconnu, vrai), s))
+        assertNull("OU : inconnu sans vrai", RuleLogic.evaluate(groupe(RuleCondition.Type.ANY, faux, inconnu), s))
+        assertEquals("NON : aucune vraie", true, RuleLogic.evaluate(groupe(RuleCondition.Type.NOT, faux), s))
+        assertEquals(false, RuleLogic.evaluate(groupe(RuleCondition.Type.NOT, faux, vrai), s))
+        assertNull("NON d'un inconnu reste inconnu", RuleLogic.evaluate(groupe(RuleCondition.Type.NOT, inconnu), s))
+        assertEquals("groupe vide : aucune contrainte", true, RuleLogic.evaluate(RuleCondition(RuleCondition.Type.ALL), s))
+    }
+
+    @Test
+    fun `groupes imbriques`() {
+        // lun–ven ET (temp < 5 OU 5:00–9:00)
+        val c = groupe(RuleCondition.Type.ALL,
+            RuleCondition(RuleCondition.Type.WEEKDAYS, days = listOf(1, 2, 3, 4, 5)),
+            groupe(RuleCondition.Type.ANY,
+                cmp(RuleSignal.OUTSIDE_TEMP, RuleOp.BELOW, 5.0),
+                RuleCondition(RuleCondition.Type.TIME_RANGE, from = 300, to = 540)))
+        assertEquals(true, RuleLogic.evaluate(c, etat(RuleSignal.OUTSIDE_TEMP to 12.0, minute = 7 * 60, jour = 2)))
+        assertEquals(false, RuleLogic.evaluate(c, etat(RuleSignal.OUTSIDE_TEMP to 12.0, minute = 12 * 60, jour = 2)))
+        assertEquals("samedi", false, RuleLogic.evaluate(c, etat(RuleSignal.OUTSIDE_TEMP to 1.0, minute = 7 * 60, jour = 6)))
+        assertNull("horloge pas plausible", RuleLogic.evaluate(c, etat(RuleSignal.OUTSIDE_TEMP to 12.0)))
+    }
+
+    @Test
+    fun `plage horaire qui passe minuit`() {
+        assertTrue(RuleLogic.inRange(23 * 60, 22 * 60, 6 * 60))
+        assertTrue(RuleLogic.inRange(5 * 60 + 59, 22 * 60, 6 * 60))
+        assertFalse("6:00 exclu", RuleLogic.inRange(6 * 60, 22 * 60, 6 * 60))
+        assertFalse(RuleLogic.inRange(12 * 60, 22 * 60, 6 * 60))
+        assertTrue("début inclus", RuleLogic.inRange(8 * 60, 8 * 60, 9 * 60))
+    }
+
+    @Test
+    fun `textes et telephones`() {
+        val s = etat(RuleSignal.GEAR to "P", RuleSignal.BT_DEVICE to setOf("AA:BB:CC:DD:EE:FF"))
+        assertEquals(true, RuleLogic.evaluate(cmp(RuleSignal.GEAR, RuleOp.EQUALS, t = "p"), s))
+        assertEquals(true, RuleLogic.evaluate(cmp(RuleSignal.BT_DEVICE, RuleOp.EQUALS, t = "aa:bb:cc:dd:ee:ff"), s))
+        assertEquals(false, RuleLogic.evaluate(cmp(RuleSignal.BT_DEVICE, RuleOp.NOT_EQUALS, t = "AA:BB:CC:DD:EE:FF"), s))
+        assertEquals("P", RuleSignal.gearText(1))
+        assertEquals("D", RuleSignal.gearText(4))
+        assertEquals(RuleSignal.GEAR_OTHER, RuleSignal.gearText(2))
+    }
+
+    @Test
+    fun `imbrication trop profonde inconnue`() {
+        var c = cmp(RuleSignal.READY, RuleOp.IS_TRUE)
+        repeat(RuleLogic.MAX_DEPTH + 2) { c = groupe(RuleCondition.Type.ALL, c) }
+        assertNull(RuleLogic.evaluate(c, etat(RuleSignal.READY to true)))
+    }
+
+    @Test
+    fun `seuls les signaux utiles sont lus`() {
+        val r = CustomRuleTemplates.build(CustomRuleTemplates.Template.WINTER_MORNING, "x", "y")
+        assertEquals(setOf(RuleSignal.READY, RuleSignal.OUTSIDE_TEMP), RuleLogic.signals(r))
+        assertTrue(RuleLogic.usesClock(r))
+        val m = CustomRuleTemplates.build(CustomRuleTemplates.Template.STARTUP_MESSAGE, "x", "y")
+        assertTrue(RuleLogic.signals(m).isEmpty())
+        assertFalse(RuleLogic.usesClock(m))
+    }
+
+    // ── Déclencheurs ────────────────────────────────────────────────────────
+
+    @Test
+    fun `devient vrai part au passage seulement`() {
+        val w = TriggerWatch()
+        assertFalse("déjà vrai au démarrage : rien", w.onValue(true, 0, 0))
+        assertFalse(w.onValue(false, 1, 0))
+        assertTrue("faux → vrai", w.onValue(true, 2, 0))
+        assertFalse("pas une seconde fois", w.onValue(true, 3, 0))
+        assertFalse(w.onValue(false, 4, 0))
+        assertTrue("nouveau passage", w.onValue(true, 5, 0))
+    }
+
+    @Test
+    fun `devient vrai pendant une duree`() {
+        val w = TriggerWatch()
+        w.onValue(false, 0, 60_000)
+        assertFalse(w.onValue(true, 1_000, 60_000))
+        assertFalse(w.onValue(true, 30_000, 60_000))
+        assertFalse("interrompu", w.onValue(false, 40_000, 60_000))
+        assertFalse(w.onValue(true, 50_000, 60_000))
+        assertFalse(w.onValue(true, 100_000, 60_000))
+        assertTrue("une minute sans interruption", w.onValue(true, 110_000, 60_000))
+    }
+
+    @Test
+    fun `une lecture ratee ne rearme pas et n'interrompt pas`() {
+        val w = TriggerWatch()
+        assertFalse(w.onValue(null, 0, 0))
+        assertFalse("inconnu ne compte pas comme faux", w.onValue(true, 1, 0))
+        w.onValue(false, 2, 10)
+        w.onValue(true, 3, 10)
+        assertFalse(w.onValue(null, 8, 10))
+        assertTrue("l'attente continue", w.onValue(true, 13, 10))
+    }
+
+    @Test
+    fun `declencheur horaire une fois a la minute`() {
+        val w = TimeWatch()
+        assertFalse(w.onMinute(419, 420))
+        assertTrue(w.onMinute(420, 420))
+        assertFalse("même minute, relevé suivant", w.onMinute(420, 420))
+        assertFalse(w.onMinute(null, 420))
+        assertFalse(w.onMinute(421, 420))
+    }
+
+    // ── Garde de lancement ──────────────────────────────────────────────────
+
+    @Test
+    fun `garde de lancement`() {
+        val r = CustomRule(cooldownMinutes = 10)
+        assertEquals(RuleGate.Decision.START, RuleGate.decide(r, false, null, 0, null))
+        assertEquals(RuleGate.Decision.BUSY, RuleGate.decide(r, true, null, 0, null))
+        assertEquals(RuleGate.Decision.RESTART,
+            RuleGate.decide(r.copy(ifRunning = CustomRule.IfRunning.RESTART), true, null, 0, null))
+        assertEquals(RuleGate.Decision.COOLDOWN, RuleGate.decide(r, false, 0, 9 * 60_000L, null))
+        assertEquals(RuleGate.Decision.START, RuleGate.decide(r, false, 0, 10 * 60_000L, null))
+        val ready = CustomRule(onlyWhenReady = true)
+        assertEquals("READY inconnu = refusé", RuleGate.Decision.NOT_READY, RuleGate.decide(ready, false, null, 0, null))
+        assertEquals(RuleGate.Decision.START, RuleGate.decide(ready, false, null, 0, true))
+    }
+
+    // ── Exécution ───────────────────────────────────────────────────────────
+
+    private class Faux(var etat: RuleState = RuleState(), val refuse: Set<String> = emptySet()) : RuleEffects {
+        val faits = mutableListOf<String>()
+        var attente = 0L
+        override fun state() = etat
+        override fun set(key: String, value: String) = (key !in refuse).also { faits += "$key=$value" }
+        override fun shortcut(name: String) = true.also { faits += "sc:$name" }
+        override suspend fun profile(id: String) = true.also { faits += "profil:$id" }
+        override fun notify(text: String) { faits += "msg:$text" }
+        override suspend fun pause(ms: Long) { attente += ms }
+    }
+
+    @Test
+    fun `si sinon selon l'etat lu`() = runBlocking {
+        val r = CustomRuleTemplates.build(CustomRuleTemplates.Template.WINTER_MORNING, "Matin", "Bonne route")
+        val froid = Faux(etat(RuleSignal.OUTSIDE_TEMP to -2.0))
+        RuleRun(froid).run(r.actions)
+        assertEquals(listOf("seat_heat_left=3", "seat_heat_right=3", "steering_heat=1", "msg:Bonne route"), froid.faits)
+        assertEquals(30_000L, froid.attente)
+
+        val doux = Faux(etat(RuleSignal.OUTSIDE_TEMP to 3.0))
+        RuleRun(doux).run(r.actions)
+        assertEquals(listOf("hvac_power=1", "hvac_temp=21", "hvac_auto=1", "msg:Bonne route"), doux.faits)
+
+        val illisible = Faux(etat(RuleSignal.OUTSIDE_TEMP to null))
+        RuleRun(illisible).run(r.actions)
+        assertEquals("inconnu : ni alors ni sinon", listOf("msg:Bonne route"), illisible.faits)
+    }
+
+    @Test
+    fun `arreter, echecs, actions inconnues`() = runBlocking {
+        val fx = Faux(refuse = setOf("ac"))
+        val run = RuleRun(fx)
+        run.run(listOf(
+            RuleAction(RuleAction.Type.SET, key = "ac", value = "1"),
+            RuleAction(type = null),
+            RuleAction(RuleAction.Type.SET, key = "hvac_power"),
+            RuleAction(RuleAction.Type.STOP),
+            RuleAction(RuleAction.Type.NOTIFY, text = "jamais"),
+        ))
+        assertEquals(listOf("ac=1"), fx.faits)
+        assertEquals(0, run.done)
+        assertEquals("refusée + incomplète", 2, run.failed)
+    }
+
+    @Test
+    fun `garde-fous d'execution`() = runBlocking {
+        val fx = Faux()
+        RuleRun(fx).run(listOf(RuleAction(RuleAction.Type.WAIT, seconds = 99_999)))
+        assertEquals(RuleRun.MAX_WAIT_S * 1_000L, fx.attente)
+
+        val beaucoup = Faux()
+        RuleRun(beaucoup).run(List(RuleRun.MAX_STEPS + 50) { RuleAction(RuleAction.Type.NOTIFY, text = "x") })
+        assertEquals(RuleRun.MAX_STEPS, beaucoup.faits.size)
+    }
+
+    // ── Enregistrement ──────────────────────────────────────────────────────
+
+    @Test
+    fun `aller-retour JSON`() {
+        val regles = CustomRuleTemplates.Template.entries.map { CustomRuleTemplates.build(it, it.name, "m") }
+        assertEquals(regles, CustomRuleStore.decode(CustomRuleStore.encode(regles)))
+    }
+
+    @Test
+    fun `JSON ancien ou d'une version plus recente`() {
+        // Champs absents : valeurs par défaut. Valeur d'énumération inconnue : null, donc inconnue.
+        val json = """[{"id":"a","name":"x","triggers":[{"type":"FUTURE","forSeconds":3}],
+            "condition":{"type":"COMPARE","signal":"WARP","op":"IS_TRUE"},
+            "actions":[{"type":"TELEPORT"}]}]"""
+        val r = CustomRuleStore.decode(json).single()
+        assertTrue(r.enabled)
+        assertEquals(0, r.cooldownMinutes)
+        assertEquals(CustomRule.IfRunning.IGNORE, r.ifRunning)
+        assertNull(r.triggers.single().type)
+        assertNull(RuleLogic.evaluate(r.condition, RuleState()))
+        assertNull(r.actions.single().type)
+        assertTrue("illisible : liste vide", CustomRuleStore.decode("{pas du json").isEmpty())
+    }
+
+    @Test
+    fun `les modeles n'ecrivent que des cles de l'API externe`() {
+        val cles = setOf(ExternalApi.SET_DRIVE_MODE, ExternalApi.SET_REGEN, ExternalApi.SET_SEAT_HEAT_LEFT,
+            ExternalApi.SET_SEAT_HEAT_RIGHT, ExternalApi.SET_STEERING_HEAT, ExternalApi.SET_PROFILE,
+            ExternalApi.SET_HVAC_POWER, ExternalApi.SET_HVAC_AC, ExternalApi.SET_HVAC_AUTO, ExternalApi.SET_HVAC_TEMP,
+            ExternalApi.SET_HVAC_FAN, ExternalApi.SET_HVAC_RECIRC, ExternalApi.SET_DEFROST_FRONT, ExternalApi.SET_DEFROST_REAR)
+        fun toutes(l: List<RuleAction>?): List<RuleAction> = l.orEmpty().flatMap { listOf(it) + toutes(it.then) + toutes(it.otherwise) }
+        for (t in CustomRuleTemplates.Template.entries) {
+            val r = CustomRuleTemplates.build(t, "n", "m")
+            assertTrue(t.name, r.triggers.isNotEmpty() && r.actions.isNotEmpty())
+            toutes(r.actions).filter { it.type == RuleAction.Type.SET }.forEach { assertTrue("${t.name} ${it.key}", it.key in cles) }
+            toutes(r.actions).filter { it.type == RuleAction.Type.SHORTCUT }.forEach { a ->
+                assertTrue(a.shortcut!!, com.mg4.control.shortcut.ShortcutAction.entries.any { it.name == a.shortcut })
+            }
+        }
+    }
+
+    // ── Textes ──────────────────────────────────────────────────────────────
+
+    private object Mots : RuleWords {
+        override fun signal(s: RuleSignal) = s.name
+        override fun unit(s: RuleSignal) = if (s == RuleSignal.OUTSIDE_TEMP) " °C" else ""
+        override fun value(s: RuleSignal, text: String) = text
+        override fun yes(label: String) = "$label : oui"
+        override fun no(label: String) = "$label : non"
+        override fun event(e: RuleEvent) = e.name
+        override fun forSeconds(text: String, seconds: Int) = "$text pendant $seconds s"
+        override fun at(time: String) = "à $time"
+        override val and = " et "
+        override val or = " ou "
+        override fun none(text: String) = "aucune de : $text"
+        override fun range(from: String, to: String) = "$from–$to"
+        override fun days(days: List<Int>) = days.joinToString("")
+        override val always = "toujours"
+        override fun set(key: String, value: String) = "$key=$value"
+        override fun shortcut(name: String) = name
+        override fun profile(id: String) = "profil $id"
+        override fun waitFor(seconds: Int) = "attendre $seconds s"
+        override fun ifThen(condition: String) = "si $condition"
+        override fun notify(text: String) = "« $text »"
+        override val stop = "arrêter"
+        override val unknown = "?"
+    }
+
+    @Test
+    fun `resume lisible`() {
+        val t = RuleText(Mots)
+        val r = CustomRuleTemplates.build(CustomRuleTemplates.Template.WINTER_MORNING, "Matin", "Bonne route")
+        assertEquals("READY : oui", t.triggers(r))
+        assertEquals("12345 et (OUTSIDE_TEMP < 5 °C ou 5:00–9:00)", t.conditions(r))
+        assertEquals("si OUTSIDE_TEMP < 0 °C, attendre 30 s, « Bonne route »", t.actions(r))
+        val chaud = CustomRuleTemplates.build(CustomRuleTemplates.Template.HOT_DAY, "x", "y")
+        assertEquals("OUTSIDE_TEMP > 27 °C pendant 60 s", t.triggers(chaud))
+        assertEquals("sans condition", "toujours",
+            t.conditions(CustomRuleTemplates.build(CustomRuleTemplates.Template.STARTUP_MESSAGE, "x", "y")))
+        assertEquals("7:05", t.time(425))
+    }
+}

@@ -153,6 +153,32 @@
                     app:iconGravity="start"
                     app:icon="@drawable/ic_rail_music" />
 
+                <com.mg4.control.ui.widget.RailButton
+                    android:id="@+id/btn_auto_cat_custom"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/rule_page_title"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="19sp"
+                    android:textAllCaps="false"
+                    app:backgroundTint="@color/dash_btn"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="@color/dash_border"
+                    app:cornerRadius="18dp"
+                    android:gravity="start|center_vertical"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="10dp"
+                    android:maxLines="1"
+                    app:autoSizeTextType="uniform"
+                    app:autoSizeMinTextSize="13sp"
+                    app:autoSizeMaxTextSize="19sp"
+                    app:autoSizeStepGranularity="1sp"
+                    app:iconSize="26dp"
+                    app:iconPadding="14dp"
+                    app:iconGravity="start"
+                    app:icon="@drawable/ic_rail_branch" />
+
         </LinearLayout>
 
     </ScrollView>
@@ -2861,6 +2887,73 @@
                 </LinearLayout>
 
             </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Mes automatisations (issue #201, étape 1 du 2026-11-02) : la liste, créée par
+             CustomRulesPage. Création depuis un modèle en attendant l'éditeur (étape 2). -->
+        <LinearLayout
+            android:id="@+id/page_auto_custom"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/rule_page_title"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/custom_rules_count"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="12dp"
+                    android:textColor="@color/dash_text_lo"
+                    android:textSize="16sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_custom_rule_new"
+                    android:layout_width="wrap_content"
+                    android:layout_height="52dp"
+                    android:minWidth="160dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:text="@string/rule_new"
+                    android:textColor="@color/hvac_on_accent"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textAllCaps="false"
+                    app:backgroundTint="@color/dash_accent"
+                    app:cornerRadius="14dp" />
+
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/custom_rules_empty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card_rounded"
+                android:padding="16dp"
+                android:text="@string/rule_empty"
+                android:textColor="@color/text_secondary"
+                android:textSize="16sp" />
+
+            <LinearLayout
+                android:id="@+id/custom_rules_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
 
         </LinearLayout>
 
