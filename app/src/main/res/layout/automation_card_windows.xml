@@ -32,15 +32,15 @@
             android:layout_weight="1"
             android:text="@string/win_automation_title"
             android:textColor="@color/text_primary"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textStyle="bold" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_windows_expand"
             android:layout_width="60dp"
-            android:layout_height="52dp"
+            android:layout_height="64dp"
             android:textColor="@color/text_secondary"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             app:backgroundTint="@color/dash_btn"
@@ -63,7 +63,7 @@
             android:layout_weight="1"
             android:text="@string/win_auto_label"
             android:textColor="@color/text_secondary"
-            android:textSize="16sp" />
+            android:textSize="19sp" />
 
         <com.mg4.control.ui.widget.SegmentSwitch
             android:id="@+id/switch_win_autoclose"
@@ -92,7 +92,7 @@
             android:layout_height="wrap_content"
             android:text="@string/win_auto_desc"
             android:textColor="@color/text_secondary"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:lineSpacingExtra="2dp"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
@@ -103,7 +103,7 @@
             android:layout_height="wrap_content"
             android:text="@string/win_auto_warning"
             android:textColor="@color/dash_warn"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
             android:paddingTop="6dp" />
@@ -120,7 +120,7 @@
             android:layout_height="wrap_content"
             android:text="@string/win_auto_arming_title"
             android:textColor="@color/dash_text_lo"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             android:letterSpacing="0.12"
             android:textAllCaps="true"
@@ -143,7 +143,7 @@
                 android:layout_weight="1"
                 android:text="@string/win_auto_speed_label"
                 android:textColor="@color/text_primary"
-                android:textSize="16sp" />
+                android:textSize="19sp" />
 
             <TextView
                 android:id="@+id/win_auto_speed_value"
@@ -152,7 +152,7 @@
                 android:minWidth="90dp"
                 android:gravity="end"
                 android:textColor="@color/text_primary"
-                android:textSize="16sp"
+                android:textSize="19sp"
                 android:fontFamily="monospace" />
 
             <com.mg4.control.ui.widget.SegmentSwitch
@@ -195,7 +195,7 @@
                 android:layout_weight="1"
                 android:text="@string/win_auto_time_label"
                 android:textColor="@color/text_primary"
-                android:textSize="16sp" />
+                android:textSize="19sp" />
 
             <TextView
                 android:id="@+id/win_auto_time_value"
@@ -204,7 +204,7 @@
                 android:minWidth="90dp"
                 android:gravity="end"
                 android:textColor="@color/text_primary"
-                android:textSize="16sp"
+                android:textSize="19sp"
                 android:fontFamily="monospace" />
 
             <com.mg4.control.ui.widget.SegmentSwitch
@@ -245,14 +245,14 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_win_auto_any"
                 android:layout_width="0dp"
-                android:layout_height="52dp"
+                android:layout_height="64dp"
                 android:layout_weight="1"
                 android:layout_marginEnd="4dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:text="@string/win_auto_combine_any"
                 android:textColor="@color/text_secondary"
-                android:textSize="16sp"
+                android:textSize="19sp"
                 app:backgroundTint="@color/dash_btn"
                 app:strokeWidth="1dp"
                 app:strokeColor="@color/dash_border"
@@ -261,14 +261,14 @@
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_win_auto_all"
                 android:layout_width="0dp"
-                android:layout_height="52dp"
+                android:layout_height="64dp"
                 android:layout_weight="1"
                 android:layout_marginStart="4dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:text="@string/win_auto_combine_all"
                 android:textColor="@color/text_secondary"
-                android:textSize="16sp"
+                android:textSize="19sp"
                 app:backgroundTint="@color/dash_btn"
                 app:strokeWidth="1dp"
                 app:strokeColor="@color/dash_border"
@@ -292,7 +292,7 @@
                 android:layout_weight="1"
                 android:text="@string/win_auto_delay_label"
                 android:textColor="@color/text_primary"
-                android:textSize="16sp" />
+                android:textSize="19sp" />
 
             <TextView
                 android:id="@+id/win_auto_delay_value"
@@ -301,7 +301,7 @@
                 android:minWidth="90dp"
                 android:gravity="end"
                 android:textColor="@color/text_primary"
-                android:textSize="16sp"
+                android:textSize="19sp"
                 android:fontFamily="monospace" />
 
         </LinearLayout>
@@ -344,14 +344,14 @@
                     android:layout_height="wrap_content"
                     android:text="@string/win_auto_beep_label"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp" />
+                    android:textSize="19sp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="@string/win_auto_beep_desc"
                     android:textColor="@color/text_secondary"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:layout_marginTop="2dp" />
 
             </LinearLayout>
@@ -380,7 +380,7 @@
                 android:layout_weight="1"
                 android:text="@string/win_auto_beep_volume_label"
                 android:textColor="@color/text_primary"
-                android:textSize="16sp" />
+                android:textSize="19sp" />
 
             <TextView
                 android:id="@+id/win_auto_beep_value"
@@ -389,7 +389,7 @@
                 android:minWidth="90dp"
                 android:gravity="end"
                 android:textColor="@color/text_primary"
-                android:textSize="16sp"
+                android:textSize="19sp"
                 android:fontFamily="monospace" />
 
         </LinearLayout>
@@ -431,7 +431,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/win_course_title"
                 android:textColor="@color/dash_text_lo"
-                android:textSize="15sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
                 android:textAllCaps="true"
@@ -460,7 +460,7 @@
                     android:layout_weight="1"
                     android:text="@string/win_course_label"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp" />
+                    android:textSize="19sp" />
 
                 <TextView
                     android:id="@+id/win_course_value"
@@ -469,7 +469,7 @@
                     android:minWidth="90dp"
                     android:gravity="end"
                     android:textColor="@color/text_primary"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:fontFamily="monospace" />
 
             </LinearLayout>
@@ -496,7 +496,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/win_course_hint"
                 android:textColor="@color/text_secondary"
-                android:textSize="15sp"
+                android:textSize="18sp"
                 android:lineSpacingExtra="2dp"
                 android:paddingStart="16dp"
                 android:paddingEnd="16dp"
@@ -522,7 +522,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/win_cal_advanced_title"
                 android:textColor="@color/dash_text_lo"
-                android:textSize="15sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
                 android:textAllCaps="true"
@@ -556,14 +556,14 @@
                         android:layout_height="wrap_content"
                         android:text="@string/win_cal_advanced_label"
                         android:textColor="@color/text_primary"
-                        android:textSize="16sp" />
+                        android:textSize="19sp" />
 
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="@string/win_cal_advanced_desc"
                         android:textColor="@color/text_secondary"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:layout_marginTop="2dp" />
 
                 </LinearLayout>
@@ -589,7 +589,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/win_cal_hint"
                     android:textColor="@color/text_secondary"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
                     android:paddingTop="8dp"
@@ -600,7 +600,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/win_cal_limits"
                     android:textColor="@color/dash_warn"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:lineSpacingExtra="2dp"
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp"
@@ -646,7 +646,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textColor="@color/text_primary"
-                        android:textSize="20sp"
+                        android:textSize="22sp"
                         android:textStyle="bold" />
 
                     <TextView
@@ -654,7 +654,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:layout_marginTop="2dp" />
 
                     <TextView
@@ -662,7 +662,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textColor="@color/text_primary"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:layout_marginTop="10dp" />
 
                     <TextView
@@ -671,7 +671,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/win_cal_warning"
                         android:textColor="@color/dash_warn"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:layout_marginTop="6dp" />
 
                     <TextView
@@ -679,7 +679,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:textColor="@color/text_primary"
-                        android:textSize="22sp"
+                        android:textSize="24sp"
                         android:fontFamily="monospace"
                         android:layout_marginTop="8dp"
                         android:visibility="gone" />
@@ -692,7 +692,7 @@
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
                         android:textColor="@color/text_primary"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         app:iconGravity="textStart"
                         app:iconSize="32dp"
                         app:iconTint="@color/text_primary"
@@ -710,14 +710,14 @@
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_win_cal_cancel"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="4dp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
                         android:text="@string/win_cal_cancel"
                         android:textColor="@color/text_secondary"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"
@@ -726,7 +726,7 @@
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_win_cal_redo"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginStart="4dp"
                         android:layout_marginEnd="4dp"
@@ -734,7 +734,7 @@
                         android:insetBottom="0dp"
                         android:text="@string/win_cal_redo"
                         android:textColor="@color/text_secondary"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"
@@ -743,14 +743,14 @@
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_win_cal_save"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginStart="4dp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
                         android:text="@string/win_cal_save"
                         android:textColor="@color/text_secondary"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"

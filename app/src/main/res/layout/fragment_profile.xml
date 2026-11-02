@@ -31,7 +31,7 @@
             android:paddingHorizontal="14dp"
             android:paddingVertical="6dp"
             android:textColor="@color/dash_accent"
-            android:textSize="16sp"
+            android:textSize="19sp"
             android:textStyle="bold"
             android:visibility="gone" />
 
@@ -41,11 +41,10 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_add_profile"
         android:layout_width="match_parent"
-        android:layout_height="56dp"
-        android:layout_marginBottom="8dp"
+        android:layout_height="64dp"
         android:text="@string/profile_add"
         android:textColor="@color/dash_accent"
-        android:textSize="18sp"
+        android:textSize="21sp"
         android:letterSpacing="0.04"
         android:textAllCaps="true"
         app:backgroundTint="@color/dash_accent_dim"
@@ -53,22 +52,5 @@
         app:strokeColor="@color/dash_accent"
         app:cornerRadius="16dp" />
 
-    <!-- Bouton Fermer -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btn_close_profiles"
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:text="@string/nav_close"
-        android:textColor="@color/text_secondary"
-        android:textSize="16sp"
-        android:letterSpacing="0.06"
-        android:textAllCaps="true"
-        app:backgroundTint="@color/dash_btn"
-        app:strokeWidth="1dp"
-        app:strokeColor="@color/dash_border"
-        app:cornerRadius="16dp"
-        app:icon="@android:drawable/ic_menu_close_clear_cancel"
-        app:iconTint="@color/dash_text_lo"
-        app:iconGravity="textStart" />
 
 </LinearLayout>

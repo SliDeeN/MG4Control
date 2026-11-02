@@ -28,6 +28,7 @@ import com.mg4.control.hardware.MG4Hardware.Swi68Mode
 import com.mg4.control.model.AirFlow
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RegenLevel
+import com.mg4.control.ui.widget.setCategoryTabActive
 import com.mg4.control.util.FirmwareInfo
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -246,7 +247,7 @@ class DashboardFragment : Fragment() {
     }
 
     /**
-     * Rail de gauche — meme motif que les autres ecrans refondus. Un onglet dont la page n'a
+     * Sous-onglets en pastilles (refonte B) — meme motif que les autres ecrans. Un onglet dont la page n'a
      * plus aucune section visible sur ce firmware est masque.
      */
     private fun bindCategoryRail(root: View) {
@@ -256,11 +257,6 @@ class DashboardFragment : Fragment() {
             root.findViewById<MaterialButton>(R.id.btn_dash_cat_comfort) to root.findViewById<ViewGroup>(R.id.page_dash_comfort)
         )
         val scroll   = root.findViewById<ScrollView>(R.id.scroll_dashboard)
-        val dimColor = requireContext().getColor(R.color.dash_accent_dim)
-        val accent   = requireContext().getColor(R.color.dash_accent)
-        val offBg    = requireContext().getColor(R.color.dash_btn)
-        val border   = requireContext().getColor(R.color.dash_border)
-        val textOff  = requireContext().getColor(R.color.text_secondary)
 
         fun hasVisibleContent(page: ViewGroup): Boolean =
             (0 until page.childCount).any { page.getChildAt(it).visibility == View.VISIBLE }
@@ -276,9 +272,7 @@ class DashboardFragment : Fragment() {
             tabs.forEachIndexed { i, (btn, page) ->
                 val on = i == index
                 page.visibility = if (on) View.VISIBLE else View.GONE
-                btn.backgroundTintList = ColorStateList.valueOf(if (on) dimColor else offBg)
-                btn.setTextColor(if (on) accent else textOff)
-                btn.strokeColor = ColorStateList.valueOf(if (on) accent else border)
+                btn.setCategoryTabActive(on)
             }
             scroll?.scrollTo(0, 0)
             // Rafraichissements qui etaient declenches par onPageSelected du pager.

@@ -43,7 +43,7 @@ class SegmentSwitch @JvmOverloads constructor(
 
     private val texte = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         textAlign = Paint.Align.CENTER
-        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 17f, resources.displayMetrics)
+        textSize = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 21f, resources.displayMetrics)
     }
     private val fond = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = cAccent }
     private val bord = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -118,8 +118,8 @@ class SegmentSwitch @JvmOverloads constructor(
     }
 
     private companion object {
-        const val HAUTEUR_DP = 52f
-        const val CELLULE_MIN_DP = 82f
+        const val HAUTEUR_DP = 64f
+        const val CELLULE_MIN_DP = 96f
         const val RAYON_DP = 16f
     }
 }

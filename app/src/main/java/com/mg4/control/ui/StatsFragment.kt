@@ -37,6 +37,7 @@ import com.mg4.control.model.StatsSettings
 import com.mg4.control.model.StatsSummary
 import com.mg4.control.model.Trip
 import com.mg4.control.stats.StatsStore
+import com.mg4.control.ui.widget.setCategoryTabActive
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
@@ -160,13 +161,7 @@ class StatsFragment : Fragment() {
             Triple(R.id.btn_stats_cat_charges, R.id.page_stats_charges, PAGE_CHARGES),
         ).forEach { (btnId, pageId, index) ->
             val on = index == page
-            v.findViewById<MaterialButton>(btnId).apply {
-                backgroundTintList = ColorStateList.valueOf(
-                    ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn))
-                setTextColor(ctx.getColor(if (on) R.color.dash_accent else R.color.text_secondary))
-                strokeColor = ColorStateList.valueOf(
-                    ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border))
-            }
+            v.findViewById<MaterialButton>(btnId).setCategoryTabActive(on)
             v.findViewById<View>(pageId).visibility = if (on) View.VISIBLE else View.GONE
         }
         v.findViewById<View>(R.id.stats_general_config).visibility =

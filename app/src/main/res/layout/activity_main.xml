@@ -1,106 +1,104 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Layout principal de l'activité.
-    Barre du haut (refonte 2.7.0, maquette retenue) :
-      • Logo "MG4Control", sur sa plaque (cinq appuis débloquent le Diagnostic)
-      • Onglets, dans l'ordre : TABLEAU DE BORD, PROFILS, RACCOURCIS, AUTOMATISATION,
-        STATISTIQUES, RÉGLAGES — à parts égales de la largeur, ce sont les cibles tactiles les plus
-        sollicitées de l'application
-      • À droite, le profil actif et le niveau de batterie (MainActivity)
-    La zone de contenu en dessous est gérée par le NavController.
+    Refonte B (2026-11-02) : plus de barre du haut, le menu principal est une colonne à gauche —
+    la hauteur est la dimension rare de l'écran (≈ 650 dp utiles), elle va toute au contenu.
+      • En tête, le logo "MG4Control" : il ramène au Tableau de bord, écran par défaut qui n'a donc
+        plus d'onglet (cinq appuis débloquent toujours le Diagnostic)
+      • Puis, à parts égales de la hauteur : PROFILS, RACCOURCIS, AUTOMATISATION, STATISTIQUES,
+        RÉGLAGES — pictogramme au-dessus, libellé sur deux lignes au plus
+    La zone de contenu à droite est gérée par le NavController.
 -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
+    android:orientation="horizontal"
     android:background="@color/dash_bg">
 
-    <!-- ── TOP BAR ─────────────────────────────────────────────────── -->
+    <!-- ── MENU PRINCIPAL ──────────────────────────────────────────── -->
     <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="52dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingStart="12dp"
-        android:paddingEnd="14dp"
+        android:layout_width="184dp"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="10dp"
         android:background="@color/dash_bg">
 
         <!--
-            Logo image. Les lettres "MG" sont blanches : en thème clair la plaque sombre les fait
-            ressortir, en thème sombre elle est transparente. Même hauteur que les onglets ; la
-            marge verticale garde l'image à ses 36dp.
+            Logo : retour au Tableau de bord. Les lettres "MG" sont blanches : en thème clair la
+            plaque sombre les fait ressortir, en thème sombre elle est transparente. Le cadre
+            prend un fond quand le Tableau de bord est affiché (MainActivity).
         -->
-        <ImageView
-            android:id="@+id/topbar_logo"
-            android:layout_width="wrap_content"
-            android:layout_height="44dp"
-            android:layout_marginEnd="12dp"
-            android:paddingTop="4dp"
-            android:paddingBottom="4dp"
-            android:src="@drawable/logo_topbar"
-            android:background="@drawable/bg_logo_plate"
-            android:scaleType="fitStart"
-            android:adjustViewBounds="true"
-            android:contentDescription="@string/app_name" />
+        <FrameLayout
+            android:id="@+id/nav_home"
+            android:layout_width="match_parent"
+            android:layout_height="84dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="10dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="@string/settings_default_screen_dashboard">
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_nav_dashboard"
-            style="@style/Widget.MG4.TopTab"
-            android:text="@string/settings_default_screen_dashboard" />
+            <ImageView
+                android:id="@+id/nav_logo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:maxHeight="48dp"
+                android:paddingTop="4dp"
+                android:paddingBottom="4dp"
+                android:src="@drawable/logo_topbar"
+                android:background="@drawable/bg_logo_plate"
+                android:scaleType="fitCenter"
+                android:adjustViewBounds="true"
+                android:importantForAccessibility="no" />
 
-        <com.google.android.material.button.MaterialButton
+        </FrameLayout>
+
+        <com.mg4.control.ui.widget.RailButton
             android:id="@+id/btn_nav_profiles"
-            style="@style/Widget.MG4.TopTab"
-            android:text="@string/nav_profiles" />
+            style="@style/Widget.MG4.NavItem"
+            android:text="@string/nav_profiles"
+            app:icon="@drawable/ic_nav_profiles" />
 
-        <com.google.android.material.button.MaterialButton
+        <com.mg4.control.ui.widget.RailButton
             android:id="@+id/btn_nav_shortcuts"
-            style="@style/Widget.MG4.TopTab"
-            android:text="@string/nav_shortcuts" />
+            style="@style/Widget.MG4.NavItem"
+            android:text="@string/nav_shortcuts"
+            app:icon="@drawable/ic_nav_shortcuts" />
 
-        <com.google.android.material.button.MaterialButton
+        <com.mg4.control.ui.widget.RailButton
             android:id="@+id/btn_nav_automation"
-            style="@style/Widget.MG4.TopTab"
-            android:text="@string/nav_automation" />
+            style="@style/Widget.MG4.NavItem"
+            android:text="@string/nav_automation"
+            app:icon="@drawable/ic_nav_automation" />
 
-        <com.google.android.material.button.MaterialButton
+        <com.mg4.control.ui.widget.RailButton
             android:id="@+id/btn_nav_stats"
-            style="@style/Widget.MG4.TopTab"
-            android:text="@string/nav_stats" />
+            style="@style/Widget.MG4.NavItem"
+            android:text="@string/nav_stats"
+            app:icon="@drawable/ic_nav_stats" />
 
-        <com.google.android.material.button.MaterialButton
+        <com.mg4.control.ui.widget.RailButton
             android:id="@+id/btn_nav_settings"
-            style="@style/Widget.MG4.TopTab"
-            android:text="@string/nav_settings" />
-
-        <!-- Profil actif et batterie : « Quotidien · 78 % ». Masqué tant qu'il n'y a rien à dire. -->
-        <TextView
-            android:id="@+id/topbar_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="10dp"
-            android:maxWidth="260dp"
-            android:maxLines="1"
-            android:ellipsize="end"
-            android:textColor="@color/text_secondary"
-            android:textSize="16sp"
-            android:visibility="gone" />
+            style="@style/Widget.MG4.NavItem"
+            android:text="@string/nav_settings"
+            app:icon="@drawable/ic_nav_settings" />
 
     </LinearLayout>
 
     <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
         android:background="@color/dash_border" />
 
     <!-- ── ZONE DE CONTENU (NavController) ────────────────────────── -->
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/nav_host_fragment"
         android:name="androidx.navigation.fragment.NavHostFragment"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
         android:layout_weight="1"
         app:defaultNavHost="true"
         app:navGraph="@navigation/nav_graph" />

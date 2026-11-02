@@ -32,7 +32,6 @@ import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.FullScreen
 import com.mg4.control.util.LocaleHelper
 import com.mg4.control.util.ThemeHelper
-import kotlin.math.roundToInt
 
 class MainActivity : AppCompatActivity() {
 
@@ -60,8 +59,6 @@ class MainActivity : AppCompatActivity() {
             AppCompatDelegate.setDefaultNightMode(target)
         }
         FullScreen.apply(window, FullScreen.isEnabled(this))
-        statutHandler.removeCallbacks(statutRunnable)
-        statutHandler.post(statutRunnable)
     }
 
     /** Réglage « Plein écran » : une fenêtre de dialogue peut avoir fait revenir les barres. */
@@ -162,12 +159,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Déblocage du bouton Diagnostic (5 clics sur le logo) ────────────────
+    // ── Logo : retour au Tableau de bord, et déblocage du Diagnostic (5 clics) ─
 
     private var logoClickCount = 0
 
     private fun setupDiagnosticUnlock() {
-        findViewById<View>(R.id.topbar_logo)?.setOnClickListener {
+        findViewById<View>(R.id.nav_home)?.setOnClickListener {
+            // Le Tableau de bord n'a plus d'onglet (refonte B) : c'est le logo qui y ramène.
+            navController.popBackStack(R.id.dashboardFragment, false)
             if (diagnosticUnlocked) return@setOnClickListener
             logoClickCount++
             if (logoClickCount >= 5) {
@@ -253,84 +252,44 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // ── Boutons de navigation dans la top-bar ─────────────────────────────────
+    // ── Menu principal (colonne de gauche) ──────────────────────────────────
 
     private fun setupNavButtons() {
-        // Onglet → écran. Le Tableau de bord est l'écran de départ : on y revient en dépilant.
-        // L'éditeur de profil (ouvert depuis Profils) allume l'onglet Profils.
-        val onglets = listOf(
-            findViewById<MaterialButton>(R.id.btn_nav_dashboard)  to R.id.dashboardFragment,
+        // Entrée → écran. Le Tableau de bord, écran de départ, n'a pas d'entrée : le logo y ramène
+        // en dépilant. L'éditeur de profil (ouvert depuis Profils) allume l'entrée Profils.
+        val entrees = listOf(
             findViewById<MaterialButton>(R.id.btn_nav_profiles)   to R.id.profileFragment,
             findViewById<MaterialButton>(R.id.btn_nav_shortcuts)  to R.id.shortcutsFragment,
             findViewById<MaterialButton>(R.id.btn_nav_automation) to R.id.automationFragment,
             findViewById<MaterialButton>(R.id.btn_nav_stats)      to R.id.statsFragment,
             findViewById<MaterialButton>(R.id.btn_nav_settings)   to R.id.settingsFragment,
         )
-        onglets.forEach { (bouton, destination) ->
+        entrees.forEach { (bouton, destination) ->
             bouton.setOnClickListener {
-                val ici = navController.currentDestination?.id
-                when {
-                    destination == R.id.dashboardFragment -> navController.popBackStack(R.id.dashboardFragment, false)
-                    // Un second appui sur l'onglet affiché ramène au Tableau de bord, comme avant.
-                    ici == destination -> navController.popBackStack(R.id.dashboardFragment, false)
-                    else -> navController.navigate(destination)
-                }
+                // Un second appui sur l'entrée affichée ramène au Tableau de bord, comme avant.
+                if (navController.currentDestination?.id == destination) navController.popBackStack(R.id.dashboardFragment, false)
+                else navController.navigate(destination)
             }
         }
 
-        // Refonte 2.7.0 : l'onglet affiché prend un fond de carte et le texte principal ; les
-        // autres restent sans fond, en texte secondaire.
+        // L'entrée affichée prend un fond de carte, une bordure et l'accent ; les autres restent
+        // sans fond, en texte principal. Sur le Tableau de bord, c'est le logo qui est encadré.
         val fondActif = ColorStateList.valueOf(getColor(R.color.dash_card))
         val sansFond = ColorStateList.valueOf(android.graphics.Color.TRANSPARENT)
-        val texteActif = getColor(R.color.text_primary)
-        val texteInactif = getColor(R.color.text_secondary)
-        val bordure = ColorStateList.valueOf(getColor(R.color.dash_border))
+        val accent = getColor(R.color.dash_accent)
+        val texte = getColor(R.color.text_primary)
         val trait = (resources.displayMetrics.density).toInt().coerceAtLeast(1)
+        val accueil = findViewById<View>(R.id.nav_home)
         navController.addOnDestinationChangedListener { _, destination, _ ->
             val affiche = if (destination.id == R.id.profileEditFragment) R.id.profileFragment else destination.id
-            onglets.forEach { (bouton, id) ->
+            entrees.forEach { (bouton, id) ->
                 val actif = id == affiche
                 bouton.backgroundTintList = if (actif) fondActif else sansFond
-                bouton.setTextColor(if (actif) texteActif else texteInactif)
-                bouton.strokeColor = bordure
+                bouton.setTextColor(if (actif) accent else texte)
                 bouton.strokeWidth = if (actif) trait else 0
             }
+            accueil.setBackgroundResource(if (affiche == R.id.dashboardFragment) R.drawable.bg_nav_home_active else 0)
         }
-    }
-
-    // ── Barre du haut : profil actif et batterie ────────────────────────────
-
-    private val statutHandler = android.os.Handler(android.os.Looper.getMainLooper())
-    private val statutRunnable = object : Runnable {
-        override fun run() {
-            actualiserStatut()
-            statutHandler.postDelayed(this, STATUT_PERIODE_MS)
-        }
-    }
-
-    /**
-     * « Quotidien · 78 % » à droite des onglets. Le profil est le dernier appliqué
-     * ([com.mg4.control.profile.ActiveProfile]) ; la batterie, une seule propriété lue hors du fil
-     * principal. Ce qui manque est omis ; s'il ne reste rien, la zone disparaît.
-     */
-    private fun actualiserStatut() {
-        val vue = findViewById<TextView>(R.id.topbar_status) ?: return
-        val app = applicationContext
-        CoroutineScope(Dispatchers.IO).launch {
-            val id = com.mg4.control.profile.ActiveProfile.id(app)
-            val nom = id?.let { runCatching { ProfileManager(app).getAll().firstOrNull { p -> p.id == it }?.name }.getOrNull() }
-            val soc = runCatching { com.mg4.control.hardware.EnergyReader.soc() }.getOrNull()
-            val texte = listOfNotNull(nom, soc?.let { "${it.roundToInt()} %" }).joinToString(" · ")
-            withContext(Dispatchers.Main) {
-                vue.text = texte
-                vue.visibility = if (texte.isEmpty()) View.GONE else View.VISIBLE
-            }
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        statutHandler.removeCallbacks(statutRunnable)
     }
 
     // ── Dialogue de choix de langue au premier lancement ─────────────────────
@@ -366,12 +325,9 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         /**
-         * Débloqué via 5 clics sur le logo en haut à gauche. En mémoire uniquement :
+         * Débloqué via 5 clics sur le logo du menu. En mémoire uniquement :
          * réinitialisé au redémarrage du process (le bouton Diagnostic reste masqué par défaut).
          */
         @Volatile var diagnosticUnlocked = false
-
-        /** Actualisation du profil et de la batterie dans la barre du haut. */
-        private const val STATUT_PERIODE_MS = 30_000L
     }
 }

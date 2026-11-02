@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    Ecran principal — rail de categories a gauche, contenu defilant a droite.
+    Ecran principal — sous-onglets en pastilles en haut, contenu defilant dessous (refonte B).
     Le ViewPager2 a ete retire : une seule vue porte les pages, masquees/affichees
     par le rail. Consequence importante : les trois anciens layouts de page sont fusionnes
     dans CET arbre, ce qui est sûr car leurs ids ne se recouvrent pas (verifie).
@@ -10,113 +10,57 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     android:background="@color/dash_bg"
     android:padding="14dp">
 
-    <LinearLayout
-        android:layout_width="250dp"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:paddingEnd="14dp">
+    <!-- Refonte B : sous-onglets en pastilles au-dessus du contenu ; la rangée défile si elle dépasse. -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="14dp"
+        android:scrollbars="none"
+        android:overScrollMode="never"
+        android:requiresFadingEdge="horizontal"
+        android:fadingEdgeLength="48dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
 
             <com.mg4.control.ui.widget.RailButton
+                style="@style/Widget.MG4.CategoryTab"
                 android:id="@+id/btn_dash_cat_drive"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginBottom="8dp"
                 android:text="@string/profile_cat_drive"
-                android:textColor="@color/text_secondary"
-                android:textSize="19sp"
-                android:textAllCaps="false"
-                app:backgroundTint="@color/dash_btn"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/dash_border"
-                app:cornerRadius="18dp"
-                android:gravity="start|center_vertical"
-                android:paddingStart="16dp"
-                android:paddingEnd="10dp"
-                android:maxLines="1"
-                app:autoSizeTextType="uniform"
-                app:autoSizeMinTextSize="13sp"
-                app:autoSizeMaxTextSize="19sp"
-                app:autoSizeStepGranularity="1sp"
-                app:iconSize="26dp"
-                app:iconPadding="14dp"
-                app:iconGravity="start"
                 app:icon="@drawable/ic_rail_steering" />
 
             <com.mg4.control.ui.widget.RailButton
+                style="@style/Widget.MG4.CategoryTab"
                 android:id="@+id/btn_dash_cat_safety"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginBottom="8dp"
                 android:text="@string/profile_cat_safety"
-                android:textColor="@color/text_secondary"
-                android:textSize="19sp"
-                android:textAllCaps="false"
-                app:backgroundTint="@color/dash_btn"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/dash_border"
-                app:cornerRadius="18dp"
-                android:gravity="start|center_vertical"
-                android:paddingStart="16dp"
-                android:paddingEnd="10dp"
-                android:maxLines="1"
-                app:autoSizeTextType="uniform"
-                app:autoSizeMinTextSize="13sp"
-                app:autoSizeMaxTextSize="19sp"
-                app:autoSizeStepGranularity="1sp"
-                app:iconSize="26dp"
-                app:iconPadding="14dp"
-                app:iconGravity="start"
                 app:icon="@drawable/ic_rail_shield" />
 
             <com.mg4.control.ui.widget.RailButton
+                style="@style/Widget.MG4.CategoryTab"
                 android:id="@+id/btn_dash_cat_comfort"
-                android:layout_width="match_parent"
-                android:layout_height="60dp"
-                android:layout_marginBottom="8dp"
                 android:text="@string/profile_cat_comfort"
-                android:textColor="@color/text_secondary"
-                android:textSize="19sp"
-                android:textAllCaps="false"
-                app:backgroundTint="@color/dash_btn"
-                app:strokeWidth="1dp"
-                app:strokeColor="@color/dash_border"
-                app:cornerRadius="18dp"
-                android:gravity="start|center_vertical"
-                android:paddingStart="16dp"
-                android:paddingEnd="10dp"
-                android:maxLines="1"
-                app:autoSizeTextType="uniform"
-                app:autoSizeMinTextSize="13sp"
-                app:autoSizeMaxTextSize="19sp"
-                app:autoSizeStepGranularity="1sp"
-                app:iconSize="26dp"
-                app:iconPadding="14dp"
-                app:iconGravity="start"
                 app:icon="@drawable/ic_rail_armchair" />
 
-    </LinearLayout>
-
-    <View
-        android:layout_width="1dp"
-        android:layout_height="match_parent"
-        android:background="@color/dash_border" />
+        </LinearLayout>
+    </HorizontalScrollView>
 
     <ScrollView
         android:id="@+id/scroll_dashboard"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
         android:layout_weight="1"
         android:overScrollMode="ifContentScrolls">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingStart="14dp">
+            android:orientation="vertical">
 
             <!-- ═══════════ CONDUITE ═══════════ -->
             <LinearLayout
@@ -141,7 +85,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/drive_section_mode"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
                     android:textAllCaps="true"
@@ -172,13 +116,13 @@
                     android:insetBottom="0dp"
                     android:text="@string/drive_eco"
                     android:textColor="@color/text_secondary"
-                    android:textSize="20sp"
+                    android:textSize="22sp"
                     android:textStyle="bold"
                     android:textAllCaps="true"
                     android:maxLines="1"
                     app:autoSizeTextType="uniform"
-                    app:autoSizeMinTextSize="13sp"
-                    app:autoSizeMaxTextSize="20sp"
+                    app:autoSizeMinTextSize="15sp"
+                    app:autoSizeMaxTextSize="22sp"
                     app:autoSizeStepGranularity="1sp"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -199,13 +143,13 @@
                     android:insetBottom="0dp"
                     android:text="@string/drive_normal"
                     android:textColor="@color/text_secondary"
-                    android:textSize="20sp"
+                    android:textSize="22sp"
                     android:textStyle="bold"
                     android:textAllCaps="true"
                     android:maxLines="1"
                     app:autoSizeTextType="uniform"
-                    app:autoSizeMinTextSize="13sp"
-                    app:autoSizeMaxTextSize="20sp"
+                    app:autoSizeMinTextSize="15sp"
+                    app:autoSizeMaxTextSize="22sp"
                     app:autoSizeStepGranularity="1sp"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -226,13 +170,13 @@
                     android:insetBottom="0dp"
                     android:text="@string/drive_sport"
                     android:textColor="@color/text_secondary"
-                    android:textSize="20sp"
+                    android:textSize="22sp"
                     android:textStyle="bold"
                     android:textAllCaps="true"
                     android:maxLines="1"
                     app:autoSizeTextType="uniform"
-                    app:autoSizeMinTextSize="13sp"
-                    app:autoSizeMaxTextSize="20sp"
+                    app:autoSizeMinTextSize="15sp"
+                    app:autoSizeMaxTextSize="22sp"
                     app:autoSizeStepGranularity="1sp"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -253,13 +197,13 @@
                     android:insetBottom="0dp"
                     android:text="@string/drive_snow"
                     android:textColor="@color/text_secondary"
-                    android:textSize="20sp"
+                    android:textSize="22sp"
                     android:textStyle="bold"
                     android:textAllCaps="true"
                     android:maxLines="1"
                     app:autoSizeTextType="uniform"
-                    app:autoSizeMinTextSize="13sp"
-                    app:autoSizeMaxTextSize="20sp"
+                    app:autoSizeMinTextSize="15sp"
+                    app:autoSizeMaxTextSize="22sp"
                     app:autoSizeStepGranularity="1sp"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -279,13 +223,13 @@
                     android:insetBottom="0dp"
                     android:text="@string/drive_custom"
                     android:textColor="@color/text_secondary"
-                    android:textSize="20sp"
+                    android:textSize="22sp"
                     android:textStyle="bold"
                     android:textAllCaps="true"
                     android:maxLines="1"
                     app:autoSizeTextType="uniform"
-                    app:autoSizeMinTextSize="13sp"
-                    app:autoSizeMaxTextSize="20sp"
+                    app:autoSizeMinTextSize="15sp"
+                    app:autoSizeMaxTextSize="22sp"
                     app:autoSizeStepGranularity="1sp"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -307,7 +251,7 @@
                     android:text="@string/drive_energy_saving"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true"
                     android:paddingTop="5dp"
                     android:paddingBottom="5dp"
@@ -335,7 +279,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/drive_section_custom"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
                     android:textAllCaps="true"
@@ -350,7 +294,7 @@
                 <LinearLayout
                     android:id="@+id/row_cd_power"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:layout_marginTop="4dp">
@@ -361,50 +305,50 @@
                         android:minWidth="86dp"
                         android:text="@string/drive_custom_power"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:letterSpacing="0.06"
                         android:textAllCaps="true" />
 
                     <Button
                         android:id="@+id/btn_cd_power_eco"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="5dp"
                         android:text="@string/drive_eco"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
 
                     <Button
                         android:id="@+id/btn_cd_power_normal"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="5dp"
                         android:text="@string/drive_normal"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
 
                     <Button
                         android:id="@+id/btn_cd_power_sport"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:text="@string/drive_sport"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
 
                 </LinearLayout>
                 <LinearLayout
                     android:id="@+id/row_cd_steer"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:layout_marginTop="4dp">
@@ -415,50 +359,50 @@
                         android:minWidth="86dp"
                         android:text="@string/drive_custom_steering"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:letterSpacing="0.06"
                         android:textAllCaps="true" />
 
                     <Button
                         android:id="@+id/btn_cd_steer_comfort"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="5dp"
                         android:text="@string/drive_custom_comfort"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
 
                     <Button
                         android:id="@+id/btn_cd_steer_normal"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="5dp"
                         android:text="@string/drive_normal"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
 
                     <Button
                         android:id="@+id/btn_cd_steer_sport"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:text="@string/drive_sport"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
 
                 </LinearLayout>
                 <LinearLayout
                     android:id="@+id/row_cd_pedal"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
                     android:layout_marginTop="4dp">
@@ -469,43 +413,43 @@
                         android:minWidth="86dp"
                         android:text="@string/drive_custom_pedal"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:letterSpacing="0.06"
                         android:textAllCaps="true" />
 
                     <Button
                         android:id="@+id/btn_cd_pedal_comfort"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="5dp"
                         android:text="@string/drive_custom_comfort"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
 
                     <Button
                         android:id="@+id/btn_cd_pedal_normal"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="5dp"
                         android:text="@string/drive_normal"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
 
                     <Button
                         android:id="@+id/btn_cd_pedal_sport"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:text="@string/drive_sport"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
 
                 </LinearLayout>
@@ -528,7 +472,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/drive_section_regen"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
                     android:textAllCaps="true"
@@ -556,33 +500,33 @@
                         <Button
                             android:id="@+id/btn_regen_off"
                             android:layout_width="match_parent"
-                            android:layout_height="52dp"
+                            android:layout_height="64dp"
                             android:layout_marginBottom="3dp"
                             android:text="@string/regen_off"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <Button
                             android:id="@+id/btn_regen_medium"
                             android:layout_width="match_parent"
-                            android:layout_height="52dp"
+                            android:layout_height="64dp"
                             android:layout_marginBottom="3dp"
                             android:text="@string/regen_medium"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <Button
                             android:id="@+id/btn_regen_adaptive"
                             android:layout_width="match_parent"
-                            android:layout_height="52dp"
+                            android:layout_height="64dp"
                             android:text="@string/regen_adaptive_short"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                     </LinearLayout>
@@ -597,33 +541,33 @@
                         <Button
                             android:id="@+id/btn_regen_low"
                             android:layout_width="match_parent"
-                            android:layout_height="52dp"
+                            android:layout_height="64dp"
                             android:layout_marginBottom="3dp"
                             android:text="@string/regen_low"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <Button
                             android:id="@+id/btn_regen_high"
                             android:layout_width="match_parent"
-                            android:layout_height="52dp"
+                            android:layout_height="64dp"
                             android:layout_marginBottom="3dp"
                             android:text="@string/regen_high"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <Button
                             android:id="@+id/btn_regen_one_pedal"
                             android:layout_width="match_parent"
-                            android:layout_height="52dp"
+                            android:layout_height="64dp"
                             android:text="@string/regen_one_pedal_short"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                     </LinearLayout>
@@ -649,7 +593,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/batheat_section"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
                     android:textAllCaps="true"
@@ -669,23 +613,23 @@
                     <Button
                         android:id="@+id/btn_battery_heat_on"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="3dp"
                         android:text="@string/common_on"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
                     <Button
                         android:id="@+id/btn_battery_heat_off"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:text="@string/common_off"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
 
                 </LinearLayout>
@@ -697,7 +641,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:textColor="@color/text_secondary"
-                    android:textSize="14sp"
+                    android:textSize="17sp"
                     android:visibility="gone" />
 
                 <TextView
@@ -706,7 +650,7 @@
                     android:layout_marginTop="2dp"
                     android:text="@string/batheat_hint"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp" />
+                    android:textSize="18sp" />
 
             </LinearLayout>
             </LinearLayout>
@@ -735,7 +679,7 @@
                     android:layout_height="wrap_content"
                     android:text="ADAS"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
                     android:paddingBottom="5dp" />
@@ -770,7 +714,7 @@
                             android:text="@string/adas_off"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <Button
@@ -783,7 +727,7 @@
                             android:text="@string/adas_limiteur_short"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <Button
@@ -795,7 +739,7 @@
                             android:text="@string/adas_auto"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                     </LinearLayout>
@@ -815,7 +759,7 @@
                             android:text="@string/adas_acc"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <Button
@@ -828,7 +772,7 @@
                             android:text="@string/adas_ica"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <!-- Spacer pour aligner sur 3 colonnes -->
@@ -866,7 +810,7 @@
                             android:text="@string/adas_off"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <Button
@@ -879,7 +823,7 @@
                             android:text="@string/adas_limiteur_short"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <Button
@@ -891,7 +835,7 @@
                             android:text="@string/adas_auto"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                     </LinearLayout>
@@ -911,7 +855,7 @@
                             android:text="@string/adas_acc"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <Button
@@ -924,7 +868,7 @@
                             android:text="@string/adas_tja"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <View
@@ -953,7 +897,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/card_alerts"
                 android:textColor="@color/dash_text_lo"
-                android:textSize="15sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
                 android:textAllCaps="true"
@@ -991,7 +935,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/adas_section_aeb"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.12"
                         android:textAllCaps="true"
@@ -1017,7 +961,7 @@
                             android:layout_weight="1"
                             android:text="@string/adas_aeb_switch"
                             android:textColor="@color/text_secondary"
-                            android:textSize="15sp"
+                            android:textSize="18sp"
                             android:textStyle="bold"
                             android:letterSpacing="0.05"
                             android:textAllCaps="true" />
@@ -1040,24 +984,24 @@
                             android:id="@+id/btn_aeb_alarm"
                             android:layout_width="0dp"
                             android:layout_weight="1"
-                            android:layout_height="52dp"
+                            android:layout_height="64dp"
                             android:layout_marginEnd="5dp"
                             android:text="@string/adas_aeb_alarm"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                         <Button
                             android:id="@+id/btn_aeb_alarm_brake"
                             android:layout_width="0dp"
                             android:layout_weight="1"
-                            android:layout_height="52dp"
+                            android:layout_height="64dp"
                             android:layout_marginStart="5dp"
                             android:text="@string/adas_aeb_alarm_brake"
                             android:textColor="@color/text_secondary"
                             android:backgroundTint="@color/dash_btn"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="true" />
 
                     </LinearLayout>
@@ -1079,7 +1023,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/adas_section_sounds"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.12"
                         android:textAllCaps="true"
@@ -1113,7 +1057,7 @@
                                 android:layout_weight="1"
                                 android:text="@string/adas_tsr"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="15sp"
+                                android:textSize="18sp"
                                 android:textStyle="bold"
                                 android:letterSpacing="0.05"
                                 android:textAllCaps="true" />
@@ -1163,7 +1107,7 @@
                                         android:layout_weight="1"
                                         android:text="@string/adas_overspeed_alarm"
                                         android:textColor="@color/text_secondary"
-                                        android:textSize="15sp"
+                                        android:textSize="18sp"
                                         android:textStyle="bold"
                                         android:letterSpacing="0.05"
                                         android:textAllCaps="true" />
@@ -1188,7 +1132,7 @@
                                         android:layout_weight="1"
                                         android:text="@string/adas_speed_limit_tone"
                                         android:textColor="@color/text_secondary"
-                                        android:textSize="15sp"
+                                        android:textSize="18sp"
                                         android:textStyle="bold"
                                         android:letterSpacing="0.05"
                                         android:textAllCaps="true" />
@@ -1223,7 +1167,7 @@
                                         android:layout_weight="1"
                                         android:text="@string/adas_sound_warning"
                                         android:textColor="@color/text_secondary"
-                                        android:textSize="15sp"
+                                        android:textSize="18sp"
                                         android:textStyle="bold"
                                         android:letterSpacing="0.05"
                                         android:textAllCaps="true" />
@@ -1248,7 +1192,6 @@
 
         </LinearLayout>
 
-
     <!-- ══════════════════════════════════════════════════════════════════ -->
     <!--  CARTE : Anticollision avant (AEB) — SWI133 uniquement            -->
     <!-- ══════════════════════════════════════════════════════════════════ -->
@@ -1267,7 +1210,7 @@
             android:layout_height="wrap_content"
             android:text="@string/aeb_card_title"
             android:textColor="@color/dash_text_lo"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             android:letterSpacing="0.12"
             android:textAllCaps="true"
@@ -1303,7 +1246,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/elk_section_toggle"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
                     android:textAllCaps="true"
@@ -1346,7 +1289,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/elk_section_mode"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
                     android:textAllCaps="true"
@@ -1361,22 +1304,22 @@
                 <Button
                     android:id="@+id/btn_aeb_alarm_p2"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="3dp"
                     android:text="@string/adas_aeb_alarm"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
                 <Button
                     android:id="@+id/btn_aeb_alarm_brake_p2"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:text="@string/adas_aeb_alarm_brake"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
             </LinearLayout>
@@ -1396,7 +1339,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/aeb_section_sensitivity"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
                     android:textAllCaps="true"
@@ -1411,33 +1354,33 @@
                 <Button
                     android:id="@+id/btn_aeb_sen_low"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="3dp"
                     android:text="@string/aeb_sensitivity_low"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
                 <Button
                     android:id="@+id/btn_aeb_sen_standard"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="3dp"
                     android:text="@string/aeb_sensitivity_standard"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
                 <Button
                     android:id="@+id/btn_aeb_sen_high"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:text="@string/aeb_sensitivity_high"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
             </LinearLayout>
@@ -1461,7 +1404,7 @@
             android:layout_height="wrap_content"
             android:text="@string/elk_card_title"
             android:textColor="@color/dash_text_lo"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             android:letterSpacing="0.12"
             android:textAllCaps="true"
@@ -1497,7 +1440,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/elk_section_toggle"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
                     android:textAllCaps="true"
@@ -1545,7 +1488,7 @@
                             android:layout_weight="1"
                             android:text="@string/elk_label_enable"
                             android:textColor="@color/text_secondary"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="false" />
                         <com.mg4.control.ui.widget.SegmentSwitch
                             android:layout_marginHorizontal="8dp"
@@ -1566,7 +1509,7 @@
                             android:layout_weight="1"
                             android:text="@string/elk_sound_warning"
                             android:textColor="@color/text_secondary"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="false" />
                         <com.mg4.control.ui.widget.SegmentSwitch
                             android:layout_marginHorizontal="8dp"
@@ -1587,7 +1530,7 @@
                             android:layout_weight="1"
                             android:text="@string/elk_vibration_reminder"
                             android:textColor="@color/text_secondary"
-                            android:textSize="16sp"
+                            android:textSize="19sp"
                             android:textAllCaps="false" />
                         <com.mg4.control.ui.widget.SegmentSwitch
                             android:layout_marginHorizontal="8dp"
@@ -1616,7 +1559,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/elk_section_mode"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
                     android:textAllCaps="true"
@@ -1631,33 +1574,33 @@
                 <Button
                     android:id="@+id/btn_elk_alert"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="3dp"
                     android:text="@string/elk_mode_alert"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
                 <Button
                     android:id="@+id/btn_elk_assist"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="3dp"
                     android:text="@string/elk_mode_assist"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
                 <Button
                     android:id="@+id/btn_elk_emergency"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:text="@string/elk_mode_emergency"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
             </LinearLayout>
@@ -1677,7 +1620,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/elk_section_sensitivity"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
                     android:textAllCaps="true"
@@ -1692,33 +1635,33 @@
                 <Button
                     android:id="@+id/btn_elk_sen_low"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="3dp"
                     android:text="@string/elk_sensitivity_low"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
                 <Button
                     android:id="@+id/btn_elk_sen_standard"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="3dp"
                     android:text="@string/elk_sensitivity_standard"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
                 <Button
                     android:id="@+id/btn_elk_sen_high"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:text="@string/elk_sensitivity_high"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
             </LinearLayout>
@@ -1726,7 +1669,6 @@
         </LinearLayout>
 
     </LinearLayout>
-
 
         <!-- ═════ Somnolence + sensibilité + ESC — SWI133 uniquement ═════ -->
         <LinearLayout
@@ -1743,7 +1685,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/safety_esc"
                 android:textColor="@color/dash_text_lo"
-                android:textSize="15sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
                 android:textAllCaps="true"
@@ -1763,24 +1705,24 @@
                 <Button
                     android:id="@+id/btn_esc_on"
                     android:layout_width="0dp"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="3dp"
                     android:text="@string/common_on"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
                 <Button
                     android:id="@+id/btn_esc_off"
                     android:layout_width="0dp"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="0dp"
                     android:text="@string/common_off"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
             </LinearLayout>
@@ -1789,7 +1731,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/safety_drowsiness"
                 android:textColor="@color/dash_text_lo"
-                android:textSize="15sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
                 android:textAllCaps="true"
@@ -1809,24 +1751,24 @@
                 <Button
                     android:id="@+id/btn_dms_on"
                     android:layout_width="0dp"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="3dp"
                     android:text="@string/common_on"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
                 <Button
                     android:id="@+id/btn_dms_off"
                     android:layout_width="0dp"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="0dp"
                     android:text="@string/common_off"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
             </LinearLayout>
@@ -1835,7 +1777,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/safety_drowsiness_sensitivity"
                 android:textColor="@color/dash_text_lo"
-                android:textSize="15sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
                 android:textAllCaps="true"
@@ -1856,35 +1798,35 @@
                 <Button
                     android:id="@+id/btn_dms_sen_low"
                     android:layout_width="0dp"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="3dp"
                     android:text="@string/sens_low"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
                 <Button
                     android:id="@+id/btn_dms_sen_medium"
                     android:layout_width="0dp"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="3dp"
                     android:text="@string/sens_medium"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
                 <Button
                     android:id="@+id/btn_dms_sen_high"
                     android:layout_width="0dp"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_weight="1"
                     android:layout_marginEnd="0dp"
                     android:text="@string/sens_high"
                     android:textColor="@color/text_secondary"
                     android:backgroundTint="@color/dash_btn"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true" />
 
             </LinearLayout>
@@ -1917,7 +1859,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/card_climate"
                 android:textColor="@color/dash_text_lo"
-                android:textSize="15sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
                 android:textAllCaps="true"
@@ -1952,7 +1894,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/climate_steering_heat"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.12"
                         android:textAllCaps="true"
@@ -1995,7 +1937,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/climate_seat_left"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.12"
                         android:textAllCaps="true"
@@ -2022,22 +1964,22 @@
                             <Button
                                 android:id="@+id/btn_seat_left_0"
                                 android:layout_width="match_parent"
-                                android:layout_height="52dp"
+                                android:layout_height="64dp"
                                 android:layout_marginBottom="2dp"
                                 android:text="@string/climate_off"
                                 android:textColor="@color/text_secondary"
                                 android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
+                                android:textSize="19sp"
                                 android:textAllCaps="true" />
 
                             <Button
                                 android:id="@+id/btn_seat_left_2"
                                 android:layout_width="match_parent"
-                                android:layout_height="52dp"
+                                android:layout_height="64dp"
                                 android:text="@string/climate_level_2"
                                 android:textColor="@color/text_secondary"
                                 android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
+                                android:textSize="19sp"
                                 android:textAllCaps="true" />
 
                         </LinearLayout>
@@ -2052,22 +1994,22 @@
                             <Button
                                 android:id="@+id/btn_seat_left_1"
                                 android:layout_width="match_parent"
-                                android:layout_height="52dp"
+                                android:layout_height="64dp"
                                 android:layout_marginBottom="2dp"
                                 android:text="@string/climate_level_1"
                                 android:textColor="@color/text_secondary"
                                 android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
+                                android:textSize="19sp"
                                 android:textAllCaps="true" />
 
                             <Button
                                 android:id="@+id/btn_seat_left_3"
                                 android:layout_width="match_parent"
-                                android:layout_height="52dp"
+                                android:layout_height="64dp"
                                 android:text="@string/climate_level_3"
                                 android:textColor="@color/text_secondary"
                                 android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
+                                android:textSize="19sp"
                                 android:textAllCaps="true" />
 
                         </LinearLayout>
@@ -2091,7 +2033,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/climate_seat_right"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.12"
                         android:textAllCaps="true"
@@ -2118,22 +2060,22 @@
                             <Button
                                 android:id="@+id/btn_seat_right_0"
                                 android:layout_width="match_parent"
-                                android:layout_height="52dp"
+                                android:layout_height="64dp"
                                 android:layout_marginBottom="2dp"
                                 android:text="@string/climate_off"
                                 android:textColor="@color/text_secondary"
                                 android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
+                                android:textSize="19sp"
                                 android:textAllCaps="true" />
 
                             <Button
                                 android:id="@+id/btn_seat_right_2"
                                 android:layout_width="match_parent"
-                                android:layout_height="52dp"
+                                android:layout_height="64dp"
                                 android:text="@string/climate_level_2"
                                 android:textColor="@color/text_secondary"
                                 android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
+                                android:textSize="19sp"
                                 android:textAllCaps="true" />
 
                         </LinearLayout>
@@ -2148,22 +2090,22 @@
                             <Button
                                 android:id="@+id/btn_seat_right_1"
                                 android:layout_width="match_parent"
-                                android:layout_height="52dp"
+                                android:layout_height="64dp"
                                 android:layout_marginBottom="2dp"
                                 android:text="@string/climate_level_1"
                                 android:textColor="@color/text_secondary"
                                 android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
+                                android:textSize="19sp"
                                 android:textAllCaps="true" />
 
                             <Button
                                 android:id="@+id/btn_seat_right_3"
                                 android:layout_width="match_parent"
-                                android:layout_height="52dp"
+                                android:layout_height="64dp"
                                 android:text="@string/climate_level_3"
                                 android:textColor="@color/text_secondary"
                                 android:backgroundTint="@color/dash_btn"
-                                android:textSize="16sp"
+                                android:textSize="19sp"
                                 android:textAllCaps="true" />
 
                         </LinearLayout>
@@ -2191,7 +2133,7 @@
                 android:layout_height="wrap_content"
                 android:text="@string/card_lighting"
                 android:textColor="@color/dash_text_lo"
-                android:textSize="15sp"
+                android:textSize="18sp"
                 android:textStyle="bold"
                 android:letterSpacing="0.12"
                 android:textAllCaps="true"
@@ -2218,7 +2160,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/lighting_auto_high_beam"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.12"
                     android:textAllCaps="true"
@@ -2238,23 +2180,23 @@
                     <Button
                         android:id="@+id/btn_high_beam_on"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="3dp"
                         android:text="@string/common_on"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
                     <Button
                         android:id="@+id/btn_high_beam_off"
                         android:layout_width="0dp"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_weight="1"
                         android:text="@string/common_off"
                         android:textColor="@color/text_secondary"
                         android:backgroundTint="@color/dash_btn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         android:textAllCaps="true" />
 
                 </LinearLayout>
@@ -2271,7 +2213,6 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-
     <!-- ══════════════════════════════════════════════════════════════════ -->
     <!--  CARTE : Température + Ventilation                                -->
     <!-- ══════════════════════════════════════════════════════════════════ -->
@@ -2287,7 +2228,7 @@
             android:layout_height="wrap_content"
             android:text="@string/clim_card_title"
             android:textColor="@color/dash_text_lo"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             android:letterSpacing="0.12"
             android:textAllCaps="true"
@@ -2329,7 +2270,7 @@
                         android:layout_weight="1"
                         android:text="@string/clim_temperature"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.08"
                         android:textAllCaps="true" />
@@ -2340,7 +2281,7 @@
                         android:layout_height="wrap_content"
                         android:text="--°"
                         android:textColor="@color/dash_accent"
-                        android:textSize="36sp"
+                        android:textSize="40sp"
                         android:textStyle="bold" />
 
                 </LinearLayout>
@@ -2383,7 +2324,7 @@
                         android:layout_weight="1"
                         android:text="@string/clim_fan"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="15sp"
+                        android:textSize="18sp"
                         android:textStyle="bold"
                         android:letterSpacing="0.08"
                         android:textAllCaps="true" />
@@ -2394,7 +2335,7 @@
                         android:layout_height="wrap_content"
                         android:text="--"
                         android:textColor="@color/dash_accent"
-                        android:textSize="36sp"
+                        android:textSize="40sp"
                         android:textStyle="bold" />
 
                 </LinearLayout>
@@ -2434,7 +2375,7 @@
             android:layout_height="wrap_content"
             android:text="@string/clim_modes_title"
             android:textColor="@color/dash_text_lo"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             android:letterSpacing="0.12"
             android:textAllCaps="true"
@@ -2469,7 +2410,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/clim_section_switches"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.08"
                     android:textAllCaps="true"
@@ -2478,11 +2419,11 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/clim_btn_power"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="4dp"
                     android:text="@string/clim_power"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -2492,11 +2433,11 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/clim_btn_ac"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="4dp"
                     android:text="@string/clim_ac"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -2506,10 +2447,10 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/clim_btn_auto"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:text="@string/clim_auto"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -2520,11 +2461,11 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/clim_btn_eco"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginTop="4dp"
                     android:text="@string/clim_eco"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true"
                     app:icon="@drawable/ic_clim_eco"
                     app:iconGravity="textStart"
@@ -2550,7 +2491,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/clim_section_loop"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.08"
                     android:textAllCaps="true"
@@ -2559,11 +2500,11 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/clim_btn_loop_inner"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="4dp"
                     android:text="@string/clim_loop_inner"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -2573,11 +2514,11 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/clim_btn_loop_outside"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="4dp"
                     android:text="@string/clim_loop_outside"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -2587,10 +2528,10 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/clim_btn_loop_auto"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:text="@string/clim_loop_auto"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -2615,7 +2556,7 @@
                     android:layout_height="wrap_content"
                     android:text="@string/clim_section_autovol"
                     android:textColor="@color/dash_text_lo"
-                    android:textSize="15sp"
+                    android:textSize="18sp"
                     android:textStyle="bold"
                     android:letterSpacing="0.08"
                     android:textAllCaps="true"
@@ -2624,11 +2565,11 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/clim_btn_autovol_high"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="4dp"
                     android:text="@string/clim_autovol_high"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -2638,11 +2579,11 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/clim_btn_autovol_medium"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:layout_marginBottom="4dp"
                     android:text="@string/clim_autovol_medium"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -2652,10 +2593,10 @@
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/clim_btn_autovol_low"
                     android:layout_width="match_parent"
-                    android:layout_height="52dp"
+                    android:layout_height="64dp"
                     android:text="@string/clim_autovol_low"
                     android:textColor="@color/text_secondary"
-                    android:textSize="16sp"
+                    android:textSize="19sp"
                     android:textAllCaps="true"
                     app:backgroundTint="@color/dash_btn"
                     app:strokeWidth="1dp"
@@ -2686,7 +2627,7 @@
             android:layout_height="wrap_content"
             android:text="@string/clim_section_airflow"
             android:textColor="@color/dash_text_lo"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:textStyle="bold"
             android:letterSpacing="0.12"
             android:textAllCaps="true"
@@ -2717,7 +2658,7 @@
                 android:insetBottom="0dp"
                 android:text="@string/clim_air_face"
                 android:textColor="@color/text_secondary"
-                android:textSize="14sp"
+                android:textSize="17sp"
                 android:textAllCaps="true"
                 app:icon="@drawable/ic_air_face"
                 app:iconGravity="top"
@@ -2741,7 +2682,7 @@
                 android:insetBottom="0dp"
                 android:text="@string/clim_air_feet"
                 android:textColor="@color/text_secondary"
-                android:textSize="14sp"
+                android:textSize="17sp"
                 android:textAllCaps="true"
                 app:icon="@drawable/ic_air_feet"
                 app:iconGravity="top"
@@ -2765,7 +2706,7 @@
                 android:insetBottom="0dp"
                 android:text="@string/clim_air_windshield_front"
                 android:textColor="@color/text_secondary"
-                android:textSize="14sp"
+                android:textSize="17sp"
                 android:textAllCaps="true"
                 app:icon="@drawable/ic_air_windshield_front"
                 app:iconGravity="top"
@@ -2788,7 +2729,7 @@
                 android:insetBottom="0dp"
                 android:text="@string/clim_air_windshield_rear"
                 android:textColor="@color/text_secondary"
-                android:textSize="14sp"
+                android:textSize="17sp"
                 android:textAllCaps="true"
                 app:icon="@drawable/ic_air_windshield_rear"
                 app:iconGravity="top"
@@ -2803,7 +2744,6 @@
         </LinearLayout>
 
     </LinearLayout>
-
 
                 </LinearLayout>
             </LinearLayout>

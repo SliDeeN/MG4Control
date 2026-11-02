@@ -12,7 +12,6 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.MG4Hardware.AebMode
@@ -134,11 +133,6 @@ class ProfileFragment : Fragment() {
                 rv.post { adapter.clicsBloques = false }
             }
         }).attachToRecyclerView(liste)
-
-        // ── Bouton Fermer ─────────────────────────────────────────────────────
-        view.findViewById<MaterialButton>(R.id.btn_close_profiles).setOnClickListener {
-            findNavController().popBackStack(R.id.dashboardFragment, false)
-        }
 
         view.findViewById<View>(R.id.btn_add_profile).setOnClickListener {
             if (manager.getAll().size >= ProfileManager.MAX_PROFILES) {

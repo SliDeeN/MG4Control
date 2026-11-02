@@ -47,6 +47,8 @@
 
     <!-- Pop-up HVAC « moderne » : texte et pictos posés SUR un fond plein (accent, chauffage), et
          segment choisi d'un sélecteur de niveau. -->
+    <!-- Refonte B : texte et picto posés sur un fond d'accent plein (sous-onglet choisi). -->
+    <color name="dash_on_accent">#FFFFFFFF</color>
     <color name="hvac_on_accent">#FFFFFFFF</color>
     <color name="hvac_on_heat">#FFFFFFFF</color>
     <color name="hvac_on_eco">#FFFFFFFF</color>

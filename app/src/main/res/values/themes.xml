@@ -20,28 +20,59 @@
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
         <item name="android:windowAnimationStyle">@null</item>
     </style>
-    <!-- Refonte 2.7.0 : onglet de la barre du haut. Inactif : sans fond ni bordure, texte secondaire ;
-         l'onglet actif reçoit un fond (MainActivity, à chaque changement d'écran). -->
-    <style name="Widget.MG4.TopTab" parent="Widget.MaterialComponents.Button.UnelevatedButton">
-        <item name="android:layout_width">0dp</item>
-        <item name="android:layout_height">44dp</item>
+    <!-- Refonte B : entrée du menu principal, dans la colonne de gauche. Pictogramme au-dessus,
+         libellé sur deux lignes au plus (langues longues, texte agrandi). Inactive : sans fond ni
+         bordure ; l'entrée affichée reçoit fond, bordure et accent (MainActivity). -->
+    <style name="Widget.MG4.NavItem" parent="Widget.MaterialComponents.Button.UnelevatedButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">0dp</item>
         <item name="android:layout_weight">1</item>
-        <item name="android:layout_marginEnd">6dp</item>
+        <item name="android:layout_marginTop">6dp</item>
         <item name="android:insetTop">0dp</item>
         <item name="android:insetBottom">0dp</item>
-        <item name="android:paddingStart">6dp</item>
-        <item name="android:paddingEnd">6dp</item>
-        <item name="android:maxLines">1</item>
+        <item name="android:paddingStart">4dp</item>
+        <item name="android:paddingEnd">4dp</item>
+        <item name="android:paddingTop">6dp</item>
+        <item name="android:paddingBottom">6dp</item>
+        <item name="android:maxLines">2</item>
+        <item name="android:ellipsize">end</item>
+        <item name="android:breakStrategy">balanced</item>
+        <item name="android:hyphenationFrequency">normal</item>
+        <item name="android:gravity">center</item>
         <item name="android:textSize">17sp</item>
-        <item name="autoSizeTextType">uniform</item>
-        <item name="autoSizeMinTextSize">11sp</item>
-        <item name="autoSizeMaxTextSize">17sp</item>
-        <item name="autoSizeStepGranularity">1sp</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:letterSpacing">0</item>
-        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textColor">@color/text_primary</item>
         <item name="backgroundTint">@android:color/transparent</item>
         <item name="strokeWidth">0dp</item>
-        <item name="cornerRadius">12dp</item>
+        <item name="strokeColor">@color/dash_accent</item>
+        <item name="cornerRadius">18dp</item>
+        <item name="iconSize">36dp</item>
+        <item name="iconPadding">6dp</item>
+        <item name="iconGravity">top</item>
+    </style>
+
+    <!-- Refonte B : sous-onglet en pastille, au-dessus du contenu de chaque écran. Une seule ligne :
+         la rangée défile plutôt que de couper un libellé. Couleurs d'état : setCategoryTabActive. -->
+    <style name="Widget.MG4.CategoryTab" parent="Widget.MaterialComponents.Button.UnelevatedButton">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">62dp</item>
+        <item name="android:layout_marginEnd">10dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:paddingStart">22dp</item>
+        <item name="android:paddingEnd">24dp</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:textSize">21sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:letterSpacing">0</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="backgroundTint">@color/dash_card</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/dash_border</item>
+        <item name="cornerRadius">31dp</item>
+        <item name="iconSize">26dp</item>
+        <item name="iconPadding">10dp</item>
+        <item name="iconGravity">textStart</item>
     </style>
 </resources>

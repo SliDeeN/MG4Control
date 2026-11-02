@@ -39,6 +39,7 @@ import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.WindowAutoClose
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.ui.widget.setCategoryTabActive
 import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToLong
@@ -158,12 +159,6 @@ class AutomationFragment : Fragment() {
             R.id.btn_auto_cat_custom   to R.id.page_auto_custom,
         ).map { (b, p) -> root.findViewById<MaterialButton>(b) to root.findViewById<ViewGroup>(p) }
         val scroll  = root.findViewById<android.widget.ScrollView>(R.id.scroll_automation)
-        val ctx     = requireContext()
-        val fondOn  = ctx.getColor(R.color.dash_accent_dim)
-        val fondOff = ctx.getColor(R.color.dash_btn)
-        val accent  = ctx.getColor(R.color.dash_accent)
-        val bord    = ctx.getColor(R.color.dash_border)
-        val texte   = ctx.getColor(R.color.text_secondary)
 
         fun garnie(page: ViewGroup) = (0 until page.childCount).any { page.getChildAt(it).visibility == View.VISIBLE }
         onglets.forEach { (btn, page) -> btn.visibility = if (garnie(page)) View.VISIBLE else View.GONE }
@@ -175,9 +170,7 @@ class AutomationFragment : Fragment() {
             onglets.forEachIndexed { i, (btn, page) ->
                 val on = i == index
                 page.visibility = if (on) View.VISIBLE else View.GONE
-                btn.backgroundTintList = ColorStateList.valueOf(if (on) fondOn else fondOff)
-                btn.setTextColor(if (on) accent else texte)
-                btn.strokeColor = ColorStateList.valueOf(if (on) accent else bord)
+                btn.setCategoryTabActive(on)
             }
             scroll?.scrollTo(0, 0)
         }

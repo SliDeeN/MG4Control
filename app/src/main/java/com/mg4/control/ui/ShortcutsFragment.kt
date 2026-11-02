@@ -18,9 +18,9 @@ import android.widget.ImageView
 import android.widget.Toast
 import android.widget.TextView
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
+import com.mg4.control.ui.widget.setCategoryTabActive
 import com.mg4.control.util.CustomShortcutSettings
 import com.mg4.control.accessibility.AdvancedShortcuts
 import com.mg4.control.accessibility.KeyCaptureService
@@ -237,11 +237,6 @@ class ShortcutsFragment : Fragment() {
         adasSupported = isKnown
         view.findViewById<View>(R.id.config_adas_swi133)?.visibility  = if (isKnown) View.VISIBLE else View.GONE
         view.findViewById<View>(R.id.config_adas_swi68)?.visibility   = View.GONE
-
-        // ── Bouton Fermer ─────────────────────────────────────────────
-        view.findViewById<MaterialButton>(R.id.btn_shortcuts_close)?.setOnClickListener {
-            findNavController().popBackStack(R.id.dashboardFragment, false)
-        }
 
         setupSpinners(view)
         setupConfigListeners(view)
@@ -1136,7 +1131,7 @@ class ShortcutsFragment : Fragment() {
     }
 
     /**
-     * Rail de gauche — même motif que l'éditeur de profil et les Réglages, à ceci près que
+     * Sous-onglets en pastilles — même motif que l'éditeur de profil et les Réglages, à ceci près que
      * plusieurs entrées vont et viennent selon ce que l'utilisateur a attribué.
      *
      * Deux familles d'entrées, deux règles :
@@ -1179,13 +1174,6 @@ class ShortcutsFragment : Fragment() {
         )
         setupAdvancedShortcuts(view)
         val scroll = view.findViewById<ScrollView>(R.id.scroll_shortcuts)
-        // Le rail reprend l'accent des deux autres écrans refondus (dash_accent), pas l'accent vert
-        // propre aux boutons de cet écran : c'est le même composant de navigation partout.
-        val dimColor = requireContext().getColor(R.color.dash_accent_dim)
-        val railOn   = requireContext().getColor(R.color.dash_accent)
-        val railOff  = requireContext().getColor(R.color.dash_btn)
-        val border   = requireContext().getColor(R.color.dash_border)
-        val textOff  = requireContext().getColor(R.color.text_secondary)
 
         fun hasVisibleContent(page: ViewGroup): Boolean =
             (0 until page.childCount).any { page.getChildAt(it).visibility == View.VISIBLE }
@@ -1215,10 +1203,7 @@ class ShortcutsFragment : Fragment() {
                 usable.firstOrNull()?.let { (_, page) -> page.visibility = View.VISIBLE }
             }
             tabs.forEach { (btn, page) ->
-                val on = page.visibility == View.VISIBLE
-                btn.backgroundTintList = ColorStateList.valueOf(if (on) dimColor else railOff)
-                btn.setTextColor(if (on) railOn else textOff)
-                btn.strokeColor = ColorStateList.valueOf(if (on) railOn else border)
+                btn.setCategoryTabActive(page.visibility == View.VISIBLE)
             }
             // Page des boutons flottants à l'écran : les bulles montrées sont celles du profil qu'elle règle.
             floatingPage.surPageVisible(isResumed && tabs.first { it.second.id == R.id.page_sc_floating }.second.visibility == View.VISIBLE)

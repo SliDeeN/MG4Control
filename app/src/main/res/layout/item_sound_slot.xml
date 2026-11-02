@@ -24,7 +24,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:textColor="@color/text_primary"
-            android:textSize="18sp"
+            android:textSize="21sp"
             android:textStyle="bold" />
 
         <TextView
@@ -32,7 +32,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/text_secondary"
-            android:textSize="13sp" />
+            android:textSize="15sp" />
 
     </LinearLayout>
 
@@ -42,7 +42,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
         android:textColor="@color/text_primary"
-        android:textSize="16sp"
+        android:textSize="19sp"
         android:maxLines="1"
         android:ellipsize="middle" />
 
@@ -55,12 +55,12 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_sound_import"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:textColor="@color/text_primary"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:maxLines="1"
             app:backgroundTint="@color/dash_btn"
             app:strokeWidth="1dp"
@@ -70,13 +70,13 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_sound_play"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:textColor="@color/text_primary"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:maxLines="1"
             app:backgroundTint="@color/dash_btn"
             app:strokeWidth="1dp"
@@ -86,14 +86,14 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_sound_remove"
             android:layout_width="0dp"
-            android:layout_height="52dp"
+            android:layout_height="64dp"
             android:layout_weight="1"
             android:layout_marginStart="8dp"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:text="@string/sound_remove"
             android:textColor="@color/text_secondary"
-            android:textSize="15sp"
+            android:textSize="18sp"
             android:maxLines="1"
             app:backgroundTint="@color/dash_btn"
             app:strokeWidth="1dp"
@@ -115,7 +115,7 @@
             android:layout_weight="1"
             android:text="@string/sound_volume"
             android:textColor="@color/text_secondary"
-            android:textSize="16sp" />
+            android:textSize="19sp" />
 
         <TextView
             android:id="@+id/sound_slot_volume_value"
@@ -124,7 +124,7 @@
             android:minWidth="90dp"
             android:gravity="end"
             android:textColor="@color/text_primary"
-            android:textSize="16sp"
+            android:textSize="19sp"
             android:fontFamily="monospace" />
 
     </LinearLayout>
@@ -151,7 +151,7 @@
         android:layout_marginTop="8dp"
         android:text="@string/sound_when"
         android:textColor="@color/text_secondary"
-        android:textSize="16sp" />
+        android:textSize="19sp" />
 
     <LinearLayout
         android:id="@+id/sound_slot_events"

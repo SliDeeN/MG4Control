@@ -10,100 +10,50 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="horizontal"
+    android:orientation="vertical"
     android:background="@color/dash_bg"
     android:padding="14dp">
 
-    <!-- Rail de sous-catégories : mêmes cotes que le tableau de bord (180dp, 14dp de séparation) -->
-    <LinearLayout
-        android:layout_width="250dp"
-        android:layout_height="match_parent"
-        android:orientation="vertical"
-        android:paddingEnd="14dp">
+    <!-- Refonte B : sous-onglets en pastilles au-dessus du contenu ; la rangée défile si elle dépasse. -->
+    <HorizontalScrollView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="14dp"
+        android:scrollbars="none"
+        android:overScrollMode="never"
+        android:requiresFadingEdge="horizontal"
+        android:fadingEdgeLength="48dp">
 
-        <com.mg4.control.ui.widget.RailButton
-            android:id="@+id/btn_stats_cat_general"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:layout_marginBottom="8dp"
-            android:text="@string/stats_cat_general"
-            android:textColor="@color/text_secondary"
-            android:textSize="19sp"
-            android:textAllCaps="false"
-            app:backgroundTint="@color/dash_btn"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="18dp"
-            android:gravity="start|center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="10dp"
-            android:maxLines="1"
-            app:autoSizeTextType="uniform"
-            app:autoSizeMinTextSize="13sp"
-            app:autoSizeMaxTextSize="19sp"
-            app:autoSizeStepGranularity="1sp"
-            app:iconSize="26dp"
-            app:iconPadding="14dp"
-            app:iconGravity="start"
-            app:icon="@drawable/ic_rail_chart" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
 
-        <com.mg4.control.ui.widget.RailButton
-            android:id="@+id/btn_stats_cat_trips"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:layout_marginBottom="8dp"
-            android:text="@string/stats_cat_trips"
-            android:textColor="@color/text_secondary"
-            android:textSize="19sp"
-            android:textAllCaps="false"
-            app:backgroundTint="@color/dash_btn"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="18dp"
-            android:gravity="start|center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="10dp"
-            android:maxLines="1"
-            app:autoSizeTextType="uniform"
-            app:autoSizeMinTextSize="13sp"
-            app:autoSizeMaxTextSize="19sp"
-            app:autoSizeStepGranularity="1sp"
-            app:iconSize="26dp"
-            app:iconPadding="14dp"
-            app:iconGravity="start"
-            app:icon="@drawable/ic_rail_route" />
+            <com.mg4.control.ui.widget.RailButton
+                style="@style/Widget.MG4.CategoryTab"
+                android:id="@+id/btn_stats_cat_general"
+                android:text="@string/stats_cat_general"
+                app:icon="@drawable/ic_rail_chart" />
 
-        <com.mg4.control.ui.widget.RailButton
-            android:id="@+id/btn_stats_cat_charges"
-            android:layout_width="match_parent"
-            android:layout_height="60dp"
-            android:text="@string/stats_cat_charges"
-            android:textColor="@color/text_secondary"
-            android:textSize="19sp"
-            android:textAllCaps="false"
-            app:backgroundTint="@color/dash_btn"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="18dp"
-            android:gravity="start|center_vertical"
-            android:paddingStart="16dp"
-            android:paddingEnd="10dp"
-            android:maxLines="1"
-            app:autoSizeTextType="uniform"
-            app:autoSizeMinTextSize="13sp"
-            app:autoSizeMaxTextSize="19sp"
-            app:autoSizeStepGranularity="1sp"
-            app:iconSize="26dp"
-            app:iconPadding="14dp"
-            app:iconGravity="start"
-            app:icon="@drawable/ic_rail_bolt" />
+            <com.mg4.control.ui.widget.RailButton
+                style="@style/Widget.MG4.CategoryTab"
+                android:id="@+id/btn_stats_cat_trips"
+                android:text="@string/stats_cat_trips"
+                app:icon="@drawable/ic_rail_route" />
 
-    </LinearLayout>
+            <com.mg4.control.ui.widget.RailButton
+                style="@style/Widget.MG4.CategoryTab"
+                android:id="@+id/btn_stats_cat_charges"
+                android:text="@string/stats_cat_charges"
+                app:icon="@drawable/ic_rail_bolt" />
+
+        </LinearLayout>
+    </HorizontalScrollView>
 
     <ScrollView
         android:id="@+id/scroll_stats"
-        android:layout_width="0dp"
-        android:layout_height="match_parent"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
         android:layout_weight="1"
         android:fillViewport="true">
 
@@ -143,7 +93,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="@string/stats_enable_label"
                                 android:textColor="@color/text_primary"
-                                android:textSize="20sp"
+                                android:textSize="22sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -152,7 +102,7 @@
                                 android:layout_marginTop="4dp"
                                 android:text="@string/stats_enable_desc"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="16sp" />
+                                android:textSize="19sp" />
 
                         </LinearLayout>
 
@@ -171,7 +121,7 @@
                         android:layout_marginTop="10dp"
                         android:text="@string/stats_disabled_note"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="15sp" />
+                        android:textSize="18sp" />
 
                 </LinearLayout>
 
@@ -196,7 +146,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/stats_summary_title"
                             android:textColor="@color/text_primary"
-                            android:textSize="20sp"
+                            android:textSize="22sp"
                             android:textStyle="bold" />
 
                         <LinearLayout
@@ -222,7 +172,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/stats_battery_title"
                             android:textColor="@color/text_primary"
-                            android:textSize="20sp"
+                            android:textSize="22sp"
                             android:textStyle="bold" />
 
                         <LinearLayout
@@ -238,12 +188,12 @@
                                 android:layout_weight="1"
                                 android:text="@string/stats_battery_label"
                                 android:textColor="@color/text_primary"
-                                android:textSize="16sp" />
+                                android:textSize="19sp" />
 
                             <Spinner
                                 android:id="@+id/spinner_stats_battery"
                                 android:layout_width="wrap_content"
-                                android:layout_height="52dp" />
+                                android:layout_height="64dp" />
 
                         </LinearLayout>
 
@@ -262,12 +212,12 @@
                                 android:layout_weight="1"
                                 android:text="@string/stats_soh_label"
                                 android:textColor="@color/text_primary"
-                                android:textSize="16sp" />
+                                android:textSize="19sp" />
 
                             <ImageView
                                 android:id="@+id/btn_stats_soh_minus"
                                 android:layout_width="52dp"
-                                android:layout_height="52dp"
+                                android:layout_height="64dp"
                                 android:background="@drawable/bg_dialog_tile"
                                 android:padding="14dp"
                                 android:contentDescription="@string/stats_soh_less"
@@ -280,13 +230,13 @@
                                 android:minWidth="96dp"
                                 android:gravity="center"
                                 android:textColor="@color/dash_accent"
-                                android:textSize="20sp"
+                                android:textSize="22sp"
                                 android:textStyle="bold" />
 
                             <ImageView
                                 android:id="@+id/btn_stats_soh_plus"
                                 android:layout_width="52dp"
-                                android:layout_height="52dp"
+                                android:layout_height="64dp"
                                 android:background="@drawable/bg_dialog_tile"
                                 android:padding="14dp"
                                 android:contentDescription="@string/stats_soh_more"
@@ -300,7 +250,7 @@
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
                             android:textColor="@color/dash_accent"
-                            android:textSize="14sp" />
+                            android:textSize="17sp" />
 
                         <TextView
                             android:layout_width="match_parent"
@@ -308,7 +258,7 @@
                             android:layout_marginTop="8dp"
                             android:text="@string/stats_battery_note"
                             android:textColor="@color/text_secondary"
-                            android:textSize="15sp" />
+                            android:textSize="18sp" />
 
                     </LinearLayout>
 
@@ -325,7 +275,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/stats_price_title"
                             android:textColor="@color/text_primary"
-                            android:textSize="20sp"
+                            android:textSize="22sp"
                             android:textStyle="bold" />
 
                         <LinearLayout
@@ -341,7 +291,7 @@
                             android:layout_marginTop="8dp"
                             android:text="@string/stats_price_note"
                             android:textColor="@color/text_secondary"
-                            android:textSize="15sp" />
+                            android:textSize="18sp" />
 
                     </LinearLayout>
 
@@ -358,7 +308,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/stats_cat_trips"
                             android:textColor="@color/text_primary"
-                            android:textSize="20sp"
+                            android:textSize="22sp"
                             android:textStyle="bold" />
 
                         <LinearLayout
@@ -374,7 +324,7 @@
                                 android:layout_weight="1"
                                 android:text="@string/stats_skip_short_label"
                                 android:textColor="@color/text_primary"
-                                android:textSize="16sp" />
+                                android:textSize="19sp" />
 
                             <com.mg4.control.ui.widget.SegmentSwitch
                                 android:id="@+id/switch_stats_skip_short"
@@ -396,7 +346,7 @@
                             android:layout_marginTop="8dp"
                             android:text="@string/stats_skip_short_note"
                             android:textColor="@color/text_secondary"
-                            android:textSize="15sp" />
+                            android:textSize="18sp" />
 
                     </LinearLayout>
 
@@ -413,7 +363,7 @@
                             android:layout_height="wrap_content"
                             android:text="@string/stats_retention_title"
                             android:textColor="@color/text_primary"
-                            android:textSize="20sp"
+                            android:textSize="22sp"
                             android:textStyle="bold" />
 
                         <LinearLayout
@@ -429,7 +379,7 @@
                             android:layout_marginTop="8dp"
                             android:text="@string/stats_retention_note"
                             android:textColor="@color/text_secondary"
-                            android:textSize="15sp" />
+                            android:textSize="18sp" />
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -444,15 +394,15 @@
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
                                 android:textColor="@color/text_secondary"
-                                android:textSize="16sp" />
+                                android:textSize="19sp" />
 
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btn_stats_clear"
                                 android:layout_width="wrap_content"
-                                android:layout_height="52dp"
+                                android:layout_height="64dp"
                                 android:text="@string/stats_clear"
                                 android:textColor="@color/dash_danger"
-                                android:textSize="16sp"
+                                android:textSize="19sp"
                                 app:backgroundTint="@color/dash_btn"
                                 app:strokeWidth="1dp"
                                 app:strokeColor="@color/dash_danger"
@@ -486,7 +436,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/stats_cat_trips"
                         android:textColor="@color/text_primary"
-                        android:textSize="20sp"
+                        android:textSize="22sp"
                         android:textStyle="bold" />
 
                     <LinearLayout
@@ -533,16 +483,16 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:textColor="@color/text_primary"
-                        android:textSize="16sp" />
+                        android:textSize="19sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_stats_battery_ok"
                         android:layout_width="wrap_content"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_marginStart="12dp"
                         android:text="@string/stats_battery_banner_ok"
                         android:textColor="@color/text_primary"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"
@@ -551,11 +501,11 @@
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_stats_battery_change"
                         android:layout_width="wrap_content"
-                        android:layout_height="52dp"
+                        android:layout_height="64dp"
                         android:layout_marginStart="8dp"
                         android:text="@string/stats_battery_banner_change"
                         android:textColor="@color/dash_warn"
-                        android:textSize="16sp"
+                        android:textSize="19sp"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_warn"
@@ -575,7 +525,7 @@
                         android:layout_height="wrap_content"
                         android:text="@string/stats_cat_charges"
                         android:textColor="@color/text_primary"
-                        android:textSize="20sp"
+                        android:textSize="22sp"
                         android:textStyle="bold" />
 
                     <LinearLayout

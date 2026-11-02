@@ -22,7 +22,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:textColor="@color/text_primary"
-            android:textSize="20sp"
+            android:textSize="22sp"
             android:textStyle="bold"
             android:maxLines="1"
             android:ellipsize="end" />
@@ -41,7 +41,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:textColor="@color/text_secondary"
-        android:textSize="16sp"
+        android:textSize="19sp"
         android:lineSpacingExtra="2dp"
         android:maxLines="4"
         android:ellipsize="end" />
@@ -59,18 +59,18 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:textColor="@color/dash_text_lo"
-            android:textSize="15sp" />
+            android:textSize="18sp" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/rule_test"
             android:layout_width="wrap_content"
-            android:layout_height="52dp"
+            android:layout_height="64dp"
             android:minWidth="140dp"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:text="@string/rule_test"
             android:textColor="@color/text_primary"
-            android:textSize="16sp"
+            android:textSize="19sp"
             android:textAllCaps="false"
             app:backgroundTint="@color/dash_btn"
             app:strokeWidth="1dp"
@@ -80,14 +80,14 @@
         <com.google.android.material.button.MaterialButton
             android:id="@+id/rule_delete"
             android:layout_width="wrap_content"
-            android:layout_height="52dp"
+            android:layout_height="64dp"
             android:layout_marginStart="10dp"
             android:minWidth="140dp"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:text="@string/rule_delete"
             android:textColor="@color/dash_danger"
-            android:textSize="16sp"
+            android:textSize="19sp"
             android:textAllCaps="false"
             app:backgroundTint="@color/dash_danger_dim"
             app:strokeWidth="1dp"

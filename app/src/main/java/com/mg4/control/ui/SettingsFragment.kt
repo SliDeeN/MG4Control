@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import androidx.appcompat.app.AppCompatDelegate
 import com.mg4.control.MainActivity
+import com.mg4.control.ui.widget.setCategoryTabActive
 import com.mg4.control.util.ThemeHelper
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -29,7 +30,6 @@ import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
 import androidx.fragment.app.Fragment
-import androidx.navigation.fragment.findNavController
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.BuildConfig
@@ -903,17 +903,12 @@ class SettingsFragment : Fragment() {
             com.mg4.control.util.AndroidSettings.open(requireContext())
         }
 
-        // ── Bouton Fermer ─────────────────────────────────────────────────────
-        view.findViewById<MaterialButton>(R.id.btn_close_settings).setOnClickListener {
-            findNavController().popBackStack(R.id.dashboardFragment, false)
-        }
-
         // En dernier : le rail masque un onglet dont la page n'a plus rien de visible, il doit
         // donc être câblé APRÈS toutes les décisions de visibilité ci-dessus (build offline,
         // firmware sans extinction véhicule…), sinon le décompte serait faux.
         setupFirmwareChips(view)
         setupDataUsage(view)
-        bindCategoryRail(view, savedInstanceState, accentDim, inactiveColor, accentColor, textActive, textInactive)
+        bindCategoryRail(view, savedInstanceState)
     }
 
     override fun onResume() {
@@ -940,7 +935,7 @@ class SettingsFragment : Fragment() {
     }
 
     /**
-     * Rail de gauche : une catégorie visible à la fois — même motif que l'éditeur de profil.
+     * Sous-onglets en pastilles : une catégorie visible à la fois — même motif que l'éditeur de profil.
      *
      * Le bouton Diagnostic reste dans l'arbre même sur une page masquée : [MainActivity] peut donc
      * continuer à le révéler en direct après les 5 clics sur le logo, quel que soit l'onglet ouvert.
@@ -948,10 +943,7 @@ class SettingsFragment : Fragment() {
      * L'onglet ouvert survit à un `recreate()` : langue, thème et taille du texte recréent
      * l'activité, et retomber à chaque fois sur le premier onglet obligeait à y retourner.
      */
-    private fun bindCategoryRail(
-        view: View, savedInstanceState: Bundle?,
-        accentDim: Int, inactive: Int, accent: Int, textOn: Int, textOff: Int
-    ) {
+    private fun bindCategoryRail(view: View, savedInstanceState: Bundle?) {
         val tabs = listOf(
             view.findViewById<MaterialButton>(R.id.btn_set_cat_lang)     to view.findViewById<ViewGroup>(R.id.page_set_lang),
             view.findViewById<MaterialButton>(R.id.btn_set_cat_ui)       to view.findViewById<ViewGroup>(R.id.page_set_ui),
@@ -974,10 +966,7 @@ class SettingsFragment : Fragment() {
             tabs.forEach { (btn, page) ->
                 val on = page === target
                 page.visibility = if (on) View.VISIBLE else View.GONE
-                btn.backgroundTintList = ColorStateList.valueOf(if (on) accentDim else inactive)
-                btn.setTextColor(if (on) textOn else textOff)
-                btn.strokeColor = ColorStateList.valueOf(
-                    if (on) accent else requireContext().getColor(R.color.dash_border))
+                btn.setCategoryTabActive(on)
             }
             scroll?.scrollTo(0, 0)   // changer d'onglet en gardant le scroll précédent désoriente
         }

@@ -20,7 +20,7 @@
         android:layout_width="180dp"
         android:layout_height="wrap_content"
         android:textColor="@color/text_primary"
-        android:textSize="16sp" />
+        android:textSize="19sp" />
 
     <TextView
         android:id="@+id/win_cal_row_status"
@@ -28,17 +28,17 @@
         android:layout_height="wrap_content"
         android:layout_weight="1"
         android:textColor="@color/text_secondary"
-        android:textSize="13sp" />
+        android:textSize="15sp" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_win_cal_row_start"
         android:layout_width="wrap_content"
-        android:layout_height="52dp"
+        android:layout_height="64dp"
         android:minWidth="140dp"
         android:insetTop="0dp"
         android:insetBottom="0dp"
         android:textColor="@color/text_secondary"
-        android:textSize="16sp"
+        android:textSize="19sp"
         app:backgroundTint="@color/dash_btn"
         app:strokeWidth="1dp"
         app:strokeColor="@color/dash_border"
