@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
     Layout principal de l'activité.
-    Remplace la BottomNavigationView par une top-bar fixe avec :
-      • Logo "MG4Control", sur sa plaque
-      • Onglets, dans l'ordre : PROFILS, AUTOMATISATION, RACCOURCIS, STATISTIQUES, RÉGLAGES
-    Les cinq onglets se partagent à parts égales toute la largeur laissée par le logo : ce sont
-    les cibles tactiles les plus sollicitées de l'application, autant qu'elles soient grandes.
+    Barre du haut (refonte 2.7.0, maquette retenue) :
+      • Logo "MG4Control", sur sa plaque (cinq appuis débloquent le Diagnostic)
+      • Onglets, dans l'ordre : TABLEAU DE BORD, PROFILS, RACCOURCIS, AUTOMATISATION,
+        STATISTIQUES, RÉGLAGES — à parts égales de la largeur, ce sont les cibles tactiles les plus
+        sollicitées de l'application
+      • À droite, le profil actif et le niveau de batterie (MainActivity)
     La zone de contenu en dessous est gérée par le NavController.
 -->
 <LinearLayout
@@ -23,20 +24,19 @@
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingStart="12dp"
-        android:paddingEnd="12dp"
-        android:background="@color/dash_card"
-        android:elevation="4dp">
+        android:paddingEnd="14dp"
+        android:background="@color/dash_bg">
 
         <!--
             Logo image. Les lettres "MG" sont blanches : en thème clair la plaque sombre les fait
-            ressortir sur la barre blanche, en thème sombre elle est transparente. Même hauteur
-            que les onglets ; la marge verticale garde l'image à ses 36dp.
+            ressortir, en thème sombre elle est transparente. Même hauteur que les onglets ; la
+            marge verticale garde l'image à ses 36dp.
         -->
         <ImageView
             android:id="@+id/topbar_logo"
             android:layout_width="wrap_content"
             android:layout_height="44dp"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="12dp"
             android:paddingTop="4dp"
             android:paddingBottom="4dp"
             android:src="@drawable/logo_topbar"
@@ -45,143 +45,55 @@
             android:adjustViewBounds="true"
             android:contentDescription="@string/app_name" />
 
-        <!--
-            Onglets : même police qu'avant, à 16sp comme le reste de l'application. Les marges
-            internes par défaut du bouton (6dp en haut et en bas) sont retirées pour que la plaque
-            fasse réellement 44dp dans la barre de 52dp. Un libellé trop long pour sa part de
-            largeur (langue, taille de texte) rétrécit au lieu d'être coupé.
-        -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_nav_dashboard"
+            style="@style/Widget.MG4.TopTab"
+            android:text="@string/settings_default_screen_dashboard" />
 
-        <!-- Bouton PROFILS -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_nav_profiles"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_weight="1"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:maxLines="1"
-            android:text="@string/nav_profiles"
-            android:textSize="16sp"
-            app:autoSizeTextType="uniform"
-            app:autoSizeMinTextSize="11sp"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeStepGranularity="1sp"
-            android:letterSpacing="0.06"
-            android:textAllCaps="true"
-            android:textColor="@color/text_secondary"
-            app:backgroundTint="@color/dash_btn"
-            android:layout_marginEnd="8dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="8dp" />
+            style="@style/Widget.MG4.TopTab"
+            android:text="@string/nav_profiles" />
 
-        <!-- Bouton AUTOMATISATION -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_nav_automation"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_weight="1"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:maxLines="1"
-            android:text="@string/nav_automation"
-            android:textSize="16sp"
-            app:autoSizeTextType="uniform"
-            app:autoSizeMinTextSize="11sp"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeStepGranularity="1sp"
-            android:letterSpacing="0.06"
-            android:textAllCaps="true"
-            android:textColor="@color/text_secondary"
-            app:backgroundTint="@color/dash_btn"
-            android:layout_marginEnd="8dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="8dp" />
-
-        <!-- Bouton RACCOURCIS -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_nav_shortcuts"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_weight="1"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:maxLines="1"
-            android:text="@string/nav_shortcuts"
-            android:textSize="16sp"
-            app:autoSizeTextType="uniform"
-            app:autoSizeMinTextSize="11sp"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeStepGranularity="1sp"
-            android:letterSpacing="0.06"
-            android:textAllCaps="true"
-            android:textColor="@color/text_secondary"
-            app:backgroundTint="@color/dash_btn"
-            android:layout_marginEnd="8dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="8dp" />
+            style="@style/Widget.MG4.TopTab"
+            android:text="@string/nav_shortcuts" />
 
-        <!-- Bouton STATISTIQUES -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_nav_automation"
+            style="@style/Widget.MG4.TopTab"
+            android:text="@string/nav_automation" />
+
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_nav_stats"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_weight="1"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
-            android:maxLines="1"
-            android:text="@string/nav_stats"
-            android:textSize="16sp"
-            app:autoSizeTextType="uniform"
-            app:autoSizeMinTextSize="11sp"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeStepGranularity="1sp"
-            android:letterSpacing="0.06"
-            android:textAllCaps="true"
-            android:textColor="@color/text_secondary"
-            app:backgroundTint="@color/dash_btn"
-            android:layout_marginEnd="8dp"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="8dp" />
+            style="@style/Widget.MG4.TopTab"
+            android:text="@string/nav_stats" />
 
-        <!-- Bouton RÉGLAGES -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_nav_settings"
-            android:layout_width="0dp"
-            android:layout_height="44dp"
-            android:layout_weight="1"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:paddingStart="4dp"
-            android:paddingEnd="4dp"
+            style="@style/Widget.MG4.TopTab"
+            android:text="@string/nav_settings" />
+
+        <!-- Profil actif et batterie : « Quotidien · 78 % ». Masqué tant qu'il n'y a rien à dire. -->
+        <TextView
+            android:id="@+id/topbar_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:maxWidth="260dp"
             android:maxLines="1"
-            android:text="@string/nav_settings"
-            android:textSize="16sp"
-            app:autoSizeTextType="uniform"
-            app:autoSizeMinTextSize="11sp"
-            app:autoSizeMaxTextSize="16sp"
-            app:autoSizeStepGranularity="1sp"
-            android:letterSpacing="0.06"
-            android:textAllCaps="true"
+            android:ellipsize="end"
             android:textColor="@color/text_secondary"
-            app:backgroundTint="@color/dash_btn"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_border"
-            app:cornerRadius="8dp" />
+            android:textSize="16sp"
+            android:visibility="gone" />
 
     </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/dash_border" />
 
     <!-- ── ZONE DE CONTENU (NavController) ────────────────────────── -->
     <androidx.fragment.app.FragmentContainerView

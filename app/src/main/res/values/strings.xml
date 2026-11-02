@@ -1218,4 +1218,10 @@
     <string name="btn_android_settings">Paramètres Android</string>
     <string name="android_settings_open_failed">Impossible d\'ouvrir les paramètres Android</string>
     <string name="shortcuts_custom_prefix">Perso :</string>
+    <!-- Refonte 2.7.0 : segments « Non | Oui » qui remplacent les interrupteurs -->
+    <string name="segment_no">Non</string>
+    <string name="segment_yes">Oui</string>
+    <!-- Refonte 2.7.0 : rail de l'onglet Automatisation -->
+    <string name="automation_cat_screen">Écran</string>
+    <string name="automation_cat_leave">En quittant</string>
 </resources>

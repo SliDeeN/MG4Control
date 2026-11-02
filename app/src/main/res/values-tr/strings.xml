@@ -1201,4 +1201,10 @@
     <string name="btn_android_settings">Android ayarları</string>
     <string name="android_settings_open_failed">Android ayarları açılamadı</string>
     <string name="shortcuts_custom_prefix">Özel:</string>
+    <!-- Refonte 2.7.0 : segments « Non | Oui » qui remplacent les interrupteurs -->
+    <string name="segment_no">Hayır</string>
+    <string name="segment_yes">Evet</string>
+    <!-- Refonte 2.7.0 : rail de l'onglet Automatisation -->
+    <string name="automation_cat_screen">Ekran</string>
+    <string name="automation_cat_leave">İnerken</string>
 </resources>

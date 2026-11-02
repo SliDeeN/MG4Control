@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rail de catégories (refonte 2.7.0) : graphique. Contour d'après Tabler Icons (MIT).
+     Blanc : c'est le bouton qui colore le pictogramme. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:strokeColor="@android:color/white"
+      android:strokeWidth="2"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"
+      android:pathData="M3,13a1,1 0,0 1,1 -1h4a1,1 0,0 1,1 1v6a1,1 0,0 1,-1 1h-4a1,1 0,0 1,-1 -1z M15,9a1,1 0,0 1,1 -1h4a1,1 0,0 1,1 1v10a1,1 0,0 1,-1 1h-4a1,1 0,0 1,-1 -1z M9,5a1,1 0,0 1,1 -1h4a1,1 0,0 1,1 1v14a1,1 0,0 1,-1 1h-4a1,1 0,0 1,-1 -1z M4,20h14"/>
+</vector>

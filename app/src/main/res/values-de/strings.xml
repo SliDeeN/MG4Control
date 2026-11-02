@@ -1201,4 +1201,10 @@
     <string name="btn_android_settings">Android-Einstellungen</string>
     <string name="android_settings_open_failed">Android-Einstellungen konnten nicht geöffnet werden</string>
     <string name="shortcuts_custom_prefix">Eigene:</string>
+    <!-- Refonte 2.7.0 : segments « Non | Oui » qui remplacent les interrupteurs -->
+    <string name="segment_no">Nein</string>
+    <string name="segment_yes">Ja</string>
+    <!-- Refonte 2.7.0 : rail de l'onglet Automatisation -->
+    <string name="automation_cat_screen">Bildschirm</string>
+    <string name="automation_cat_leave">Beim Aussteigen</string>
 </resources>

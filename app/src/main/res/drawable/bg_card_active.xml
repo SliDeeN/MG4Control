@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Carte du profil actif (refonte 2.7.0) : même forme que bg_card_rounded, fond et cadre d'accent. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="20dp" />
+    <solid android:color="@color/dash_accent_dim" />
+    <stroke android:width="2dp" android:color="@color/dash_accent" />
+</shape>

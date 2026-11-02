@@ -16,51 +16,87 @@
 
     <!-- Rail de sous-catégories : mêmes cotes que le tableau de bord (180dp, 14dp de séparation) -->
     <LinearLayout
-        android:layout_width="180dp"
+        android:layout_width="250dp"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:paddingEnd="14dp">
 
-        <com.google.android.material.button.MaterialButton
+        <com.mg4.control.ui.widget.RailButton
             android:id="@+id/btn_stats_cat_general"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="60dp"
             android:layout_marginBottom="8dp"
             android:text="@string/stats_cat_general"
             android:textColor="@color/text_secondary"
-            android:textSize="16sp"
-            android:textAllCaps="true"
+            android:textSize="19sp"
+            android:textAllCaps="false"
             app:backgroundTint="@color/dash_btn"
             app:strokeWidth="1dp"
             app:strokeColor="@color/dash_border"
-            app:cornerRadius="8dp" />
+            app:cornerRadius="18dp"
+            android:gravity="start|center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="10dp"
+            android:maxLines="1"
+            app:autoSizeTextType="uniform"
+            app:autoSizeMinTextSize="13sp"
+            app:autoSizeMaxTextSize="19sp"
+            app:autoSizeStepGranularity="1sp"
+            app:iconSize="26dp"
+            app:iconPadding="14dp"
+            app:iconGravity="start"
+            app:icon="@drawable/ic_rail_chart" />
 
-        <com.google.android.material.button.MaterialButton
+        <com.mg4.control.ui.widget.RailButton
             android:id="@+id/btn_stats_cat_trips"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="60dp"
             android:layout_marginBottom="8dp"
             android:text="@string/stats_cat_trips"
             android:textColor="@color/text_secondary"
-            android:textSize="16sp"
-            android:textAllCaps="true"
+            android:textSize="19sp"
+            android:textAllCaps="false"
             app:backgroundTint="@color/dash_btn"
             app:strokeWidth="1dp"
             app:strokeColor="@color/dash_border"
-            app:cornerRadius="8dp" />
+            app:cornerRadius="18dp"
+            android:gravity="start|center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="10dp"
+            android:maxLines="1"
+            app:autoSizeTextType="uniform"
+            app:autoSizeMinTextSize="13sp"
+            app:autoSizeMaxTextSize="19sp"
+            app:autoSizeStepGranularity="1sp"
+            app:iconSize="26dp"
+            app:iconPadding="14dp"
+            app:iconGravity="start"
+            app:icon="@drawable/ic_rail_route" />
 
-        <com.google.android.material.button.MaterialButton
+        <com.mg4.control.ui.widget.RailButton
             android:id="@+id/btn_stats_cat_charges"
             android:layout_width="match_parent"
-            android:layout_height="64dp"
+            android:layout_height="60dp"
             android:text="@string/stats_cat_charges"
             android:textColor="@color/text_secondary"
-            android:textSize="16sp"
-            android:textAllCaps="true"
+            android:textSize="19sp"
+            android:textAllCaps="false"
             app:backgroundTint="@color/dash_btn"
             app:strokeWidth="1dp"
             app:strokeColor="@color/dash_border"
-            app:cornerRadius="8dp" />
+            app:cornerRadius="18dp"
+            android:gravity="start|center_vertical"
+            android:paddingStart="16dp"
+            android:paddingEnd="10dp"
+            android:maxLines="1"
+            app:autoSizeTextType="uniform"
+            app:autoSizeMinTextSize="13sp"
+            app:autoSizeMaxTextSize="19sp"
+            app:autoSizeStepGranularity="1sp"
+            app:iconSize="26dp"
+            app:iconPadding="14dp"
+            app:iconGravity="start"
+            app:icon="@drawable/ic_rail_bolt" />
 
     </LinearLayout>
 
@@ -120,10 +156,8 @@
 
                         </LinearLayout>
 
-                        <Switch
+                        <com.mg4.control.ui.widget.SegmentSwitch
                             android:id="@+id/switch_stats_enabled"
-                            android:scaleX="1.3"
-                            android:scaleY="1.3"
                             android:layout_marginHorizontal="8dp"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content" />
@@ -137,7 +171,7 @@
                         android:layout_marginTop="10dp"
                         android:text="@string/stats_disabled_note"
                         android:textColor="@color/dash_text_lo"
-                        android:textSize="13sp" />
+                        android:textSize="15sp" />
 
                 </LinearLayout>
 
@@ -274,7 +308,7 @@
                             android:layout_marginTop="8dp"
                             android:text="@string/stats_battery_note"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="15sp" />
 
                     </LinearLayout>
 
@@ -307,7 +341,7 @@
                             android:layout_marginTop="8dp"
                             android:text="@string/stats_price_note"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="15sp" />
 
                     </LinearLayout>
 
@@ -342,10 +376,8 @@
                                 android:textColor="@color/text_primary"
                                 android:textSize="16sp" />
 
-                            <Switch
+                            <com.mg4.control.ui.widget.SegmentSwitch
                                 android:id="@+id/switch_stats_skip_short"
-                                android:scaleX="1.3"
-                                android:scaleY="1.3"
                                 android:layout_marginHorizontal="8dp"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content" />
@@ -364,7 +396,7 @@
                             android:layout_marginTop="8dp"
                             android:text="@string/stats_skip_short_note"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="15sp" />
 
                     </LinearLayout>
 
@@ -397,7 +429,7 @@
                             android:layout_marginTop="8dp"
                             android:text="@string/stats_retention_note"
                             android:textColor="@color/text_secondary"
-                            android:textSize="13sp" />
+                            android:textSize="15sp" />
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -424,7 +456,7 @@
                                 app:backgroundTint="@color/dash_btn"
                                 app:strokeWidth="1dp"
                                 app:strokeColor="@color/dash_danger"
-                                app:cornerRadius="8dp" />
+                                app:cornerRadius="14dp" />
 
                         </LinearLayout>
 
@@ -514,7 +546,7 @@
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"
-                        app:cornerRadius="8dp" />
+                        app:cornerRadius="14dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_stats_battery_change"
@@ -527,7 +559,7 @@
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_warn"
-                        app:cornerRadius="8dp" />
+                        app:cornerRadius="14dp" />
 
                 </LinearLayout>
 

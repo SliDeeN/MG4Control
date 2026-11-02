@@ -1,31 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Thème CLAIR — chargé automatiquement par DayNight en MODE_NIGHT_NO -->
 <resources>
+    <!-- Refonte 2.7.0 (style DiAuto, maquette retenue) : fond, cartes, bordures, accent et textes. -->
     <!-- Couleurs historiques (gardées pour compatibilité) -->
-    <color name="bg_dark">#FFFFFFFF</color>
-    <color name="bg_card">#FFF5F5F7</color>
-    <color name="bg_button">#FFE5E5EA</color>
+    <color name="bg_dark">#FFF2F5FA</color>
+    <color name="bg_card">#FFFFFFFF</color>
+    <color name="bg_button">#FFEEF2F8</color>
 
     <color name="accent_eco">#FF2E7D32</color>
     <color name="accent_normal">#FF1565C0</color>
 
 
-    <color name="text_primary">#FF1C1C1E</color>
-    <color name="text_secondary">#FF6C6C70</color>
+    <color name="text_primary">#FF101826</color>
+    <color name="text_secondary">#FF556274</color>
     <color name="text_active">#FFFFFFFF</color>
 
 
     <!-- ── Palette dashboard claire ── -->
-    <color name="dash_bg">#FFF2F2F7</color>
+    <color name="dash_bg">#FFF2F5FA</color>
     <color name="dash_card">#FFFFFFFF</color>
-    <color name="dash_section">#FFF2F2F7</color>
-    <color name="dash_border">#FFD1D1D6</color>
-    <color name="dash_btn">#FFE5E5EA</color>
-    <color name="dash_text_lo">#FF8E8E93</color>
+    <color name="dash_section">#FFEEF2F8</color>
+    <color name="dash_border">#FFD5DEEA</color>
+    <color name="dash_btn">#FFEEF2F8</color>
+    <color name="dash_text_lo">#FF7A8699</color>
 
     <!-- Accent cyan (légèrement assombri pour lisibilité sur fond blanc) -->
-    <color name="dash_accent">#FF0284C7</color>
-    <color name="dash_accent_dim">#FFE0F2FE</color>
+    <color name="dash_accent">#FF1F5FC4</color>
+    <color name="dash_accent_dim">#FFDCE8FB</color>
 
     <!-- ECO vert -->
     <color name="dash_eco">#FF16A34A</color>
@@ -41,8 +42,8 @@
 
     <!-- Pop-up HVAC : cadre de la zone pilotée au joystick. Le fond reste bien plus discret que
          dash_accent_dim, réservé aux boutons ALLUMÉS — sinon la case AUTO ne ressortirait plus. -->
-    <color name="hvac_zone_stroke">#FF0284C7</color>
-    <color name="hvac_zone_fill">#FFF0F9FF</color>
+    <color name="hvac_zone_stroke">#FF1F5FC4</color>
+    <color name="hvac_zone_fill">#FFF3F7FE</color>
 
     <!-- Pop-up HVAC « moderne » : texte et pictos posés SUR un fond plein (accent, chauffage), et
          segment choisi d'un sélecteur de niveau. -->
@@ -61,4 +62,10 @@
     <color name="preclim_heat">#FFF97316</color>
     <color name="preclim_heat_bright">#FFFDBA74</color>
     <color name="preclim_cool_bright">#FFBAE6FD</color>
+    <!-- Écran conducteur (combiné) : couleurs à part, celles d'avant la refonte 2.7.0. Il est
+         toujours sombre et ne suit pas la palette de l'application. -->
+    <color name="cluster_track">#FF2A2A2E</color>
+    <color name="cluster_text">#FFFFFFFF</color>
+    <color name="cluster_text_secondary">#FFB0B0B0</color>
+    <color name="cluster_accent">#FF38BDF8</color>
 </resources>

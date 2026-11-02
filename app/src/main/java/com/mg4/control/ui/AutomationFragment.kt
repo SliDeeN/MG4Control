@@ -48,6 +48,11 @@ import kotlinx.coroutines.withContext
 
 class AutomationFragment : Fragment() {
 
+    private companion object {
+        /** Onglet du rail rouvert en revenant sur Automatisation, le temps de la session. */
+        var ongletRetenu = 0
+    }
+
     private var profiles: List<DrivingProfile> = emptyList()
 
     /** Carte des vitres : le panneau survit à la vue, comme au tableau de bord avant le déplacement. */
@@ -128,6 +133,51 @@ class AutomationFragment : Fragment() {
         bindClimateAutomation(view, prefs)
         bindDoorVolume(view, prefs)
         bindSounds(view)
+        // En dernier : les cartes masquées par firmware sont alors connues (garde d'onglet vide).
+        bindCategoryRail(view)
+    }
+
+    // ══════════ Rail de catégories (refonte 2.7.0) ══════════
+
+    /**
+     * Cinq pages, une seule visible. Un onglet dont la page n'a plus aucune carte visible
+     * (firmware sans l'équipement) est masqué. L'onglet choisi est retenu le temps de la session :
+     * revenir sur Automatisation rouvre la même page.
+     */
+    private fun bindCategoryRail(root: View) {
+        val onglets = listOf(
+            R.id.btn_auto_cat_profiles to R.id.page_auto_profiles,
+            R.id.btn_auto_cat_climate  to R.id.page_auto_climate,
+            R.id.btn_auto_cat_screen   to R.id.page_auto_screen,
+            R.id.btn_auto_cat_leave    to R.id.page_auto_leave,
+            R.id.btn_auto_cat_sounds   to R.id.page_auto_sounds,
+        ).map { (b, p) -> root.findViewById<MaterialButton>(b) to root.findViewById<ViewGroup>(p) }
+        val scroll  = root.findViewById<android.widget.ScrollView>(R.id.scroll_automation)
+        val ctx     = requireContext()
+        val fondOn  = ctx.getColor(R.color.dash_accent_dim)
+        val fondOff = ctx.getColor(R.color.dash_btn)
+        val accent  = ctx.getColor(R.color.dash_accent)
+        val bord    = ctx.getColor(R.color.dash_border)
+        val texte   = ctx.getColor(R.color.text_secondary)
+
+        fun garnie(page: ViewGroup) = (0 until page.childCount).any { page.getChildAt(it).visibility == View.VISIBLE }
+        onglets.forEach { (btn, page) -> btn.visibility = if (garnie(page)) View.VISIBLE else View.GONE }
+        val utiles = onglets.indices.filter { garnie(onglets[it].second) }
+        if (utiles.isEmpty()) return
+
+        fun choisir(index: Int) {
+            ongletRetenu = index
+            onglets.forEachIndexed { i, (btn, page) ->
+                val on = i == index
+                page.visibility = if (on) View.VISIBLE else View.GONE
+                btn.backgroundTintList = ColorStateList.valueOf(if (on) fondOn else fondOff)
+                btn.setTextColor(if (on) accent else texte)
+                btn.strokeColor = ColorStateList.valueOf(if (on) accent else bord)
+            }
+            scroll?.scrollTo(0, 0)
+        }
+        onglets.forEachIndexed { i, (btn, _) -> btn.setOnClickListener { choisir(i) } }
+        choisir(if (ongletRetenu in utiles) ongletRetenu else utiles.first())
     }
 
     // ══════════ Sons d'automatisation (issue #161) ══════════

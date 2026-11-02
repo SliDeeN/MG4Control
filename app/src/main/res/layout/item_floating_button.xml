@@ -41,7 +41,7 @@
         app:backgroundTint="@color/dash_btn"
         app:strokeWidth="1dp"
         app:strokeColor="@color/dash_border"
-        app:cornerRadius="8dp" />
+        app:cornerRadius="14dp" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_floating_row_delete"
@@ -57,6 +57,6 @@
         app:backgroundTint="@color/dash_btn"
         app:strokeWidth="1dp"
         app:strokeColor="@color/dash_border"
-        app:cornerRadius="8dp" />
+        app:cornerRadius="14dp" />
 
 </LinearLayout>

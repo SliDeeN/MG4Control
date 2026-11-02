@@ -168,10 +168,10 @@ class ClusterGaugeView(context: Context) : View(context) {
     private val sombre = context.createConfigurationContext(Configuration(context.resources.configuration).apply {
         uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or Configuration.UI_MODE_NIGHT_YES
     })
-    private val cPiste = sombre.getColor(R.color.dash_border)
-    private val cTexte = sombre.getColor(R.color.text_primary)
-    private val cTexte2 = sombre.getColor(R.color.text_secondary)
-    private val cAccent = sombre.getColor(R.color.dash_accent)
+    private val cPiste = sombre.getColor(R.color.cluster_track)
+    private val cTexte = sombre.getColor(R.color.cluster_text)
+    private val cTexte2 = sombre.getColor(R.color.cluster_text_secondary)
+    private val cAccent = sombre.getColor(R.color.cluster_accent)
     private val cVert = sombre.getColor(R.color.dash_eco)
     private val cChaud = sombre.getColor(R.color.preclim_heat)
     private val cAlerte = sombre.getColor(R.color.dash_warn)
@@ -907,7 +907,7 @@ class ClusterGaugeView(context: Context) : View(context) {
 
     private fun couleur(niveau: GaugeLevel): Int = sombre.getColor(when (niveau) {
         GaugeLevel.CONSUMPTION -> R.color.dash_warn
-        GaugeLevel.REGEN -> R.color.dash_accent
+        GaugeLevel.REGEN -> R.color.cluster_accent
     })
 
     private companion object {

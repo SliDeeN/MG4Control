@@ -10,7 +10,7 @@ import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
@@ -82,7 +82,8 @@ class ProfileFragment : Fragment() {
         )
 
         val liste = view.findViewById<RecyclerView>(R.id.recycler_profiles).apply {
-            layoutManager = LinearLayoutManager(context)
+            // Refonte 2.7.0 : une grille de trois colonnes de cartes.
+            layoutManager = GridLayoutManager(context, COLONNES)
             adapter = this@ProfileFragment.adapter
         }
 
@@ -95,11 +96,12 @@ class ProfileFragment : Fragment() {
         }
         val densite = resources.displayMetrics.density
         fun anneau() = GradientDrawable().apply {
-            cornerRadius = 14f * densite            // celui de bg_card_rounded
+            cornerRadius = 20f * densite            // celui de bg_card_rounded
             setColor(Color.TRANSPARENT)
             setStroke((2f * densite).toInt(), requireContext().getColor(R.color.dash_accent))
         }
-        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0) {
+        ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
+            ItemTouchHelper.UP or ItemTouchHelper.DOWN or ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT, 0) {
             private var ordreAvant: List<String>? = null
 
             override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, cible: RecyclerView.ViewHolder): Boolean {
@@ -242,5 +244,10 @@ class ProfileFragment : Fragment() {
         ProfileEditFragment.pendingExisting = existing
         ProfileEditFragment.pendingData = data
         findNavController().navigate(R.id.profileEditFragment)
+    }
+
+    private companion object {
+        /** Cartes par rangée dans la liste des profils. */
+        const val COLONNES = 3
     }
 }
