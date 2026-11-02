@@ -200,14 +200,21 @@ interface RuleEffects {
 
 /**
  * Une exécution des actions, de haut en bas. Le [journal] garde une ligne par action (le Journal
- * de l'éditeur, étape 2). Garde-fous : [MAX_STEPS] actions au plus, attentes plafonnées à
- * [MAX_WAIT_S], imbrication à [RuleLogic.MAX_DEPTH].
+ * de l'éditeur) : un signe (✓ fait, ✗ refusé, → résultat d'un Si, ↻ Répéter, ■ arrêt) puis
+ * l'action dite par [describe], dans la langue de l'appli. Garde-fous : [MAX_STEPS] actions au
+ * plus, attentes plafonnées à [MAX_WAIT_S], [MAX_REPEAT] tours de Répéter, imbrication à
+ * [RuleLogic.MAX_DEPTH], [MAX_JOURNAL] lignes de journal.
  */
-class RuleRun(private val fx: RuleEffects) {
+class RuleRun(
+    private val fx: RuleEffects,
+    private val describe: (RuleAction) -> String = { it.type?.name ?: "?" },
+) {
 
     companion object {
         const val MAX_STEPS = 200
         const val MAX_WAIT_S = 3_600
+        const val MAX_REPEAT = 20
+        const val MAX_JOURNAL = 80
     }
 
     val journal = mutableListOf<String>()
@@ -222,16 +229,21 @@ class RuleRun(private val fx: RuleEffects) {
         bloc(actions, 0)
     }
 
+    private fun ligne(texte: String) {
+        if (journal.size < MAX_JOURNAL) journal += texte
+        else if (journal.size == MAX_JOURNAL) journal += "…"
+    }
+
     private suspend fun bloc(actions: List<RuleAction>?, depth: Int) {
         if (actions == null) return
         if (depth > RuleLogic.MAX_DEPTH) {
-            journal += "bloc trop imbriqué : sauté"
+            ligne("✗ …")
             return
         }
         for (a in actions) {
             if (arret) return
             if (++etapes > MAX_STEPS) {
-                journal += "plus de $MAX_STEPS actions : arrêt"
+                ligne("■ $MAX_STEPS+")
                 arret = true
                 return
             }
@@ -244,25 +256,25 @@ class RuleRun(private val fx: RuleEffects) {
             RuleAction.Type.SET -> {
                 val k = a.key
                 val v = a.value
-                if (k == null || v == null) return note(false, "écriture incomplète")
-                note(fx.set(k, v), "$k = $v")
+                if (k == null || v == null) return note(false, a)
+                note(fx.set(k, v), a)
             }
             RuleAction.Type.SHORTCUT -> {
-                val n = a.shortcut ?: return note(false, "raccourci sans nom")
-                note(fx.shortcut(n), "raccourci $n")
+                val n = a.shortcut ?: return note(false, a)
+                note(fx.shortcut(n), a)
             }
             RuleAction.Type.PROFILE -> {
-                val id = a.profileId ?: return note(false, "profil non choisi")
-                note(fx.profile(id), "profil $id")
+                val id = a.profileId ?: return note(false, a)
+                note(fx.profile(id), a)
             }
             RuleAction.Type.WAIT -> {
                 val s = (a.seconds ?: 0).coerceIn(0, MAX_WAIT_S)
-                journal += "attente $s s"
+                ligne("… ${describe(a)}")
                 fx.pause(s * 1_000L)
             }
             RuleAction.Type.IF -> {
                 val r = RuleLogic.evaluate(a.condition, fx.state())
-                journal += "si → ${r ?: "inconnu"}"
+                ligne("${describe(a)} → ${when (r) { true -> "✓"; false -> "✗"; null -> "?" }}")
                 // Inconnu : ni l'un ni l'autre. « Sinon » veut dire « la condition est fausse »,
                 // pas « on n'a pas pu lire ».
                 when (r) {
@@ -273,18 +285,23 @@ class RuleRun(private val fx: RuleEffects) {
             }
             RuleAction.Type.NOTIFY -> {
                 fx.notify(a.text.orEmpty())
-                note(true, "message")
+                note(true, a)
             }
             RuleAction.Type.STOP -> {
-                journal += "arrêt demandé"
+                ligne("■ ${describe(a)}")
                 arret = true
             }
-            null -> journal += "action inconnue : sautée"
+            RuleAction.Type.REPEAT -> {
+                val n = (a.count ?: 0).coerceIn(0, MAX_REPEAT)
+                ligne("↻ ${describe(a)}")
+                repeat(n) { if (!arret) bloc(a.then, depth + 1) }
+            }
+            null -> ligne("? ${describe(a)}")
         }
     }
 
-    private fun note(ok: Boolean, quoi: String) {
+    private fun note(ok: Boolean, a: RuleAction) {
         if (ok) done++ else failed++
-        journal += (if (ok) "ok " else "échec ") + quoi
+        ligne((if (ok) "✓ " else "✗ ") + describe(a))
     }
 }

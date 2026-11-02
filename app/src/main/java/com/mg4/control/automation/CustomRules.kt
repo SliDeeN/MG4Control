@@ -21,6 +21,7 @@ import com.mg4.control.model.RuleLogic
 import com.mg4.control.model.RuleRun
 import com.mg4.control.model.RuleSignal
 import com.mg4.control.model.RuleState
+import com.mg4.control.model.RuleText
 import com.mg4.control.model.RuleTrigger
 import com.mg4.control.model.StatsTracker
 import com.mg4.control.model.TimeWatch
@@ -29,6 +30,7 @@ import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.service.MG4ControlService
 import com.mg4.control.service.VehicleCommands
 import com.mg4.control.shortcut.ShortcutAction
+import com.mg4.control.ui.AndroidRuleWords
 import com.mg4.control.util.GarageMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -82,8 +84,17 @@ object CustomRules {
     /** Exécutions en cours, par id de règle (touchées aussi depuis les coroutines). */
     private val enCours = ConcurrentHashMap<String, Job>()
 
-    /** Prévenu sur le fil principal à la fin d'une exécution (liste de l'onglet). */
+    /** Prévenu sur le fil principal à la fin d'une exécution (liste de l'onglet, éditeur). */
     @Volatile var surChangement: (() -> Unit)? = null
+
+    /**
+     * Dernière exécution de chaque règle depuis le démarrage, journal compris — y compris d'une
+     * règle essayée dans l'éditeur avant d'être enregistrée, que le stockage ne garde pas.
+     */
+    private val dernieres = ConcurrentHashMap<String, RuleLastRun>()
+
+    /** La dernière exécution connue : celle de cette session, sinon celle enregistrée. */
+    fun lastRun(context: Context, id: String): RuleLastRun? = dernieres[id] ?: CustomRuleStore.lastRuns(context)[id]
 
     /** Démarrage du service : charge les règles, puis l'événement « démarrage de l'écran ». */
     fun start(context: Context) {
@@ -108,12 +119,24 @@ object CustomRules {
         fil.post {
             recharger()
             val r = regles.firstOrNull { it.id == id } ?: return@post
-            if (GarageMode.isOn(context)) {
-                AppLogger.i(TAG, "« ${r.name} » : test refusé — Mode Garage")
-                return@post
-            }
-            lancer(r, "test")
+            tester(context, r)
         }
+    }
+
+    /** Tester depuis l'éditeur : la version affichée, enregistrée ou non. */
+    fun test(context: Context, rule: CustomRule) {
+        app = context.applicationContext
+        fil.post { tester(context, rule) }
+    }
+
+    private fun tester(context: Context, r: CustomRule) {
+        if (GarageMode.isOn(context)) {
+            AppLogger.i(TAG, "« ${r.name} » : test refusé — Mode Garage")
+            return
+        }
+        // Une version en cours d'essai remplace celle qui tournait : on teste ce qu'on voit.
+        enCours.remove(r.id)?.cancel()
+        lancer(r, "test")
     }
 
     // ── Chargement (fil mg4-rules) ───────────────────────────────────────────
@@ -228,13 +251,17 @@ object CustomRules {
         val ctx = app ?: return
         departs[r.id] = SystemClock.elapsedRealtime()
         AppLogger.i(TAG, "« ${r.name} » ($origine) : ${r.actions.size} action(s)")
-        val run = RuleRun(Effets(ctx, r))
+        // Le journal dit les actions comme l'éditeur : dans la langue de l'appli.
+        val texte = RuleText(AndroidRuleWords(ctx))
+        val run = RuleRun(Effets(ctx, r)) { texte.action(it) }
         val job = scope.launch {
             try {
                 run.run(r.actions)
             } finally {
                 val heure = System.currentTimeMillis().takeIf { StatsTracker.clockPlausible(it) }
-                CustomRuleStore.setLastRun(ctx, r.id, RuleLastRun(heure, run.done, run.failed))
+                val bilan = RuleLastRun(heure, run.done, run.failed, run.journal.toList())
+                dernieres[r.id] = bilan
+                CustomRuleStore.setLastRun(ctx, r.id, bilan)
                 AppLogger.i(TAG, "« ${r.name} » terminée : ${run.done} ok, ${run.failed} en échec — ${run.journal.joinToString(" ; ")}")
                 principal.post { surChangement?.invoke() }
             }
@@ -282,9 +309,13 @@ object CustomRules {
 
     /**
      * Raccourcis qu'une automatisation ne lance pas : ceux qui attendent un réglage propre à la
-     * touche (raccourci perso, profil de la touche) — les profils ont leur propre action.
+     * touche (raccourci perso, profil de la touche, appli choisie pour la touche) — les profils
+     * ont leur propre action. Aussi la liste des choix de l'éditeur.
      */
-    private val INTERDITS = setOf(ShortcutAction.NONE, ShortcutAction.CUSTOM, ShortcutAction.APPLY_PROFILE)
+    val INTERDITS = setOf(
+        ShortcutAction.NONE, ShortcutAction.CUSTOM, ShortcutAction.APPLY_PROFILE,
+        ShortcutAction.OPEN_APP, ShortcutAction.OPEN_CUSTOM_APP,
+    )
 
     // ── Lectures ─────────────────────────────────────────────────────────────
 

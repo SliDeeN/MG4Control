@@ -256,7 +256,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupNavButtons() {
         // Entrée → écran. Le Tableau de bord, écran de départ, n'a pas d'entrée : le logo y ramène
-        // en dépilant. L'éditeur de profil (ouvert depuis Profils) allume l'entrée Profils.
+        // en dépilant. Un éditeur allume l'entrée d'où il s'ouvre : profil → Profils, automatisation
+        // → Automatisation.
         val entrees = listOf(
             findViewById<MaterialButton>(R.id.btn_nav_profiles)   to R.id.profileFragment,
             findViewById<MaterialButton>(R.id.btn_nav_shortcuts)  to R.id.shortcutsFragment,
@@ -281,7 +282,11 @@ class MainActivity : AppCompatActivity() {
         val trait = (resources.displayMetrics.density).toInt().coerceAtLeast(1)
         val accueil = findViewById<View>(R.id.nav_home)
         navController.addOnDestinationChangedListener { _, destination, _ ->
-            val affiche = if (destination.id == R.id.profileEditFragment) R.id.profileFragment else destination.id
+            val affiche = when (destination.id) {
+                R.id.profileEditFragment -> R.id.profileFragment
+                R.id.customRuleEditFragment -> R.id.automationFragment
+                else -> destination.id
+            }
             entrees.forEach { (bouton, id) ->
                 val actif = id == affiche
                 bouton.backgroundTintList = if (actif) fondActif else sansFond

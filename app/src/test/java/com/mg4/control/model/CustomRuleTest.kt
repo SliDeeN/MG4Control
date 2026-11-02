@@ -10,8 +10,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
- * Mes automatisations (issue #201, étape 1) : conditions à trois valeurs, déclencheurs, garde de
- * lancement, exécution, enregistrement et modèles.
+ * Mes automatisations (issue #201, étapes 1 et 2) : conditions à trois valeurs, déclencheurs,
+ * garde de lancement, exécution (Répéter, journal), enregistrement et modèles.
  *
  * L'enjeu : ne toucher la voiture que sur un VRAI franc, une fois, et jamais en boucle.
  */
@@ -229,6 +229,47 @@ class CustomRuleTest {
         assertEquals(RuleRun.MAX_STEPS, beaucoup.faits.size)
     }
 
+    @Test
+    fun `repeter, plafonne, et arrete au milieu`() = runBlocking {
+        val fx = Faux()
+        RuleRun(fx).run(listOf(RuleAction(RuleAction.Type.REPEAT, count = 3,
+            then = listOf(RuleAction(RuleAction.Type.NOTIFY, text = "x"), RuleAction(RuleAction.Type.WAIT, seconds = 2)))))
+        assertEquals(List(3) { "msg:x" }, fx.faits)
+        assertEquals(6_000L, fx.attente)
+
+        val trop = Faux()
+        RuleRun(trop).run(listOf(RuleAction(RuleAction.Type.REPEAT, count = 1_000,
+            then = listOf(RuleAction(RuleAction.Type.NOTIFY, text = "x")))))
+        assertEquals(RuleRun.MAX_REPEAT, trop.faits.size)
+
+        val stop = Faux()
+        RuleRun(stop).run(listOf(
+            RuleAction(RuleAction.Type.REPEAT, count = 5, then = listOf(
+                RuleAction(RuleAction.Type.NOTIFY, text = "x"), RuleAction(RuleAction.Type.STOP))),
+            RuleAction(RuleAction.Type.NOTIFY, text = "après"),
+        ))
+        assertEquals("Arrêter sort de tout, pas seulement du tour", listOf("msg:x"), stop.faits)
+    }
+
+    @Test
+    fun `journal dans la langue de l'appli`() = runBlocking {
+        val t = RuleText(Mots)
+        val run = RuleRun(Faux(etat(RuleSignal.OUTSIDE_TEMP to 3.0), refuse = setOf("ac"))) { t.action(it) }
+        run.run(listOf(
+            RuleAction(RuleAction.Type.SET, key = "hvac_power", value = "1"),
+            RuleAction(RuleAction.Type.SET, key = "ac", value = "1"),
+            RuleAction(RuleAction.Type.IF, condition = cmp(RuleSignal.OUTSIDE_TEMP, RuleOp.BELOW, 0.0)),
+            RuleAction(RuleAction.Type.WAIT, seconds = 5),
+            RuleAction(RuleAction.Type.STOP),
+        ))
+        assertEquals(listOf("✓ hvac_power=1", "✗ ac=1", "si OUTSIDE_TEMP < 0 °C → ✗", "… attendre 5 s", "■ arrêter"), run.journal)
+        assertEquals("répéter 4 fois", t.action(RuleAction(RuleAction.Type.REPEAT, count = 4)))
+
+        val long = RuleRun(Faux())
+        long.run(List(RuleRun.MAX_JOURNAL + 30) { RuleAction(RuleAction.Type.NOTIFY, text = "x") })
+        assertEquals("journal plafonné, puis …", RuleRun.MAX_JOURNAL + 1, long.journal.size)
+    }
+
     // ── Enregistrement ──────────────────────────────────────────────────────
 
     @Test
@@ -292,6 +333,7 @@ class CustomRuleTest {
         override fun profile(id: String) = "profil $id"
         override fun waitFor(seconds: Int) = "attendre $seconds s"
         override fun ifThen(condition: String) = "si $condition"
+        override fun repeat(times: Int) = "répéter $times fois"
         override fun notify(text: String) = "« $text »"
         override val stop = "arrêter"
         override val unknown = "?"

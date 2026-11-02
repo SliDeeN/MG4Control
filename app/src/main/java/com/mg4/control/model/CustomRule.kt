@@ -128,7 +128,8 @@ data class RuleTrigger(
  * - WAIT : attendre [seconds] ;
  * - IF : si [condition], alors [then], sinon [otherwise] ;
  * - NOTIFY : un message [text] à l'écran ;
- * - STOP : arrêter l'automatisation ici.
+ * - STOP : arrêter l'automatisation ici ;
+ * - REPEAT : [then] répété [count] fois (étape 2, plafonné par [RuleRun.MAX_REPEAT]).
  */
 data class RuleAction(
     val type: Type? = null,
@@ -141,16 +142,23 @@ data class RuleAction(
     val condition: RuleCondition? = null,
     val then: List<RuleAction>? = null,
     val otherwise: List<RuleAction>? = null,
+    val count: Int? = null,
 ) {
-    enum class Type { SET, SHORTCUT, PROFILE, WAIT, IF, NOTIFY, STOP }
+    enum class Type { SET, SHORTCUT, PROFILE, WAIT, IF, NOTIFY, STOP, REPEAT }
 }
 
 /**
  * Dernière exécution d'une automatisation. [atMs] : heure murale, `null` si l'horloge n'était pas
- * encore plausible (réveil sur l'horloge d'usine) ; [done] / [failed] : actions réussies, refusées.
+ * encore plausible (réveil sur l'horloge d'usine) ; [done] / [failed] : actions réussies, refusées ;
+ * [journal] : une ligne par action, dans la langue de l'appli (le Journal de l'éditeur).
  * Dans `model` comme le reste : enregistré par Gson, il doit garder ses noms une fois minifié.
  */
-data class RuleLastRun(val atMs: Long? = null, val done: Int = 0, val failed: Int = 0)
+data class RuleLastRun(
+    val atMs: Long? = null,
+    val done: Int = 0,
+    val failed: Int = 0,
+    val journal: List<String>? = null,
+)
 
 /**
  * Ce que le moteur a lu au moment d'évaluer. Seuls les signaux utiles aux règles actives sont lus

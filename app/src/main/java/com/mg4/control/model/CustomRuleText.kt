@@ -28,12 +28,13 @@ interface RuleWords {
     fun profile(id: String): String
     fun waitFor(seconds: Int): String
     fun ifThen(condition: String): String
+    fun repeat(times: Int): String
     fun notify(text: String): String
     val stop: String
     val unknown: String
 }
 
-/** Les phrases d'une automatisation, pour sa carte et (étape 2) les lignes de l'éditeur. */
+/** Les phrases d'une automatisation, pour sa carte, les lignes de l'éditeur et le journal. */
 class RuleText(private val w: RuleWords) {
 
     fun time(minute: Int): String = String.format(Locale.US, "%d:%02d", minute / 60, minute % 60)
@@ -97,6 +98,7 @@ class RuleText(private val w: RuleWords) {
         RuleAction.Type.IF -> w.ifThen(condition(a.condition))
         RuleAction.Type.NOTIFY -> w.notify(a.text.orEmpty())
         RuleAction.Type.STOP -> w.stop
+        RuleAction.Type.REPEAT -> w.repeat(a.count ?: 0)
         null -> w.unknown
     }
 

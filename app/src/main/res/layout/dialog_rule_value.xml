@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fenêtre de réglage d'une valeur de Mes automatisations (issue #201, étape 2) : un titre, une
+     explication, un corps posé par RuleValueDialogs (nombre à − / +, heure, plage horaire, jours,
+     texte), puis Annuler / OK — même style que les confirmations. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_hvac_modern_card"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/rule_value_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:textColor="@color/text_primary"
+        android:textSize="23sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/rule_value_subtitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center_horizontal"
+        android:textColor="@color/text_secondary"
+        android:textSize="18sp"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/rule_value_body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:orientation="vertical"
+        android:gravity="center_horizontal" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
+        <TextView
+            android:id="@+id/rule_value_cancel"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:gravity="center"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/rule_value_ok"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:background="@drawable/bg_dialog_primary"
+            android:gravity="center"
+            android:textColor="@color/dash_on_accent"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:maxLines="1" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -54,6 +54,22 @@ object CustomRuleStore {
         true
     }
 
+    /**
+     * Enregistre [rule] : remplace celle de même id, ou l'ajoute à la fin. Faux quand c'est un
+     * ajout et que la liste est pleine.
+     */
+    fun upsert(ctx: Context, rule: CustomRule): Boolean = synchronized(LOCK) {
+        val l = all(ctx)
+        val i = l.indexOfFirst { it.id == rule.id }
+        if (i >= 0) {
+            write(ctx, l.toMutableList().also { it[i] = rule })
+            return true
+        }
+        if (l.size >= MAX_RULES) return false
+        write(ctx, l + rule)
+        true
+    }
+
     fun setEnabled(ctx: Context, id: String, enabled: Boolean) = synchronized(LOCK) {
         write(ctx, all(ctx).map { if (it.id == id) it.copy(enabled = enabled) else it })
     }

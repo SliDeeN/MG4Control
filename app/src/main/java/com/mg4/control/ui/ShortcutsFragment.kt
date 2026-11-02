@@ -39,7 +39,6 @@ import com.mg4.control.shortcut.PressType
 import com.mg4.control.shortcut.ProfileCycle
 import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.shortcut.ShortcutAction
-import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.PreClimateSettings
@@ -127,110 +126,9 @@ class ShortcutsFragment : Fragment() {
 
         val gen        = FirmwareInfo.getGeneration()
         val isKnown    = gen != FirmwareInfo.Gen.UNKNOWN
-        val isVsmBased = FirmwareInfo.isVsmBased()
-        val isSWI132   = gen == FirmwareInfo.Gen.SWI132
 
         // ── Construction des items de base selon firmware ─────────────────
-        baseActionItems = buildList {
-            add(ActionItem(getString(R.string.shortcuts_action_none),           ShortcutAction.NONE))
-            add(ActionItem(getString(R.string.shortcuts_action_one_pedal),      ShortcutAction.ONE_PEDAL))
-            add(ActionItem(getString(R.string.shortcuts_action_regen_cycle),    ShortcutAction.REGEN_CYCLE))
-            if (isKnown) {
-                add(ActionItem(getString(R.string.shortcuts_action_aeb),        ShortcutAction.AEB_CYCLE))
-            }
-            // SWI68/69/131/165 : une seule alerte sonore VSM
-            if (isVsmBased && !isSWI132) {
-                add(ActionItem(getString(R.string.shortcuts_action_sound),      ShortcutAction.SOUND_WARNING))
-            }
-            // SWI133 + SWI132 : deux alertes indépendantes (survitesse + ton limite)
-            if ((!isVsmBased || isSWI132) && isKnown) {
-                add(ActionItem(getString(R.string.shortcuts_action_overspeed),  ShortcutAction.OVERSPEED_ALARM))
-                add(ActionItem(getString(R.string.shortcuts_action_speed_limit),ShortcutAction.SPEED_LIMIT_TONE))
-            }
-            if (isKnown) {
-                add(ActionItem(getString(R.string.shortcuts_action_adas),       ShortcutAction.ADAS_CYCLE))
-            }
-            if (isKnown) {
-                add(ActionItem(getString(R.string.shortcuts_action_energy_saving), ShortcutAction.ENERGY_SAVING_TOGGLE))
-            }
-            if (isKnown) {
-                add(ActionItem(getString(R.string.shortcuts_action_tsr), ShortcutAction.TSR_TOGGLE))
-            }
-            // ESC + somnolence : même condition que la carte du Dashboard, sinon on
-            // proposerait un raccourci qui échouerait en silence sur les firmwares non câblés.
-            if (MG4Hardware.hasDrowsinessAndEsc()) {
-                add(ActionItem(getString(R.string.shortcuts_action_esc),             ShortcutAction.ESC_TOGGLE))
-                add(ActionItem(getString(R.string.shortcuts_action_drowsiness),      ShortcutAction.DROWSINESS_TOGGLE))
-                add(ActionItem(getString(R.string.shortcuts_action_drowsiness_sen),  ShortcutAction.DROWSINESS_SEN_CYCLE))
-            }
-            // Chauffages : aucun filtre firmware, exactement comme la carte du Dashboard qui les
-            // affiche partout. Ils passent par des propriétés véhicule dont la lecture nullable
-            // tranche avant d'agir — au pire le raccourci reste sans effet, jamais une écriture
-            // à l'aveugle.
-            add(ActionItem(getString(R.string.shortcuts_action_seat_heat_left),  ShortcutAction.SEAT_HEAT_LEFT_CYCLE))
-            add(ActionItem(getString(R.string.shortcuts_action_seat_heat_right), ShortcutAction.SEAT_HEAT_RIGHT_CYCLE))
-            add(ActionItem(getString(R.string.shortcuts_action_steering_heat),   ShortcutAction.STEERING_HEAT_TOGGLE))
-            if (MG4Hardware.hasClimateControl()) {
-                add(ActionItem(getString(R.string.shortcuts_action_hvac_toggle),     ShortcutAction.HVAC_TOGGLE))
-                add(ActionItem(getString(R.string.shortcuts_action_hvac_ac_toggle),  ShortcutAction.HVAC_AC_TOGGLE))
-                add(ActionItem(getString(R.string.shortcuts_action_hvac_temp_up),    ShortcutAction.HVAC_TEMP_UP))
-                add(ActionItem(getString(R.string.shortcuts_action_hvac_temp_down),  ShortcutAction.HVAC_TEMP_DOWN))
-                add(ActionItem(getString(R.string.shortcuts_action_hvac_fan_up),     ShortcutAction.HVAC_FAN_UP))
-                add(ActionItem(getString(R.string.shortcuts_action_hvac_fan_down),   ShortcutAction.HVAC_FAN_DOWN))
-                add(ActionItem(getString(R.string.shortcuts_action_defrost_front),   ShortcutAction.DEFROST_FRONT_TOGGLE))
-                add(ActionItem(getString(R.string.shortcuts_action_defrost_rear),    ShortcutAction.DEFROST_REAR_TOGGLE))
-                add(ActionItem(getString(R.string.shortcuts_action_hvac_recirc),     ShortcutAction.HVAC_RECIRC_CYCLE))
-                add(ActionItem(getString(R.string.shortcuts_action_hvac_autovol),    ShortcutAction.HVAC_AUTO_VOLUME_CYCLE))
-                add(ActionItem(getString(R.string.shortcuts_action_hvac_popup),      ShortcutAction.HVAC_POPUP))
-            }
-            // Feux de route automatiques : même condition que la carte Éclairage du Dashboard.
-            if (MG4Hardware.hasAutoHighBeam()) {
-                add(ActionItem(getString(R.string.shortcuts_action_auto_high_beam),  ShortcutAction.AUTO_HIGH_BEAM_TOGGLE))
-            }
-            // Chauffage de la batterie : même condition que sa carte du Dashboard.
-            if (MG4Hardware.hasBatteryHeating()) {
-                add(ActionItem(getString(R.string.shortcuts_action_battery_heat),    ShortcutAction.BATTERY_HEAT_TOGGLE))
-            }
-            if (MG4Hardware.hasBrightnessControl()) {
-                add(ActionItem(getString(R.string.shortcuts_action_brightness_up),   ShortcutAction.BRIGHTNESS_UP))
-                add(ActionItem(getString(R.string.shortcuts_action_brightness_down), ShortcutAction.BRIGHTNESS_DOWN))
-            }
-            // Média : aucun filtre firmware — ça ne passe pas par le véhicule mais par la
-            // session média d'Android, identique sur les six firmwares.
-            add(ActionItem(getString(R.string.shortcuts_action_media_next),      ShortcutAction.MEDIA_NEXT))
-            add(ActionItem(getString(R.string.shortcuts_action_media_prev),      ShortcutAction.MEDIA_PREVIOUS))
-            add(ActionItem(getString(R.string.shortcuts_action_media_play_pause), ShortcutAction.MEDIA_PLAY_PAUSE))
-            // Volume : pas de filtre non plus — la voie SAIC est tentée d'abord, AudioManager
-            // prend le relais ailleurs, donc il y a toujours un chemin.
-            add(ActionItem(getString(R.string.shortcuts_action_volume_up),       ShortcutAction.VOLUME_UP))
-            add(ActionItem(getString(R.string.shortcuts_action_volume_down),     ShortcutAction.VOLUME_DOWN))
-            // Vitres : même propriété véhicule sur les six firmwares, donc aucun filtre. Les
-            // vitres sans capteur suivent la calibration de l'onglet Automatisation.
-            add(ActionItem(getString(R.string.shortcuts_action_windows_open),    ShortcutAction.WINDOWS_OPEN_ALL))
-            add(ActionItem(getString(R.string.shortcuts_action_windows_close),   ShortcutAction.WINDOWS_CLOSE_ALL))
-            add(ActionItem(getString(R.string.shortcuts_action_apply_profile),   ShortcutAction.APPLY_PROFILE))
-            add(ActionItem(getString(R.string.shortcuts_action_profile_picker), ShortcutAction.PROFILE_PICKER))
-            add(ActionItem(getString(R.string.shortcuts_action_profile_cycle),  ShortcutAction.PROFILE_CYCLE))
-            // Sources audio : aucun filtre firmware — chaque firmware a sa voie (service média
-            // SAIC, lecteurs Android sur A9, allgo pour la projection), à valider sur la voiture.
-            add(ActionItem(getString(R.string.shortcuts_action_audio_cycle),    ShortcutAction.AUDIO_SOURCE_CYCLE))
-            // Pop-up de charge : toujours proposé (2026-10-17) ; option coupée, il dit où l'activer.
-            add(ActionItem(getString(R.string.shortcuts_action_charge_popup),  ShortcutAction.CHARGE_POPUP))
-            // Pré-climatisation (issue #130) : verrouillage, clim et extinction existent sur tout
-            // firmware connu.
-            if (isKnown) add(ActionItem(getString(R.string.shortcuts_action_preclim), ShortcutAction.PRE_CLIMATE))
-            // Android Auto / CarPlay : le service AllGo est sur les six firmwares ; vérifié quand même,
-            // un raccourci qui ne trouverait personne ne dirait que « aucun téléphone ».
-            if (allgoPresent()) add(ActionItem(getString(R.string.shortcuts_action_projection), ShortcutAction.PROJECTION))
-            add(ActionItem(getString(R.string.shortcuts_action_open_app),       ShortcutAction.OPEN_APP))
-            add(ActionItem(getString(R.string.shortcuts_action_open_custom_app),ShortcutAction.OPEN_CUSTOM_APP))
-            add(ActionItem(getString(R.string.shortcuts_action_android_settings), ShortcutAction.ANDROID_SETTINGS))
-            // Raccourci perso (issue #172) : appli, fonction d'une autre appli, diffusion, lien, webhook.
-            add(ActionItem(getString(R.string.shortcuts_action_custom),         ShortcutAction.CUSTOM))
-            if (MG4Hardware.hasVehiclePowerOff()) {
-                add(ActionItem(getString(R.string.shortcuts_action_vehicle_power_off), ShortcutAction.VEHICLE_POWER_OFF))
-            }
-        }
+        baseActionItems = ShortcutCatalog.items(requireContext()).map { ActionItem(it.label, it.action) }
 
         // ── Affichage des sections de config selon firmware ───────────────
         // Tous les firmwares connus utilisent la config 5 modes (Off/Lim.Manuel/Lim.Auto/ACC/ICA|TJA).
@@ -575,11 +473,6 @@ class ShortcutsFragment : Fragment() {
      * cas d'annulation. Les réutiliser ici aurait modifié les raccourcis classiques au passage.
      */
     /** Service AllGo du raccourci Android Auto / CarPlay (`com.allgo.rui`), sur les six firmwares connus. */
-    private fun allgoPresent(): Boolean = runCatching {
-        requireContext().packageManager.getPackageInfo("com.allgo.rui", 0)
-        true
-    }.getOrDefault(false)
-
     private fun choisirAppAvancee(slot: String, apres: () -> Unit) {
         val cle = "shortcut_${slot}_custom_app"
         choisirUneApp(dejaChoisie = prefs.getString(cle, null)) { paquet, _ ->
