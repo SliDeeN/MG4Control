@@ -28,29 +28,52 @@ internal object RuleValueDialogs {
     private const val LARGEUR_LARGE_DP = 1000f
 
     /**
-     * Pose la fenêtre : titre, explication, corps rempli par [remplir], puis Annuler / OK. [remplir]
-     * rend ce que fait OK : vrai referme la fenêtre, faux la laisse ouverte (saisie à corriger).
+     * Pose la fenêtre : titre, explication, corps rempli par [remplir], puis (Retour) / Annuler / OK.
+     * [remplir] rend ce que fait OK : vrai referme la fenêtre, faux la laisse ouverte (saisie à
+     * corriger). Dans une fenêtre à étapes ([Assistant.courant]), elle remplace l'étape d'avant et
+     * Retour y ramène ; sinon, une fenêtre à elle.
      */
     private fun fenetre(
         ctx: Context, titre: CharSequence, sousTitre: CharSequence?, largeurDp: Float,
         remplir: (LinearLayout) -> () -> Boolean,
-    ): AlertDialog {
-        val vue = LayoutInflater.from(ctx).inflate(R.layout.dialog_rule_value, null)
-        vue.findViewById<TextView>(R.id.rule_value_title).text = titre
-        vue.findViewById<TextView>(R.id.rule_value_subtitle).apply {
-            text = sousTitre
-            visibility = if (sousTitre.isNullOrEmpty()) View.GONE else View.VISIBLE
+    ): AlertDialog? {
+        fun construire(surAnnule: () -> Unit, surRetour: (() -> Unit)?, surOk: (() -> Boolean) -> Unit): View {
+            val vue = LayoutInflater.from(ctx).inflate(R.layout.dialog_rule_value, null)
+            vue.findViewById<TextView>(R.id.rule_value_title).text = titre
+            vue.findViewById<TextView>(R.id.rule_value_subtitle).apply {
+                text = sousTitre
+                visibility = if (sousTitre.isNullOrEmpty()) View.GONE else View.VISIBLE
+            }
+            val ok = remplir(vue.findViewById(R.id.rule_value_body))
+            vue.findViewById<TextView>(R.id.rule_value_cancel).apply {
+                text = ctx.getString(R.string.profile_cancel)
+                setOnClickListener { surAnnule() }
+            }
+            vue.findViewById<TextView>(R.id.rule_value_back).apply {
+                visibility = if (surRetour == null) View.GONE else View.VISIBLE
+                setOnClickListener { surRetour?.invoke() }
+            }
+            vue.findViewById<TextView>(R.id.rule_value_ok).apply {
+                text = ctx.getString(android.R.string.ok)
+                setOnClickListener { surOk(ok) }
+            }
+            return vue
         }
-        val ok = remplir(vue.findViewById(R.id.rule_value_body))
-        val dialog = AppDialog.afficher(ctx, vue, largeurDp)
-        vue.findViewById<TextView>(R.id.rule_value_cancel).apply {
-            text = ctx.getString(R.string.profile_cancel)
-            setOnClickListener { dialog.dismiss() }
+        val a = Assistant.courant
+        if (a != null) {
+            a.etape {
+                a.afficher(construire(
+                    surAnnule = { a.fermer() },
+                    surRetour = if (a.peutRetour) ({ a.retour() }) else null,
+                    surOk = { ok -> a.valider(ok) }), largeurDp)
+            }
+            return a.dialog
         }
-        vue.findViewById<TextView>(R.id.rule_value_ok).apply {
-            text = ctx.getString(android.R.string.ok)
-            setOnClickListener { if (ok()) dialog.dismiss() }
-        }
+        lateinit var dialog: AlertDialog
+        dialog = AppDialog.afficher(ctx, construire(
+            surAnnule = { dialog.dismiss() },
+            surRetour = null,
+            surOk = { ok -> if (ok()) dialog.dismiss() }), largeurDp)
         return dialog
     }
 
@@ -290,6 +313,6 @@ internal object RuleValueDialogs {
             }
         }
         // La carte de la fenêtre : le corps y est posé directement.
-        AppDialog.saisie(dialog, champ.parent.parent as View)
+        dialog?.let { AppDialog.saisie(it, champ.parent.parent as View) }
     }
 }

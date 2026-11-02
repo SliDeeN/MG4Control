@@ -236,7 +236,34 @@ internal object AppDialog {
         choisi: Int = -1,
         onAnnule: () -> Unit = {},
         onChoix: (Int) -> Unit,
-    ): AlertDialog {
+    ) {
+        // Dans une fenêtre à étapes : la grille remplace l'étape d'avant, Retour y ramène.
+        val a = Assistant.courant
+        if (a != null) {
+            a.etape {
+                a.afficher(vueChoix(context, titre, choix, annuler, sousTitre, icone, choisi,
+                    surAnnule = { a.fermer(); onAnnule() },
+                    surRetour = if (a.peutRetour) ({ a.retour() }) else null,
+                    surChoix = { rang -> a.apres { onChoix(rang) } }), LARGEUR_CHOIX_DP)
+            }
+            return
+        }
+        lateinit var dialog: AlertDialog
+        val vue = vueChoix(context, titre, choix, annuler, sousTitre, icone, choisi,
+            surAnnule = { dialog.dismiss(); onAnnule() },
+            surRetour = null,
+            surChoix = { rang -> dialog.dismiss(); onChoix(rang) })
+        dialog = afficher(context, vue, LARGEUR_CHOIX_DP)
+        // « dismiss » ne passe pas par ici : seuls le retour et le toucher à côté annulent.
+        dialog.setOnCancelListener { onAnnule() }
+    }
+
+    /** La grille de choix : en-tête, tuiles, puis (Retour) et Annuler. */
+    private fun vueChoix(
+        context: Context, titre: CharSequence, choix: List<Choix>, annuler: CharSequence,
+        sousTitre: CharSequence?, @DrawableRes icone: Int, choisi: Int,
+        surAnnule: () -> Unit, surRetour: (() -> Unit)?, surChoix: (Int) -> Unit,
+    ): View {
         val gonfleur = LayoutInflater.from(context)
         val vue = gonfleur.inflate(R.layout.dialog_choice, null)
         val accent = context.getColor(R.color.dash_accent)
@@ -251,7 +278,6 @@ internal object AppDialog {
             visibility = if (sousTitre.isNullOrEmpty()) View.GONE else View.VISIBLE
         }
 
-        val dialog = afficher(context, vue, LARGEUR_CHOIX_DP)
         val lignes = vue.findViewById<LinearLayout>(R.id.choice_rows)
         val defilement = vue.findViewById<ScrollView>(R.id.choice_scroll)
         val ecart = dp(context, ECART_DP)
@@ -282,10 +308,7 @@ internal object AppDialog {
                 } else {
                     peindreChoix(context, cellule, c, choisie = rang == choisi)
                     if (rang == choisi) tuileChoisie = cellule
-                    cellule.setOnClickListener {
-                        dialog.dismiss()
-                        onChoix(rang)
-                    }
+                    cellule.setOnClickListener { surChoix(rang) }
                 }
                 rangee.addView(cellule)
             }
@@ -294,13 +317,12 @@ internal object AppDialog {
 
         vue.findViewById<TextView>(R.id.choice_cancel).apply {
             text = annuler
-            setOnClickListener {
-                dialog.dismiss()
-                onAnnule()
-            }
+            setOnClickListener { surAnnule() }
         }
-        // « dismiss » ne passe pas par ici : seuls le retour et le toucher à côté annulent.
-        dialog.setOnCancelListener { onAnnule() }
+        vue.findViewById<TextView>(R.id.choice_back).apply {
+            visibility = if (surRetour == null) View.GONE else View.VISIBLE
+            setOnClickListener { surRetour?.invoke() }
+        }
 
         // Le choix en cours peut être loin dans la grille : on l'amène en vue une fois posée.
         tuileChoisie?.let { tuile ->
@@ -309,7 +331,7 @@ internal object AppDialog {
                 defilement.scrollTo(0, (ligne.top - ecart).coerceAtLeast(0))
             }
         }
-        return dialog
+        return vue
     }
 
     private fun peindreChoix(context: Context, cellule: View, c: Choix, choisie: Boolean) {

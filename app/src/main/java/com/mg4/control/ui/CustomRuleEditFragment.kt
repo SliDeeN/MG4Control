@@ -289,7 +289,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             setPadding(dp(18f), dp(12f), dp(8f), dp(12f))
         })
         rangee.addView(boutonMenu(menu))
-        rangee.setOnClickListener { (editer ?: menu)() }
+        rangee.setOnClickListener { enchainement(editer ?: menu) }
         box.addView(rangee)
     }
 
@@ -297,7 +297,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         layoutParams = LinearLayout.LayoutParams(dp(64f), dp(64f))
         gravity = Gravity.CENTER
         contentDescription = s(R.string.rule_menu_title)
-        setOnClickListener { menu() }
+        setOnClickListener { enchainement(menu) }
     }
 
     private fun ajouter(box: LinearLayout, t: Int, onClick: () -> Unit) {
@@ -309,9 +309,15 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             gravity = Gravity.CENTER
             setPadding(dp(22f), 0, dp(22f), 0)
             setBackgroundResource(R.drawable.bg_dialog_tile)
-            setOnClickListener { onClick() }
+            setOnClickListener { enchainement(onClick) }
         })
     }
+
+    /**
+     * Un enchaînement de choix (ajouter, modifier, ⋮) : ses fenêtres se succèdent dans une seule,
+     * avec Retour à partir de la deuxième étape ([Assistant]).
+     */
+    private fun enchainement(f: () -> Unit) = Assistant.dans(Assistant(ctx), f)
 
     private fun rangeeBoutons(box: LinearLayout): LinearLayout = LinearLayout(ctx).apply {
         orientation = LinearLayout.HORIZONTAL

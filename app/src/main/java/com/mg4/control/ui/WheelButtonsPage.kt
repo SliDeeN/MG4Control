@@ -215,7 +215,16 @@ class WheelButtonsPage(private val host: Host) {
         }
     }
 
-    fun nomTouche(code: Int): String = when (code) {
+    // ── Nom des touches : celui donné par l'utilisateur, sinon le nom connu, sinon le code ──
+    // Pas de table de noms par code Android : rien ne garantit le même code d'un firmware à l'autre.
+
+    private val noms get() = ctx.getSharedPreferences(AdvancedShortcuts.PREFS, Context.MODE_PRIVATE)
+    private fun cleNom(code: Int) = "wheel_key_name_$code"
+    private fun nomPerso(code: Int): String? = noms.getString(cleNom(code), null)?.takeIf { it.isNotBlank() }
+
+    fun nomTouche(code: Int): String = nomPerso(code) ?: nomOrigine(code)
+
+    private fun nomOrigine(code: Int): String = when (code) {
         STAR_LEFT -> s(R.string.wheel_key_star_left)
         STAR_RIGHT, 18 -> s(R.string.wheel_key_star_right)
         297 -> s(R.string.wheel_key_joy_up)
@@ -232,9 +241,12 @@ class WheelButtonsPage(private val host: Host) {
             setBackgroundResource(R.drawable.bg_card_rounded)
             setPadding(dp(18f), dp(14f), dp(18f), dp(16f))
         }
+        // Même hauteur de titre pour toutes les cartes, ⋮ ou non : sinon les lignes Simple / Long /
+        // Double d'un ★ (sans ⋮) remontent par rapport à celles d'une touche ajoutée.
         val tete = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            minimumHeight = dp(56f)
         }
         tete.addView(TextView(ctx).apply {
             text = nomTouche(code)
@@ -245,13 +257,13 @@ class WheelButtonsPage(private val host: Host) {
             ellipsize = TextUtils.TruncateAt.END
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         })
-        if (!estEtoile(code)) tete.addView(TextView(ctx).apply {
+        tete.addView(TextView(ctx).apply {
             text = "⋮"
             gravity = Gravity.CENTER
             setTextColor(ctx.getColor(R.color.text_secondary))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 30f)
             layoutParams = LinearLayout.LayoutParams(dp(56f), dp(56f))
-            setOnClickListener { retirer(code) }
+            setOnClickListener { menuTouche(code) }
         })
         c.addView(tete)
         listOf(
@@ -396,6 +408,56 @@ class WheelButtonsPage(private val host: Host) {
         refresh()
     }
 
+    /** ⋮ d'une carte : renommer, revenir au nom d'origine, retirer (touches ajoutées seulement). */
+    private fun menuTouche(code: Int) {
+        val gestes = buildList<Pair<String, () -> Unit>> {
+            add(s(R.string.wheel_rename) to { renommer(code) })
+            if (nomPerso(code) != null) add(s(R.string.wheel_name_reset) to {
+                noms.edit().remove(cleNom(code)).apply()
+                refresh()
+            })
+            if (!estEtoile(code)) add(s(R.string.wheel_remove_key) to { retirer(code) })
+        }
+        AppDialog.choisir(ctx,
+            titre = nomTouche(code),
+            sousTitre = s(R.string.adv_sc_key_unknown, code),
+            icone = R.drawable.ic_dialog_edit,
+            choix = gestes.map { AppDialog.Choix(it.first) },
+            annuler = s(R.string.profile_cancel),
+        ) { rang -> gestes[rang].second() }
+    }
+
+    /**
+     * Nom PROPOSÉ au renommage d'une touche sans nom : celui de la touche Android de même code
+     * (`KeyEvent.KEYCODE_*`). Seulement une proposition — rien ne garantit qu'un firmware donne le
+     * même code à la même touche ; l'utilisateur corrige au besoin. La carte, elle, garde son nom
+     * d'origine tant qu'il n'a rien validé.
+     */
+    private fun suggestion(code: Int): String? = when (code) {
+        3 -> R.string.wheel_hint_home
+        4 -> R.string.wheel_hint_back
+        5 -> R.string.wheel_hint_call
+        6 -> R.string.wheel_hint_end_call
+        24 -> R.string.wheel_hint_vol_up
+        25 -> R.string.wheel_hint_vol_down
+        82 -> R.string.wheel_hint_menu
+        85 -> R.string.wheel_hint_play_pause
+        86 -> R.string.wheel_hint_stop
+        87 -> R.string.wheel_hint_next
+        88 -> R.string.wheel_hint_previous
+        164 -> R.string.wheel_hint_mute
+        231 -> R.string.wheel_hint_voice
+        else -> null
+    }?.let { s(it) }
+
+    private fun renommer(code: Int) {
+        val propose = nomPerso(code) ?: suggestion(code) ?: nomOrigine(code)
+        RuleValueDialogs.texte(ctx, s(R.string.wheel_name_title), propose) { nom ->
+            noms.edit().putString(cleNom(code), nom.take(30)).apply()
+            refresh()
+        }
+    }
+
     private fun retirer(code: Int) {
         AppDialog.confirmer(ctx,
             titre = s(R.string.wheel_remove_key) + " — " + nomTouche(code),
@@ -406,6 +468,7 @@ class WheelButtonsPage(private val host: Host) {
             onOui = {
                 AdvancedShortcuts.all(ctx).filter { it.keyCode == code }
                     .forEach { AdvancedShortcuts.remove(ctx, it.keyCode, it.press, it.profileId) }
+                noms.edit().remove(cleNom(code)).apply()
                 ajoutees.remove(code)
                 fini()
             })

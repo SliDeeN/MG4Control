@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Fenêtre de réglage d'une valeur de Mes automatisations (issue #201, étape 2) : un titre, une
      explication, un corps posé par RuleValueDialogs (nombre à − / +, heure, plage horaire, jours,
-     texte), puis Annuler / OK — même style que les confirmations. -->
+     texte), puis (Retour) / Annuler / OK — même style que les confirmations. Retour : seulement dans
+     une fenêtre à étapes (Assistant), à partir de la deuxième. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -42,6 +43,21 @@
         android:layout_marginTop="20dp"
         android:orientation="horizontal"
         android:baselineAligned="false">
+
+        <TextView
+            android:id="@+id/rule_value_back"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="12dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:gravity="center"
+            android:text="@string/dialog_back"
+            android:textColor="@color/text_primary"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/rule_value_cancel"
