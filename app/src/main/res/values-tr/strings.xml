@@ -16,6 +16,7 @@
 
     <!-- Steering wheel shortcuts -->
     <string name="shortcuts_enabled_label">Direksiyon kısayollarını etkinleştir</string>
+    <string name="shortcuts_enabled_short">Direksiyonda</string>
     <string name="shortcuts_btn1_label">★ Sol düğme</string>
     <string name="shortcuts_btn2_label">★ Sağ düğme</string>
     <string name="shortcuts_action_none">Yok</string>
@@ -312,6 +313,14 @@
     <string name="settings_theme_auto">Otomatik</string>
     <string name="settings_theme_dark">Koyu tema</string>
     <string name="settings_theme_light">Açık tema</string>
+    <string name="settings_nav_side">Menü tarafı</string>
+    <string name="settings_nav_side_auto">Otomatik</string>
+    <string name="settings_nav_side_left">Sol</string>
+    <string name="settings_nav_side_right">Sağ</string>
+    <string name="settings_nav_side_desc">Menü ve alt sekmeler sürücü tarafında. Otomatik, direksiyonu izler: %1$s.</string>
+    <string name="settings_nav_side_detected_left">soldan direksiyon</string>
+    <string name="settings_nav_side_detected_right">sağdan direksiyon</string>
+    <string name="settings_nav_side_detected_unknown">araçtan okunamadı, menü solda</string>
     <string name="settings_text_size">Yazı boyutu</string>
     <string name="settings_popup_delay">Açılır pencerelerin kapanma süresi</string>
     <string name="settings_popup_delay_desc">Profil seçici, otomasyon onayı ve HVAC açılır penceresi. Her işlem süreyi yeniden başlatır.</string>

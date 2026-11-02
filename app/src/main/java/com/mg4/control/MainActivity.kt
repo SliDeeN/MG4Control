@@ -23,6 +23,7 @@ import com.mg4.control.ui.RestoreProfilesDialog
 import com.mg4.control.ui.SettingsFragment
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.mg4.control.update.UpdateChecker
@@ -31,6 +32,7 @@ import com.mg4.control.update.UpdateNotifier
 import com.mg4.control.util.FirmwareInfo
 import com.mg4.control.util.FullScreen
 import com.mg4.control.util.LocaleHelper
+import com.mg4.control.util.NavSide
 import com.mg4.control.util.ThemeHelper
 
 class MainActivity : AppCompatActivity() {
@@ -86,6 +88,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         setContentView(R.layout.activity_main)
+        placerMenu()
 
         startForegroundService(Intent(this, MG4ControlService::class.java))
         MG4Hardware.initAudio(applicationContext)  // connecte le helper audio vendor (A9 uniquement, no-op ailleurs)
@@ -252,6 +255,39 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ── Côté du menu (volant à droite) ──────────────────────────────────────
+
+    /**
+     * Le menu passe à droite du contenu quand le conducteur est à droite (Réglages › Interface).
+     * En Auto, le côté du volant est relu en arrière-plan — la connexion à la voiture n'est pas
+     * prête au démarrage : s'il fait changer le menu de côté, l'activité se recrée une fois.
+     */
+    private fun placerMenu() {
+        if (NavSide.right(this)) {
+            val menu = findViewById<View>(R.id.nav_column)
+            val trait = findViewById<View>(R.id.nav_divider)
+            val racine = menu.parent as android.view.ViewGroup
+            racine.removeView(menu)
+            racine.removeView(trait)
+            racine.addView(trait)
+            racine.addView(menu)
+        }
+        if (NavSide.mode(this) != NavSide.Mode.AUTO) return
+        val app = applicationContext
+        CoroutineScope(Dispatchers.IO).launch {
+            repeat(LECTURES_COTE) { essai ->
+                if (essai > 0) delay(LECTURE_COTE_PAUSE_MS)
+                val cote = com.mg4.control.hardware.DriverSide.read() ?: return@repeat
+                val avant = NavSide.right(app)
+                NavSide.saveDetected(app, cote)
+                if (NavSide.right(app) != avant) withContext(Dispatchers.Main) {
+                    if (!isFinishing && !isDestroyed) recreate()
+                }
+                return@launch
+            }
+        }
+    }
+
     // ── Menu principal (colonne de gauche) ──────────────────────────────────
 
     private fun setupNavButtons() {
@@ -334,5 +370,9 @@ class MainActivity : AppCompatActivity() {
          * réinitialisé au redémarrage du process (le bouton Diagnostic reste masqué par défaut).
          */
         @Volatile var diagnosticUnlocked = false
+
+        /** Côté du volant : quelques lectures, le temps que la connexion à la voiture s'établisse. */
+        private const val LECTURES_COTE = 5
+        private const val LECTURE_COTE_PAUSE_MS = 2_000L
     }
 }

@@ -818,10 +818,107 @@
 
                 </LinearLayout>
 
-                <Space
+                <!-- ── Section CÔTÉ DU MENU (2026-11-02) ─────────────────────────────
+                     Menu principal et sous-onglets du côté du conducteur. Auto : côté du volant lu
+                     dans la configuration de la voiture (DriverSide) ; illisible, à gauche. -->
+                <LinearLayout
+                    android:layout_weight="1"
                     android:layout_width="0dp"
-                    android:layout_height="1dp"
-                    android:layout_weight="1" />
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_card_rounded"
+                    android:layout_marginBottom="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_nav_side"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.12"
+                        android:textAllCaps="true"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="7dp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/dash_border" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:baselineAligned="false">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_nav_side_auto"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="@string/settings_nav_side_auto"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_nav_side_left"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp"
+                            android:text="@string/settings_nav_side_left"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_nav_side_right"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="@string/settings_nav_side_right"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_nav_side_desc"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="18sp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
             </LinearLayout>
 

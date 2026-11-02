@@ -16,6 +16,7 @@
 
     <!-- Raccourcis au volant -->
     <string name="shortcuts_enabled_label">Activer les raccourcis au volant</string>
+    <string name="shortcuts_enabled_short">Au volant</string>
     <string name="shortcuts_btn1_label">★ Bouton Gauche</string>
     <string name="shortcuts_btn2_label">★ Bouton Droite</string>
     <string name="shortcuts_action_none">Aucune</string>
@@ -314,6 +315,14 @@
     <string name="settings_theme_auto">Auto</string>
     <string name="settings_theme_dark">Mode sombre</string>
     <string name="settings_theme_light">Mode clair</string>
+    <string name="settings_nav_side">Côté du menu</string>
+    <string name="settings_nav_side_auto">Auto</string>
+    <string name="settings_nav_side_left">Gauche</string>
+    <string name="settings_nav_side_right">Droite</string>
+    <string name="settings_nav_side_desc">Menu et sous-onglets du côté du conducteur. Auto suit le volant : %1$s.</string>
+    <string name="settings_nav_side_detected_left">volant à gauche</string>
+    <string name="settings_nav_side_detected_right">volant à droite</string>
+    <string name="settings_nav_side_detected_unknown">non lu dans la voiture, menu à gauche</string>
     <string name="settings_text_size">Taille du texte</string>
     <string name="settings_popup_delay">Délai avant fermeture des pop-ups</string>
     <string name="settings_popup_delay_desc">Sélecteur de profils, confirmation d\'automatisation et pop-up HVAC. Chaque action relance le délai.</string>

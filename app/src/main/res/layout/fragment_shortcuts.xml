@@ -8,57 +8,22 @@
     android:background="@color/dash_bg"
     android:padding="14dp">
 
-    <!-- Bandeau persistant : l'interrupteur commande toute la fonctionnalite, il
-         n'appartient a aucun des deux onglets. -->
-    <!-- ── Toggle activation globale ────────────────────────────────── -->
+    <!-- Refonte B : sous-onglets en pastilles (la rangée défile si elle dépasse), puis au bout
+         l'interrupteur général « Au volant » (proposition A, 2026-11-02) : il commande toute la
+         fonctionnalité et reste actif quand le reste est grisé, d'où sa place hors du contenu. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="14dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="@drawable/bg_card_rounded"
-        android:padding="12dp"
-        android:layout_marginBottom="8dp">
+        android:baselineAligned="false">
 
-        <TextView
+        <HorizontalScrollView
+            android:id="@+id/sc_tabs_scroll"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/shortcuts_enabled_label"
-            android:textColor="@color/text_secondary"
-            android:textSize="19sp" />
-
-        <com.mg4.control.ui.widget.SegmentSwitch
-            android:layout_marginHorizontal="8dp"
-                        android:id="@+id/switch_shortcuts_enabled"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:checked="false" />
-
-    </LinearLayout>
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/dash_border"
-        android:layout_marginTop="10dp" />
-
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-    <LinearLayout
-        android:id="@+id/shortcuts_content"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
-
-        <!-- Refonte B : sous-onglets en pastilles au-dessus du contenu ; la rangée défile si elle dépasse. -->
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="14dp"
             android:scrollbars="none"
             android:overScrollMode="never"
             android:requiresFadingEdge="horizontal"
@@ -143,6 +108,42 @@
 
             </LinearLayout>
         </HorizontalScrollView>
+
+        <View
+            android:layout_width="1dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="14dp"
+            android:background="@color/dash_border" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/shortcuts_enabled_short"
+            android:textColor="@color/text_secondary"
+            android:textSize="19sp"
+            android:maxLines="1" />
+
+        <com.mg4.control.ui.widget.SegmentSwitch
+            android:id="@+id/switch_shortcuts_enabled"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:contentDescription="@string/shortcuts_enabled_label"
+            android:checked="false" />
+
+    </LinearLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+    <LinearLayout
+        android:id="@+id/shortcuts_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
         <ScrollView
             android:id="@+id/scroll_shortcuts"

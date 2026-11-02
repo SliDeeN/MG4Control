@@ -16,6 +16,7 @@
 
     <!-- Scorciatoie al volante -->
     <string name="shortcuts_enabled_label">Attiva scorciatoie al volante</string>
+    <string name="shortcuts_enabled_short">Al volante</string>
     <string name="shortcuts_btn1_label">★ Pulsante Sinistro</string>
     <string name="shortcuts_btn2_label">★ Pulsante Destro</string>
     <string name="shortcuts_action_none">Nessuna</string>
@@ -312,6 +313,14 @@
     <string name="settings_theme_auto">Auto</string>
     <string name="settings_theme_dark">Modalità scura</string>
     <string name="settings_theme_light">Modalità chiara</string>
+    <string name="settings_nav_side">Lato del menu</string>
+    <string name="settings_nav_side_auto">Auto</string>
+    <string name="settings_nav_side_left">Sinistra</string>
+    <string name="settings_nav_side_right">Destra</string>
+    <string name="settings_nav_side_desc">Menu e sottoschede dal lato del conducente. Auto segue il volante: %1$s.</string>
+    <string name="settings_nav_side_detected_left">guida a sinistra</string>
+    <string name="settings_nav_side_detected_right">guida a destra</string>
+    <string name="settings_nav_side_detected_unknown">non letto dall’auto, menu a sinistra</string>
     <string name="settings_text_size">Dimensione del testo</string>
     <string name="settings_popup_delay">Tempo prima della chiusura dei pop-up</string>
     <string name="settings_popup_delay_desc">Selettore profilo, conferma di automazione e pop-up HVAC. Ogni azione fa ripartire il tempo.</string>

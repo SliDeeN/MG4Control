@@ -16,6 +16,7 @@
 
     <!-- Atajos del volante -->
     <string name="shortcuts_enabled_label">Activar atajos del volante</string>
+    <string name="shortcuts_enabled_short">En el volante</string>
     <string name="shortcuts_btn1_label">★ Botón Izquierdo</string>
     <string name="shortcuts_btn2_label">★ Botón Derecho</string>
     <string name="shortcuts_action_none">Ninguna</string>
@@ -312,6 +313,14 @@
     <string name="settings_theme_auto">Auto</string>
     <string name="settings_theme_dark">Modo oscuro</string>
     <string name="settings_theme_light">Modo claro</string>
+    <string name="settings_nav_side">Lado del menú</string>
+    <string name="settings_nav_side_auto">Auto</string>
+    <string name="settings_nav_side_left">Izquierda</string>
+    <string name="settings_nav_side_right">Derecha</string>
+    <string name="settings_nav_side_desc">Menú y subpestañas del lado del conductor. Auto sigue el volante: %1$s.</string>
+    <string name="settings_nav_side_detected_left">volante a la izquierda</string>
+    <string name="settings_nav_side_detected_right">volante a la derecha</string>
+    <string name="settings_nav_side_detected_unknown">no leído del coche, menú a la izquierda</string>
     <string name="settings_text_size">Tamaño del texto</string>
     <string name="settings_popup_delay">Tiempo antes de cerrar los pop-ups</string>
     <string name="settings_popup_delay_desc">Selector de perfil, confirmación de automatización y pop-up HVAC. Cada acción reinicia el tiempo.</string>

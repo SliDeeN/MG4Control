@@ -18,7 +18,10 @@
     android:background="@color/dash_bg">
 
     <!-- ── MENU PRINCIPAL ──────────────────────────────────────────── -->
+    <!-- Volant à droite (Réglages › Interface › Côté du menu) : MainActivity le passe après le
+         contenu, avec son trait. -->
     <LinearLayout
+        android:id="@+id/nav_column"
         android:layout_width="184dp"
         android:layout_height="match_parent"
         android:orientation="vertical"
@@ -89,6 +92,7 @@
     </LinearLayout>
 
     <View
+        android:id="@+id/nav_divider"
         android:layout_width="1dp"
         android:layout_height="match_parent"
         android:background="@color/dash_border" />

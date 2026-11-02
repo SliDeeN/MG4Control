@@ -3,10 +3,13 @@ package com.mg4.control.ui.widget
 import android.content.Context
 import android.content.res.ColorStateList
 import android.util.AttributeSet
+import android.view.Gravity
 import android.widget.HorizontalScrollView
+import android.widget.LinearLayout
 import com.google.android.material.R as MaterialR
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
+import com.mg4.control.util.NavSide
 
 /**
  * Onglet de navigation (menu principal, sous-onglets en pastilles) : un [MaterialButton] dont le
@@ -45,15 +48,20 @@ class RailButton @JvmOverloads constructor(
 /**
  * Refonte B : allume ou éteint un sous-onglet en pastille (style `Widget.MG4.CategoryTab`).
  * Choisi : fond d'accent plein et texte foncé ; sinon fond de carte et bordure. Quand la rangée
- * défile (Raccourcis : jusqu'à onze sous-onglets), le choisi est amené en vue.
+ * défile (Raccourcis : jusqu'à onze sous-onglets), le choisi est amené en vue. Menu à droite
+ * ([NavSide]) : les pastilles se rangent contre le bord droit, du côté du conducteur.
  */
 fun MaterialButton.setCategoryTabActive(on: Boolean) {
     val c = context
     backgroundTintList = ColorStateList.valueOf(c.getColor(if (on) R.color.dash_accent else R.color.dash_card))
     setTextColor(c.getColor(if (on) R.color.dash_on_accent else R.color.text_primary))
     strokeColor = ColorStateList.valueOf(c.getColor(if (on) R.color.dash_accent else R.color.dash_border))
-    if (!on) return
     val rangee = parent?.parent as? HorizontalScrollView ?: return
+    if (NavSide.right(c) && !rangee.isFillViewport) {
+        rangee.isFillViewport = true
+        (parent as? LinearLayout)?.gravity = Gravity.END
+    }
+    if (!on) return
     rangee.post {
         // Un peu de marge : le bord de la rangée s'estompe, le libellé y serait à moitié lisible.
         val marge = (48 * resources.displayMetrics.density).toInt()

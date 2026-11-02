@@ -16,6 +16,7 @@
 
     <!-- Steering wheel shortcuts -->
     <string name="shortcuts_enabled_label">Enable steering wheel shortcuts</string>
+    <string name="shortcuts_enabled_short">Steering wheel</string>
     <string name="shortcuts_btn1_label">★ Left Button</string>
     <string name="shortcuts_btn2_label">★ Right Button</string>
     <string name="shortcuts_action_none">None</string>
@@ -312,6 +313,14 @@
     <string name="settings_theme_auto">Auto</string>
     <string name="settings_theme_dark">Dark mode</string>
     <string name="settings_theme_light">Light mode</string>
+    <string name="settings_nav_side">Menu side</string>
+    <string name="settings_nav_side_auto">Auto</string>
+    <string name="settings_nav_side_left">Left</string>
+    <string name="settings_nav_side_right">Right</string>
+    <string name="settings_nav_side_desc">Menu and sub-tabs on the driver’s side. Auto follows the steering wheel: %1$s.</string>
+    <string name="settings_nav_side_detected_left">left-hand drive</string>
+    <string name="settings_nav_side_detected_right">right-hand drive</string>
+    <string name="settings_nav_side_detected_unknown">not read from the car, menu on the left</string>
     <string name="settings_text_size">Text size</string>
     <string name="settings_popup_delay">Pop-up auto-close delay</string>
     <string name="settings_popup_delay_desc">Profile picker, automation confirmation and HVAC pop-up. Each action restarts the delay.</string>

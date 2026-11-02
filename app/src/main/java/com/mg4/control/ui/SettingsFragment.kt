@@ -8,6 +8,7 @@ import android.content.res.ColorStateList
 import androidx.appcompat.app.AppCompatDelegate
 import com.mg4.control.MainActivity
 import com.mg4.control.ui.widget.setCategoryTabActive
+import com.mg4.control.util.NavSide
 import com.mg4.control.util.ThemeHelper
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -218,6 +219,35 @@ class SettingsFragment : Fragment() {
         btnThemeAuto.setOnClickListener  { applyThemeMode("auto")  }
         btnThemeDark.setOnClickListener  { applyThemeMode("dark")  }
         btnThemeLight.setOnClickListener { applyThemeMode("light") }
+
+        // ── Côté du menu : Auto / Gauche / Droite (2026-11-02) ──────────────
+        // L'activité se recrée pour reposer le menu ; le sous-onglet ouvert est conservé.
+        val navSideBtns = listOf(
+            NavSide.Mode.AUTO  to view.findViewById<MaterialButton>(R.id.btn_nav_side_auto),
+            NavSide.Mode.LEFT  to view.findViewById(R.id.btn_nav_side_left),
+            NavSide.Mode.RIGHT to view.findViewById(R.id.btn_nav_side_right)
+        )
+        val navSide = NavSide.mode(requireContext())
+        navSideBtns.forEach { (mode, btn) ->
+            val active = mode == navSide
+            btn.backgroundTintList = ColorStateList.valueOf(if (active) accentDim else inactiveColor)
+            btn.setTextColor(if (active) textActive else textInactive)
+            btn.strokeColor = ColorStateList.valueOf(
+                if (active) accentColor else requireContext().getColor(R.color.dash_border)
+            )
+            btn.setOnClickListener {
+                if (mode == NavSide.mode(requireContext())) return@setOnClickListener
+                NavSide.setMode(requireContext(), mode)
+                AppLogger.i("MG4_SETTINGS", "Côté du menu → ${mode.key}")
+                requireActivity().recreate()
+            }
+        }
+        view.findViewById<TextView>(R.id.tv_nav_side_desc).text = getString(R.string.settings_nav_side_desc,
+            getString(when (NavSide.detected(requireContext())) {
+                com.mg4.control.hardware.DriverSide.Side.LEFT -> R.string.settings_nav_side_detected_left
+                com.mg4.control.hardware.DriverSide.Side.RIGHT -> R.string.settings_nav_side_detected_right
+                null -> R.string.settings_nav_side_detected_unknown
+            }))
 
         // ── Taille du texte : Standard / Grand / Très grand ─────────────────
         // Appliquée par LocaleHelper au contexte de l'activité : il faut la recréer pour que les
@@ -1067,6 +1097,7 @@ class SettingsFragment : Fragment() {
         // Sonde type de batterie : décide du curseur de limite du pop-up de charge sur A9
         // (Standard LFP sans, Confort NMC avec — même firmware SWI69).
         com.mg4.control.hardware.BatteryTypeConfig.journaliser()
+        com.mg4.control.hardware.DriverSide.journaliser()
         // Énergie par tranche de 1 % apprise pendant les charges vues (issue #156).
         com.mg4.control.service.ChargeMonitor.journaliserApprentissage(ctx)
 

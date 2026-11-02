@@ -103,7 +103,12 @@ class StatsFragment : Fragment() {
             R.id.btn_stats_cat_trips to PAGE_TRIPS,
             R.id.btn_stats_cat_charges to PAGE_CHARGES,
         ).forEach { (id, index) ->
-            view.findViewById<MaterialButton>(id).setOnClickListener { page = index; render() }
+            view.findViewById<MaterialButton>(id).setOnClickListener {
+                // Changer de sous-onglet repart du haut : garder le défilement de l'autre page désoriente.
+                if (page != index) view.findViewById<ScrollView>(R.id.scroll_stats)?.scrollTo(0, 0)
+                page = index
+                render()
+            }
         }
         view.findViewById<MaterialButton>(R.id.btn_stats_clear).setOnClickListener { confirmClear() }
 

@@ -1423,6 +1423,11 @@ class ShortcutsFragment : Fragment() {
     private fun applyEnabledUI(enabled: Boolean) {
         shortcutsContent?.alpha = if (enabled) 1f else 0.35f
         setChildrenEnabled(shortcutsContent, enabled)
+        // Les pastilles sont dans la rangée de l'interrupteur, hors du contenu : grisées à part.
+        view?.findViewById<View>(R.id.sc_tabs_scroll)?.let {
+            it.alpha = if (enabled) 1f else 0.35f
+            setChildrenEnabled(it, enabled)
+        }
         // setChildrenEnabled réactive TOUT, « Sauvegarder » compris. Or son état ne dépend pas
         // de l'interrupteur global mais du nombre de modes choisis : il faut le lui rendre.
         if (enabled) {
