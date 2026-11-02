@@ -6,9 +6,14 @@ import com.mg4.control.api.ExternalApi
 import com.mg4.control.bluetooth.BluetoothProfileManager
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RegenLevel
+import com.mg4.control.automation.CustomRuleStore
+import com.mg4.control.automation.RulePlaces
 import com.mg4.control.model.RuleEvent
+import com.mg4.control.model.RuleKeys
 import com.mg4.control.model.RuleSignal
 import com.mg4.control.model.RuleWords
+import com.mg4.control.model.SunEvent
+import com.mg4.control.util.CustomShortcutSettings
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.shortcut.ShortcutAction
 import java.text.DateFormatSymbols
@@ -45,6 +50,8 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
         RuleSignal.PROFILE -> profils[text] ?: text
         RuleSignal.BT_DEVICE -> telephones[text.uppercase()] ?: text
         RuleSignal.DRIVE_MODE -> DriveMode.entries.firstOrNull { it.name.equals(text, true) }?.let { driveMode(it) } ?: text
+        RuleSignal.REGEN -> RegenLevel.entries.firstOrNull { it.name.equals(text, true) }?.let { regen(it) } ?: text
+        RuleSignal.RECIRC -> recircRes(text)?.let { t(it) } ?: text
         else -> text
     }
 
@@ -75,6 +82,16 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
     override fun set(key: String, value: String): String {
         val nom = keyRes(key)?.let { t(it) } ?: key
         val valeur = when (key) {
+            RuleKeys.BRIGHTNESS, RuleKeys.CHARGE_LIMIT -> "$value %"
+            RuleKeys.VOLUME -> value
+            RuleKeys.VOLUME_STEP -> if (value.startsWith("-")) value else "+$value"
+            RuleKeys.AIR_FLOW -> value
+            RuleKeys.AUTO_VOLUME -> t(when (value) { "0" -> R.string.rule_level_high; "1" -> R.string.rule_level_medium; else -> R.string.rule_level_low })
+            in RuleKeys.ALL -> when (value) {
+                "1", "true" -> t(R.string.rule_on)
+                "0", "false" -> t(R.string.rule_off)
+                else -> value
+            }
             ExternalApi.SET_STEERING_HEAT, ExternalApi.SET_HVAC_POWER, ExternalApi.SET_HVAC_AC,
             ExternalApi.SET_HVAC_AUTO, ExternalApi.SET_DEFROST_FRONT, ExternalApi.SET_DEFROST_REAR -> when (value) {
                 "1", "true" -> t(R.string.rule_on)
@@ -118,6 +135,44 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
     override fun repeat(times: Int) = t(R.string.rule_repeat_fmt, times)
     override fun notify(text: String) = t(R.string.rule_act_notify_fmt, text)
     override val stop: String get() = t(R.string.rule_act_stop)
+
+    // ── Étape 3 ──
+    private val regles by lazy { CustomRuleStore.all(ctx).associate { it.id to it.name } }
+    private val lieux by lazy { RulePlaces.all(ctx).associate { it.id to it.name } }
+
+    private fun appli(paquet: String): String = runCatching {
+        ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(paquet, 0)).toString()
+    }.getOrDefault(paquet)
+
+    /** « 1 déc. » : jour et mois abrégé, dans la langue de l'appli. */
+    fun monthDay(md: Int): String {
+        val mois = DateFormatSymbols.getInstance(ctx.resources.configuration.locales[0]).shortMonths
+        return "${md % 100} ${mois.getOrNull(md / 100 - 1) ?: "?"}"
+    }
+
+    fun placeName(id: String): String = lieux[id] ?: id
+
+    override fun every(minutes: Int) = t(R.string.rule_every_fmt, minutes)
+    override fun changes(signal: String) = t(R.string.rule_changes_fmt, signal)
+    override val manual: String get() = t(R.string.rule_manual)
+    override fun sun(e: SunEvent, offset: Int): String {
+        val base = t(if (e == SunEvent.SUNRISE) R.string.rule_sunrise else R.string.rule_sunset)
+        return if (offset == 0) base else base + " " + (if (offset > 0) "+" else "−") + t(R.string.rule_minutes_fmt, kotlin.math.abs(offset))
+    }
+    override fun random(percent: Int) = t(R.string.rule_random_fmt, percent)
+    override fun season(from: Int, to: Int) = t(R.string.rule_season_fmt, monthDay(from), monthDay(to))
+    override fun variable(name: String, test: String) = "$name $test"
+    override fun place(id: String, inside: Boolean) = t(if (inside) R.string.rule_in_place_fmt else R.string.rule_out_place_fmt, placeName(id))
+    override fun waitUntil(condition: String, seconds: Int) = t(R.string.rule_wait_until_fmt, condition, seconds)
+    override fun confirm(text: String) = t(R.string.rule_confirm_fmt, text)
+    override fun playSound(name: String) = t(R.string.rule_play_sound_fmt, name)
+    override fun openApp(pkg: String) = t(R.string.rule_open_app_fmt, appli(pkg))
+    override fun customShortcut(id: String) = t(R.string.rule_custom_shortcut_fmt, CustomShortcutSettings.get(ctx, id)?.name ?: id)
+    override fun ruleEnable(id: String, on: Boolean) = t(if (on) R.string.rule_enable_fmt else R.string.rule_disable_fmt, regles[id] ?: id)
+    override fun runRule(id: String) = t(R.string.rule_run_fmt, regles[id] ?: id)
+    override fun setVariable(name: String, value: String) = "$name = $value"
+    override fun speak(text: String) = t(R.string.rule_speak_fmt, text)
+    override fun navigate(dest: String) = t(R.string.rule_navigate_fmt, placeName(dest))
     override val unknown: String get() = t(R.string.rule_unknown)
 
     companion object {
@@ -133,6 +188,45 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             RuleSignal.BT_DEVICE -> R.string.rule_sig_bt
             RuleSignal.PROFILE -> R.string.rule_sig_profile
             RuleSignal.DRIVE_MODE -> R.string.rule_sig_drive_mode
+            RuleSignal.REGEN -> R.string.rule_key_regen
+            RuleSignal.ONE_PEDAL -> R.string.rule_sig_one_pedal
+            RuleSignal.ENERGY_SAVING -> R.string.rule_sig_energy_saving
+            RuleSignal.AEB -> R.string.rule_sig_aeb
+            RuleSignal.TSR -> R.string.rule_sig_tsr
+            RuleSignal.ESC -> R.string.rule_sig_esc
+            RuleSignal.DROWSINESS -> R.string.rule_sig_drowsiness
+            RuleSignal.OVERSPEED_ALARM -> R.string.rule_sig_overspeed
+            RuleSignal.AC_ON -> R.string.rule_key_ac
+            RuleSignal.HVAC_AUTO -> R.string.rule_key_hvac_auto
+            RuleSignal.HVAC_ECO -> R.string.rule_sig_hvac_eco
+            RuleSignal.HVAC_TEMP -> R.string.rule_key_hvac_temp
+            RuleSignal.FAN -> R.string.rule_key_hvac_fan
+            RuleSignal.RECIRC -> R.string.rule_key_recirc
+            RuleSignal.DEFROST_FRONT -> R.string.rule_key_defrost_front
+            RuleSignal.DEFROST_REAR -> R.string.rule_key_defrost_rear
+            RuleSignal.SEAT_HEAT_LEFT -> R.string.rule_key_seat_left
+            RuleSignal.SEAT_HEAT_RIGHT -> R.string.rule_key_seat_right
+            RuleSignal.STEERING_HEAT -> R.string.rule_key_steering
+            RuleSignal.LOCKED -> R.string.rule_sig_locked
+            RuleSignal.KEY_AWAY -> R.string.rule_sig_key_away
+            RuleSignal.BRIGHTNESS -> R.string.rule_sig_brightness
+            RuleSignal.VOLUME -> R.string.rule_sig_volume
+            RuleSignal.NIGHT -> R.string.rule_sig_night
+            RuleSignal.DRIVE_MINUTES -> R.string.rule_sig_drive_minutes
+            RuleSignal.DATA_TODAY_MB -> R.string.rule_sig_data_today
+            RuleSignal.DATA_MONTH_MB -> R.string.rule_sig_data_month
+            RuleSignal.CHARGE_LIMIT -> R.string.rule_sig_charge_limit
+            RuleSignal.PLUGGED -> R.string.rule_sig_plugged
+            RuleSignal.CHARGE_DC -> R.string.rule_sig_charge_dc
+            RuleSignal.FIRMWARE -> R.string.rule_sig_firmware
+            RuleSignal.PROJECTION -> R.string.rule_sig_projection
+            RuleSignal.WIFI_ON -> R.string.rule_sig_wifi_on
+            RuleSignal.WIFI_SSID -> R.string.rule_sig_wifi_ssid
+            RuleSignal.BT_ON -> R.string.rule_sig_bt_on
+            RuleSignal.HOTSPOT_ON -> R.string.rule_sig_hotspot
+            RuleSignal.MEDIA_PLAYING -> R.string.rule_sig_media_playing
+            RuleSignal.IN_CALL -> R.string.rule_sig_in_call
+            RuleSignal.SUN_UP -> R.string.rule_sig_sun_up
         }
 
         fun eventRes(e: RuleEvent): Int = when (e) {
@@ -155,6 +249,26 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             ExternalApi.SET_HVAC_RECIRC -> R.string.rule_key_recirc
             ExternalApi.SET_DEFROST_FRONT -> R.string.rule_key_defrost_front
             ExternalApi.SET_DEFROST_REAR -> R.string.rule_key_defrost_rear
+            RuleKeys.BRIGHTNESS -> R.string.rule_sig_brightness
+            RuleKeys.VOLUME -> R.string.rule_sig_volume
+            RuleKeys.VOLUME_STEP -> R.string.rule_key_volume_step
+            RuleKeys.ONE_PEDAL -> R.string.rule_sig_one_pedal
+            RuleKeys.ENERGY_SAVING -> R.string.rule_sig_energy_saving
+            RuleKeys.AEB -> R.string.rule_sig_aeb
+            RuleKeys.TSR -> R.string.rule_sig_tsr
+            RuleKeys.ESC -> R.string.rule_sig_esc
+            RuleKeys.DROWSINESS -> R.string.rule_sig_drowsiness
+            RuleKeys.OVERSPEED_ALARM -> R.string.rule_sig_overspeed
+            RuleKeys.SPEED_LIMIT_TONE -> R.string.rule_key_speed_limit_tone
+            RuleKeys.HVAC_ECO -> R.string.rule_sig_hvac_eco
+            RuleKeys.AIR_FLOW -> R.string.rule_key_air_flow
+            RuleKeys.AUTO_VOLUME -> R.string.rule_key_auto_volume
+            RuleKeys.AUTO_HIGH_BEAM -> R.string.rule_key_auto_high_beam
+            RuleKeys.BATTERY_HEAT -> R.string.rule_key_battery_heat
+            RuleKeys.CHARGE_LIMIT -> R.string.rule_sig_charge_limit
+            RuleKeys.WIFI -> R.string.rule_sig_wifi_on
+            RuleKeys.BLUETOOTH -> R.string.rule_sig_bt_on
+            RuleKeys.HOTSPOT -> R.string.rule_sig_hotspot
             else -> null
         }
 

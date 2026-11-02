@@ -117,6 +117,8 @@ object ShortcutCatalog {
             add(Item(ctx.getString(R.string.shortcuts_action_android_settings), ShortcutAction.ANDROID_SETTINGS))
             // Raccourci perso (issue #172) : appli, fonction d'une autre appli, diffusion, lien, webhook.
             add(Item(ctx.getString(R.string.shortcuts_action_custom),         ShortcutAction.CUSTOM))
+            // Mes automatisations : lancer celle choisie pour l'emplacement (étape 3).
+            add(Item(ctx.getString(R.string.shortcuts_action_run_rule),       ShortcutAction.RUN_RULE))
             if (MG4Hardware.hasVehiclePowerOff()) {
                 add(Item(ctx.getString(R.string.shortcuts_action_vehicle_power_off), ShortcutAction.VEHICLE_POWER_OFF))
             }

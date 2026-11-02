@@ -52,6 +52,19 @@
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
+    <!-- Mes automatisations, étape 3 (2026-11-02) : lieux et soleil (position), Wi-Fi, Bluetooth et
+         partage de connexion à allumer / couper, export et import du fichier des automatisations.
+         Accordées d'office à l'identité système (android.uid.system). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.TETHER_PRIVILEGED"
+        tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
     <!-- [T-902] "com.saic.keyevent.hardkey.report" n'est pas un broadcast protégé :
          n'importe quelle app installée peut le forger et piloter les raccourcis, donc
          écrire mode de conduite / régen / ADAS / AEB. Le receiver exige désormais cette

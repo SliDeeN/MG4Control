@@ -183,6 +183,11 @@ class CustomRuleTest {
         override suspend fun profile(id: String) = true.also { faits += "profil:$id" }
         override fun notify(text: String) { faits += "msg:$text" }
         override suspend fun pause(ms: Long) { attente += ms }
+        var reponse: Boolean? = true
+        /** Appelé à chaque pause d'« attendre que » : de quoi faire évoluer l'état. */
+        var surPause: (() -> Unit)? = null
+        override suspend fun confirm(text: String, seconds: Int): Boolean? = reponse.also { faits += "q:$text" }
+        override suspend fun perform(a: RuleAction): Boolean = true.also { faits += "${a.type}:${a.text ?: a.key}" }
     }
 
     @Test
@@ -270,6 +275,83 @@ class CustomRuleTest {
         assertEquals("journal plafonné, puis …", RuleRun.MAX_JOURNAL + 1, long.journal.size)
     }
 
+    // ── Étape 3 ─────────────────────────────────────────────────────────────
+
+    @Test
+    fun `periode de l'annee, hasard, variable et lieu`() {
+        val hiver = RuleCondition(RuleCondition.Type.SEASON, from = 1201, to = 228)
+        assertEquals(true, RuleLogic.evaluate(hiver, RuleState(monthDay = 1225)))
+        assertEquals(true, RuleLogic.evaluate(hiver, RuleState(monthDay = 115)))
+        assertEquals(false, RuleLogic.evaluate(hiver, RuleState(monthDay = 615)))
+        assertNull("horloge inconnue", RuleLogic.evaluate(hiver, RuleState()))
+
+        val chance = RuleCondition(RuleCondition.Type.RANDOM, number = 30.0)
+        assertEquals(true, RuleLogic.evaluate(chance, RuleState(chance = 12.0)))
+        assertEquals(false, RuleLogic.evaluate(chance, RuleState(chance = 30.0)))
+
+        val vars = RuleState(variables = mapOf("COMPTEUR" to "3", "FAIT" to "true"))
+        assertEquals(true, RuleLogic.evaluate(RuleCondition(RuleCondition.Type.VARIABLE, text = " compteur ", op = RuleOp.ABOVE, number = 2.0), vars))
+        assertEquals(true, RuleLogic.evaluate(RuleCondition(RuleCondition.Type.VARIABLE, text = "fait", op = RuleOp.IS_TRUE), vars))
+        assertNull("jamais définie", RuleLogic.evaluate(RuleCondition(RuleCondition.Type.VARIABLE, text = "autre", op = RuleOp.IS_TRUE), vars))
+
+        val maison = RuleCondition(RuleCondition.Type.PLACE, text = "m", op = RuleOp.IS_FALSE)
+        assertEquals(true, RuleLogic.evaluate(maison, RuleState(places = mapOf("m" to false))))
+        assertNull("position inconnue", RuleLogic.evaluate(maison, RuleState(places = mapOf("m" to null))))
+        assertEquals(setOf("m"), RuleLogic.places(CustomRule(condition = RuleCondition(RuleCondition.Type.ALL, children = listOf(maison)))))
+    }
+
+    @Test
+    fun `soleil et distances`() {
+        // Paris, 21 juin, heure d'été (UTC+2) : lever ≈ 5:47, coucher ≈ 21:58.
+        val lever = SunCalc.minuteOfDay(172, 48.8566, 2.3522, 120, rising = true)!!
+        val coucher = SunCalc.minuteOfDay(172, 48.8566, 2.3522, 120, rising = false)!!
+        assertTrue("lever $lever", lever in (5 * 60 + 40)..(5 * 60 + 55))
+        assertTrue("coucher $coucher", coucher in (21 * 60 + 50)..(22 * 60 + 5))
+        assertEquals(true, SunCalc.isUp(12 * 60, 172, 48.8566, 2.3522, 120))
+        assertEquals(false, SunCalc.isUp(23 * 60, 172, 48.8566, 2.3522, 120))
+        assertNull("nuit polaire", SunCalc.minuteOfDay(355, 78.2, 15.6, 60, rising = true))
+        // Paris → Lyon ≈ 392 km.
+        assertTrue(Geo.distanceM(48.8566, 2.3522, 45.764, 4.8357) in 385_000.0..400_000.0)
+        assertTrue(RulePlace(lat = 48.8566, lng = 2.3522, radius = 200).contains(48.8575, 2.3522))
+    }
+
+    @Test
+    fun `declencheurs change et periodique`() {
+        val c = ChangeWatch()
+        assertFalse("première lecture = départ", c.onValue("P"))
+        assertFalse(c.onValue("P"))
+        assertFalse("illisible ne compte pas", c.onValue(null))
+        assertTrue(c.onValue("D"))
+        val p = PeriodicWatch(debut = 0)
+        assertFalse("pas de salve au démarrage", p.onTick(1_000, 60_000))
+        assertTrue(p.onTick(60_000, 60_000))
+        assertFalse(p.onTick(90_000, 60_000))
+        assertTrue(p.onTick(120_000, 60_000))
+    }
+
+    @Test
+    fun `attendre que, question et actions deleguees`() = runBlocking {
+        val fx = Faux(etat(RuleSignal.READY to false))
+        val run = RuleRun(fx)
+        run.run(listOf(RuleAction(RuleAction.Type.WAIT_UNTIL, condition = cmp(RuleSignal.READY, RuleOp.IS_TRUE), seconds = 3),
+            RuleAction(RuleAction.Type.NOTIFY, text = "suite")))
+        assertEquals("délai écoulé : on continue", listOf("msg:suite"), fx.faits)
+        assertEquals(3_000L, fx.attente)
+
+        val non = Faux().also { it.reponse = false }
+        RuleRun(non).run(listOf(RuleAction(RuleAction.Type.CONFIRM, text = "Clim ?"), RuleAction(RuleAction.Type.NOTIFY, text = "x")))
+        assertEquals("Non arrête", listOf("q:Clim ?"), non.faits)
+        val muet = Faux().also { it.reponse = null }
+        RuleRun(muet).run(listOf(RuleAction(RuleAction.Type.CONFIRM, text = "Clim ?", value = "yes"), RuleAction(RuleAction.Type.NOTIFY, text = "x")))
+        assertEquals("sans réponse = oui si demandé", listOf("q:Clim ?", "msg:x"), muet.faits)
+
+        val d = Faux()
+        val r = RuleRun(d)
+        r.run(listOf(RuleAction(RuleAction.Type.SET_VARIABLE, key = "N", value = "1"), RuleAction(RuleAction.Type.SPEAK, text = "Bonjour")))
+        assertEquals(listOf("SET_VARIABLE:N", "SPEAK:Bonjour"), d.faits)
+        assertEquals(2, r.done)
+    }
+
     // ── Enregistrement ──────────────────────────────────────────────────────
 
     @Test
@@ -334,6 +416,24 @@ class CustomRuleTest {
         override fun waitFor(seconds: Int) = "attendre $seconds s"
         override fun ifThen(condition: String) = "si $condition"
         override fun repeat(times: Int) = "répéter $times fois"
+        override fun every(minutes: Int) = "toutes les $minutes min"
+        override fun changes(signal: String) = "$signal change"
+        override val manual = "à la main"
+        override fun sun(e: SunEvent, offset: Int) = "$e $offset"
+        override fun random(percent: Int) = "$percent %"
+        override fun season(from: Int, to: Int) = "$from-$to"
+        override fun variable(name: String, test: String) = "$name $test"
+        override fun place(id: String, inside: Boolean) = (if (inside) "dans " else "hors ") + id
+        override fun waitUntil(condition: String, seconds: Int) = "attendre que $condition ($seconds s)"
+        override fun confirm(text: String) = "demander $text"
+        override fun playSound(name: String) = "son $name"
+        override fun openApp(pkg: String) = "appli $pkg"
+        override fun customShortcut(id: String) = "perso $id"
+        override fun ruleEnable(id: String, on: Boolean) = "$id $on"
+        override fun runRule(id: String) = "lancer $id"
+        override fun setVariable(name: String, value: String) = "$name = $value"
+        override fun speak(text: String) = "dire $text"
+        override fun navigate(dest: String) = "aller $dest"
         override fun notify(text: String) = "« $text »"
         override val stop = "arrêter"
         override val unknown = "?"

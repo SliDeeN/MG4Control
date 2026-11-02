@@ -125,7 +125,11 @@ class FloatingButtonsPage {
         val listeLue = FloatingButtonSettings.buttons(ctx)
         // Un raccourci perso garde son nom à lui (renommé depuis : le nouveau).
         val relibelles = listeLue.map { b ->
-            val nom = if (b.action == ShortcutAction.CUSTOM.name) CustomShortcutSettings.get(ctx, b.customId)?.name else libelle(b.action)
+            val nom = when (b.action) {
+                ShortcutAction.CUSTOM.name -> CustomShortcutSettings.get(ctx, b.customId)?.name
+                ShortcutAction.RUN_RULE.name -> RuleChooser.nom(ctx, b.customId)
+                else -> libelle(b.action)
+            }
             nom?.let { b.copy(actionLabel = it) } ?: b
         }
         if (relibelles != listeLue) {
@@ -256,6 +260,8 @@ class FloatingButtonsPage {
             val (nom, action) = actions[rang]
             if (action == ShortcutAction.CUSTOM) {
                 CustomShortcutDialog.choisir(ctx, dejaPerso) { c -> surChoix(action, c.name, c.id) }
+            } else if (action == ShortcutAction.RUN_RULE) {
+                RuleChooser.choisir(ctx, dejaPerso) { r -> surChoix(action, r.name, r.id) }
             } else {
                 surChoix(action, nom, null)
             }

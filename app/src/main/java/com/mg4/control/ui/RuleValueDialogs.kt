@@ -175,6 +175,58 @@ internal object RuleValueDialogs {
         }
     }
 
+    /**
+     * Une période de l'année, de [de] à [a] (mois × 100 + jour) ; elle peut passer l'an (1er décembre
+     * → 28 février). Jour et mois à part, chacun entre − et + ; [nom] écrit « 1 déc. ».
+     */
+    fun periode(ctx: Context, titre: CharSequence, de: Int, a: Int, nom: (Int) -> String, onOk: (Int, Int) -> Unit) {
+        var d = de
+        var f = a
+        fenetre(ctx, titre, null, LARGEUR_DP) { corps ->
+            fun ligne(depart: Int, maj: (Int) -> Unit) {
+                var v = depart
+                val rangee = LinearLayout(ctx).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                }
+                lateinit var aff: TextView
+                fun montrer() { aff.text = nom(v); maj(v) }
+                fun jours(m: Int) = intArrayOf(31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)[m - 1]
+                val (jour, tj) = pasAPas(ctx, 60f) { sens ->
+                    val m = v / 100
+                    v = m * 100 + ((v % 100 - 1 + sens + jours(m)) % jours(m) + 1)
+                    montrer()
+                }
+                val (mois, tm) = pasAPas(ctx, 60f) { sens ->
+                    val m = ((v / 100 - 1 + sens + 12) % 12) + 1
+                    v = m * 100 + minOf(v % 100, jours(m))
+                    montrer()
+                }
+                tj.visibility = View.GONE
+                tm.visibility = View.GONE
+                aff = TextView(ctx).apply {
+                    gravity = Gravity.CENTER
+                    setTextColor(ctx.getColor(R.color.text_primary))
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 36f)
+                    paint.isFakeBoldText = true
+                    layoutParams = LinearLayout.LayoutParams(dp(ctx, 220f), LinearLayout.LayoutParams.WRAP_CONTENT)
+                }
+                // − jour + | date | − mois +
+                rangee.addView(jour)
+                rangee.addView(aff)
+                rangee.addView(mois)
+                corps.addView(rangee)
+                montrer()
+            }
+            corps.addView(legende(ctx, ctx.getString(R.string.rule_range_from)))
+            ligne(de) { d = it }
+            corps.addView(legende(ctx, ctx.getString(R.string.rule_range_to)))
+            ligne(a) { f = it }
+            corps.addView(legende(ctx, ctx.getString(R.string.rule_season_hint)))
+            return@fenetre { onOk(d, f); true }
+        }
+    }
+
     /** Des jours, 1 = lundi … 7 = dimanche ; au moins un. */
     fun jours(ctx: Context, titre: CharSequence, choisis: List<Int>, nom: (Int) -> String, onOk: (List<Int>) -> Unit) {
         val actifs = choisis.filter { it in 1..7 }.toMutableSet()

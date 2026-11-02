@@ -949,6 +949,13 @@ class MG4ControlService : Service() {
             return
         }
 
+        // RUN_RULE (Mes automatisations) : l'automatisation de l'emplacement, ou celle de la bulle.
+        if (action == ShortcutAction.RUN_RULE) {
+            val id = customId ?: prefs.getString("shortcut_${pressKey}_rule_id", null)
+            com.mg4.control.automation.CustomRules.runManual(this@MG4ControlService, id, "raccourci $pressKey")
+            return
+        }
+
         // PROFILE_PICKER : overlay flottant au-dessus du launcher — un second appui le referme
         // (issue #137), comme le pop-up HVAC.
         if (action == ShortcutAction.PROFILE_PICKER) {

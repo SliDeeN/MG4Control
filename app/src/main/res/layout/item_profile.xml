@@ -108,7 +108,8 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:baselineAligned="false">
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_edit"
@@ -147,11 +148,8 @@
             android:textColor="@color/text_primary"
             android:textSize="19sp"
             android:textAllCaps="false"
-            android:maxLines="1"
-            app:autoSizeTextType="uniform"
-            app:autoSizeMinTextSize="13sp"
-            app:autoSizeMaxTextSize="19sp"
-            app:autoSizeStepGranularity="1sp"
+            android:maxLines="2"
+            android:lineSpacingMultiplier="0.9"
             app:backgroundTint="@color/dash_btn"
             app:strokeWidth="1dp"
             app:strokeColor="@color/dash_border"

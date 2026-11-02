@@ -1258,9 +1258,11 @@
                     android:background="@color/dash_border"
                     android:layout_marginBottom="5dp" />
 
+                <!-- Centré dans la hauteur de la carte : les colonnes voisines sont plus hautes. -->
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
                     android:gravity="center">
 
                     <com.mg4.control.ui.widget.SegmentSwitch
@@ -1452,11 +1454,12 @@
                     android:background="@color/dash_border"
                     android:layout_marginBottom="5dp" />
 
-                <!-- Non-SWI132 : switch centré (layout par défaut) -->
+                <!-- Non-SWI132 : switch centré, aussi dans la hauteur de la carte (layout par défaut) -->
                 <LinearLayout
                     android:id="@+id/elk_activation_simple"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
                     android:gravity="center">
 
                     <com.mg4.control.ui.widget.SegmentSwitch

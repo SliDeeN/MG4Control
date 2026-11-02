@@ -102,7 +102,11 @@ enum class ShortcutAction(val id: Int) {
 
     // Paramètres Android (2026-10-31, repris du fork sensoyg) : ouvre l'écran des paramètres
     // d'Android, que le launcher SAIC ne propose pas. Voir AndroidSettings. N'écrit rien.
-    ANDROID_SETTINGS(50);
+    ANDROID_SETTINGS(50),
+
+    // Mes automatisations (étape 3, 2026-11-02) : lance l'automatisation choisie pour l'emplacement
+    // (`shortcut_<slot>_rule_id`, ou FloatingButton.customId) ; ses conditions s'appliquent.
+    RUN_RULE(51);
 
     companion object {
         /**

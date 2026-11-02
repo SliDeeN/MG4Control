@@ -52,7 +52,57 @@ enum class RuleSignal(val kind: Kind) {
     HVAC_ON(Kind.BOOL),
     BT_DEVICE(Kind.TEXT_SET),
     PROFILE(Kind.TEXT),
-    DRIVE_MODE(Kind.TEXT);
+    DRIVE_MODE(Kind.TEXT),
+
+    // ── Lot 1 (étape 3, 2026-11-02) : ce que MG4Control lisait déjà ailleurs ──
+    /** Niveau de récupération, nom de [RegenLevel]. */
+    REGEN(Kind.TEXT),
+    ONE_PEDAL(Kind.BOOL),
+    ENERGY_SAVING(Kind.BOOL),
+    AEB(Kind.BOOL),
+    TSR(Kind.BOOL),
+    ESC(Kind.BOOL),
+    DROWSINESS(Kind.BOOL),
+    OVERSPEED_ALARM(Kind.BOOL),
+    AC_ON(Kind.BOOL),
+    HVAC_AUTO(Kind.BOOL),
+    HVAC_ECO(Kind.BOOL),
+    HVAC_TEMP(Kind.NUMBER),
+    FAN(Kind.NUMBER),
+    /** `INNER`, `OUTSIDE` ou `AUTO`. */
+    RECIRC(Kind.TEXT),
+    DEFROST_FRONT(Kind.BOOL),
+    DEFROST_REAR(Kind.BOOL),
+    SEAT_HEAT_LEFT(Kind.NUMBER),
+    SEAT_HEAT_RIGHT(Kind.NUMBER),
+    STEERING_HEAT(Kind.BOOL),
+    LOCKED(Kind.BOOL),
+    /** Clé qui s'éloigne (chargeur sans fil 0x2140f445 = 8, relevé SWI133 seulement). */
+    KEY_AWAY(Kind.BOOL),
+    BRIGHTNESS(Kind.NUMBER),
+    VOLUME(Kind.NUMBER),
+    /** Feux de position automatiques allumés : la nuit des écrans d'origine. */
+    NIGHT(Kind.BOOL),
+    /** Minutes depuis le dernier passage en READY (0 hors READY). */
+    DRIVE_MINUTES(Kind.NUMBER),
+    DATA_TODAY_MB(Kind.NUMBER),
+    DATA_MONTH_MB(Kind.NUMBER),
+    CHARGE_LIMIT(Kind.NUMBER),
+    PLUGGED(Kind.BOOL),
+    CHARGE_DC(Kind.BOOL),
+    /** Nom de la génération de firmware (`SWI133`…). */
+    FIRMWARE(Kind.TEXT),
+    PROJECTION(Kind.BOOL),
+
+    // ── Lot 2 : Android ──
+    WIFI_ON(Kind.BOOL),
+    WIFI_SSID(Kind.TEXT),
+    BT_ON(Kind.BOOL),
+    HOTSPOT_ON(Kind.BOOL),
+    MEDIA_PLAYING(Kind.BOOL),
+    IN_CALL(Kind.BOOL),
+    /** Soleil au-dessus de l'horizon, à la position de la voiture. */
+    SUN_UP(Kind.BOOL);
 
     enum class Kind { BOOL, NUMBER, TEXT, TEXT_SET }
 
@@ -73,6 +123,9 @@ enum class RuleSignal(val kind: Kind) {
 
 enum class RuleOp { IS_TRUE, IS_FALSE, ABOVE, BELOW, EQUALS, NOT_EQUALS }
 
+/** Lever ou coucher du soleil, pour un déclencheur [RuleTrigger.Type.SUN]. */
+enum class SunEvent { SUNRISE, SUNSET }
+
 /** Événements ponctuels, sans valeur à comparer. */
 enum class RuleEvent {
     /** Démarrage du service, donc de l'écran de la voiture. */
@@ -86,7 +139,11 @@ enum class RuleEvent {
  * - ALL / ANY / NOT : groupe de [children] (NOT = aucune n'est vraie) ;
  * - COMPARE : [signal] [op] [number] ou [text] ;
  * - TIME_RANGE : de [from] à [to], en minutes depuis minuit (peut passer minuit : 22:00 → 6:00) ;
- * - WEEKDAYS : jour dans [days], 1 = lundi … 7 = dimanche.
+ * - WEEKDAYS : jour dans [days], 1 = lundi … 7 = dimanche ;
+ * - RANDOM : vrai [number] fois sur 100, tiré à chaque évaluation ;
+ * - SEASON : période de l'année de [from] à [to], en mois × 100 + jour (1201 → 0228 passe l'an) ;
+ * - VARIABLE : la variable [text] comparée par [op] à [number] (ou vraie / fausse) ;
+ * - PLACE : la voiture est ([op] IS_TRUE) ou n'est pas (IS_FALSE) dans le lieu [text] (lot 2).
  */
 data class RuleCondition(
     val type: Type? = null,
@@ -98,8 +155,10 @@ data class RuleCondition(
     val to: Int? = null,
     val days: List<Int>? = null,
     val children: List<RuleCondition>? = null,
+    /** Valeur texte comparée à une variable (VARIABLE, EQUALS / NOT_EQUALS sans nombre). */
+    val value: String? = null,
 ) {
-    enum class Type { ALL, ANY, NOT, COMPARE, TIME_RANGE, WEEKDAYS }
+    enum class Type { ALL, ANY, NOT, COMPARE, TIME_RANGE, WEEKDAYS, RANDOM, SEASON, VARIABLE, PLACE }
 
     val isGroup: Boolean get() = type == Type.ALL || type == Type.ANY || type == Type.NOT
 }
@@ -108,7 +167,11 @@ data class RuleCondition(
  * Un déclencheur.
  * - EVENT : [event] arrive ;
  * - BECOMES : [condition] PASSE de fausse à vraie (et le reste [forSeconds]) ;
- * - TIME : l'horloge arrive à [at] (minutes depuis minuit).
+ * - TIME : l'horloge arrive à [at] (minutes depuis minuit) ;
+ * - PERIODIC : toutes les [every] minutes (étape 3) ;
+ * - CHANGES : la valeur du signal de [condition] change (d'une valeur lue à une autre) ;
+ * - MANUAL : lancée par un bouton du volant, une bulle ou une autre automatisation ;
+ * - SUN : au lever ou au coucher du soleil [sun], décalé de [offset] minutes (lot 2).
  */
 data class RuleTrigger(
     val type: Type? = null,
@@ -116,8 +179,11 @@ data class RuleTrigger(
     val condition: RuleCondition? = null,
     val at: Int? = null,
     val forSeconds: Int = 0,
+    val every: Int? = null,
+    val sun: SunEvent? = null,
+    val offset: Int = 0,
 ) {
-    enum class Type { EVENT, BECOMES, TIME }
+    enum class Type { EVENT, BECOMES, TIME, PERIODIC, CHANGES, MANUAL, SUN }
 }
 
 /**
@@ -129,7 +195,18 @@ data class RuleTrigger(
  * - IF : si [condition], alors [then], sinon [otherwise] ;
  * - NOTIFY : un message [text] à l'écran ;
  * - STOP : arrêter l'automatisation ici ;
- * - REPEAT : [then] répété [count] fois (étape 2, plafonné par [RuleRun.MAX_REPEAT]).
+ * - REPEAT : [then] répété [count] fois (étape 2, plafonné par [RuleRun.MAX_REPEAT]) ;
+ * - WAIT_UNTIL : attendre que [condition] soit vraie, [seconds] au plus, puis continuer ;
+ * - CONFIRM : poser la question [text] (Oui / Non), [seconds] pour répondre ; Non arrête,
+ *   sans réponse vaut Oui si [value] = "yes", sinon arrête ;
+ * - PLAY_SOUND : le son n° [value] des sons d'automatisation ([text] = son nom) ;
+ * - OPEN_APP : ouvrir l'appli [text] (nom de paquet) ;
+ * - CUSTOM_SHORTCUT : lancer le raccourci perso [text] (identifiant) ;
+ * - RULE_ENABLE : activer ([value] = "1") ou couper ("0") l'automatisation [text] ;
+ * - RUN_RULE : lancer l'automatisation [text] (ses conditions s'appliquent) ;
+ * - SET_VARIABLE : la variable [key] prend la valeur [value] ;
+ * - SPEAK : lire [text] à voix haute (lot 2) ;
+ * - NAVIGATE : ouvrir la navigation vers le lieu [text] (identifiant ou « lat,lng », lot 2).
  */
 data class RuleAction(
     val type: Type? = null,
@@ -144,7 +221,11 @@ data class RuleAction(
     val otherwise: List<RuleAction>? = null,
     val count: Int? = null,
 ) {
-    enum class Type { SET, SHORTCUT, PROFILE, WAIT, IF, NOTIFY, STOP, REPEAT }
+    enum class Type {
+        SET, SHORTCUT, PROFILE, WAIT, IF, NOTIFY, STOP, REPEAT,
+        WAIT_UNTIL, CONFIRM, PLAY_SOUND, OPEN_APP, CUSTOM_SHORTCUT, RULE_ENABLE, RUN_RULE, SET_VARIABLE,
+        SPEAK, NAVIGATE,
+    }
 }
 
 /**
@@ -153,6 +234,9 @@ data class RuleAction(
  * [journal] : une ligne par action, dans la langue de l'appli (le Journal de l'éditeur).
  * Dans `model` comme le reste : enregistré par Gson, il doit garder ses noms une fois minifié.
  */
+/** Une ligne de l'historique des exécutions (les 20 dernières, toutes automatisations). */
+data class RuleHistoryEntry(val id: String = "", val name: String = "", val run: RuleLastRun = RuleLastRun())
+
 data class RuleLastRun(
     val atMs: Long? = null,
     val done: Int = 0,
@@ -171,4 +255,12 @@ data class RuleState(
     val minuteOfDay: Int? = null,
     /** 1 = lundi … 7 = dimanche ; `null` avec l'horloge. */
     val weekday: Int? = null,
+    /** Mois × 100 + jour (1225 = 25 décembre) ; `null` avec l'horloge. */
+    val monthDay: Int? = null,
+    /** Variables de l'utilisateur, en texte (« 12 », « true »). */
+    val variables: Map<String, String> = emptyMap(),
+    /** Tirage 0 ≤ x < 100 pour les conditions au hasard ; `null` = pas tiré (inconnu). */
+    val chance: Double? = null,
+    /** Dans chaque lieu ? par identifiant ; absent ou `null` = position inconnue. */
+    val places: Map<String, Boolean?> = emptyMap(),
 )

@@ -33,9 +33,49 @@ object RuleLogic {
                 val j = s.weekday ?: return null
                 j in c.days.orEmpty()
             }
+            RuleCondition.Type.RANDOM -> {
+                val tirage = s.chance ?: return null
+                val p = c.number ?: return null
+                tirage < p
+            }
+            RuleCondition.Type.SEASON -> {
+                val d = s.monthDay ?: return null
+                val de = c.from ?: return null
+                val a = c.to ?: return null
+                // Bornes incluses : du 1er décembre au 28 février compris.
+                if (de <= a) d in de..a else d >= de || d <= a
+            }
+            RuleCondition.Type.VARIABLE -> variable(c, s)
+            RuleCondition.Type.PLACE -> {
+                val dedans = s.places[c.text ?: return null] ?: return null
+                when (c.op) {
+                    RuleOp.IS_TRUE -> dedans
+                    RuleOp.IS_FALSE -> !dedans
+                    else -> null
+                }
+            }
             null -> null
         }
     }
+
+    /** Variable inconnue (jamais définie) : condition inconnue, comme un signal illisible. */
+    private fun variable(c: RuleCondition, s: RuleState): Boolean? {
+        val v = s.variables[c.text?.let { variableName(it) } ?: return null] ?: return null
+        val n = v.toDoubleOrNull()
+        val b = v.toBooleanStrictOrNull()
+        return when (c.op) {
+            RuleOp.IS_TRUE -> b ?: n?.let { it != 0.0 }
+            RuleOp.IS_FALSE -> (b ?: n?.let { it != 0.0 })?.not()
+            RuleOp.ABOVE -> n?.let { x -> c.number?.let { x > it } }
+            RuleOp.BELOW -> n?.let { x -> c.number?.let { x < it } }
+            RuleOp.EQUALS -> c.number?.let { k -> n?.let { it == k } } ?: c.value?.let { v.equals(it, true) }
+            RuleOp.NOT_EQUALS -> (c.number?.let { k -> n?.let { it == k } } ?: c.value?.let { v.equals(it, true) })?.not()
+            null -> null
+        }
+    }
+
+    /** Nom de variable normalisé : sans espaces autour, en majuscules, 32 caractères au plus. */
+    fun variableName(raw: String): String = raw.trim().uppercase().take(32)
 
     /** ET : un faux suffit ; sinon un inconnu rend inconnu. */
     fun tous(v: List<Boolean?>): Boolean? = when {
@@ -93,6 +133,24 @@ object RuleLogic {
         return out
     }
 
+    /** Les lieux dont une règle a besoin : seule leur appartenance est calculée. */
+    fun places(rule: CustomRule): Set<String> {
+        val out = mutableSetOf<String>()
+        fun c(x: RuleCondition?, d: Int) {
+            if (x == null || d > MAX_DEPTH) return
+            if (x.type == RuleCondition.Type.PLACE) x.text?.let { out += it }
+            x.children.orEmpty().forEach { c(it, d + 1) }
+        }
+        fun a(l: List<RuleAction>?, d: Int) {
+            if (l == null || d > MAX_DEPTH) return
+            l.forEach { c(it.condition, d + 1); a(it.then, d + 1); a(it.otherwise, d + 1) }
+        }
+        rule.triggers.forEach { c(it.condition, 0) }
+        c(rule.condition, 0)
+        a(rule.actions, 0)
+        return out
+    }
+
     /** Les signaux d'un seul déclencheur : le relevé périodique ne lit que ceux-là. */
     fun signals(t: RuleTrigger): Set<RuleSignal> = mutableSetOf<RuleSignal>().also { collect(t.condition, it, 0) }
 
@@ -115,10 +173,10 @@ object RuleLogic {
     fun usesClock(rule: CustomRule): Boolean {
         fun c(x: RuleCondition?, d: Int): Boolean = x != null && d <= MAX_DEPTH &&
             (x.type == RuleCondition.Type.TIME_RANGE || x.type == RuleCondition.Type.WEEKDAYS ||
-                x.children.orEmpty().any { c(it, d + 1) })
+                x.type == RuleCondition.Type.SEASON || x.children.orEmpty().any { c(it, d + 1) })
         fun a(l: List<RuleAction>?, d: Int): Boolean = l != null && d <= MAX_DEPTH &&
             l.any { c(it.condition, d + 1) || a(it.then, d + 1) || a(it.otherwise, d + 1) }
-        return rule.triggers.any { it.type == RuleTrigger.Type.TIME || c(it.condition, 0) } ||
+        return rule.triggers.any { it.type == RuleTrigger.Type.TIME || it.type == RuleTrigger.Type.SUN || c(it.condition, 0) } ||
             c(rule.condition, 0) || a(rule.actions, 0)
     }
 }
@@ -168,6 +226,40 @@ class TimeWatch {
     }
 }
 
+/**
+ * Un déclencheur « change » : part quand le signal passe d'une valeur LUE à une autre. La première
+ * lecture sert de point de départ ; une lecture inconnue ne compte pas.
+ */
+class ChangeWatch {
+    private var derniere: Any? = null
+    private var vue = false
+
+    fun onValue(v: Any?): Boolean {
+        if (v == null) return false
+        val change = vue && v != derniere
+        derniere = v
+        vue = true
+        return change
+    }
+}
+
+/**
+ * Un déclencheur périodique : part toutes les [everyMs], la première fois une période après son
+ * chargement (pas de salve au démarrage de l'écran). Horloge monotone : l'horloge d'usine du réveil
+ * n'y change rien.
+ */
+class PeriodicWatch(private val debut: Long) {
+    private var dernier: Long? = null
+
+    fun onTick(now: Long, everyMs: Long): Boolean {
+        if (everyMs <= 0) return false
+        val ref = dernier ?: debut
+        if (now - ref < everyMs) return false
+        dernier = now
+        return true
+    }
+}
+
 /** Que faire d'un déclenchement, selon l'état de la règle. */
 object RuleGate {
     enum class Decision { START, RESTART, BUSY, COOLDOWN, NOT_READY }
@@ -196,6 +288,10 @@ interface RuleEffects {
     suspend fun profile(id: String): Boolean
     fun notify(text: String)
     suspend fun pause(ms: Long)
+    /** Question Oui / Non ; `null` = pas de réponse dans le délai. */
+    suspend fun confirm(text: String, seconds: Int): Boolean?
+    /** Les autres actions (son, appli, raccourci perso, automatisations, variable, voix, navigation). */
+    suspend fun perform(a: RuleAction): Boolean
 }
 
 /**
@@ -296,6 +392,33 @@ class RuleRun(
                 ligne("↻ ${describe(a)}")
                 repeat(n) { if (!arret) bloc(a.then, depth + 1) }
             }
+            RuleAction.Type.WAIT_UNTIL -> {
+                val max = (a.seconds ?: 0).coerceIn(0, MAX_WAIT_S)
+                var ecoule = 0
+                while (true) {
+                    if (RuleLogic.evaluate(a.condition, fx.state()) == true) {
+                        ligne("✓ ${describe(a)}")
+                        break
+                    }
+                    // Délai écoulé : on continue quand même, comme Home Assistant par défaut.
+                    if (ecoule >= max) {
+                        ligne("… ${describe(a)} → ${max} s")
+                        break
+                    }
+                    fx.pause(1_000L)
+                    ecoule++
+                }
+            }
+            RuleAction.Type.CONFIRM -> {
+                val r = fx.confirm(a.text.orEmpty(), (a.seconds ?: 15).coerceIn(5, 120))
+                val oui = r ?: (a.value == "yes")
+                ligne("${describe(a)} → ${when (r) { true -> "✓"; false -> "✗"; null -> if (oui) "✓ …" else "✗ …" }}")
+                // Non (ou pas de réponse, par défaut) : la suite n'a pas été voulue.
+                if (!oui) arret = true
+            }
+            RuleAction.Type.PLAY_SOUND, RuleAction.Type.OPEN_APP, RuleAction.Type.CUSTOM_SHORTCUT,
+            RuleAction.Type.RULE_ENABLE, RuleAction.Type.RUN_RULE, RuleAction.Type.SET_VARIABLE,
+            RuleAction.Type.SPEAK, RuleAction.Type.NAVIGATE -> note(fx.perform(a), a)
             null -> ligne("? ${describe(a)}")
         }
     }

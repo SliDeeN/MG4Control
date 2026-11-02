@@ -337,6 +337,9 @@ object MG4Hardware {
     /** Objet `Car` lié, pour obtenir un gestionnaire SAIC par son nom ([EnergyProbe]). */
     internal fun car(): Any? = sCar
 
+    /** Propriété entière en zone globale par le CarPropertyManager, -1 si illisible (Mes automatisations). */
+    internal fun readIntGlobal(propId: Int): Int = getIntPropertyCPM(propId, AREA_GLOBAL)
+
     /** Lecture VPM brute (SWI133), -1 si indisponible — pour [LightProbe]. */
     internal fun vpmIntForProbe(propId: Int): Int = getIntPropertyVpm(propId)
 

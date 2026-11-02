@@ -5,6 +5,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.CustomRule
+import com.mg4.control.model.RuleHistoryEntry
 import com.mg4.control.model.RuleLastRun
 
 /**
@@ -78,6 +79,26 @@ object CustomRuleStore {
         write(ctx, all(ctx).filterNot { it.id == id })
         val runs = lastRuns(ctx) - id
         prefs(ctx).edit().putString(KEY_RUNS, gson.toJson(runs, typeRuns)).apply()
+    }
+
+    // ── Interrupteur général ──
+    private const val KEY_ENGINE = "engine_enabled"
+
+    fun isEngineEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_ENGINE, true)
+    fun setEngineEnabled(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_ENGINE, on).apply()
+
+    // ── Historique : les [HISTORY_MAX] dernières exécutions, toutes règles ──
+    private const val KEY_HISTORY = "history_json"
+    const val HISTORY_MAX = 20
+    private val typeHistory = object : TypeToken<List<RuleHistoryEntry>>() {}.type
+
+    fun history(ctx: Context): List<RuleHistoryEntry> =
+        runCatching { gson.fromJson<List<RuleHistoryEntry>>(prefs(ctx).getString(KEY_HISTORY, null), typeHistory) }
+            .getOrNull().orEmpty().filterNotNull()
+
+    fun addHistory(ctx: Context, id: String, name: String, run: RuleLastRun) = synchronized(LOCK) {
+        val l = (listOf(RuleHistoryEntry(id, name, run)) + history(ctx)).take(HISTORY_MAX)
+        prefs(ctx).edit().putString(KEY_HISTORY, gson.toJson(l, typeHistory)).apply()
     }
 
     fun lastRuns(ctx: Context): Map<String, RuleLastRun> {

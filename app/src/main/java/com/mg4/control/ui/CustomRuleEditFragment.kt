@@ -32,7 +32,14 @@ import com.mg4.control.model.RuleOp
 import com.mg4.control.model.RuleRun
 import com.mg4.control.model.RuleSignal
 import com.mg4.control.model.RuleText
+import com.mg4.control.model.RuleKeys
+import com.mg4.control.model.RuleLogic
 import com.mg4.control.model.RuleTrigger
+import com.mg4.control.model.SunEvent
+import com.mg4.control.automation.AndroidControls
+import com.mg4.control.automation.RulePlaces
+import com.mg4.control.automation.RuleVariables
+import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.ui.widget.SegmentSwitch
 import java.text.DateFormat
@@ -418,6 +425,10 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             add(R.string.rule_cond_compare to { condition(null, ok) })
             add(R.string.rule_cond_time to { plage(null, ok) })
             add(R.string.rule_cond_days to { jours(null, ok) })
+            add(R.string.rule_cond_season to { saison(null, ok) })
+            add(R.string.rule_cond_place to { lieu(null, ok) })
+            add(R.string.rule_cond_variable to { variable(null, ok) })
+            add(R.string.rule_cond_random to { hasard(null, ok) })
             if (profondeur < PROFONDEUR_MAX - 1) {
                 add(R.string.rule_cond_group_all to { ok(RuleCondition(RuleCondition.Type.ALL, children = emptyList())) })
                 add(R.string.rule_cond_group_any to { ok(RuleCondition(RuleCondition.Type.ANY, children = emptyList())) })
@@ -427,10 +438,14 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         liste(R.string.rule_choose_condition, choix)
     }
 
-    /** Modifie une condition simple (valeur, plage, jours) ; un nœud inconnu repart d'une valeur. */
+    /** Modifie une condition simple ; un nœud inconnu repart d'une valeur. */
     private fun condition(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) = when (actuelle?.type) {
         RuleCondition.Type.TIME_RANGE -> plage(actuelle, ok)
         RuleCondition.Type.WEEKDAYS -> jours(actuelle, ok)
+        RuleCondition.Type.SEASON -> saison(actuelle, ok)
+        RuleCondition.Type.PLACE -> lieu(actuelle, ok)
+        RuleCondition.Type.VARIABLE -> variable(actuelle, ok)
+        RuleCondition.Type.RANDOM -> hasard(actuelle, ok)
         else -> comparer(actuelle?.takeIf { it.type == RuleCondition.Type.COMPARE }, ok)
     }
 
@@ -443,6 +458,71 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     private fun jours(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
         RuleValueDialogs.jours(ctx, s(R.string.rule_days_title), actuelle?.days ?: listOf(1, 2, 3, 4, 5), mots::dayName) { j ->
             ok(RuleCondition(RuleCondition.Type.WEEKDAYS, days = j))
+        }
+    }
+
+    private fun saison(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        RuleValueDialogs.periode(ctx, s(R.string.rule_cond_season), actuelle?.from ?: 1201, actuelle?.to ?: 228, mots::monthDay) { de, a ->
+            ok(RuleCondition(RuleCondition.Type.SEASON, from = de, to = a))
+        }
+    }
+
+    private fun hasard(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        RuleValueDialogs.nombre(ctx, s(R.string.rule_cond_random), s(R.string.rule_random_hint), actuelle?.number?.toInt() ?: 50, 1, 99,
+            texte = { "$it %" }) { p -> ok(RuleCondition(RuleCondition.Type.RANDOM, number = p.toDouble())) }
+    }
+
+    /** Une variable : son nom (une existante, ou une nouvelle), puis le test. */
+    private fun variable(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        choisirVariable(actuelle?.text) { nom ->
+            valeurs(nom, listOf(
+                s(R.string.rule_var_true) to RuleOp.IS_TRUE, s(R.string.rule_var_false) to RuleOp.IS_FALSE,
+                s(R.string.rule_op_above) to RuleOp.ABOVE, s(R.string.rule_op_below) to RuleOp.BELOW,
+                s(R.string.rule_op_is) to RuleOp.EQUALS, s(R.string.rule_op_is_not) to RuleOp.NOT_EQUALS,
+            ), actuelle?.op) { op ->
+                val base = RuleCondition(RuleCondition.Type.VARIABLE, text = nom, op = op)
+                when (op) {
+                    RuleOp.IS_TRUE, RuleOp.IS_FALSE -> ok(base)
+                    else -> RuleValueDialogs.nombre(ctx, nom, null, actuelle?.number?.toInt() ?: 0, -9999, 9999,
+                        texte = { "$it" }) { n -> ok(base.copy(number = n.toDouble())) }
+                }
+            }
+        }
+    }
+
+    /** Choisir une variable : celles déjà définies, ou une nouvelle (nom saisi). */
+    private fun choisirVariable(deja: String?, ok: (String) -> Unit) {
+        val connues = RuleVariables.all(ctx).keys.sorted()
+        val nouvelle = s(R.string.rule_var_new)
+        valeurs(s(R.string.rule_choose_variable), connues.map { it to it } + (nouvelle to ""), deja?.let { RuleLogic.variableName(it) }) { v ->
+            if (v.isNotEmpty()) ok(v)
+            else RuleValueDialogs.texte(ctx, s(R.string.rule_var_name), "") { ok(RuleLogic.variableName(it)) }
+        }
+    }
+
+    /** Dans / hors d'un lieu : choisir le lieu (ou enregistrer la position actuelle), puis le sens. */
+    private fun lieu(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        choisirLieu(actuelle?.text) { id ->
+            valeurs(mots.placeName(id), listOf(s(R.string.rule_place_inside) to RuleOp.IS_TRUE, s(R.string.rule_place_outside) to RuleOp.IS_FALSE),
+                actuelle?.op) { op -> ok(RuleCondition(RuleCondition.Type.PLACE, text = id, op = op)) }
+        }
+    }
+
+    private fun choisirLieu(deja: String?, ok: (String) -> Unit) {
+        val lieux = RulePlaces.all(ctx)
+        val ici = "+ " + s(R.string.rule_place_here)
+        valeurs(s(R.string.rule_choose_place), lieux.map { it.name to it.id } + (ici to ""), deja) { id ->
+            if (id.isNotEmpty()) return@valeurs ok(id)
+            val l = AndroidControls.location(ctx)
+            if (l == null) return@valeurs Toast.makeText(ctx, s(R.string.rule_place_no_fix), Toast.LENGTH_LONG).show()
+            RuleValueDialogs.texte(ctx, s(R.string.rule_place_name), "") { nom ->
+                RuleValueDialogs.nombre(ctx, s(R.string.rule_place_radius), null, 200, 50, 5_000,
+                    texte = { "$it m" }, pas = { v, sens -> v + sens * (if (sens > 0 && v < 500 || sens < 0 && v <= 500) 50 else 250) }) { r ->
+                    val p = com.mg4.control.model.RulePlace(name = nom, lat = l.latitude, lng = l.longitude, radius = r)
+                    RulePlaces.save(ctx, RulePlaces.all(ctx) + p)
+                    ok(p.id)
+                }
+            }
         }
     }
 
@@ -459,7 +539,34 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             annuler = s(R.string.profile_cancel), choisi = choix.indexOfFirst { it.second == choisi }) { rang -> ok(choix[rang].second) }
     }
 
-    private fun signaux(): List<RuleSignal> = RuleSignal.entries.filter { it != RuleSignal.HVAC_ON || MG4Hardware.hasClimateControl() }
+    /** Les signaux proposés, dans un ordre de lecture (conduite, énergie, clim, confort, ADAS, appareil). */
+    private fun signaux(): List<RuleSignal> {
+        val clim = MG4Hardware.hasClimateControl()
+        val climat = setOf(RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO, RuleSignal.HVAC_TEMP,
+            RuleSignal.FAN, RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR)
+        return listOf(
+            RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
+            RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES,
+            RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.PLUGGED, RuleSignal.CHARGE_DC, RuleSignal.CHARGE_LIMIT,
+            RuleSignal.OUTSIDE_TEMP, RuleSignal.NIGHT, RuleSignal.SUN_UP,
+            RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO, RuleSignal.HVAC_TEMP, RuleSignal.FAN,
+            RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR,
+            RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT,
+            RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM,
+            RuleSignal.LOCKED, RuleSignal.KEY_AWAY,
+            RuleSignal.PROFILE, RuleSignal.BT_DEVICE, RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON,
+            RuleSignal.PROJECTION, RuleSignal.MEDIA_PLAYING, RuleSignal.IN_CALL, RuleSignal.BRIGHTNESS, RuleSignal.VOLUME,
+            RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB, RuleSignal.FIRMWARE,
+        ).filter { s ->
+            when {
+                s in climat -> clim
+                s == RuleSignal.ESC || s == RuleSignal.DROWSINESS -> MG4Hardware.hasDrowsinessAndEsc()
+                s == RuleSignal.KEY_AWAY -> com.mg4.control.util.FirmwareInfo.getGeneration() == com.mg4.control.util.FirmwareInfo.Gen.SWI133
+                s == RuleSignal.BRIGHTNESS -> MG4Hardware.hasBrightnessControl()
+                else -> true
+            }
+        }
+    }
 
     private class Borne(val min: Int, val max: Int, val defaut: Int, val pas: Int)
 
@@ -468,49 +575,66 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         RuleSignal.SOC -> Borne(0, 100, 50, 1)
         RuleSignal.RANGE -> Borne(0, 700, 100, 5)
         RuleSignal.OUTSIDE_TEMP -> Borne(-30, 50, 20, 1)
+        RuleSignal.HVAC_TEMP -> Borne(16, 30, 21, 1)
+        RuleSignal.FAN -> Borne(0, 7, 3, 1)
+        RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT -> Borne(0, 3, 0, 1)
+        RuleSignal.BRIGHTNESS -> Borne(0, 100, 50, 5)
+        RuleSignal.VOLUME -> Borne(0, 40, 10, 1)
+        RuleSignal.DRIVE_MINUTES -> Borne(0, 600, 30, 5)
+        RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> Borne(0, 50_000, 500, 50)
+        RuleSignal.CHARGE_LIMIT -> Borne(40, 100, 80, 10)
         else -> Borne(0, 100, 0, 1)
     }
 
-    /** Les valeurs possibles d'un signal texte ; vide = rien à proposer (pas de profil, de téléphone). */
-    private fun choixTexte(sig: RuleSignal): List<Pair<String, String>> = when (sig) {
+    /** Les valeurs possibles d'un signal texte ; vide = rien à proposer, `null` = valeur à saisir. */
+    private fun choixTexte(sig: RuleSignal): List<Pair<String, String>>? = when (sig) {
         RuleSignal.GEAR -> listOf(RuleSignal.GEAR_PARK, RuleSignal.GEAR_DRIVE, RuleSignal.GEAR_OTHER).map { mots.value(sig, it) to it }
         RuleSignal.PROFILE -> ProfileManager(ctx).getAll().map { it.name to it.id }
         RuleSignal.DRIVE_MODE -> DriveMode.entries.map { mots.driveMode(it) to it.name }
+        RuleSignal.REGEN -> RegenLevel.entries.map { mots.regen(it) to it.name }
+        RuleSignal.RECIRC -> listOf("INNER", "OUTSIDE", "AUTO").map { mots.value(sig, it) to it }
+        RuleSignal.FIRMWARE -> com.mg4.control.util.FirmwareInfo.Gen.entries.map { it.name to it.name }
         RuleSignal.BT_DEVICE -> runCatching { BluetoothProfileManager.getBondedDevices(ctx) }.getOrNull().orEmpty()
             .map { it.name to it.mac.uppercase() }
+        RuleSignal.WIFI_SSID -> null
         else -> emptyList()
     }
 
     /** Une comparaison : le signal, puis comment le comparer, puis la valeur. */
     private fun comparer(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
-        val liste = signaux()
-        valeurs(s(R.string.rule_choose_signal), liste.map { mots.signal(it) to it }, actuelle?.signal) { sig ->
-            val meme = actuelle?.takeIf { it.signal == sig }
-            fun base(op: RuleOp) = RuleCondition(RuleCondition.Type.COMPARE, signal = sig, op = op)
-            when (sig.kind) {
-                RuleSignal.Kind.BOOL -> valeurs(mots.signal(sig),
-                    listOf(s(R.string.segment_yes) to RuleOp.IS_TRUE, s(R.string.segment_no) to RuleOp.IS_FALSE), meme?.op) { op ->
-                    ok(base(op))
+        valeurs(s(R.string.rule_choose_signal), signaux().map { mots.signal(it) to it }, actuelle?.signal) { sig ->
+            comparerSignal(sig, actuelle?.takeIf { it.signal == sig }, ok)
+        }
+    }
+
+    private fun comparerSignal(sig: RuleSignal, meme: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        fun base(op: RuleOp) = RuleCondition(RuleCondition.Type.COMPARE, signal = sig, op = op)
+        when (sig.kind) {
+            RuleSignal.Kind.BOOL -> valeurs(mots.signal(sig),
+                listOf(s(R.string.segment_yes) to RuleOp.IS_TRUE, s(R.string.segment_no) to RuleOp.IS_FALSE), meme?.op) { op ->
+                ok(base(op))
+            }
+            RuleSignal.Kind.NUMBER -> valeurs(mots.signal(sig),
+                listOf(s(R.string.rule_op_above) to RuleOp.ABOVE, s(R.string.rule_op_below) to RuleOp.BELOW), meme?.op) { op ->
+                val b = borne(sig)
+                RuleValueDialogs.nombre(ctx, mots.signal(sig) + " " + s(if (op == RuleOp.ABOVE) R.string.rule_op_above else R.string.rule_op_below).lowercase(),
+                    null, meme?.number?.toInt() ?: b.defaut, b.min, b.max,
+                    texte = { "$it" + mots.unit(sig) }, pas = { v, sens -> v + sens * b.pas }) { n ->
+                    ok(base(op).copy(number = n.toDouble()))
                 }
-                RuleSignal.Kind.NUMBER -> valeurs(mots.signal(sig),
-                    listOf(s(R.string.rule_op_above) to RuleOp.ABOVE, s(R.string.rule_op_below) to RuleOp.BELOW), meme?.op) { op ->
-                    val b = borne(sig)
-                    RuleValueDialogs.nombre(ctx, mots.signal(sig) + " " + s(if (op == RuleOp.ABOVE) R.string.rule_op_above else R.string.rule_op_below).lowercase(),
-                        null, meme?.number?.toInt() ?: b.defaut, b.min, b.max,
-                        texte = { "$it" + mots.unit(sig) }, pas = { v, sens -> v + sens * b.pas }) { n ->
-                        ok(base(op).copy(number = n.toDouble()))
-                    }
+            }
+            RuleSignal.Kind.TEXT, RuleSignal.Kind.TEXT_SET -> {
+                val choix = choixTexte(sig)
+                if (choix != null && choix.isEmpty()) {
+                    Toast.makeText(ctx, s(if (sig == RuleSignal.BT_DEVICE) R.string.rule_no_phones else R.string.rule_no_profiles), Toast.LENGTH_LONG).show()
+                    return
                 }
-                RuleSignal.Kind.TEXT, RuleSignal.Kind.TEXT_SET -> {
-                    val choix = choixTexte(sig)
-                    if (choix.isEmpty()) {
-                        Toast.makeText(ctx, s(if (sig == RuleSignal.BT_DEVICE) R.string.rule_no_phones else R.string.rule_no_profiles), Toast.LENGTH_LONG).show()
-                        return@valeurs
+                valeurs(mots.signal(sig),
+                    listOf(s(R.string.rule_op_is) to RuleOp.EQUALS, s(R.string.rule_op_is_not) to RuleOp.NOT_EQUALS), meme?.op) { op ->
+                    if (choix == null) RuleValueDialogs.texte(ctx, mots.signal(sig), meme?.text ?: AndroidControls.wifiSsid(ctx).orEmpty()) { v ->
+                        ok(base(op).copy(text = v))
                     }
-                    valeurs(mots.signal(sig),
-                        listOf(s(R.string.rule_op_is) to RuleOp.EQUALS, s(R.string.rule_op_is_not) to RuleOp.NOT_EQUALS), meme?.op) { op ->
-                        valeurs(mots.signal(sig), choix, meme?.text) { v -> ok(base(op).copy(text = v)) }
-                    }
+                    else valeurs(mots.signal(sig), choix, meme?.text) { v -> ok(base(op).copy(text = v)) }
                 }
             }
         }
@@ -518,30 +642,68 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
     // ── Déclencheurs ─────────────────────────────────────────────────────────
 
+    private fun quand(sig: RuleSignal, op: RuleOp, texte: String? = null) =
+        RuleTrigger(RuleTrigger.Type.BECOMES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = sig, op = op, text = texte))
+
     private fun declencheur(actuel: RuleTrigger?, ok: (RuleTrigger) -> Unit) {
         fun evenement(t: RuleTrigger) = valeurs(s(R.string.rule_choose_event),
             RuleEvent.entries.filter { it != RuleEvent.FRONT_DOOR_OPEN || MG4Hardware.hasDoorDetection() }
                 .map { mots.event(it) to it }, t.event) { e -> ok(t.copy(type = RuleTrigger.Type.EVENT, event = e)) }
-        fun devient(t: RuleTrigger) = comparer(t.condition) { c ->
+        fun devient(t: RuleTrigger) = condition(t.condition) { c ->
             RuleValueDialogs.nombre(ctx, s(R.string.rule_for_title), s(R.string.rule_for_hint), t.forSeconds, 0, RuleRun.MAX_WAIT_S,
                 texte = { if (it == 0) s(R.string.rule_for_now) else duree(it) }, pas = ::pasDuree) { sec ->
                 ok(t.copy(type = RuleTrigger.Type.BECOMES, condition = c, forSeconds = sec))
             }
         }
+        fun change(t: RuleTrigger) = valeurs(s(R.string.rule_choose_signal), signaux().filter { it.kind != RuleSignal.Kind.NUMBER || it in CHANGE_NOMBRES }
+            .map { mots.signal(it) to it }, t.condition?.signal) { sig ->
+            ok(t.copy(type = RuleTrigger.Type.CHANGES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = sig)))
+        }
         fun horaire(t: RuleTrigger) = RuleValueDialogs.heure(ctx, s(R.string.rule_time_title), t.at ?: 7 * 60) { m ->
             ok(t.copy(type = RuleTrigger.Type.TIME, at = m))
+        }
+        fun periodique(t: RuleTrigger) = RuleValueDialogs.nombre(ctx, s(R.string.rule_every_title), s(R.string.rule_every_hint), t.every ?: 15, 1, 1_440,
+            texte = { if (it < 60) s(R.string.rule_minutes_fmt, it) else duree(it * 60) },
+            pas = { v, sens -> v + sens * (if (sens > 0 && v < 15 || sens < 0 && v <= 15) 1 else if (sens > 0 && v < 120 || sens < 0 && v <= 120) 5 else 30) }) { m ->
+            ok(t.copy(type = RuleTrigger.Type.PERIODIC, every = m))
+        }
+        fun soleil(t: RuleTrigger) = valeurs(s(R.string.rule_trg_sun), listOf(s(R.string.rule_sunrise) to SunEvent.SUNRISE, s(R.string.rule_sunset) to SunEvent.SUNSET), t.sun) { e ->
+            RuleValueDialogs.nombre(ctx, s(R.string.rule_sun_offset), s(R.string.rule_sun_offset_hint), t.offset, -180, 180,
+                texte = { if (it == 0) s(R.string.rule_for_now) else (if (it > 0) "+" else "−") + s(R.string.rule_minutes_fmt, kotlin.math.abs(it)) },
+                pas = { v, sens -> v + sens * 5 }) { o -> ok(t.copy(type = RuleTrigger.Type.SUN, sun = e, offset = o)) }
         }
         when (actuel?.type) {
             RuleTrigger.Type.EVENT -> evenement(actuel)
             RuleTrigger.Type.BECOMES -> devient(actuel)
             RuleTrigger.Type.TIME -> horaire(actuel)
+            RuleTrigger.Type.PERIODIC -> periodique(actuel)
+            RuleTrigger.Type.CHANGES -> change(actuel)
+            RuleTrigger.Type.SUN -> soleil(actuel)
+            RuleTrigger.Type.MANUAL -> {}
             null -> liste(R.string.rule_choose_trigger, listOf(
                 R.string.rule_trg_event to { evenement(RuleTrigger()) },
                 R.string.rule_trg_becomes to { devient(RuleTrigger()) },
+                R.string.rule_trg_changes to { change(RuleTrigger()) },
                 R.string.rule_trg_time to { horaire(RuleTrigger()) },
-            ))
+                R.string.rule_trg_every to { periodique(RuleTrigger()) },
+                R.string.rule_trg_sun to { soleil(RuleTrigger()) },
+                R.string.rule_trg_manual to { ok(RuleTrigger(RuleTrigger.Type.MANUAL)) },
+                R.string.rule_trg_charge_start to { ok(quand(RuleSignal.CHARGING, RuleOp.IS_TRUE)) },
+                R.string.rule_trg_charge_end to { ok(quand(RuleSignal.CHARGING, RuleOp.IS_FALSE)) },
+                R.string.rule_trg_plugged to { ok(quand(RuleSignal.PLUGGED, RuleOp.IS_TRUE)) },
+                R.string.rule_trg_unplugged to { ok(quand(RuleSignal.PLUGGED, RuleOp.IS_FALSE)) },
+                R.string.rule_trg_locked to { ok(quand(RuleSignal.LOCKED, RuleOp.IS_TRUE)) },
+                R.string.rule_trg_unlocked to { ok(quand(RuleSignal.LOCKED, RuleOp.IS_FALSE)) },
+                R.string.rule_trg_phone to { comparerSignal(RuleSignal.BT_DEVICE, null) { c -> ok(RuleTrigger(RuleTrigger.Type.BECOMES, condition = c)) } },
+                R.string.rule_trg_place to { lieu(null) { c -> ok(RuleTrigger(RuleTrigger.Type.BECOMES, condition = c)) } },
+            ) + (if (com.mg4.control.util.FirmwareInfo.getGeneration() == com.mg4.control.util.FirmwareInfo.Gen.SWI133)
+                listOf(R.string.rule_trg_key_away to { ok(quand(RuleSignal.KEY_AWAY, RuleOp.IS_TRUE)) }) else emptyList()))
         }
     }
+
+    /** Signaux numériques qu'un déclencheur « change » suit (les autres bougent sans cesse). */
+    private val CHANGE_NOMBRES = setOf(RuleSignal.HVAC_TEMP, RuleSignal.FAN, RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT,
+        RuleSignal.CHARGE_LIMIT, RuleSignal.BRIGHTNESS, RuleSignal.VOLUME)
 
     /** Une durée lisible : « 45 s », « 2 min », « 2 min 30 s ». */
     private fun duree(sec: Int): String = when {
@@ -597,11 +759,17 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         ajouter(rangeeBoutons(box), R.string.rule_add_action) { action(null, profondeur) { n -> put(liste + n) } }
     }
 
+    /** Raccourcis regroupés sous une entrée à eux dans le choix des actions. */
+    private val MEDIA = listOf(ShortcutAction.MEDIA_PLAY_PAUSE, ShortcutAction.MEDIA_NEXT, ShortcutAction.MEDIA_PREVIOUS, ShortcutAction.AUDIO_SOURCE_CYCLE)
+    private val VITRES = listOf(ShortcutAction.WINDOWS_CLOSE_ALL, ShortcutAction.WINDOWS_OPEN_ALL)
+    private val OUVRIR = listOf(ShortcutAction.HVAC_POPUP, ShortcutAction.CHARGE_POPUP, ShortcutAction.PROFILE_PICKER,
+        ShortcutAction.PRE_CLIMATE, ShortcutAction.PROJECTION, ShortcutAction.ANDROID_SETTINGS)
+
     /** Ajoute ([actuelle] nulle) ou modifie une action. */
     private fun action(actuelle: RuleAction?, profondeur: Int, ok: (RuleAction) -> Unit) {
-        fun reglage(a: RuleAction) = choisirReglage(a, ok)
-        fun raccourci(a: RuleAction) = valeurs(s(R.string.rule_choose_shortcut),
-            ShortcutCatalog.items(ctx).filter { it.action !in CustomRules.INTERDITS }.map { it.label to it.action.name }, a.shortcut) { n ->
+        val catalogue = ShortcutCatalog.items(ctx).filter { it.action !in CustomRules.INTERDITS }
+        fun raccourcis(a: RuleAction, parmi: List<ShortcutAction>?, titre: Int) = valeurs(s(titre),
+            catalogue.filter { parmi == null || it.action in parmi }.map { it.label to it.action.name }, a.shortcut) { n ->
             ok(a.copy(type = RuleAction.Type.SHORTCUT, shortcut = n))
         }
         fun profil(a: RuleAction) {
@@ -613,26 +781,93 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         }
         fun attente(a: RuleAction) = RuleValueDialogs.nombre(ctx, s(R.string.rule_wait_title), null, a.seconds ?: 10, 1, RuleRun.MAX_WAIT_S,
             texte = ::duree, pas = ::pasDuree) { sec -> ok(a.copy(type = RuleAction.Type.WAIT, seconds = sec)) }
+        fun attenteQue(a: RuleAction) = condition(a.condition) { c ->
+            RuleValueDialogs.nombre(ctx, s(R.string.rule_wait_until_title), s(R.string.rule_wait_until_hint), a.seconds ?: 60, 1, RuleRun.MAX_WAIT_S,
+                texte = ::duree, pas = ::pasDuree) { sec -> ok(a.copy(type = RuleAction.Type.WAIT_UNTIL, condition = c, seconds = sec)) }
+        }
         fun message(a: RuleAction) = RuleValueDialogs.texte(ctx, s(R.string.rule_notify_title), a.text.orEmpty()) { t ->
             ok(a.copy(type = RuleAction.Type.NOTIFY, text = t))
         }
+        fun question(a: RuleAction) = RuleValueDialogs.texte(ctx, s(R.string.rule_confirm_title), a.text.orEmpty()) { t ->
+            RuleValueDialogs.nombre(ctx, s(R.string.rule_confirm_delay), null, a.seconds ?: 15, 5, 120, texte = { s(R.string.rule_seconds_fmt, it) }) { sec ->
+                valeurs(s(R.string.rule_confirm_no_answer), listOf(s(R.string.rule_confirm_no_answer_stop) to "no", s(R.string.rule_confirm_no_answer_go) to "yes"), a.value) { v ->
+                    ok(a.copy(type = RuleAction.Type.CONFIRM, text = t, seconds = sec, value = v))
+                }
+            }
+        }
+        fun son(a: RuleAction) {
+            val sons = com.mg4.control.automation.SoundAutomationSettings.slots(ctx)
+            if (sons.isEmpty()) return Toast.makeText(ctx, s(R.string.rule_no_sounds), Toast.LENGTH_LONG).show()
+            valeurs(s(R.string.rule_choose_sound), sons.mapIndexed { i, so -> (so.title?.takeIf { it.isNotBlank() } ?: "${i + 1}") to "$i" }, a.value) { v ->
+                ok(a.copy(type = RuleAction.Type.PLAY_SOUND, value = v, text = sons[v.toInt()].title?.takeIf { it.isNotBlank() } ?: "${v.toInt() + 1}"))
+            }
+        }
+        fun appli(a: RuleAction) {
+            val pm = ctx.packageManager
+            val apps = pm.queryIntentActivities(android.content.Intent(android.content.Intent.ACTION_MAIN)
+                .addCategory(android.content.Intent.CATEGORY_LAUNCHER), 0)
+                .map { it.loadLabel(pm).toString() to it.activityInfo.packageName }.sortedBy { it.first.lowercase() }
+            valeurs(s(R.string.shortcuts_pick_app_title), apps, a.text) { p -> ok(a.copy(type = RuleAction.Type.OPEN_APP, text = p)) }
+        }
+        fun perso(a: RuleAction) = CustomShortcutDialog.choisir(ctx, a.text) { c -> ok(a.copy(type = RuleAction.Type.CUSTOM_SHORTCUT, text = c.id)) }
+        fun automatisation(a: RuleAction) = valeurs(s(R.string.rule_act_rule), listOf(
+            s(R.string.rule_rule_run) to "run", s(R.string.rule_rule_enable) to "1", s(R.string.rule_rule_disable) to "0"),
+            when (a.type) { RuleAction.Type.RUN_RULE -> "run"; RuleAction.Type.RULE_ENABLE -> a.value; else -> null }) { quoi ->
+            RuleChooser.choisir(ctx, a.text, sauf = if (quoi == "run") regle.id else null) { r ->
+                ok(if (quoi == "run") a.copy(type = RuleAction.Type.RUN_RULE, text = r.id, value = null)
+                   else a.copy(type = RuleAction.Type.RULE_ENABLE, text = r.id, value = quoi))
+            }
+        }
+        fun definir(a: RuleAction) = choisirVariable(a.key) { nom ->
+            valeurs(nom, listOf(s(R.string.rule_var_true) to "true", s(R.string.rule_var_false) to "false", s(R.string.rule_var_number) to ""), a.value) { v ->
+                if (v.isNotEmpty()) ok(a.copy(type = RuleAction.Type.SET_VARIABLE, key = nom, value = v))
+                else RuleValueDialogs.nombre(ctx, nom, null, a.value?.toIntOrNull() ?: 0, -9999, 9999, texte = { "$it" }) { n ->
+                    ok(a.copy(type = RuleAction.Type.SET_VARIABLE, key = nom, value = "$n"))
+                }
+            }
+        }
+        fun parler(a: RuleAction) = RuleValueDialogs.texte(ctx, s(R.string.rule_speak_title), a.text.orEmpty()) { t ->
+            ok(a.copy(type = RuleAction.Type.SPEAK, text = t))
+        }
+        fun naviguer(a: RuleAction) = choisirLieu(a.text) { id -> ok(a.copy(type = RuleAction.Type.NAVIGATE, text = id)) }
         fun repeter(a: RuleAction) = RuleValueDialogs.nombre(ctx, s(R.string.rule_repeat_title), null, a.count ?: 2, 2, RuleRun.MAX_REPEAT,
             texte = { "×$it" }) { n -> ok(a.copy(type = RuleAction.Type.REPEAT, count = n)) }
 
         when (actuelle?.type) {
-            RuleAction.Type.SET -> reglage(actuelle)
-            RuleAction.Type.SHORTCUT -> raccourci(actuelle)
+            RuleAction.Type.SET -> choisirReglage(actuelle, ok)
+            RuleAction.Type.SHORTCUT -> raccourcis(actuelle, null, R.string.rule_choose_shortcut)
             RuleAction.Type.PROFILE -> profil(actuelle)
             RuleAction.Type.WAIT -> attente(actuelle)
+            RuleAction.Type.WAIT_UNTIL -> attenteQue(actuelle)
             RuleAction.Type.NOTIFY -> message(actuelle)
+            RuleAction.Type.CONFIRM -> question(actuelle)
+            RuleAction.Type.PLAY_SOUND -> son(actuelle)
+            RuleAction.Type.OPEN_APP -> appli(actuelle)
+            RuleAction.Type.CUSTOM_SHORTCUT -> perso(actuelle)
+            RuleAction.Type.RULE_ENABLE, RuleAction.Type.RUN_RULE -> automatisation(actuelle)
+            RuleAction.Type.SET_VARIABLE -> definir(actuelle)
+            RuleAction.Type.SPEAK -> parler(actuelle)
+            RuleAction.Type.NAVIGATE -> naviguer(actuelle)
             RuleAction.Type.REPEAT -> repeter(actuelle)
             RuleAction.Type.IF, RuleAction.Type.STOP -> {}
             null -> liste(R.string.rule_choose_action, buildList {
-                add(R.string.rule_act_set to { reglage(RuleAction()) })
-                add(R.string.rule_act_shortcut to { raccourci(RuleAction()) })
+                add(R.string.rule_act_set to { choisirReglage(RuleAction(), ok) })
+                add(R.string.rule_act_media to { raccourcis(RuleAction(), MEDIA, R.string.rule_act_media) })
+                add(R.string.rule_act_windows to { raccourcis(RuleAction(), VITRES, R.string.rule_act_windows) })
+                add(R.string.rule_act_open to { raccourcis(RuleAction(), OUVRIR, R.string.rule_act_open) })
+                add(R.string.rule_act_shortcut to { raccourcis(RuleAction(), null, R.string.rule_choose_shortcut) })
                 add(R.string.rule_act_profile to { profil(RuleAction()) })
+                add(R.string.rule_act_sound to { son(RuleAction()) })
+                add(R.string.rule_act_app to { appli(RuleAction()) })
+                add(R.string.rule_act_custom to { perso(RuleAction()) })
+                add(R.string.rule_act_rule to { automatisation(RuleAction()) })
+                add(R.string.rule_act_variable to { definir(RuleAction()) })
                 add(R.string.rule_act_wait to { attente(RuleAction()) })
+                add(R.string.rule_act_wait_until to { attenteQue(RuleAction()) })
+                add(R.string.rule_act_confirm to { question(RuleAction()) })
                 add(R.string.rule_act_notify to { message(RuleAction()) })
+                add(R.string.rule_act_speak to { parler(RuleAction()) })
+                add(R.string.rule_act_navigate to { naviguer(RuleAction()) })
                 if (profondeur < PROFONDEUR_MAX - 1) {
                     add(R.string.rule_act_if to {
                         ok(RuleAction(RuleAction.Type.IF, condition = RuleCondition(RuleCondition.Type.ALL, children = emptyList()),
@@ -645,12 +880,14 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         }
     }
 
-    /** Les réglages de la voiture qu'une action peut écrire, et la façon de choisir leur valeur. */
+    /** Les réglages de la voiture (et d'Android) qu'une action peut écrire, et la façon de choisir leur valeur. */
     private fun choisirReglage(a: RuleAction, ok: (RuleAction) -> Unit) {
         val clim = MG4Hardware.hasClimateControl()
         val cles = buildList {
             add(ExternalApi.SET_DRIVE_MODE)
             add(ExternalApi.SET_REGEN)
+            add(RuleKeys.ONE_PEDAL)
+            add(RuleKeys.ENERGY_SAVING)
             add(ExternalApi.SET_SEAT_HEAT_LEFT)
             add(ExternalApi.SET_SEAT_HEAT_RIGHT)
             add(ExternalApi.SET_STEERING_HEAT)
@@ -658,27 +895,53 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 add(ExternalApi.SET_HVAC_POWER)
                 add(ExternalApi.SET_HVAC_AC)
                 add(ExternalApi.SET_HVAC_AUTO)
+                add(RuleKeys.HVAC_ECO)
                 add(ExternalApi.SET_HVAC_TEMP)
                 add(ExternalApi.SET_HVAC_FAN)
+                add(RuleKeys.AIR_FLOW)
+                add(RuleKeys.AUTO_VOLUME)
                 add(ExternalApi.SET_HVAC_RECIRC)
                 add(ExternalApi.SET_DEFROST_FRONT)
                 add(ExternalApi.SET_DEFROST_REAR)
             }
+            if (MG4Hardware.hasBrightnessControl()) add(RuleKeys.BRIGHTNESS)
+            add(RuleKeys.VOLUME)
+            add(RuleKeys.VOLUME_STEP)
+            add(RuleKeys.AEB)
+            add(RuleKeys.TSR)
+            if (MG4Hardware.hasDrowsinessAndEsc()) { add(RuleKeys.ESC); add(RuleKeys.DROWSINESS) }
+            add(RuleKeys.OVERSPEED_ALARM)
+            add(RuleKeys.SPEED_LIMIT_TONE)
+            if (MG4Hardware.hasAutoHighBeam()) add(RuleKeys.AUTO_HIGH_BEAM)
+            if (MG4Hardware.hasBatteryHeating()) add(RuleKeys.BATTERY_HEAT)
+            add(RuleKeys.CHARGE_LIMIT)
+            add(RuleKeys.WIFI)
+            add(RuleKeys.BLUETOOTH)
+            add(RuleKeys.HOTSPOT)
         }
         valeurs(s(R.string.rule_choose_setting), cles.map { k -> (AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k) to k }, a.key) { k ->
             val nom = AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k
             val meme = a.value.takeIf { a.key == k }
             fun fini(v: String) = ok(RuleAction(RuleAction.Type.SET, key = k, value = v))
+            fun nombre(min: Int, max: Int, defaut: Int, unite: String = "", pas: Int = 1) =
+                RuleValueDialogs.nombre(ctx, nom, null, meme?.toIntOrNull() ?: defaut, min, max,
+                    texte = { "$it$unite" }, pas = { v, sens -> v + sens * pas }) { fini("$it") }
             val ouiNon = listOf(s(R.string.segment_yes) to "1", s(R.string.segment_no) to "0")
             when (k) {
                 ExternalApi.SET_DRIVE_MODE -> valeurs(nom, DriveMode.entries.map { mots.driveMode(it) to it.name }, meme, ::fini)
                 ExternalApi.SET_REGEN -> valeurs(nom, RegenLevel.entries.map { mots.regen(it) to it.name }, meme, ::fini)
                 ExternalApi.SET_SEAT_HEAT_LEFT, ExternalApi.SET_SEAT_HEAT_RIGHT ->
                     valeurs(nom, listOf(s(R.string.rule_seat_off) to "0", "1" to "1", "2" to "2", "3" to "3"), meme, ::fini)
-                ExternalApi.SET_HVAC_TEMP -> RuleValueDialogs.nombre(ctx, nom, null, meme?.toIntOrNull() ?: 21, 16, 30,
-                    texte = { "$it °C" }) { fini("$it") }
-                ExternalApi.SET_HVAC_FAN -> RuleValueDialogs.nombre(ctx, nom, null, meme?.toIntOrNull() ?: 3, 1, 7,
-                    texte = { "$it" }) { fini("$it") }
+                ExternalApi.SET_HVAC_TEMP -> nombre(16, 30, 21, " °C")
+                ExternalApi.SET_HVAC_FAN -> nombre(1, 7, 3)
+                RuleKeys.AIR_FLOW -> nombre(0, 6, 1)
+                RuleKeys.AUTO_VOLUME -> valeurs(nom, listOf(s(R.string.rule_level_high) to "0", s(R.string.rule_level_medium) to "1",
+                    s(R.string.rule_level_low) to "2"), meme, ::fini)
+                RuleKeys.BRIGHTNESS -> nombre(0, 100, 50, " %", 5)
+                RuleKeys.VOLUME -> nombre(0, MG4Hardware.getMediaVolumeMax().takeIf { it > 0 } ?: 40, 10)
+                RuleKeys.VOLUME_STEP -> RuleValueDialogs.nombre(ctx, nom, null, meme?.toIntOrNull() ?: 2, -10, 10,
+                    texte = { if (it > 0) "+$it" else "$it" }) { fini("$it") }
+                RuleKeys.CHARGE_LIMIT -> nombre(40, 100, 80, " %", 10)
                 ExternalApi.SET_HVAC_RECIRC -> valeurs(nom, listOf("INNER", "OUTSIDE", "AUTO").map { v ->
                     (AndroidRuleWords.recircRes(v)?.let { s(it) } ?: v) to v }, meme, ::fini)
                 else -> valeurs(nom, ouiNon, meme, ::fini)

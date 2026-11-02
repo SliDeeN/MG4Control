@@ -76,10 +76,11 @@ class AppWindowsLayoutTest {
 
     @Test
     fun `une liste a choix unique rend le rang touche`() {
-        val vue = gonfler(R.layout.dialog_edit_shortcut)
-        val liste = vue.findViewById<LinearLayout>(R.id.edit_list_action)
-        val rang = AppDialog.options(
-            liste, vue.findViewById(R.id.edit_scroll_action), listOf("A", "B", "C"), choisi = 1)
+        // La fenêtre qui s'en servait (« Modifier un raccourci », onglet Avancés) a disparu avec la
+        // fusion des Raccourcis : la liste est posée ici dans un défilement à elle.
+        val liste = LinearLayout(themed)
+        val defilement = ScrollView(themed).also { it.addView(liste) }
+        val rang = AppDialog.options(liste, defilement, listOf("A", "B", "C"), choisi = 1)
 
         assertEquals(3, liste.childCount)
         assertEquals(1, rang())
@@ -97,21 +98,6 @@ class AppWindowsLayoutTest {
         rangee.getChildAt(1).performClick()
         rangee.getChildAt(2).performClick()
         assertEquals(listOf(2), touchees)
-    }
-
-    @Test
-    fun `modifier un raccourci - deux listes qui defilent`() {
-        val vue = gonfler(R.layout.dialog_edit_shortcut)
-        assertNotNull(vue.findViewById<ImageView>(R.id.edit_shortcut_icon))
-        assertNotNull(vue.findViewById<TextView>(R.id.edit_shortcut_key))
-        assertNotNull(vue.findViewById<TextView>(R.id.edit_caption_action))
-        assertNotNull(vue.findViewById<TextView>(R.id.edit_caption_profile))
-        assertNotNull(vue.findViewById<ScrollView>(R.id.edit_scroll_action))
-        assertNotNull(vue.findViewById<ScrollView>(R.id.edit_scroll_profile))
-        assertNotNull(vue.findViewById<LinearLayout>(R.id.edit_list_action))
-        assertNotNull(vue.findViewById<LinearLayout>(R.id.edit_list_profile))
-        assertNotNull(vue.findViewById<View>(R.id.edit_cancel))
-        assertNotNull(vue.findViewById<View>(R.id.edit_save))
     }
 
     @Test

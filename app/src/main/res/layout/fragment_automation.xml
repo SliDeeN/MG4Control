@@ -2814,6 +2814,17 @@
 
             </LinearLayout>
 
+            <!-- Étape 3 : interrupteur général, historique, variables, lieux, export et import
+                 (posés par CustomRulesPage). -->
+            <LinearLayout
+                android:id="@+id/custom_rules_tools"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:baselineAligned="false" />
+
             <TextView
                 android:id="@+id/custom_rules_empty"
                 android:layout_width="match_parent"
