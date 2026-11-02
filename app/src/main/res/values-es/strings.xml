@@ -1371,6 +1371,7 @@
     <string name="rule_place_inside">Dentro del lugar</string>
     <string name="rule_place_name">Nombre del lugar</string>
     <string name="rule_place_no_fix">Posición desconocida por ahora: inténtelo de nuevo cuando el coche esté localizado.</string>
+    <string name="rule_place_locating">Buscando la posición…</string>
     <string name="rule_place_outside">Fuera del lugar</string>
     <string name="rule_place_radius">Radio del lugar</string>
     <string name="rule_places_empty">Ningún lugar: se guardan desde una condición «Un lugar» (posición actual).</string>

@@ -233,9 +233,19 @@ object AndroidControls {
     }
 
     /**
-     * Suivre la position tant qu'une automatisation en a besoin. Comme DiAuto : GPS, au TEMPS
-     * seulement — Android combine temps ET distance, et toute distance minimale arrête un écran de
-     * voiture garée après sa première position.
+     * Les fournisseurs de position, dans l'ordre : `fused` d'abord. Sur ces voitures il est alimenté
+     * par le GPS de la T-Box (FusedLocation modifié par SAIC) et répond en 0,2 s au READY, mais il
+     * n'apparaît PAS dans la liste des fournisseurs d'Android — il faut le demander par son nom
+     * (sonde de la luminosité auto, 2026-10-01 ; diagnostic du 2026-11-02 : `gps` sans aucune
+     * position, `fused` avec une position fraîche). `gps` ensuite, `network` et `passive` en repli.
+     */
+    private val FOURNISSEURS = listOf("fused", LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)
+
+    /**
+     * Suivre la position tant qu'une automatisation en a besoin, sur `fused` et `gps`. Comme DiAuto :
+     * au TEMPS seulement — Android combine temps ET distance, et toute distance minimale arrête un
+     * écran de voiture garée après sa première position. Pas de test « fournisseur actif » : `fused`
+     * répondrait non alors qu'il marche ; une demande refusée est seulement journalisée.
      */
     @SuppressLint("MissingPermission")
     fun followLocation(ctx: Context, on: Boolean) {
@@ -243,13 +253,51 @@ object AndroidControls {
         suivi = on
         principal.post {
             val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return@post
-            runCatching {
-                if (on) {
-                    if (runCatching { lm.isProviderEnabled(LocationManager.GPS_PROVIDER) }.getOrDefault(false))
-                        lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 10_000L, 0f, ecoute)
-                    else AppLogger.w(TAG, "position : GPS désactivé ou absent")
-                } else lm.removeUpdates(ecoute)
-            }.onFailure { AppLogger.w(TAG, "position : ${it.message}") }
+            if (!on) {
+                runCatching { lm.removeUpdates(ecoute) }
+                return@post
+            }
+            for (p in listOf("fused", LocationManager.GPS_PROVIDER)) {
+                runCatching { lm.requestLocationUpdates(p, 10_000L, 0f, ecoute) }
+                    .onFailure { AppLogger.w(TAG, "position : suivi $p refusé — ${it.message}") }
+            }
+        }
+    }
+
+    /**
+     * Une position tout de suite : la dernière connue, sinon une position fraîche demandée à `fused`
+     * puis `gps` (au plus [attenteMs]). [rappel] reçoit la position, ou `null`, sur le fil principal.
+     */
+    @SuppressLint("MissingPermission")
+    fun locate(ctx: Context, attenteMs: Long = 8_000L, rappel: (Location?) -> Unit) {
+        location(ctx)?.let { l -> principal.post { rappel(l) }; return }
+        principal.post {
+            val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+            if (lm == null) return@post rappel(null)
+            var fini = false
+            val ecoutes = mutableListOf<LocationListener>()
+            fun terminer(l: Location?) {
+                if (fini) return
+                fini = true
+                ecoutes.forEach { runCatching { lm.removeUpdates(it) } }
+                if (l != null) derniere = l
+                AppLogger.i(TAG, "position fraîche : ${if (l == null) "aucune après ${attenteMs / 1000} s" else "reçue (${l.provider})"}")
+                rappel(l)
+            }
+            for (p in listOf("fused", LocationManager.GPS_PROVIDER)) {
+                val e = object : LocationListener {
+                    override fun onLocationChanged(l: Location) {
+                        if (!(l.latitude == 0.0 && l.longitude == 0.0)) terminer(l)
+                    }
+                    @Deprecated("API 28") override fun onStatusChanged(p: String?, s: Int, b: Bundle?) {}
+                    override fun onProviderEnabled(p: String) {}
+                    override fun onProviderDisabled(p: String) {}
+                }
+                @Suppress("DEPRECATION")
+                runCatching { lm.requestSingleUpdate(p, e, Looper.getMainLooper()); ecoutes += e }
+                    .onFailure { AppLogger.w(TAG, "position : demande $p refusée — ${it.message}") }
+            }
+            principal.postDelayed({ terminer(null) }, attenteMs)
         }
     }
 
@@ -261,8 +309,7 @@ object AndroidControls {
     @SuppressLint("MissingPermission")
     fun location(ctx: Context): Location? {
         val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-        val connues = listOfNotNull(derniere) + listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)
-            .mapNotNull { p -> runCatching { lm?.getLastKnownLocation(p) }.getOrNull() }
+        val connues = listOfNotNull(derniere) + FOURNISSEURS.mapNotNull { p -> runCatching { lm?.getLastKnownLocation(p) }.getOrNull() }
         return connues.filterNot { it.latitude == 0.0 && it.longitude == 0.0 }.maxByOrNull { it.time }
     }
 }

@@ -1388,6 +1388,7 @@
     <string name="rule_place_inside">Dans le lieu</string>
     <string name="rule_place_name">Nom du lieu</string>
     <string name="rule_place_no_fix">Position inconnue pour l\'instant : réessayez une fois la voiture localisée.</string>
+    <string name="rule_place_locating">Recherche de la position…</string>
     <string name="rule_place_outside">Hors du lieu</string>
     <string name="rule_place_radius">Rayon du lieu</string>
     <string name="rule_places_empty">Aucun lieu : ils s\'enregistrent depuis une condition « Un lieu » (position actuelle).</string>

@@ -1371,6 +1371,7 @@
     <string name="rule_place_inside">Inside the place</string>
     <string name="rule_place_name">Place name</string>
     <string name="rule_place_no_fix">Position unknown for now: try again once the car is located.</string>
+    <string name="rule_place_locating">Looking for the position…</string>
     <string name="rule_place_outside">Outside the place</string>
     <string name="rule_place_radius">Place radius</string>
     <string name="rule_places_empty">No place yet: save one from an “A place” condition (current position).</string>

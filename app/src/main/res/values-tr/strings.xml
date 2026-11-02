@@ -1371,6 +1371,7 @@
     <string name="rule_place_inside">Yerin içinde</string>
     <string name="rule_place_name">Yer adı</string>
     <string name="rule_place_no_fix">Konum henüz bilinmiyor: araç bulununca tekrar deneyin.</string>
+    <string name="rule_place_locating">Konum aranıyor…</string>
     <string name="rule_place_outside">Yerin dışında</string>
     <string name="rule_place_radius">Yer yarıçapı</string>
     <string name="rule_places_empty">Henüz yer yok: “Bir yer” koşulundan kaydedin (mevcut konum).</string>

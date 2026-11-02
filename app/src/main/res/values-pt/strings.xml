@@ -1371,6 +1371,7 @@
     <string name="rule_place_inside">No local</string>
     <string name="rule_place_name">Nome do local</string>
     <string name="rule_place_no_fix">Posição desconhecida por agora: tente de novo quando o carro estiver localizado.</string>
+    <string name="rule_place_locating">A procurar a posição…</string>
     <string name="rule_place_outside">Fora do local</string>
     <string name="rule_place_radius">Raio do local</string>
     <string name="rule_places_empty">Nenhum local: guarda-se a partir de uma condição «Um local» (posição atual).</string>

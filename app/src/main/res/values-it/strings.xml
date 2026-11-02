@@ -1371,6 +1371,7 @@
     <string name="rule_place_inside">Nel luogo</string>
     <string name="rule_place_name">Nome del luogo</string>
     <string name="rule_place_no_fix">Posizione sconosciuta per ora: riprova quando l\'auto è localizzata.</string>
+    <string name="rule_place_locating">Ricerca della posizione…</string>
     <string name="rule_place_outside">Fuori dal luogo</string>
     <string name="rule_place_radius">Raggio del luogo</string>
     <string name="rule_places_empty">Nessun luogo: si salvano da una condizione «Un luogo» (posizione attuale).</string>

@@ -1371,6 +1371,7 @@
     <string name="rule_place_inside">Am Ort</string>
     <string name="rule_place_name">Name des Orts</string>
     <string name="rule_place_no_fix">Position noch unbekannt: erneut versuchen, sobald das Auto geortet ist.</string>
+    <string name="rule_place_locating">Position wird gesucht …</string>
     <string name="rule_place_outside">Außerhalb des Orts</string>
     <string name="rule_place_radius">Radius des Orts</string>
     <string name="rule_places_empty">Noch kein Ort: über eine Bedingung „Ein Ort“ speichern (aktuelle Position).</string>

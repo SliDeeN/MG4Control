@@ -513,15 +513,23 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         val ici = "+ " + s(R.string.rule_place_here)
         valeurs(s(R.string.rule_choose_place), lieux.map { it.name to it.id } + (ici to ""), deja) { id ->
             if (id.isNotEmpty()) return@valeurs ok(id)
-            val l = AndroidControls.location(ctx)
-            if (l == null) return@valeurs Toast.makeText(ctx, s(R.string.rule_place_no_fix), Toast.LENGTH_LONG).show()
-            RuleValueDialogs.texte(ctx, s(R.string.rule_place_name), "") { nom ->
-                RuleValueDialogs.nombre(ctx, s(R.string.rule_place_radius), null, 200, 50, 5_000,
-                    texte = { "$it m" }, pas = { v, sens -> v + sens * (if (sens > 0 && v < 500 || sens < 0 && v <= 500) 50 else 250) }) { r ->
-                    val p = com.mg4.control.model.RulePlace(name = nom, lat = l.latitude, lng = l.longitude, radius = r)
-                    RulePlaces.save(ctx, RulePlaces.all(ctx) + p)
-                    ok(p.id)
-                }
+            Toast.makeText(ctx, s(R.string.rule_place_locating), Toast.LENGTH_SHORT).show()
+            AndroidControls.locate(ctx) { l ->
+                if (!isAdded) return@locate
+                if (l == null) return@locate Toast.makeText(ctx, s(R.string.rule_place_no_fix), Toast.LENGTH_LONG).show()
+                enregistrerLieu(l, ok)
+            }
+        }
+    }
+
+    /** Nom et rayon du lieu à la position [l], puis enregistrement. */
+    private fun enregistrerLieu(l: android.location.Location, ok: (String) -> Unit) {
+        RuleValueDialogs.texte(ctx, s(R.string.rule_place_name), "") { nom ->
+            RuleValueDialogs.nombre(ctx, s(R.string.rule_place_radius), null, 200, 50, 5_000,
+                texte = { "$it m" }, pas = { v, sens -> v + sens * (if (sens > 0 && v < 500 || sens < 0 && v <= 500) 50 else 250) }) { r ->
+                val p = com.mg4.control.model.RulePlace(name = nom, lat = l.latitude, lng = l.longitude, radius = r)
+                RulePlaces.save(ctx, RulePlaces.all(ctx) + p)
+                ok(p.id)
             }
         }
     }
