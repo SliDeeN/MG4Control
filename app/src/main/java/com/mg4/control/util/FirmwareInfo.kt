@@ -12,6 +12,14 @@ import android.content.Context
  * SWI68  : "SWI68-xxxxx"  — ADAS via VehicleSettingManager (acc/tja), sièges+volant chauffants
  * SWI69  : "SWI69-xxxxx"  — ADAS via VehicleSettingManager "nouvelle gen", sans sièges/volant chauffants
  * SWI131 : "SWI131-xxxxx" — Identique SWI69 (même package, même API), sans sièges/volant chauffants
+ * SWI173 : "SWI173-xxxxx" — traité en SWI131 (issue #175, extraction SWI173-29958-1100R08 du
+ *                            2026-11-02) : famille A9, finition Standard/Comfort sans sièges/volant
+ *                            chauffants. Comparé aux SWI69 et SWI131 : les 85 méthodes carapi
+ *                            appelées par réflexion existent toutes, aucune constante carapi ne
+ *                            change de valeur, les codes de transaction appelés en direct sont
+ *                            identiques (ICarAdapterService, ICarAudioService, ICarGeneralCallback),
+ *                            et les applis d'origine utilisent les MÊMES 96 identifiants de propriétés
+ *                            que SWI131 (les 7 de plus de SWI69 ne servent qu'aux sondes de diagnostic).
  * SWI165 : "SWI165-xxxxx" — ADAS via VehicleSettingManager (même SDK que SWI68), AEB via setFcwAlarmMode
  *                            sièges+volant chauffants disponibles
  * UNKNOWN : firmware non reconnu — l'utilisateur peut forcer un mode de compatibilité
@@ -43,10 +51,20 @@ object FirmwareInfo {
      * suivant (service, écran) refera la lecture.
      */
     fun initWithContext(context: Context) {
-        val forced = runCatching {
+        val prefs = runCatching {
             context.applicationContext.getSharedPreferences(PREF_NAME, Context.MODE_PRIVATE)
-                .getString(PREF_FORCED_GEN, null)
         }.getOrNull() ?: return
+        val forced = runCatching { prefs.getString(PREF_FORCED_GEN, null) }.getOrNull() ?: return
+        // Le mode de compatibilité ne sert qu'aux firmwares non reconnus. Choisi quand ce firmware
+        // ne l'était pas encore (SWI173 avant l'issue #175, DBI68 avant le fork sensoyg), il est
+        // abandonné dès que la détection le reconnaît : sinon l'appli resterait « forcée » pour
+        // toujours, sans moyen de revenir à la détection automatique.
+        val natif = detecter()
+        if (natif != Gen.UNKNOWN) {
+            runCatching { prefs.edit().remove(PREF_FORCED_GEN).apply() }
+            cached = natif
+            return
+        }
         cached = runCatching { Gen.valueOf(forced) }.getOrDefault(Gen.UNKNOWN)
     }
 
@@ -55,12 +73,17 @@ object FirmwareInfo {
         // UNKNOWN aussi est gardé en cache : la génération est demandée à chaque lecture ou écriture
         // véhicule, relire les propriétés système à chaque fois coûterait pour rien.
         cached?.let { return it }
+        val gen = detecter()
+        cached = gen
+        return gen
+    }
+
+    /** Génération d'après les propriétés système, sans tenir compte d'un choix forcé. */
+    private fun detecter(): Gen {
         val version = readProp("ro.build.mt2712.version")
             ?: readProp("ro.build.version.incremental")
         detectedString = version
-        val gen = parseGeneration(version)
-        cached = gen
-        return gen
+        return parseGeneration(version)
     }
 
     /** Préfixes reconnus : SAIC (SWI) et distributeurs connus (DBI, Turquie). */
@@ -79,6 +102,7 @@ object FirmwareInfo {
             "133" -> Gen.SWI133
             "132" -> Gen.SWI132
             "131" -> Gen.SWI131
+            "173" -> Gen.SWI131   // issue #175 : même génération A9 que SWI131 (voir l'en-tête)
             "68"  -> Gen.SWI68
             "69"  -> Gen.SWI69
             else  -> Gen.UNKNOWN
@@ -125,7 +149,7 @@ object FirmwareInfo {
         return gen == Gen.SWI69 || gen == Gen.SWI131
     }
 
-    /** Firmwares « A9 » : SWI69, SWI131 et SWI132. */
+    /** Firmwares « A9 » : SWI69, SWI131 (SWI173 compris) et SWI132. */
     fun isA9(): Boolean {
         val gen = getGeneration()
         return gen == Gen.SWI69 || gen == Gen.SWI131 || gen == Gen.SWI132
@@ -143,7 +167,7 @@ object FirmwareInfo {
 
     /**
      * SWI133, SWI68 et SWI165 ont les sièges chauffants et le volant chauffant.
-     * SWI69 et SWI131 sont des finitions Standard/SE sans ces équipements.
+     * SWI69, SWI131 et SWI173 sont des finitions Standard/SE/Comfort sans ces équipements.
      */
     fun hasHeatFeatures(): Boolean {
         val gen = getGeneration()
