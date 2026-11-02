@@ -24,10 +24,15 @@ object PreClimateScreen {
 
     fun isShowing(): Boolean = activite?.get() != null
 
-    /** Affiche l'écran, ou le rallume s'il l'est déjà. Fil principal. */
+    /**
+     * Affiche l'écran, ou le ramène devant et le rallume s'il existe déjà. Fil principal.
+     *
+     * Toujours relancé : quitté par l'accueil ou une autre appli (pas par « Masquer »), il reste
+     * ouvert en arrière-plan — le seul rallumer ne le faisait pas revenir (2026-11-02). L'activité
+     * étant `singleInstance`, c'est la même instance qui revient, par [PreClimateActivity.onNewIntent].
+     */
     fun afficher(context: Context, raison: String) {
-        activite?.get()?.let { it.eveiller(); return }
-        AppLogger.i(TAG, "Écran de suivi : ouverture ($raison)")
+        AppLogger.i(TAG, "Écran de suivi : " + (if (activite?.get() != null) "ramené devant" else "ouverture") + " ($raison)")
         try {
             context.startActivity(Intent(context, PreClimateActivity::class.java)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION))

@@ -2,6 +2,7 @@ package com.mg4.control.ui
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Color
@@ -79,9 +80,38 @@ class PreClimateActivity : Activity() {
         OverlayKit.tenirDansLaFenetre(v.racine, (MARGE_DP * c.mesures.density).roundToInt(), "Pré-climatisation (suivi)",
             carte = v.racine.findViewById(R.id.preclim_frame))
         pleinEcran()
+        journaliserFenetre(c)
         PreClimateScreen.attacher(this)
         eveilJusqua = SystemClock.elapsedRealtime() + EVEIL_MS
         AppLogger.i(TAG, "Écran de suivi affiché (plein écran)")
+    }
+
+    /** Raccourci pendant un programme alors que l'écran existe déjà : il revient devant, rallumé. */
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        eveiller()
+    }
+
+    override fun onMultiWindowModeChanged(isInMultiWindowMode: Boolean, newConfig: Configuration?) {
+        super.onMultiWindowModeChanged(isInMultiWindowMode, newConfig)
+        AppLogger.w(TAG, "Écran de suivi : multi-fenêtre $isInMultiWindowMode")
+    }
+
+    /**
+     * Diagnostic de l'affichage « format téléphone » vu parfois (2026-11-02) : la taille réelle de
+     * la fenêtre à chaque changement, l'écran annoncé, l'échelle retenue et le mode multi-fenêtre.
+     */
+    private fun journaliserFenetre(c: OverlayKit.Contextes) {
+        var derniere = ""
+        v.racine.addOnLayoutChangeListener { _, gauche, haut, droite, bas, _, _, _, _ ->
+            val taille = "${droite - gauche}×${bas - haut}"
+            if (taille == derniere) return@addOnLayoutChangeListener
+            derniere = taille
+            val m = resources.displayMetrics
+            AppLogger.i(TAG, "Écran de suivi : fenêtre $taille px (écran ${m.widthPixels}×${m.heightPixels}, " +
+                "à la création ${c.mesures.widthPixels}×${c.mesures.heightPixels}, échelle " +
+                "${String.format(Locale.US, "%.2f", c.echelle)}, multi-fenêtre $isInMultiWindowMode)")
+        }
     }
 
     override fun onStart() {
