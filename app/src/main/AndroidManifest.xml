@@ -63,9 +63,11 @@
     <uses-permission android:name="android.permission.TETHER_PRIVILEGED"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <!-- Export des Statistiques sur la clé USB (issue #206) : écrire sur un volume amovible.
-         Signature|privileged : accordée à l'appli signée plateforme. -->
-    <uses-permission android:name="android.permission.WRITE_MEDIA_STORAGE"
+    <!-- Export des Statistiques sur la clé USB (issue #206) : l'écriture directe à la racine de la
+         clé est refusée (essai du 2026-11-03) ; l'appli passe par le fournisseur de documents
+         d'Android, sans sélecteur, ce que cette permission autorise. Signature|privileged :
+         accordée à l'appli signée plateforme. -->
+    <uses-permission android:name="android.permission.MANAGE_DOCUMENTS"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 

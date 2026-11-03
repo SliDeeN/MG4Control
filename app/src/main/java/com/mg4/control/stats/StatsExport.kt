@@ -15,9 +15,13 @@ import java.io.File
  * là où l'utilisateur l'a choisi — Téléchargements (défaut), la clé USB branchée, ou un dossier pris
  * dans le sélecteur d'Android (DocumentsUI, présent sur SWI69/132/133).
  *
- * Téléchargements et la clé s'écrivent en fichiers ordinaires, dans un sous-dossier `MG4Control` ;
- * le dossier choisi, par le fournisseur de documents, avec la permission gardée d'un export à
- * l'autre. Le dernier choix est retenu.
+ * Téléchargements s'écrit en fichiers ordinaires, dans un sous-dossier `MG4Control`. La clé USB et
+ * le dossier choisi passent par le fournisseur de documents d'Android (ExternalStorageProvider) :
+ * une appli ne peut pas écrire elle-même à la racine d'un volume amovible sur Android 9 — essai du
+ * 2026-11-03, `mkdirs` refusé sur /storage/34B0-FBA7 alors que la même clé prise dans le sélecteur
+ * s'écrivait sans souci. Pour la clé, l'appli (signée plateforme, MANAGE_DOCUMENTS) s'adresse au
+ * fournisseur sans passer par le sélecteur. Un fichier du même nom est remplacé, partout.
+ * Le dernier choix est retenu.
  */
 object StatsExport {
 
@@ -27,11 +31,12 @@ object StatsExport {
     private const val KEY_DEST = "stats_export_dest"
     private const val KEY_TREE = "stats_export_tree"
     private const val MIME = "text/csv"
+    private const val STOCKAGE = "com.android.externalstorage.documents"
 
     enum class Destination { DOWNLOADS, USB, FOLDER }
 
-    /** La clé USB montée : son dossier racine, son nom, la place libre. */
-    data class Usb(val racine: File, val nom: String, val libreOctets: Long)
+    /** La clé USB montée : son identifiant de volume (`34B0-FBA7`), son nom, la place libre. */
+    data class Usb(val uuid: String, val nom: String, val libreOctets: Long)
 
     sealed class Resultat {
         /** [ou] : le dossier tel qu'on peut le montrer ; [fichiers] : les noms écrits. */
@@ -76,8 +81,8 @@ object StatsExport {
     fun usb(ctx: Context): Usb? = runCatching {
         val sm = ctx.getSystemService(StorageManager::class.java) ?: return null
         val v = sm.storageVolumes.firstOrNull { it.isRemovable && it.state == Environment.MEDIA_MOUNTED } ?: return null
-        val racine = racine(v) ?: return null
-        Usb(racine, v.getDescription(ctx) ?: racine.name, racine.usableSpace)
+        val uuid = v.uuid ?: return null
+        Usb(uuid, v.getDescription(ctx) ?: uuid, racine(v)?.usableSpace ?: 0L)
     }.getOrNull()
 
     /** `getPathFile` est caché sur Android 9 (l'appli système y a droit) ; repli sur /storage/<uuid>. */
@@ -91,11 +96,14 @@ object StatsExport {
             Destination.DOWNLOADS -> versDossier(telechargements(), fichiers, "Download/$DOSSIER")
             Destination.USB -> {
                 val cle = usb(ctx) ?: return Resultat.Echec("USB ?")
-                versDossier(File(cle.racine, DOSSIER), fichiers, "${cle.nom}/$DOSSIER")
+                val racine = DocumentsContract.buildTreeDocumentUri(STOCKAGE, "${cle.uuid}:")
+                versArbre(ctx, racine, fichiers, sousDossier = DOSSIER)?.let { Resultat.Ok("${cle.nom}/$DOSSIER", it) }
+                    ?: Resultat.Echec(cle.nom)
             }
             Destination.FOLDER -> {
                 val arbre = dossierChoisi(ctx) ?: return Resultat.Echec("?")
-                versArbre(ctx, arbre, fichiers)
+                versArbre(ctx, arbre, fichiers)?.let { Resultat.Ok(libelleDossier(arbre), it) }
+                    ?: Resultat.Echec(libelleDossier(arbre))
             }
         }.also { AppLogger.i(TAG, "export $d → $it") }
     } catch (e: Exception) {
@@ -109,20 +117,37 @@ object StatsExport {
         return Resultat.Ok(montre, fichiers.map { it.first })
     }
 
-    private fun versArbre(ctx: Context, arbre: Uri, fichiers: List<Pair<String, String>>): Resultat {
+    /**
+     * Écrit [fichiers] dans [arbre], ou dans son [sousDossier] (créé au besoin), par le fournisseur
+     * de documents. Un fichier du même nom est réécrit plutôt que doublé en « nom (1).csv ».
+     * Renvoie les noms écrits, ou null si le fournisseur n'a rien créé.
+     */
+    private fun versArbre(ctx: Context, arbre: Uri, fichiers: List<Pair<String, String>>, sousDossier: String? = null): List<String>? {
         val r = ctx.contentResolver
-        val parent = DocumentsContract.buildDocumentUriUsingTree(arbre, DocumentsContract.getTreeDocumentId(arbre))
-        val noms = fichiers.map { (nom, texte) ->
-            // Un fichier du même nom existe déjà : le fournisseur en crée un autre, « nom (1).csv ».
-            val doc = DocumentsContract.createDocument(r, parent, MIME, nom) ?: return Resultat.Echec(nom)
-            r.openOutputStream(doc)?.use { it.write(texte.toByteArray(Charsets.UTF_8)) } ?: return Resultat.Echec(nom)
-            nomDe(ctx, doc) ?: nom
+        var parentId = DocumentsContract.getTreeDocumentId(arbre)
+        if (sousDossier != null) {
+            parentId = enfant(ctx, arbre, parentId, sousDossier)
+                ?: DocumentsContract.createDocument(r, DocumentsContract.buildDocumentUriUsingTree(arbre, parentId),
+                    DocumentsContract.Document.MIME_TYPE_DIR, sousDossier)?.let { DocumentsContract.getDocumentId(it) }
+                ?: return null
         }
-        return Resultat.Ok(libelleDossier(arbre), noms)
+        val parent = DocumentsContract.buildDocumentUriUsingTree(arbre, parentId)
+        return fichiers.map { (nom, texte) ->
+            val doc = enfant(ctx, arbre, parentId, nom)?.let { DocumentsContract.buildDocumentUriUsingTree(arbre, it) }
+                ?: DocumentsContract.createDocument(r, parent, MIME, nom) ?: return null
+            r.openOutputStream(doc, "wt")?.use { it.write(texte.toByteArray(Charsets.UTF_8)) } ?: return null
+            nom
+        }
     }
 
-    private fun nomDe(ctx: Context, doc: Uri): String? = runCatching {
-        ctx.contentResolver.query(doc, arrayOf(DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)
-            ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+    /** Identifiant du document nommé [nom] directement sous [parentId], ou null. */
+    private fun enfant(ctx: Context, arbre: Uri, parentId: String, nom: String): String? = runCatching {
+        val enfants = DocumentsContract.buildChildDocumentsUriUsingTree(arbre, parentId)
+        ctx.contentResolver.query(enfants, arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID,
+            DocumentsContract.Document.COLUMN_DISPLAY_NAME), null, null, null)?.use { c ->
+            var id: String? = null
+            while (id == null && c.moveToNext()) if (c.getString(1) == nom) id = c.getString(0)
+            id
+        }
     }.getOrNull()
 }
