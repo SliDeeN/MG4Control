@@ -1003,7 +1003,10 @@
     <string name="projection_launch_failed">No se puede abrir %1$s</string>
     <string name="shortcuts_cat_preclim">Guardián del coche</string>
     <string name="shortcuts_cat_floating">Botones flotantes</string>
-    <string name="floating_desc">Burbujas de acceso directo sobre todas las aplicaciones. Pulsación corta: el acceso directo. Pulsación larga: mover la burbuja.</string>
+    <string name="floating_switch_title">Mostrar los botones flotantes</string>
+    <string name="floating_switch_title_profile">Botones flotantes de %1$s</string>
+    <string name="floating_state_on">Se muestran sobre todas las aplicaciones, Android Auto incluido. Toque una burbuja para lanzar su acceso directo; manténgala pulsada para moverla.</string>
+    <string name="floating_state_off">Ocultos. Actívelos para tener sus accesos directos a mano, sobre todas las aplicaciones.</string>
     <string name="floating_empty">Aún no hay botones. Añade uno: elige su acceso directo, el título lo sigue.</string>
     <string name="floating_add">+ Añadir un botón</string>
     <string name="floating_edit">Editar</string>
@@ -1030,7 +1033,7 @@
     <string name="floating_hvac_zone">Barra de climatización con Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">Durante la proyección, la barra superior ya no abre la climatización: un toque ahí abre el pop-up HVAC de MG4Control.</string>
     <string name="floating_profiles_title">Botones de:</string>
-    <string name="floating_profiles_info">Un perfil a la vez. Mientras esta página está abierta, la pantalla muestra sus botones para colocarlos.</string>
+    <string name="floating_profiles_info">Cada perfil tiene sus propias burbujas. Mientras esta página está abierta, se muestran las del perfil elegido para que pueda colocarlas.</string>
     <string name="floating_copy">Copiar estos botones a…</string>
     <string name="floating_copy_info">Copiar los botones de «%1$s» a:</string>
     <string name="floating_copy_go">Reemplazar sus botones</string>

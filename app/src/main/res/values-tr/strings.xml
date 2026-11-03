@@ -1003,7 +1003,10 @@
     <string name="projection_launch_failed">%1$s açılamadı</string>
     <string name="shortcuts_cat_preclim">Araç bekçisi</string>
     <string name="shortcuts_cat_floating">Yüzen düğmeler</string>
-    <string name="floating_desc">Tüm uygulamaların üzerinde kısayol baloncukları. Kısa basış: kısayol. Uzun basış: baloncuğu taşı.</string>
+    <string name="floating_switch_title">Yüzen düğmeleri göster</string>
+    <string name="floating_switch_title_profile">%1$s için yüzen düğmeler</string>
+    <string name="floating_state_on">Android Auto dahil tüm uygulamaların üzerinde gösterilir. Kısayolunu çalıştırmak için bir baloncuğa dokunun, taşımak için basılı tutun.</string>
+    <string name="floating_state_off">Gizli. Kısayollarınızı tüm uygulamaların üzerinde el altında tutmak için açın.</string>
     <string name="floating_empty">Henüz düğme yok. Bir tane ekleyin: kısayolunu seçin, başlık onu izler.</string>
     <string name="floating_add">+ Düğme ekle</string>
     <string name="floating_edit">Düzenle</string>
@@ -1030,7 +1033,7 @@
     <string name="floating_hvac_zone">Android Auto / CarPlay sırasında klima çubuğu</string>
     <string name="floating_hvac_zone_desc">Yansıtma sırasında üst çubuk artık klimayı açmıyor: oraya dokunmak MG4Control HVAC açılır penceresini açar.</string>
     <string name="floating_profiles_title">Profil düğmeleri:</string>
-    <string name="floating_profiles_info">Her seferinde bir profil. Bu sayfa açıkken ekran, yerleştirmeniz için o profilin düğmelerini gösterir.</string>
+    <string name="floating_profiles_info">Her profilin kendi baloncukları vardır. Bu sayfa açıkken, yerleştirebilmeniz için seçilen profilin baloncukları gösterilir.</string>
     <string name="floating_copy">Bu düğmeleri kopyala…</string>
     <string name="floating_copy_info">“%1$s” düğmelerini şuraya kopyala:</string>
     <string name="floating_copy_go">Düğmelerini değiştir</string>

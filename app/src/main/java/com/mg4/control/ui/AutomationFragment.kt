@@ -1014,6 +1014,8 @@ class AutomationFragment : Fragment() {
         }
         apply()
         btn.setOnClickListener { open = !open; apply() }
+        // Le titre déplie aussi (2026-11-03) : la rangée d'en-tête ne porte que lui et le chevron.
+        (btn.parent as? View)?.setOnClickListener { open = !open; apply() }
         // Pour l'interrupteur d'activation : activer déplie, désactiver replie (décision du 2026-10-02).
         return { voulu -> if (voulu != open) { open = voulu; apply() } }
     }

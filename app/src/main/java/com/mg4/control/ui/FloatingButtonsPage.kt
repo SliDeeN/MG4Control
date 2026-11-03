@@ -76,6 +76,7 @@ class FloatingButtonsPage {
         view.findViewById<Switch>(R.id.switch_floating).apply {
             isChecked = FloatingButtonSettings.isEnabled(ctx)
             setOnCheckedChangeListener { _, on ->
+                peindreEtat(on)
                 if (majInterrupteur) return@setOnCheckedChangeListener
                 FloatingButtonSettings.setEnabled(ctx, on)
                 FloatingButtonsOverlay.refresh(ctx)
@@ -99,6 +100,7 @@ class FloatingButtonsPage {
         view.findViewById<MaterialButton>(R.id.btn_floating_copy_go).setOnClickListener { copier() }
         brancherEdition()
         construirePuces()
+        peindreEtat(FloatingButtonSettings.isEnabled(ctx))
         peindreListe()
     }
 
@@ -178,9 +180,23 @@ class FloatingButtonsPage {
     /** L'interrupteur et la liste du profil réglé. */
     private fun peindreProfil(ctx: Context) {
         majInterrupteur = true
-        racine.findViewById<Switch>(R.id.switch_floating).isChecked = FloatingButtonSettings.isEnabled(ctx)
+        val on = FloatingButtonSettings.isEnabled(ctx)
+        racine.findViewById<Switch>(R.id.switch_floating).isChecked = on
         majInterrupteur = false
+        peindreEtat(on)
         peindreListe()
+    }
+
+    /**
+     * Titre et phrase de l'interrupteur (maquette C du 2026-11-03) : nommé avec le profil réglé
+     * — l'interrupteur est le sien —, et ce que fait l'état en cours.
+     */
+    private fun peindreEtat(on: Boolean) {
+        val ctx = fragment?.context ?: return
+        val profil = profils.firstOrNull { it.id == profilRegle }
+        racine.findViewById<TextView>(R.id.floating_switch_title).text =
+            profil?.let { ctx.getString(R.string.floating_switch_title_profile, it.name) } ?: ctx.getString(R.string.floating_switch_title)
+        racine.findViewById<TextView>(R.id.floating_switch_desc).setText(if (on) R.string.floating_state_on else R.string.floating_state_off)
     }
 
     // ── Copie vers d'autres profils ──────────────────────────────────────────

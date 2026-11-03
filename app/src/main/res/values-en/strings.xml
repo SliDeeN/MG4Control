@@ -1003,7 +1003,10 @@
     <string name="projection_launch_failed">Couldn’t open %1$s</string>
     <string name="shortcuts_cat_preclim">Car keeper</string>
     <string name="shortcuts_cat_floating">Floating buttons</string>
-    <string name="floating_desc">Shortcut bubbles on top of every app. Short press: the shortcut. Long press: move the bubble.</string>
+    <string name="floating_switch_title">Show floating buttons</string>
+    <string name="floating_switch_title_profile">Floating buttons for %1$s</string>
+    <string name="floating_state_on">Shown on top of every app, Android Auto included. Tap a bubble to run its shortcut, hold it to move it.</string>
+    <string name="floating_state_off">Hidden. Turn them on to keep your shortcuts at your fingertips, on top of every app.</string>
     <string name="floating_empty">No button yet. Add one: choose its shortcut, the title follows.</string>
     <string name="floating_add">+ Add a button</string>
     <string name="floating_edit">Edit</string>
@@ -1030,7 +1033,7 @@
     <string name="floating_hvac_zone">Climate bar during Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">During projection, the top bar no longer opens the climate controls: a tap there opens the MG4Control HVAC pop-up.</string>
     <string name="floating_profiles_title">Buttons of:</string>
-    <string name="floating_profiles_info">One profile at a time. While this page is open, the screen shows its buttons so you can place them.</string>
+    <string name="floating_profiles_info">Each profile has its own bubbles. While this page is open, the chosen profile’s bubbles are shown so you can place them.</string>
     <string name="floating_copy">Copy these buttons to…</string>
     <string name="floating_copy_info">Copy the buttons of “%1$s” to:</string>
     <string name="floating_copy_go">Replace their buttons</string>

@@ -1003,7 +1003,10 @@
     <string name="projection_launch_failed">Não foi possível abrir %1$s</string>
     <string name="shortcuts_cat_preclim">Guardião do carro</string>
     <string name="shortcuts_cat_floating">Botões flutuantes</string>
-    <string name="floating_desc">Bolhas de atalho por cima de todas as aplicações. Toque curto: o atalho. Toque longo: mover a bolha.</string>
+    <string name="floating_switch_title">Mostrar os botões flutuantes</string>
+    <string name="floating_switch_title_profile">Botões flutuantes de %1$s</string>
+    <string name="floating_state_on">Mostrados por cima de todas as aplicações, Android Auto incluído. Toque numa bolha para abrir o atalho; mantenha-a premida para a mover.</string>
+    <string name="floating_state_off">Ocultos. Ative-os para ter os seus atalhos à mão, por cima de todas as aplicações.</string>
     <string name="floating_empty">Ainda não há botões. Adicione um: escolha o atalho, o título acompanha.</string>
     <string name="floating_add">+ Adicionar um botão</string>
     <string name="floating_edit">Editar</string>
@@ -1030,7 +1033,7 @@
     <string name="floating_hvac_zone">Barra de climatização com Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">Durante a projeção, a barra superior já não abre a climatização: um toque aí abre o pop-up HVAC do MG4Control.</string>
     <string name="floating_profiles_title">Botões de:</string>
-    <string name="floating_profiles_info">Um perfil de cada vez. Enquanto esta página estiver aberta, o ecrã mostra os seus botões para os posicionar.</string>
+    <string name="floating_profiles_info">Cada perfil tem as suas próprias bolhas. Enquanto esta página estiver aberta, as do perfil escolhido são mostradas para as posicionar.</string>
     <string name="floating_copy">Copiar estes botões para…</string>
     <string name="floating_copy_info">Copiar os botões de «%1$s» para:</string>
     <string name="floating_copy_go">Substituir os botões deles</string>

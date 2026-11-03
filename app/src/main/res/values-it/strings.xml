@@ -1003,7 +1003,10 @@
     <string name="projection_launch_failed">Impossibile aprire %1$s</string>
     <string name="shortcuts_cat_preclim">Custode dell’auto</string>
     <string name="shortcuts_cat_floating">Pulsanti mobili</string>
-    <string name="floating_desc">Bolle di scorciatoia sopra tutte le app. Pressione breve: la scorciatoia. Pressione lunga: spostare la bolla.</string>
+    <string name="floating_switch_title">Mostra i pulsanti mobili</string>
+    <string name="floating_switch_title_profile">Pulsanti mobili di %1$s</string>
+    <string name="floating_state_on">Mostrati sopra tutte le app, Android Auto compreso. Tocca una bolla per avviare la sua scorciatoia, tienila premuta per spostarla.</string>
+    <string name="floating_state_off">Nascosti. Attivali per avere le tue scorciatoie a portata di dito, sopra tutte le app.</string>
     <string name="floating_empty">Ancora nessun pulsante. Aggiungine uno: scegli la scorciatoia, il titolo la segue.</string>
     <string name="floating_add">+ Aggiungi un pulsante</string>
     <string name="floating_edit">Modifica</string>
@@ -1030,7 +1033,7 @@
     <string name="floating_hvac_zone">Barra clima durante Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">Durante la proiezione, la barra in alto non apre più il clima: un tocco lì apre il pop-up HVAC di MG4Control.</string>
     <string name="floating_profiles_title">Pulsanti di:</string>
-    <string name="floating_profiles_info">Un profilo alla volta. Finché questa pagina è aperta, lo schermo mostra i suoi pulsanti per posizionarli.</string>
+    <string name="floating_profiles_info">Ogni profilo ha le sue bolle. Finché questa pagina è aperta, vengono mostrate quelle del profilo scelto per poterle posizionare.</string>
     <string name="floating_copy">Copia questi pulsanti in…</string>
     <string name="floating_copy_info">Copia i pulsanti di «%1$s» in:</string>
     <string name="floating_copy_go">Sostituisci i loro pulsanti</string>

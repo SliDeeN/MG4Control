@@ -1003,7 +1003,10 @@
     <string name="projection_launch_failed">%1$s lässt sich nicht öffnen</string>
     <string name="shortcuts_cat_preclim">Fahrzeugwächter</string>
     <string name="shortcuts_cat_floating">Schwebende Tasten</string>
-    <string name="floating_desc">Verknüpfungsblasen über allen Apps. Kurz drücken: die Verknüpfung. Lang drücken: die Blase verschieben.</string>
+    <string name="floating_switch_title">Schwebende Tasten anzeigen</string>
+    <string name="floating_switch_title_profile">Schwebende Tasten von %1$s</string>
+    <string name="floating_state_on">Über allen Apps angezeigt, auch über Android Auto. Tippen Sie auf eine Blase, um ihre Verknüpfung zu starten; halten Sie sie gedrückt, um sie zu verschieben.</string>
+    <string name="floating_state_off">Ausgeblendet. Schalten Sie sie ein, um Ihre Verknüpfungen über allen Apps griffbereit zu haben.</string>
     <string name="floating_empty">Noch keine Taste. Fügen Sie eine hinzu: Verknüpfung wählen, der Titel folgt.</string>
     <string name="floating_add">+ Taste hinzufügen</string>
     <string name="floating_edit">Bearbeiten</string>
@@ -1030,7 +1033,7 @@
     <string name="floating_hvac_zone">Klimaleiste während Android Auto / CarPlay</string>
     <string name="floating_hvac_zone_desc">Während der Projektion öffnet die obere Leiste die Klimaanlage nicht mehr: Ein Tippen dort öffnet das HVAC-Pop-up von MG4Control.</string>
     <string name="floating_profiles_title">Schaltflächen von:</string>
-    <string name="floating_profiles_info">Ein Profil nach dem anderen. Solange diese Seite offen ist, zeigt der Bildschirm seine Schaltflächen zum Platzieren.</string>
+    <string name="floating_profiles_info">Jedes Profil hat eigene Blasen. Solange diese Seite offen ist, werden die Blasen des gewählten Profils angezeigt, damit Sie sie platzieren können.</string>
     <string name="floating_copy">Diese Schaltflächen kopieren nach…</string>
     <string name="floating_copy_info">Schaltflächen von „%1$s“ kopieren nach:</string>
     <string name="floating_copy_go">Ihre Schaltflächen ersetzen</string>

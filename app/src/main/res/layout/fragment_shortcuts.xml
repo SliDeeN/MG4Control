@@ -1210,6 +1210,8 @@
 
                         </LinearLayout>
 
+                        <!-- Interrupteur du profil choisi juste au-dessus (maquette C du 2026-11-03) : nommé
+                             avec ce profil, et une phrase qui dit ce que fait l'état en cours. -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -1219,13 +1221,31 @@
                             android:paddingEnd="14dp"
                             android:paddingTop="10dp">
 
-                            <TextView
+                            <LinearLayout
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
                                 android:layout_weight="1"
-                                android:text="@string/floating_desc"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="17sp" />
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:id="@+id/floating_switch_title"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_switch_title"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="20sp"
+                                    android:textStyle="bold" />
+
+                                <TextView
+                                    android:id="@+id/floating_switch_desc"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="2dp"
+                                    android:text="@string/floating_state_on"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="17sp" />
+
+                            </LinearLayout>
 
                             <com.mg4.control.ui.widget.SegmentSwitch
                                 android:id="@+id/switch_floating"
