@@ -22,6 +22,7 @@ import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.Switch
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.mg4.control.R
@@ -83,6 +84,12 @@ class StatsFragment : Fragment() {
     /** Ligne dépliée d'une liste, repérée par l'horodatage de son enregistrement. */
     private var expanded: Long? = null
 
+    /** Export CSV (issue #206) : la fenêtre ouverte, et le sélecteur de dossier d'Android qui lui répond. */
+    private var exportDialog: StatsExportDialog? = null
+    private val choisirDossier = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { arbre ->
+        exportDialog?.surDossier(arbre)
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View = inflater.inflate(R.layout.fragment_stats, container, false)
@@ -111,6 +118,9 @@ class StatsFragment : Fragment() {
             }
         }
         view.findViewById<MaterialButton>(R.id.btn_stats_clear).setOnClickListener { confirmClear() }
+        view.findViewById<MaterialButton>(R.id.btn_stats_export).setOnClickListener {
+            exportDialog = StatsExportDialog(requireContext(), store) { choisirDossier.launch(null) }.also { it.ouvrir() }
+        }
 
         view.findViewById<Switch>(R.id.switch_stats_skip_short).apply {
             isChecked = store.settings().skipShortTrips

@@ -63,6 +63,10 @@
     <uses-permission android:name="android.permission.TETHER_PRIVILEGED"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <!-- Export des Statistiques sur la clé USB (issue #206) : écrire sur un volume amovible.
+         Signature|privileged : accordée à l'appli signée plateforme. -->
+    <uses-permission android:name="android.permission.WRITE_MEDIA_STORAGE"
+        tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <!-- [T-902] "com.saic.keyevent.hardkey.report" n'est pas un broadcast protégé :
