@@ -50,7 +50,6 @@ class ShortcutsFragment : Fragment() {
     private var switchEnabled:   Switch? = null
     /** Vrai pendant que [restoreState] pose l'interrupteur : ce n'est pas un choix à enregistrer. */
     private var restauration = false
-    private var shortcutsContent: View?  = null
 
     /** Éléments disponibles dans les Spinners — calculés une fois selon le firmware. */
     private data class ActionItem(val label: String, val action: ShortcutAction)
@@ -131,7 +130,6 @@ class ShortcutsFragment : Fragment() {
         defColor    = requireContext().getColor(R.color.bg_button)
 
         switchEnabled    = view.findViewById(R.id.switch_shortcuts_enabled)
-        shortcutsContent = view.findViewById(R.id.shortcuts_content)
 
         val gen        = FirmwareInfo.getGeneration()
         val isKnown    = gen != FirmwareInfo.Gen.UNKNOWN
@@ -775,8 +773,7 @@ class ShortcutsFragment : Fragment() {
                 btn.setCategoryTabActive(page.visibility == View.VISIBLE)
             }
             // L'interrupteur « Activer » n'a sa place que sur le premier sous-onglet, « Boutons
-            // physiques ». Éteint, il grise les pastilles : on ne peut donc pas quitter cet onglet
-            // sans lui, ni le perdre de vue.
+            // physiques », la seule page qu'il commande.
             enabledRow?.visibility = if (tabs.first().second.visibility == View.VISIBLE) View.VISIBLE else View.GONE
             // Page des boutons flottants à l'écran : les bulles montrées sont celles du profil qu'elle règle.
             floatingPage.surPageVisible(isResumed && tabs.first { it.second.id == R.id.page_sc_floating }.second.visibility == View.VISIBLE)
@@ -855,7 +852,6 @@ class ShortcutsFragment : Fragment() {
             if (restauration) return@setOnCheckedChangeListener
             saveBoolean("shortcut_enabled", checked)
             applyEnabledUI(checked)
-            if (checked) showShortcutWarning()
         }
 
         // One Pedal — regen de retour
@@ -909,20 +905,15 @@ class ShortcutsFragment : Fragment() {
 
     // ── Helpers UI ───────────────────────────────────────────────────────
 
+    /**
+     * L'interrupteur « Activer » ne commande que les boutons physiques (2026-11-03) : seule leur
+     * page est grisée. Les autres sous-onglets — boutons flottants (qui ont leur propre
+     * interrupteur), cycles, garde-voiture, raccourcis perso — restent utilisables.
+     */
     private fun applyEnabledUI(enabled: Boolean) {
-        shortcutsContent?.alpha = if (enabled) 1f else 0.35f
-        setChildrenEnabled(shortcutsContent, enabled)
-        // Les pastilles sont dans la rangée de l'interrupteur, hors du contenu : grisées à part.
-        view?.findViewById<View>(R.id.sc_tabs_scroll)?.let {
+        view?.findViewById<View>(R.id.page_sc_classic)?.let {
             it.alpha = if (enabled) 1f else 0.35f
             setChildrenEnabled(it, enabled)
-        }
-        // setChildrenEnabled réactive TOUT, « Sauvegarder » compris. Or son état ne dépend pas
-        // de l'interrupteur global mais du nombre de modes choisis : il faut le lui rendre.
-        if (enabled) {
-            majCycleRegen?.invoke()
-            majCycleModes?.invoke()
-            majCycleProfils?.invoke()
         }
     }
 
@@ -995,16 +986,6 @@ class ShortcutsFragment : Fragment() {
             btn?.backgroundTintList = ColorStateList.valueOf(if (isActive) accentColor else defColor)
             btn?.setTextColor(if (isActive) activeTextColor else inactiveTextColor)
         }
-    }
-
-    private fun showShortcutWarning() {
-        AppDialog.confirmer(
-            requireContext(),
-            titre = getString(R.string.shortcuts_warning_title),
-            message = getString(R.string.shortcuts_warning_message),
-            ton = AppDialog.Ton.ALERTE,
-            oui = getString(R.string.shortcuts_warning_ok),
-        )
     }
 
     // ── Prefs helpers ────────────────────────────────────────────────────

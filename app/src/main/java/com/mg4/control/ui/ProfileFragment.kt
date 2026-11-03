@@ -48,12 +48,17 @@ class ProfileFragment : Fragment() {
             manager.getDefaultId(),
             onApply = { profile ->
                 ProfileApplier.apply(profile) { ok ->
-                    requireActivity().runOnUiThread {
+                    activity?.runOnUiThread {
+                        if (!isAdded) return@runOnUiThread
                         val msg = if (ok) getString(R.string.profile_applied, profile.name)
                                   else getString(R.string.profile_applied_check_logs)
                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                     }
                 }
+                // Le profil actif est noté dès la demande ([ProfileApplier.apply]) : la carte
+                // passe en surbrillance tout de suite, sans attendre la fin des écritures ni un
+                // changement d'onglet (2026-11-03).
+                refreshList()
             },
             onSetDefault = { profile ->
                 manager.setDefault(profile.id)
