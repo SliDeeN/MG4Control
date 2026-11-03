@@ -1365,7 +1365,8 @@ object MG4Hardware {
             val types = args.map { if (it is Int) Int::class.javaPrimitiveType!! else it!!.javaClass }.toTypedArray()
             vsm.javaClass.getMethod(methodName, *types).invoke(vsm, *args)
         } catch (e: Exception) {
-            AppLogger.w(TAG, "  SWI68: $methodName() exc: ${e.message}")
+            val cause = e.cause ?: e
+            AppLogger.w(TAG, "  SWI68: $methodName(${args.joinToString()}) exc: ${cause.javaClass.simpleName} ${cause.message}")
             null
         }
     }
@@ -1385,7 +1386,10 @@ object MG4Hardware {
             vsm.javaClass.getMethod(methodName, *types).invoke(vsm, *args)
             true   // méthode trouvée et appelée sans exception → succès
         } catch (e: Exception) {
-            AppLogger.w(TAG, "  VSM: $methodName() exc: ${e.message}")
+            // La vraie cause est sous l'InvocationTargetException, dont le message est null
+            // (« exc: null » relevé sur SWI173 pour setLasWarningSound, 2026-11-03).
+            val cause = e.cause ?: e
+            AppLogger.w(TAG, "  VSM: $methodName(${args.joinToString()}) exc: ${cause.javaClass.simpleName} ${cause.message}")
             false
         }
     }
@@ -6030,6 +6034,9 @@ object MG4Hardware {
     // ── Climatisation ─────────────────────────────────────────────────────────
     private const val CLIM_TAG = "MG4_CLIM"
 
+    /** Pause avant la relecture finale de l'A/C d'un profil ([applyProfileClimate]). */
+    private const val AC_RECHECK_MS = 800L
+
     // ── Voie A9 (SWI69/131/132) : carapi CarHvacClient via queryClient(0x7) ──────
     // Le SDK vehiclesettings est ABSENT sur A9 ; la clim passe par l'adaptateur carapi,
     // exactement comme le power-off (queryClient(0xf)) déjà en place.
@@ -6821,6 +6828,13 @@ object MG4Hardware {
         // [airEtRecirculation]. Hors « Inchangé », le profil applique ce qui est affiché :
         // lunette arrière non cochée = dégivrage arrière ÉTEINT.
         ok = airEtRecirculation(state, autoMode, airFlow, loopMode, "Profil") && ok
+
+        // A/C relu et remis EN DERNIER (testeur SWI173, 2026-11-03) : coupé et relu à 0 en début
+        // de bloc, il était revenu à ON au profil suivant — quitter AUTO par la ventilation, la
+        // recirculation ou ECO peut le rallumer. Une pause d'abord, le temps que la voiture ait
+        // fini de réagir aux réglages précédents ; s'il est déjà bon, aucun appui.
+        try { Thread.sleep(AC_RECHECK_MS) } catch (_: InterruptedException) {}
+        ok = setClimateAc(ac) && ok
 
         AppLogger.i(CLIM_TAG, "Profil : clim=ON A/C=$ac consigne=$targetTemp " +
             (if (autoMode) "ventilation=AUTO débit=${autoVolume?.let { AutoVolume.label(it) } ?: "inchangé"}"
