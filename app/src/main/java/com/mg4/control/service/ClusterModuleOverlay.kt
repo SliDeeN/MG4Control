@@ -232,7 +232,9 @@ internal object ClusterModuleOverlay {
             // Hors des firmwares pris en charge, rien — même si le réglage a été activé pendant les
             // essais sur A9 : sans ça, une fenêtre invisible resterait posée sur l'écran du combiné.
             // Module désactivé : posé quand même le temps d'une pré-climatisation.
-            if (ClusterModuleSettings.isSupported() &&
+            // Mode Garage : rien sur le combiné, pré-climatisation comprise (signalé le 2026-11-03).
+            val garage = com.mg4.control.util.GarageMode.isOn(app)
+            if (ClusterModuleSettings.isSupported() && !garage &&
                 (ClusterModuleSettings.isEnabled(app) || PreClimate.surLeCombine(app))) {
                 if (!abonne) {
                     abonne = true
@@ -243,7 +245,11 @@ internal object ClusterModuleOverlay {
                 afficher(origine)
             } else {
                 desabonner()
-                masquer(if (origine == "réglage") "réglage désactivé" else "$origine, module désactivé")
+                masquer(when {
+                    garage -> "$origine, mode Garage"
+                    origine == "réglage" -> "réglage désactivé"
+                    else -> "$origine, module désactivé"
+                })
             }
         }
     }
