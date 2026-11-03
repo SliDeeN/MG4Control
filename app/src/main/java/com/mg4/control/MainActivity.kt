@@ -89,6 +89,8 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_main)
         placerMenu()
+        // Libellés trop longs : deux lignes s'il y a la place, sinon une, puis « … ».
+        com.mg4.control.util.ButtonLines.suivre(window.decorView)
 
         startForegroundService(Intent(this, MG4ControlService::class.java))
         MG4Hardware.initAudio(applicationContext)  // connecte le helper audio vendor (A9 uniquement, no-op ailleurs)

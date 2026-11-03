@@ -333,11 +333,11 @@ class WheelButtonsPage(private val host: Host) {
     private fun tuile(texte: String, accent: Boolean) = TextView(ctx).apply {
         text = texte
         gravity = Gravity.CENTER_VERTICAL
-        maxLines = 1
-        ellipsize = TextUtils.TruncateAt.END
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 19f)
         setTextColor(ctx.getColor(if (accent) R.color.text_primary else R.color.text_secondary))
         setPadding(dp(16f), 0, dp(12f), 0)
+        // Deux lignes si la tuile les loge, sinon une, puis « … » (règle commune des boutons).
+        com.mg4.control.util.ButtonLines.appliquer(this)
         com.mg4.control.service.OverlayKit.fond(this,
             ctx.getColor(if (accent) R.color.dash_accent_dim else R.color.dash_btn),
             ctx.getColor(if (accent) R.color.dash_accent else R.color.dash_border), dp(1f), dp(14f).toFloat())

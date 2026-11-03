@@ -125,6 +125,7 @@ internal object AppDialog {
         dialog.show()
         // Après show() : avant, la fenêtre n'a pas encore ses dimensions et le réglage est perdu.
         dialog.window?.setLayout(dp(context, largeurDp), WindowManager.LayoutParams.WRAP_CONTENT)
+        com.mg4.control.util.ButtonLines.suivre(vue)
         return dialog
     }
 
