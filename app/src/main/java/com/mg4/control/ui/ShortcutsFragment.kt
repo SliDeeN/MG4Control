@@ -48,6 +48,8 @@ class ShortcutsFragment : Fragment() {
     private var defColor    = 0
 
     private var switchEnabled:   Switch? = null
+    /** Vrai pendant que [restoreState] pose l'interrupteur : ce n'est pas un choix à enregistrer. */
+    private var restauration = false
     private var shortcutsContent: View?  = null
 
     /** Éléments disponibles dans les Spinners — calculés une fois selon le firmware. */
@@ -846,11 +848,14 @@ class ShortcutsFragment : Fragment() {
 
     private fun setupConfigListeners(view: View) {
         switchEnabled?.setOnCheckedChangeListener { _, checked ->
-            if (switchEnabled?.isPressed == true) {
-                saveBoolean("shortcut_enabled", checked)
-                applyEnabledUI(checked)
-                if (checked) showShortcutWarning()
-            }
+            // Seul un geste de l'utilisateur enregistre : la restauration pose l'état sans passer
+            // ici ([restauration]). L'ancien filtre `isPressed` ne voyait jamais le SegmentSwitch
+            // de la refonte (il ne passe pas par l'état « appuyé ») : Oui n'était jamais
+            // enregistré et revenait à Non au retour sur l'écran (testeur SWI173, 2026-11-03).
+            if (restauration) return@setOnCheckedChangeListener
+            saveBoolean("shortcut_enabled", checked)
+            applyEnabledUI(checked)
+            if (checked) showShortcutWarning()
         }
 
         // One Pedal — regen de retour
@@ -896,7 +901,9 @@ class ShortcutsFragment : Fragment() {
 
     private fun restoreState() {
         val enabled = prefs.getBoolean("shortcut_enabled", false)
+        restauration = true
         switchEnabled?.isChecked = enabled
+        restauration = false
         applyEnabledUI(enabled)
     }
 
