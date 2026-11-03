@@ -265,11 +265,8 @@ class MainActivity : AppCompatActivity() {
     private fun placerMenu() {
         if (NavSide.right(this)) {
             val menu = findViewById<View>(R.id.nav_column)
-            val trait = findViewById<View>(R.id.nav_divider)
             val racine = menu.parent as android.view.ViewGroup
             racine.removeView(menu)
-            racine.removeView(trait)
-            racine.addView(trait)
             racine.addView(menu)
         }
         if (NavSide.mode(this) != NavSide.Mode.AUTO) return

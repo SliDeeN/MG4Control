@@ -19,7 +19,7 @@
 
     <!-- ── MENU PRINCIPAL ──────────────────────────────────────────── -->
     <!-- Volant à droite (Réglages › Interface › Côté du menu) : MainActivity le passe après le
-         contenu, avec son trait. -->
+         contenu. Pas de trait entre le menu et le contenu (retiré le 2026-11-03, sa demande). -->
     <LinearLayout
         android:id="@+id/nav_column"
         android:layout_width="184dp"
@@ -90,12 +90,6 @@
             app:icon="@drawable/ic_nav_settings" />
 
     </LinearLayout>
-
-    <View
-        android:id="@+id/nav_divider"
-        android:layout_width="1dp"
-        android:layout_height="match_parent"
-        android:background="@color/dash_border" />
 
     <!-- ── ZONE DE CONTENU (NavController) ────────────────────────── -->
     <androidx.fragment.app.FragmentContainerView
