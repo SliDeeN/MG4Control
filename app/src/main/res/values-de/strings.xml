@@ -1123,6 +1123,7 @@
     <string name="preclim_off_at">Auto aus gegen %1$s</string>
     <string name="preclim_outside">Außen %1$s</string>
     <string name="preclim_battery">Akku %1$s</string>
+    <string name="preclim_power">Verbrauch %1$s</string>
     <string name="preclim_hint">Entriegeln, um zu stoppen und die Einstellungen zurückzubekommen · Bildschirm berühren, um ihn aufzuhellen</string>
     <string name="preclim_hide">Ausblenden</string>
     <string name="preclim_stop">Stoppen</string>

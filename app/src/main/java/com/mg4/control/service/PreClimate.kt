@@ -87,6 +87,8 @@ object PreClimate {
         val endWallMinute: Double? = null,
         /** Extinction de fin : envoyée et acceptée (vrai), refusée (faux), pas tentée (null). */
         val powerOffOk: Boolean? = null,
+        /** Puissance tirée de la batterie, lissée, en W (issue #210) ; null = illisible. */
+        val powerW: Int? = null,
     )
 
     private val fil by lazy { HandlerThread("mg4-preclim").also { it.start() } }
@@ -110,6 +112,8 @@ object PreClimate {
     private var lockConfirmedAt = 0L
     private var climOffReads = 0
     private var ticks = 0
+    /** Puissance des écrans (issue #210) : un relevé par seconde, moyenné sur cinq. */
+    private val puissance = com.mg4.control.model.PowerSmoother()
 
     fun actif(): Boolean = etat?.phase.let { it == Phase.COUNTDOWN || it == Phase.ACTIVE }
 
@@ -168,6 +172,7 @@ object PreClimate {
             unlockWatch = UnlockWatch()
             climOffReads = 0
             ticks = 0
+            puissance.reset()
             val e = Etat(
                 phase = Phase.COUNTDOWN, req = borne, startMs = maintenant, startWallMinute = mur,
                 lockAtMs = maintenant + PreClimateSettings.lockSeconds(app) * 1_000L,
@@ -332,7 +337,8 @@ object PreClimate {
             }
         }
         val dehors = if (ticks % OUTSIDE_TICKS == 0) MG4Hardware.getOutsideTempCelsius() ?: e.outsideC else e.outsideC
-        val suite = e.copy(step = step, soc = soc ?: e.soc, outsideC = dehors)
+        puissance.add(runCatching { EnergyReader.dischargeKw() }.getOrNull())
+        val suite = e.copy(step = step, soc = soc ?: e.soc, outsideC = dehors, powerW = puissance.watts())
         etat = suite
         publier(suite)
     }

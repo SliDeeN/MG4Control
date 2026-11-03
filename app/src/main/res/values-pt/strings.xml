@@ -1123,6 +1123,7 @@
     <string name="preclim_off_at">Carro desligado por volta das %1$s</string>
     <string name="preclim_outside">Exterior %1$s</string>
     <string name="preclim_battery">Bateria %1$s</string>
+    <string name="preclim_power">Consumo %1$s</string>
     <string name="preclim_hint">Destranque para parar e recuperar as suas definições · toque no ecrã para o iluminar</string>
     <string name="preclim_hide">Ocultar</string>
     <string name="preclim_stop">Parar</string>

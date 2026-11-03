@@ -1123,6 +1123,7 @@
     <string name="preclim_off_at">Araç %1$s civarında kapanır</string>
     <string name="preclim_outside">Dış %1$s</string>
     <string name="preclim_battery">Batarya %1$s</string>
+    <string name="preclim_power">Tüketim %1$s</string>
     <string name="preclim_hint">Durdurmak ve ayarlarınızı geri almak için kilidi açın · aydınlatmak için ekrana dokunun</string>
     <string name="preclim_hide">Gizle</string>
     <string name="preclim_stop">Durdur</string>

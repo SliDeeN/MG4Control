@@ -171,6 +171,7 @@ class PreClimateActivity : Activity() {
         val lignes: LinearLayout = racine.findViewById(R.id.preclim_lines)
         val dehors: TextView = racine.findViewById(R.id.preclim_outside)
         val batterie: TextView = racine.findViewById(R.id.preclim_battery)
+        val puissance: TextView = racine.findViewById(R.id.preclim_power)
         val masquer: TextView = racine.findViewById(R.id.preclim_hide)
         val arreter: TextView = racine.findViewById(R.id.preclim_stop)
         val chien: View = racine.findViewById(R.id.preclim_dog)
@@ -356,6 +357,9 @@ class PreClimateActivity : Activity() {
         lignes(e, step)
         v.dehors.text = v.s(R.string.preclim_outside, temperatureDehors(e))
         v.batterie.text = v.s(R.string.preclim_battery, batterie(e))
+        // Consommation (issue #210) : absente tant que la mesure est illisible.
+        v.puissance.text = e.powerW?.let { v.s(R.string.preclim_power, watts(it)) }.orEmpty()
+        v.puissance.visibility = if (e.powerW != null) View.VISIBLE else View.GONE
     }
 
     /**
@@ -372,12 +376,12 @@ class PreClimateActivity : Activity() {
         v.chienTemp.setTextColor(couleur)
         v.chienTemp.text = v.s(R.string.preclim_value_celsius, e.req.tempC)
         v.chienDehors.text = v.s(R.string.preclim_dog_outside, temperatureDehors(e))
-        v.chienEtat.text = v.s(R.string.preclim_dog_status, heure(e.startWallMinute.toInt()), batterie(e))
+        v.chienEtat.text = v.s(R.string.preclim_dog_status, heure(e.startWallMinute.toInt()), batterieEtPuissance(e))
     }
 
     /** Surveillance (issue #180) : l'avertissement est fixe ; seule la ligne d'état change. */
     private fun peindreSurveillance(e: PreClimate.Etat) {
-        v.survEtat.text = v.s(R.string.preclim_surv_status, heure(e.startWallMinute.toInt()), batterie(e),
+        v.survEtat.text = v.s(R.string.preclim_surv_status, heure(e.startWallMinute.toInt()), batterieEtPuissance(e),
             heure((e.startWallMinute + e.req.maxMin).roundToInt()))
     }
 
@@ -489,6 +493,17 @@ class PreClimateActivity : Activity() {
 
     private fun batterie(e: PreClimate.Etat): String =
         e.soc?.let { v.s(R.string.preclim_value_percent, it.toInt()) } ?: "–"
+
+    /**
+     * Ligne d'état du mode chien et de la surveillance (issue #210) : « 78 % · 2 100 W » — la
+     * puissance suit la batterie, et disparaît tant qu'elle est illisible.
+     */
+    private fun batterieEtPuissance(e: PreClimate.Etat): String =
+        batterie(e) + (e.powerW?.let { " · " + watts(it) } ?: "")
+
+    /** « 1 850 W », séparateur de milliers de la langue. */
+    private fun watts(w: Int): String =
+        java.text.NumberFormat.getIntegerInstance(v.locale).format(w) + " W"
 
     /** « 25 °C · ventilation 8 · A/C » : ce que la pré-climatisation règle (compresseur toujours en marche). */
     private fun resumeDemande(e: PreClimate.Etat): String = v.s(

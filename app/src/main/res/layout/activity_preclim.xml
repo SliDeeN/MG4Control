@@ -300,6 +300,16 @@
                             android:textColor="@color/text_secondary"
                             android:textSize="18sp" />
 
+                        <!-- Consommation en direct (issue #210) : masquée tant qu'elle est illisible. -->
+                        <TextView
+                            android:id="@+id/preclim_power"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="28dp"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="18sp"
+                            android:visibility="gone" />
+
                     </LinearLayout>
 
                     <TextView

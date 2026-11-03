@@ -1140,6 +1140,7 @@
     <string name="preclim_off_at">Voiture éteinte vers %1$s</string>
     <string name="preclim_outside">Extérieur %1$s</string>
     <string name="preclim_battery">Batterie %1$s</string>
+    <string name="preclim_power">Consommation %1$s</string>
     <string name="preclim_hint">Déverrouillez pour arrêter et retrouver vos réglages · touchez l’écran pour l’éclairer</string>
     <string name="preclim_hide">Masquer</string>
     <string name="preclim_stop">Arrêter</string>

@@ -1123,6 +1123,7 @@
     <string name="preclim_off_at">Auto spenta verso le %1$s</string>
     <string name="preclim_outside">Esterno %1$s</string>
     <string name="preclim_battery">Batteria %1$s</string>
+    <string name="preclim_power">Consumo %1$s</string>
     <string name="preclim_hint">Sblocca per fermare e ritrovare le tue impostazioni · tocca lo schermo per illuminarlo</string>
     <string name="preclim_hide">Nascondi</string>
     <string name="preclim_stop">Ferma</string>

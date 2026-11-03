@@ -1123,6 +1123,7 @@
     <string name="preclim_off_at">Car switched off around %1$s</string>
     <string name="preclim_outside">Outside %1$s</string>
     <string name="preclim_battery">Battery %1$s</string>
+    <string name="preclim_power">Consumption %1$s</string>
     <string name="preclim_hint">Unlock to stop and get your settings back · touch the screen to light it up</string>
     <string name="preclim_hide">Hide</string>
     <string name="preclim_stop">Stop</string>

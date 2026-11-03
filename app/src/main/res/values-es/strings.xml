@@ -1123,6 +1123,7 @@
     <string name="preclim_off_at">Coche apagado hacia las %1$s</string>
     <string name="preclim_outside">Exterior %1$s</string>
     <string name="preclim_battery">Batería %1$s</string>
+    <string name="preclim_power">Consumo %1$s</string>
     <string name="preclim_hint">Desbloquea para parar y recuperar tus ajustes · toca la pantalla para iluminarla</string>
     <string name="preclim_hide">Ocultar</string>
     <string name="preclim_stop">Parar</string>
