@@ -30,6 +30,8 @@ import com.mg4.control.service.OverlayKit
 import com.mg4.control.service.PreClimate
 import com.mg4.control.shortcut.AudioSource
 import com.mg4.control.shortcut.AudioSourceCycle
+import com.mg4.control.shortcut.DriveModeCycle
+import com.mg4.control.model.DriveMode
 import com.mg4.control.shortcut.ProfileCycle
 import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.shortcut.ShortcutAction
@@ -78,6 +80,11 @@ class ShortcutsFragment : Fragment() {
 
     /** Repart de la séquence ENREGISTRÉE, en jetant une composition non sauvegardée. */
     private var rechargerCycleRegen: (() -> Unit)? = null
+
+    /** Cycle des modes de conduite (issue #207) : mêmes trois pièces que celui de la régénération. */
+    private val driveCycleSel = mutableListOf<DriveMode>()
+    private var majCycleModes: (() -> Unit)? = null
+    private var rechargerCycleModes: (() -> Unit)? = null
 
     /**
      * Cycle de profils en cours d'édition : des IDENTIFIANTS de profil, dans l'ordre des appuis.
@@ -139,6 +146,7 @@ class ShortcutsFragment : Fragment() {
         wheelPage.bind(view)
         setupConfigListeners(view)
         setupRegenCycle(view)
+        setupDriveCycle(view)
         setupProfileCycle(view)
         setupSourceCycle(view)
         setupPreClimatePage(view)
@@ -190,6 +198,8 @@ class ShortcutsFragment : Fragment() {
         reselectTabs = null
         majCycleRegen = null
         rechargerCycleRegen = null
+        majCycleModes = null
+        rechargerCycleModes = null
         majCycleProfils = null
         rechargerCycleProfils = null
         rechargerCycleSources = null
@@ -444,6 +454,73 @@ class ShortcutsFragment : Fragment() {
         rechargerCycleRegen?.invoke()
     }
 
+    /**
+     * Composition du cycle des modes de conduite (issue #207) : le même geste que [setupRegenCycle]
+     * — l'ordre des appuis est l'ordre du cycle, rien n'est gardé avant « Sauvegarder », deux modes
+     * au moins.
+     */
+    private fun setupDriveCycle(view: View) {
+        val boutons = listOf(
+            R.id.sc_drive_cycle_eco    to DriveMode.ECO,
+            R.id.sc_drive_cycle_normal to DriveMode.NORMAL,
+            R.id.sc_drive_cycle_sport  to DriveMode.SPORT,
+            R.id.sc_drive_cycle_snow   to DriveMode.SNOW,
+            R.id.sc_drive_cycle_custom to DriveMode.CUSTOM,
+        ).mapNotNull { (id, mode) -> view.findViewById<MaterialButton>(id)?.let { it to mode } }
+        val resume = view.findViewById<TextView>(R.id.tv_drive_cycle_summary)
+        val save   = view.findViewById<MaterialButton>(R.id.btn_drive_cycle_save)
+        val texteActif   = requireContext().getColor(R.color.text_active)
+        val texteInactif = requireContext().getColor(R.color.text_secondary)
+
+        fun maj() {
+            boutons.forEach { (btn, mode) ->
+                val rang = driveCycleSel.indexOf(mode)
+                val on   = rang >= 0
+                btn.text = libelleMode(mode) + "\n" + (if (on) "${rang + 1}" else "\u00A0")
+                btn.backgroundTintList = ColorStateList.valueOf(if (on) accentColor else defColor)
+                btn.setTextColor(if (on) texteActif else texteInactif)
+            }
+            val assez = driveCycleSel.size >= DriveModeCycle.MIN_MODES
+            resume?.text = if (assez) getString(R.string.shortcuts_cfg_regen_summary,
+                driveCycleSel.joinToString(" → ") { libelleMode(it) })
+            else getString(R.string.shortcuts_cfg_drive_min)
+            save?.isEnabled = assez
+            save?.alpha     = if (assez) 1f else 0.4f
+        }
+
+        boutons.forEach { (btn, mode) ->
+            btn.setOnClickListener {
+                if (!driveCycleSel.remove(mode)) driveCycleSel.add(mode)
+                maj()
+            }
+        }
+        view.findViewById<MaterialButton>(R.id.btn_drive_cycle_clear)?.setOnClickListener {
+            driveCycleSel.clear()
+            maj()
+        }
+        save?.setOnClickListener {
+            if (driveCycleSel.size < DriveModeCycle.MIN_MODES) return@setOnClickListener
+            DriveModeCycle.save(requireContext(), driveCycleSel)
+            Toast.makeText(requireContext(), R.string.shortcuts_cfg_regen_saved, Toast.LENGTH_SHORT).show()
+        }
+        majCycleModes = { maj() }
+        rechargerCycleModes = {
+            driveCycleSel.clear()
+            driveCycleSel.addAll(DriveModeCycle.order(requireContext()))
+            maj()
+        }
+        rechargerCycleModes?.invoke()
+    }
+
+    /** Nom d'un mode, le même que sur l'écran Conduite. */
+    private fun libelleMode(m: DriveMode): String = getString(when (m) {
+        DriveMode.ECO    -> R.string.drive_eco
+        DriveMode.NORMAL -> R.string.drive_normal
+        DriveMode.SPORT  -> R.string.drive_sport
+        DriveMode.SNOW   -> R.string.drive_snow
+        DriveMode.CUSTOM -> R.string.drive_custom
+    })
+
     /** Libellés courts des niveaux — les mêmes que la rangée « Regen retour », pour que le même
      *  mode ne porte pas deux noms d'un écran à l'autre. */
     private fun libelleRegen(niveau: RegenLevel): String = getString(when (niveau) {
@@ -638,6 +715,7 @@ class ShortcutsFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_onepedal) to view.findViewById<ViewGroup>(R.id.page_sc_onepedal),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_adas)     to view.findViewById<ViewGroup>(R.id.page_sc_adas),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_regen)    to view.findViewById<ViewGroup>(R.id.page_sc_regen),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_drivemode) to view.findViewById<ViewGroup>(R.id.page_sc_drivemode),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_profiles) to view.findViewById<ViewGroup>(R.id.page_sc_profiles),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_sources)  to view.findViewById<ViewGroup>(R.id.page_sc_sources),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_preclim)  to view.findViewById<ViewGroup>(R.id.page_sc_preclim),
@@ -656,6 +734,7 @@ class ShortcutsFragment : Fragment() {
             page(R.id.page_sc_onepedal) to ShortcutAction.ONE_PEDAL,
             page(R.id.page_sc_adas)     to ShortcutAction.ADAS_CYCLE,
             pageCycle                   to ShortcutAction.REGEN_CYCLE,
+            page(R.id.page_sc_drivemode) to ShortcutAction.DRIVE_MODE_CYCLE,
             pageProfils                 to ShortcutAction.PROFILE_CYCLE,
             pageSources                 to ShortcutAction.AUDIO_SOURCE_CYCLE,
             page(R.id.page_sc_preclim)  to ShortcutAction.PRE_CLIMATE
@@ -712,6 +791,7 @@ class ShortcutsFragment : Fragment() {
                 // abandonnée sans « Sauvegarder » ne doit pas se faire passer pour le réglage
                 // en vigueur.
                 if (page === pageCycle) rechargerCycleRegen?.invoke()
+                if (page.id == R.id.page_sc_drivemode) rechargerCycleModes?.invoke()
                 // Idem pour le cycle de profils, qui relit en plus la liste des profils.
                 if (page === pageProfils) rechargerCycleProfils?.invoke()
                 if (page === pageSources) rechargerCycleSources?.invoke()
@@ -834,6 +914,7 @@ class ShortcutsFragment : Fragment() {
         // de l'interrupteur global mais du nombre de modes choisis : il faut le lui rendre.
         if (enabled) {
             majCycleRegen?.invoke()
+            majCycleModes?.invoke()
             majCycleProfils?.invoke()
         }
     }

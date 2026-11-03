@@ -595,6 +595,12 @@
     <string name="shortcuts_cat_onepedal">1 Pedal</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Regen cycle</string>
+    <string name="shortcuts_action_drive_cycle">Drive mode cycle</string>
+    <string name="shortcuts_cat_drive_cycle">Mode cycle</string>
+    <string name="shortcuts_cfg_drive_cycle">Drive mode cycle</string>
+    <string name="shortcuts_cfg_drive_hint">Tap the modes in the order you want to go through them, then save. The shortcut also works while driving.</string>
+    <string name="shortcuts_cfg_drive_min">Choose at least two modes.</string>
+    <string name="shortcut_drive_mode_toast">Mode %1$s</string>
     <string name="shortcuts_cfg_regen_cycle">Regeneration cycle</string>
     <string name="shortcuts_cfg_regen_hint">Tap the modes in the order you want to cycle through them, then save.</string>
     <string name="shortcuts_cfg_regen_summary">Cycle: %1$s</string>

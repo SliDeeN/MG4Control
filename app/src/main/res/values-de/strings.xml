@@ -595,6 +595,12 @@
     <string name="shortcuts_cat_onepedal">1 Pedal</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Regen-Zyklus</string>
+    <string name="shortcuts_action_drive_cycle">Fahrmodus-Zyklus</string>
+    <string name="shortcuts_cat_drive_cycle">Modus-Zyklus</string>
+    <string name="shortcuts_cfg_drive_cycle">Fahrmodus-Zyklus</string>
+    <string name="shortcuts_cfg_drive_hint">Tippen Sie die Modi in der gewünschten Reihenfolge an und speichern Sie. Die Verknüpfung funktioniert auch während der Fahrt.</string>
+    <string name="shortcuts_cfg_drive_min">Wählen Sie mindestens zwei Modi.</string>
+    <string name="shortcut_drive_mode_toast">Modus %1$s</string>
     <string name="shortcuts_cfg_regen_cycle">Rekuperationszyklus</string>
     <string name="shortcuts_cfg_regen_hint">Tippen Sie die Stufen in der gewünschten Reihenfolge an, dann speichern.</string>
     <string name="shortcuts_cfg_regen_summary">Zyklus: %1$s</string>

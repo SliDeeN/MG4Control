@@ -600,6 +600,12 @@
     <string name="shortcuts_cat_onepedal">1 Pédale</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Cycle regen</string>
+    <string name="shortcuts_action_drive_cycle">Cycle des modes de conduite</string>
+    <string name="shortcuts_cat_drive_cycle">Cycle des modes</string>
+    <string name="shortcuts_cfg_drive_cycle">Cycle des modes de conduite</string>
+    <string name="shortcuts_cfg_drive_hint">Touchez les modes dans l’ordre où vous voulez les parcourir, puis enregistrez. Le raccourci marche aussi en roulant.</string>
+    <string name="shortcuts_cfg_drive_min">Choisissez au moins deux modes.</string>
+    <string name="shortcut_drive_mode_toast">Mode %1$s</string>
     <string name="shortcuts_cfg_regen_cycle">Cycle de régénération</string>
     <string name="shortcuts_cfg_regen_hint">Touchez les modes dans l\'ordre où vous voulez les parcourir, puis enregistrez.</string>
     <string name="shortcuts_cfg_regen_summary">Cycle : %1$s</string>

@@ -595,6 +595,12 @@
     <string name="shortcuts_cat_onepedal">1 Pedale</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Ciclo regen</string>
+    <string name="shortcuts_action_drive_cycle">Ciclo modalità di guida</string>
+    <string name="shortcuts_cat_drive_cycle">Ciclo modalità</string>
+    <string name="shortcuts_cfg_drive_cycle">Ciclo modalità di guida</string>
+    <string name="shortcuts_cfg_drive_hint">Tocca le modalità nell’ordine in cui vuoi scorrerle, poi salva. La scorciatoia funziona anche durante la guida.</string>
+    <string name="shortcuts_cfg_drive_min">Scegli almeno due modalità.</string>
+    <string name="shortcut_drive_mode_toast">Modalità %1$s</string>
     <string name="shortcuts_cfg_regen_cycle">Ciclo di rigenerazione</string>
     <string name="shortcuts_cfg_regen_hint">Tocca le modalità nell\'ordine in cui vuoi scorrerle, poi salva.</string>
     <string name="shortcuts_cfg_regen_summary">Ciclo: %1$s</string>

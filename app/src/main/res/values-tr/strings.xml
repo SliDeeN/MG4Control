@@ -595,6 +595,12 @@
     <string name="shortcuts_cat_onepedal">Tek pedal</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Rejenerasyon döngüsü</string>
+    <string name="shortcuts_action_drive_cycle">Sürüş modu döngüsü</string>
+    <string name="shortcuts_cat_drive_cycle">Mod döngüsü</string>
+    <string name="shortcuts_cfg_drive_cycle">Sürüş modu döngüsü</string>
+    <string name="shortcuts_cfg_drive_hint">Modlara geçmek istediğiniz sırayla dokunun, ardından kaydedin. Kısayol sürüş sırasında da çalışır.</string>
+    <string name="shortcuts_cfg_drive_min">En az iki mod seçin.</string>
+    <string name="shortcut_drive_mode_toast">%1$s modu</string>
     <string name="shortcuts_cfg_regen_cycle">Rejenerasyon döngüsü</string>
     <string name="shortcuts_cfg_regen_hint">Dolaşmak istediğiniz sırayla modlara dokunun, sonra kaydedin.</string>
     <string name="shortcuts_cfg_regen_summary">Döngü: %1$s</string>

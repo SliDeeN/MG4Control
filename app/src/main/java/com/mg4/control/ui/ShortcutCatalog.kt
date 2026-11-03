@@ -25,6 +25,7 @@ object ShortcutCatalog {
             add(Item(ctx.getString(R.string.shortcuts_action_none),           ShortcutAction.NONE))
             add(Item(ctx.getString(R.string.shortcuts_action_one_pedal),      ShortcutAction.ONE_PEDAL))
             add(Item(ctx.getString(R.string.shortcuts_action_regen_cycle),    ShortcutAction.REGEN_CYCLE))
+            add(Item(ctx.getString(R.string.shortcuts_action_drive_cycle),    ShortcutAction.DRIVE_MODE_CYCLE))
             if (isKnown) {
                 add(Item(ctx.getString(R.string.shortcuts_action_aeb),        ShortcutAction.AEB_CYCLE))
             }

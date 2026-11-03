@@ -106,7 +106,10 @@ enum class ShortcutAction(val id: Int) {
 
     // Mes automatisations (étape 3, 2026-11-02) : lance l'automatisation choisie pour l'emplacement
     // (`shortcut_<slot>_rule_id`, ou FloatingButton.customId) ; ses conditions s'appliquent.
-    RUN_RULE(51);
+    RUN_RULE(51),
+    // Cycle des modes de conduite (issue #207) : seulement les modes choisis, dans l'ordre choisi
+    // (voir DriveModeCycle). Utilisable en roulant, comme le bouton de la voiture.
+    DRIVE_MODE_CYCLE(52);
 
     companion object {
         /**

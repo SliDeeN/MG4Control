@@ -595,6 +595,12 @@
     <string name="shortcuts_cat_onepedal">1 Pedal</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Ciclo regen</string>
+    <string name="shortcuts_action_drive_cycle">Ciclo de modos de condução</string>
+    <string name="shortcuts_cat_drive_cycle">Ciclo de modos</string>
+    <string name="shortcuts_cfg_drive_cycle">Ciclo de modos de condução</string>
+    <string name="shortcuts_cfg_drive_hint">Toque nos modos pela ordem em que os quer percorrer e guarde. O atalho também funciona em andamento.</string>
+    <string name="shortcuts_cfg_drive_min">Escolha pelo menos dois modos.</string>
+    <string name="shortcut_drive_mode_toast">Modo %1$s</string>
     <string name="shortcuts_cfg_regen_cycle">Ciclo de regeneração</string>
     <string name="shortcuts_cfg_regen_hint">Toque nos modos pela ordem por que os quer percorrer e depois guarde.</string>
     <string name="shortcuts_cfg_regen_summary">Ciclo: %1$s</string>

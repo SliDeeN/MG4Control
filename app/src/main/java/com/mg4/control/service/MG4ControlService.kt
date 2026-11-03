@@ -43,6 +43,7 @@ import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileApplier
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.profile.ReadyProfilePolicy
+import com.mg4.control.shortcut.DriveModeCycle
 import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateNotifier
@@ -77,7 +78,7 @@ class MG4ControlService : Service() {
             ShortcutAction.HVAC_TEMP_UP, ShortcutAction.HVAC_TEMP_DOWN,
             ShortcutAction.HVAC_FAN_UP, ShortcutAction.HVAC_FAN_DOWN,
             ShortcutAction.ADAS_CYCLE,
-            ShortcutAction.REGEN_CYCLE, ShortcutAction.SEAT_HEAT_LEFT_CYCLE,
+            ShortcutAction.REGEN_CYCLE, ShortcutAction.DRIVE_MODE_CYCLE, ShortcutAction.SEAT_HEAT_LEFT_CYCLE,
             ShortcutAction.SEAT_HEAT_RIGHT_CYCLE, ShortcutAction.STEERING_HEAT_TOGGLE,
             ShortcutAction.DEFROST_FRONT_TOGGLE, ShortcutAction.DEFROST_REAR_TOGGLE,
             ShortcutAction.HVAC_RECIRC_CYCLE, ShortcutAction.HVAC_AUTO_VOLUME_CYCLE,
@@ -709,6 +710,22 @@ class MG4ControlService : Service() {
                 AppLogger.i(TAG, "SHORTCUT régénération : ${actuel.label} → ${suivant.label} " +
                     "(cycle ${ordre.joinToString("/") { it.label }})")
                 MG4Hardware.setRegenLevel(suivant)
+            }
+
+            ShortcutAction.DRIVE_MODE_CYCLE -> {
+                // Relu à chaque appui, comme la régénération : le réglage vit dans un autre écran.
+                // Mode illisible ou hors du cycle : le premier mode du cycle.
+                val ordre   = DriveModeCycle.order(this)
+                val actuel  = MG4Hardware.getDriveMode()
+                val suivant = DriveModeCycle.next(ordre, actuel) ?: return
+                AppLogger.i(TAG, "SHORTCUT mode de conduite : ${actuel?.label ?: "?"} → ${suivant.label} " +
+                    "(cycle ${ordre.joinToString("/") { it.label }})")
+                MG4Hardware.setDriveMode(suivant)
+                val loc = LocaleHelper.applyLocale(this)
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(loc, loc.getString(R.string.shortcut_drive_mode_toast, loc.getString(libelleMode(suivant))),
+                        Toast.LENGTH_SHORT).show()
+                }
             }
 
             ShortcutAction.ADAS_CYCLE -> {
@@ -1658,5 +1675,14 @@ class MG4ControlService : Service() {
             .setContentText(etat)
             .setSmallIcon(R.mipmap.ic_launcher)
             .build()
+    }
+
+    /** Nom d'un mode, le même que sur l'écran Conduite. */
+    private fun libelleMode(m: DriveMode): Int = when (m) {
+        DriveMode.ECO    -> R.string.drive_eco
+        DriveMode.NORMAL -> R.string.drive_normal
+        DriveMode.SPORT  -> R.string.drive_sport
+        DriveMode.SNOW   -> R.string.drive_snow
+        DriveMode.CUSTOM -> R.string.drive_custom
     }
 }

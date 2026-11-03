@@ -595,6 +595,12 @@
     <string name="shortcuts_cat_onepedal">1 Pedal</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Ciclo regen</string>
+    <string name="shortcuts_action_drive_cycle">Ciclo de modos de conducción</string>
+    <string name="shortcuts_cat_drive_cycle">Ciclo de modos</string>
+    <string name="shortcuts_cfg_drive_cycle">Ciclo de modos de conducción</string>
+    <string name="shortcuts_cfg_drive_hint">Toque los modos en el orden en que quiera recorrerlos y guarde. El acceso directo también funciona en marcha.</string>
+    <string name="shortcuts_cfg_drive_min">Elija al menos dos modos.</string>
+    <string name="shortcut_drive_mode_toast">Modo %1$s</string>
     <string name="shortcuts_cfg_regen_cycle">Ciclo de regeneración</string>
     <string name="shortcuts_cfg_regen_hint">Toque los modos en el orden en que desea recorrerlos y luego guarde.</string>
     <string name="shortcuts_cfg_regen_summary">Ciclo: %1$s</string>
