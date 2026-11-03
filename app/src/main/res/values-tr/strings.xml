@@ -284,6 +284,9 @@
     <string name="settings_auto_scope_loop_car">Araç seçer</string>
     <string name="settings_auto_scope_loop_kept">Sizinki korunur</string>
     <string name="settings_auto_scope_note">Hepsi işaretli = aracın davranışı. İşaretsiz: MG4Control, AUTO açıldıktan hemen sonra ayarınızı geri koyar (HVAC açılır penceresi, Klima sayfası, profiller ve A/C otomasyonu).</string>
+    <string name="settings_keep_ac_title">Klima · A/C</string>
+    <string name="settings_keep_ac">Sıcaklık değişince A/C kapalı kalsın</string>
+    <string name="settings_keep_ac_desc">Araç, ayar sıcaklığı değişince A/C’yi yeniden açar. A/C kapalıysa MG4Control onu yeniden kapatır: MG4Control’den ve deneme olarak aracın ekranından. AUTO modunda veya ön buz çözme açıkken asla.</string>
     <string name="settings_ready_default">Araç her READY konumuna geçtiğinde varsayılan profile dön</string>
     <string name="settings_ready_default_desc">Varsayılan olarak, elle seçilen profil araç kapatılana kadar geçerli kalır. Bu seçenekle, kısa bir duruştan sonra bile araç her READY konumuna geçtiğinde unutulur ve varsayılan profil yeniden uygulanır. Dış sıcaklığa veya bir Bluetooth telefona bağlı bir profil uygulanacaksa, açılışta olduğu gibi önceliğini korur.</string>
     <string name="notif_service_active">Hizmet çalışıyor</string>

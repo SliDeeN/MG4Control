@@ -707,6 +707,14 @@ class SettingsFragment : Fragment() {
             }
         }
 
+        // ── Garder l'A/C coupé quand la température change (issue #208), désactivé par défaut ──
+        view.findViewById<View>(R.id.card_hvac_keep_ac).visibility =
+            if (MG4Hardware.hasClimateControl()) View.VISIBLE else View.GONE
+        view.findViewById<Switch>(R.id.switch_keep_ac).apply {
+            isChecked = com.mg4.control.automation.AcKeepOff.isOn(requireContext())
+            setOnCheckedChangeListener { _, checked -> com.mg4.control.automation.AcKeepOff.setOn(requireContext(), checked) }
+        }
+
         // ── Ce que règle AUTO (issue #160) : coché = la voiture choisit (défaut) ──
         view.findViewById<View>(R.id.card_hvac_auto_scope).visibility =
             if (MG4Hardware.hasClimateControl()) View.VISIBLE else View.GONE

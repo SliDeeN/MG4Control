@@ -284,6 +284,9 @@
     <string name="settings_auto_scope_loop_car">Vom Auto gewählt</string>
     <string name="settings_auto_scope_loop_kept">Ihre wird beibehalten</string>
     <string name="settings_auto_scope_note">Alles aktiviert = Verhalten des Autos. Deaktiviert: MG4Control stellt Ihre Einstellung direkt nach dem Einschalten von AUTO wieder her (HVAC-Pop-up, Klimaseite, Profile und A/C-Automatisierung).</string>
+    <string name="settings_keep_ac_title">Klimaanlage · A/C</string>
+    <string name="settings_keep_ac">A/C ausgeschaltet lassen, wenn sich die Temperatur ändert</string>
+    <string name="settings_keep_ac_desc">Das Fahrzeug schaltet die A/C bei jeder Änderung der Solltemperatur wieder ein. War sie aus, schaltet MG4Control sie wieder ab: aus MG4Control und testweise auch vom Fahrzeugbildschirm. Nie im AUTO-Modus oder mit Frontscheibenenteisung.</string>
     <string name="settings_ready_default">Bei jedem Wechsel in READY zum Standardprofil zurückkehren</string>
     <string name="settings_ready_default_desc">Standardmäßig bleibt ein von Hand gewähltes Profil aktiv, bis das Fahrzeug ausgeschaltet wird. Mit dieser Option wird es bei jedem Wechsel in READY vergessen, auch nach einem kurzen Halt, und das Standardprofil wird erneut angewendet. Ein Profil, das an die Außentemperatur oder an ein Bluetooth-Telefon gebunden ist, behält wie beim Start den Vorrang.</string>
     <string name="notif_service_active">Dienst aktiv</string>

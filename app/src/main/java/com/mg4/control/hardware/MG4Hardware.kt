@@ -6411,11 +6411,42 @@ object MG4Hardware {
             acCall(if (on) "openHvacPower" else "closeHvacPower").also { climLog("power=$on", it) }
 
     /** Consigne : Int sur old-SDK, **Float** sur A9 (setDriverTemperature(F)). */
-    fun setClimateTemp(celsius: Int): Boolean =
-        if (isClimateA9())
+    fun setClimateTemp(celsius: Int): Boolean {
+        // Issue #208 : la voiture rallume l'A/C quand la consigne change. Option active : l'état
+        // est lu AVANT l'écriture, pour savoir si l'A/C était coupé ([AcKeepOff]).
+        if (com.mg4.control.automation.AcKeepOff.isOn(sAppContext))
+            com.mg4.control.automation.AcKeepOff.avantConsigne(etatAc())
+        return if (isClimateA9())
             a9Set("setDriverTemperature", celsius.toFloat()).also { climLog("A9 temp=$celsius", it) }
         else
             acSet("setDrvTemp", celsius).also { climLog("temp=$celsius", it) }
+    }
+
+    /** Marche, A/C, AUTO et dégivrage avant, lus en quatre appels ([AcKeepOff]) ; null si la clim est injoignable. */
+    data class EtatAc(val power: Boolean?, val ac: Boolean?, val auto: Boolean?, val degivrage: Boolean?)
+
+    fun etatAc(): EtatAc? = try {
+        if (isClimateA9()) {
+            if (hvacA9() == null) null
+            else EtatAc(a9Get("getHvacPowerStatus") as? Boolean, a9Get("getACStatus") as? Boolean,
+                a9Get("getAutoStatus") as? Boolean, a9Get("getFrontDefrostStatus") as? Boolean)
+        } else {
+            if (sAirCondition == null) null
+            else EtatAc(acInt("getHvacPowerStatus")?.takeIf { it >= 0 }?.let { it == 1 },
+                acInt("getAcSwitch")?.takeIf { it >= 0 }?.let { it == 1 },
+                acInt("getAutoStatus")?.takeIf { it >= 0 }?.let { it == 1 },
+                acInt("getFrontWindowDefroster")?.takeIf { it >= 0 }?.let { it == 1 })
+        }
+    } catch (_: Exception) { null }
+
+    /** Consigne de température lue sur la voiture, en °C entiers ; null si illisible. */
+    fun consigneLue(): Int? = try {
+        if (isClimateA9()) (a9Get("getDriverTemperature") as? Float)?.takeIf { !it.isNaN() && it > 0f }?.let { Math.round(it) }
+        else acInt("getDrvTemp")?.takeIf { it > 0 }
+    } catch (_: Exception) { null }
+
+    /** Un seul appelant à la fois sur l'A/C : deux séries d'appuis entremêlées se fausseraient. */
+    private val sAcLock = Any()
 
     /**
      * Écrire un niveau fait aussi SORTIR du mode AUTO (voir [setClimateAuto]) : le sens de l'air et
@@ -6467,13 +6498,15 @@ object MG4Hardware {
      * sur véhicule ; envoyer `setAcStatus(0)` restait sans effet, ce qui trahit un argument
      * ignoré. On avance donc jusqu'à l'état voulu. Deux états ⇒ une bascule suffit.
      */
-    fun setClimateAc(on: Boolean): Boolean =
+    fun setClimateAc(on: Boolean): Boolean = synchronized(sAcLock) {
+        com.mg4.control.automation.AcKeepOff.noteEcriture()
         if (isClimateA9())
             a9CycleTo("ac", "getACStatus", if (on) 1 else 0, 2, "switchACStatus")
         else
             hvacCycleTo("ac", PROP_HVAC_AC_ON, if (on) 1 else 0, maxSteps = 2) {
                 acSet("setAcStatus", 1)
             }
+    }
 
     /**
      * Mode ECO de la clim (2026-10-23) : la clim limite sa puissance pour ménager la batterie.

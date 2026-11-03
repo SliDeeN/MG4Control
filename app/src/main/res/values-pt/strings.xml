@@ -284,6 +284,9 @@
     <string name="settings_auto_scope_loop_car">Escolhida pelo carro</string>
     <string name="settings_auto_scope_loop_kept">A sua é mantida</string>
     <string name="settings_auto_scope_note">Tudo marcado = comportamento do carro. Desmarcado: o MG4Control repõe a sua definição logo após ativar o AUTO (pop-up HVAC, página Clima, perfis e automatização A/C).</string>
+    <string name="settings_keep_ac_title">Climatização · A/C</string>
+    <string name="settings_keep_ac">Manter o A/C desligado ao mudar a temperatura</string>
+    <string name="settings_keep_ac_desc">O carro volta a ligar o A/C quando se muda a temperatura. Se estava desligado, o MG4Control desliga-o de novo: a partir do MG4Control e, em teste, a partir do ecrã do carro. Nunca em AUTO nem com o desembaciamento dianteiro.</string>
     <string name="settings_ready_default">Voltar ao perfil padrão sempre que o carro passa a READY</string>
     <string name="settings_ready_default_desc">Por predefinição, um perfil escolhido à mão mantém-se até o carro ser desligado. Com esta opção, é esquecido sempre que o carro passa a READY, mesmo após uma paragem curta, e o perfil padrão volta a ser aplicado. Se um perfil ligado à temperatura exterior ou a um telemóvel Bluetooth tiver de ser aplicado, mantém a prioridade, como no arranque.</string>
     <string name="notif_service_active">Serviço ativo</string>

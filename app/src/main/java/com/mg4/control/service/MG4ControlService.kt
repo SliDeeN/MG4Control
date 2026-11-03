@@ -193,6 +193,8 @@ class MG4ControlService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // Issue #208 : relevé de l'A/C, seulement si l'option est active.
+        com.mg4.control.automation.AcKeepOff.demarrer(this)
         AppLogger.i(TAG, "onCreate")
         // Relu ici aussi : démarré avant le déverrouillage, MG4App a pu trouver le réglage illisible.
         FirmwareInfo.initWithContext(applicationContext)

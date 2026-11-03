@@ -286,6 +286,9 @@
     <string name="settings_auto_scope_loop_car">Choisie par la voiture</string>
     <string name="settings_auto_scope_loop_kept">La vôtre est gardée</string>
     <string name="settings_auto_scope_note">Tout coché = comportement de la voiture. Décoché : MG4Control remet votre réglage juste après le passage en AUTO (pop-up HVAC, page Clim, profils et automatisation A/C).</string>
+    <string name="settings_keep_ac_title">Climatisation · A/C</string>
+    <string name="settings_keep_ac">Garder l’A/C coupé quand la température change</string>
+    <string name="settings_keep_ac_desc">La voiture rallume l’A/C dès qu’on change la consigne. S’il était coupé, MG4Control le recoupe : depuis MG4Control, et à l’essai depuis l’écran de la voiture. Jamais en AUTO ni avec le dégivrage avant.</string>
     <string name="settings_ready_default">Revenir au profil par défaut à chaque passage en READY</string>
     <string name="settings_ready_default_desc">Par défaut, un profil choisi à la main reste en place jusqu\'à l\'extinction de la voiture. Avec cette option, il est oublié à chaque passage en READY, y compris après un arrêt court, et le profil par défaut est réappliqué. Si un profil lié à la température extérieure ou à un téléphone Bluetooth doit s\'appliquer, il garde la priorité, comme au démarrage.</string>
     <string name="notif_service_active">Service actif</string>
