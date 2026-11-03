@@ -661,6 +661,7 @@ class ShortcutsFragment : Fragment() {
             page(R.id.page_sc_preclim)  to ShortcutAction.PRE_CLIMATE
         )
         val scroll = view.findViewById<ScrollView>(R.id.scroll_shortcuts)
+        val enabledRow = view.findViewById<View?>(R.id.sc_enabled_row)
 
         fun hasVisibleContent(page: ViewGroup): Boolean =
             (0 until page.childCount).any { page.getChildAt(it).visibility == View.VISIBLE }
@@ -692,6 +693,10 @@ class ShortcutsFragment : Fragment() {
             tabs.forEach { (btn, page) ->
                 btn.setCategoryTabActive(page.visibility == View.VISIBLE)
             }
+            // L'interrupteur « Activer » n'a sa place que sur le premier sous-onglet, « Boutons
+            // physiques ». Éteint, il grise les pastilles : on ne peut donc pas quitter cet onglet
+            // sans lui, ni le perdre de vue.
+            enabledRow?.visibility = if (tabs.first().second.visibility == View.VISIBLE) View.VISIBLE else View.GONE
             // Page des boutons flottants à l'écran : les bulles montrées sont celles du profil qu'elle règle.
             floatingPage.surPageVisible(isResumed && tabs.first { it.second.id == R.id.page_sc_floating }.second.visibility == View.VISIBLE)
             // Aucune entrée n'est masquée par le CONTEXTE : la liste reste atteignable depuis

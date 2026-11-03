@@ -97,6 +97,14 @@
             </LinearLayout>
         </HorizontalScrollView>
 
+        <!-- Seulement sur le premier sous-onglet, « Boutons physiques » (2026-11-03). -->
+        <LinearLayout
+            android:id="@+id/sc_enabled_row"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
         <View
             android:layout_width="1dp"
             android:layout_height="40dp"
@@ -119,6 +127,8 @@
             android:layout_marginStart="10dp"
             android:contentDescription="@string/shortcuts_enabled_label"
             android:checked="false" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
