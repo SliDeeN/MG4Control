@@ -33,6 +33,7 @@ import com.mg4.control.model.ChargeSession
 import com.mg4.control.model.ChargeTimes
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.MoneyFormat
+import com.mg4.control.model.StatsCsv
 import com.mg4.control.model.StatsHistory
 import com.mg4.control.model.StatsSettings
 import com.mg4.control.model.StatsSummary
@@ -85,7 +86,7 @@ class StatsFragment : Fragment() {
     private var expanded: Long? = null
 
     /** Export CSV (issue #206) : la fenêtre ouverte, et le sélecteur de dossier d'Android qui lui répond. */
-    private var exportDialog: StatsExportDialog? = null
+    private var exportDialog: ExportDialog? = null
     private val choisirDossier = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { arbre ->
         exportDialog?.surDossier(arbre)
     }
@@ -119,7 +120,7 @@ class StatsFragment : Fragment() {
         }
         view.findViewById<MaterialButton>(R.id.btn_stats_clear).setOnClickListener { confirmClear() }
         view.findViewById<MaterialButton>(R.id.btn_stats_export).setOnClickListener {
-            exportDialog = StatsExportDialog(requireContext(), store) { choisirDossier.launch(null) }.also { it.ouvrir() }
+            ouvrirExport()
         }
 
         view.findViewById<Switch>(R.id.switch_stats_skip_short).apply {
@@ -614,6 +615,32 @@ class StatsFragment : Fragment() {
                 render()
             },
         )
+    }
+
+    /** Export CSV (issue #206) : trajets et recharges, deux fichiers, à l'endroit choisi. */
+    private fun ouvrirExport() {
+        val ctx = requireContext()
+        val h = store.history()
+        if (h.trips.isEmpty() && h.charges.isEmpty()) {
+            android.widget.Toast.makeText(ctx, R.string.stats_export_empty, android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        val virgule = ctx.resources.configuration.locales[0].language != "en"
+        exportDialog = ExportDialog(ctx,
+            titre = getString(R.string.stats_export_title),
+            sousTitre = getString(R.string.stats_export_subtitle, h.trips.size, h.charges.size),
+            bouton = getString(R.string.stats_export),
+            titreFait = getString(R.string.stats_export_done),
+            fichiers = {
+                val maintenant = System.currentTimeMillis()
+                val tout = store.history()
+                listOf(
+                    StatsCsv.fileName("trips", maintenant) to StatsCsv.trips(tout.trips, virgule),
+                    StatsCsv.fileName("charges", maintenant) to StatsCsv.charges(tout.charges, store.settings(), virgule),
+                )
+            },
+            parcourir = { choisirDossier.launch(null) },
+        ).also { it.ouvrir() }
     }
 
     private fun confirmClear() {

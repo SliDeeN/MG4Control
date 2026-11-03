@@ -58,9 +58,6 @@
     <string name="choice_count_profiles">Profili: %1$d</string>
     <string name="choice_count_functions">Funzioni: %1$d</string>
     <string name="shortcuts_open_custom_prefix">Avvia</string>
-    <string name="shortcuts_warning_title">Scorciatoie al volante</string>
-    <string name="shortcuts_warning_message">⚠ Se il launcher ufficiale è configurato su un tasto, avrà la priorità su MG4Control.\n\nEsempio: se la telecamera 360° è assegnata alla pressione singola nel launcher, MG4Control non riuscirà a intercettare quel tasto e la telecamera si attiverà al suo posto.\n\nSi consiglia di disattivare le scorciatoie del launcher ufficiale per evitare conflitti.</string>
-    <string name="shortcuts_warning_ok">Capito</string>
 
     <!-- Configurazione scorciatoie -->
     <string name="shortcuts_cfg_one_pedal">1 Pedale — Regen ritorno</string>
@@ -202,9 +199,11 @@
     <string name="diag_copied">Copiato!</string>
     <string name="diag_loading">Analisi in corso…</string>
     <string name="diag_clear_crash">Cancella crash log</string>
-    <string name="diag_download">Scarica</string>
-    <string name="diag_downloaded">Salvato: %1$s</string>
-    <string name="diag_download_failed">Download non riuscito: %1$s</string>
+    <string name="diag_save">Salva…</string>
+    <string name="diag_save_title">Salva la diagnostica</string>
+    <string name="diag_save_subtitle">Il rapporto completo, in un file di testo.</string>
+    <string name="diag_save_go">Salva</string>
+    <string name="diag_saved">Diagnostica salvata</string>
 
     <!-- Info / Informazioni -->
     <string name="btn_check_update">Controlla aggiornamenti</string>

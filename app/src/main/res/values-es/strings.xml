@@ -58,9 +58,6 @@
     <string name="choice_count_profiles">Perfiles: %1$d</string>
     <string name="choice_count_functions">Funciones: %1$d</string>
     <string name="shortcuts_open_custom_prefix">Iniciar</string>
-    <string name="shortcuts_warning_title">Atajos del volante</string>
-    <string name="shortcuts_warning_message">⚠ Si el launcher oficial está configurado en un botón, tendrá prioridad sobre MG4Control.\n\nEjemplo: si la cámara 360° está asignada a pulsación simple en el launcher, MG4Control no podrá interceptar ese botón y se activará la cámara.\n\nSe recomienda desactivar los atajos del launcher oficial para evitar conflictos.</string>
-    <string name="shortcuts_warning_ok">Entendido</string>
 
     <!-- Configuración atajos -->
     <string name="shortcuts_cfg_one_pedal">1 Pedal — Regen vuelta</string>
@@ -202,9 +199,11 @@
     <string name="diag_copied">¡Copiado!</string>
     <string name="diag_loading">Analizando…</string>
     <string name="diag_clear_crash">Borrar informe de crash</string>
-    <string name="diag_download">Descargar</string>
-    <string name="diag_downloaded">Guardado: %1$s</string>
-    <string name="diag_download_failed">Error de descarga: %1$s</string>
+    <string name="diag_save">Guardar…</string>
+    <string name="diag_save_title">Guardar el diagnóstico</string>
+    <string name="diag_save_subtitle">El informe completo, en un archivo de texto.</string>
+    <string name="diag_save_go">Guardar</string>
+    <string name="diag_saved">Diagnóstico guardado</string>
 
     <!-- Info / Acerca de -->
     <string name="btn_check_update">Buscar actualizaciones</string>

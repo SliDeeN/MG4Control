@@ -58,9 +58,6 @@
     <string name="choice_count_profiles">Profiller: %1$d</string>
     <string name="choice_count_functions">İşlevler: %1$d</string>
     <string name="shortcuts_open_custom_prefix">Başlat</string>
-    <string name="shortcuts_warning_title">Direksiyon kısayolları</string>
-    <string name="shortcuts_warning_message">⚠ Bir düğmeye resmî başlatıcıdan bir işlev atanmışsa, o işlev MG4Control\'ün önüne geçer.\n\nÖrnek: başlatıcıda tek basışa 360° kamera atanmışsa, MG4Control o düğmeyi yakalayamaz ve onun yerine kamera açılır.\n\nÇakışmaları önlemek için resmî başlatıcının kısayollarını kapatmanız önerilir.</string>
-    <string name="shortcuts_warning_ok">Anladım</string>
 
     <!-- Shortcut config -->
     <string name="shortcuts_cfg_one_pedal">Tek pedal — Dönüş seviyesi</string>
@@ -202,9 +199,11 @@
     <string name="diag_copied">Kopyalandı!</string>
     <string name="diag_loading">İnceleniyor…</string>
     <string name="diag_clear_crash">Çökme kaydını temizle</string>
-    <string name="diag_download">İndir</string>
-    <string name="diag_downloaded">Kaydedildi: %1$s</string>
-    <string name="diag_download_failed">İndirme başarısız: %1$s</string>
+    <string name="diag_save">Kaydet…</string>
+    <string name="diag_save_title">Tanılamayı kaydet</string>
+    <string name="diag_save_subtitle">Tam rapor, bir metin dosyası olarak.</string>
+    <string name="diag_save_go">Kaydet</string>
+    <string name="diag_saved">Tanılama kaydedildi</string>
 
     <!-- Infos / About -->
     <string name="btn_check_update">Güncellemeleri denetle</string>

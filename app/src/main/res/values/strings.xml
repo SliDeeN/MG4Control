@@ -58,9 +58,6 @@
     <string name="choice_count_profiles">Profils : %1$d</string>
     <string name="choice_count_functions">Fonctions : %1$d</string>
     <string name="shortcuts_open_custom_prefix">Lancer</string>
-    <string name="shortcuts_warning_title">Raccourcis au volant</string>
-    <string name="shortcuts_warning_message">⚠ Si le launcher officiel est configuré sur un bouton, il sera prioritaire sur MG4Control.\n\nExemple : si la caméra 360° est assignée en appui simple sur le launcher, MG4Control ne pourra pas intercepter ce bouton et la caméra s\'activera à la place.\n\nIl est recommandé de désactiver les raccourcis du launcher officiel pour éviter les conflits.</string>
-    <string name="shortcuts_warning_ok">Compris</string>
 
     <!-- Config raccourcis -->
     <string name="shortcuts_cfg_one_pedal">1 Pédale — Regen retour</string>
@@ -204,9 +201,11 @@
     <string name="diag_copied">Copié !</string>
     <string name="diag_loading">Analyse en cours…</string>
     <string name="diag_clear_crash">Effacer le crash</string>
-    <string name="diag_download">Télécharger</string>
-    <string name="diag_downloaded">Enregistré : %1$s</string>
-    <string name="diag_download_failed">Échec du téléchargement : %1$s</string>
+    <string name="diag_save">Enregistrer…</string>
+    <string name="diag_save_title">Enregistrer le diagnostic</string>
+    <string name="diag_save_subtitle">Le rapport complet, dans un fichier texte.</string>
+    <string name="diag_save_go">Enregistrer</string>
+    <string name="diag_saved">Diagnostic enregistré</string>
 
     <!-- Infos / À propos -->
     <string name="btn_check_update">Vérifier les mises à jour</string>

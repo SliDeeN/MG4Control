@@ -58,9 +58,6 @@
     <string name="choice_count_profiles">Profiles: %1$d</string>
     <string name="choice_count_functions">Functions: %1$d</string>
     <string name="shortcuts_open_custom_prefix">Launch</string>
-    <string name="shortcuts_warning_title">Steering wheel shortcuts</string>
-    <string name="shortcuts_warning_message">⚠ If the official launcher is configured on a button, it will take priority over MG4Control.\n\nExample: if the 360° camera is assigned to a single press in the launcher, MG4Control will not be able to intercept that button and the camera will activate instead.\n\nIt is recommended to disable the official launcher\'s shortcuts to avoid conflicts.</string>
-    <string name="shortcuts_warning_ok">Got it</string>
 
     <!-- Shortcut config -->
     <string name="shortcuts_cfg_one_pedal">1 Pedal — Return regen</string>
@@ -202,9 +199,11 @@
     <string name="diag_copied">Copied!</string>
     <string name="diag_loading">Analysing…</string>
     <string name="diag_clear_crash">Clear crash log</string>
-    <string name="diag_download">Download</string>
-    <string name="diag_downloaded">Saved: %1$s</string>
-    <string name="diag_download_failed">Download failed: %1$s</string>
+    <string name="diag_save">Save…</string>
+    <string name="diag_save_title">Save the diagnostic</string>
+    <string name="diag_save_subtitle">The full report, as a text file.</string>
+    <string name="diag_save_go">Save</string>
+    <string name="diag_saved">Diagnostic saved</string>
 
     <!-- Infos / About -->
     <string name="btn_check_update">Check for updates</string>

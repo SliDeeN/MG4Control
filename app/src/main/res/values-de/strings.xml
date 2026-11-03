@@ -58,9 +58,6 @@
     <string name="choice_count_profiles">Profile: %1$d</string>
     <string name="choice_count_functions">Funktionen: %1$d</string>
     <string name="shortcuts_open_custom_prefix">Starten</string>
-    <string name="shortcuts_warning_title">Lenkrad-Kurzbefehle</string>
-    <string name="shortcuts_warning_message">⚠ Wenn der offizielle Launcher einer Taste zugewiesen ist, hat er Vorrang vor MG4Control.\n\nBeispiel: Wenn die 360°-Kamera im Launcher auf einfaches Drücken eingestellt ist, kann MG4Control diese Taste nicht abfangen und die Kamera wird stattdessen aktiviert.\n\nEs wird empfohlen, die Kurzbefehle des offiziellen Launchers zu deaktivieren, um Konflikte zu vermeiden.</string>
-    <string name="shortcuts_warning_ok">Verstanden</string>
 
     <!-- Kurzbefehl-Konfiguration -->
     <string name="shortcuts_cfg_one_pedal">1 Pedal — Regen zurück</string>
@@ -202,9 +199,11 @@
     <string name="diag_copied">Kopiert!</string>
     <string name="diag_loading">Analysiere…</string>
     <string name="diag_clear_crash">Absturzbericht löschen</string>
-    <string name="diag_download">Herunterladen</string>
-    <string name="diag_downloaded">Gespeichert: %1$s</string>
-    <string name="diag_download_failed">Download fehlgeschlagen: %1$s</string>
+    <string name="diag_save">Speichern…</string>
+    <string name="diag_save_title">Diagnose speichern</string>
+    <string name="diag_save_subtitle">Der vollständige Bericht als Textdatei.</string>
+    <string name="diag_save_go">Speichern</string>
+    <string name="diag_saved">Diagnose gespeichert</string>
 
     <!-- Info / Über -->
     <string name="btn_check_update">Nach Updates suchen</string>

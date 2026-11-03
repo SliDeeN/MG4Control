@@ -85,6 +85,13 @@ import kotlinx.coroutines.withContext
 
 class SettingsFragment : Fragment() {
 
+    /** « Enregistrer… » du diagnostic : la fenêtre ouverte, et le sélecteur de dossier qui lui répond. */
+    private var exportDialog: ExportDialog? = null
+    private val choisirDossier = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { arbre ->
+        exportDialog?.surDossier(arbre)
+    }
+
     private val githubUrl = "https://github.com/SliDeeN/MG4Control"
     private val gitlabUrl = "https://gitlab.com/SliDeeN/mg4control"
 
@@ -1158,9 +1165,20 @@ class SettingsFragment : Fragment() {
             cm.setPrimaryClip(ClipData.newPlainText("MG4Control Diagnostic", buildReport(false)))
             btnCopier.text = getString(R.string.diag_copied)
         }
-        // « Télécharger » — écrit le rapport complet dans le dossier Download de la voiture
+        // « Enregistrer… » (maquette B du 2026-11-03) : le rapport complet, à l'endroit choisi —
+        // Téléchargements, clé USB ou autre dossier, comme l'export des Statistiques. Le rapport
+        // est pris au moment de l'appui : il lit les vues de la fenêtre.
         vue.findViewById<View>(R.id.diag_download).setOnClickListener {
-            downloadDiagnostic(ctx, buildReport(true))
+            val rapport = buildReport(true)
+            val ts = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+            exportDialog = ExportDialog(ctx,
+                titre = getString(R.string.diag_save_title),
+                sousTitre = getString(R.string.diag_save_subtitle),
+                bouton = getString(R.string.diag_save_go),
+                titreFait = getString(R.string.diag_saved),
+                fichiers = { listOf("MG4Control_diag_$ts.txt" to rapport) },
+                parcourir = { choisirDossier.launch(null) },
+            ).also { it.ouvrir() }
         }
         // « Effacer le crash » — supprime le fichier et ferme la fenêtre
         vue.findViewById<View>(R.id.diag_clear_crash).apply {
@@ -1186,21 +1204,6 @@ class SettingsFragment : Fragment() {
             withContext(Dispatchers.Main) {
                 if (isAdded) tvReport.text = report
             }
-        }
-    }
-
-    /** Écrit le rapport de diagnostic dans le dossier Download de la voiture (fichier .txt horodaté). */
-    private fun downloadDiagnostic(ctx: Context, report: String) {
-        try {
-            val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (!dir.exists()) dir.mkdirs()
-            val ts = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US)
-                .format(java.util.Date())
-            val file = File(dir, "MG4Control_diag_$ts.txt")
-            file.writeText(report)
-            Toast.makeText(ctx, getString(R.string.diag_downloaded, file.absolutePath), Toast.LENGTH_LONG).show()
-        } catch (e: Exception) {
-            Toast.makeText(ctx, getString(R.string.diag_download_failed, e.message ?: "?"), Toast.LENGTH_LONG).show()
         }
     }
 

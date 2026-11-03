@@ -17,23 +17,27 @@ import android.widget.TextView
 import android.widget.Toast
 import android.app.AlertDialog
 import com.mg4.control.R
-import com.mg4.control.model.StatsCsv
 import com.mg4.control.service.OverlayKit
 import com.mg4.control.stats.StatsExport
 import com.mg4.control.stats.StatsExport.Destination
-import com.mg4.control.stats.StatsStore
 
 /**
- * Statistiques › Général › Historique › « Exporter » (issue #206, maquette B du 2026-11-03) : trois
- * tuiles de destination — Téléchargements (défaut), Clé USB (seulement branchée), Autre dossier… —
- * puis les deux CSV, trajets et recharges ([StatsCsv], [StatsExport]).
+ * Fenêtre « où enregistrer ? » : trois tuiles de destination — Téléchargements (défaut), Clé USB
+ * (seulement branchée), Autre dossier… — puis l'écriture par [StatsExport]. Née pour l'export des
+ * Statistiques (issue #206, maquette B du 2026-11-03), reprise par le diagnostic (« Enregistrer… »,
+ * maquette B du même jour). Le dernier choix est commun aux deux.
  *
+ * [fichiers] (nom, contenu) est appelé sur un fil de travail, au moment d'écrire.
  * « Autre dossier… » ouvre le sélecteur d'Android par [parcourir] ; le dossier revient par
  * [surDossier]. Toucher la tuile déjà choisie relance le sélecteur pour en changer.
  */
-internal class StatsExportDialog(
+internal class ExportDialog(
     private val ctx: Context,
-    private val store: StatsStore,
+    private val titre: String,
+    private val sousTitre: String,
+    private val bouton: String,
+    private val titreFait: String,
+    private val fichiers: () -> List<Pair<String, String>>,
     private val parcourir: () -> Unit,
 ) {
     private val main = Handler(Looper.getMainLooper())
@@ -47,17 +51,12 @@ internal class StatsExportDialog(
     private fun dp(v: Float) = OverlayKit.dp(ctx, v)
 
     fun ouvrir() {
-        val h = store.history()
-        if (h.trips.isEmpty() && h.charges.isEmpty()) {
-            Toast.makeText(ctx, s(R.string.stats_export_empty), Toast.LENGTH_LONG).show()
-            return
-        }
         usb = StatsExport.usb(ctx)
         choix = StatsExport.destination(ctx, usb)
         val vue = LayoutInflater.from(ctx).inflate(R.layout.dialog_rule_value, null)
-        vue.findViewById<TextView>(R.id.rule_value_title).text = s(R.string.stats_export_title)
+        vue.findViewById<TextView>(R.id.rule_value_title).text = titre
         vue.findViewById<TextView>(R.id.rule_value_subtitle).apply {
-            text = s(R.string.stats_export_subtitle, h.trips.size, h.charges.size)
+            text = sousTitre
             visibility = View.VISIBLE
         }
         val rangee = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
@@ -70,7 +69,7 @@ internal class StatsExportDialog(
             setOnClickListener { dialog?.dismiss() }
         }
         vue.findViewById<TextView>(R.id.rule_value_ok).apply {
-            text = s(R.string.stats_export)
+            text = bouton
             setOnClickListener { exporter() }
         }
         dialog = AppDialog.afficher(ctx, vue, LARGEUR_DP).also { it.setOnDismissListener { dialog = null } }
@@ -151,16 +150,8 @@ internal class StatsExportDialog(
         enCours = true
         val d = choix
         StatsExport.retenir(ctx, d)
-        val virgule = ctx.resources.configuration.locales[0].language != "en"
-        val maintenant = System.currentTimeMillis()
         Thread {
-            val h = store.history()
-            val reglages = store.settings()
-            val fichiers = listOf(
-                StatsCsv.fileName("trips", maintenant) to StatsCsv.trips(h.trips, virgule),
-                StatsCsv.fileName("charges", maintenant) to StatsCsv.charges(h.charges, reglages, virgule),
-            )
-            val r = StatsExport.exporter(ctx, d, fichiers)
+            val r = StatsExport.exporter(ctx, d, fichiers())
             main.post {
                 enCours = false
                 dialog?.dismiss()
@@ -172,12 +163,12 @@ internal class StatsExportDialog(
     private fun montrer(r: StatsExport.Resultat, d: Destination) {
         when (r) {
             is StatsExport.Resultat.Ok -> AppDialog.confirmer(ctx,
-                titre = s(R.string.stats_export_done),
+                titre = titreFait,
                 message = s(R.string.stats_export_done_text, r.ou, r.fichiers.joinToString("\n")),
                 icone = R.drawable.ic_dialog_download,
                 oui = s(R.string.nav_close))
             is StatsExport.Resultat.Echec -> AppDialog.confirmer(ctx,
-                titre = s(R.string.stats_export_title),
+                titre = titre,
                 message = s(R.string.stats_export_failed, r.raison) +
                     if (d == Destination.USB) "\n\n" + s(R.string.stats_export_failed_hint) else "",
                 ton = AppDialog.Ton.ALERTE,
