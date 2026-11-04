@@ -241,6 +241,9 @@
     <string name="update_cancel">İptal</string>
     <string name="update_close">Kapat</string>
     <string name="update_downloading">İndiriliyor…</string>
+    <string name="update_installing">Güncelleme yükleniyor… MG4Control kendiliğinden yeniden başlayacak.</string>
+    <string name="update_installed">MG4Control güncellendi: %1$s</string>
+    <string name="update_install_failed">Otomatik yükleme başarısız (%1$s). APK’yı İndirilenler’den yükleyin.</string>
     <string name="update_downloading_pct">İndiriliyor… %d%%</string>
     <string name="update_error_download">İndirme başarısız. Bağlantınızı denetleyin.</string>
     <string name="update_error_signature">Güncelleme reddedildi: indirilen APK beklenen anahtarla imzalanmamış. Dosya silindi.</string>

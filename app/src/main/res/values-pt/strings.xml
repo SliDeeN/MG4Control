@@ -241,6 +241,9 @@
     <string name="update_cancel">Cancelar</string>
     <string name="update_close">Fechar</string>
     <string name="update_downloading">A transferir…</string>
+    <string name="update_installing">A instalar a atualização… O MG4Control vai reiniciar sozinho.</string>
+    <string name="update_installed">MG4Control atualizado: %1$s</string>
+    <string name="update_install_failed">Falha na instalação automática (%1$s). Instale o APK a partir de Transferências.</string>
     <string name="update_downloading_pct">A transferir… %d%%</string>
     <string name="update_error_download">Transferência falhada. Verifique a ligação.</string>
     <string name="update_error_signature">Atualização recusada: o APK transferido não está assinado com a chave esperada. Ficheiro eliminado.</string>

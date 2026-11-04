@@ -241,6 +241,9 @@
     <string name="update_cancel">Annulla</string>
     <string name="update_close">Chiudi</string>
     <string name="update_downloading">Download in corso…</string>
+    <string name="update_installing">Installazione dell’aggiornamento… MG4Control si riavvierà da solo.</string>
+    <string name="update_installed">MG4Control aggiornato: %1$s</string>
+    <string name="update_install_failed">Installazione automatica non riuscita (%1$s). Installa l’APK da Download.</string>
     <string name="update_downloading_pct">Download… %d%%</string>
     <string name="update_error_download">Download fallito. Controlla la connessione.</string>
     <string name="update_error_signature">Aggiornamento rifiutato: l\'APK scaricato non è firmato con la chiave attesa. File eliminato.</string>

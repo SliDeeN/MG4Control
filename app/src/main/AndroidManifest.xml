@@ -203,6 +203,24 @@
             android:authorities="${applicationId}.state"
             android:exported="true" />
 
+        <!-- Mise à jour (2026-11-04) : résultat de la session d'installation silencieuse, puis
+             relance du service (et de l'écran) une fois la nouvelle version en place. -->
+        <receiver
+            android:name=".update.InstallResultReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.mg4.control.UPDATE_INSTALL_RESULT" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".receiver.PackageReplacedReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <receiver
             android:name=".receiver.BootReceiver"
             android:exported="true"

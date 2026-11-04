@@ -241,6 +241,9 @@
     <string name="update_cancel">Cancelar</string>
     <string name="update_close">Cerrar</string>
     <string name="update_downloading">Descargando…</string>
+    <string name="update_installing">Instalando la actualización… MG4Control se reiniciará solo.</string>
+    <string name="update_installed">MG4Control actualizado: %1$s</string>
+    <string name="update_install_failed">No se pudo instalar automáticamente (%1$s). Instale el APK desde Descargas.</string>
     <string name="update_downloading_pct">Descargando… %d%%</string>
     <string name="update_error_download">Descarga fallida. Compruebe la conexión.</string>
     <string name="update_error_signature">Actualización rechazada: el APK descargado no está firmado con la clave esperada. Archivo eliminado.</string>

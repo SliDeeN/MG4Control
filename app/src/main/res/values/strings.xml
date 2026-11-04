@@ -243,6 +243,9 @@
     <string name="update_cancel">Annuler</string>
     <string name="update_close">Fermer</string>
     <string name="update_downloading">Téléchargement en cours…</string>
+    <string name="update_installing">Installation de la mise à jour… MG4Control va se relancer tout seul.</string>
+    <string name="update_installed">MG4Control mis à jour : %1$s</string>
+    <string name="update_install_failed">Installation automatique impossible (%1$s). Installez l’APK depuis Téléchargements.</string>
     <string name="update_downloading_pct">Téléchargement… %d%%</string>
     <string name="update_error_download">Erreur lors du téléchargement. Vérifiez la connexion.</string>
     <string name="update_error_signature">Mise à jour refusée : la signature de l\'APK téléchargé ne correspond pas. Fichier supprimé.</string>
