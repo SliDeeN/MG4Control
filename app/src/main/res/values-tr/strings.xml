@@ -1019,7 +1019,7 @@
     <string name="floating_add">+ Düğme ekle</string>
     <string name="floating_edit">Düzenle</string>
     <string name="floating_delete">Sil</string>
-    <string name="floating_edit_heading">Düğme %1$d</string>
+    <string name="floating_edit_heading_name">“%1$s” düzenle</string>
     <string name="floating_field_title">Başlık</string>
     <string name="floating_title_reset">Kısayolun adını kullan</string>
     <string name="floating_field_action">Kısayol</string>

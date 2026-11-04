@@ -1019,7 +1019,7 @@
     <string name="floating_add">+ Aggiungi un pulsante</string>
     <string name="floating_edit">Modifica</string>
     <string name="floating_delete">Elimina</string>
-    <string name="floating_edit_heading">Pulsante %1$d</string>
+    <string name="floating_edit_heading_name">Modifica «%1$s»</string>
     <string name="floating_field_title">Titolo</string>
     <string name="floating_title_reset">Usa il nome della scorciatoia</string>
     <string name="floating_field_action">Scorciatoia</string>

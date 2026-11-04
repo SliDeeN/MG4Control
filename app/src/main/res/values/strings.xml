@@ -1036,7 +1036,7 @@
     <string name="floating_add">+ Ajouter un bouton</string>
     <string name="floating_edit">Modifier</string>
     <string name="floating_delete">Supprimer</string>
-    <string name="floating_edit_heading">Bouton %1$d</string>
+    <string name="floating_edit_heading_name">Modifier « %1$s »</string>
     <string name="floating_field_title">Titre</string>
     <string name="floating_title_reset">Reprendre le nom du raccourci</string>
     <string name="floating_field_action">Raccourci</string>

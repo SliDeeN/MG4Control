@@ -1019,7 +1019,7 @@
     <string name="floating_add">+ Añadir un botón</string>
     <string name="floating_edit">Editar</string>
     <string name="floating_delete">Eliminar</string>
-    <string name="floating_edit_heading">Botón %1$d</string>
+    <string name="floating_edit_heading_name">Editar «%1$s»</string>
     <string name="floating_field_title">Título</string>
     <string name="floating_title_reset">Usar el nombre del acceso directo</string>
     <string name="floating_field_action">Acceso directo</string>

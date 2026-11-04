@@ -1019,7 +1019,7 @@
     <string name="floating_add">+ Taste hinzufügen</string>
     <string name="floating_edit">Bearbeiten</string>
     <string name="floating_delete">Löschen</string>
-    <string name="floating_edit_heading">Taste %1$d</string>
+    <string name="floating_edit_heading_name">„%1$s“ bearbeiten</string>
     <string name="floating_field_title">Titel</string>
     <string name="floating_title_reset">Namen der Verknüpfung verwenden</string>
     <string name="floating_field_action">Verknüpfung</string>

@@ -1019,7 +1019,7 @@
     <string name="floating_add">+ Add a button</string>
     <string name="floating_edit">Edit</string>
     <string name="floating_delete">Delete</string>
-    <string name="floating_edit_heading">Button %1$d</string>
+    <string name="floating_edit_heading_name">Edit “%1$s”</string>
     <string name="floating_field_title">Title</string>
     <string name="floating_title_reset">Use the shortcut name</string>
     <string name="floating_field_action">Shortcut</string>

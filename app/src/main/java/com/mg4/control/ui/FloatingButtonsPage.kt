@@ -6,6 +6,7 @@ import android.text.Editable
 import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.Switch
@@ -22,6 +23,7 @@ import com.mg4.control.model.FloatingButtons
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.service.FloatingButtonsOverlay
+import com.mg4.control.service.OverlayKit
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.CustomShortcutSettings
 import com.mg4.control.util.FloatingButtonSettings
@@ -46,6 +48,12 @@ class FloatingButtonsPage {
     private lateinit var racine: View
     private lateinit var actions: List<Pair<String, ShortcutAction>>
     private var choisi: String? = null
+    /** Le panneau d'édition, déplacé dans la carte de la bulle modifiée (issue #213), et sa place d'origine. */
+    private var panneau: View? = null
+    private var panneauParent: ViewGroup? = null
+    private var panneauRang = 0
+    /** Lignes de la liste, par bulle : repeintes sur place pendant l'édition. */
+    private val lignes = HashMap<String, View>()
     private var majTitre = false
 
     /** Profil dont la page règle les bulles ; `null` sans aucun profil (bulles communes). */
@@ -72,6 +80,13 @@ class FloatingButtonsPage {
         // Page encore cachée : les bulles lues et écrites sont celles du profil à l'écran.
         profilRegle = FloatingProfiles.target(ctx)?.id
         relibeller(ctx)
+        panneau = view.findViewById<View>(R.id.floating_edit).also { p ->
+            panneauParent = p.parent as? ViewGroup
+            panneauRang = panneauParent?.indexOfChild(p) ?: 0
+        }
+        // « Fermer » et « Bouton n » : remplacés par la ligne de la bulle elle-même (issue #213).
+        view.findViewById<View>(R.id.btn_floating_close).visibility = View.GONE
+        view.findViewById<View>(R.id.floating_edit_heading).visibility = View.GONE
 
         view.findViewById<Switch>(R.id.switch_floating).apply {
             isChecked = FloatingButtonSettings.isEnabled(ctx)
@@ -298,29 +313,76 @@ class FloatingButtonsPage {
         racine.findViewById<View>(R.id.floating_empty).visibility = if (liste.isEmpty()) View.VISIBLE else View.GONE
         racine.findViewById<View>(R.id.btn_floating_add).visibility =
             if (liste.size >= FloatingButtons.MAX) View.GONE else View.VISIBLE
+        rangerPanneau()
+        lignes.clear()
         val gonfleur = LayoutInflater.from(ctx)
         liste.forEach { b ->
             val ligne = gonfleur.inflate(R.layout.item_floating_button, boite, false)
-            val nom = b.actionLabel.ifEmpty { ctx.getString(R.string.floating_unknown_action) }
-            // Aperçu réduit : la taille de la liste, la vraie bulle étant dans l'édition.
-            FloatingButtonsOverlay.peindre(ligne.findViewById(R.id.floating_row_chip),
-                b.copy(size = 0, textSp = 14), FloatingButtons.title(b, nom), deplacement = false)
-            ligne.findViewById<TextView>(R.id.floating_row_info).text = ctx.getString(R.string.floating_summary, nom,
+            lignes[b.id] = ligne
+            peindreLigne(ctx, ligne, b)
+            val ouverte = b.id == choisi
+            ligne.findViewById<MaterialButton>(R.id.btn_floating_row_edit).apply {
+                setText(if (ouverte) R.string.floating_close else R.string.floating_edit)
+                setOnClickListener { if (ouverte) fermerEdition() else { choisi = b.id; ouvrirEdition() } }
+            }
+            ligne.findViewById<View>(R.id.btn_floating_row_delete).apply {
+                visibility = if (ouverte) View.GONE else View.VISIBLE
+                setOnClickListener {
+                    FloatingButtonSettings.remove(ctx, b.id)
+                    FloatingButtonsOverlay.refresh(ctx)
+                    peindreListe()
+                }
+            }
+            if (!ouverte) { boite.addView(ligne); return@forEach }
+            // Bulle modifiée (issue #213) : sa ligne et le panneau d'édition dans une même carte,
+            // à sa place dans la liste — et non plus tout en bas de la page.
+            val carte = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                val marge = OverlayKit.dp(ctx, 6f)
+                setPadding(marge, marge, marge, marge)
+                OverlayKit.fond(this, ctx.getColor(R.color.dash_accent_dim), ctx.getColor(R.color.dash_accent),
+                    OverlayKit.dp(ctx, 2f), OverlayKit.dp(ctx, 16f).toFloat())
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT).also { it.topMargin = OverlayKit.dp(ctx, 8f) }
+            }
+            (ligne.layoutParams as? ViewGroup.MarginLayoutParams)?.topMargin = 0
+            carte.addView(ligne)
+            panneau?.let { p ->
+                (p.parent as? ViewGroup)?.removeView(p)
+                carte.addView(p)
+                p.visibility = View.VISIBLE
+            }
+            boite.addView(carte)
+        }
+    }
+
+    /** L'aperçu de la bulle et sa ligne : le résumé, ou « Modifier « titre » » pour la bulle ouverte. */
+    private fun peindreLigne(ctx: Context, ligne: View, b: FloatingButton) {
+        val nom = b.actionLabel.ifEmpty { ctx.getString(R.string.floating_unknown_action) }
+        FloatingButtonsOverlay.peindre(ligne.findViewById(R.id.floating_row_chip),
+            b.copy(size = 0, textSp = 14), FloatingButtons.title(b, nom), deplacement = false)
+        ligne.findViewById<TextView>(R.id.floating_row_info).text =
+            if (b.id == choisi) ctx.getString(R.string.floating_edit_heading_name, FloatingButtons.title(b, nom))
+            else ctx.getString(R.string.floating_summary, nom,
                 if (FloatingButtons.inTopBar(b)) ctx.getString(R.string.floating_loc_bar) else nomTaille(b.size),
                 FloatingButtons.textFor(b))
-            ligne.findViewById<View>(R.id.btn_floating_row_edit).setOnClickListener {
-                choisi = b.id
-                ouvrirEdition()
-            }
-            ligne.findViewById<View>(R.id.btn_floating_row_delete).setOnClickListener {
-                FloatingButtonSettings.remove(ctx, b.id)
-                if (choisi == b.id) fermerEdition()
-                FloatingButtonsOverlay.refresh(ctx)
-                peindreListe()
-            }
-            if (b.id == choisi) ligne.background = ctx.getDrawable(R.drawable.bg_card_rounded)
-            boite.addView(ligne)
+    }
+
+    /** Pendant l'édition, les lignes sont repeintes sur place : reconstruire la liste ferait perdre la saisie. */
+    private fun majLignes() {
+        val ctx = fragment?.context ?: return
+        FloatingButtonSettings.buttons(ctx).forEach { b -> lignes[b.id]?.let { peindreLigne(ctx, it, b) } }
+    }
+
+    /** Le panneau d'édition retourne, caché, à sa place d'origine (hors de la liste). */
+    private fun rangerPanneau() {
+        val p = panneau ?: return
+        val origine = panneauParent ?: return
+        if (p.parent !== origine) {
+            (p.parent as? ViewGroup)?.removeView(p)
+            origine.addView(p, panneauRang.coerceAtMost(origine.childCount))
         }
+        p.visibility = View.GONE
     }
 
     private fun nomTaille(size: Int): String {
@@ -408,30 +470,31 @@ class FloatingButtonsPage {
         val ctx = fragment?.context ?: return
         FloatingButtonSettings.update(ctx, b)
         peindreEdition(b, repeindreChamps)
-        peindreListe()
+        majLignes()
         racine.removeCallbacks(rafraichir)
         racine.postDelayed(rafraichir, RAFRAICHIR_MS)
     }
 
     private fun ouvrirEdition() {
         val b = bouton(choisi) ?: return
-        racine.findViewById<View>(R.id.floating_edit).visibility = View.VISIBLE
-        peindreEdition(b, true)
         peindreListe()
+        peindreEdition(b, true)
+        // La carte ouverte peut sortir de l'écran (bas de la liste, bulle ajoutée) : on l'y amène.
+        val carte = panneau?.parent as? View ?: return
+        carte.post { carte.requestRectangleOnScreen(android.graphics.Rect(0, 0, carte.width, carte.height), false) }
     }
 
     private fun fermerEdition() {
         choisi = null
-        racine.findViewById<View>(R.id.floating_edit).visibility = View.GONE
+        rangerPanneau()
         racine.removeCallbacks(rafraichir)
         fragment?.context?.let { FloatingButtonsOverlay.refresh(it) }
+        peindreListe()
     }
 
     private fun peindreEdition(b: FloatingButton, repeindreChamps: Boolean) {
         val ctx = fragment?.context ?: return
         val nom = b.actionLabel.ifEmpty { ctx.getString(R.string.floating_unknown_action) }
-        val rang = FloatingButtonSettings.buttons(ctx).indexOfFirst { it.id == b.id }
-        racine.findViewById<TextView>(R.id.floating_edit_heading).text = ctx.getString(R.string.floating_edit_heading, rang + 1)
         racine.findViewById<MaterialButton>(R.id.btn_floating_action).text = nom
         if (repeindreChamps) {
             majTitre = true
