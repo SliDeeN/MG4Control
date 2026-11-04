@@ -48,6 +48,8 @@ class FloatingButtonsPage {
     private lateinit var racine: View
     private lateinit var actions: List<Pair<String, ShortcutAction>>
     private var choisi: String? = null
+    /** Couleur de la bulle modifiée, dans son panneau (2026-11-04). */
+    private var couleurBulle: CouleurRangee? = null
     /** Le panneau d'édition, déplacé dans la carte de la bulle modifiée (issue #213), et sa place d'origine. */
     private var panneau: View? = null
     private var panneauParent: ViewGroup? = null
@@ -110,6 +112,17 @@ class FloatingButtonsPage {
             Toast.makeText(ctx, R.string.floating_reset_done, Toast.LENGTH_SHORT).show()
         }
         view.findViewById<MaterialButton>(R.id.btn_floating_add).setOnClickListener { ajouter() }
+        // Couleur générale des bulles (2026-11-04) : pastilles, personnalisée, code, par défaut.
+        CouleurRangee(ctx, view.findViewById(R.id.floating_color_row), defaut = { com.mg4.control.model.BubbleColors.DEFAULT }) { c ->
+            FloatingButtonSettings.setDefaultColor(ctx, c)
+            FloatingButtonsOverlay.refresh(ctx)
+            majLignes()
+        }.peindre(if (FloatingButtonSettings.defaultColor(ctx) == com.mg4.control.model.BubbleColors.DEFAULT) null
+            else FloatingButtonSettings.defaultColor(ctx))
+        couleurBulle = CouleurRangee(ctx, view.findViewById(R.id.floating_edit_color),
+            defaut = { FloatingButtonSettings.defaultColor(ctx) }) { c ->
+            bouton(choisi)?.let { modifier(it.copy(color = c), repeindreChamps = false) }
+        }
         view.findViewById<MaterialButton>(R.id.btn_floating_copy).setOnClickListener { ouvrirCopie() }
         view.findViewById<MaterialButton>(R.id.btn_floating_copy_cancel).setOnClickListener { fermerCopie() }
         view.findViewById<MaterialButton>(R.id.btn_floating_copy_go).setOnClickListener { copier() }
@@ -500,6 +513,7 @@ class FloatingButtonsPage {
             majTitre = true
             racine.findViewById<EditText>(R.id.edit_floating_title).setText(FloatingButtons.title(b, nom))
             racine.findViewById<Switch>(R.id.switch_floating_bold).isChecked = b.bold == true
+            couleurBulle?.peindre(b.color)
             majTitre = false
             racine.findViewById<Slider>(R.id.slider_floating_size).value = b.size.toFloat()
             // Dans la barre, 14 sp au plus : la valeur d'abord ramenée sous la nouvelle borne, sinon

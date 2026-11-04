@@ -1034,6 +1034,15 @@
     <string name="floating_size_value">%1$d %%</string>
     <string name="floating_field_text">Textgröße</string>
     <string name="floating_field_bold">Fetter Text</string>
+    <string name="floating_color">Farbe der Blasen</string>
+    <string name="floating_color_desc">Für alle Blasen aller Profile. Jede Blase kann unter „Bearbeiten“ ihre eigene haben.</string>
+    <string name="floating_field_color">Farbe</string>
+    <string name="color_default">Standard</string>
+    <string name="color_custom">Eigene…</string>
+    <string name="color_code">Code</string>
+    <string name="color_custom_title">Eigene Farbe</string>
+    <string name="color_custom_sub">Farbton auf der unteren Leiste, hell oder dunkel im Quadrat, oder den Code eingeben.</string>
+    <string name="color_preview">Vorschau</string>
     <string name="floating_text_value">%1$d sp</string>
     <string name="floating_close">Schließen</string>
     <string name="floating_options">Optionen</string>

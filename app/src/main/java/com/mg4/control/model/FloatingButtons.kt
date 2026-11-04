@@ -42,6 +42,8 @@ data class FloatingButton(
     val bold: Boolean? = null,
     /** Raccourci perso lancé ([action] = CUSTOM, issue #172) ; son nom sert de [actionLabel]. */
     val customId: String? = null,
+    /** Couleur de la bulle, ARGB (2026-11-04) ; `null` = la couleur générale ([BubbleColors]). */
+    val color: Int? = null,
 )
 
 object FloatingButtons {

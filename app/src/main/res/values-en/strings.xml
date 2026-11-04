@@ -1034,6 +1034,15 @@
     <string name="floating_size_value">%1$d %%</string>
     <string name="floating_field_text">Text size</string>
     <string name="floating_field_bold">Bold text</string>
+    <string name="floating_color">Bubble colour</string>
+    <string name="floating_color_desc">For every bubble, in every profile. Each bubble can have its own in “Edit”.</string>
+    <string name="floating_field_color">Colour</string>
+    <string name="color_default">Default</string>
+    <string name="color_custom">Custom…</string>
+    <string name="color_code">Code</string>
+    <string name="color_custom_title">Custom colour</string>
+    <string name="color_custom_sub">Hue on the bottom bar, light or dark in the square, or type the code.</string>
+    <string name="color_preview">Preview</string>
     <string name="floating_text_value">%1$d sp</string>
     <string name="floating_close">Close</string>
     <string name="floating_options">Options</string>

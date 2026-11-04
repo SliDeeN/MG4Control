@@ -1051,6 +1051,15 @@
     <string name="floating_size_value">%1$d %%</string>
     <string name="floating_field_text">Taille du texte</string>
     <string name="floating_field_bold">Texte en gras</string>
+    <string name="floating_color">Couleur des bulles</string>
+    <string name="floating_color_desc">Pour toutes les bulles, de tous les profils. Chaque bulle peut avoir la sienne dans « Modifier ».</string>
+    <string name="floating_field_color">Couleur</string>
+    <string name="color_default">Par défaut</string>
+    <string name="color_custom">Personnalisée…</string>
+    <string name="color_code">Code</string>
+    <string name="color_custom_title">Couleur personnalisée</string>
+    <string name="color_custom_sub">Teinte sur la barre du bas, clair ou foncé dans le carré, ou tapez le code.</string>
+    <string name="color_preview">Aperçu</string>
     <string name="floating_text_value">%1$d sp</string>
     <string name="floating_close">Fermer</string>
     <string name="floating_options">Options</string>

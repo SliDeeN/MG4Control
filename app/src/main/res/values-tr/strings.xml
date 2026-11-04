@@ -1034,6 +1034,15 @@
     <string name="floating_size_value">%%%1$d</string>
     <string name="floating_field_text">Metin boyutu</string>
     <string name="floating_field_bold">Kalın metin</string>
+    <string name="floating_color">Baloncuk rengi</string>
+    <string name="floating_color_desc">Tüm profillerdeki tüm baloncuklar için. Her baloncuk «Düzenle» bölümünde kendi rengine sahip olabilir.</string>
+    <string name="floating_field_color">Renk</string>
+    <string name="color_default">Varsayılan</string>
+    <string name="color_custom">Özel…</string>
+    <string name="color_code">Kod</string>
+    <string name="color_custom_title">Özel renk</string>
+    <string name="color_custom_sub">Alttaki çubukta ton, karede açık veya koyu; ya da kodu yazın.</string>
+    <string name="color_preview">Önizleme</string>
     <string name="floating_text_value">%1$d sp</string>
     <string name="floating_close">Kapat</string>
     <string name="floating_options">Seçenekler</string>

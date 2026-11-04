@@ -77,14 +77,16 @@ object FloatingButtonsOverlay {
     private const val ENFONCE_MS = 80L
     private const val RELACHE_MS = 100L
 
-    /** Bulle : fond sombre presque opaque, bordure bleue (orange pendant le déplacement). */
+    /**
+     * Bulle : fond sombre presque opaque, bordure de sa couleur (orange pendant le déplacement).
+     * La couleur est celle de la bulle, sinon la générale — bleu de la refonte par défaut
+     * ([FloatingButtonSettings.colorOf], 2026-11-04).
+     */
     private val FOND = Color.argb(0xE6, 0x17, 0x17, 0x1A)
-    private val BORDURE = Color.rgb(0x38, 0xBD, 0xF8)
     private val BORDURE_DEPLACEMENT = Color.rgb(0xF5, 0x9E, 0x0B)
     private val TEXTE = Color.rgb(0xE5, 0xE5, 0xE5)
     /** Bascule coupée : le fond s'efface ; activée : plein, de la couleur de la bordure. */
     private val FOND_COUPE = Color.argb(0x59, 0x17, 0x17, 0x1A)
-    private val TEXTE_SUR_PLEIN = Color.rgb(0x06, 0x28, 0x3D)
     /** Seconde lecture de la valeur : si la voiture n'avait pas encore suivi à la première. */
     private const val VALEUR_RELUE_MS = 1_600L
 
@@ -257,7 +259,7 @@ object FloatingButtonsOverlay {
         // Largeur gardée : la fenêtre suit son contenu, une valeur plus courte la ferait rétrécir.
         vue.minWidth = maxOf(vue.width, vue.minWidth)
         vue.text = texte
-        vue.setTextColor(BORDURE)
+        vue.setTextColor(FloatingButtonSettings.colorOf(vue.context, bulle.bouton))
         val fin = Runnable {
             bulle.eclair = null
             peindre(vue, bulle.bouton, titre(bulle), deplacement = false, etat = bulle.etat)
@@ -503,10 +505,11 @@ object FloatingButtonsOverlay {
             // barre comprise.
             val reel = ecranReel(wm)
             val e = Point(reel.x - bulle.decalage, reel.y)
-            FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, e, BORDURE,
-                type = bulle.params.type, pleinEcran = true)
+            FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, e,
+                FloatingButtonSettings.colorOf(ctx, bulle.bouton), type = bulle.params.type, pleinEcran = true)
         } else {
-            FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, ecran(wm), BORDURE)
+            FloatingHalo.jouer(ctx, wm, bulle.params.x, bulle.params.y, bulle.vue.width, bulle.vue.height, ecran(wm),
+                FloatingButtonSettings.colorOf(ctx, bulle.bouton))
         }
     }
 
@@ -576,15 +579,16 @@ object FloatingButtonsOverlay {
     private fun habiller(vue: TextView, b: FloatingButton, deplacement: Boolean, etat: Boolean?) {
         val densite = vue.resources.displayMetrics.density
         val hauteur = (FloatingButtons.heightDp(b.size) * densite).roundToInt()
-        vue.setTextColor(if (etat == true) TEXTE_SUR_PLEIN else TEXTE)
+        val couleur = FloatingButtonSettings.colorOf(vue.context, b)
+        vue.setTextColor(if (etat == true) com.mg4.control.model.BubbleColors.textOn(couleur) else TEXTE)
         vue.background = GradientDrawable().apply {
             cornerRadius = hauteur / 2f
             setColor(when (etat) {
-                true -> BORDURE
+                true -> couleur
                 false -> FOND_COUPE
                 null -> FOND
             })
-            setStroke((2 * densite).roundToInt(), if (deplacement) BORDURE_DEPLACEMENT else BORDURE)
+            setStroke((2 * densite).roundToInt(), if (deplacement) BORDURE_DEPLACEMENT else couleur)
         }
     }
 

@@ -1,5 +1,6 @@
 package com.mg4.control.util
 
+import com.mg4.control.model.BubbleColors
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -22,6 +23,7 @@ object FloatingButtonSettings {
     /** Même fichier que les autres réglages. */
     private const val PREFS = "mg4_settings"
     private const val KEY_ENABLED = "floating_enabled"
+    private const val KEY_COLOR = "floating_color"
     private const val KEY_HIDE_REVERSE = "floating_hide_reverse"
     private const val KEY_BUTTONS = "floating_buttons"
     /**
@@ -39,6 +41,21 @@ object FloatingButtonSettings {
     fun setEnabled(ctx: Context, on: Boolean) {
         if (!FloatingProfiles.setEnabled(ctx, on)) prefs(ctx).edit().putBoolean(KEY_ENABLED, on).apply()
     }
+
+    /**
+     * Couleur générale des bulles (2026-11-04), pour tous les profils ; chaque bulle peut avoir la
+     * sienne ([FloatingButton.color]). Sans réglage : le bleu de la refonte.
+     */
+    fun defaultColor(ctx: Context): Int =
+        if (prefs(ctx).contains(KEY_COLOR)) prefs(ctx).getInt(KEY_COLOR, BubbleColors.DEFAULT) else BubbleColors.DEFAULT
+
+    /** [c] = null : retour au bleu de la refonte. */
+    fun setDefaultColor(ctx: Context, c: Int?) {
+        prefs(ctx).edit().apply { if (c == null) remove(KEY_COLOR) else putInt(KEY_COLOR, c) }.apply()
+    }
+
+    /** La couleur d'une bulle : la sienne, sinon la générale. */
+    fun colorOf(ctx: Context, b: FloatingButton): Int = b.color ?: defaultColor(ctx)
 
     fun hideInReverse(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_HIDE_REVERSE, true)
     fun setHideInReverse(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_HIDE_REVERSE, on).apply()

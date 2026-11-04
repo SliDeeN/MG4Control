@@ -1034,6 +1034,15 @@
     <string name="floating_size_value">%1$d %%</string>
     <string name="floating_field_text">Dimensione del testo</string>
     <string name="floating_field_bold">Testo in grassetto</string>
+    <string name="floating_color">Colore delle bolle</string>
+    <string name="floating_color_desc">Per tutte le bolle di tutti i profili. Ogni bolla può avere il suo in «Modifica».</string>
+    <string name="floating_field_color">Colore</string>
+    <string name="color_default">Predefinito</string>
+    <string name="color_custom">Personalizzato…</string>
+    <string name="color_code">Codice</string>
+    <string name="color_custom_title">Colore personalizzato</string>
+    <string name="color_custom_sub">Tonalità sulla barra in basso, chiaro o scuro nel quadrato, oppure digita il codice.</string>
+    <string name="color_preview">Anteprima</string>
     <string name="floating_text_value">%1$d sp</string>
     <string name="floating_close">Chiudi</string>
     <string name="floating_options">Opzioni</string>

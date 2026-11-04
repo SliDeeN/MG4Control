@@ -1778,6 +1778,22 @@
 
                             </LinearLayout>
 
+                            <!-- Couleur de la bulle (2026-11-04) : pastilles, personnalisée, code, par défaut. -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:text="@string/floating_field_color"
+                                android:textColor="@color/text_secondary"
+                                android:textSize="19sp" />
+
+                            <LinearLayout
+                                android:id="@+id/floating_edit_color"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="8dp"
+                                android:orientation="vertical" />
+
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btn_floating_close"
                                 android:layout_width="180dp"
@@ -1826,6 +1842,36 @@
                                 android:layout_height="wrap_content" />
 
                         </LinearLayout>
+
+                        <!-- Couleur générale des bulles (2026-11-04), tous profils ; chaque bulle peut
+                             avoir la sienne dans « Modifier ». -->
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp"
+                            android:text="@string/floating_color"
+                            android:textColor="@color/text_primary"
+                            android:textSize="19sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:text="@string/floating_color_desc"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="17sp" />
+
+                        <LinearLayout
+                            android:id="@+id/floating_color_row"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="8dp"
+                            android:orientation="vertical" />
 
                         <LinearLayout
                             android:layout_width="match_parent"

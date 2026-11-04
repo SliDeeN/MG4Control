@@ -1034,6 +1034,15 @@
     <string name="floating_size_value">%1$d %%</string>
     <string name="floating_field_text">Tamaño del texto</string>
     <string name="floating_field_bold">Texto en negrita</string>
+    <string name="floating_color">Color de las burbujas</string>
+    <string name="floating_color_desc">Para todas las burbujas de todos los perfiles. Cada burbuja puede tener el suyo en «Editar».</string>
+    <string name="floating_field_color">Color</string>
+    <string name="color_default">Predeterminado</string>
+    <string name="color_custom">Personalizado…</string>
+    <string name="color_code">Código</string>
+    <string name="color_custom_title">Color personalizado</string>
+    <string name="color_custom_sub">Tono en la barra inferior, claro u oscuro en el cuadrado, o escriba el código.</string>
+    <string name="color_preview">Vista previa</string>
     <string name="floating_text_value">%1$d sp</string>
     <string name="floating_close">Cerrar</string>
     <string name="floating_options">Opciones</string>

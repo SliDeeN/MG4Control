@@ -1034,6 +1034,15 @@
     <string name="floating_size_value">%1$d %%</string>
     <string name="floating_field_text">Tamanho do texto</string>
     <string name="floating_field_bold">Texto a negrito</string>
+    <string name="floating_color">Cor das bolhas</string>
+    <string name="floating_color_desc">Para todas as bolhas de todos os perfis. Cada bolha pode ter a sua em «Editar».</string>
+    <string name="floating_field_color">Cor</string>
+    <string name="color_default">Predefinido</string>
+    <string name="color_custom">Personalizada…</string>
+    <string name="color_code">Código</string>
+    <string name="color_custom_title">Cor personalizada</string>
+    <string name="color_custom_sub">Tom na barra de baixo, claro ou escuro no quadrado, ou escreva o código.</string>
+    <string name="color_preview">Pré-visualização</string>
     <string name="floating_text_value">%1$d sp</string>
     <string name="floating_close">Fechar</string>
     <string name="floating_options">Opções</string>
