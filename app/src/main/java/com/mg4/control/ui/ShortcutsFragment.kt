@@ -371,7 +371,14 @@ class ShortcutsFragment : Fragment() {
         if (slotPressList.any {
                 ShortcutAction.fromId(prefs.getInt("shortcut_$it", 0)) == action
             }) return true
-        return AdvancedShortcuts.all(requireContext()).any { it.action == action }
+        val ctx = requireContext()
+        if (AdvancedShortcuts.all(ctx).any { it.action == action }) return true
+        // Les boutons flottants aussi, de tous les profils (2026-11-04) : une bulle « Cycle de
+        // régénération » ne faisait pas apparaître la page qui règle ce cycle.
+        val bulles = ProfileManager(ctx).getAll()
+            .flatMap { com.mg4.control.util.FloatingProfiles.buttonsOf(it) } +
+            com.mg4.control.util.FloatingButtonSettings.legacyButtons(ctx)
+        return bulles.any { it.action == action.name }
     }
 
     /**
@@ -752,6 +759,10 @@ class ShortcutsFragment : Fragment() {
             // L'ADAS ne se règle pas là où le firmware ne l'expose pas : la page offrirait des
             // crans dont aucun ne serait écrit.
             if (action == ShortcutAction.ADAS_CYCLE && !adasSupported) return false
+            // Garde-voiture : toujours là sur un firmware reconnu — la tuile du sélecteur de
+            // profils le lance sans aucun bouton attribué, et ses réglages doivent rester
+            // atteignables (retour utilisateur du 2026-11-04).
+            if (action == ShortcutAction.PRE_CLIMATE) return FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
             return actionEnJeu(action)
         }
 
