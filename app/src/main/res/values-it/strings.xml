@@ -820,6 +820,16 @@
     <string name="stats_trip_mixed">Misto</string>
     <string name="stats_portion">%1$s su %2$s</string>
     <string name="stats_split_title">Ripartizione per profilo</string>
+    <string name="stats_curve_title">Consumo lungo il tragitto</string>
+    <string name="stats_curve_summary">media %1$s · max %2$s kWh/100</string>
+    <string name="stats_curve_speed">Velocità</string>
+    <string name="stats_curve_elevation">Dislivello</string>
+    <string name="stats_curve_elevation_value">%1$s: + %2$d m · − %3$d m</string>
+    <string name="stats_curve_no_altitude">Nessuna altitudine GPS ricevuta durante questo tragitto</string>
+    <string name="stats_curve_none">Nessun grafico per questo tragitto: viene registrato dalla versione 2.7.</string>
+    <string name="stats_curve_legend_regen">recupero</string>
+    <string name="stats_curve_legend_speed">velocità</string>
+    <string name="stats_curve_legend_altitude">altitudine</string>
     <string name="stats_split_order">Ordine: %1$s</string>
     <string name="stats_tile_longest">Il più lungo</string>
     <string name="stats_tile_cost_total">Costo totale</string>

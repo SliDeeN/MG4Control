@@ -820,6 +820,16 @@
     <string name="stats_trip_mixed">Mixed</string>
     <string name="stats_portion">%1$s of %2$s</string>
     <string name="stats_split_title">Split by profile</string>
+    <string name="stats_curve_title">Consumption along the trip</string>
+    <string name="stats_curve_summary">avg %1$s · max %2$s kWh/100</string>
+    <string name="stats_curve_speed">Speed</string>
+    <string name="stats_curve_elevation">Elevation</string>
+    <string name="stats_curve_elevation_value">%1$s: + %2$d m · − %3$d m</string>
+    <string name="stats_curve_no_altitude">No GPS altitude received during this trip</string>
+    <string name="stats_curve_none">No graph for this trip: it is recorded since version 2.7.</string>
+    <string name="stats_curve_legend_regen">regen</string>
+    <string name="stats_curve_legend_speed">speed</string>
+    <string name="stats_curve_legend_altitude">altitude</string>
     <string name="stats_split_order">Order: %1$s</string>
     <string name="stats_tile_longest">Longest</string>
     <string name="stats_tile_cost_total">Total cost</string>

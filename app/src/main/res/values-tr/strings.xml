@@ -820,6 +820,16 @@
     <string name="stats_trip_mixed">Karma</string>
     <string name="stats_portion">%1$s / %2$s</string>
     <string name="stats_split_title">Profile göre dağılım</string>
+    <string name="stats_curve_title">Yolculuk boyunca tüketim</string>
+    <string name="stats_curve_summary">ort. %1$s · maks %2$s kWh/100</string>
+    <string name="stats_curve_speed">Hız</string>
+    <string name="stats_curve_elevation">Yükselti</string>
+    <string name="stats_curve_elevation_value">%1$s: + %2$d m · − %3$d m</string>
+    <string name="stats_curve_no_altitude">Bu yolculukta GPS yüksekliği alınamadı</string>
+    <string name="stats_curve_none">Bu yolculuk için grafik yok: 2.7 sürümünden beri kaydediliyor.</string>
+    <string name="stats_curve_legend_regen">rejenerasyon</string>
+    <string name="stats_curve_legend_speed">hız</string>
+    <string name="stats_curve_legend_altitude">yükseklik</string>
     <string name="stats_split_order">Sıra: %1$s</string>
     <string name="stats_tile_longest">En uzun</string>
     <string name="stats_tile_cost_total">Toplam maliyet</string>

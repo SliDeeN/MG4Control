@@ -440,6 +440,7 @@ class StatsFragment : Fragment() {
                 onClick = { expanded = if (expanded == entier.startMs) null else entier.startMs; render() }))
             if (expanded == entier.startMs) {
                 if (entier.isMixed) list.addView(repartition(ctx, entier))
+                list.addView(courbe(ctx, entier))
                 list.addView(tripDetail(ctx, entier))
             }
         }
@@ -767,11 +768,7 @@ class StatsFragment : Fragment() {
             text = label
             textSize = 14f
             isAllCaps = false
-            setTextColor(ctx.getColor(if (on) R.color.dash_accent else R.color.text_secondary))
-            backgroundTintList = ColorStateList.valueOf(
-                ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn))
-            strokeColor = ColorStateList.valueOf(
-                ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border))
+            styleChoix(this, on)
             strokeWidth = dp(ctx, 1)
             cornerRadius = dp(ctx, 8)
             layoutParams = LinearLayout.LayoutParams(
@@ -779,6 +776,113 @@ class StatsFragment : Fragment() {
             ).also { it.marginEnd = dp(ctx, 8) }
             setOnClickListener { onClick() }
         }
+
+    /** Couleurs d'un bouton de choix, allumé ou non : repeint sur place par les boutons de la courbe. */
+    private fun styleChoix(b: MaterialButton, on: Boolean) {
+        val ctx = b.context
+        b.setTextColor(ctx.getColor(if (on) R.color.dash_accent else R.color.text_secondary))
+        b.backgroundTintList = ColorStateList.valueOf(ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn))
+        b.strokeColor = ColorStateList.valueOf(ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border))
+    }
+
+    // ── Courbe du trajet (2026-11-05, maquette B) ───────────────────────────
+
+    /**
+     * Le graphique du détail : barres de consommation par tronçon de 500 m, et deux boutons qui
+     * ajoutent la vitesse et l'altitude en bandes sous les barres. Leur choix vaut pour tous les
+     * trajets et se garde. Un trajet sans courbe (d'avant la fonction) le dit en une ligne.
+     */
+    private fun courbe(ctx: Context, trip: Trip): View {
+        val box = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(R.drawable.bg_section_rounded)
+            setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10))
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .also { it.bottomMargin = dp(ctx, 8) }
+        }
+        val points = com.mg4.control.model.TripCurve.decode(trip.curve)
+        if (points.isEmpty()) {
+            box.addView(label(ctx, getString(R.string.stats_curve_none), 13f, R.color.dash_text_lo))
+            return box
+        }
+        val vue = TripCurveView(ctx).apply {
+            this.points = points
+            showSpeed = store.curveSpeedShown()
+            showAltitude = store.curveAltitudeShown()
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .also { it.topMargin = dp(ctx, 6) }
+        }
+        val maxi = points.maxOf { it.kwhPer100 }
+        val tete = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        tete.addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            addView(label(ctx, getString(R.string.stats_curve_title), 13f, R.color.text_secondary))
+            addView(label(ctx, getString(R.string.stats_curve_summary,
+                trip.consumptionPer100?.let { fmt(it) } ?: "—", Math.round(maxi).toString()), 12f, R.color.dash_text_lo))
+        })
+        // Dénivelé : sous le graphique, seulement avec la bande d'altitude.
+        val denivele = label(ctx, "", 12f, R.color.text_secondary).apply { setPadding(0, dp(ctx, 4), 0, 0) }
+        val legende = label(ctx, "", 12f, R.color.dash_text_lo)
+        fun peindreBas() {
+            legende.text = legendeCourbe(ctx, vue.showSpeed, vue.showAltitude)
+            val d = com.mg4.control.model.TripCurve.elevation(points)
+            denivele.text = if (d == null) getString(R.string.stats_curve_no_altitude)
+                else getString(R.string.stats_curve_elevation_value, getString(R.string.stats_curve_elevation), d.first, d.second)
+            denivele.visibility = if (vue.showAltitude) View.VISIBLE else View.GONE
+        }
+        fun bouton(texte: String, on: () -> Boolean, basculer: (Boolean) -> Unit) = MaterialButton(ctx).apply {
+            text = texte
+            textSize = 14f
+            isAllCaps = false
+            strokeWidth = dp(ctx, 1)
+            cornerRadius = dp(ctx, 8)
+            styleChoix(this, on())
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(ctx, 52))
+                .also { it.marginStart = dp(ctx, 8) }
+            setOnClickListener { basculer(!on()); styleChoix(this, on()); peindreBas() }
+        }
+        tete.addView(bouton(getString(R.string.stats_curve_speed), { vue.showSpeed }) {
+            vue.showSpeed = it; store.setCurveSpeedShown(it)
+        })
+        tete.addView(bouton(getString(R.string.stats_curve_elevation), { vue.showAltitude }) {
+            vue.showAltitude = it; store.setCurveAltitudeShown(it)
+        })
+        box.addView(tete)
+        box.addView(vue)
+        box.addView(legende)
+        box.addView(denivele)
+        peindreBas()
+        return box
+    }
+
+    /** Légende des couleurs : un carré coloré par entrée, le texte reste dans la couleur du texte. */
+    private fun legendeCourbe(ctx: Context, vitesse: Boolean, altitude: Boolean): CharSequence {
+        val entrees = mutableListOf(
+            "< ${TripCurveView.SOBRE.toInt()}" to ctx.getColor(R.color.dash_eco),
+            "${TripCurveView.SOBRE.toInt()}–${TripCurveView.NORMAL.toInt()}" to ctx.getColor(R.color.dash_accent),
+            "> ${TripCurveView.NORMAL.toInt()} kWh/100" to ctx.getColor(R.color.dash_warn),
+            getString(R.string.stats_curve_legend_regen) to assombrir(ctx.getColor(R.color.dash_eco)),
+        )
+        if (vitesse) entrees += getString(R.string.stats_curve_legend_speed) to ctx.getColor(R.color.text_secondary)
+        if (altitude) entrees += getString(R.string.stats_curve_legend_altitude) to TripCurveView.C_ALTITUDE
+        val sb = android.text.SpannableStringBuilder()
+        entrees.forEach { (texte, couleur) ->
+            if (sb.isNotEmpty()) sb.append("    ")
+            val debut = sb.length
+            sb.append("■ ")
+            sb.setSpan(android.text.style.ForegroundColorSpan(couleur), debut, debut + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            sb.append(texte)
+        }
+        return sb
+    }
+
+    private fun assombrir(c: Int): Int {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(c, hsv)
+        hsv[2] *= 0.62f
+        return android.graphics.Color.HSVToColor(hsv)
+    }
 
     // ── Trajets par profil (2026-11-05) ─────────────────────────────────────
 

@@ -57,6 +57,8 @@ data class PendingTrip(
     val auxLast: Float? = null,
     /** Débuts des morceaux par profil (2026-11-05) ; null pour un trajet repris d'avant la fonction. */
     val segmentStarts: List<SegmentStart>? = null,
+    /** Courbe du trajet en construction ([TripCurve]) ; null pour un trajet repris d'avant la fonction. */
+    val curve: CurveState? = null,
 ) {
     val averageTempC: Float? get() = moyenne(tempSum, tempCount, tempC)
 }

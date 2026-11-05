@@ -88,6 +88,11 @@ data class Trip(
      * avant la fonction. Un seul morceau = un seul profil ; plusieurs = trajet « Mixte ».
      */
     val segments: List<TripSegment>? = null,
+    /**
+     * Courbe du trajet, un point tous les 500 m, encodée par [TripCurve] ; null pour un trajet
+     * enregistré avant la fonction (2026-11-05) ou sans énergie intégrée.
+     */
+    val curve: String? = null,
 ) {
     val durationMs: Long get() = max(0L, endMs - startMs)
 

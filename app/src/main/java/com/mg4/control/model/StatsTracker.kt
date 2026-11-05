@@ -139,6 +139,8 @@ class StatsTracker(
                 segmentStarts = listOf(SegmentStart(snapshot.profileId, snapshot.profileName, snapshot.timestampMs, 0f,
                     snapshot.odometerKm, snapshot.energySinceStartKwh, snapshot.regenSinceStartKwh,
                     snapshot.tripConsumedKwh, snapshot.tripRegenKwh)),
+                curve = TripCurve.advance(TripCurve.start(snapshot.timestampMs), 0f, snapshot.tripConsumedKwh,
+                    snapshot.tripRegenKwh, snapshot.timestampMs, snapshot.altitudeM, measured = true),
             ) else suivreProfil(enCours.copy(
                 lastMs = snapshot.timestampMs,
                 odometerLast = snapshot.odometerKm ?: enCours.odometerLast,
@@ -160,6 +162,10 @@ class StatsTracker(
                 // Le départ peut avoir été illisible : le premier relevé lisible en tient lieu.
                 auxStart = enCours.auxStart ?: snapshot.auxSinceStartKwh,
                 auxLast = snapshot.auxSinceStartKwh ?: enCours.auxLast,
+                curve = enCours.curve?.let {
+                    TripCurve.advance(it, enCours.integratedKm + (pas ?: 0f), snapshot.tripConsumedKwh,
+                        snapshot.tripRegenKwh, snapshot.timestampMs, snapshot.altitudeM, measured = pas != null)
+                },
             ), snapshot)
         } else if (ready == false && enCours != null) {
             // Entre le dernier relevé sous contact et celui qui le coupe, la voiture roulait
@@ -172,6 +178,11 @@ class StatsTracker(
                 lastMs = snapshot.timestampMs,
                 integratedKm = enCours.integratedKm + fin,
                 integrated = true,
+                // Le dernier trapèze nourrit aussi la courbe : sans lui, le dernier tronçon manquerait.
+                curve = enCours.curve?.let {
+                    TripCurve.advance(it, enCours.integratedKm + fin, snapshot.tripConsumedKwh,
+                        snapshot.tripRegenKwh, snapshot.timestampMs, snapshot.altitudeM, measured = true)
+                },
             )
             // L'énergie intégrée, elle, est reprise : c'est notre propre mesure, arrêtée par le
             // collecteur juste avant ce relevé, et non un compteur du véhicule qui a pu retomber.
@@ -347,6 +358,7 @@ class StatsTracker(
             energyIntegrated = parIntegration,
             auxiliaryKwh = if (parIntegration) counterDelta(p.auxStart, p.auxLast) else null,
             segments = TripSegments.build(p.segmentStarts, fin, p.integrated, parIntegration),
+            curve = TripCurve.finish(p.curve),
         )
     }
 

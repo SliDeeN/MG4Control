@@ -59,6 +59,8 @@ data class EnergySnapshot(
     /** Profil actif au relevé, et son nom (2026-11-05) : un trajet se découpe par profil ([TripSegments]). */
     val profileId: String? = null,
     val profileName: String? = null,
+    /** Altitude GPS en mètres, pour le dénivelé de la courbe du trajet ([TripCurve]) ; null sans position récente. */
+    val altitudeM: Float? = null,
 ) {
     /** Vrai si l'instantané porte assez d'information pour être exploité. */
     val usable: Boolean get() = socPercent != null || odometerKm != null

@@ -820,6 +820,16 @@
     <string name="stats_trip_mixed">Misto</string>
     <string name="stats_portion">%1$s de %2$s</string>
     <string name="stats_split_title">Repartição por perfil</string>
+    <string name="stats_curve_title">Consumo ao longo da viagem</string>
+    <string name="stats_curve_summary">média %1$s · máx %2$s kWh/100</string>
+    <string name="stats_curve_speed">Velocidade</string>
+    <string name="stats_curve_elevation">Desnível</string>
+    <string name="stats_curve_elevation_value">%1$s: + %2$d m · − %3$d m</string>
+    <string name="stats_curve_no_altitude">Nenhuma altitude GPS recebida durante esta viagem</string>
+    <string name="stats_curve_none">Sem gráfico para esta viagem: é registado desde a versão 2.7.</string>
+    <string name="stats_curve_legend_regen">regeneração</string>
+    <string name="stats_curve_legend_speed">velocidade</string>
+    <string name="stats_curve_legend_altitude">altitude</string>
     <string name="stats_split_order">Ordem: %1$s</string>
     <string name="stats_tile_longest">A mais longa</string>
     <string name="stats_tile_cost_total">Custo total</string>

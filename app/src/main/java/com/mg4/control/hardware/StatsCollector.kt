@@ -79,6 +79,7 @@ object StatsCollector {
                 // Départ : on repart de zéro. Arrivée : un dernier point AVANT le relevé qui clôt
                 // le trajet, puisque c'est lui qui consigne la comparaison.
                 if (ready) integrator.reset() else integrer()
+                suivreAltitude(ready)
                 sample()
                 if (ready) worker.post(powerTick)
                 // La cadence dépend du contact : on la réarme tout de suite au lieu d'attendre
@@ -195,6 +196,7 @@ object StatsCollector {
             worker.removeCallbacks(tick)
             worker.removeCallbacks(powerTick)
             integrator.reset()
+            suivreAltitude(false)
             ReadyWatcher.remove(readyListener)
             tracker = null
             store = null
@@ -212,12 +214,71 @@ object StatsCollector {
         return s.copy(profileId = id, profileName = nom)
     }
 
+    // ── Altitude GPS, pour le dénivelé de la courbe du trajet (2026-11-05) ─────────────────
+
+    /** Dernière altitude reçue et son instant (`elapsedRealtime`). */
+    @Volatile private var altitude: Pair<Long, Float>? = null
+    private var altitudeSuivie = false
+    /** Relevés du trajet avec et sans altitude : journalisés à l'arrivée. */
+    private var altitudesVues = 0
+    private var altitudesTotal = 0
+
+    /** Une altitude plus vieille ne décrit plus l'endroit où roule la voiture. */
+    private const val ALTITUDE_MAX_AGE_MS = 25_000L
+
+    private val ecouteAltitude = object : android.location.LocationListener {
+        override fun onLocationChanged(l: android.location.Location) {
+            if (l.hasAltitude() && !(l.latitude == 0.0 && l.longitude == 0.0))
+                altitude = SystemClock.elapsedRealtime() to l.altitude.toFloat()
+        }
+        @Deprecated("API 28") override fun onStatusChanged(p: String?, s: Int, b: android.os.Bundle?) {}
+        override fun onProviderEnabled(p: String) {}
+        override fun onProviderDisabled(p: String) {}
+    }
+
+    /**
+     * Position suivie seulement sous contact, sur `fused` (le GPS de la T-Box, voir
+     * [com.mg4.control.automation.RuleServices]) et `gps`, toutes les 5 s : le relevé prend la plus
+     * récente. Une demande refusée est seulement journalisée — la courbe se passe alors d'altitude.
+     */
+    @android.annotation.SuppressLint("MissingPermission")
+    private fun suivreAltitude(on: Boolean) {
+        if (on == altitudeSuivie) return
+        val ctx = appContext ?: return
+        val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager ?: return
+        altitudeSuivie = on
+        if (on) {
+            altitude = null
+            altitudesVues = 0
+            altitudesTotal = 0
+            for (p in listOf("fused", android.location.LocationManager.GPS_PROVIDER)) {
+                runCatching { lm.requestLocationUpdates(p, 5_000L, 0f, ecouteAltitude, thread.looper) }
+                    .onFailure { AppLogger.w(TAG, "altitude : suivi $p refusé — ${it.message}") }
+            }
+        } else {
+            runCatching { lm.removeUpdates(ecouteAltitude) }
+            if (altitudesTotal > 0) AppLogger.i(TAG, "altitude GPS : $altitudesVues/$altitudesTotal relevés du trajet")
+            altitude = null
+        }
+    }
+
+    private fun avecAltitude(s: EnergySnapshot): EnergySnapshot {
+        if (!altitudeSuivie) return s
+        altitudesTotal++
+        val (ms, alt) = altitude ?: return s
+        if (SystemClock.elapsedRealtime() - ms > ALTITUDE_MAX_AGE_MS) return s
+        altitudesVues++
+        return s.copy(altitudeM = alt)
+    }
+
     /** Un relevé, sur le fil du collecteur. Toute erreur reste sans conséquence : on réessaie. */
     private fun sample() {
         val s = store ?: return
         val t = tracker ?: return
+        // Application lancée voiture déjà en READY : aucun changement ne déclencherait le suivi.
+        suivreAltitude(ReadyWatcher.ready == true)
         runCatching {
-            val snapshot = avecProfil(avecIntegration(EnergyReader.read()))
+            val snapshot = avecAltitude(avecProfil(avecIntegration(EnergyReader.read())))
             // Horloge d'usine au réveil : on n'écrit rien, surtout pas le point de comparaison —
             // daté de 2018, il ferait d'une charge de nuit une session de sept ans.
             if (!StatsTracker.clockPlausible(snapshot.timestampMs)) {

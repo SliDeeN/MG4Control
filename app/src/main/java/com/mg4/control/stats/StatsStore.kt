@@ -52,6 +52,9 @@ class StatsStore(private val context: Context) {
         private const val KEY_SOC_TABLE_AC = "soc_energy_table_ac"
         private const val KEY_SOC_TABLE_DC = "soc_energy_table_dc"
         private const val MAX_ENERGY_CHECKS = 40
+        /** Bandes du graphique d'un trajet (2026-11-05) : un choix pour tous les trajets. */
+        private const val KEY_CURVE_SPEED = "curve_show_speed"
+        private const val KEY_CURVE_ALTITUDE = "curve_show_altitude"
 
         /** Verrou de processus : le service écrit pendant que l'écran lit. */
         private val LOCK = Any()
@@ -114,6 +117,11 @@ class StatsStore(private val context: Context) {
     }
 
     fun isEnabled(): Boolean = prefs.getBoolean(KEY_ENABLED, false)
+
+    fun curveSpeedShown(): Boolean = prefs.getBoolean(KEY_CURVE_SPEED, false)
+    fun setCurveSpeedShown(on: Boolean) = prefs.edit { putBoolean(KEY_CURVE_SPEED, on) }
+    fun curveAltitudeShown(): Boolean = prefs.getBoolean(KEY_CURVE_ALTITUDE, false)
+    fun setCurveAltitudeShown(on: Boolean) = prefs.edit { putBoolean(KEY_CURVE_ALTITUDE, on) }
 
     // ── Énergie par tranche de 1 %, apprise pendant les charges vues (issue #156) ──
 

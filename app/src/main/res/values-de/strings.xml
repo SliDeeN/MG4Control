@@ -820,6 +820,16 @@
     <string name="stats_trip_mixed">Gemischt</string>
     <string name="stats_portion">%1$s von %2$s</string>
     <string name="stats_split_title">Aufteilung nach Profil</string>
+    <string name="stats_curve_title">Verbrauch entlang der Fahrt</string>
+    <string name="stats_curve_summary">Ø %1$s · max %2$s kWh/100</string>
+    <string name="stats_curve_speed">Tempo</string>
+    <string name="stats_curve_elevation">Höhe</string>
+    <string name="stats_curve_elevation_value">%1$s: + %2$d m · − %3$d m</string>
+    <string name="stats_curve_no_altitude">Keine GPS-Höhe während dieser Fahrt empfangen</string>
+    <string name="stats_curve_none">Kein Diagramm für diese Fahrt: Es wird seit Version 2.7 aufgezeichnet.</string>
+    <string name="stats_curve_legend_regen">Rekuperation</string>
+    <string name="stats_curve_legend_speed">Tempo</string>
+    <string name="stats_curve_legend_altitude">Höhe</string>
     <string name="stats_split_order">Reihenfolge: %1$s</string>
     <string name="stats_tile_longest">Längste</string>
     <string name="stats_tile_cost_total">Gesamtkosten</string>
