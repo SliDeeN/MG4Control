@@ -109,7 +109,10 @@ enum class ShortcutAction(val id: Int) {
     RUN_RULE(51),
     // Cycle des modes de conduite (issue #207) : seulement les modes choisis, dans l'ordre choisi
     // (voir DriveModeCycle). Utilisable en roulant, comme le bouton de la voiture.
-    DRIVE_MODE_CYCLE(52);
+    DRIVE_MODE_CYCLE(52),
+    // Pop-up Réglages rapides (issue #197) : les tuiles choisies dans Raccourcis › Réglages rapides
+    // (voir QuickSettingsOverlay). Un second appui le referme.
+    QUICK_SETTINGS(53);
 
     companion object {
         /**

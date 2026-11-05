@@ -859,7 +859,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     /** Raccourcis regroupés sous une entrée à eux dans le choix des actions. */
     private val MEDIA = listOf(ShortcutAction.MEDIA_PLAY_PAUSE, ShortcutAction.MEDIA_NEXT, ShortcutAction.MEDIA_PREVIOUS, ShortcutAction.AUDIO_SOURCE_CYCLE)
     private val VITRES = listOf(ShortcutAction.WINDOWS_CLOSE_ALL, ShortcutAction.WINDOWS_OPEN_ALL)
-    private val OUVRIR = listOf(ShortcutAction.HVAC_POPUP, ShortcutAction.CHARGE_POPUP, ShortcutAction.PROFILE_PICKER,
+    private val OUVRIR = listOf(ShortcutAction.HVAC_POPUP, ShortcutAction.CHARGE_POPUP, ShortcutAction.QUICK_SETTINGS, ShortcutAction.PROFILE_PICKER,
         ShortcutAction.PRE_CLIMATE, ShortcutAction.PROJECTION, ShortcutAction.ANDROID_SETTINGS)
 
     /** Ajoute ([actuelle] nulle) ou modifie une action. */

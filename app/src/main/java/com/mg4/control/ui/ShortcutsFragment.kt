@@ -61,6 +61,15 @@ class ShortcutsFragment : Fragment() {
     private val floatingPage = FloatingButtonsPage()
     /** Raccourcis perso (issue #172) : leur page, dans le rail. */
     private val customPage = CustomShortcutsPage()
+    /** Raccourcis › Réglages rapides (issue #197). */
+    companion object {
+        /** Page à ouvrir au prochain affichage, demandée par un pop-up (voir MainActivity). */
+        var pageDemandee: String? = null
+    }
+
+    private val quickPage = QuickSettingsPage()
+    /** La page Réglages rapides a été demandée par son pop-up : elle reste dans la rangée. */
+    private var quickForcee = false
 
     /** Clés identifiant chaque ligne slot × type de pression. */
     private val slotPressList = listOf(
@@ -152,6 +161,7 @@ class ShortcutsFragment : Fragment() {
         setupPreClimatePage(view)
         // Boutons flottants : les actions du volant, sans celles qui demandent un réglage à part
         // (profil ou appli à choisir) — la bulle n'a que son raccourci.
+        view.findViewById<android.widget.LinearLayout>(R.id.page_sc_quick)?.let { quickPage.bind(it) }
         floatingPage.bind(this, view, baseActionItems
             .filter { it.action !in setOf(ShortcutAction.NONE, ShortcutAction.APPLY_PROFILE, ShortcutAction.OPEN_CUSTOM_APP) }
             .map { it.label to it.action })
@@ -176,6 +186,13 @@ class ShortcutsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        // « Choisir les tuiles » du pop-up Réglages rapides : directement sur sa page.
+        if (pageDemandee == com.mg4.control.MainActivity.PAGE_QUICK_SETTINGS) {
+            pageDemandee = null
+            quickForcee = true
+            reselectTabs?.invoke()
+            rootView?.findViewById<View>(R.id.btn_sc_sub_quick)?.performClick()
+        }
         // L utilisateur revient peut-etre des reglages d accessibilite : l etat affiche doit
         // suivre, sinon il resterait sur "inactif" apres avoir active le service.
         wheelPage.refresh()
@@ -378,7 +395,12 @@ class ShortcutsFragment : Fragment() {
         val bulles = ProfileManager(ctx).getAll()
             .flatMap { com.mg4.control.util.FloatingProfiles.buttonsOf(it) } +
             com.mg4.control.util.FloatingButtonSettings.legacyButtons(ctx)
-        return bulles.any { it.action == action.name }
+        if (bulles.any { it.action == action.name }) return true
+        // Et Mes automatisations : une action « raccourci » qui lance cette fonction.
+        fun lance(l: List<com.mg4.control.model.RuleAction>?): Boolean = l.orEmpty().any {
+            (it.type == com.mg4.control.model.RuleAction.Type.SHORTCUT && it.shortcut == action.name) || lance(it.then) || lance(it.otherwise)
+        }
+        return com.mg4.control.automation.CustomRuleStore.all(ctx).any { lance(it.actions) }
     }
 
     /**
@@ -726,6 +748,7 @@ class ShortcutsFragment : Fragment() {
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_profiles) to view.findViewById<ViewGroup>(R.id.page_sc_profiles),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_sources)  to view.findViewById<ViewGroup>(R.id.page_sc_sources),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_preclim)  to view.findViewById<ViewGroup>(R.id.page_sc_preclim),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_quick)    to view.findViewById<ViewGroup>(R.id.page_sc_quick),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_floating) to view.findViewById<ViewGroup>(R.id.page_sc_floating),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_custom)   to view.findViewById<ViewGroup>(R.id.page_sc_custom)
         )
@@ -744,7 +767,8 @@ class ShortcutsFragment : Fragment() {
             page(R.id.page_sc_drivemode) to ShortcutAction.DRIVE_MODE_CYCLE,
             pageProfils                 to ShortcutAction.PROFILE_CYCLE,
             pageSources                 to ShortcutAction.AUDIO_SOURCE_CYCLE,
-            page(R.id.page_sc_preclim)  to ShortcutAction.PRE_CLIMATE
+            page(R.id.page_sc_preclim)  to ShortcutAction.PRE_CLIMATE,
+            page(R.id.page_sc_quick)    to ShortcutAction.QUICK_SETTINGS
         )
         val scroll = view.findViewById<ScrollView>(R.id.scroll_shortcuts)
         val enabledRow = view.findViewById<View?>(R.id.sc_enabled_row)
@@ -763,6 +787,7 @@ class ShortcutsFragment : Fragment() {
             // profils le lance sans aucun bouton attribué, et ses réglages doivent rester
             // atteignables (retour utilisateur du 2026-11-04).
             if (action == ShortcutAction.PRE_CLIMATE) return FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
+            if (action == ShortcutAction.QUICK_SETTINGS && quickForcee) return true
             return actionEnJeu(action)
         }
 
@@ -806,6 +831,7 @@ class ShortcutsFragment : Fragment() {
                 if (page === pageProfils) rechargerCycleProfils?.invoke()
                 if (page === pageSources) rechargerCycleSources?.invoke()
                 if (page.id == R.id.page_sc_custom) customPage.peindre()
+                if (page.id == R.id.page_sc_quick) quickPage.refresh()
                 scroll?.scrollTo(0, 0)
                 apply()
             }

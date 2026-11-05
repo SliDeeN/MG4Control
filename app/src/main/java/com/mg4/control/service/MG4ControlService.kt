@@ -996,6 +996,12 @@ class MG4ControlService : Service() {
             return
         }
 
+        // QUICK_SETTINGS (issue #197) : même famille — un second appui referme la fenêtre.
+        if (action == ShortcutAction.QUICK_SETTINGS) {
+            QuickSettingsOverlay.toggle(this@MG4ControlService)
+            return
+        }
+
         // PRE_CLIMATE : même famille — pop-up de réglage, ou écran de suivi pendant un programme.
         if (action == ShortcutAction.PRE_CLIMATE) {
             PreClimate.raccourci(this@MG4ControlService)

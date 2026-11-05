@@ -107,6 +107,8 @@ object ShortcutCatalog {
             add(Item(ctx.getString(R.string.shortcuts_action_audio_cycle),    ShortcutAction.AUDIO_SOURCE_CYCLE))
             // Pop-up de charge : toujours proposé (2026-10-17) ; option coupée, il dit où l'activer.
             add(Item(ctx.getString(R.string.shortcuts_action_charge_popup),  ShortcutAction.CHARGE_POPUP))
+            // Réglages rapides (issue #197) : ses tuiles sont filtrées par firmware.
+            if (isKnown) add(Item(ctx.getString(R.string.shortcuts_action_quick_settings), ShortcutAction.QUICK_SETTINGS))
             // Pré-climatisation (issue #130) : verrouillage, clim et extinction existent sur tout
             // firmware connu.
             if (isKnown) add(Item(ctx.getString(R.string.shortcuts_action_preclim), ShortcutAction.PRE_CLIMATE))

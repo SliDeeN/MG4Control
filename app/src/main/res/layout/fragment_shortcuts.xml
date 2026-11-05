@@ -91,6 +91,13 @@
 
                 <com.mg4.control.ui.widget.RailButton
                     style="@style/Widget.MG4.CategoryTab"
+                    android:id="@+id/btn_sc_sub_quick"
+                    android:text="@string/shortcuts_cat_quick"
+                    android:visibility="gone"
+                    app:icon="@drawable/ic_cat_adjust" />
+
+                <com.mg4.control.ui.widget.RailButton
+                    style="@style/Widget.MG4.CategoryTab"
                     android:id="@+id/btn_sc_sub_floating"
                     android:text="@string/shortcuts_cat_floating"
                     app:icon="@drawable/ic_rail_circle_dot" />
@@ -1164,6 +1171,15 @@
                     </LinearLayout>
 
                 </LinearLayout>
+
+                <!-- ══════════ Réglages rapides (issue #197, 2026-11-05) ══════════
+                     Les tuiles du pop-up, le catalogue et l'aperçu. Rempli par QuickSettingsPage. -->
+                <LinearLayout
+                    android:id="@+id/page_sc_quick"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone" />
 
                 <!-- ══════════ Raccourcis perso (issue #172, 2026-10-25) ══════════
                      Les actions définies par l'utilisateur, à mettre sur un bouton du volant, un
