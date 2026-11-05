@@ -1337,6 +1337,11 @@
     <string name="rule_tpl_hot">Clima cuando hace calor</string>
     <string name="rule_tpl_hot_msg">Clima encendido: hace calor fuera</string>
     <string name="rule_tpl_windows">Ventanillas cerradas al salir</string>
+    <string name="rule_tpl_steering_timer">Volante calefactado: apagado tras 15 min</string>
+    <string name="rule_tpl_steering_timer_msg">Volante calefactado apagado tras 15 min</string>
+    <string name="rule_tpl_seat_timer">Asiento izquierdo calefactado: apagado tras 20 min</string>
+    <string name="rule_tpl_seat_timer_msg">Asiento calefactado apagado tras 20 min</string>
+    <string name="rule_tpl_brightness_sun">Brillo día / noche según el sol</string>
     <string name="rule_sig_ready">READY</string>
     <string name="rule_sig_gear">Marcha</string>
     <string name="rule_sig_speed">Velocidad</string>

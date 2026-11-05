@@ -7,7 +7,12 @@ package com.mg4.control.model
  */
 object CustomRuleTemplates {
 
-    enum class Template { STARTUP_MESSAGE, WINTER_MORNING, HOT_DAY, WINDOWS_ON_LEAVING }
+    enum class Template {
+        STARTUP_MESSAGE, WINTER_MORNING, HOT_DAY, WINDOWS_ON_LEAVING,
+        // 2026-11-05 : les demandes des issues #173 (chauffages coupés après un temps) et #198
+        // (luminosité selon le soleil), faites avec le moteur plutôt qu'en options à part.
+        STEERING_HEAT_TIMER, SEAT_HEAT_TIMER, BRIGHTNESS_SUN,
+    }
 
     private fun compare(s: RuleSignal, op: RuleOp, number: Double? = null, text: String? = null) =
         RuleCondition(RuleCondition.Type.COMPARE, signal = s, op = op, number = number, text = text)
@@ -70,6 +75,39 @@ object CustomRuleTemplates {
             triggers = listOf(RuleTrigger(RuleTrigger.Type.BECOMES, condition = compare(RuleSignal.READY, RuleOp.IS_FALSE))),
             condition = tous(compare(RuleSignal.GEAR, RuleOp.EQUALS, text = RuleSignal.GEAR_PARK)),
             actions = listOf(RuleAction(RuleAction.Type.SHORTCUT, shortcut = "WINDOWS_CLOSE_ALL")),
+        )
+        // Issue #173 : le compte part quand le volant chauffe, et repart de zéro s'il est coupé
+        // puis rallumé. Recommencer = relancer le compte, pas l'ignorer.
+        Template.STEERING_HEAT_TIMER -> CustomRule(
+            name = name,
+            triggers = listOf(RuleTrigger(
+                RuleTrigger.Type.BECOMES, condition = compare(RuleSignal.STEERING_HEAT, RuleOp.IS_TRUE), forSeconds = 15 * 60,
+            )),
+            actions = listOf(set("steering_heat", "0"), RuleAction(RuleAction.Type.NOTIFY, text = message)),
+        )
+        // Issue #173, côté sièges : le siège gauche ; à dupliquer pour le droit, chacun sa durée.
+        Template.SEAT_HEAT_TIMER -> CustomRule(
+            name = name,
+            triggers = listOf(RuleTrigger(
+                RuleTrigger.Type.BECOMES, condition = compare(RuleSignal.SEAT_HEAT_LEFT, RuleOp.ABOVE, 0.0), forSeconds = 20 * 60,
+            )),
+            actions = listOf(set("seat_heat_left", "0"), RuleAction(RuleAction.Type.NOTIFY, text = message)),
+        )
+        // Issue #198 : jour / nuit d'après le soleil, réglé aussi au démarrage. Position inconnue :
+        // « soleil levé » est inconnu, rien n'est écrit.
+        Template.BRIGHTNESS_SUN -> CustomRule(
+            name = name,
+            triggers = listOf(
+                RuleTrigger(RuleTrigger.Type.SUN, sun = SunEvent.SUNRISE),
+                RuleTrigger(RuleTrigger.Type.SUN, sun = SunEvent.SUNSET),
+                RuleTrigger(RuleTrigger.Type.BECOMES, condition = compare(RuleSignal.READY, RuleOp.IS_TRUE)),
+            ),
+            actions = listOf(RuleAction(
+                RuleAction.Type.IF,
+                condition = compare(RuleSignal.SUN_UP, RuleOp.IS_TRUE),
+                then = listOf(set(RuleKeys.BRIGHTNESS, "80")),
+                otherwise = listOf(set(RuleKeys.BRIGHTNESS, "25")),
+            )),
         )
     }
 }

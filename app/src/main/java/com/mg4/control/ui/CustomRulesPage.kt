@@ -244,6 +244,9 @@ class CustomRulesPage {
         Modele(CustomRuleTemplates.Template.WINTER_MORNING, R.string.rule_tpl_morning, R.string.rule_tpl_morning_msg),
         Modele(CustomRuleTemplates.Template.HOT_DAY, R.string.rule_tpl_hot, R.string.rule_tpl_hot_msg),
         Modele(CustomRuleTemplates.Template.WINDOWS_ON_LEAVING, R.string.rule_tpl_windows, R.string.rule_tpl_windows),
+        Modele(CustomRuleTemplates.Template.STEERING_HEAT_TIMER, R.string.rule_tpl_steering_timer, R.string.rule_tpl_steering_timer_msg),
+        Modele(CustomRuleTemplates.Template.SEAT_HEAT_TIMER, R.string.rule_tpl_seat_timer, R.string.rule_tpl_seat_timer_msg),
+        Modele(CustomRuleTemplates.Template.BRIGHTNESS_SUN, R.string.rule_tpl_brightness_sun, R.string.rule_tpl_brightness_sun),
     )
 
     /** La nouvelle automatisation s'ouvre dans l'éditeur ; elle n'existe qu'une fois enregistrée. */

@@ -1337,6 +1337,11 @@
     <string name="rule_tpl_hot">A/C when it is hot</string>
     <string name="rule_tpl_hot_msg">A/C started: it is hot outside</string>
     <string name="rule_tpl_windows">Windows closed when leaving</string>
+    <string name="rule_tpl_steering_timer">Heated steering wheel: off after 15 min</string>
+    <string name="rule_tpl_steering_timer_msg">Heated steering wheel turned off after 15 min</string>
+    <string name="rule_tpl_seat_timer">Left heated seat: off after 20 min</string>
+    <string name="rule_tpl_seat_timer_msg">Heated seat turned off after 20 min</string>
+    <string name="rule_tpl_brightness_sun">Day / night brightness from the sun</string>
     <string name="rule_sig_ready">READY</string>
     <string name="rule_sig_gear">Gear</string>
     <string name="rule_sig_speed">Speed</string>

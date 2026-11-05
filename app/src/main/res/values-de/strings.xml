@@ -1337,6 +1337,11 @@
     <string name="rule_tpl_hot">Klima bei Hitze</string>
     <string name="rule_tpl_hot_msg">Klima gestartet: draußen ist es heiß</string>
     <string name="rule_tpl_windows">Fenster schließen beim Aussteigen</string>
+    <string name="rule_tpl_steering_timer">Lenkradheizung: Aus nach 15 Min.</string>
+    <string name="rule_tpl_steering_timer_msg">Lenkradheizung nach 15 Min. ausgeschaltet</string>
+    <string name="rule_tpl_seat_timer">Sitzheizung links: Aus nach 20 Min.</string>
+    <string name="rule_tpl_seat_timer_msg">Sitzheizung nach 20 Min. ausgeschaltet</string>
+    <string name="rule_tpl_brightness_sun">Helligkeit Tag / Nacht nach Sonnenstand</string>
     <string name="rule_sig_ready">READY</string>
     <string name="rule_sig_gear">Gang</string>
     <string name="rule_sig_speed">Geschwindigkeit</string>

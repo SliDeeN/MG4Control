@@ -110,6 +110,28 @@ class CustomRuleTest {
         assertFalse(RuleLogic.usesClock(m))
     }
 
+    @Test
+    fun `modeles des issues 173 et 198`() = runBlocking {
+        val v = CustomRuleTemplates.build(CustomRuleTemplates.Template.STEERING_HEAT_TIMER, "v", "coupé")
+        assertEquals(setOf(RuleSignal.STEERING_HEAT), RuleLogic.signals(v))
+        assertEquals(15 * 60, v.triggers.single().forSeconds)
+        val faitV = Faux(etat())
+        RuleRun(faitV).run(v.actions)
+        assertEquals(listOf("steering_heat=0", "msg:coupé"), faitV.faits)
+
+        val s = CustomRuleTemplates.build(CustomRuleTemplates.Template.SEAT_HEAT_TIMER, "s", "m")
+        assertEquals(setOf(RuleSignal.SEAT_HEAT_LEFT), RuleLogic.signals(s))
+
+        val l = CustomRuleTemplates.build(CustomRuleTemplates.Template.BRIGHTNESS_SUN, "l", "l")
+        assertEquals(3, l.triggers.size)
+        val jour = Faux(etat(RuleSignal.SUN_UP to true))
+        RuleRun(jour).run(l.actions)
+        assertEquals(listOf("${RuleKeys.BRIGHTNESS}=80"), jour.faits)
+        val nuit = Faux(etat(RuleSignal.SUN_UP to false))
+        RuleRun(nuit).run(l.actions)
+        assertEquals(listOf("${RuleKeys.BRIGHTNESS}=25"), nuit.faits)
+    }
+
     // ── Déclencheurs ────────────────────────────────────────────────────────
 
     @Test
@@ -377,11 +399,13 @@ class CustomRuleTest {
     }
 
     @Test
-    fun `les modeles n'ecrivent que des cles de l'API externe`() {
+    fun `les modeles n'ecrivent que des cles connues`() {
         val cles = setOf(ExternalApi.SET_DRIVE_MODE, ExternalApi.SET_REGEN, ExternalApi.SET_SEAT_HEAT_LEFT,
             ExternalApi.SET_SEAT_HEAT_RIGHT, ExternalApi.SET_STEERING_HEAT, ExternalApi.SET_PROFILE,
             ExternalApi.SET_HVAC_POWER, ExternalApi.SET_HVAC_AC, ExternalApi.SET_HVAC_AUTO, ExternalApi.SET_HVAC_TEMP,
-            ExternalApi.SET_HVAC_FAN, ExternalApi.SET_HVAC_RECIRC, ExternalApi.SET_DEFROST_FRONT, ExternalApi.SET_DEFROST_REAR)
+            ExternalApi.SET_HVAC_FAN, ExternalApi.SET_HVAC_RECIRC, ExternalApi.SET_DEFROST_FRONT, ExternalApi.SET_DEFROST_REAR) +
+            // Plus les clés propres aux automatisations (lot 1), que RuleWrites sait écrire.
+            RuleKeys.ALL
         fun toutes(l: List<RuleAction>?): List<RuleAction> = l.orEmpty().flatMap { listOf(it) + toutes(it.then) + toutes(it.otherwise) }
         for (t in CustomRuleTemplates.Template.entries) {
             val r = CustomRuleTemplates.build(t, "n", "m")

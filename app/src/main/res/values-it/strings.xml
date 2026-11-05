@@ -1337,6 +1337,11 @@
     <string name="rule_tpl_hot">Clima quando fa caldo</string>
     <string name="rule_tpl_hot_msg">Clima avviato: fuori fa caldo</string>
     <string name="rule_tpl_windows">Finestrini chiusi all’uscita</string>
+    <string name="rule_tpl_steering_timer">Volante riscaldato: spento dopo 15 min</string>
+    <string name="rule_tpl_steering_timer_msg">Volante riscaldato spento dopo 15 min</string>
+    <string name="rule_tpl_seat_timer">Sedile sinistro riscaldato: spento dopo 20 min</string>
+    <string name="rule_tpl_seat_timer_msg">Sedile riscaldato spento dopo 20 min</string>
+    <string name="rule_tpl_brightness_sun">Luminosità giorno / notte secondo il sole</string>
     <string name="rule_sig_ready">READY</string>
     <string name="rule_sig_gear">Marcia</string>
     <string name="rule_sig_speed">Velocità</string>

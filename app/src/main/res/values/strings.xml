@@ -1354,6 +1354,11 @@
     <string name="rule_tpl_hot">Clim quand il fait chaud</string>
     <string name="rule_tpl_hot_msg">Clim lancée : il fait chaud dehors</string>
     <string name="rule_tpl_windows">Vitres fermées en quittant</string>
+    <string name="rule_tpl_steering_timer">Volant chauffant : arrêt après 15 min</string>
+    <string name="rule_tpl_steering_timer_msg">Volant chauffant coupé après 15 min</string>
+    <string name="rule_tpl_seat_timer">Siège gauche chauffant : arrêt après 20 min</string>
+    <string name="rule_tpl_seat_timer_msg">Siège chauffant coupé après 20 min</string>
+    <string name="rule_tpl_brightness_sun">Luminosité jour / nuit selon le soleil</string>
     <string name="rule_sig_ready">READY</string>
     <string name="rule_sig_gear">Rapport</string>
     <string name="rule_sig_speed">Vitesse</string>
