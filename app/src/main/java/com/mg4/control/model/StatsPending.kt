@@ -55,6 +55,8 @@ data class PendingTrip(
     /** Compteur d'origine « climatisation et autres », au départ et au dernier relevé. */
     val auxStart: Float? = null,
     val auxLast: Float? = null,
+    /** Débuts des morceaux par profil (2026-11-05) ; null pour un trajet repris d'avant la fonction. */
+    val segmentStarts: List<SegmentStart>? = null,
 ) {
     val averageTempC: Float? get() = moyenne(tempSum, tempCount, tempC)
 }

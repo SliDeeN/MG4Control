@@ -791,7 +791,7 @@
     <string name="stats_clear">Delete everything</string>
     <string name="stats_export">Export</string>
     <string name="stats_export_title">Export statistics</string>
-    <string name="stats_export_subtitle">%1$d trips and %2$d charges: 2 CSV files</string>
+    <string name="stats_export_subtitle">%1$d trips and %2$d charges: 3 CSV files</string>
     <string name="stats_export_downloads">Downloads</string>
     <string name="stats_export_default">Default</string>
     <string name="stats_export_usb">USB drive</string>
@@ -815,6 +815,12 @@
     <string name="stats_tile_cost">Estimated cost</string>
     <string name="stats_tile_cost_per100">Cost per 100 km</string>
     <string name="stats_tile_trips">Trips</string>
+    <string name="stats_filter_profile">Profile</string>
+    <string name="stats_filter_all">All</string>
+    <string name="stats_trip_mixed">Mixed</string>
+    <string name="stats_portion">%1$s of %2$s</string>
+    <string name="stats_split_title">Split by profile</string>
+    <string name="stats_split_order">Order: %1$s</string>
     <string name="stats_tile_longest">Longest</string>
     <string name="stats_tile_cost_total">Total cost</string>
     <string name="stats_tile_avg_price">Average price</string>

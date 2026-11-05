@@ -791,7 +791,7 @@
     <string name="stats_clear">Tümünü sil</string>
     <string name="stats_export">Dışa aktar</string>
     <string name="stats_export_title">İstatistikleri dışa aktar</string>
-    <string name="stats_export_subtitle">%1$d yolculuk ve %2$d şarj: 2 CSV dosyası</string>
+    <string name="stats_export_subtitle">%1$d yolculuk ve %2$d şarj: 3 CSV dosyası</string>
     <string name="stats_export_downloads">İndirilenler</string>
     <string name="stats_export_default">Varsayılan</string>
     <string name="stats_export_usb">USB bellek</string>
@@ -815,6 +815,12 @@
     <string name="stats_tile_cost">Tahmini maliyet</string>
     <string name="stats_tile_cost_per100">100 km maliyeti</string>
     <string name="stats_tile_trips">Yolculuklar</string>
+    <string name="stats_filter_profile">Profil</string>
+    <string name="stats_filter_all">Tümü</string>
+    <string name="stats_trip_mixed">Karma</string>
+    <string name="stats_portion">%1$s / %2$s</string>
+    <string name="stats_split_title">Profile göre dağılım</string>
+    <string name="stats_split_order">Sıra: %1$s</string>
     <string name="stats_tile_longest">En uzun</string>
     <string name="stats_tile_cost_total">Toplam maliyet</string>
     <string name="stats_tile_avg_price">Ortalama fiyat</string>

@@ -807,7 +807,7 @@
     <string name="stats_clear">Tout supprimer</string>
     <string name="stats_export">Exporter</string>
     <string name="stats_export_title">Exporter les statistiques</string>
-    <string name="stats_export_subtitle">%1$d trajets et %2$d charges : 2 fichiers CSV</string>
+    <string name="stats_export_subtitle">%1$d trajets et %2$d charges : 3 fichiers CSV</string>
     <string name="stats_export_downloads">Téléchargements</string>
     <string name="stats_export_default">Par défaut</string>
     <string name="stats_export_usb">Clé USB</string>
@@ -831,6 +831,12 @@
     <string name="stats_tile_cost">Coût estimé</string>
     <string name="stats_tile_cost_per100">Coût aux 100 km</string>
     <string name="stats_tile_trips">Trajets</string>
+    <string name="stats_filter_profile">Profil</string>
+    <string name="stats_filter_all">Tous</string>
+    <string name="stats_trip_mixed">Mixte</string>
+    <string name="stats_portion">%1$s sur %2$s</string>
+    <string name="stats_split_title">Répartition par profil</string>
+    <string name="stats_split_order">Ordre : %1$s</string>
     <string name="stats_tile_longest">Le plus long</string>
     <string name="stats_tile_cost_total">Coût total</string>
     <string name="stats_tile_avg_price">Prix moyen</string>

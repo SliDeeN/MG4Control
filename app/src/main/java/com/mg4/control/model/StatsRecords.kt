@@ -83,6 +83,11 @@ data class Trip(
      * à présenter comme un ordre de grandeur. Renseigné seulement quand [energyIntegrated].
      */
     val auxiliaryKwh: Float? = null,
+    /**
+     * Morceaux du trajet par profil (2026-11-05, [TripSegments]) ; null pour un trajet enregistré
+     * avant la fonction. Un seul morceau = un seul profil ; plusieurs = trajet « Mixte ».
+     */
+    val segments: List<TripSegment>? = null,
 ) {
     val durationMs: Long get() = max(0L, endMs - startMs)
 

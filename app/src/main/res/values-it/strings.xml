@@ -791,7 +791,7 @@
     <string name="stats_clear">Cancellare tutto</string>
     <string name="stats_export">Esporta</string>
     <string name="stats_export_title">Esporta le statistiche</string>
-    <string name="stats_export_subtitle">%1$d viaggi e %2$d ricariche: 2 file CSV</string>
+    <string name="stats_export_subtitle">%1$d viaggi e %2$d ricariche: 3 file CSV</string>
     <string name="stats_export_downloads">Download</string>
     <string name="stats_export_default">Predefinito</string>
     <string name="stats_export_usb">Chiavetta USB</string>
@@ -815,6 +815,12 @@
     <string name="stats_tile_cost">Costo stimato</string>
     <string name="stats_tile_cost_per100">Costo ogni 100 km</string>
     <string name="stats_tile_trips">Viaggi</string>
+    <string name="stats_filter_profile">Profilo</string>
+    <string name="stats_filter_all">Tutti</string>
+    <string name="stats_trip_mixed">Misto</string>
+    <string name="stats_portion">%1$s su %2$s</string>
+    <string name="stats_split_title">Ripartizione per profilo</string>
+    <string name="stats_split_order">Ordine: %1$s</string>
     <string name="stats_tile_longest">Il più lungo</string>
     <string name="stats_tile_cost_total">Costo totale</string>
     <string name="stats_tile_avg_price">Prezzo medio</string>

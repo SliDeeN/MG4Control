@@ -56,6 +56,9 @@ data class EnergySnapshot(
      * sur un long trajet, pas pour un chiffre au dixième.
      */
     val auxSinceStartKwh: Float? = null,
+    /** Profil actif au relevé, et son nom (2026-11-05) : un trajet se découpe par profil ([TripSegments]). */
+    val profileId: String? = null,
+    val profileName: String? = null,
 ) {
     /** Vrai si l'instantané porte assez d'information pour être exploité. */
     val usable: Boolean get() = socPercent != null || odometerKm != null

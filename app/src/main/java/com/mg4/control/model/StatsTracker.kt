@@ -136,7 +136,10 @@ class StatsTracker(
                 integratedRegenKwh = snapshot.tripRegenKwh,
                 auxStart = snapshot.auxSinceStartKwh,
                 auxLast = snapshot.auxSinceStartKwh,
-            ) else enCours.copy(
+                segmentStarts = listOf(SegmentStart(snapshot.profileId, snapshot.profileName, snapshot.timestampMs, 0f,
+                    snapshot.odometerKm, snapshot.energySinceStartKwh, snapshot.regenSinceStartKwh,
+                    snapshot.tripConsumedKwh, snapshot.tripRegenKwh)),
+            ) else suivreProfil(enCours.copy(
                 lastMs = snapshot.timestampMs,
                 odometerLast = snapshot.odometerKm ?: enCours.odometerLast,
                 energyLast = snapshot.energySinceStartKwh ?: enCours.energyLast,
@@ -157,7 +160,7 @@ class StatsTracker(
                 // Le départ peut avoir été illisible : le premier relevé lisible en tient lieu.
                 auxStart = enCours.auxStart ?: snapshot.auxSinceStartKwh,
                 auxLast = snapshot.auxSinceStartKwh ?: enCours.auxLast,
-            )
+            ), snapshot)
         } else if (ready == false && enCours != null) {
             // Entre le dernier relevé sous contact et celui qui le coupe, la voiture roulait
             // encore : sans ce dernier trapèze, chaque trajet perdrait sa fin. Seules la distance
@@ -321,6 +324,8 @@ class StatsTracker(
         // trajet, même si l'odomètre n'a pas changé de kilomètre.
         val integre = if (p.integrated) p.integratedKm.roundTenth() else null
         if (distance <= 0 && energy <= 0f && (integre ?: 0f) <= 0f) return null
+        val fin = SegmentStart(null, null, p.lastMs, p.integratedKm, p.odometerLast, p.energyLast, p.regenLast,
+            p.integratedEnergyKwh, p.integratedRegenKwh)
         return Trip(
             startMs = p.startMs,
             endMs = p.lastMs,
@@ -341,7 +346,23 @@ class StatsTracker(
             integratedKm = integre,
             energyIntegrated = parIntegration,
             auxiliaryKwh = if (parIntegration) counterDelta(p.auxStart, p.auxLast) else null,
+            segments = TripSegments.build(p.segmentStarts, fin, p.integrated, parIntegration),
         )
+    }
+
+    /**
+     * Changement de profil en cours de route (2026-11-05) : un nouveau morceau commence, aux
+     * compteurs de ce relevé. Un profil d'abord inconnu est complété plutôt que d'ouvrir un morceau.
+     */
+    private fun suivreProfil(p: PendingTrip, s: EnergySnapshot): PendingTrip {
+        val id = s.profileId ?: return p
+        val debuts = p.segmentStarts ?: return p
+        val dernier = debuts.lastOrNull() ?: return p
+        if (dernier.profileId == id) return p
+        if (dernier.profileId == null)
+            return p.copy(segmentStarts = debuts.dropLast(1) + dernier.copy(profileId = id, profileName = s.profileName))
+        return p.copy(segmentStarts = debuts + SegmentStart(id, s.profileName, p.lastMs, p.integratedKm, p.odometerLast,
+            p.energyLast, p.regenLast, p.integratedEnergyKwh, p.integratedRegenKwh))
     }
 
     private fun finishCharge(p: PendingCharge, endMs: Long, socEnd: Float?): ChargeSession {

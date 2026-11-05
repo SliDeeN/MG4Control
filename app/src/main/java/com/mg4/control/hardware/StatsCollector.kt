@@ -55,6 +55,10 @@ object StatsCollector {
     private val worker = Handler(thread.looper)
 
     private var store: StatsStore? = null
+    /** Pour lire le profil actif à chaque relevé (trajets découpés par profil, 2026-11-05). */
+    @Volatile private var appContext: Context? = null
+    /** Nom du dernier profil lu : relu seulement quand le profil change. */
+    private var profilLu: Pair<String, String?>? = null
     private var tracker: StatsTracker? = null
 
     @Volatile
@@ -157,6 +161,7 @@ object StatsCollector {
 
     private fun start(context: Context) {
         val app = context.applicationContext
+        appContext = app
         worker.post {
             if (running) return@post
             running = true
@@ -197,12 +202,22 @@ object StatsCollector {
         }
     }
 
+    /** Le profil actif et son nom, ajoutés au relevé : le trajet se découpe par profil ([com.mg4.control.model.TripSegments]). */
+    private fun avecProfil(s: com.mg4.control.model.EnergySnapshot): com.mg4.control.model.EnergySnapshot {
+        val ctx = appContext ?: return s
+        val id = runCatching { com.mg4.control.profile.ActiveProfile.id(ctx) }.getOrNull() ?: return s
+        val nom = profilLu?.takeIf { it.first == id }?.second
+            ?: runCatching { com.mg4.control.profile.ProfileManager(ctx).getAll().firstOrNull { it.id == id }?.name }.getOrNull()
+                .also { profilLu = id to it }
+        return s.copy(profileId = id, profileName = nom)
+    }
+
     /** Un relevé, sur le fil du collecteur. Toute erreur reste sans conséquence : on réessaie. */
     private fun sample() {
         val s = store ?: return
         val t = tracker ?: return
         runCatching {
-            val snapshot = avecIntegration(EnergyReader.read())
+            val snapshot = avecProfil(avecIntegration(EnergyReader.read()))
             // Horloge d'usine au réveil : on n'écrit rien, surtout pas le point de comparaison —
             // daté de 2018, il ferait d'une charge de nuit une session de sept ans.
             if (!StatsTracker.clockPlausible(snapshot.timestampMs)) {

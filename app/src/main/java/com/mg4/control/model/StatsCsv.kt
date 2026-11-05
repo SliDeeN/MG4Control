@@ -25,7 +25,12 @@ object StatsCsv {
     val TRIP_HEADERS = listOf(
         "start", "end", "duration_min", "distance_km", "odometer_km", "net_energy_kwh",
         "gross_energy_kwh", "regen_kwh", "climate_kwh", "accessories_kwh", "consumption_kwh_100km",
-        "average_speed_kmh", "soc_start_pct", "soc_end_pct", "outside_temp_c", "energy_source",
+        "average_speed_kmh", "soc_start_pct", "soc_end_pct", "outside_temp_c", "energy_source", "profile",
+    )
+
+    /** Un morceau de trajet par profil (2026-11-05) : `trip_start` relie au trajet. */
+    val SEGMENT_HEADERS = listOf(
+        "trip_start", "profile", "duration_min", "distance_km", "net_energy_kwh", "regen_kwh", "consumption_kwh_100km",
     )
 
     val CHARGE_HEADERS = listOf(
@@ -34,7 +39,12 @@ object StatsCsv {
         "times", "reconstructed",
     )
 
-    fun trips(trips: List<Trip>, virgule: Boolean, zone: TimeZone = TimeZone.getDefault()): String {
+    /** Nom d'un profil : l'actuel ([noms]) s'il existe encore, sinon celui noté sur le trajet. */
+    private fun nom(id: String?, note: String?, noms: Map<String, String>): String =
+        if (id == null) "" else noms[id] ?: note ?: id
+
+    fun trips(trips: List<Trip>, virgule: Boolean, zone: TimeZone = TimeZone.getDefault(),
+              noms: Map<String, String> = emptyMap()): String {
         val date = format(zone)
         val lignes = trips.sortedBy { it.startMs }.map { t ->
             listOf(
@@ -49,9 +59,35 @@ object StatsCsv {
                 nombre(t.socStart, 1, virgule), nombre(t.socEnd, 1, virgule),
                 nombre(t.outsideTempC, 1, virgule),
                 if (t.energyIntegrated) "integrated" else "vehicle",
+                // Profil du trajet : son nom, « mixed » pour plusieurs, vide avant la fonction.
+                when {
+                    t.segments.isNullOrEmpty() -> ""
+                    t.isMixed -> "mixed"
+                    else -> t.segments.first().let { nom(it.profileId, it.profileName, noms) }
+                },
             )
         }
         return document(TRIP_HEADERS, lignes)
+    }
+
+    /** Morceaux de trajet par profil : une ligne par morceau, dans l'ordre du trajet. */
+    fun segments(trips: List<Trip>, virgule: Boolean, zone: TimeZone = TimeZone.getDefault(),
+                 noms: Map<String, String> = emptyMap()): String {
+        val date = format(zone)
+        val lignes = trips.sortedBy { it.startMs }.flatMap { t ->
+            t.segments.orEmpty().map { s ->
+                listOf(
+                    date.format(Date(t.startMs)),
+                    nom(s.profileId, s.profileName, noms),
+                    minutes(s.durationMs),
+                    nombre(s.distanceKm, 1, virgule),
+                    nombre(s.netEnergyKwh, 1, virgule),
+                    nombre(s.regenKwh, 1, virgule),
+                    nombre(if (s.distanceKm >= 1f) s.netEnergyKwh * 100f / s.distanceKm else null, 1, virgule),
+                )
+            }
+        }
+        return document(SEGMENT_HEADERS, lignes)
     }
 
     fun charges(

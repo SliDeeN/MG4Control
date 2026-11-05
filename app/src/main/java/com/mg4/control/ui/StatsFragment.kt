@@ -38,6 +38,9 @@ import com.mg4.control.model.StatsHistory
 import com.mg4.control.model.StatsSettings
 import com.mg4.control.model.StatsSummary
 import com.mg4.control.model.Trip
+import com.mg4.control.model.TripSegment
+import com.mg4.control.model.isMixed
+import com.mg4.control.model.portion
 import com.mg4.control.stats.StatsStore
 import com.mg4.control.ui.widget.setCategoryTabActive
 import java.text.DateFormat
@@ -84,6 +87,10 @@ class StatsFragment : Fragment() {
     private var shortPeriod = true
     /** Ligne dépliée d'une liste, repérée par l'horodatage de son enregistrement. */
     private var expanded: Long? = null
+    /** Filtre « Profil » de l'onglet Trajets (2026-11-05) ; null = tous. */
+    private var profilFiltre: String? = null
+    /** Profils de l'appli, lus une fois par affichage : noms et couleurs des trajets. */
+    private var profilsActuels: List<com.mg4.control.model.DrivingProfile> = emptyList()
 
     /** Export CSV (issue #206) : la fenêtre ouverte, et le sélecteur de dossier d'Android qui lui répond. */
     private var exportDialog: ExportDialog? = null
@@ -195,8 +202,16 @@ class StatsFragment : Fragment() {
         val charges = filtered(history.charges.sortedByDescending { it.endMs }) { it.endMs }
         val summary = StatsSummary.of(trips, charges, settings)
 
+        // Filtre par profil (2026-11-05) : chaque trajet ramené à la part roulée sous ce profil.
+        profilsActuels = com.mg4.control.profile.ProfileManager(ctx).getAll()
+        val profils = profilsDes(trips)
+        if (profils.none { it.first == profilFiltre }) profilFiltre = null
+        val affiches = profilFiltre?.let { id -> trips.mapNotNull { t -> t.portion(id)?.let { it to t } } }
+            ?: trips.map { it to it }
+        val sommeTrajets = if (profilFiltre == null) summary else StatsSummary.of(affiches.map { it.first }, charges, settings)
+
         renderGeneral(v, settings, summary, history)
-        renderTrips(v, settings, summary, trips)
+        renderTrips(v, settings, sommeTrajets, affiches, profils)
         renderCharges(v, settings, summary, charges)
     }
 
@@ -380,12 +395,18 @@ class StatsFragment : Fragment() {
     private fun tripCost(trip: Trip, sum: StatsSummary, s: StatsSettings): Float? =
         if (trip.energyKnown) trip.netEnergyKwh * (sum.averagePricePerKwh ?: s.priceAc) else null
 
-    private fun renderTrips(v: View, s: StatsSettings, sum: StatsSummary, trips: List<Trip>) {
+    /**
+     * [trips] : (ce qui est affiché, le trajet entier) — les deux sont le même trajet sans filtre ;
+     * avec le filtre « Profil », le premier n'est que la part de ce profil ([portion]).
+     */
+    private fun renderTrips(v: View, s: StatsSettings, sum: StatsSummary, trips: List<Pair<Trip, Trip>>,
+                            profils: List<Pair<String, String>>) {
         val ctx = v.context
         val tiles = v.findViewById<LinearLayout>(R.id.stats_trips_tiles)
         tiles
         vider(tiles)
         tiles.addView(periodRow(ctx))
+        if (profils.isNotEmpty()) tiles.addView(profileRow(ctx, profils))
         grid(ctx, tiles, listOf(
             getString(R.string.stats_tile_trips) to sum.tripCount.toString(),
             getString(R.string.stats_tile_distance) to km(sum.distanceKm),
@@ -400,11 +421,14 @@ class StatsFragment : Fragment() {
             list.addView(emptyNote(ctx, R.string.stats_no_trip))
             return
         }
-        trips.forEach { trip ->
-            list.addView(row(ctx, when1 = dateLine(trip.startMs, trip.endMs),
+        trips.forEach { (trip, entier) ->
+            // Avec le filtre, un trajet mixte annonce sa part : « 24 km sur 61 km ».
+            val distance = if (trip !== entier && entier.isMixed)
+                getString(R.string.stats_portion, km(trip.distance), km(entier.distance)) else km(trip.distance)
+            list.addView(row(ctx, when1 = dateLine(entier.startMs, entier.endMs),
                 when2 = listOfNotNull(
                     duration(trip.durationMs),
-                    km(trip.distance),
+                    distance,
                     money(tripCost(trip, sum, s), s).takeIf { it != "—" },
                 ).joinToString(" · "),
                 value1 = conso(trip.consumptionPer100, trip.consumptionApproximate) ?: "—",
@@ -412,8 +436,12 @@ class StatsFragment : Fragment() {
                     trip.averageSpeedKmh?.let { "${it.toInt()} km/h" },
                     kwh(trip.netEnergyKwh).takeIf { trip.energyKnown },
                 ).joinToString(" · "),
-                onClick = { expanded = if (expanded == trip.startMs) null else trip.startMs; render() }))
-            if (expanded == trip.startMs) list.addView(tripDetail(ctx, trip))
+                badge = pastille(ctx, entier),
+                onClick = { expanded = if (expanded == entier.startMs) null else entier.startMs; render() }))
+            if (expanded == entier.startMs) {
+                if (entier.isMixed) list.addView(repartition(ctx, entier))
+                list.addView(tripDetail(ctx, entier))
+            }
         }
     }
 
@@ -617,7 +645,11 @@ class StatsFragment : Fragment() {
         )
     }
 
-    /** Export CSV (issue #206) : trajets et recharges, deux fichiers, à l'endroit choisi. */
+    /** Noms actuels des profils, pour l'export (un profil supprimé garde le nom noté sur le trajet). */
+    private fun nomsProfils(): Map<String, String> =
+        com.mg4.control.profile.ProfileManager(requireContext()).getAll().associate { it.id to it.name }
+
+    /** Export CSV (issue #206) : trajets, morceaux de trajet par profil et recharges, à l'endroit choisi. */
     private fun ouvrirExport() {
         val ctx = requireContext()
         val h = store.history()
@@ -635,7 +667,8 @@ class StatsFragment : Fragment() {
                 val maintenant = System.currentTimeMillis()
                 val tout = store.history()
                 listOf(
-                    StatsCsv.fileName("trips", maintenant) to StatsCsv.trips(tout.trips, virgule),
+                    StatsCsv.fileName("trips", maintenant) to StatsCsv.trips(tout.trips, virgule, noms = nomsProfils()),
+                    StatsCsv.fileName("trip_segments", maintenant) to StatsCsv.segments(tout.trips, virgule, noms = nomsProfils()),
                     StatsCsv.fileName("charges", maintenant) to StatsCsv.charges(tout.charges, store.settings(), virgule),
                 )
             },
@@ -747,8 +780,100 @@ class StatsFragment : Fragment() {
             setOnClickListener { onClick() }
         }
 
+    // ── Trajets par profil (2026-11-05) ─────────────────────────────────────
+
+    /** Profils présents dans [trips] (id, nom) : le nom actuel s'il existe encore, sinon celui du trajet. */
+    private fun profilsDes(trips: List<Trip>): List<Pair<String, String>> {
+        val actuels = profilsActuels.associate { it.id to it.name }
+        val vus = LinkedHashMap<String, String>()
+        trips.forEach { t -> t.segments.orEmpty().forEach { seg ->
+            val id = seg.profileId ?: return@forEach
+            if (id !in vus) vus[id] = actuels[id] ?: seg.profileName ?: "?"
+        } }
+        // Dans l'ordre des profils de l'appli, les profils supprimés à la fin.
+        val ordre = actuels.keys.toList()
+        return vus.entries.sortedBy { ordre.indexOf(it.key).let { i -> if (i < 0) Int.MAX_VALUE else i } }.map { it.key to it.value }
+    }
+
+    /** Couleur d'un profil : la pastille de sa place dans la liste des profils. */
+    private fun couleurProfil(ctx: Context, id: String?): Int {
+        if (id == null) return ctx.getColor(R.color.text_secondary)
+        val i = profilsActuels.indexOfFirst { it.id == id }
+        val palette = com.mg4.control.model.BubbleColors.PALETTE
+        return if (i < 0) ctx.getColor(R.color.text_secondary) else palette[i % palette.size]
+    }
+
+    private fun nomProfil(id: String?, nom: String?): String =
+        if (id == null) "—" else profilsActuels.firstOrNull { it.id == id }?.name ?: nom ?: "?"
+
+    private fun profileRow(ctx: Context, profils: List<Pair<String, String>>): View =
+        android.widget.HorizontalScrollView(ctx).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(LinearLayout(ctx).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                addView(label(ctx, getString(R.string.stats_filter_profile), 14f, R.color.text_secondary).apply {
+                    setPadding(0, 0, dp(ctx, 10), 0)
+                })
+                addView(choice(ctx, getString(R.string.stats_filter_all), profilFiltre == null) { profilFiltre = null; expanded = null; render() })
+                profils.forEach { (id, nom) ->
+                    addView(choice(ctx, nom, profilFiltre == id) { profilFiltre = id; expanded = null; render() })
+                }
+            })
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .also { it.topMargin = dp(ctx, 6) }
+        }
+
+    /** « Paul » pour un seul profil, « Mixte » pour plusieurs, rien pour un trajet d'avant la fonction. */
+    private fun pastille(ctx: Context, t: Trip): Pair<String, Int>? {
+        val segs = t.segments ?: return null
+        return if (t.isMixed) getString(R.string.stats_trip_mixed) to ctx.getColor(R.color.dash_warn)
+        else segs.firstOrNull()?.let { nomProfil(it.profileId, it.profileName) to couleurProfil(ctx, it.profileId) }
+    }
+
+    /** Détail d'un trajet mixte : la barre de répartition, une ligne par profil, l'ordre réel. */
+    private fun repartition(ctx: Context, t: Trip): View {
+        val segs = t.segments.orEmpty()
+        val box = LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(R.drawable.bg_section_rounded)
+            setPadding(dp(ctx, 12), dp(ctx, 10), dp(ctx, 12), dp(ctx, 10))
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .also { it.bottomMargin = dp(ctx, 8) }
+        }
+        box.addView(label(ctx, getString(R.string.stats_split_title), 13f, R.color.text_secondary))
+        val barre = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 8))
+                .also { it.topMargin = dp(ctx, 6); it.bottomMargin = dp(ctx, 6) }
+        }
+        segs.forEach { seg ->
+            barre.addView(View(ctx).apply { setBackgroundColor(couleurProfil(ctx, seg.profileId)) },
+                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, seg.distanceKm.coerceAtLeast(0.01f)))
+        }
+        box.addView(barre)
+        // Une ligne par profil : ses morceaux additionnés.
+        segs.groupBy { it.profileId }.forEach { (id, ms) ->
+            val km = ms.sumOf { it.distanceKm.toDouble() }.toFloat()
+            val net = ms.sumOf { it.netEnergyKwh.toDouble() }.toFloat()
+            val ligne = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+            ligne.addView(label(ctx, "● ", 13f, R.color.text_primary).apply { setTextColor(couleurProfil(ctx, id)) })
+            ligne.addView(label(ctx, nomProfil(id, ms.first().profileName), 13f, R.color.text_secondary).apply {
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            })
+            ligne.addView(label(ctx, listOfNotNull(km(km), kwh(net),
+                if (km >= 1f) conso(net * 100f / km, false) else null).joinToString(" · "), 13f, R.color.text_primary, mono = true))
+            box.addView(ligne)
+        }
+        box.addView(label(ctx, getString(R.string.stats_split_order,
+            segs.joinToString(" → ") { "${nomProfil(it.profileId, it.profileName)} ${km(it.distanceKm)}" }), 12f, R.color.dash_text_lo)
+            .apply { setPadding(0, dp(ctx, 6), 0, 0) })
+        return box
+    }
+
     private fun row(
-        ctx: Context, when1: String, when2: String, value1: String, value2: String, onClick: () -> Unit
+        ctx: Context, when1: String, when2: String, value1: String, value2: String,
+        badge: Pair<String, Int>? = null, onClick: () -> Unit
     ): View {
         val ligne = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -760,7 +885,20 @@ class StatsFragment : Fragment() {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
-        gauche.addView(label(ctx, when1, 16f, R.color.text_primary))
+        if (badge == null) gauche.addView(label(ctx, when1, 16f, R.color.text_primary))
+        else gauche.addView(LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            addView(label(ctx, when1, 16f, R.color.text_primary))
+            // Profil du trajet (2026-11-05) : son nom, ou « Mixte ».
+            addView(label(ctx, badge.first, 12f, R.color.text_primary).apply {
+                setTextColor(badge.second)
+                setPadding(dp(ctx, 8), dp(ctx, 2), dp(ctx, 8), dp(ctx, 2))
+                com.mg4.control.service.OverlayKit.fond(this, ctx.getColor(R.color.dash_btn), badge.second, dp(ctx, 1), dp(ctx, 10).toFloat())
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                    .also { it.marginStart = dp(ctx, 8) }
+            })
+        })
         gauche.addView(label(ctx, when2, 13f, R.color.text_secondary))
         val droite = LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
