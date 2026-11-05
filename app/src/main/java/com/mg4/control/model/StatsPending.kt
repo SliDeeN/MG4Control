@@ -59,6 +59,10 @@ data class PendingTrip(
     val segmentStarts: List<SegmentStart>? = null,
     /** Courbe du trajet en construction ([TripCurve]) ; null pour un trajet repris d'avant la fonction. */
     val curve: CurveState? = null,
+    /** Distance intégrée à la seconde au dernier relevé ([EnergySnapshot.tripDistanceKm]). */
+    val lastTripDistanceKm: Float? = null,
+    /** Distance intégrée à chaque relevé (10 s), gardée en contrôle de l'intégration à la seconde. */
+    val checkKm: Float = 0f,
 ) {
     val averageTempC: Float? get() = moyenne(tempSum, tempCount, tempC)
 }

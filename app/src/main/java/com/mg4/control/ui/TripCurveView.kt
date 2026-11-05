@@ -8,15 +8,15 @@ import android.graphics.Path
 import android.graphics.RectF
 import android.view.View
 import com.mg4.control.R
-import com.mg4.control.model.CurvePoint
-import com.mg4.control.model.TripCurve
+import com.mg4.control.model.CurveBars
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Graphique du détail d'un trajet (2026-11-05, maquette B) : une barre par tronçon de 500 m,
+ * Graphique du détail d'un trajet (2026-11-05, maquette B) : une barre par tronçon (largeur
+ * choisie selon la longueur du trajet, [com.mg4.control.model.TripCurve.bars]),
  * colorée selon la consommation (sobre / normal / gourmand, récupération sous zéro), et deux
  * bandes facultatives sous les barres — vitesse et altitude — alignées sur les mêmes kilomètres,
  * chacune avec sa propre échelle (jamais deux échelles sur un même graphique).
@@ -26,7 +26,7 @@ import kotlin.math.min
  */
 class TripCurveView(context: Context) : View(context) {
 
-    var points: List<CurvePoint> = emptyList()
+    var curve: CurveBars? = null
         set(v) { field = v; requestLayout(); invalidate() }
     var showSpeed = false
         set(v) { field = v; requestLayout(); invalidate() }
@@ -66,10 +66,14 @@ class TripCurveView(context: Context) : View(context) {
     }
 
     override fun onDraw(canvas: Canvas) {
-        val n = points.size
-        if (n == 0) return
+        val c = curve ?: return
+        val points = c.bars
+        if (points.isEmpty() || c.totalKm <= 0f) return
         val largeur = width - left - right
-        val pas = largeur / n
+        val total = c.totalKm
+        fun x(km: Float) = left + largeur * km / total
+        // Largeur d'une barre entière, à l'écran ; la dernière peut être plus courte.
+        val pas = largeur * c.stepKm / total
         val valeurs = points.map { it.kwhPer100 }
         val hi = max(HI, ceil(valeurs.max() / 5f) * 5f).coerceAtMost(80f)
         val lo = min(LO, floor(valeurs.min() / 5f) * 5f).coerceAtLeast(-60f)
@@ -95,9 +99,10 @@ class TripCurveView(context: Context) : View(context) {
                 v <= NORMAL -> cNormal
                 else -> cGourmand
             }
-            val x0 = left + i * pas + ecart / 2
+            val x0 = x(i * c.stepKm) + ecart / 2
+            val x1 = x(min((i + 1) * c.stepKm, total)) - ecart / 2
             val yy = y(v)
-            r.set(x0, min(yy, zero), x0 + max(pas - ecart, 1f), max(max(yy, zero), min(yy, zero) + 1 * dp))
+            r.set(x0, min(yy, zero), max(x1, x0 + 1f), max(max(yy, zero), min(yy, zero) + 1 * dp))
             canvas.drawRoundRect(r, 1.5f * dp, 1.5f * dp, barre)
         }
 
@@ -105,32 +110,33 @@ class TripCurveView(context: Context) : View(context) {
         if (showSpeed) {
             val v = points.map { it.speedKmh }
             val mx = max(130f, ceil((v.filterNotNull().maxOrNull() ?: 0f) / 10f) * 10f)
-            haut = bande(canvas, haut, v, 0f, mx, cVitesse, entier(mx), "km/h", pas)
+            haut = bande(canvas, haut, v, 0f, mx, cVitesse, entier(mx), "km/h", c, ::x)
         }
         if (showAltitude) {
-            val a = points.map { it.altitudeM?.toFloat() }
+            val a = points.map { it.altitudeM }
             val connus = a.filterNotNull()
             val mn = if (connus.isEmpty()) 0f else floor(connus.min() / 50f) * 50f
             val mx = if (connus.isEmpty()) 100f else max(mn + 50f, ceil(connus.max() / 50f) * 50f)
-            haut = bande(canvas, haut, a, mn, mx, C_ALTITUDE, "${entier(mx)} m", "${entier(mn)} m", pas)
+            haut = bande(canvas, haut, a, mn, mx, C_ALTITUDE, "${entier(mx)} m", "${entier(mn)} m", c, ::x)
         }
 
         // Kilomètres : un pas rond, six repères au plus.
-        val total = n * TripCurve.STEP_KM
         val graduation = listOf(1f, 2f, 5f, 10f, 20f, 50f, 100f, 200f).firstOrNull { total / it <= 6f } ?: 500f
         var km = 0f
         while (km <= total + 0.01f) {
             val etiquette = "${entier(km)} km"
-            val x = (left + largeur * km / total - texte.measureText(etiquette) / 2)
+            val xe = (x(km) - texte.measureText(etiquette) / 2)
                 .coerceIn(left, width - right - texte.measureText(etiquette))
-            canvas.drawText(etiquette, x, haut + axisH - 4 * dp, texte)
+            canvas.drawText(etiquette, xe, haut + axisH - 4 * dp, texte)
             km += graduation
         }
     }
 
     /** Une bande sous les barres : aire et trait, coupés là où la valeur manque. Rend son bas. */
     private fun bande(canvas: Canvas, depuis: Float, v: List<Float?>, mn: Float, mx: Float, couleur: Int,
-                      etiquetteHaut: String, etiquetteBas: String, pas: Float): Float {
+                      etiquetteHaut: String, etiquetteBas: String, c: CurveBars, x: (Float) -> Float): Float {
+        // Chaque valeur au milieu de sa barre.
+        fun milieu(i: Int) = x((i * c.stepKm + min((i + 1) * c.stepKm, c.totalKm)) / 2f)
         val debut = depuis + gap
         val bas = debut + stripH
         fun y(x: Float) = bas - stripH * ((x - mn) / (mx - mn)).coerceIn(0f, 1f)
@@ -146,17 +152,16 @@ class TripCurveView(context: Context) : View(context) {
             if (v[i] == null) { i++; continue }
             val ligne = Path()
             val surface = Path()
-            val x0 = left + i * pas + pas / 2
-            surface.moveTo(x0, bas)
+            surface.moveTo(milieu(i), bas)
             var j = i
             while (j < v.size && v[j] != null) {
-                val x = left + j * pas + pas / 2
+                val xm = milieu(j)
                 val yy = y(v[j]!!)
-                if (j == i) ligne.moveTo(x, yy) else ligne.lineTo(x, yy)
-                surface.lineTo(x, yy)
+                if (j == i) ligne.moveTo(xm, yy) else ligne.lineTo(xm, yy)
+                surface.lineTo(xm, yy)
                 j++
             }
-            surface.lineTo(left + (j - 1) * pas + pas / 2, bas)
+            surface.lineTo(milieu(j - 1), bas)
             surface.close()
             canvas.drawPath(surface, aire)
             canvas.drawPath(ligne, trait)

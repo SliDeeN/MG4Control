@@ -51,6 +51,12 @@ data class EnergySnapshot(
     val tripConsumedKwh: Float? = null,
     val tripRegenKwh: Float? = null,
     /**
+     * Distance depuis le début du trajet, intégrée à partir de la vitesse lue chaque seconde
+     * ([SpeedIntegrator], 2026-11-05) ; null tant que rien n'a pu être intégré. Plus fine que
+     * l'intégration faite à chaque relevé, qui reste le repli.
+     */
+    val tripDistanceKm: Float? = null,
+    /**
      * « Climatisation et autres » depuis le contact, d'après le compteur de l'écran d'origine.
      * Il n'avance que par **kWh entier** (mesuré le 2026-10-05) : bon pour un ordre de grandeur
      * sur un long trajet, pas pour un chiffre au dixième.

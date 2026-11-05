@@ -112,7 +112,8 @@ class StatsTracker(
         if (ready == true) {
             // Calculé avant la recopie : il dit à la fois combien ajouter et si l'intervalle
             // comptait, ce qui n'est pas la même chose qu'ajouter zéro.
-            val pas = enCours?.let { integrationStep(it, snapshot) }
+            val pas10 = enCours?.let { integrationStep(it, snapshot) }
+            val pas = enCours?.let { pasALaSeconde(it, snapshot) ?: pas10 }
             trip = if (enCours == null) PendingTrip(
                 startMs = snapshot.timestampMs,
                 odometerStart = snapshot.odometerKm,
@@ -141,6 +142,7 @@ class StatsTracker(
                     snapshot.tripConsumedKwh, snapshot.tripRegenKwh)),
                 curve = TripCurve.advance(TripCurve.start(snapshot.timestampMs), 0f, snapshot.tripConsumedKwh,
                     snapshot.tripRegenKwh, snapshot.timestampMs, snapshot.altitudeM, measured = true),
+                lastTripDistanceKm = snapshot.tripDistanceKm,
             ) else suivreProfil(enCours.copy(
                 lastMs = snapshot.timestampMs,
                 odometerLast = snapshot.odometerKm ?: enCours.odometerLast,
@@ -154,6 +156,10 @@ class StatsTracker(
                 tempCount = enCours.tempCount + if (snapshot.outsideTempC != null) 1 else 0,
                 integratedKm = enCours.integratedKm + (pas ?: 0f),
                 integrated = enCours.integrated || pas != null,
+                // Une valeur manquée oblige le relevé suivant à repasser par le repli : sinon son
+                // écart couvrirait aussi l'intervalle déjà compté par le repli.
+                lastTripDistanceKm = snapshot.tripDistanceKm,
+                checkKm = enCours.checkKm + (pas10 ?: 0f),
                 // Une vitesse manquée ne réinitialise pas le trapèze : le prochain intervalle
                 // repart de la dernière vitesse connue, ce qui sous-estime sans jamais inventer.
                 lastSpeedKmh = snapshot.speedKmh ?: enCours.lastSpeedKmh,
@@ -172,12 +178,14 @@ class StatsTracker(
             // encore : sans ce dernier trapèze, chaque trajet perdrait sa fin. Seules la distance
             // et l'heure de fin sont reprises — les compteurs d'énergie restent ceux du dernier
             // relevé sous contact, dont on sait qu'ils étaient valides.
-            val fin = integrationStep(enCours, snapshot)
+            val fin10 = integrationStep(enCours, snapshot)
+            val fin = pasALaSeconde(enCours, snapshot) ?: fin10
             var clos = enCours
             if (fin != null) clos = clos.copy(
                 lastMs = snapshot.timestampMs,
                 integratedKm = enCours.integratedKm + fin,
                 integrated = true,
+                checkKm = enCours.checkKm + (fin10 ?: 0f),
                 // Le dernier trapèze nourrit aussi la courbe : sans lui, le dernier tronçon manquerait.
                 curve = enCours.curve?.let {
                     TripCurve.advance(it, enCours.integratedKm + fin, snapshot.tripConsumedKwh,
@@ -314,6 +322,22 @@ class StatsTracker(
     }
 
     /**
+     * Distance depuis le relevé précédent d'après l'intégration à la seconde ([SpeedIntegrator]) :
+     * l'écart des deux cumuls. Null sans les deux valeurs, ou pour un écart impossible — négatif
+     * (intégration repartie de zéro) ou au-delà de 300 km/h sur l'intervalle — : le repli à 10 s
+     * ([integrationStep]) prend alors le relais.
+     */
+    private fun pasALaSeconde(p: PendingTrip, s: EnergySnapshot): Float? {
+        val avant = p.lastTripDistanceKm ?: return null
+        val apres = s.tripDistanceKm ?: return null
+        val d = apres - avant
+        val dt = s.timestampMs - p.lastMs
+        if (d < 0f || dt <= 0L || dt > MAX_SAMPLE_GAP_MS) return null
+        if (d > 300f * dt / 3_600_000f * 1.5f + 0.05f) return null
+        return d
+    }
+
+    /**
      * Fin de trajet, à partir du dernier relevé observé. Rend null pour un trajet sans distance ni
      * énergie : mettre le contact pour régler la climatisation n'est pas un trajet, et remplirait
      * la liste de lignes vides.
@@ -359,6 +383,7 @@ class StatsTracker(
             auxiliaryKwh = if (parIntegration) counterDelta(p.auxStart, p.auxLast) else null,
             segments = TripSegments.build(p.segmentStarts, fin, p.integrated, parIntegration),
             curve = TripCurve.finish(p.curve),
+            distanceCheckKm = if (p.integrated) p.checkKm.roundTenth() else null,
         )
     }
 

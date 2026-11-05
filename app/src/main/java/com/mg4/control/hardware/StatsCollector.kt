@@ -78,7 +78,7 @@ object StatsCollector {
                 worker.removeCallbacks(powerTick)
                 // Départ : on repart de zéro. Arrivée : un dernier point AVANT le relevé qui clôt
                 // le trajet, puisque c'est lui qui consigne la comparaison.
-                if (ready) integrator.reset() else integrer()
+                if (ready) { integrator.reset(); vitesses.reset() } else integrer()
                 suivreAltitude(ready)
                 sample()
                 if (ready) worker.post(powerTick)
@@ -108,11 +108,17 @@ object StatsCollector {
      */
     private val integrator = PowerIntegrator()
 
+    /** Distance du trajet, vitesse lue chaque seconde sur le même tic (2026-11-05). */
+    private val vitesses = com.mg4.control.model.SpeedIntegrator()
+
     /** Le relevé, complété de l'énergie intégrée depuis le début du trajet quand il y en a une. */
     private fun avecIntegration(s: EnergySnapshot): EnergySnapshot {
         val r = integrator.result()
-        if (r.samples == 0) return s
-        return s.copy(tripConsumedKwh = r.consumedKwh, tripRegenKwh = r.regenKwh)
+        val v = vitesses.result()
+        var res = s
+        if (r.samples > 0) res = res.copy(tripConsumedKwh = r.consumedKwh, tripRegenKwh = r.regenKwh)
+        if (v.samples > 0) res = res.copy(tripDistanceKm = v.km)
+        return res
     }
 
     /**
@@ -137,7 +143,10 @@ object StatsCollector {
 
     /** Temps monotone : l'horloge du boîtier peut sauter, voire se réveiller en 2019. */
     private fun integrer() {
-        runCatching { integrator.add(SystemClock.elapsedRealtime(), EnergyReader.dischargeKw()) }
+        val t = SystemClock.elapsedRealtime()
+        runCatching { integrator.add(t, EnergyReader.dischargeKw()) }
+        // Déjà en km/h chez SAIC : voir MG4Hardware.getVehicleSpeedKmh().
+        runCatching { vitesses.add(t, MG4Hardware.getVehicleSpeedKmh()?.takeIf { it in 0f..300f }) }
     }
 
     fun startIfEnabled(context: Context) {
@@ -196,6 +205,7 @@ object StatsCollector {
             worker.removeCallbacks(tick)
             worker.removeCallbacks(powerTick)
             integrator.reset()
+            vitesses.reset()
             suivreAltitude(false)
             ReadyWatcher.remove(readyListener)
             tracker = null
@@ -361,6 +371,11 @@ object StatsCollector {
     private fun comparer(s: StatsStore, trip: Trip) {
         val ligne = EnergyCheck(trip, integrator.result(), s.settings().effectiveCapacityKwh).line()
         integrator.reset()
+        // Contrôle de la distance à la seconde (2026-11-05) : à côté de l'ancienne méthode et de l'odomètre.
+        val v = vitesses.result()
+        AppLogger.i(TAG, "distance · à la seconde ${trip.integratedKm ?: "?"} km (${v.samples} vitesses, ${v.gaps} trou(s)) · " +
+            "à 10 s ${trip.distanceCheckKm ?: "?"} km · odomètre ${trip.distanceKm} km")
+        vitesses.reset()
         s.addEnergyCheck(ligne)
         AppLogger.i(TAG, "énergie · $ligne")
     }

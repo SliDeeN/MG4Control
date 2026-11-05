@@ -89,10 +89,15 @@ data class Trip(
      */
     val segments: List<TripSegment>? = null,
     /**
-     * Courbe du trajet, un point tous les 500 m, encodée par [TripCurve] ; null pour un trajet
+     * Courbe du trajet, un point par relevé, encodée par [TripCurve] ; null pour un trajet
      * enregistré avant la fonction (2026-11-05) ou sans énergie intégrée.
      */
     val curve: String? = null,
+    /**
+     * Diagnostic (2026-11-05) : la distance intégrée à chaque relevé (10 s), l'ancienne méthode,
+     * à comparer à [integratedKm] désormais intégrée à la seconde. Null avant ce contrôle.
+     */
+    val distanceCheckKm: Float? = null,
 ) {
     val durationMs: Long get() = max(0L, endMs - startMs)
 

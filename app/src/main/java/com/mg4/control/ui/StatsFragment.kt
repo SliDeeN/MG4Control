@@ -800,19 +800,20 @@ class StatsFragment : Fragment() {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
                 .also { it.bottomMargin = dp(ctx, 8) }
         }
-        val points = com.mg4.control.model.TripCurve.decode(trip.curve)
-        if (points.isEmpty()) {
+        val releves = com.mg4.control.model.TripCurve.decode(trip.curve)
+        val barres = com.mg4.control.model.TripCurve.bars(releves)
+        if (barres == null || barres.bars.isEmpty()) {
             box.addView(label(ctx, getString(R.string.stats_curve_none), 13f, R.color.dash_text_lo))
             return box
         }
         val vue = TripCurveView(ctx).apply {
-            this.points = points
+            curve = barres
             showSpeed = store.curveSpeedShown()
             showAltitude = store.curveAltitudeShown()
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
                 .also { it.topMargin = dp(ctx, 6) }
         }
-        val maxi = points.maxOf { it.kwhPer100 }
+        val maxi = barres.bars.maxOf { it.kwhPer100 }
         val tete = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
         tete.addView(LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
@@ -826,7 +827,7 @@ class StatsFragment : Fragment() {
         val legende = label(ctx, "", 12f, R.color.dash_text_lo)
         fun peindreBas() {
             legende.text = legendeCourbe(ctx, vue.showSpeed, vue.showAltitude)
-            val d = com.mg4.control.model.TripCurve.elevation(points)
+            val d = com.mg4.control.model.TripCurve.elevation(releves)
             denivele.text = if (d == null) getString(R.string.stats_curve_no_altitude)
                 else getString(R.string.stats_curve_elevation_value, getString(R.string.stats_curve_elevation), d.first, d.second)
             denivele.visibility = if (vue.showAltitude) View.VISIBLE else View.GONE
