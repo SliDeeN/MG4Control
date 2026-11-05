@@ -2394,22 +2394,25 @@ object MG4Hardware {
     }
 
     /**
-     * SWI68/SWI165 : getLaneKeepingWarningSound()
-     * SWI69/SWI131/SWI132 : getLasWarningSound()   (confirmé dans smali SWI132)
-     * Valeurs : 2=ON / 1=OFF
+     * SWI68/SWI165 : getLaneKeepingWarningSound() — 2=ON / 1=OFF.
+     * A9 (SWI69/SWI131/SWI132, SWI173) : getLasWarningSound() — **1=ON / 0=OFF**.
+     *
+     * Encodage A9 corrigé le 2026-11-05 (issue #216) : l'appli d'origine des quatre firmwares
+     * (`EhMgPilotFragment.onLasSoundChanged`) coche l'interrupteur quand la valeur vaut 1, et
+     * envoie la case telle quelle (1/0). Avec l'ancien 2/1, « coupé » écrivait 1 = ACTIVÉ, l'état
+     * se lisait toujours coupé, et « activé » (2) levait une exception (vu sur SWI173).
      */
-    fun isSoundWarningOn(): Boolean {
-        val method = if (FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132)
-            "getLasWarningSound" else "getLaneKeepingWarningSound"
-        return ((callVsm(method) as? Int) ?: 1) == 2
-    }
+    private fun lasA9() = FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132
 
-    /** SWI68 : setLaneKeepingWarningSound(I)   SWI69/SWI131/SWI132 : setLasWarningSound(I) — void */
+    fun isSoundWarningOn(): Boolean =
+        if (lasA9()) (callVsm("getLasWarningSound") as? Int) == 1
+        else ((callVsm("getLaneKeepingWarningSound") as? Int) ?: 1) == 2
+
+    /** SWI68/165 : setLaneKeepingWarningSound(2/1)   A9 : setLasWarningSound(1/0) — void */
     fun setSoundWarning(on: Boolean): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setSoundWarning → $on")
-        val method = if (FirmwareInfo.isNewGenVsm() || FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI132)
-            "setLasWarningSound" else "setLaneKeepingWarningSound"
-        return callVsmVoid(method, if (on) 2 else 1)
+        return if (lasA9()) callVsmVoid("setLasWarningSound", if (on) 1 else 0)
+        else callVsmVoid("setLaneKeepingWarningSound", if (on) 2 else 1)
     }
 
     // ── AEB — Système anti-collision avant ──────────────────────────────────
