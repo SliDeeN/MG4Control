@@ -17,10 +17,8 @@ import com.mg4.control.model.CustomRule
 import com.mg4.control.model.CustomRuleTemplates
 import com.mg4.control.model.RuleLastRun
 import com.mg4.control.model.RuleText
-import android.os.Environment
 import com.mg4.control.automation.RulePlaces
 import com.mg4.control.automation.RuleVariables
-import java.io.File
 import java.text.DateFormat
 import java.util.UUID
 import java.util.Date
@@ -35,6 +33,18 @@ class CustomRulesPage {
 
     private var vue: View? = null
     private var fragment: Fragment? = null
+
+    /** Sélecteurs d'Android, enregistrés par le fragment hôte (ils doivent l'être à sa création). */
+    var parcourirDossier: () -> Unit = {}
+    var parcourirFichier: () -> Unit = {}
+    private var exportDialog: ExportDialog? = null
+    private var importDialog: ImportDialog? = null
+
+    /** Dossier choisi pour l'export. */
+    fun surDossier(arbre: android.net.Uri?) { exportDialog?.surDossier(arbre) }
+
+    /** Fichier choisi pour l'import. */
+    fun surFichier(doc: android.net.Uri?) { importDialog?.surFichier(doc) }
 
     fun bind(fragment: Fragment, root: View) {
         this.fragment = fragment
@@ -66,8 +76,14 @@ class CustomRulesPage {
         liste.removeAllViews()
         val texte = RuleText(AndroidRuleWords(ctx))
         val gonfleur = LayoutInflater.from(ctx)
+        // Grisées : une automatisation coupée, et toutes quand l'interrupteur général est coupé.
+        val moteur = CustomRuleStore.isEngineEnabled(ctx)
         for (r in regles) {
             val carte = gonfleur.inflate(R.layout.item_custom_rule, liste, false)
+            val active = moteur && r.enabled
+            listOf(R.id.rule_name, R.id.rule_summary, R.id.rule_last_run, R.id.rule_edit, R.id.rule_test, R.id.rule_delete)
+                .forEach { carte.findViewById<View>(it).alpha = if (active) 1f else ALPHA_COUPEE }
+            if (!moteur) carte.findViewById<View>(R.id.rule_switch).alpha = ALPHA_COUPEE
             carte.findViewById<TextView>(R.id.rule_name).text = r.name
             carte.findViewById<TextView>(R.id.rule_summary).text = resume(ctx, texte, r)
             carte.findViewById<TextView>(R.id.rule_last_run).text = derniere(ctx, CustomRules.lastRun(ctx, r.id))
@@ -76,6 +92,7 @@ class CustomRulesPage {
                 setOnCheckedChangeListener { _, on ->
                     CustomRuleStore.setEnabled(ctx, r.id, on)
                     CustomRules.refresh(ctx)
+                    post { dessiner() }
                 }
             }
             carte.setOnClickListener { ouvrir(CustomRuleEditFragment.ARG_RULE_ID to r.id) }
@@ -108,6 +125,7 @@ class CustomRulesPage {
             setOnCheckedChangeListener { _, on ->
                 CustomRuleStore.setEngineEnabled(ctx, on)
                 CustomRules.refresh(ctx)
+                dessiner()
             }
         })
         box.addView(View(ctx).apply { layoutParams = LinearLayout.LayoutParams(0, 1, 1f) })
@@ -175,25 +193,33 @@ class CustomRulesPage {
         }
     }
 
-    /** Le fichier d'échange, dans « Téléchargements » : là où l'utilisateur peut le retrouver. */
-    private fun fichier(): File = File(
-        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "mg4control-automatisations.json")
-
+    /**
+     * Export (2026-11-05) : la même fenêtre que les Statistiques et le diagnostic — Téléchargements,
+     * clé USB, autre dossier —, un fichier JSON dans « MG4Control ».
+     */
     private fun exporter(ctx: Context) {
         val regles = CustomRuleStore.all(ctx)
-        val ok = runCatching {
-            val f = fichier()
-            f.parentFile?.mkdirs()
-            f.writeText(CustomRuleStore.encode(regles))
-        }
-        Toast.makeText(ctx, if (ok.isSuccess) ctx.getString(R.string.rule_export_done, regles.size, fichier().path)
-            else ctx.getString(R.string.rule_export_failed), Toast.LENGTH_LONG).show()
+        exportDialog = ExportDialog(ctx,
+            titre = ctx.getString(R.string.rule_export_title),
+            sousTitre = ctx.getString(R.string.rule_export_subtitle, regles.size),
+            bouton = ctx.getString(R.string.rule_tool_export),
+            titreFait = ctx.getString(R.string.rule_export_done_title),
+            fichiers = { listOf(FICHIER to CustomRuleStore.encode(regles)) },
+            parcourir = parcourirDossier,
+        ).also { it.ouvrir() }
     }
 
+    /** Import : depuis Téléchargements, la clé USB, ou n'importe quel fichier choisi. */
     private fun importer(ctx: Context) {
-        val lues = runCatching { CustomRuleStore.decode(fichier().readText()) }.getOrNull().orEmpty()
+        importDialog = ImportDialog(ctx, FICHIER, parcourirFichier) { texte, ou -> importerTexte(ctx, texte, ou) }
+            .also { it.ouvrir() }
+    }
+
+    private fun importerTexte(ctx: Context, texte: String?, ou: String) {
+        val lues = texte?.let { runCatching { CustomRuleStore.decode(it) }.getOrNull() }.orEmpty()
         if (lues.isEmpty()) {
-            Toast.makeText(ctx, ctx.getString(R.string.rule_import_none, fichier().path), Toast.LENGTH_LONG).show()
+            AppDialog.confirmer(ctx, titre = ctx.getString(R.string.rule_tool_import),
+                message = ctx.getString(R.string.rule_import_none, ou), ton = AppDialog.Ton.ALERTE, oui = ctx.getString(R.string.nav_close))
             return
         }
         AppDialog.confirmer(ctx, titre = ctx.getString(R.string.rule_import_title, lues.size), message = ctx.getString(R.string.rule_import_msg),
@@ -207,6 +233,12 @@ class CustomRulesPage {
             })
     }
 
+
+    private companion object {
+        /** Nom du fichier d'échange (le même qu'avant, pour retrouver les anciens exports). */
+        const val FICHIER = "mg4control-automatisations.json"
+        const val ALPHA_COUPEE = 0.45f
+    }
 
     private fun ouvrir(arg: Pair<String, String>) {
         fragment?.findNavController()?.navigate(R.id.customRuleEditFragment, bundleOf(arg))

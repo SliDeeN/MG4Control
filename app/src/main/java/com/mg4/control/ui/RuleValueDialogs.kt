@@ -61,7 +61,7 @@ internal object RuleValueDialogs {
         }
         val a = Assistant.courant
         if (a != null) {
-            a.etape {
+            a.etape(titre) {
                 a.afficher(construire(
                     surAnnule = { a.fermer() },
                     surRetour = if (a.peutRetour) ({ a.retour() }) else null,

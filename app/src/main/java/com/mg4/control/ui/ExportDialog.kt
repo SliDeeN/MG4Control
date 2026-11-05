@@ -101,36 +101,8 @@ internal class ExportDialog(
         }
     }
 
-    private fun tuile(d: Destination, icone: Int, titre: String, detail: String): View {
-        val on = d == choix
-        val couleur = ctx.getColor(if (on) R.color.dash_accent else R.color.text_secondary)
-        return LinearLayout(ctx).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
-            OverlayKit.fond(this, ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn),
-                ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border), dp(if (on) 2f else 1f), dp(16f).toFloat())
-            addView(ImageView(ctx).apply {
-                setImageResource(icone)
-                imageTintList = ColorStateList.valueOf(couleur)
-            }, LinearLayout.LayoutParams(dp(30f), dp(30f)))
-            addView(TextView(ctx).apply {
-                text = titre
-                setTextColor(ctx.getColor(R.color.text_primary))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-                setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setPadding(0, dp(8f), 0, 0)
-            })
-            addView(TextView(ctx).apply {
-                text = detail
-                setTextColor(ctx.getColor(R.color.text_secondary))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-                maxLines = 2
-                ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
-                gravity = Gravity.START
-            })
-            setOnClickListener { toucher(d) }
-        }
-    }
+    private fun tuile(d: Destination, icone: Int, titre: String, detail: String): View =
+        tuileDestination(ctx, d == choix, icone, titre, detail) { toucher(d) }
 
     private fun toucher(d: Destination) {
         if (d == Destination.FOLDER && (choix == Destination.FOLDER || StatsExport.dossierChoisi(ctx) == null)) {
@@ -178,5 +150,40 @@ internal class ExportDialog(
 
     private companion object {
         const val LARGEUR_DP = 900f
+    }
+}
+
+/**
+ * Une tuile de destination (Téléchargements, clé USB, dossier…), commune à l'export et à l'import :
+ * pictogramme, titre, détail ; [on] = choisie.
+ */
+internal fun tuileDestination(ctx: Context, on: Boolean, icone: Int, titre: String, detail: String, onClick: () -> Unit): View {
+    fun dp(v: Float) = OverlayKit.dp(ctx, v)
+    val couleur = ctx.getColor(if (on) R.color.dash_accent else R.color.text_secondary)
+    return LinearLayout(ctx).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
+        OverlayKit.fond(this, ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn),
+            ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border), dp(if (on) 2f else 1f), dp(16f).toFloat())
+        addView(ImageView(ctx).apply {
+            setImageResource(icone)
+            imageTintList = ColorStateList.valueOf(couleur)
+        }, LinearLayout.LayoutParams(dp(30f), dp(30f)))
+        addView(TextView(ctx).apply {
+            text = titre
+            setTextColor(ctx.getColor(R.color.text_primary))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setPadding(0, dp(8f), 0, 0)
+        })
+        addView(TextView(ctx).apply {
+            text = detail
+            setTextColor(ctx.getColor(R.color.text_secondary))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
+            maxLines = 2
+            ellipsize = android.text.TextUtils.TruncateAt.MIDDLE
+            gravity = Gravity.START
+        })
+        setOnClickListener { onClick() }
     }
 }

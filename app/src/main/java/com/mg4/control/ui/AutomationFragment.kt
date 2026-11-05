@@ -63,7 +63,16 @@ class AutomationFragment : Fragment() {
     private val soundCard = SoundCard()
 
     /** Page « Mes automatisations » (issue #201). */
-    private val customRules = CustomRulesPage()
+    private val customRules: CustomRulesPage = CustomRulesPage().also { p ->
+        p.parcourirDossier = { choisirDossier.launch(null) }
+        p.parcourirFichier = { choisirFichier.launch(arrayOf("*/*")) }
+    }
+
+    /** Export / import des automatisations : les sélecteurs d'Android (2026-11-05). */
+    private val choisirDossier: androidx.activity.result.ActivityResultLauncher<android.net.Uri?> = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()) { customRules.surDossier(it) }
+    private val choisirFichier: androidx.activity.result.ActivityResultLauncher<Array<String>> = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { customRules.surFichier(it) }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?

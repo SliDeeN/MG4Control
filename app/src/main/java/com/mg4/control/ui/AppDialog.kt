@@ -51,6 +51,9 @@ internal object AppDialog {
      */
     private const val LIGNES_VISIBLES = 3
 
+    /** Au-delà, la fenêtre de choix a un champ de recherche (2026-11-05). */
+    private const val SEUIL_RECHERCHE = 9
+
     /** Ce que la couleur d'une confirmation dit de l'action proposée. */
     enum class Ton {
         /** Une action ordinaire, qu'on peut refaire ou défaire. */
@@ -75,6 +78,10 @@ internal object AppDialog {
         val window = dialog.window ?: return
         val ctx = racine.context
         dialog.setCanceledOnTouchOutside(false)
+        // Une AlertDialog créée SANS champ de saisie (l'assistant de l'éditeur d'automatisation,
+        // dont la première étape est une liste) reçoit FLAG_ALT_FOCUSABLE_IM : le clavier ne
+        // s'ouvre alors jamais, même en touchant le champ ajouté plus tard (2026-11-05).
+        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
         window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
         // Le focus repose sur la carte quand le clavier est fermé : sans ça, Android le rendrait
         // au premier champ, et le clavier pourrait revenir.
@@ -99,20 +106,47 @@ internal object AppDialog {
         }
         brancherOk(racine)
 
-        // Un toucher hors de la fenêtre ne fait plus que refermer le clavier.
+        // Un toucher hors de la fenêtre ne fait plus que refermer le clavier. Une seule garde par
+        // fenêtre : l'assistant de l'éditeur réutilise la sienne d'une étape de saisie à l'autre.
+        garde(window).apply {
+            toujours = true
+            surFermeture = { if (racine.findFocus() is EditText) racine.requestFocus() }
+        }
+    }
+
+    /**
+     * Garde d'une fenêtre contre le toucher à côté (2026-11-05) : tant que [toujours] (fenêtre de
+     * saisie) ou que le clavier est ouvert par un champ de recherche ([clavier]), un toucher hors
+     * de la fenêtre referme le clavier au lieu de fermer la fenêtre — on ne perd ni la saisie ni
+     * l'automatisation en cours de création. Clavier fermé, une fenêtre de choix se ferme comme avant.
+     */
+    private class Garde {
+        var toujours = false
+        var clavier = false
+        var surFermeture: (() -> Unit)? = null
+    }
+
+    private val gardes = java.util.WeakHashMap<Window, Garde>()
+
+    private fun garde(window: Window): Garde = gardes.getOrPut(window) {
+        val g = Garde()
         val origine = window.callback
         window.callback = object : Window.Callback by origine {
             override fun dispatchTouchEvent(e: MotionEvent): Boolean {
-                if (e.actionMasked == MotionEvent.ACTION_DOWN) {
+                if (e.actionMasked == MotionEvent.ACTION_DOWN && (g.toujours || g.clavier)) {
                     val decor = window.decorView
                     if (e.x < 0 || e.y < 0 || e.x > decor.width || e.y > decor.height) {
-                        fermerClavier()
+                        decor.context.getSystemService(InputMethodManager::class.java)
+                            ?.hideSoftInputFromWindow(decor.windowToken, 0)
+                        g.clavier = false
+                        g.surFermeture?.invoke()
                         return true
                     }
                 }
                 return origine.dispatchTouchEvent(e)
             }
         }
+        g
     }
 
     /** Affiche [vue] et rend la fenêtre, à refermer par `dismiss()`. */
@@ -227,6 +261,14 @@ internal object AppDialog {
      * @param onAnnule « Annuler », mais aussi la fenêtre fermée sans choisir (retour, toucher à côté)
      * @param choisi   rang du choix en cours, s'il y en a un : sa tuile est marquée et amenée en vue
      */
+    /** Une catégorie de la grande fenêtre de choix : son nom, son pictogramme, les rangs de ses choix. */
+    class Categorie(val libelle: CharSequence, @DrawableRes val icone: Int, val rangs: List<Int>)
+
+    /**
+     * @param categories rangement des choix (grande fenêtre de l'éditeur, maquette B du 2026-11-05)
+     * @param recents    nom de la liste pour ses « Récents » (null : pas de récents) ; [cles] donne
+     *                   alors un identifiant stable à chaque choix
+     */
     fun choisir(
         context: Context,
         titre: CharSequence,
@@ -236,27 +278,43 @@ internal object AppDialog {
         @DrawableRes icone: Int = R.drawable.ic_dialog_list,
         choisi: Int = -1,
         onAnnule: () -> Unit = {},
+        categories: List<Categorie>? = null,
+        recents: String? = null,
+        cles: List<String>? = null,
         onChoix: (Int) -> Unit,
     ) {
+        fun retenirChoix(rang: Int) {
+            val cle = cles?.getOrNull(rang) ?: return
+            if (recents != null) retenirRecent(context, recents, cle)
+        }
         // Dans une fenêtre à étapes : la grille remplace l'étape d'avant, Retour y ramène.
         val a = Assistant.courant
         if (a != null) {
-            a.etape {
-                a.afficher(vueChoix(context, titre, choix, annuler, sousTitre, icone, choisi,
+            // Grande fenêtre (en part d'écran) pour une liste rangée ou longue ; une courte (Dans /
+            // Hors d'un lieu…) garde sa fenêtre, elle se perdrait dans la grande.
+            val grand = categories != null || choix.size > SEUIL_RECHERCHE
+            a.etape(titre) {
+                val surChoix: (Int) -> Unit = { rang -> retenirChoix(rang); a.noter(choix[rang].libelle); a.apres { onChoix(rang) } }
+                if (grand) a.afficherGrand(vueChoixGrand(context, a, titre, sousTitre, icone, choix, annuler,
+                    avecRecents(context, categories, recents, cles), choisi, surAnnule = { a.fermer(); onAnnule() }, surChoix = surChoix))
+                else a.afficher(vueChoix(context, titre, choix, annuler, sousTitre, icone, choisi,
                     surAnnule = { a.fermer(); onAnnule() },
                     surRetour = if (a.peutRetour) ({ a.retour() }) else null,
-                    surChoix = { rang -> a.apres { onChoix(rang) } }), LARGEUR_CHOIX_DP)
+                    surChoix = surChoix,
+                    fenetre = { a.dialog }), LARGEUR_CHOIX_DP)
             }
             return
         }
-        lateinit var dialog: AlertDialog
+        var dialog: AlertDialog? = null
         val vue = vueChoix(context, titre, choix, annuler, sousTitre, icone, choisi,
-            surAnnule = { dialog.dismiss(); onAnnule() },
+            surAnnule = { dialog?.dismiss(); onAnnule() },
             surRetour = null,
-            surChoix = { rang -> dialog.dismiss(); onChoix(rang) })
-        dialog = afficher(context, vue, LARGEUR_CHOIX_DP)
-        // « dismiss » ne passe pas par ici : seuls le retour et le toucher à côté annulent.
-        dialog.setOnCancelListener { onAnnule() }
+            surChoix = { rang -> retenirChoix(rang); dialog?.dismiss(); onChoix(rang) },
+            fenetre = { dialog })
+        dialog = afficher(context, vue, LARGEUR_CHOIX_DP).also {
+            // « dismiss » ne passe pas par ici : seuls le retour et le toucher à côté annulent.
+            it.setOnCancelListener { onAnnule() }
+        }
     }
 
     /** La grille de choix : en-tête, tuiles, puis (Retour) et Annuler. */
@@ -264,6 +322,7 @@ internal object AppDialog {
         context: Context, titre: CharSequence, choix: List<Choix>, annuler: CharSequence,
         sousTitre: CharSequence?, @DrawableRes icone: Int, choisi: Int,
         surAnnule: () -> Unit, surRetour: (() -> Unit)?, surChoix: (Int) -> Unit,
+        fenetre: () -> android.app.Dialog? = { null },
     ): View {
         val gonfleur = LayoutInflater.from(context)
         val vue = gonfleur.inflate(R.layout.dialog_choice, null)
@@ -289,31 +348,18 @@ internal object AppDialog {
             }
         }
         var tuileChoisie: View? = null
-        choix.chunked(COLONNES).forEachIndexed { rangLigne, ligne ->
-            val rangee = LinearLayout(context).apply {
-                orientation = LinearLayout.HORIZONTAL
-                isBaselineAligned = false
-                layoutParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-                ).also { if (rangLigne > 0) it.topMargin = ecart }
-            }
-            // Toujours COLONNES cellules : une dernière ligne incomplète garde des tuiles de la
-            // même largeur que les autres, le reste étant du vide.
-            repeat(COLONNES) { colonne ->
-                val rang = rangLigne * COLONNES + colonne
-                val cellule = gonfleur.inflate(R.layout.item_dialog_choice, rangee, false)
-                (cellule.layoutParams as LinearLayout.LayoutParams).marginStart = if (colonne > 0) ecart else 0
-                val c = ligne.getOrNull(colonne)
-                if (c == null) {
-                    cellule.visibility = View.INVISIBLE
-                } else {
-                    peindreChoix(context, cellule, c, choisie = rang == choisi)
-                    if (rang == choisi) tuileChoisie = cellule
-                    cellule.setOnClickListener { surChoix(rang) }
-                }
-                rangee.addView(cellule)
-            }
-            lignes.addView(rangee)
+        // Recherche (2026-11-05, maquette A) : au-delà de [SEUIL_RECHERCHE] choix, un champ filtre la
+        // grille, sans tenir compte des majuscules ni des accents. Les rangs rendus restent ceux de
+        // la liste complète.
+        fun remplir(filtre: String) {
+            val cle = sansAccents(filtre.trim())
+            val visibles = choix.indices.filter { cle.isEmpty() || sansAccents(choix[it].libelle.toString()).contains(cle) }
+            tuileChoisie = grille(context, lignes, visibles, choix, choisi, COLONNES, surChoix)
+        }
+        remplir("")
+        if (choix.size > SEUIL_RECHERCHE) {
+            val parent = defilement.parent as LinearLayout
+            parent.addView(champRecherche(context, fenetre) { remplir(it) }, parent.indexOfChild(defilement))
         }
 
         vue.findViewById<TextView>(R.id.choice_cancel).apply {
@@ -333,6 +379,299 @@ internal object AppDialog {
             }
         }
         return vue
+    }
+
+    /**
+     * Remplit [lignes] avec les choix [rangs] (rangs de la liste complète), [colonnes] par ligne ;
+     * rend la tuile du choix en cours s'il est affiché. Vide : « Aucun résultat ».
+     */
+    private fun grille(
+        context: Context, lignes: LinearLayout, rangs: List<Int>, choix: List<Choix>, choisi: Int,
+        colonnes: Int, surChoix: (Int) -> Unit,
+    ): View? {
+        lignes.removeAllViews()
+        if (rangs.isEmpty()) {
+            lignes.addView(TextView(context).apply {
+                text = context.getString(R.string.dialog_search_none)
+                setTextColor(context.getColor(R.color.text_secondary))
+                textSize = 18f
+                setPadding(0, dp(context, 12f), 0, dp(context, 12f))
+            })
+            return null
+        }
+        val gonfleur = LayoutInflater.from(context)
+        val ecart = dp(context, ECART_DP)
+        var tuileChoisie: View? = null
+        rangs.chunked(colonnes).forEachIndexed { rangLigne, ligne ->
+            val rangee = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                isBaselineAligned = false
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+                ).also { if (rangLigne > 0) it.topMargin = ecart }
+            }
+            // Toujours [colonnes] cellules : une dernière ligne incomplète garde des tuiles de la
+            // même largeur que les autres, le reste étant du vide.
+            repeat(colonnes) { colonne ->
+                val rang = ligne.getOrNull(colonne) ?: -1
+                val cellule = gonfleur.inflate(R.layout.item_dialog_choice, rangee, false)
+                (cellule.layoutParams as LinearLayout.LayoutParams).marginStart = if (colonne > 0) ecart else 0
+                val c = choix.getOrNull(rang)
+                if (c == null) {
+                    cellule.visibility = View.INVISIBLE
+                } else {
+                    peindreChoix(context, cellule, c, choisie = rang == choisi)
+                    if (rang == choisi) tuileChoisie = cellule
+                    cellule.setOnClickListener { surChoix(rang) }
+                }
+                rangee.addView(cellule)
+            }
+            lignes.addView(rangee)
+        }
+        return tuileChoisie
+    }
+
+    // ── Grande fenêtre de choix (éditeur d'automatisation, 2026-11-05) ─────────────────────────
+
+    /**
+     * La grande fenêtre (maquette B, écran complet) : en haut Retour, le chemin parcouru (chaque
+     * étape y ramène), la recherche et Annuler ; dessous, les catégories en colonne et la grille.
+     * La recherche couvre toutes les catégories ; toucher une catégorie la vide.
+     */
+    private fun vueChoixGrand(
+        context: Context, a: Assistant, titre: CharSequence, sousTitre: CharSequence?, @DrawableRes icone: Int,
+        choix: List<Choix>, annuler: CharSequence, categories: List<Categorie>?, choisi: Int,
+        surAnnule: () -> Unit, surChoix: (Int) -> Unit,
+    ): View {
+        fun px(v: Float) = dp(context, v)
+        val accent = context.getColor(R.color.dash_accent)
+        fun bouton(texte: CharSequence, onClick: () -> Unit) = TextView(context).apply {
+            text = texte
+            textSize = 17f
+            setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(context.getColor(R.color.text_primary))
+            gravity = Gravity.CENTER
+            maxLines = 1
+            setBackgroundResource(R.drawable.bg_dialog_tile)
+            setPadding(px(22f), 0, px(22f), 0)
+            setOnClickListener { onClick() }
+        }
+        val racine = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundResource(R.drawable.bg_hvac_modern_card)
+            setPadding(px(22f), px(20f), px(22f), px(20f))
+            layoutParams = android.widget.FrameLayout.LayoutParams(
+                android.widget.FrameLayout.LayoutParams.MATCH_PARENT, android.widget.FrameLayout.LayoutParams.MATCH_PARENT)
+        }
+
+        // ── Ligne du haut ──
+        val haut = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        if (a.peutRetour) haut.addView(bouton("‹  " + context.getString(R.string.dialog_back)) { a.retour() },
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, px(56f)).also { it.marginEnd = px(14f) })
+        haut.addView(android.widget.FrameLayout(context).apply {
+            setBackgroundResource(R.drawable.bg_dialog_icon)
+            addView(ImageView(context).apply {
+                setImageResource(icone)
+                imageTintList = ColorStateList.valueOf(accent)
+            }, android.widget.FrameLayout.LayoutParams(px(28f), px(28f), Gravity.CENTER))
+        }, LinearLayout.LayoutParams(px(52f), px(52f)))
+        // Le chemin : les étapes passées (touchables), puis l'étape en cours.
+        val chemin = a.chemin.ifEmpty { listOf(titre) }
+        val pistes = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+        chemin.forEachIndexed { i, etape ->
+            if (i > 0) pistes.addView(TextView(context).apply {
+                text = "›"
+                textSize = 20f
+                setTextColor(context.getColor(R.color.text_secondary))
+                setPadding(px(8f), 0, px(8f), 0)
+            })
+            val ici = i == chemin.lastIndex
+            pistes.addView(TextView(context).apply {
+                text = etape
+                textSize = if (ici) 20f else 17f
+                maxLines = 1
+                setTypeface(typeface, if (ici) android.graphics.Typeface.BOLD else android.graphics.Typeface.NORMAL)
+                setTextColor(if (ici) context.getColor(R.color.text_primary) else accent)
+                setPadding(px(14f), px(8f), px(14f), px(8f))
+                OverlayKit.fond(this, context.getColor(if (ici) R.color.dash_accent_dim else R.color.dash_btn),
+                    rayon = px(12f).toFloat())
+                if (!ici) setOnClickListener { a.retourA(i) }
+            })
+        }
+        val defilChemin = android.widget.HorizontalScrollView(context).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(pistes)
+            post { fullScroll(View.FOCUS_RIGHT) }
+        }
+        haut.addView(defilChemin, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also { it.marginStart = px(14f) })
+
+        val lignes = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        val defilGrille = ScrollView(context).apply { overScrollMode = View.OVER_SCROLL_NEVER; addView(lignes) }
+        val colonneCats = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
+        var courante = categories?.indexOfFirst { choisi in it.rangs && it.icone != R.drawable.ic_cat_star }
+            ?.takeIf { it >= 0 } ?: 0
+        var filtre = ""
+
+        lateinit var champ: EditText
+        fun dessiner() {
+            val cle = sansAccents(filtre.trim())
+            fun trouve(r: Int) = cle.isEmpty() || sansAccents(choix[r].libelle.toString()).contains(cle)
+            val rangs = when {
+                cle.isNotEmpty() -> choix.indices.filter { trouve(it) }
+                categories == null -> choix.indices.toList()
+                else -> categories.getOrNull(courante)?.rangs.orEmpty()
+            }
+            val tuile = grille(context, lignes, rangs, choix, choisi, COLONNES, surChoix)
+            if (cle.isEmpty() && tuile != null) defilGrille.post { defilGrille.scrollTo(0, ((tuile.parent as View).top - px(ECART_DP)).coerceAtLeast(0)) }
+            else defilGrille.scrollTo(0, 0)
+            colonneCats.removeAllViews()
+            categories?.forEachIndexed { i, c ->
+                val n = if (cle.isEmpty()) c.rangs.size else c.rangs.count { trouve(it) }
+                val on = cle.isEmpty() && i == courante
+                val couleur = if (on) accent else context.getColor(R.color.text_primary)
+                colonneCats.addView(LinearLayout(context).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = Gravity.CENTER_VERTICAL
+                    setPadding(px(14f), 0, px(14f), 0)
+                    alpha = if (cle.isNotEmpty() && n == 0) 0.4f else 1f
+                    if (on) OverlayKit.fond(this, context.getColor(R.color.dash_accent_dim), rayon = px(14f).toFloat())
+                    addView(ImageView(context).apply {
+                        setImageResource(c.icone)
+                        imageTintList = ColorStateList.valueOf(if (on) accent else context.getColor(R.color.text_secondary))
+                    }, LinearLayout.LayoutParams(px(24f), px(24f)))
+                    addView(TextView(context).apply {
+                        text = c.libelle
+                        textSize = 18f
+                        maxLines = 1
+                        ellipsize = android.text.TextUtils.TruncateAt.END
+                        setTextColor(couleur)
+                        setPadding(px(12f), 0, px(8f), 0)
+                    }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                    addView(TextView(context).apply {
+                        text = n.toString()
+                        textSize = 15f
+                        typeface = android.graphics.Typeface.MONOSPACE
+                        setTextColor(context.getColor(R.color.text_secondary))
+                    })
+                    setOnClickListener {
+                        courante = i
+                        if (filtre.isNotEmpty()) champ.setText("") else dessiner()
+                    }
+                }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, px(58f)).also { if (i > 0) it.topMargin = px(6f) })
+            }
+        }
+
+        champ = champRecherche(context, { a.dialog }) { filtre = it; dessiner() } as EditText
+        haut.addView(champ, LinearLayout.LayoutParams(px(420f), px(56f)).also { it.marginStart = px(14f) })
+        haut.addView(bouton(annuler) { surAnnule() },
+            LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, px(56f)).also { it.marginStart = px(14f) })
+        racine.addView(haut)
+
+        if (!sousTitre.isNullOrEmpty()) racine.addView(TextView(context).apply {
+            text = sousTitre
+            textSize = 15f
+            setTextColor(context.getColor(R.color.text_secondary))
+            setPadding(px(4f), px(10f), 0, 0)
+        })
+
+        val corps = LinearLayout(context).apply { orientation = LinearLayout.HORIZONTAL; isBaselineAligned = false }
+        if (categories != null) corps.addView(ScrollView(context).apply {
+            overScrollMode = View.OVER_SCROLL_NEVER
+            isVerticalScrollBarEnabled = false
+            addView(colonneCats)
+        }, LinearLayout.LayoutParams(px(320f), LinearLayout.LayoutParams.MATCH_PARENT).also { it.marginEnd = px(18f) })
+        corps.addView(defilGrille, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f))
+        racine.addView(corps, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f).also { it.topMargin = px(16f) })
+        dessiner()
+        return racine
+    }
+
+    // ── Récents (2026-11-05) ──────────────────────────────────────────────────────────────────
+
+    private const val PREFS_RECENTS = "mg4_rule_picker"
+    private const val MAX_RECENTS = 8
+
+    private fun lireRecents(context: Context, liste: String): List<String> =
+        context.getSharedPreferences(PREFS_RECENTS, Context.MODE_PRIVATE).getString("recent_$liste", null)
+            ?.split('\n')?.filter { it.isNotEmpty() }.orEmpty()
+
+    private fun retenirRecent(context: Context, liste: String, cle: String) {
+        val l = (listOf(cle) + lireRecents(context, liste).filter { it != cle }).take(MAX_RECENTS)
+        context.getSharedPreferences(PREFS_RECENTS, Context.MODE_PRIVATE).edit()
+            .putString("recent_$liste", l.joinToString("\n")).apply()
+    }
+
+    /** « Récents » en tête des catégories : les derniers choix de cette liste encore proposés. */
+    private fun avecRecents(context: Context, categories: List<Categorie>?, liste: String?, cles: List<String>?): List<Categorie>? {
+        if (categories == null || liste == null || cles == null) return categories
+        val rangs = lireRecents(context, liste).mapNotNull { k -> cles.indexOf(k).takeIf { it >= 0 } }
+        if (rangs.isEmpty()) return categories
+        return listOf(Categorie(context.getString(R.string.rule_cat_recent), R.drawable.ic_cat_star, rangs)) + categories
+    }
+
+    /** Minuscules sans accents : « Volant » et « vol », « Démarrage » et « demar » se trouvent. */
+    private fun sansAccents(s: String): String =
+        java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replace(Regex("\\p{Mn}+"), "").lowercase()
+
+    /**
+     * Champ de recherche d'une fenêtre de choix. Le clavier de la voiture couvre la moitié basse de
+     * l'écran : tant qu'on tape, la fenêtre remonte en haut, et les premiers résultats restent
+     * visibles ; « OK » du clavier le referme et la recentre.
+     */
+    private fun champRecherche(context: Context, fenetre: () -> android.app.Dialog?, surTexte: (String) -> Unit): View {
+        val champ = EditText(context).apply {
+            hint = context.getString(R.string.dialog_search)
+            setTextColor(context.getColor(R.color.text_primary))
+            setHintTextColor(context.getColor(R.color.text_secondary))
+            textSize = 19f
+            maxLines = 1
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            imeOptions = EditorInfo.IME_ACTION_DONE
+            setBackgroundResource(R.drawable.bg_dialog_tile)
+            setPadding(dp(context, 16f), 0, dp(context, 16f), 0)
+            compoundDrawablePadding = dp(context, 10f)
+            context.getDrawable(R.drawable.ic_search)?.mutate()?.let { d ->
+                d.setTint(context.getColor(R.color.text_secondary))
+                d.setBounds(0, 0, dp(context, 22f), dp(context, 22f))
+                setCompoundDrawablesRelative(d, null, null, null)
+            }
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(context, 56f))
+                .also { it.topMargin = dp(context, 14f) }
+            addTextChangedListener(object : android.text.TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+                override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
+                override fun afterTextChanged(s: android.text.Editable?) = surTexte(s?.toString().orEmpty())
+            })
+        }
+        fun placer(enHaut: Boolean) {
+            val w = fenetre()?.window ?: return
+            // Clavier ouvert : toucher à côté le referme sans fermer la fenêtre, et la recentre.
+            garde(w).apply {
+                clavier = enHaut
+                if (enHaut) surFermeture = { champ.clearFocus(); placer(false) }
+            }
+            // Une fenêtre créée sans champ de saisie bloque le clavier : voir [saisie].
+            w.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+            w.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING or WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
+            w.attributes = w.attributes.apply {
+                gravity = if (enHaut) Gravity.TOP or Gravity.CENTER_HORIZONTAL else Gravity.CENTER
+                y = if (enHaut) dp(context, 8f) else 0
+            }
+        }
+        // Au toucher, pas au focus : à l'ouverture, Android peut donner le focus au champ sans que
+        // personne ne tape, et la fenêtre remonterait pour rien.
+        @Suppress("ClickableViewAccessibility")
+        champ.setOnTouchListener { _, e -> if (e.actionMasked == android.view.MotionEvent.ACTION_UP) placer(true); false }
+        champ.setOnEditorActionListener { v, action, _ ->
+            if (action != EditorInfo.IME_ACTION_DONE) return@setOnEditorActionListener false
+            context.getSystemService(InputMethodManager::class.java)?.hideSoftInputFromWindow(v.windowToken, 0)
+            v.clearFocus()
+            placer(false)
+            true
+        }
+        // Le focus ne va pas au champ à l'ouverture : le clavier ne s'ouvre qu'au toucher.
+        champ.post { fenetre()?.window?.let { placer(false) } }
+        return champ
     }
 
     private fun peindreChoix(context: Context, cellule: View, c: Choix, choisie: Boolean) {

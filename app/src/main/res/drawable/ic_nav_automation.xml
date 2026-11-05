@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Menu principal (refonte B) : Automatisation (robot). Contour d'après Tabler Icons (MIT). Blanc : c'est le
-     bouton qui colore le pictogramme. -->
+<!-- Menu principal (refonte B) : Automatisation — tête de robot « yeux carrés » (maquette D, choisie le
+     2026-11-05 : la plus lisible à la taille du menu). Même trait que les autres icônes du menu (Tabler,
+     contour 2). Blanc : c'est le bouton qui colore le pictogramme. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
@@ -11,5 +12,5 @@
       android:strokeWidth="2"
       android:strokeLineCap="round"
       android:strokeLineJoin="round"
-      android:pathData="M6,8a2,2 0,0 1,2 -2h8a2,2 0,0 1,2 2v4a2,2 0,0 1,-2 2h-8a2,2 0,0 1,-2 -2z M12,2v2 M9,12v9 M15,12v9 M5,16l4,-2 M15,14l4,2 M9,18h6 M10,8v0.01 M14,8v0.01"/>
+      android:pathData="M7,8h10a2,2 0,0 1,2 2v7a2,2 0,0 1,-2 2h-10a2,2 0,0 1,-2 -2v-7a2,2 0,0 1,2 -2z M12,8v-3 M2.5,12.5v3 M21.5,12.5v3 M8.5,11.5h2v2h-2z M13.5,11.5h2v2h-2z M10,16.5h4 M11,4a1,1 0,1 0,2 0a1,1 0,1 0,-2 0"/>
 </vector>

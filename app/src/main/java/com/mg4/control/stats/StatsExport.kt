@@ -134,11 +134,47 @@ object StatsExport {
         val parent = DocumentsContract.buildDocumentUriUsingTree(arbre, parentId)
         return fichiers.map { (nom, texte) ->
             val doc = enfant(ctx, arbre, parentId, nom)?.let { DocumentsContract.buildDocumentUriUsingTree(arbre, it) }
-                ?: DocumentsContract.createDocument(r, parent, MIME, nom) ?: return null
+                ?: DocumentsContract.createDocument(r, parent, mime(nom), nom) ?: return null
             r.openOutputStream(doc, "wt")?.use { it.write(texte.toByteArray(Charsets.UTF_8)) } ?: return null
             nom
         }
     }
+
+    /**
+     * Type du fichier créé : le fournisseur ajoute l'extension du type si le nom ne la porte pas
+     * (« x.json » en text/csv deviendrait « x.json.csv »). Inconnu : octet-stream, nom gardé tel quel.
+     */
+    private fun mime(nom: String): String = when (nom.substringAfterLast('.', "").lowercase()) {
+        "csv" -> MIME
+        "txt" -> "text/plain"
+        else -> "application/octet-stream"
+    }
+
+    /**
+     * Lecture pour l'import (2026-11-05) : le fichier [nom] dans Téléchargements/MG4Control (ou
+     * directement dans Téléchargements, où allaient les anciens exports), ou dans MG4Control sur
+     * la clé USB. Null s'il n'y est pas. Fil de travail.
+     */
+    fun lire(ctx: Context, d: Destination, nom: String): String? = runCatching {
+        when (d) {
+            Destination.DOWNLOADS -> listOf(File(telechargements(), nom),
+                File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), nom))
+                .firstOrNull { it.isFile }?.readText(Charsets.UTF_8)
+            Destination.USB -> {
+                val cle = usb(ctx) ?: return null
+                val arbre = DocumentsContract.buildTreeDocumentUri(STOCKAGE, "${cle.uuid}:")
+                val racine = DocumentsContract.getTreeDocumentId(arbre)
+                val dossier = enfant(ctx, arbre, racine, DOSSIER)
+                val id = dossier?.let { enfant(ctx, arbre, it, nom) } ?: enfant(ctx, arbre, racine, nom) ?: return null
+                lireUri(ctx, DocumentsContract.buildDocumentUriUsingTree(arbre, id))
+            }
+            Destination.FOLDER -> null
+        }
+    }.onFailure { AppLogger.w(TAG, "import $d : ${it.javaClass.simpleName} ${it.message}") }.getOrNull()
+
+    fun lireUri(ctx: Context, uri: Uri): String? = runCatching {
+        ctx.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }
+    }.getOrNull()
 
     /** Identifiant du document nommé [nom] directement sous [parentId], ou null. */
     private fun enfant(ctx: Context, arbre: Uri, parentId: String, nom: String): String? = runCatching {

@@ -20,6 +20,10 @@ import android.widget.FrameLayout
 internal class Assistant(private val ctx: Context) {
 
     companion object {
+        /** Part de l'écran occupée par la grande fenêtre (maquette du 2026-11-05). */
+        private const val PART_LARGEUR = 0.85f
+        private const val PART_HAUTEUR = 0.92f
+
         /** L'enchaînement dans lequel la prochaine fenêtre se pose ; `null` = fenêtre à part. */
         var courant: Assistant? = null
             private set
@@ -36,36 +40,74 @@ internal class Assistant(private val ctx: Context) {
     }
 
     private val conteneur = FrameLayout(ctx)
-    private val pile = ArrayList<() -> Unit>()
+
+    /**
+     * Une étape : son titre, ce qui la redessine, et le choix qu'on y a fait (2026-11-05). Le chemin
+     * de la grande fenêtre ([AppDialog.choisir]) montre les choix des étapes passées, puis le titre
+     * de l'étape en cours ; toucher une étape y ramène ([retourA]).
+     */
+    private class Etape(val titre: CharSequence, val rendu: () -> Unit) {
+        var choix: CharSequence? = null
+    }
+
+    private val pile = ArrayList<Etape>()
 
     var dialog: AlertDialog? = null
         private set
 
     val peutRetour: Boolean get() = pile.size > 1
 
+    /** Le chemin parcouru : les choix faits aux étapes passées, puis le titre de l'étape en cours. */
+    val chemin: List<CharSequence>
+        get() = pile.mapIndexed { i, e -> if (i == pile.lastIndex) e.titre else e.choix ?: e.titre }
+
     /** Ajoute une étape et l'affiche ; [rendu] la reconstruit aussi au retour. */
-    fun etape(rendu: () -> Unit) {
-        pile += rendu
+    fun etape(titre: CharSequence, rendu: () -> Unit) {
+        pile += Etape(titre, rendu)
         rendu()
     }
 
-    /** Remplace le contenu de la fenêtre (la crée à la première étape). */
-    fun afficher(vue: View, largeurDp: Float) {
+    /** Le choix fait à l'étape en cours, pour le chemin. */
+    fun noter(choix: CharSequence) {
+        pile.lastOrNull()?.choix = choix
+    }
+
+    /** Une fenêtre de valeur ou une petite grille : [largeurDp] de large, la hauteur de son contenu. */
+    fun afficher(vue: View, largeurDp: Float) =
+        poser(vue, AppDialog.dp(ctx, largeurDp), WindowManager.LayoutParams.WRAP_CONTENT)
+
+    /**
+     * La grande fenêtre des sélecteurs de l'éditeur (2026-11-05) : une part de l'écran plutôt que des
+     * dp, la densité des firmwares A9 n'étant pas connue — elle ne déborde ainsi sur aucun.
+     */
+    fun afficherGrand(vue: View) {
+        val m = ctx.resources.displayMetrics
+        poser(vue, (m.widthPixels * PART_LARGEUR).toInt(), (m.heightPixels * PART_HAUTEUR).toInt())
+    }
+
+    private fun poser(vue: View, largeur: Int, hauteur: Int) {
         conteneur.removeAllViews()
         conteneur.addView(vue)
-        val d = dialog
-        if (d == null) {
-            dialog = AppDialog.afficher(ctx, conteneur, largeurDp).also { it.setOnDismissListener { pile.clear() } }
-        } else {
-            d.window?.setLayout(AppDialog.dp(ctx, largeurDp), WindowManager.LayoutParams.WRAP_CONTENT)
+        val d = dialog ?: AppDialog.afficher(ctx, conteneur, 600f).also {
+            it.setOnDismissListener { pile.clear() }
+            dialog = it
+        }
+        d.window?.let { w ->
+            w.setLayout(largeur, hauteur)
+            // Une recherche a pu remonter la fenêtre en haut : chaque étape repart centrée.
+            w.attributes = w.attributes.apply { gravity = android.view.Gravity.CENTER; y = 0 }
         }
     }
 
     /** Revient à l'étape précédente, reconstruite telle qu'elle était. */
-    fun retour() {
-        if (pile.size < 2) return
-        pile.removeAt(pile.lastIndex)
-        pile.last().invoke()
+    fun retour() = retourA(pile.size - 2)
+
+    /** Revient à l'étape [i] du chemin (0 = la première). */
+    fun retourA(i: Int) {
+        if (i < 0 || i >= pile.lastIndex) return
+        while (pile.size > i + 1) pile.removeAt(pile.lastIndex)
+        pile.last().choix = null
+        pile.last().rendu()
     }
 
     fun fermer() {

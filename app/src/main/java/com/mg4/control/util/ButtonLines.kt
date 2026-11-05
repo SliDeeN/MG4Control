@@ -39,6 +39,8 @@ object ButtonLines {
         if (v is ViewGroup) for (i in 0 until v.childCount) equiper(v.getChildAt(i))
     }
 
+    // Layout.BREAK_STRATEGY_BALANCED vaut LineBreaker.BREAK_STRATEGY_BALANCED, qui demande l'API 29.
+    @android.annotation.SuppressLint("WrongConstant")
     fun appliquer(t: TextView) {
         if (!equipes.add(t)) return
         if (TextViewCompat.getAutoSizeTextType(t) != TextViewCompat.AUTO_SIZE_TEXT_TYPE_NONE) return

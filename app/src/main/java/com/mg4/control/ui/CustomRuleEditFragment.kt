@@ -540,17 +540,97 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         }
     }
 
-    /** Une grille de choix dont chaque tuile lance son action. */
-    private fun liste(titre: Int, choix: List<Pair<Int, () -> Unit>>, choisi: Int = -1) {
+    /**
+     * Une grille de choix dont chaque tuile lance son action. [rangement] range chaque choix (par son
+     * libellé) dans une catégorie de la grande fenêtre ; [recents] nomme la liste pour ses « Récents ».
+     */
+    private fun liste(titre: Int, choix: List<Pair<Int, () -> Unit>>, choisi: Int = -1,
+                      rangement: ((Int) -> Cat)? = null, recents: String? = null) {
         AppDialog.choisir(ctx, titre = s(titre), choix = choix.map { AppDialog.Choix(s(it.first)) },
-            annuler = s(R.string.profile_cancel), choisi = choisi) { rang -> choix[rang].second() }
+            annuler = s(R.string.profile_cancel), choisi = choisi,
+            categories = rangement?.let { r -> categories(choix.map { r(it.first) }) },
+            recents = recents, cles = choix.map { resources.getResourceEntryName(it.first) }) { rang -> choix[rang].second() }
     }
 
-    /** Une grille de valeurs libellées. */
-    private fun <T> valeurs(titre: CharSequence, choix: List<Pair<String, T>>, choisi: T?, ok: (T) -> Unit) {
+    /** Une grille de valeurs libellées ; [rangement] et [recents] comme pour [liste]. */
+    private fun <T> valeurs(titre: CharSequence, choix: List<Pair<String, T>>, choisi: T?,
+                            rangement: ((T) -> Cat)? = null, recents: String? = null, ok: (T) -> Unit) {
         if (choix.isEmpty()) return
         AppDialog.choisir(ctx, titre = titre, choix = choix.map { AppDialog.Choix(it.first) },
-            annuler = s(R.string.profile_cancel), choisi = choix.indexOfFirst { it.second == choisi }) { rang -> ok(choix[rang].second) }
+            annuler = s(R.string.profile_cancel), choisi = choix.indexOfFirst { it.second == choisi },
+            categories = rangement?.let { r -> categories(choix.map { r(it.second) }) },
+            recents = recents, cles = choix.map { it.second.toString() }) { rang -> ok(choix[rang].second) }
+    }
+
+    /**
+     * Catégories de la grande fenêtre (maquette B, 2026-11-05). L'ordre de l'énumération est celui
+     * de la colonne ; une catégorie sans choix n'apparaît pas.
+     */
+    private enum class Cat(val libelle: Int, val icone: Int) {
+        CAR(R.string.rule_cat_car, R.drawable.ic_cat_car),
+        CHARGE(R.string.rule_cat_charge, R.drawable.ic_cat_plug),
+        TIME(R.string.rule_cat_time, R.drawable.ic_cat_clock),
+        PLACES(R.string.rule_cat_places, R.drawable.ic_cat_pin),
+        DRIVING(R.string.rule_cat_driving, R.drawable.ic_cat_steering),
+        BATTERY(R.string.rule_cat_battery, R.drawable.ic_cat_battery),
+        CLIMATE(R.string.rule_cat_climate, R.drawable.ic_cat_snow),
+        COMFORT(R.string.rule_cat_comfort, R.drawable.ic_cat_seat),
+        ADAS(R.string.rule_cat_adas, R.drawable.ic_cat_shield),
+        MEDIA(R.string.rule_cat_media, R.drawable.ic_cat_music),
+        SCREEN_SOUND(R.string.rule_cat_screen_sound, R.drawable.ic_cat_screen),
+        SCREEN_APPS(R.string.rule_cat_screen_apps, R.drawable.ic_cat_screen),
+        CONNECTIONS(R.string.rule_cat_connections, R.drawable.ic_cat_wifi),
+        SHORTCUTS(R.string.rule_cat_shortcuts, R.drawable.ic_cat_bolt),
+        FLOW(R.string.rule_cat_flow, R.drawable.ic_cat_flow),
+        SYSTEM(R.string.rule_cat_system, R.drawable.ic_cat_system),
+        ADVANCED(R.string.rule_cat_advanced, R.drawable.ic_cat_adjust),
+    }
+
+    private fun categories(rangs: List<Cat>): List<AppDialog.Categorie> =
+        Cat.entries.mapNotNull { c ->
+            val r = rangs.indices.filter { rangs[it] == c }
+            if (r.isEmpty()) null else AppDialog.Categorie(s(c.libelle), c.icone, r)
+        }
+
+    private fun catDeclencheur(res: Int): Cat = when (res) {
+        R.string.rule_event_app_start, R.string.rule_event_door, R.string.rule_trg_locked, R.string.rule_trg_unlocked -> Cat.CAR
+        R.string.rule_trg_charge_start, R.string.rule_trg_charge_end, R.string.rule_trg_plugged, R.string.rule_trg_unplugged -> Cat.CHARGE
+        R.string.rule_trg_time, R.string.rule_trg_every, R.string.rule_trg_sun -> Cat.TIME
+        R.string.rule_trg_place, R.string.rule_trg_phone -> Cat.PLACES
+        else -> Cat.ADVANCED
+    }
+
+    private fun catAction(res: Int): Cat = when (res) {
+        R.string.rule_act_set, R.string.rule_act_profile, R.string.rule_act_windows -> Cat.CAR
+        R.string.rule_act_media, R.string.rule_act_sound, R.string.rule_act_speak -> Cat.MEDIA
+        R.string.rule_act_notify, R.string.rule_act_open, R.string.rule_act_app, R.string.rule_act_navigate -> Cat.SCREEN_APPS
+        R.string.rule_act_shortcut, R.string.rule_act_custom, R.string.rule_act_rule -> Cat.SHORTCUTS
+        else -> Cat.FLOW
+    }
+
+    private fun catSignal(sig: RuleSignal): Cat = when (sig) {
+        RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
+        RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES -> Cat.DRIVING
+        RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.PLUGGED, RuleSignal.CHARGE_DC, RuleSignal.CHARGE_LIMIT -> Cat.BATTERY
+        RuleSignal.OUTSIDE_TEMP, RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO, RuleSignal.HVAC_TEMP,
+        RuleSignal.FAN, RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR -> Cat.CLIMATE
+        RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT, RuleSignal.LOCKED, RuleSignal.KEY_AWAY -> Cat.COMFORT
+        RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM -> Cat.ADAS
+        RuleSignal.BRIGHTNESS, RuleSignal.VOLUME, RuleSignal.MEDIA_PLAYING, RuleSignal.NIGHT, RuleSignal.SUN_UP -> Cat.SCREEN_SOUND
+        RuleSignal.BT_DEVICE, RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON, RuleSignal.PROJECTION,
+        RuleSignal.IN_CALL, RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> Cat.CONNECTIONS
+        else -> Cat.SYSTEM
+    }
+
+    private fun catReglage(cle: String): Cat = when (cle) {
+        ExternalApi.SET_DRIVE_MODE, ExternalApi.SET_REGEN, RuleKeys.ONE_PEDAL, RuleKeys.ENERGY_SAVING -> Cat.DRIVING
+        ExternalApi.SET_SEAT_HEAT_LEFT, ExternalApi.SET_SEAT_HEAT_RIGHT, ExternalApi.SET_STEERING_HEAT -> Cat.COMFORT
+        RuleKeys.BRIGHTNESS, RuleKeys.VOLUME, RuleKeys.VOLUME_STEP -> Cat.SCREEN_SOUND
+        RuleKeys.AEB, RuleKeys.TSR, RuleKeys.ESC, RuleKeys.DROWSINESS, RuleKeys.OVERSPEED_ALARM, RuleKeys.SPEED_LIMIT_TONE,
+        RuleKeys.AUTO_HIGH_BEAM -> Cat.ADAS
+        RuleKeys.BATTERY_HEAT, RuleKeys.CHARGE_LIMIT -> Cat.BATTERY
+        RuleKeys.WIFI, RuleKeys.BLUETOOTH, RuleKeys.HOTSPOT -> Cat.CONNECTIONS
+        else -> Cat.CLIMATE
     }
 
     /** Les signaux proposés, dans un ordre de lecture (conduite, énergie, clim, confort, ADAS, appareil). */
@@ -567,7 +647,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR,
             RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT,
             RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM,
-            RuleSignal.LOCKED, RuleSignal.KEY_AWAY,
+            RuleSignal.LOCKED,
             RuleSignal.PROFILE, RuleSignal.BT_DEVICE, RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON,
             RuleSignal.PROJECTION, RuleSignal.MEDIA_PLAYING, RuleSignal.IN_CALL, RuleSignal.BRIGHTNESS, RuleSignal.VOLUME,
             RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB, RuleSignal.FIRMWARE,
@@ -575,7 +655,6 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             when {
                 s in climat -> clim
                 s == RuleSignal.ESC || s == RuleSignal.DROWSINESS -> MG4Hardware.hasDrowsinessAndEsc()
-                s == RuleSignal.KEY_AWAY -> com.mg4.control.util.FirmwareInfo.getGeneration() == com.mg4.control.util.FirmwareInfo.Gen.SWI133
                 s == RuleSignal.BRIGHTNESS -> MG4Hardware.hasBrightnessControl()
                 else -> true
             }
@@ -616,7 +695,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
     /** Une comparaison : le signal, puis comment le comparer, puis la valeur. */
     private fun comparer(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) {
-        valeurs(s(R.string.rule_choose_signal), signaux().map { mots.signal(it) to it }, actuelle?.signal) { sig ->
+        valeurs(s(R.string.rule_choose_signal), signaux().map { mots.signal(it) to it }, actuelle?.signal,
+            rangement = ::catSignal, recents = "sig") { sig ->
             comparerSignal(sig, actuelle?.takeIf { it.signal == sig }, ok)
         }
     }
@@ -670,7 +750,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             }
         }
         fun change(t: RuleTrigger) = valeurs(s(R.string.rule_choose_signal), signaux().filter { it.kind != RuleSignal.Kind.NUMBER || it in CHANGE_NOMBRES }
-            .map { mots.signal(it) to it }, t.condition?.signal) { sig ->
+            .map { mots.signal(it) to it }, t.condition?.signal, rangement = ::catSignal, recents = "sig") { sig ->
             ok(t.copy(type = RuleTrigger.Type.CHANGES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = sig)))
         }
         fun horaire(t: RuleTrigger) = RuleValueDialogs.heure(ctx, s(R.string.rule_time_title), t.at ?: 7 * 60) { m ->
@@ -694,8 +774,11 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleTrigger.Type.CHANGES -> change(actuel)
             RuleTrigger.Type.SUN -> soleil(actuel)
             RuleTrigger.Type.MANUAL -> {}
-            null -> liste(R.string.rule_choose_trigger, listOf(
-                R.string.rule_trg_event to { evenement(RuleTrigger()) },
+            null -> liste(R.string.rule_choose_trigger, buildList {
+                add(R.string.rule_event_app_start to { ok(RuleTrigger(RuleTrigger.Type.EVENT, event = RuleEvent.APP_START)) })
+                if (MG4Hardware.hasDoorDetection())
+                    add(R.string.rule_event_door to { ok(RuleTrigger(RuleTrigger.Type.EVENT, event = RuleEvent.FRONT_DOOR_OPEN)) })
+                addAll(listOf(
                 R.string.rule_trg_becomes to { devient(RuleTrigger()) },
                 R.string.rule_trg_changes to { change(RuleTrigger()) },
                 R.string.rule_trg_time to { horaire(RuleTrigger()) },
@@ -710,8 +793,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 R.string.rule_trg_unlocked to { ok(quand(RuleSignal.LOCKED, RuleOp.IS_FALSE)) },
                 R.string.rule_trg_phone to { comparerSignal(RuleSignal.BT_DEVICE, null) { c -> ok(RuleTrigger(RuleTrigger.Type.BECOMES, condition = c)) } },
                 R.string.rule_trg_place to { lieu(null) { c -> ok(RuleTrigger(RuleTrigger.Type.BECOMES, condition = c)) } },
-            ) + (if (com.mg4.control.util.FirmwareInfo.getGeneration() == com.mg4.control.util.FirmwareInfo.Gen.SWI133)
-                listOf(R.string.rule_trg_key_away to { ok(quand(RuleSignal.KEY_AWAY, RuleOp.IS_TRUE)) }) else emptyList()))
+                ))
+            }, rangement = ::catDeclencheur, recents = "trg")
         }
     }
 
@@ -890,7 +973,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                     add(R.string.rule_act_repeat to { repeter(RuleAction(then = emptyList())) })
                 }
                 add(R.string.rule_act_stop to { ok(RuleAction(RuleAction.Type.STOP)) })
-            })
+            }, rangement = ::catAction, recents = "act")
         }
     }
 
@@ -933,7 +1016,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             add(RuleKeys.BLUETOOTH)
             add(RuleKeys.HOTSPOT)
         }
-        valeurs(s(R.string.rule_choose_setting), cles.map { k -> (AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k) to k }, a.key) { k ->
+        valeurs(s(R.string.rule_choose_setting), cles.map { k -> (AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k) to k }, a.key,
+            rangement = ::catReglage, recents = "set") { k ->
             val nom = AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k
             val meme = a.value.takeIf { a.key == k }
             fun fini(v: String) = ok(RuleAction(RuleAction.Type.SET, key = k, value = v))
@@ -942,23 +1026,23 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                     texte = { "$it$unite" }, pas = { v, sens -> v + sens * pas }) { fini("$it") }
             val ouiNon = listOf(s(R.string.segment_yes) to "1", s(R.string.segment_no) to "0")
             when (k) {
-                ExternalApi.SET_DRIVE_MODE -> valeurs(nom, DriveMode.entries.map { mots.driveMode(it) to it.name }, meme, ::fini)
-                ExternalApi.SET_REGEN -> valeurs(nom, RegenLevel.entries.map { mots.regen(it) to it.name }, meme, ::fini)
+                ExternalApi.SET_DRIVE_MODE -> valeurs(nom, DriveMode.entries.map { mots.driveMode(it) to it.name }, meme, ok = ::fini)
+                ExternalApi.SET_REGEN -> valeurs(nom, RegenLevel.entries.map { mots.regen(it) to it.name }, meme, ok = ::fini)
                 ExternalApi.SET_SEAT_HEAT_LEFT, ExternalApi.SET_SEAT_HEAT_RIGHT ->
-                    valeurs(nom, listOf(s(R.string.rule_seat_off) to "0", "1" to "1", "2" to "2", "3" to "3"), meme, ::fini)
+                    valeurs(nom, listOf(s(R.string.rule_seat_off) to "0", "1" to "1", "2" to "2", "3" to "3"), meme, ok = ::fini)
                 ExternalApi.SET_HVAC_TEMP -> nombre(16, 30, 21, " °C")
                 ExternalApi.SET_HVAC_FAN -> nombre(1, 7, 3)
                 RuleKeys.AIR_FLOW -> nombre(0, 6, 1)
                 RuleKeys.AUTO_VOLUME -> valeurs(nom, listOf(s(R.string.rule_level_high) to "0", s(R.string.rule_level_medium) to "1",
-                    s(R.string.rule_level_low) to "2"), meme, ::fini)
+                    s(R.string.rule_level_low) to "2"), meme, ok = ::fini)
                 RuleKeys.BRIGHTNESS -> nombre(0, 100, 50, " %", 5)
                 RuleKeys.VOLUME -> nombre(0, MG4Hardware.getMediaVolumeMax().takeIf { it > 0 } ?: 40, 10)
                 RuleKeys.VOLUME_STEP -> RuleValueDialogs.nombre(ctx, nom, null, meme?.toIntOrNull() ?: 2, -10, 10,
                     texte = { if (it > 0) "+$it" else "$it" }) { fini("$it") }
                 RuleKeys.CHARGE_LIMIT -> nombre(40, 100, 80, " %", 10)
                 ExternalApi.SET_HVAC_RECIRC -> valeurs(nom, listOf("INNER", "OUTSIDE", "AUTO").map { v ->
-                    (AndroidRuleWords.recircRes(v)?.let { s(it) } ?: v) to v }, meme, ::fini)
-                else -> valeurs(nom, ouiNon, meme, ::fini)
+                    (AndroidRuleWords.recircRes(v)?.let { s(it) } ?: v) to v }, meme, ok = ::fini)
+                else -> valeurs(nom, ouiNon, meme, ok = ::fini)
             }
         }
     }
