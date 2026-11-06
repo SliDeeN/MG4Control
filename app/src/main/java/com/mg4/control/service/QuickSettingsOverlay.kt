@@ -205,7 +205,7 @@ object QuickSettingsOverlay {
         return racine
     }
 
-    private fun texte(ctx: Context, t: String, sp: Float, couleur: Int, gras: Boolean = false) = TextView(ctx).apply {
+    private fun texte(ctx: Context, t: String, sp: Float, @androidx.annotation.ColorRes couleur: Int, gras: Boolean = false) = TextView(ctx).apply {
         text = t
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
         setTextColor(ctx.getColor(couleur))

@@ -147,12 +147,14 @@ class QuickSettingsPage {
                 setPadding(dp(ctx, 18f), 0, dp(ctx, 18f), 0)
                 OverlayKit.fond(this, ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_btn),
                     ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border), dp(ctx, 1f), dp(ctx, 26f).toFloat())
-                val couleur = ctx.getColor(if (on) R.color.dash_accent else R.color.text_primary)
+                // Une RESSOURCE de couleur : [texte] la résout lui-même. Lui passer la couleur déjà
+                // résolue la faisait chercher comme ressource → plantage de l'onglet (2026-11-06).
+                val couleurRes = if (on) R.color.dash_accent else R.color.text_primary
                 addView(ImageView(ctx).apply {
                     setImageResource(cat.icone)
-                    imageTintList = ColorStateList.valueOf(couleur)
+                    imageTintList = ColorStateList.valueOf(ctx.getColor(couleurRes))
                 }, LinearLayout.LayoutParams(dp(ctx, 22f), dp(ctx, 22f)))
-                addView(texte(ctx, ctx.getString(cat.libelle), 18f, couleur).apply { setPadding(dp(ctx, 8f), 0, 0, 0) })
+                addView(texte(ctx, ctx.getString(cat.libelle), 18f, couleurRes).apply { setPadding(dp(ctx, 8f), 0, 0, 0) })
                 setOnClickListener { categorie = cat; peindreCatalogue(ctx) }
             }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(ctx, 52f)).also { it.marginEnd = dp(ctx, 8f) })
         }
@@ -245,7 +247,7 @@ class QuickSettingsPage {
         setPadding(dp(ctx, 14f), dp(ctx, 10f), dp(ctx, 14f), 0)
     }
 
-    private fun texte(ctx: Context, t: String, sp: Float, couleur: Int, gras: Boolean = false, lignes: Int = 1) = TextView(ctx).apply {
+    private fun texte(ctx: Context, t: String, sp: Float, @androidx.annotation.ColorRes couleur: Int, gras: Boolean = false, lignes: Int = 1) = TextView(ctx).apply {
         text = t
         setTextSize(TypedValue.COMPLEX_UNIT_SP, sp)
         setTextColor(ctx.getColor(couleur))
