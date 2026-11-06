@@ -109,4 +109,21 @@ class AbrpTelemetryTest {
         assertEquals("••••3456", maskSecret("abcdef123456"))
         assertEquals("••••", maskSecret("abc"))
     }
+
+    @Test
+    fun `modele ABRP selon le profil`() {
+        val r = CustomRuleTemplates.abrpByProfile("ABRP", listOf("p1" to "a1", "p2" to "a2"), "a1")
+        assertTrue(r.onlyWhenReady)
+        assertEquals(listOf(RuleTrigger.Type.BECOMES, RuleTrigger.Type.CHANGES), r.triggers.map { it.type })
+        assertEquals(RuleSignal.PROFILE, r.triggers[1].condition?.signal)
+        // Un bloc Si par paire, puis l'arrêt pour un profil sans compte : rien d'imbriqué.
+        assertEquals(3, r.actions.size)
+        assertEquals("a2", r.actions[1].then?.single()?.text)
+        assertEquals(RuleAction.Type.ABRP_START, r.actions[1].then?.single()?.type)
+        assertEquals(RuleCondition.Type.NOT, r.actions[2].condition?.type)
+        assertEquals(listOf("p1", "p2"), r.actions[2].condition?.children?.map { it.text })
+        assertEquals(RuleAction.Type.ABRP_STOP, r.actions[2].then?.single()?.type)
+        // Sans profil : le premier compte, sans condition.
+        assertEquals(listOf(RuleAction(RuleAction.Type.ABRP_START, text = "a1")), CustomRuleTemplates.abrpByProfile("ABRP", emptyList(), "a1").actions)
+    }
 }

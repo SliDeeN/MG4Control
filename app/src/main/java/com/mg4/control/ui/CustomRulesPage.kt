@@ -303,6 +303,21 @@ class CustomRulesPage {
         Modele(CustomRuleTemplates.Template.BRIGHTNESS_SUN, R.string.rule_tpl_brightness_sun, R.string.rule_tpl_brightness_sun),
     )
 
+    /**
+     * Modèle « ABRP selon le profil » : le n-ième profil avec le n-ième compte ABRP, à corriger
+     * dans l'éditeur. Sans compte, rien n'est créé : il faut d'abord en ajouter un.
+     */
+    private fun abrpSelonProfil(ctx: Context): CustomRule? {
+        val comptes = com.mg4.control.automation.AbrpStore.accounts(ctx)
+        if (comptes.isEmpty()) {
+            Toast.makeText(ctx, ctx.getString(R.string.abrp_no_accounts), Toast.LENGTH_LONG).show()
+            return null
+        }
+        val profils = com.mg4.control.profile.ProfileManager(ctx).getAll()
+        return CustomRuleTemplates.abrpByProfile(ctx.getString(R.string.rule_tpl_abrp_profile),
+            profils.zip(comptes).map { (p, c) -> p.id to c.id }, comptes.first().id)
+    }
+
     /** La nouvelle automatisation s'ouvre dans l'éditeur ; elle n'existe qu'une fois enregistrée. */
     private fun nouvelle(ctx: Context) {
         val n = CustomRuleStore.all(ctx).size
@@ -313,11 +328,15 @@ class CustomRulesPage {
         AppDialog.choisir(ctx,
             titre = ctx.getString(R.string.rule_templates_title),
             sousTitre = ctx.getString(R.string.rule_templates_subtitle),
-            choix = listOf(AppDialog.Choix(ctx.getString(R.string.rule_tpl_blank))) + modeles.map { AppDialog.Choix(ctx.getString(it.nom)) },
+            choix = listOf(AppDialog.Choix(ctx.getString(R.string.rule_tpl_blank))) + modeles.map { AppDialog.Choix(ctx.getString(it.nom)) } +
+                (if (com.mg4.control.automation.AbrpStore.available) listOf(AppDialog.Choix(ctx.getString(R.string.rule_tpl_abrp_profile))) else emptyList()),
             annuler = ctx.getString(R.string.profile_cancel),
         ) { rang ->
-            val regle = if (rang == 0) CustomRule(name = ctx.getString(R.string.rule_name_default_fmt, n + 1))
-            else modeles[rang - 1].let { m -> CustomRuleTemplates.build(m.t, ctx.getString(m.nom), ctx.getString(m.message)) }
+            val regle = when {
+                rang == 0 -> CustomRule(name = ctx.getString(R.string.rule_name_default_fmt, n + 1))
+                rang <= modeles.size -> modeles[rang - 1].let { m -> CustomRuleTemplates.build(m.t, ctx.getString(m.nom), ctx.getString(m.message)) }
+                else -> abrpSelonProfil(ctx) ?: return@choisir
+            }
             ouvrir(CustomRuleEditFragment.ARG_NEW_RULE to CustomRuleStore.encode(listOf(regle)).removeSurrounding("[", "]"))
         }
     }

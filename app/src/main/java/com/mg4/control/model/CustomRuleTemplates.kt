@@ -110,4 +110,30 @@ object CustomRuleTemplates {
             )),
         )
     }
+
+    /**
+     * « ABRP selon le profil » (issue #188, l'exemple de l'utilisateur) : au READY et à chaque
+     * changement de profil, l'envoi part vers le compte ABRP du profil actif ; un profil sans compte
+     * arrête l'envoi. Des blocs Si à plat, un par paire (profil, compte) : pas d'imbrication, donc
+     * autant de paires qu'on veut, toutes modifiables dans l'éditeur. Sans profil : le premier compte.
+     */
+    fun abrpByProfile(name: String, pairs: List<Pair<String, String>>, firstAccount: String): CustomRule {
+        val profil = { id: String -> compare(RuleSignal.PROFILE, RuleOp.EQUALS, text = id) }
+        val actions = if (pairs.isEmpty()) listOf(RuleAction(RuleAction.Type.ABRP_START, text = firstAccount))
+        else pairs.map { (p, a) ->
+            RuleAction(RuleAction.Type.IF, condition = tous(profil(p)),
+                then = listOf(RuleAction(RuleAction.Type.ABRP_START, text = a)), otherwise = emptyList())
+        } + RuleAction(RuleAction.Type.IF,
+            condition = RuleCondition(RuleCondition.Type.NOT, children = pairs.map { profil(it.first) }),
+            then = listOf(RuleAction(RuleAction.Type.ABRP_STOP)), otherwise = emptyList())
+        return CustomRule(
+            name = name,
+            triggers = listOf(
+                RuleTrigger(RuleTrigger.Type.BECOMES, condition = compare(RuleSignal.READY, RuleOp.IS_TRUE)),
+                RuleTrigger(RuleTrigger.Type.CHANGES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = RuleSignal.PROFILE)),
+            ),
+            actions = actions,
+            onlyWhenReady = true,
+        )
+    }
 }

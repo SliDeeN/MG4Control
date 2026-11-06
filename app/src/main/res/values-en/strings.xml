@@ -1754,5 +1754,6 @@
     <string name="abrp_rule_start_fmt">ABRP: keep sending to “%1$s”</string>
     <string name="abrp_rule_stop">ABRP: stop sending</string>
     <string name="abrp_account_missing">deleted account</string>
+    <string name="rule_tpl_abrp_profile">ABRP by profile</string>
     <string name="abrp_no_accounts">No ABRP account: add one in My automations › ABRP accounts.</string>
 </resources>

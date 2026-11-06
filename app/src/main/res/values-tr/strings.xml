@@ -1754,5 +1754,6 @@
     <string name="abrp_rule_start_fmt">ABRP: «%1$s» hesabına sürekli gönder</string>
     <string name="abrp_rule_stop">ABRP: gönderimi durdur</string>
     <string name="abrp_account_missing">silinmiş hesap</string>
+    <string name="rule_tpl_abrp_profile">Profile göre ABRP</string>
     <string name="abrp_no_accounts">ABRP hesabı yok: Otomasyonlarım › ABRP hesapları bölümünden ekleyin.</string>
 </resources>

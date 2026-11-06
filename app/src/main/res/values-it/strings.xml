@@ -1754,5 +1754,6 @@
     <string name="abrp_rule_start_fmt">ABRP: invio continuo a «%1$s»</string>
     <string name="abrp_rule_stop">ABRP: interrompi l\'invio</string>
     <string name="abrp_account_missing">account eliminato</string>
+    <string name="rule_tpl_abrp_profile">ABRP in base al profilo</string>
     <string name="abrp_no_accounts">Nessun account ABRP: aggiungine uno in Le mie automazioni › Account ABRP.</string>
 </resources>
