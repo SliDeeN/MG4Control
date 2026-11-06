@@ -1,5 +1,7 @@
 package com.mg4.control.ui
 
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import android.content.Context
 import android.os.Bundle
 import android.text.Editable
@@ -33,6 +35,7 @@ import com.mg4.control.model.RuleRun
 import com.mg4.control.model.RuleSignal
 import com.mg4.control.model.RuleText
 import com.mg4.control.model.RuleKeys
+import com.mg4.control.model.RuleClipboard
 import com.mg4.control.model.RuleLogic
 import com.mg4.control.model.RuleTrigger
 import com.mg4.control.model.SunEvent
@@ -210,7 +213,9 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 val editer = { declencheur(t) { n -> put(regle.triggers.remplace(i, n)) } }
                 ligne(s, texte.trigger(t), editer) { menu(texte.trigger(t), regle.triggers, i, put, editer) }
             }
-            ajouter(s, R.string.rule_add_trigger) { declencheur(null) { n -> put(regle.triggers + n) } }
+            val bTrig = rangeeBoutons(s)
+            ajouter(bTrig, R.string.rule_add_trigger) { declencheur(null) { n -> put(regle.triggers + n) } }
+            RuleClipboard.trigger?.let { t -> coller(bTrig) { put(regle.triggers + t) } }
         }
 
         section(box, R.string.rule_sec_if, R.string.rule_sec_if_hint) { s ->
@@ -328,6 +333,20 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         })
     }
 
+    /** « Coller » : à côté de « + … », seulement quand l'élément copié a le droit d'aller là. */
+    private fun coller(box: LinearLayout, onClick: () -> Unit) {
+        box.addView(texteVue(s(R.string.rule_paste), 19f, R.color.dash_accent, gras = true).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(56f)).also {
+                it.topMargin = dp(10f)
+                it.marginEnd = dp(10f)
+            }
+            gravity = Gravity.CENTER
+            setPadding(dp(22f), 0, dp(22f), 0)
+            setBackgroundResource(R.drawable.bg_dialog_tile)
+            setOnClickListener { onClick() }
+        })
+    }
+
     /**
      * Un enchaînement de choix (ajouter, modifier, ⋮) : ses fenêtres se succèdent dans une seule,
      * avec Retour à partir de la deuxième étape ([Assistant]).
@@ -342,7 +361,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
     // ── Menu ⋮ ───────────────────────────────────────────────────────────────
 
-    private enum class Geste { EDIT, UP, DOWN, DUPLICATE, DELETE }
+    private enum class Geste { EDIT, UP, DOWN, DUPLICATE, COPY, CUT, DELETE }
 
     private fun <T> menu(titre: String, liste: List<T>, i: Int, put: (List<T>) -> Unit, editer: (() -> Unit)?) {
         val gestes = buildList {
@@ -350,6 +369,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             if (i > 0) add(Geste.UP)
             if (i < liste.lastIndex) add(Geste.DOWN)
             add(Geste.DUPLICATE)
+            add(Geste.COPY)
+            add(Geste.CUT)
             add(Geste.DELETE)
         }
         AppDialog.choisir(ctx,
@@ -361,6 +382,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                     Geste.UP -> R.string.rule_menu_up
                     Geste.DOWN -> R.string.rule_menu_down
                     Geste.DUPLICATE -> R.string.rule_menu_duplicate
+                    Geste.COPY -> R.string.rule_menu_copy
+                    Geste.CUT -> R.string.rule_menu_cut
                     Geste.DELETE -> R.string.rule_delete
                 }))
             },
@@ -371,6 +394,16 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 Geste.UP -> put(liste.toMutableList().also { java.util.Collections.swap(it, i, i - 1) })
                 Geste.DOWN -> put(liste.toMutableList().also { java.util.Collections.swap(it, i, i + 1) })
                 Geste.DUPLICATE -> put(liste.toMutableList().also { it.add(i + 1, liste[i]) })
+                Geste.COPY -> {
+                    RuleClipboard.content = liste[i]
+                    Toast.makeText(ctx, s(R.string.rule_copied, titre), Toast.LENGTH_SHORT).show()
+                    dessiner()   // les boutons « Coller » apparaissent là où il va
+                }
+                Geste.CUT -> {
+                    RuleClipboard.content = liste[i]
+                    Toast.makeText(ctx, s(R.string.rule_copied, titre), Toast.LENGTH_SHORT).show()
+                    put(liste.toMutableList().also { it.removeAt(i) })
+                }
                 Geste.DELETE -> put(liste.toMutableList().also { it.removeAt(i) })
             }
         }
@@ -444,6 +477,9 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         if (!racine && enfants.isEmpty()) vide(box, R.string.rule_none_in_group)
         val boutons = rangeeBoutons(box)
         ajouter(boutons, R.string.rule_add_condition) { nouvelleCondition(profondeur) { n -> putEnfants(enfants + n) } }
+        RuleClipboard.condition?.takeIf { RuleClipboard.fitsCondition(it, profondeur, PROFONDEUR_MAX) }?.let { c ->
+            coller(boutons) { putEnfants(enfants + c) }
+        }
     }
 
     private fun nouvelleCondition(profondeur: Int, ok: (RuleCondition) -> Unit) {
@@ -613,10 +649,13 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         }
 
     private fun catDeclencheur(res: Int): Cat = when (res) {
-        R.string.rule_event_app_start, R.string.rule_event_door, R.string.rule_trg_locked, R.string.rule_trg_unlocked -> Cat.CAR
+        R.string.rule_event_app_start, R.string.rule_event_door, R.string.rule_event_door_close,
+        R.string.rule_trg_locked, R.string.rule_trg_unlocked -> Cat.CAR
         R.string.rule_trg_charge_start, R.string.rule_trg_charge_end, R.string.rule_trg_plugged, R.string.rule_trg_unplugged -> Cat.CHARGE
         R.string.rule_trg_time, R.string.rule_trg_every, R.string.rule_trg_sun -> Cat.TIME
-        R.string.rule_trg_place, R.string.rule_trg_phone -> Cat.PLACES
+        R.string.rule_trg_place, R.string.rule_trg_phone, R.string.rule_trg_phone_off -> Cat.PLACES
+        R.string.rule_trg_ready_on, R.string.rule_trg_ready_off, R.string.rule_trg_gear_p, R.string.rule_trg_gear_d,
+        R.string.rule_trg_profile_changes -> Cat.DRIVING
         else -> Cat.ADVANCED
     }
 
@@ -632,10 +671,12 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     private fun catSignal(sig: RuleSignal): Cat = when (sig) {
         RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
         RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES -> Cat.DRIVING
-        RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.PLUGGED, RuleSignal.CHARGE_DC, RuleSignal.CHARGE_LIMIT -> Cat.BATTERY
+        RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.PLUGGED, RuleSignal.CHARGE_DC, RuleSignal.CHARGE_LIMIT,
+        RuleSignal.BATTERY_HEAT -> Cat.BATTERY
         RuleSignal.OUTSIDE_TEMP, RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO, RuleSignal.HVAC_TEMP,
         RuleSignal.FAN, RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR -> Cat.CLIMATE
-        RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT, RuleSignal.LOCKED, RuleSignal.KEY_AWAY -> Cat.COMFORT
+        RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT, RuleSignal.LOCKED, RuleSignal.KEY_AWAY,
+        RuleSignal.FRONT_DOOR -> Cat.COMFORT
         RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM -> Cat.ADAS
         RuleSignal.BRIGHTNESS, RuleSignal.VOLUME, RuleSignal.MEDIA_PLAYING, RuleSignal.NIGHT, RuleSignal.SUN_UP -> Cat.SCREEN_SOUND
         RuleSignal.BT_DEVICE, RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON, RuleSignal.PROJECTION,
@@ -663,12 +704,13 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
             RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES,
             RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.PLUGGED, RuleSignal.CHARGE_DC, RuleSignal.CHARGE_LIMIT,
+            RuleSignal.BATTERY_HEAT,
             RuleSignal.OUTSIDE_TEMP, RuleSignal.NIGHT, RuleSignal.SUN_UP,
             RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO, RuleSignal.HVAC_TEMP, RuleSignal.FAN,
             RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR,
             RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT,
             RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM,
-            RuleSignal.LOCKED,
+            RuleSignal.LOCKED, RuleSignal.FRONT_DOOR,
             RuleSignal.PROFILE, RuleSignal.BT_DEVICE, RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON,
             RuleSignal.PROJECTION, RuleSignal.MEDIA_PLAYING, RuleSignal.IN_CALL, RuleSignal.BRIGHTNESS, RuleSignal.VOLUME,
             RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB, RuleSignal.FIRMWARE,
@@ -677,6 +719,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 s in climat -> clim
                 s == RuleSignal.ESC || s == RuleSignal.DROWSINESS -> MG4Hardware.hasDrowsinessAndEsc()
                 s == RuleSignal.BRIGHTNESS -> MG4Hardware.hasBrightnessControl()
+                s == RuleSignal.BATTERY_HEAT -> MG4Hardware.hasBatteryHeating()
+                s == RuleSignal.FRONT_DOOR -> MG4Hardware.hasDoorDetection()
                 else -> true
             }
         }
@@ -762,7 +806,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
     private fun declencheur(actuel: RuleTrigger?, ok: (RuleTrigger) -> Unit) {
         fun evenement(t: RuleTrigger) = valeurs(s(R.string.rule_choose_event),
-            RuleEvent.entries.filter { it != RuleEvent.FRONT_DOOR_OPEN || MG4Hardware.hasDoorDetection() }
+            RuleEvent.entries.filter { (it != RuleEvent.FRONT_DOOR_OPEN && it != RuleEvent.FRONT_DOOR_CLOSE) || MG4Hardware.hasDoorDetection() }
                 .map { mots.event(it) to it }, t.event) { e -> ok(t.copy(type = RuleTrigger.Type.EVENT, event = e)) }
         fun devient(t: RuleTrigger) = condition(t.condition) { c ->
             RuleValueDialogs.nombre(ctx, s(R.string.rule_for_title), s(R.string.rule_for_hint), t.forSeconds, 0, RuleRun.MAX_WAIT_S,
@@ -799,7 +843,16 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 add(R.string.rule_event_app_start to { ok(RuleTrigger(RuleTrigger.Type.EVENT, event = RuleEvent.APP_START)) })
                 if (MG4Hardware.hasDoorDetection())
                     add(R.string.rule_event_door to { ok(RuleTrigger(RuleTrigger.Type.EVENT, event = RuleEvent.FRONT_DOOR_OPEN)) })
+                if (MG4Hardware.hasDoorDetection())
+                    add(R.string.rule_event_door_close to { ok(RuleTrigger(RuleTrigger.Type.EVENT, event = RuleEvent.FRONT_DOOR_CLOSE)) })
                 addAll(listOf(
+                R.string.rule_trg_ready_on to { ok(quand(RuleSignal.READY, RuleOp.IS_TRUE)) },
+                R.string.rule_trg_ready_off to { ok(quand(RuleSignal.READY, RuleOp.IS_FALSE)) },
+                R.string.rule_trg_gear_p to { ok(quand(RuleSignal.GEAR, RuleOp.EQUALS, RuleSignal.GEAR_PARK)) },
+                R.string.rule_trg_gear_d to { ok(quand(RuleSignal.GEAR, RuleOp.EQUALS, RuleSignal.GEAR_DRIVE)) },
+                R.string.rule_trg_profile_changes to {
+                    ok(RuleTrigger(RuleTrigger.Type.CHANGES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = RuleSignal.PROFILE)))
+                },
                 R.string.rule_trg_becomes to { devient(RuleTrigger()) },
                 R.string.rule_trg_changes to { change(RuleTrigger()) },
                 R.string.rule_trg_time to { horaire(RuleTrigger()) },
@@ -813,6 +866,11 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 R.string.rule_trg_locked to { ok(quand(RuleSignal.LOCKED, RuleOp.IS_TRUE)) },
                 R.string.rule_trg_unlocked to { ok(quand(RuleSignal.LOCKED, RuleOp.IS_FALSE)) },
                 R.string.rule_trg_phone to { comparerSignal(RuleSignal.BT_DEVICE, null) { c -> ok(RuleTrigger(RuleTrigger.Type.BECOMES, condition = c)) } },
+                R.string.rule_trg_phone_off to {
+                    val tel = choixTexte(RuleSignal.BT_DEVICE).orEmpty()
+                    if (tel.isEmpty()) Toast.makeText(ctx, s(R.string.rule_no_phones), Toast.LENGTH_LONG).show()
+                    else valeurs(s(R.string.rule_trg_phone_off), tel, null) { mac -> ok(quand(RuleSignal.BT_DEVICE, RuleOp.NOT_EQUALS, mac)) }
+                },
                 R.string.rule_trg_place to { lieu(null) { c -> ok(RuleTrigger(RuleTrigger.Type.BECOMES, condition = c)) } },
                 ))
             }, rangement = ::catDeclencheur, recents = "trg")
@@ -875,7 +933,15 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 }
             }
         }
-        ajouter(rangeeBoutons(box), R.string.rule_add_action) { action(null, profondeur) { n -> put(liste + n) } }
+        val boutons = rangeeBoutons(box)
+        ajouter(boutons, R.string.rule_add_action) { action(null, profondeur) { n -> put(liste + n) } }
+        RuleClipboard.action?.takeIf { RuleClipboard.fitsAction(it, profondeur, PROFONDEUR_MAX) }?.let { a ->
+            coller(boutons) {
+                // Une automatisation qui se lancerait elle-même tournerait en boucle.
+                if (RuleClipboard.runsRule(a, regle.id)) Toast.makeText(ctx, s(R.string.rule_paste_self), Toast.LENGTH_LONG).show()
+                else put(liste + a)
+            }
+        }
     }
 
     /** Valeur « arrêter » du choix ABRP, à côté des identifiants de comptes. */
@@ -893,6 +959,16 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         fun raccourcis(a: RuleAction, parmi: List<ShortcutAction>?, titre: Int) = valeurs(s(titre),
             catalogue.filter { parmi == null || it.action in parmi }.map { it.label to it.action.name }, a.shortcut) { n ->
             ok(a.copy(type = RuleAction.Type.SHORTCUT, shortcut = n))
+        }
+        // Lecture / Pause explicites (2026-11-06), en plus des raccourcis média (dont la bascule).
+        fun media(a: RuleAction) {
+            val choix = listOf(s(R.string.rule_act_media_play) to "#" + RuleLogic.MEDIA_PLAY, s(R.string.rule_act_media_pause) to "#" + RuleLogic.MEDIA_PAUSE) +
+                catalogue.filter { it.action in MEDIA }.map { it.label to it.action.name }
+            val deja = if (a.type == RuleAction.Type.MEDIA) "#" + a.value else a.shortcut
+            valeurs(s(R.string.rule_act_media), choix, deja) { v ->
+                ok(if (v.startsWith("#")) RuleAction(RuleAction.Type.MEDIA, value = v.removePrefix("#"))
+                   else RuleAction(RuleAction.Type.SHORTCUT, shortcut = v))
+            }
         }
         fun profil(a: RuleAction) {
             val p = ProfileManager(ctx).getAll()
@@ -917,13 +993,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 }
             }
         }
-        fun son(a: RuleAction) {
-            val sons = com.mg4.control.automation.SoundAutomationSettings.slots(ctx)
-            if (sons.isEmpty()) return Toast.makeText(ctx, s(R.string.rule_no_sounds), Toast.LENGTH_LONG).show()
-            valeurs(s(R.string.rule_choose_sound), sons.mapIndexed { i, so -> (so.title?.takeIf { it.isNotBlank() } ?: "${i + 1}") to "$i" }, a.value) { v ->
-                ok(a.copy(type = RuleAction.Type.PLAY_SOUND, value = v, text = sons[v.toInt()].title?.takeIf { it.isNotBlank() } ?: "${v.toInt() + 1}"))
-            }
-        }
+        fun son(a: RuleAction) = choisirSon(a, ok)
         fun appli(a: RuleAction) {
             val pm = ctx.packageManager
             val apps = pm.queryIntentActivities(android.content.Intent(android.content.Intent.ACTION_MAIN)
@@ -933,20 +1003,36 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         }
         fun perso(a: RuleAction) = CustomShortcutDialog.choisir(ctx, a.text) { c -> ok(a.copy(type = RuleAction.Type.CUSTOM_SHORTCUT, text = c.id)) }
         fun automatisation(a: RuleAction) = valeurs(s(R.string.rule_act_rule), listOf(
-            s(R.string.rule_rule_run) to "run", s(R.string.rule_rule_enable) to "1", s(R.string.rule_rule_disable) to "0"),
-            when (a.type) { RuleAction.Type.RUN_RULE -> "run"; RuleAction.Type.RULE_ENABLE -> a.value; else -> null }) { quoi ->
-            RuleChooser.choisir(ctx, a.text, sauf = if (quoi == "run") regle.id else null) { r ->
-                ok(if (quoi == "run") a.copy(type = RuleAction.Type.RUN_RULE, text = r.id, value = null)
-                   else a.copy(type = RuleAction.Type.RULE_ENABLE, text = r.id, value = quoi))
+            s(R.string.rule_rule_run) to "run", s(R.string.rule_rule_stop) to "stop",
+            s(R.string.rule_rule_enable) to "1", s(R.string.rule_rule_disable) to "0"),
+            when (a.type) { RuleAction.Type.RUN_RULE -> "run"; RuleAction.Type.RULE_STOP -> "stop"; RuleAction.Type.RULE_ENABLE -> a.value; else -> null }) { quoi ->
+            RuleChooser.choisir(ctx, a.text, sauf = if (quoi == "run" || quoi == "stop") regle.id else null) { r ->
+                ok(when (quoi) {
+                    "run" -> RuleAction(RuleAction.Type.RUN_RULE, text = r.id)
+                    "stop" -> RuleAction(RuleAction.Type.RULE_STOP, text = r.id)
+                    else -> RuleAction(RuleAction.Type.RULE_ENABLE, text = r.id, value = quoi)
+                })
             }
         }
         fun definir(a: RuleAction) = choisirVariable(a.key) { nom ->
-            valeurs(nom, listOf(s(R.string.rule_var_true) to "true", s(R.string.rule_var_false) to "false", s(R.string.rule_var_number) to ""), a.value) { v ->
-                if (v.isNotEmpty()) ok(a.copy(type = RuleAction.Type.SET_VARIABLE, key = nom, value = v))
+            val ADD = "#add"
+            valeurs(nom, listOf(s(R.string.rule_var_true) to "true", s(R.string.rule_var_false) to "false", s(R.string.rule_var_number) to "",
+                s(R.string.rule_var_add) to ADD), if (a.type == RuleAction.Type.VARIABLE_ADD) ADD else a.value) { v ->
+                if (v == ADD) RuleValueDialogs.nombre(ctx, s(R.string.rule_var_add_title, nom), null,
+                    a.value?.toDoubleOrNull()?.toInt()?.takeIf { a.type == RuleAction.Type.VARIABLE_ADD } ?: 1, -1000, 1000,
+                    texte = { if (it > 0) "+$it" else "$it" }) { n ->
+                    ok(RuleAction(RuleAction.Type.VARIABLE_ADD, key = nom, value = "$n"))
+                }
+                else if (v.isNotEmpty()) ok(a.copy(type = RuleAction.Type.SET_VARIABLE, key = nom, value = v))
                 else RuleValueDialogs.nombre(ctx, nom, null, a.value?.toIntOrNull() ?: 0, -9999, 9999, texte = { "$it" }) { n ->
                     ok(a.copy(type = RuleAction.Type.SET_VARIABLE, key = nom, value = "$n"))
                 }
             }
+        }
+        // 2026-11-06 : la valeur LUE d'un signal, gardée dans une variable (volume, A/C, média…).
+        fun memoriser(a: RuleAction) = valeurs(s(R.string.rule_choose_signal), signaux().map { mots.signal(it) to it.name }, a.text,
+            rangement = { n -> catSignal(RuleSignal.valueOf(n)) }) { sig ->
+            choisirVariable(a.key) { nom -> ok(RuleAction(RuleAction.Type.SAVE_VALUE, key = nom, text = sig)) }
         }
         fun parler(a: RuleAction) = RuleValueDialogs.texte(ctx, s(R.string.rule_speak_title), a.text.orEmpty()) { t ->
             ok(a.copy(type = RuleAction.Type.SPEAK, text = t))
@@ -977,6 +1063,10 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleAction.Type.CUSTOM_SHORTCUT -> perso(actuelle)
             RuleAction.Type.RULE_ENABLE, RuleAction.Type.RUN_RULE -> automatisation(actuelle)
             RuleAction.Type.SET_VARIABLE -> definir(actuelle)
+            RuleAction.Type.SAVE_VALUE -> memoriser(actuelle)
+            RuleAction.Type.VARIABLE_ADD -> definir(actuelle)
+            RuleAction.Type.MEDIA -> media(actuelle)
+            RuleAction.Type.RULE_STOP -> automatisation(actuelle)
             RuleAction.Type.SPEAK -> parler(actuelle)
             RuleAction.Type.NAVIGATE -> naviguer(actuelle)
             RuleAction.Type.ABRP_START, RuleAction.Type.ABRP_STOP -> abrp(actuelle)
@@ -984,7 +1074,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleAction.Type.IF, RuleAction.Type.STOP -> {}
             null -> liste(R.string.rule_choose_action, buildList {
                 add(R.string.rule_act_set to { choisirReglage(RuleAction(), ok) })
-                add(R.string.rule_act_media to { raccourcis(RuleAction(), MEDIA, R.string.rule_act_media) })
+                add(R.string.rule_act_media to { media(RuleAction()) })
                 add(R.string.rule_act_windows to { raccourcis(RuleAction(), VITRES, R.string.rule_act_windows) })
                 add(R.string.rule_act_open to { raccourcis(RuleAction(), OUVRIR, R.string.rule_act_open) })
                 add(R.string.rule_act_shortcut to { raccourcis(RuleAction(), null, R.string.rule_choose_shortcut) })
@@ -994,6 +1084,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 add(R.string.rule_act_custom to { perso(RuleAction()) })
                 add(R.string.rule_act_rule to { automatisation(RuleAction()) })
                 add(R.string.rule_act_variable to { definir(RuleAction()) })
+                add(R.string.rule_act_save_value to { memoriser(RuleAction()) })
                 add(R.string.rule_act_wait to { attente(RuleAction()) })
                 add(R.string.rule_act_wait_until to { attenteQue(RuleAction()) })
                 add(R.string.rule_act_confirm to { question(RuleAction()) })
@@ -1010,6 +1101,103 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 }
                 add(R.string.rule_act_stop to { ok(RuleAction(RuleAction.Type.STOP)) })
             }, rangement = ::catAction, recents = "act")
+        }
+    }
+
+    // ── Sons (2026-11-06) ────────────────────────────────────────────────────
+
+    /**
+     * « Jouer un son » : le bip intégré, un son importé ici (depuis la clé USB, sans passer par la
+     * page Sons), ou un son de la page Sons ; puis son volume (bip, son importé).
+     */
+    private fun choisirSon(a: RuleAction, ok: (RuleAction) -> Unit) {
+        val importes = com.mg4.control.automation.RuleSounds.all(ctx)
+        val page = com.mg4.control.automation.SoundAutomationSettings.slots(ctx)
+        val IMPORT = "#import"
+        val GERER = "#gerer"
+        val choix = buildList {
+            add(s(R.string.rule_sound_beep) to RuleLogic.BEEP)
+            importes.forEach { add(it.title to RuleLogic.RULE_SOUND + it.id) }
+            page.forEachIndexed { i, so -> if (so.hasFile) add(s(R.string.rule_sound_page_fmt, so.title?.takeIf { it.isNotBlank() } ?: "${i + 1}") to "page:$i") }
+            add(s(R.string.rule_sound_import) to IMPORT)
+            if (importes.isNotEmpty()) add(s(R.string.rule_sound_delete) to GERER)
+        }
+        val deja = when {
+            a.type != RuleAction.Type.PLAY_SOUND -> null
+            a.key != null -> a.key
+            else -> a.value?.let { "page:$it" }
+        }
+        valeurs(s(R.string.rule_choose_sound), choix, deja) { v ->
+            when {
+                v == IMPORT -> importerSon { n -> volumeSon(RuleAction(RuleAction.Type.PLAY_SOUND, key = RuleLogic.RULE_SOUND + n.id, text = n.title), ok) }
+                v == GERER -> supprimerSon()
+                v == RuleLogic.BEEP -> RuleValueDialogs.nombre(ctx, s(R.string.rule_sound_beep_volume), null,
+                    (a.count.takeIf { a.key == RuleLogic.BEEP } ?: 70), 10, 100, texte = { "$it %" }, pas = { x, sens -> x + sens * 10 }) { pct ->
+                    ok(RuleAction(RuleAction.Type.PLAY_SOUND, key = RuleLogic.BEEP, count = pct))
+                }
+                v.startsWith(RuleLogic.RULE_SOUND) -> {
+                    val son = importes.firstOrNull { RuleLogic.RULE_SOUND + it.id == v } ?: return@valeurs
+                    volumeSon(RuleAction(RuleAction.Type.PLAY_SOUND, key = v, text = son.title, count = a.count.takeIf { a.key == v }), ok)
+                }
+                else -> {
+                    val i = v.removePrefix("page:").toInt()
+                    ok(RuleAction(RuleAction.Type.PLAY_SOUND, value = "$i", text = page[i].title?.takeIf { it.isNotBlank() } ?: "${i + 1}"))
+                }
+            }
+        }
+    }
+
+    /** Volume de la voiture pendant un son importé : 0 = inchangé. */
+    private fun volumeSon(a: RuleAction, ok: (RuleAction) -> Unit) {
+        val max = MG4Hardware.getMediaVolumeMax().takeIf { it > 0 } ?: 40
+        RuleValueDialogs.nombre(ctx, s(R.string.rule_sound_volume), null, a.count ?: 0, 0, max,
+            texte = { if (it == 0) s(R.string.rule_sound_volume_unchanged) else "$it" }) { v ->
+            ok(a.copy(count = v.takeIf { it > 0 }))
+        }
+    }
+
+    /** Import depuis la clé USB, comme la page Sons (fichiers audio de 30 s au plus). */
+    private fun importerSon(ok: (com.mg4.control.model.RuleSound) -> Unit) {
+        if (com.mg4.control.automation.RuleSounds.all(ctx).size >= com.mg4.control.automation.RuleSounds.MAX)
+            return Toast.makeText(ctx, s(R.string.rule_sound_full, com.mg4.control.automation.RuleSounds.MAX), Toast.LENGTH_LONG).show()
+        val titre = s(R.string.rule_sound_import_title)
+        Toast.makeText(ctx, R.string.sound_import_searching, Toast.LENGTH_SHORT).show()
+        viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val r = com.mg4.control.automation.SoundImport.chercher()
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                if (!isAdded) return@withContext
+                when {
+                    r.cles == 0 -> AppDialog.confirmer(ctx, titre, s(R.string.sound_import_no_usb), oui = s(android.R.string.ok))
+                    r.fichiers.isEmpty() -> AppDialog.confirmer(ctx, titre, s(R.string.sound_import_none), oui = s(android.R.string.ok))
+                    else -> AppDialog.choisir(ctx, titre, r.fichiers.map {
+                        AppDialog.Choix(libelle = it.file.name, pastille = String.format(java.util.Locale.US, "%.1f s", it.durationMs / 1000.0),
+                            fondPastille = ctx.getColor(R.color.dash_accent_dim), textePastille = ctx.getColor(R.color.dash_accent))
+                    }, annuler = s(android.R.string.cancel),
+                        sousTitre = if (r.tropLongs > 0) s(R.string.sound_import_subtitle_skipped, r.tropLongs) else s(R.string.sound_import_subtitle),
+                        icone = R.drawable.ic_source_usb) { rang ->
+                        val f = r.fichiers[rang]
+                        viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                            val n = com.mg4.control.automation.RuleSounds.importer(ctx, f)
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                                if (!isAdded) return@withContext
+                                Toast.makeText(ctx, if (n != null) s(R.string.sound_import_done, f.file.name) else s(R.string.sound_import_failed),
+                                    Toast.LENGTH_LONG).show()
+                                n?.let(ok)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun supprimerSon() {
+        val l = com.mg4.control.automation.RuleSounds.all(ctx)
+        valeurs(s(R.string.rule_sound_delete), l.map { it.title to it.id }, null) { id ->
+            val son = l.firstOrNull { it.id == id } ?: return@valeurs
+            AppDialog.confirmer(ctx, titre = s(R.string.rule_delete_confirm_fmt, son.title), ton = AppDialog.Ton.DANGER,
+                oui = s(R.string.rule_delete), non = s(R.string.profile_cancel),
+                onOui = { com.mg4.control.automation.RuleSounds.delete(ctx, id) })
         }
     }
 
@@ -1055,7 +1243,27 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         valeurs(s(R.string.rule_choose_setting), cles.map { k -> (AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k) to k }, a.key,
             rangement = ::catReglage, recents = "set") { k ->
             val nom = AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k
-            val meme = a.value.takeIf { a.key == k }
+            val variables = RuleVariables.all(ctx)
+            // 2026-11-06 : une valeur fixe, ou celle d'une variable (dès qu'il en existe une).
+            if (variables.isNotEmpty()) {
+                val deVariable = a.key == k && RuleLogic.variableRef(a.value) != null
+                valeurs(nom, listOf(s(R.string.rule_value_fixed) to "fixe", s(R.string.rule_value_from_var) to "var"),
+                    if (deVariable) "var" else "fixe") { quoi ->
+                    if (quoi == "var") choisirVariable(RuleLogic.variableRef(a.value)) { v ->
+                        ok(RuleAction(RuleAction.Type.SET, key = k, value = "$" + v))
+                    } else choisirReglageValeur(a, k, ok)
+                }
+                return@valeurs
+            }
+            choisirReglageValeur(a, k, ok)
+        }
+    }
+
+    /** La valeur fixe d'un réglage [k], selon son genre (liste, nombre, oui/non). */
+    private fun choisirReglageValeur(a: RuleAction, k: String, ok: (RuleAction) -> Unit) {
+        run {
+            val nom = AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k
+            val meme = a.value.takeIf { a.key == k && RuleLogic.variableRef(a.value) == null }
             fun fini(v: String) = ok(RuleAction(RuleAction.Type.SET, key = k, value = v))
             fun nombre(min: Int, max: Int, defaut: Int, unite: String = "", pas: Int = 1) =
                 RuleValueDialogs.nombre(ctx, nom, null, meme?.toIntOrNull() ?: defaut, min, max,

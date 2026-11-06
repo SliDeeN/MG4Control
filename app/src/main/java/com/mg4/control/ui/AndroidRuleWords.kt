@@ -176,6 +176,13 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
     override fun ruleEnable(id: String, on: Boolean) = t(if (on) R.string.rule_enable_fmt else R.string.rule_disable_fmt, regles[id] ?: id)
     override fun runRule(id: String) = t(R.string.rule_run_fmt, regles[id] ?: id)
     override fun setVariable(name: String, value: String) = "$name = $value"
+    override fun saveValue(signal: String, variable: String) = t(R.string.rule_save_value_fmt, signal, variable)
+    override fun setFromVariable(key: String, variable: String) =
+        t(R.string.rule_set_from_var_fmt, keyRes(key)?.let { t(it) } ?: key, variable)
+    override val beep: String get() = t(R.string.rule_sound_beep)
+    override fun variableAdd(name: String, delta: String) = t(R.string.rule_var_add_fmt, name, delta)
+    override fun ruleStop(id: String) = t(R.string.rule_stop_rule_fmt, regles[id] ?: id)
+    override fun media(play: Boolean) = t(if (play) R.string.rule_act_media_play else R.string.rule_act_media_pause)
     override fun speak(text: String) = t(R.string.rule_speak_fmt, text)
     override fun navigate(dest: String) = t(R.string.rule_navigate_fmt, placeName(dest))
     override val unknown: String get() = t(R.string.rule_unknown)
@@ -212,6 +219,8 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             RuleSignal.SEAT_HEAT_LEFT -> R.string.rule_key_seat_left
             RuleSignal.SEAT_HEAT_RIGHT -> R.string.rule_key_seat_right
             RuleSignal.STEERING_HEAT -> R.string.rule_key_steering
+            RuleSignal.BATTERY_HEAT -> R.string.rule_key_battery_heat
+            RuleSignal.FRONT_DOOR -> R.string.rule_sig_front_door
             RuleSignal.LOCKED -> R.string.rule_sig_locked
             RuleSignal.KEY_AWAY -> R.string.rule_sig_key_away
             RuleSignal.BRIGHTNESS -> R.string.rule_sig_brightness
@@ -237,6 +246,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
         fun eventRes(e: RuleEvent): Int = when (e) {
             RuleEvent.APP_START -> R.string.rule_event_app_start
             RuleEvent.FRONT_DOOR_OPEN -> R.string.rule_event_door
+            RuleEvent.FRONT_DOOR_CLOSE -> R.string.rule_event_door_close
         }
 
         fun keyRes(key: String): Int? = when (key) {

@@ -76,6 +76,10 @@ enum class RuleSignal(val kind: Kind) {
     SEAT_HEAT_LEFT(Kind.NUMBER),
     SEAT_HEAT_RIGHT(Kind.NUMBER),
     STEERING_HEAT(Kind.BOOL),
+    /** Chauffage intelligent de la batterie allumé (2026-11-06), là où la voiture l'a. */
+    BATTERY_HEAT(Kind.BOOL),
+    /** Une porte avant est ouverte (2026-11-06) : seulement là où la voiture la signale (SWI132, SWI133). */
+    FRONT_DOOR(Kind.BOOL),
     LOCKED(Kind.BOOL),
     /** Clé qui s'éloigne (chargeur sans fil 0x2140f445 = 8, relevé SWI133 seulement). */
     KEY_AWAY(Kind.BOOL),
@@ -132,6 +136,8 @@ enum class RuleEvent {
     APP_START,
     /** Une porte avant s'ouvre : seulement là où la voiture la signale (SWI132, SWI133). */
     FRONT_DOOR_OPEN,
+    /** Les portes avant sont toutes refermées (2026-11-06) : mêmes firmwares que l'ouverture. */
+    FRONT_DOOR_CLOSE,
 }
 
 /**
@@ -208,7 +214,17 @@ data class RuleTrigger(
  * - SPEAK : lire [text] à voix haute (lot 2) ;
  * - NAVIGATE : ouvrir la navigation vers le lieu [text] (identifiant ou « lat,lng », lot 2) ;
  * - ABRP_START : envoi continu des données à ABRP vers le compte [text] (issue #188) ;
- * - ABRP_STOP : arrêter l'envoi à ABRP.
+ * - ABRP_STOP : arrêter l'envoi à ABRP ;
+ * - SAVE_VALUE : la variable [key] prend la valeur LUE du signal [text] (2026-11-06) : vrai/faux
+ *   en « 1 » / « 0 », nombre, texte. Un SET dont la valeur est « $NOM » écrit celle de la variable.
+ *
+ * - VARIABLE_ADD : la variable [key] (nombre, 0 si absente) augmente de [value] (négatif = retire) ;
+ * - RULE_STOP : arrêter l'automatisation [text] si elle est en cours (elle reste active) ;
+ * - MEDIA : [value] = « play » (reprendre si rien ne joue) ou « pause » (mettre en pause si ça joue).
+ *
+ * PLAY_SOUND (2026-11-06) : [key] = « beep » (bip intégré, [count] = volume en %) ou
+ * « rule:<id> » (son importé dans l'éditeur, [count] = volume média, absent = inchangé) ;
+ * sinon [value] = n° d'un son de la page Sons, comme avant.
  */
 data class RuleAction(
     val type: Type? = null,
@@ -228,6 +244,8 @@ data class RuleAction(
         WAIT_UNTIL, CONFIRM, PLAY_SOUND, OPEN_APP, CUSTOM_SHORTCUT, RULE_ENABLE, RUN_RULE, SET_VARIABLE,
         SPEAK, NAVIGATE,
         ABRP_START, ABRP_STOP,
+        SAVE_VALUE,
+        VARIABLE_ADD, RULE_STOP, MEDIA,
     }
 }
 

@@ -4379,6 +4379,7 @@ object MG4Hardware {
     @Volatile private var sAnyFrontOpenPrev = false
     /** Front d'ouverture d'une porte avant, pour les sons d'automatisation (issue #161) : l'une ou l'autre. */
     private val sFrontDoorListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
+    private val sFrontDoorCloseListeners = java.util.concurrent.CopyOnWriteArrayList<() -> Unit>()
     @Volatile private var sFrontOpenForListeners = false
     @Volatile private var sVolumeBeforeDrop = -1     // volume mémorisé à l'ouverture (pour restauration)
 
@@ -7060,6 +7061,8 @@ object MG4Hardware {
         // Sons d'automatisation : une porte avant vient de s'ouvrir, quelle que soit la baisse du volume.
         val ouverte = DOOR_FRONT_AREAS.any { sDoorReadLast[it] == 1 }
         if (ouverte && !sFrontOpenForListeners) sFrontDoorListeners.forEach { runCatching { it() } }
+        // Mes automatisations (2026-11-06) : les portes avant viennent toutes de se refermer.
+        if (!ouverte && sFrontOpenForListeners) sFrontDoorCloseListeners.forEach { runCatching { it() } }
         sFrontOpenForListeners = ouverte
         evaluateDoorTrigger()
     }
@@ -7076,6 +7079,28 @@ object MG4Hardware {
 
     fun removeFrontDoorOpenListener(listener: () -> Unit) {
         sFrontDoorListeners.remove(listener)
+    }
+
+    /**
+     * Une porte avant est-elle ouverte ? (Mes automatisations, 2026-11-06.) `null` là où la porte
+     * n'est pas lisible ou si aucune lecture ne répond. Ouvre la connexion à la voiture au besoin.
+     */
+    fun isFrontDoorOpen(): Boolean? {
+        if (!hasDoorDetection()) return null
+        connectCarProperty()   // idempotent
+        val lus = DOOR_FRONT_AREAS.toList().mapNotNull { readDoorOpen(it) }
+        return if (lus.isEmpty()) null else lus.any { it == 1 }
+    }
+
+    /** Prévient [listener] quand les portes avant sont toutes refermées (après une ouverture). */
+    fun addFrontDoorCloseListener(listener: () -> Unit) {
+        if (!hasDoorDetection()) return
+        sFrontDoorCloseListeners.addIfAbsent(listener)
+        connectCarProperty()   // idempotent
+    }
+
+    fun removeFrontDoorCloseListener(listener: () -> Unit) {
+        sFrontDoorCloseListeners.remove(listener)
     }
 
     /** Recalcule "au moins une porte choisie ouverte" à partir de l'état accumulé et applique

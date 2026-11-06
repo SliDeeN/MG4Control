@@ -57,6 +57,13 @@ interface RuleWords {
     val abrpStop: String get() = "ABRP ■"
     val stop: String
     val unknown: String
+    // 2026-11-06 : mémoriser une valeur lue, régler avec une variable, bip intégré.
+    fun saveValue(signal: String, variable: String): String = "$variable ← $signal"
+    fun setFromVariable(key: String, variable: String): String = set(key, "$" + variable)
+    val beep: String get() = "beep"
+    fun variableAdd(name: String, delta: String): String = "$name $delta"
+    fun ruleStop(id: String): String = "stop $id"
+    fun media(play: Boolean): String = if (play) "play" else "pause"
 }
 
 /** Les phrases d'une automatisation, pour sa carte, les lignes de l'éditeur et le journal. */
@@ -169,7 +176,11 @@ class RuleText(private val w: RuleWords) {
     }
 
     fun action(a: RuleAction): String = when (a.type) {
-        RuleAction.Type.SET -> if (a.key == null || a.value == null) w.unknown else w.set(a.key, a.value)
+        RuleAction.Type.SET -> when {
+            a.key == null || a.value == null -> w.unknown
+            RuleLogic.variableRef(a.value) != null -> w.setFromVariable(a.key, RuleLogic.variableRef(a.value)!!)
+            else -> w.set(a.key, a.value)
+        }
         RuleAction.Type.SHORTCUT -> a.shortcut?.let { w.shortcut(it) } ?: w.unknown
         RuleAction.Type.PROFILE -> a.profileId?.let { w.profile(it) } ?: w.unknown
         RuleAction.Type.WAIT -> w.waitFor(a.seconds ?: 0)
@@ -179,7 +190,15 @@ class RuleText(private val w: RuleWords) {
         RuleAction.Type.REPEAT -> w.repeat(a.count ?: 0)
         RuleAction.Type.WAIT_UNTIL -> w.waitUntil(condition(a.condition), a.seconds ?: 0)
         RuleAction.Type.CONFIRM -> w.confirm(a.text.orEmpty())
-        RuleAction.Type.PLAY_SOUND -> w.playSound(a.text ?: a.value ?: "?")
+        RuleAction.Type.PLAY_SOUND -> w.playSound(if (a.key == RuleLogic.BEEP) w.beep else a.text ?: a.value ?: "?")
+        RuleAction.Type.VARIABLE_ADD -> if (a.key == null || a.value == null) w.unknown
+            else w.variableAdd(a.key, if (a.value.startsWith("-")) a.value else "+" + a.value)
+        RuleAction.Type.RULE_STOP -> a.text?.let { w.ruleStop(it) } ?: w.unknown
+        RuleAction.Type.MEDIA -> w.media(a.value == RuleLogic.MEDIA_PLAY)
+        RuleAction.Type.SAVE_VALUE -> {
+            val sig = RuleSignal.entries.firstOrNull { it.name == a.text }
+            if (a.key == null || sig == null) w.unknown else w.saveValue(w.signal(sig), a.key)
+        }
         RuleAction.Type.OPEN_APP -> a.text?.let { w.openApp(it) } ?: w.unknown
         RuleAction.Type.CUSTOM_SHORTCUT -> a.text?.let { w.customShortcut(it) } ?: w.unknown
         RuleAction.Type.RULE_ENABLE -> a.text?.let { w.ruleEnable(it, a.value == "1") } ?: w.unknown

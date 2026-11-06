@@ -77,6 +77,37 @@ object RuleLogic {
     /** Nom de variable normalisé : sans espaces autour, en majuscules, 32 caractères au plus. */
     fun variableName(raw: String): String = raw.trim().uppercase().take(32)
 
+    /** Action MEDIA : « play » (reprendre) ou « pause ». */
+    const val MEDIA_PLAY = "play"
+    const val MEDIA_PAUSE = "pause"
+
+    /** La valeur d'une variable augmentée de [delta] (absente ou non numérique = 0). */
+    fun addTo(current: String?, delta: Double): String =
+        storedValue((current?.toDoubleOrNull() ?: 0.0) + delta)!!
+
+    /** Son « bip intégré » de l'action PLAY_SOUND ([RuleAction.key]). */
+    const val BEEP = "beep"
+    /** Préfixe d'un son importé dans l'éditeur ([RuleAction.key] = « rule:<id> »). */
+    const val RULE_SOUND = "rule:"
+
+    /** « $NOM » : la valeur d'un SET qui vient de la variable NOM ; `null` pour une valeur fixe. */
+    fun variableRef(value: String?): String? =
+        value?.takeIf { it.length > 1 && it.startsWith("$") }?.let { variableName(it.substring(1)) }
+
+    /**
+     * Une valeur lue, telle qu'une variable la garde et qu'un réglage la relira : vrai/faux en
+     * « 1 » / « 0 » (les réglages oui/non s'écrivent ainsi), nombre entier sans décimale, texte tel quel.
+     */
+    fun storedValue(v: Any?): String? = when (v) {
+        null -> null
+        is Boolean -> if (v) "1" else "0"
+        is Number -> v.toDouble().let { d ->
+            if (d % 1.0 == 0.0) d.toLong().toString() else String.format(java.util.Locale.US, "%.1f", d)
+        }
+        is Set<*> -> v.joinToString(",")
+        else -> v.toString()
+    }
+
     /** ET : un faux suffit ; sinon un inconnu rend inconnu. */
     fun tous(v: List<Boolean?>): Boolean? = when {
         v.any { it == false } -> false
@@ -148,8 +179,11 @@ object RuleLogic {
         fun a(l: List<RuleAction>?, d: Int): List<RuleAction>? {
             if (l == null || d > MAX_DEPTH) return l
             return l.map {
-                val k = if (it.type == RuleAction.Type.SET_VARIABLE && it.key != null && variableName(it.key) == o) n else it.key
-                it.copy(key = k, condition = c(it.condition, d + 1), then = a(it.then, d + 1), otherwise = a(it.otherwise, d + 1))
+                val k = if ((it.type == RuleAction.Type.SET_VARIABLE || it.type == RuleAction.Type.SAVE_VALUE ||
+                        it.type == RuleAction.Type.VARIABLE_ADD) &&
+                    it.key != null && variableName(it.key) == o) n else it.key
+                val v = if (it.type == RuleAction.Type.SET && variableRef(it.value) == o) "$" + n else it.value
+                it.copy(key = k, value = v, condition = c(it.condition, d + 1), then = a(it.then, d + 1), otherwise = a(it.otherwise, d + 1))
             }
         }
         return rule.copy(
@@ -445,7 +479,8 @@ class RuleRun(
             RuleAction.Type.PLAY_SOUND, RuleAction.Type.OPEN_APP, RuleAction.Type.CUSTOM_SHORTCUT,
             RuleAction.Type.RULE_ENABLE, RuleAction.Type.RUN_RULE, RuleAction.Type.SET_VARIABLE,
             RuleAction.Type.SPEAK, RuleAction.Type.NAVIGATE,
-            RuleAction.Type.ABRP_START, RuleAction.Type.ABRP_STOP -> note(fx.perform(a), a)
+            RuleAction.Type.ABRP_START, RuleAction.Type.ABRP_STOP, RuleAction.Type.SAVE_VALUE,
+            RuleAction.Type.VARIABLE_ADD, RuleAction.Type.RULE_STOP, RuleAction.Type.MEDIA -> note(fx.perform(a), a)
             null -> ligne("? ${describe(a)}")
         }
     }

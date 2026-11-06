@@ -118,3 +118,11 @@ object RuleKeys {
         OVERSPEED_ALARM, SPEED_LIMIT_TONE, HVAC_ECO, AIR_FLOW, AUTO_VOLUME, AUTO_HIGH_BEAM, BATTERY_HEAT,
         CHARGE_LIMIT, WIFI, BLUETOOTH, HOTSPOT)
 }
+
+/** Un son importé depuis l'éditeur de Mes automatisations (2026-11-06). Dans `model` pour Gson. */
+data class RuleSound(
+    val id: String = UUID.randomUUID().toString(),
+    val title: String = "",
+    val path: String = "",
+    val durationMs: Long = 0L,
+)

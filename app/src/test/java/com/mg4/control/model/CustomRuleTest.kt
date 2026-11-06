@@ -511,4 +511,30 @@ class CustomRuleTest {
         assertEquals("FAIT", n.actions[0].condition?.text)
         assertEquals("FAIT", n.actions[0].then?.single()?.key)
     }
+
+    @Test
+    fun `memoriser une valeur et regler avec une variable`() {
+        assertEquals("1", RuleLogic.storedValue(true))
+        assertEquals("0", RuleLogic.storedValue(false))
+        assertEquals("12", RuleLogic.storedValue(12.0))
+        assertEquals("21.5", RuleLogic.storedValue(21.5))
+        assertEquals("P", RuleLogic.storedValue("P"))
+        assertEquals(null, RuleLogic.storedValue(null))
+        assertEquals("VOL", RuleLogic.variableRef("\$vol"))
+        assertEquals(null, RuleLogic.variableRef("12"))
+        assertEquals(null, RuleLogic.variableRef("\$"))
+        val t = RuleText(Mots)
+        assertEquals("volume=\$VOL", t.action(RuleAction(RuleAction.Type.SET, key = "volume", value = "\$VOL")))
+        assertEquals("VOL ← VOLUME", t.action(RuleAction(RuleAction.Type.SAVE_VALUE, key = "VOL", text = "VOLUME")))
+        assertEquals("son beep", t.action(RuleAction(RuleAction.Type.PLAY_SOUND, key = RuleLogic.BEEP, count = 70)))
+        // Renommer la variable suit aussi « mémoriser » et les réglages qui la lisent.
+        val r = CustomRule(name = "x", actions = listOf(
+            RuleAction(RuleAction.Type.SAVE_VALUE, key = "VOL", text = "VOLUME"),
+            RuleAction(RuleAction.Type.SET, key = "volume", value = "\$VOL"),
+            RuleAction(RuleAction.Type.SET, key = "volume", value = "12")))
+        val n = RuleLogic.renameVariable(r, "VOL", "avant")
+        assertEquals("AVANT", n.actions[0].key)
+        assertEquals("\$AVANT", n.actions[1].value)
+        assertEquals("12", n.actions[2].value)
+    }
 }

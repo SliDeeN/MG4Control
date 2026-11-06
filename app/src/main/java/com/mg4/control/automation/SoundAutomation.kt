@@ -125,6 +125,19 @@ object SoundAutomation {
         }
     }
 
+    /**
+     * Un son de Mes automatisations (2026-11-06) : même lecteur, même garde-fou et même retour du
+     * volume que les sons de la page Sons. [volume] nul = volume de la voiture inchangé.
+     */
+    fun jouerFichier(context: Context, titre: String, chemin: String, dureeMs: Long, volume: Int?) {
+        app = context.applicationContext
+        fil.post {
+            val ctx = app ?: return@post
+            val v = volume ?: MG4Hardware.getMediaVolume().takeIf { it >= 0 }
+            jouer(ctx, -1, SoundSlot(path = chemin, title = titre, durationMs = dureeMs, volume = v), "automatisation", ecoute = false)
+        }
+    }
+
     /** Bouton Arrêter. */
     fun arreter() {
         fil.post { terminer("arrêt demandé") }

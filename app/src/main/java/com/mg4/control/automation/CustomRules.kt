@@ -229,6 +229,11 @@ object CustomRules {
             porteAbonnee = porte
             if (porte) MG4Hardware.addFrontDoorOpenListener(porteOuverte) else MG4Hardware.removeFrontDoorOpenListener(porteOuverte)
         }
+        val fermee = actives.any { r -> r.triggers.any { it.type == RuleTrigger.Type.EVENT && it.event == RuleEvent.FRONT_DOOR_CLOSE } }
+        if (fermee != fermetureAbonnee) {
+            fermetureAbonnee = fermee
+            if (fermee) MG4Hardware.addFrontDoorCloseListener(porteFermee) else MG4Hardware.removeFrontDoorCloseListener(porteFermee)
+        }
         // La position n'est suivie que si une règle s'en sert (lieu, soleil).
         AndroidControls.followLocation(ctx, actives.any { besoinPosition(it) })
         val voulu = actives.any { r -> r.triggers.any { it.type in SUIVIS } }
@@ -245,7 +250,17 @@ object CustomRules {
         RuleLogic.places(r).isNotEmpty() || RuleSignal.SUN_UP in RuleLogic.signals(r) ||
             r.triggers.any { it.type == RuleTrigger.Type.SUN }
 
+    /** Arrête l'exécution en cours de l'automatisation [id], s'il y en a une ; elle reste active. */
+    fun arreterEnCours(id: String, raison: String) {
+        enCours.remove(id)?.let {
+            it.cancel()
+            AppLogger.i(TAG, "automatisation $id arrêtée $raison")
+        }
+    }
+
     private val porteOuverte: () -> Unit = { fil.post { evenement(RuleEvent.FRONT_DOOR_OPEN) } }
+    private val porteFermee: () -> Unit = { fil.post { evenement(RuleEvent.FRONT_DOOR_CLOSE) } }
+    private var fermetureAbonnee = false
 
     // ── Déclencheurs (fil mg4-rules) ─────────────────────────────────────────
 
@@ -364,7 +379,11 @@ object CustomRules {
 
         override fun set(key: String, value: String): Boolean {
             if (GarageMode.isOn(ctx)) return false
-            return if (key in RuleKeys.ALL) RuleWrites.set(ctx, key, value) else VehicleCommands.set(ctx, key, value, TAG)
+            // « $NOM » : la valeur de la variable NOM (2026-11-06) ; variable inconnue = échec.
+            val v = RuleLogic.variableRef(value)?.let { nom ->
+                RuleVariables.all(ctx)[nom] ?: run { AppLogger.w(TAG, "réglage $key : variable $nom inconnue"); return false }
+            } ?: value
+            return if (key in RuleKeys.ALL) RuleWrites.set(ctx, key, v) else VehicleCommands.set(ctx, key, v, TAG)
         }
 
         override fun shortcut(name: String): Boolean {
@@ -399,13 +418,49 @@ object CustomRules {
             ProfileConfirmOverlay.showQuestion(ctx, r.name, text, seconds) { r -> if (suite.isActive) suite.resume(r) }
         }
 
+        /** Un son de la page Sons ([RuleAction.value] = son numéro), comme avant le 2026-11-06. */
+        private fun sonDeLaPage(a: RuleAction): Boolean {
+            val n = a.value?.toIntOrNull() ?: return false
+            if (n !in 0 until SoundAutomationSettings.count(ctx)) return false
+            SoundAutomation.ecouter(ctx, n)
+            return true
+        }
+
         override suspend fun perform(a: RuleAction): Boolean {
             if (GarageMode.isOn(ctx)) return false
             return when (a.type) {
-                RuleAction.Type.PLAY_SOUND -> {
-                    val n = a.value?.toIntOrNull() ?: return false
-                    if (n !in 0 until SoundAutomationSettings.count(ctx)) return false
-                    SoundAutomation.ecouter(ctx, n)
+                RuleAction.Type.PLAY_SOUND -> when {
+                    a.key == RuleLogic.BEEP -> { RuleSounds.bip(a.count ?: 70); true }
+                    a.key?.startsWith(RuleLogic.RULE_SOUND) == true -> {
+                        val son = RuleSounds.get(ctx, a.key.removePrefix(RuleLogic.RULE_SOUND)) ?: return false
+                        if (!java.io.File(son.path).canRead()) return false
+                        SoundAutomation.jouerFichier(ctx, son.title, son.path, son.durationMs, a.count)
+                        true
+                    }
+                    else -> sonDeLaPage(a)
+                }
+                RuleAction.Type.VARIABLE_ADD -> {
+                    val nom = a.key ?: return false
+                    val delta = a.value?.toDoubleOrNull() ?: return false
+                    RuleVariables.set(ctx, nom, RuleLogic.addTo(RuleVariables.all(ctx)[RuleLogic.variableName(nom)], delta))
+                    true
+                }
+                RuleAction.Type.RULE_STOP -> {
+                    val id = a.text ?: return false
+                    // Elle-même n'est pas proposée dans l'éditeur ; si elle l'était, son travail s'arrête au prochain temps d'attente.
+                    arreterEnCours(id, "par « ${r.name} »")
+                    true
+                }
+                RuleAction.Type.MEDIA -> if (a.value == RuleLogic.MEDIA_PLAY) {
+                    MG4Hardware.mediaResumeIfStopped(); true
+                } else {
+                    MG4Hardware.mediaPauseIfPlaying(); true
+                }
+                RuleAction.Type.SAVE_VALUE -> {
+                    val nom = a.key ?: return false
+                    val sig = RuleSignal.entries.firstOrNull { it.name == a.text } ?: return false
+                    val v = RuleLogic.storedValue(runCatching { lireUn(ctx, sig) }.getOrNull()) ?: return false
+                    RuleVariables.set(ctx, nom, v)
                     true
                 }
                 RuleAction.Type.OPEN_APP -> a.text?.let { p -> onMain { AndroidControls.openApp(ctx, p) } } ?: false
@@ -531,6 +586,8 @@ object CustomRules {
         RuleSignal.SEAT_HEAT_LEFT -> MG4Hardware.getSeatHeatLeftOrNull()?.toDouble()
         RuleSignal.SEAT_HEAT_RIGHT -> MG4Hardware.getSeatHeatRightOrNull()?.toDouble()
         RuleSignal.STEERING_HEAT -> MG4Hardware.getSteeringHeatOrNull()
+        RuleSignal.BATTERY_HEAT -> if (MG4Hardware.hasBatteryHeating()) MG4Hardware.isBatteryHeatingOn() else null
+        RuleSignal.FRONT_DOOR -> MG4Hardware.isFrontDoorOpen()
         RuleSignal.LOCKED -> MG4Hardware.readCentralLock()
         RuleSignal.KEY_AWAY -> if (FirmwareInfo.getGeneration() == FirmwareInfo.Gen.SWI133)
             MG4Hardware.readIntGlobal(PROP_CLE_SANS_FIL).takeIf { it >= 0 }?.let { it == CLE_ELOIGNEE } else null
