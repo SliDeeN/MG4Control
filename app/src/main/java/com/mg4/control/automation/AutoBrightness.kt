@@ -398,28 +398,36 @@ object AutoBrightness {
         for (p in listOf("fused", "gps")) {
             runCatching { lm.getLastKnownLocation(p) }.getOrNull()?.let { return it }
         }
-        // Aucune : une position fraîche (0,3 s sur SWI133, sonde du 2026-10-01).
+        // Aucune : une position fraîche (0,3 s sur SWI133, sonde du 2026-10-01), demandée à `fused`
+        // ET à `gps`, la première arrivée gagne — comme les automatisations perso. `fused` (GPS de la
+        // T-Box) n'est pas dans la liste d'Android mais répond ; sur SWI68, `gps` n'avait aucune
+        // dernière position quand `fused` en avait une (sonde du 2026-11-06).
         val latch = CountDownLatch(1)
         var recue: Location? = null
-        // Les quatre méthodes : sur le framework de la voiture (API 28) elles sont abstraites.
-        val ecoute = object : LocationListener {
-            override fun onLocationChanged(location: Location) {
-                recue = location
-                latch.countDown()
-            }
-            @Deprecated("Deprecated in Java")
-            override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-            override fun onProviderEnabled(provider: String) {}
-            override fun onProviderDisabled(provider: String) {}
-        }
+        val ecoutes = mutableListOf<LocationListener>()
         try {
-            @Suppress("DEPRECATION")
-            lm.requestSingleUpdate("gps", ecoute, Looper.getMainLooper())
-            latch.await(ATTENTE_POSITION_MS, TimeUnit.MILLISECONDS)
+            for (p in listOf("fused", "gps")) {
+                // Les quatre méthodes : sur le framework de la voiture (API 28) elles sont abstraites.
+                val ecoute = object : LocationListener {
+                    override fun onLocationChanged(location: Location) {
+                        if (location.latitude == 0.0 && location.longitude == 0.0) return
+                        if (recue == null) recue = location
+                        latch.countDown()
+                    }
+                    @Deprecated("Deprecated in Java")
+                    override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
+                    override fun onProviderEnabled(provider: String) {}
+                    override fun onProviderDisabled(provider: String) {}
+                }
+                @Suppress("DEPRECATION")
+                runCatching { lm.requestSingleUpdate(p, ecoute, Looper.getMainLooper()); ecoutes += ecoute }
+                    .onFailure { AppLogger.w(TAG, "position : demande $p refusée — ${it.javaClass.simpleName} ${it.message ?: ""}") }
+            }
+            if (ecoutes.isNotEmpty()) latch.await(ATTENTE_POSITION_MS, TimeUnit.MILLISECONDS)
         } catch (e: Exception) {
             AppLogger.w(TAG, "position : ${e.javaClass.simpleName} ${e.message ?: ""}")
         } finally {
-            runCatching { lm.removeUpdates(ecoute) }
+            ecoutes.forEach { runCatching { lm.removeUpdates(it) } }
         }
         return recue
     }
