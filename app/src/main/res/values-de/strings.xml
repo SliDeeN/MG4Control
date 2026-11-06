@@ -1606,6 +1606,10 @@
     <string name="rule_group_not">Keine</string>
     <string name="rule_if_condition">Wenn</string>
     <string name="rule_if_else">Sonst</string>
+    <string name="rule_sum_if_fmt">falls %1$s → %2$s</string>
+    <string name="rule_sum_else_fmt">"; sonst → %1$s"</string>
+    <string name="rule_if_block">Falls / Sonst-Block</string>
+    <string name="rule_group_prefix">Erfüllte Bedingungen:</string>
     <string name="rule_journal">Protokoll</string>
     <string name="rule_journal_title_fmt">Protokoll von „%1$s“</string>
     <string name="rule_keep_editing">Weiter bearbeiten</string>

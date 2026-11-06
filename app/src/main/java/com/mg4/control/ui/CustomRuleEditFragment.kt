@@ -293,6 +293,21 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         box.addView(rangee)
     }
 
+    /** L'en-tête discret d'un bloc (« Bloc si / sinon ») et son ⋮. */
+    private fun enTeteBloc(box: LinearLayout, t: String, menu: () -> Unit) {
+        val rangee = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = lp()
+            setOnClickListener { enchainement(menu) }
+        }
+        rangee.addView(texteVue(t, 18f, R.color.text_secondary).apply {
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        rangee.addView(boutonMenu(menu))
+        box.addView(rangee)
+    }
+
     private fun boutonMenu(menu: () -> Unit) = texteVue("⋮", 30f, R.color.text_secondary, gras = true).apply {
         layoutParams = LinearLayout.LayoutParams(dp(64f), dp(64f))
         gravity = Gravity.CENTER
@@ -380,6 +395,9 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             gravity = Gravity.CENTER_VERTICAL
             layoutParams = lp(haut = 10f)
         }
+        rangee.addView(texteVue(s(R.string.rule_group_prefix), 18f, R.color.text_secondary).apply {
+            setPadding(0, 0, dp(14f), 0)
+        })
         val segments = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
             setBackgroundResource(R.drawable.bg_dialog_segments)
@@ -407,7 +425,9 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         val enfants = g.children.orEmpty()
         if (racine) {
             if (enfants.isEmpty()) vide(box, siVide)
-            else segmentsGroupe(box, g, null, put)
+            // Toutes / Au moins une / Aucune n'a de sens qu'à partir de deux conditions ; il reste
+            // affiché sur un « Aucune » à une condition, pour pouvoir le défaire.
+            else if (enfants.size >= 2 || g.type == RuleCondition.Type.NOT) segmentsGroupe(box, g, null, put)
         }
         val putEnfants: (List<RuleCondition>) -> Unit = { l -> put(g.copy(children = l)) }
         enfants.forEachIndexed { i, c ->
@@ -830,7 +850,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             when (a.type) {
                 RuleAction.Type.IF -> {
                     val b = bloc(box)
-                    ligne(b, titre, null) { menu(titre, liste, i, put, null) }
+                    // En-tête sans la condition : elle est juste en dessous, sous « Si ».
+                    enTeteBloc(b, s(R.string.rule_if_block)) { menu(titre, liste, i, put, null) }
                     etiquette(b, R.string.rule_if_condition)
                     groupe(b, a.condition ?: RuleCondition(RuleCondition.Type.ALL), profondeur + 1, racine = true,
                         siVide = R.string.rule_none_if) { c ->

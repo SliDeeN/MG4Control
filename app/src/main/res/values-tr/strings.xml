@@ -1606,6 +1606,10 @@
     <string name="rule_group_not">Hiçbiri</string>
     <string name="rule_if_condition">Eğer</string>
     <string name="rule_if_else">Değilse</string>
+    <string name="rule_sum_if_fmt">eğer %1$s → %2$s</string>
+    <string name="rule_sum_else_fmt">"; değilse → %1$s"</string>
+    <string name="rule_if_block">Eğer / değilse bloğu</string>
+    <string name="rule_group_prefix">Sağlanan koşullar:</string>
     <string name="rule_journal">Günlük</string>
     <string name="rule_journal_title_fmt">“%1$s” günlüğü</string>
     <string name="rule_keep_editing">Düzenlemeye devam</string>

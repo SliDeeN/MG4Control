@@ -1606,6 +1606,10 @@
     <string name="rule_group_not">Ninguna</string>
     <string name="rule_if_condition">Si</string>
     <string name="rule_if_else">Si no</string>
+    <string name="rule_sum_if_fmt">si %1$s → %2$s</string>
+    <string name="rule_sum_else_fmt">"; si no → %1$s"</string>
+    <string name="rule_if_block">Bloque si / si no</string>
+    <string name="rule_group_prefix">Condiciones cumplidas:</string>
     <string name="rule_journal">Registro</string>
     <string name="rule_journal_title_fmt">Registro de «%1$s»</string>
     <string name="rule_keep_editing">Seguir editando</string>

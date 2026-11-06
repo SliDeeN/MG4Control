@@ -1606,6 +1606,10 @@
     <string name="rule_group_not">None</string>
     <string name="rule_if_condition">If</string>
     <string name="rule_if_else">Else</string>
+    <string name="rule_sum_if_fmt">if %1$s → %2$s</string>
+    <string name="rule_sum_else_fmt">"; else → %1$s"</string>
+    <string name="rule_if_block">If / else block</string>
+    <string name="rule_group_prefix">Conditions met:</string>
     <string name="rule_journal">Log</string>
     <string name="rule_journal_title_fmt">Log of “%1$s”</string>
     <string name="rule_keep_editing">Keep editing</string>

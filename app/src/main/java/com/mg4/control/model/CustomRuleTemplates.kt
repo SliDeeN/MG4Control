@@ -120,6 +120,10 @@ object CustomRuleTemplates {
     fun abrpByProfile(name: String, pairs: List<Pair<String, String>>, firstAccount: String): CustomRule {
         val profil = { id: String -> compare(RuleSignal.PROFILE, RuleOp.EQUALS, text = id) }
         val actions = if (pairs.isEmpty()) listOf(RuleAction(RuleAction.Type.ABRP_START, text = firstAccount))
+        // Un seul profil : un seul bloc Si / Sinon, plus lisible que « Si Paul » puis « Si aucune de : Paul ».
+        else if (pairs.size == 1) listOf(RuleAction(RuleAction.Type.IF, condition = tous(profil(pairs[0].first)),
+            then = listOf(RuleAction(RuleAction.Type.ABRP_START, text = pairs[0].second)),
+            otherwise = listOf(RuleAction(RuleAction.Type.ABRP_STOP))))
         else pairs.map { (p, a) ->
             RuleAction(RuleAction.Type.IF, condition = tous(profil(p)),
                 then = listOf(RuleAction(RuleAction.Type.ABRP_START, text = a)), otherwise = emptyList())

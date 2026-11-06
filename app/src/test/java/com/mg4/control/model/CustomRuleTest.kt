@@ -469,11 +469,31 @@ class CustomRuleTest {
         val r = CustomRuleTemplates.build(CustomRuleTemplates.Template.WINTER_MORNING, "Matin", "Bonne route")
         assertEquals("READY : oui", t.triggers(r))
         assertEquals("12345 et (OUTSIDE_TEMP < 5 °C ou 5:00–9:00)", t.conditions(r))
-        assertEquals("si OUTSIDE_TEMP < 0 °C, attendre 30 s, « Bonne route »", t.actions(r))
+        assertEquals("si OUTSIDE_TEMP < 0 °C → (seat_heat_left=3, seat_heat_right=3, steering_heat=1) ; → (hvac_power=1, hvac_temp=21, hvac_auto=1), attendre 30 s, « Bonne route »", t.actions(r))
         val chaud = CustomRuleTemplates.build(CustomRuleTemplates.Template.HOT_DAY, "x", "y")
         assertEquals("OUTSIDE_TEMP > 27 °C pendant 60 s", t.triggers(chaud))
         assertEquals("sans condition", "toujours",
             t.conditions(CustomRuleTemplates.build(CustomRuleTemplates.Template.STARTUP_MESSAGE, "x", "y")))
         assertEquals("7:05", t.time(425))
+    }
+
+    @Test
+    fun `bloc si resume avec ce qu'il fait, aucune ecrit a l'endroit`() {
+        val t = RuleText(Mots)
+        fun profil(id: String) = RuleCondition(RuleCondition.Type.COMPARE, signal = RuleSignal.PROFILE, op = RuleOp.EQUALS, text = id)
+        val si = RuleAction(RuleAction.Type.IF, condition = RuleCondition(RuleCondition.Type.ALL, children = listOf(profil("Paul"))),
+            then = listOf(RuleAction(RuleAction.Type.ABRP_START, text = "Paul")),
+            otherwise = listOf(RuleAction(RuleAction.Type.ABRP_STOP), RuleAction(RuleAction.Type.WAIT, seconds = 5)))
+        val r = CustomRule(name = "x", actions = listOf(si))
+        assertEquals("si PROFILE = Paul → ABRP → Paul ; → (ABRP ■, attendre 5 s)", t.actions(r))
+        // Le journal garde la forme courte : les actions du bloc y ont leurs propres lignes.
+        assertEquals("si PROFILE = Paul", t.action(si))
+        val aucune = RuleCondition(RuleCondition.Type.NOT, children = listOf(profil("Paul"), profil("Marie")))
+        assertEquals("PROFILE ≠ Paul et ≠ Marie", t.condition(aucune))
+        // Sans contraire simple (>, plage…) : l'ancienne forme.
+        val temp = RuleCondition(RuleCondition.Type.COMPARE, signal = RuleSignal.OUTSIDE_TEMP, op = RuleOp.ABOVE, number = 5.0)
+        assertEquals("aucune de : OUTSIDE_TEMP > 5 °C", t.condition(RuleCondition(RuleCondition.Type.NOT, children = listOf(temp))))
+        assertEquals("READY : non", t.condition(RuleCondition(RuleCondition.Type.NOT,
+            children = listOf(RuleCondition(RuleCondition.Type.COMPARE, signal = RuleSignal.READY, op = RuleOp.IS_TRUE)))))
     }
 }

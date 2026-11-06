@@ -1623,6 +1623,10 @@
     <string name="rule_group_not">Aucune</string>
     <string name="rule_if_condition">Si</string>
     <string name="rule_if_else">Sinon</string>
+    <string name="rule_sum_if_fmt">si %1$s → %2$s</string>
+    <string name="rule_sum_else_fmt">" ; sinon → %1$s"</string>
+    <string name="rule_if_block">Bloc si / sinon</string>
+    <string name="rule_group_prefix">Conditions remplies :</string>
     <string name="rule_journal">Journal</string>
     <string name="rule_journal_title_fmt">Journal de « %1$s »</string>
     <string name="rule_keep_editing">Continuer</string>

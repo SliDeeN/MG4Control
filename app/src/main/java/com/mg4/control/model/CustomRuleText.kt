@@ -28,6 +28,9 @@ interface RuleWords {
     fun profile(id: String): String
     fun waitFor(seconds: Int): String
     fun ifThen(condition: String): String
+    /** Résumé d'un bloc Si pour la carte : « si X → A ; sinon → B » ([otherwise] nul = pas de Sinon). */
+    fun ifSummary(condition: String, then: String, otherwise: String?): String =
+        ifThen(condition) + " → " + then + (otherwise?.let { " ; → $it" } ?: "")
     fun repeat(times: Int): String
     // Étape 3
     fun every(minutes: Int): String
@@ -86,9 +89,10 @@ class RuleText(private val w: RuleWords) {
                 val texte = enfants.joinToString(lien) { condition(it, true, depth + 1) }
                 if (nested && enfants.size > 1) "($texte)" else texte
             }
-            RuleCondition.Type.NOT ->
-                if (enfants.isEmpty()) w.always
-                else w.none(enfants.joinToString(w.or) { condition(it, true, depth + 1) })
+            RuleCondition.Type.NOT -> when {
+                enfants.isEmpty() -> w.always
+                else -> aucune(enfants, nested, depth)
+            }
             RuleCondition.Type.COMPARE -> compare(c)
             RuleCondition.Type.TIME_RANGE ->
                 if (c.from == null || c.to == null) w.unknown else w.range(time(c.from), time(c.to))
@@ -99,6 +103,36 @@ class RuleText(private val w: RuleWords) {
             RuleCondition.Type.PLACE -> c.text?.let { w.place(it, c.op != RuleOp.IS_FALSE) } ?: w.unknown
             null -> w.unknown
         }
+    }
+
+    /**
+     * « Aucune de : A, B » écrit à l'endroit quand chaque condition a un contraire simple :
+     * « Profil actif ≠ Paul et ≠ Marie » plutôt que « aucune de : Profil actif = Paul ou … ».
+     */
+    private fun aucune(enfants: List<RuleCondition>, nested: Boolean, depth: Int): String {
+        val inverses = enfants.map { contraire(it) }
+        if (inverses.any { it == null }) return w.none(enfants.joinToString(w.or) { condition(it, true, depth + 1) })
+        val l = inverses.filterNotNull()
+        val memeSignal = l.size > 1 && l.all { it.type == RuleCondition.Type.COMPARE && it.signal == l[0].signal }
+        val textes = l.mapIndexed { i, c ->
+            val t = condition(c, true, depth + 1)
+            if (memeSignal && i > 0 && c.signal != null) t.removePrefix(w.signal(c.signal) + " ") else t
+        }
+        val texte = textes.joinToString(w.and)
+        return if (nested && textes.size > 1) "($texte)" else texte
+    }
+
+    /** Le contraire d'une condition simple, ou null quand il ne s'écrit pas simplement (>, <, plages…). */
+    private fun contraire(c: RuleCondition): RuleCondition? = when (c.type) {
+        RuleCondition.Type.COMPARE, RuleCondition.Type.VARIABLE -> when (c.op) {
+            RuleOp.EQUALS -> c.copy(op = RuleOp.NOT_EQUALS)
+            RuleOp.NOT_EQUALS -> c.copy(op = RuleOp.EQUALS)
+            RuleOp.IS_TRUE -> c.copy(op = RuleOp.IS_FALSE)
+            RuleOp.IS_FALSE -> c.copy(op = RuleOp.IS_TRUE)
+            else -> null
+        }
+        RuleCondition.Type.PLACE -> c.copy(op = if (c.op == RuleOp.IS_FALSE) RuleOp.IS_TRUE else RuleOp.IS_FALSE)
+        else -> null
     }
 
     private fun nombre(n: Double): String =
@@ -164,7 +198,21 @@ class RuleText(private val w: RuleWords) {
 
     fun conditions(r: CustomRule): String = condition(r.condition)
 
-    /** Les actions de premier niveau, jointes par une virgule. */
+    /**
+     * Les actions de premier niveau, jointes par une virgule ; un bloc Si dit aussi ce qu'il fait
+     * (« si X → A ; sinon → B »), ses actions entre parenthèses quand il y en a plusieurs.
+     */
     fun actions(r: CustomRule): String =
-        if (r.actions.isEmpty()) w.unknown else r.actions.joinToString(", ") { action(it) }
+        if (r.actions.isEmpty()) w.unknown else liste(r.actions, 0)
+
+    private fun liste(l: List<RuleAction>, depth: Int): String = l.joinToString(", ") { resume(it, depth) }
+
+    private fun resume(a: RuleAction, depth: Int): String {
+        if (a.type != RuleAction.Type.IF || depth > RuleLogic.MAX_DEPTH) return action(a)
+        fun bloc(l: List<RuleAction>?): String? = l?.takeIf { it.isNotEmpty() }?.let {
+            val t = liste(it, depth + 1)
+            if (it.size > 1) "($t)" else t
+        }
+        return w.ifSummary(condition(a.condition), bloc(a.then) ?: "—", bloc(a.otherwise))
+    }
 }

@@ -105,6 +105,24 @@ class AbrpTelemetryTest {
     }
 
     @Test
+    fun `journal espace - premier, transitions, nouvelle erreur, bilan`() {
+        val p = AbrpLogPolicy
+        val dix = AbrpLogPolicy.SUMMARY_MS
+        // Premier envoi : toujours écrit.
+        assertTrue(p.shouldLog(1_000L, null, ok = true, lastOk = null, error = null, lastError = null, stateChanged = false))
+        // Réussites suivantes : tues jusqu'au bilan.
+        assertFalse(p.shouldLog(31_000L, 1_000L, true, true, null, null, false))
+        assertTrue(p.shouldLog(1_000L + dix, 1_000L, true, true, null, null, false))
+        // Passage en P ou en charge : écrit.
+        assertTrue(p.shouldLog(31_000L, 1_000L, true, true, null, null, stateChanged = true))
+        // Échec après réussite, puis même erreur tue, puis erreur différente écrite, puis retour.
+        assertTrue(p.shouldLog(31_000L, 1_000L, false, true, "réseau", null, false))
+        assertFalse(p.shouldLog(61_000L, 31_000L, false, false, "réseau", "réseau", false))
+        assertTrue(p.shouldLog(91_000L, 31_000L, false, false, "HTTP 401", "réseau", false))
+        assertTrue(p.shouldLog(121_000L, 91_000L, true, false, null, "HTTP 401", false))
+    }
+
+    @Test
     fun `masque du jeton`() {
         assertEquals("••••3456", maskSecret("abcdef123456"))
         assertEquals("••••", maskSecret("abc"))
@@ -123,6 +141,10 @@ class AbrpTelemetryTest {
         assertEquals(RuleCondition.Type.NOT, r.actions[2].condition?.type)
         assertEquals(listOf("p1", "p2"), r.actions[2].condition?.children?.map { it.text })
         assertEquals(RuleAction.Type.ABRP_STOP, r.actions[2].then?.single()?.type)
+        // Un seul profil : un bloc Si / Sinon.
+        val un = CustomRuleTemplates.abrpByProfile("ABRP", listOf("p1" to "a1"), "a1").actions.single()
+        assertEquals(RuleAction.Type.ABRP_START, un.then?.single()?.type)
+        assertEquals(RuleAction.Type.ABRP_STOP, un.otherwise?.single()?.type)
         // Sans profil : le premier compte, sans condition.
         assertEquals(listOf(RuleAction(RuleAction.Type.ABRP_START, text = "a1")), CustomRuleTemplates.abrpByProfile("ABRP", emptyList(), "a1").actions)
     }

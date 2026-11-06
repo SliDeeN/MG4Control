@@ -9,10 +9,12 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Looper
+import android.os.SystemClock
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.EnergyReader
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.model.AbrpAccount
+import com.mg4.control.model.AbrpLogPolicy
 import com.mg4.control.model.AbrpSample
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.RuleSignal
@@ -68,6 +70,12 @@ object AbrpStream {
     private var dernierEtat: Pair<Boolean?, Boolean?>? = null
     @Volatile private var position: Location? = null
     private var appCtx: Context? = null
+    // Journal espacé (AbrpLogPolicy) : dernière ligne écrite, issue du dernier envoi, envois tus depuis.
+    private var journalMs: Long? = null
+    private var dernierOk: Boolean? = null
+    private var derniereErreur: String? = null
+    private var tus = 0
+    private var echecsSuite = 0
 
     /** Démarre (ou bascule) l'envoi vers le compte [id] ; faux si impossible (hors ligne, compte ou clé absents, Mode Garage). */
     @Synchronized
@@ -87,7 +95,8 @@ object AbrpStream {
         AppLogger.i(TAG, "envoi continu vers « ${a.name} » (${maskSecret(a.token)}), cadence ${AbrpStore.cadence(app)}")
         dernierEnvoiMs = 0L
         dernierEtat = null
-        status = Status(accountId = a.id, running = true)
+        journalMs = null; dernierOk = null; derniereErreur = null; tus = 0; echecsSuite = 0
+        status =Status(accountId = a.id, running = true)
         if (fil == null) {
             fil = HandlerThread(TAG).also { it.start() }
             h = Handler(fil!!.looper).also { it.post(tic) }
@@ -138,7 +147,7 @@ object AbrpStream {
             AppLogger.w(TAG, "relevé non envoyé : niveau de batterie illisible")
             return
         }
-        envoyer(a, e)
+        envoyer(a, e, change)
     }
 
     private fun releve(ctx: Context, parked: Boolean?, charging: Boolean?): AbrpSample {
@@ -168,7 +177,7 @@ object AbrpStream {
         )
     }
 
-    private fun envoyer(a: AbrpAccount, e: AbrpSample) {
+    private fun envoyer(a: AbrpAccount, e: AbrpSample, change: Boolean) {
         val tlm = e.json(a)
         val corps = "api_key=" + enc(AbrpStore.keyFor(a)) + "&token=" + enc(a.token) + "&tlm=" + enc(tlm)
         val (code, texte) = runCatching { post(corps) }.getOrElse { -1 to (it.javaClass.simpleName + " " + (it.message ?: "")).trim() }
@@ -179,9 +188,27 @@ object AbrpStream {
         status = st.copy(lastAtMs = System.currentTimeMillis(), lastCode = code,
             lastText = if (ok) resume else erreur(texte),
             sent = st.sent + if (ok) 1 else 0, failed = st.failed + if (ok) 0 else 1)
-        if (ok) AppLogger.i(TAG, "« ${a.name} » HTTP 200 · $resume")
-        else AppLogger.w(TAG, "« ${a.name} » ${if (code < 0) "réseau" else "HTTP $code"} · ${erreur(texte)}")
+        journaliser(a, ok, code, resume, if (ok) null else erreur(texte), change)
         notifier()
+    }
+
+    private fun journaliser(a: AbrpAccount, ok: Boolean, code: Int, resume: String, err: String?, change: Boolean) {
+        val maintenant = SystemClock.elapsedRealtime()
+        val echecsAvant = echecsSuite
+        echecsSuite = if (ok) 0 else echecsSuite + 1
+        val ecrire = AbrpLogPolicy.shouldLog(maintenant, journalMs, ok, dernierOk, err, derniereErreur, change)
+        dernierOk = ok
+        if (!ecrire) { tus++; return }
+        val extra = buildList {
+            if (tus > 0) add("+$tus non journalisés")
+            if (ok && echecsAvant > 0) add("rétabli après $echecsAvant échecs")
+            if (!ok && echecsSuite > 1) add("échec n° $echecsSuite d'affilée")
+        }.joinToString(", ").let { if (it.isEmpty()) "" else " ($it)" }
+        if (ok) AppLogger.i(TAG, "« ${a.name} » HTTP 200$extra · $resume")
+        else AppLogger.w(TAG, "« ${a.name} » ${if (code < 0) "réseau" else "HTTP $code"}$extra · $err")
+        journalMs = maintenant
+        derniereErreur = err
+        tus = 0
     }
 
     private fun post(corps: String): Pair<Int, String> {

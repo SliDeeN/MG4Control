@@ -132,6 +132,8 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
     override fun profile(id: String) = t(R.string.rule_act_profile_fmt, profils[id] ?: id)
     override fun waitFor(seconds: Int) = t(R.string.rule_act_wait_fmt, seconds)
     override fun ifThen(condition: String) = t(R.string.rule_act_if_fmt, condition)
+    override fun ifSummary(condition: String, then: String, otherwise: String?) =
+        t(R.string.rule_sum_if_fmt, condition, then) + (otherwise?.let { t(R.string.rule_sum_else_fmt, it) } ?: "")
     override fun repeat(times: Int) = t(R.string.rule_repeat_fmt, times)
     override fun notify(text: String) = t(R.string.rule_act_notify_fmt, text)
     override val stop: String get() = t(R.string.rule_act_stop)

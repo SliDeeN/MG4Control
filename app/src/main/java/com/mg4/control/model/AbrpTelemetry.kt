@@ -206,4 +206,24 @@ object AbrpConfigFile {
 }
 
 /** Ce qu'on peut montrer d'un jeton : ses 4 derniers caractères. */
-fun maskSecret(s: String): String = if (s.length <= 4) "••••" else "••••" + s.takeLast(4)
+/**
+ * Quels envois écrire dans le journal : une ligne toutes les 30 s noierait le journal (400 entrées)
+ * sur un long trajet. On écrit le premier envoi, chaque passage réussite ↔ échec, chaque changement
+ * d'état (garé, en charge), chaque nouvelle erreur, puis un bilan toutes les [SUMMARY_MS].
+ * Les durées sont en temps écoulé depuis le démarrage (horloge murale non fiable au réveil).
+ */
+object AbrpLogPolicy {
+    const val SUMMARY_MS = 10 * 60_000L
+
+    fun shouldLog(
+        nowMs: Long, lastLogMs: Long?, ok: Boolean, lastOk: Boolean?,
+        error: String?, lastError: String?, stateChanged: Boolean,
+    ): Boolean = when {
+        lastLogMs == null || lastOk == null -> true
+        ok != lastOk || stateChanged -> true
+        !ok && error != lastError -> true
+        else -> nowMs - lastLogMs !in 0 until SUMMARY_MS
+    }
+}
+
+fun maskSecret(s: String): String =if (s.length <= 4) "••••" else "••••" + s.takeLast(4)
