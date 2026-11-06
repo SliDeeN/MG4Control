@@ -122,14 +122,14 @@ langue mène à un dossier et non à sa page.
 
 ## Version documentée
 
-Le site et le simulateur décrivent la **2.6.9** (code de la branche `beta` au 16/10/2026, après le
-commit `cfba533` : cycle de sources audio avec ses correctifs A9, ventilation éteinte au cran 1 du
-pop-up HVAC, module sur l'écran conducteur réservé à SWI133, SWI68 et SWI165). Ils sont prévus pour être publiés en
-même temps que la release 2.6.9 : le bouton « Télécharger la dernière version » pointe vers
+Le site et le simulateur décrivent la **2.7.0** (code de la branche `beta` au 06/11/2026 : nouveau look
+— menu principal en colonne, sous-onglets en pastilles, palette DiAuto —, Boutons physiques, Réglages rapides, cycle
+des modes, Mes automatisations, statistiques par profil, graphique par trajet, export CSV). Ils sont prévus pour être publiés en
+même temps que la release 2.7.0 : le bouton « Télécharger la dernière version » pointe vers
 `releases/latest`, et publier plus tôt annoncerait des fonctions que la version stable n'a pas.
 
-Les nouveautés portent le badge `<span class="badge-new">` (« Nouveau · 2.6.9 ») et leur carte la
-classe `is-new` (l'aperçu d'une nouveauté aussi, pour rester visible avec le filtre) ; le filtre « ★ 2.6.9 », le lien « Nouveautés » de l'en-tête et l'encadré de
+Les nouveautés portent le badge `<span class="badge-new">` (« Nouveau · 2.7.0 ») et leur carte la
+classe `is-new` (l'aperçu d'une nouveauté aussi, pour rester visible avec le filtre) ; le filtre « ★ 2.7.0 », le lien « Nouveautés » de l'en-tête et l'encadré de
 l'accueil s'appuient dessus. À la version suivante, retirer ces badges et ces classes (cartes et
 tableau de compatibilité), réécrire l'encadré des nouveautés et changer la pastille `vX.Y.Z` de
 l'accueil, la puce « ★ » et les deux liens « Nouveautés X.Y.Z » de l'en-tête.
