@@ -58,7 +58,7 @@ class QuickSettingsPage {
         val mienne = carte(ctx, R.string.quick_card_mine).also { (c, droite) ->
             compteur = droite
             c.addView(aide(ctx, R.string.quick_hint_mine))
-            val rv = RecyclerView(ctx).apply {
+            val rv = ListeEntiere(ctx).apply {
                 layoutManager = LinearLayoutManager(ctx)
                 isNestedScrollingEnabled = false
                 overScrollMode = View.OVER_SCROLL_NEVER
@@ -128,15 +128,6 @@ class QuickSettingsPage {
         compteur?.text = "${tuiles.size} / ${QuickSettings.MAX_TILES}"
         @Suppress("NotifyDataSetChanged")
         adaptateur?.notifyDataSetChanged()
-        // Retour 2026-11-06 : la liste ne grandissait pas tout de suite après un ajout (liste dans
-        // un ScrollView, hauteur au contenu). On redemande sa mise en page après le passage de
-        // l'adaptateur, et on note les hauteurs pour le vérifier dans le journal.
-        liste?.let { rv ->
-            rv.post {
-                rv.requestLayout()
-                rv.post { AppLogger.i("MG4_QUICK", "Réglages rapides — liste : ${tuiles.size} tuiles, ${rv.childCount} rangées affichées, hauteur ${rv.height} px") }
-            }
-        }
         peindreCatalogue(ctx)
         peindreApercu()
     }
@@ -310,6 +301,21 @@ class QuickSettingsPage {
     }
 
     // ── Liste réordonnable ────────────────────────────────────────────────────
+
+    /**
+     * Liste qui affiche TOUTES ses rangées dans la page qui défile (retour 2026-11-06 : seules 4 des
+     * 8 tuiles s'affichaient, jusqu'au premier glisser). Depuis Android 6, un ScrollView passe à
+     * ses enfants une hauteur « libre » qui porte quand même la hauteur de l'écran ; RecyclerView
+     * s'en sert comme limite et ne pose que les rangées qui y tiennent. Les pastilles de valeurs
+     * ont grandi les rangées au-delà. Une hauteur libre à zéro lui fait tout poser.
+     */
+    private class ListeEntiere(ctx: Context) : RecyclerView(ctx) {
+        override fun onMeasure(widthSpec: Int, heightSpec: Int) {
+            val h = if (MeasureSpec.getMode(heightSpec) == MeasureSpec.UNSPECIFIED)
+                MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED) else heightSpec
+            super.onMeasure(widthSpec, h)
+        }
+    }
 
     private val glisser = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0) {
         private var avant: List<QuickTile>? = null
