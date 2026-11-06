@@ -269,6 +269,37 @@ class QuickSettingsPage {
         setOnClickListener { onClick() }
     }
 
+    // ── Valeurs proposées ─────────────────────────────────────────────────────
+
+    /**
+     * Au-delà de deux valeurs, une puce par valeur : allumée = proposée dans le pop-up. Deux au
+     * moins ; à deux, la tuile bascule d'un toucher (variante B du 2026-11-06).
+     */
+    private fun peindreValeurs(h: Ligne, t: QuickTile) {
+        val ctx = h.vue.context
+        val toutes = QuickTiles.options(t)
+        h.puces.removeAllViews()
+        if (toutes.size <= 2) { h.valeurs.visibility = View.GONE; return }
+        h.valeurs.visibility = View.VISIBLE
+        val gardees = QuickTiles.proposees(ctx, t).map { it.valeur }
+        h.mode.text = if (gardees.size == 2) ctx.getString(R.string.quick_values_toggle) else ""
+        toutes.forEach { o ->
+            val on = o.valeur in gardees
+            h.puces.addView(texte(ctx, QuickTiles.libelle(ctx, t, o), 17f, if (on) R.color.dash_accent else R.color.text_secondary, gras = on).apply {
+                gravity = Gravity.CENTER
+                setPadding(dp(ctx, 18f), 0, dp(ctx, 18f), 0)
+                OverlayKit.fond(this, ctx.getColor(if (on) R.color.dash_accent_dim else R.color.dash_card),
+                    ctx.getColor(if (on) R.color.dash_accent else R.color.dash_border), dp(ctx, 1f), dp(ctx, 24f).toFloat())
+                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(ctx, 48f))
+                setOnClickListener {
+                    QuickTiles.basculerValeur(ctx, t, o.valeur)
+                    AppLogger.i("MG4_QUICK", "Réglages rapides — ${t.name} : valeurs proposées ${QuickTiles.proposees(ctx, t).joinToString { "${it.valeur}" }}")
+                    peindreValeurs(h, t)
+                }
+            })
+        }
+    }
+
     // ── Liste réordonnable ────────────────────────────────────────────────────
 
     private val glisser = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP or ItemTouchHelper.DOWN, 0) {
@@ -299,7 +330,8 @@ class QuickSettingsPage {
     })
 
     private inner class Ligne(val vue: LinearLayout, val poignee: View, val rang: TextView, val icone: ImageView,
-                              val nom: TextView, val arret: View, val retirer: View) : RecyclerView.ViewHolder(vue)
+                              val nom: TextView, val arret: View, val retirer: View,
+                              val valeurs: LinearLayout, val puces: FlowRow, val mode: TextView) : RecyclerView.ViewHolder(vue)
 
     private inner class Adaptateur : RecyclerView.Adapter<Ligne>() {
         override fun getItemCount() = tuiles.size
@@ -307,13 +339,19 @@ class QuickSettingsPage {
         @Suppress("ClickableViewAccessibility")
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Ligne {
             val ctx = parent.context
+            // Bloc de la tuile : sa rangée (poignée, nom, −) puis, au-delà de deux valeurs, celles proposées.
+            val bloc = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                OverlayKit.fond(this, ctx.getColor(R.color.dash_btn), ctx.getColor(R.color.dash_border), dp(ctx, 1f), dp(ctx, 14f).toFloat())
+                layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .also { it.bottomMargin = dp(ctx, 8f) }
+            }
             val rangee = LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(ctx, 4f), 0, dp(ctx, 6f), 0)
-                OverlayKit.fond(this, ctx.getColor(R.color.dash_btn), ctx.getColor(R.color.dash_border), dp(ctx, 1f), dp(ctx, 14f).toFloat())
-                layoutParams = RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(ctx, 64f)).also { it.bottomMargin = dp(ctx, 8f) }
             }
+            bloc.addView(rangee, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 64f)))
             val poignee = ImageView(ctx).apply {
                 setImageResource(R.drawable.ic_drag_indicator)
                 imageTintList = ColorStateList.valueOf(ctx.getColor(R.color.dash_text_lo))
@@ -338,7 +376,21 @@ class QuickSettingsPage {
                 OverlayKit.fond(this, ctx.getColor(R.color.dash_card), ctx.getColor(R.color.dash_border), dp(ctx, 1f), dp(ctx, 14f).toFloat())
             }
             rangee.addView(retirer, LinearLayout.LayoutParams(dp(ctx, 52f), dp(ctx, 52f)))
-            val ligne = Ligne(rangee, poignee, rang, icone, nom, arret, retirer)
+            val valeurs = LinearLayout(ctx).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(ctx, 94f), 0, dp(ctx, 14f), dp(ctx, 12f))
+            }
+            val tete = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+            tete.addView(texte(ctx, ctx.getString(R.string.quick_values_label), 16f, R.color.text_secondary),
+                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            val mode = texte(ctx, "", 16f, R.color.dash_accent)
+            tete.addView(mode)
+            valeurs.addView(tete)
+            val puces = FlowRow(ctx)
+            valeurs.addView(puces, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .also { it.topMargin = dp(ctx, 8f) })
+            bloc.addView(valeurs)
+            val ligne = Ligne(bloc, poignee, rang, icone, nom, arret, retirer, valeurs, puces, mode)
             // Le glisser part de la poignée seulement : le reste de la rangée garde ses touchers.
             poignee.setOnTouchListener { _, e ->
                 if (e.actionMasked == MotionEvent.ACTION_DOWN) glisser.startDrag(ligne)
@@ -354,6 +406,7 @@ class QuickSettingsPage {
             h.icone.setImageResource(QuickTiles.cat(t).icone)
             h.nom.text = ctx.getString(QuickTiles.nom(t))
             h.arret.visibility = if (QuickTiles.aLArret(t)) View.VISIBLE else View.GONE
+            peindreValeurs(h, t)
             h.retirer.setOnClickListener {
                 val i = h.bindingAdapterPosition
                 if (i !in tuiles.indices) return@setOnClickListener

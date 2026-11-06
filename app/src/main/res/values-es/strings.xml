@@ -1023,6 +1023,8 @@
     <string name="quick_card_add">Añadir un mosaico</string>
     <string name="quick_card_preview">Vista previa</string>
     <string name="quick_hint_mine">Los mosaicos de la ventana, en este orden. Arrastra ⋮⋮ para moverlos, toca − para quitar uno. En la ventana, una pulsación larga en un mosaico te trae aquí.</string>
+    <string name="quick_values_label">Valores propuestos en la ventana:</string>
+    <string name="quick_values_toggle">2 valores: un toque alterna</string>
     <string name="quick_by_firmware">según el firmware</string>
     <string name="quick_defaults">Mosaicos por defecto</string>
     <string name="quick_stopped_only">parado</string>

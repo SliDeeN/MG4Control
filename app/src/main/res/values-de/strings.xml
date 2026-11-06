@@ -1023,6 +1023,8 @@
     <string name="quick_card_add">Kachel hinzufügen</string>
     <string name="quick_card_preview">Vorschau des Pop-ups</string>
     <string name="quick_hint_mine">Die Kacheln des Pop-ups in dieser Reihenfolge. Mit ⋮⋮ verschieben, mit − entfernen. Im Pop-up führt ein langer Druck auf eine Kachel hierher.</string>
+    <string name="quick_values_label">Im Pop-up angebotene Werte:</string>
+    <string name="quick_values_toggle">2 Werte: ein Tippen schaltet um</string>
     <string name="quick_by_firmware">je nach Firmware</string>
     <string name="quick_defaults">Standardkacheln</string>
     <string name="quick_stopped_only">im Stand</string>

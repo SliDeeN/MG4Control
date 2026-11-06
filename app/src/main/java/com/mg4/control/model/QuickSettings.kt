@@ -45,6 +45,42 @@ object QuickSettings {
     fun ajouter(tiles: List<QuickTile>, tile: QuickTile): List<QuickTile> =
         if (tile in tiles || tiles.size >= MAX_TILES) tiles else tiles + tile
 
+    // ── Valeurs proposées (variante B du 2026-11-06) ─────────────────────────
+    // Pour une tuile à plus de deux valeurs, l'utilisateur garde celles qu'il veut voir dans le
+    // pop-up (deux au moins) ; à deux, la tuile bascule d'un seul toucher. Par défaut : toutes.
+
+    /** « REGEN:2,5;ELK_MODE:1,5 » ; une tuile absente garde toutes ses valeurs. */
+    fun encodeValues(kept: Map<QuickTile, List<Int>>): String =
+        kept.entries.joinToString(";") { (t, l) -> t.name + ":" + l.joinToString(",") }
+
+    fun decodeValues(texte: String?): Map<QuickTile, List<Int>> {
+        if (texte.isNullOrBlank()) return emptyMap()
+        return texte.split(';').mapNotNull { part ->
+            val (nom, vals) = part.split(':', limit = 2).takeIf { it.size == 2 } ?: return@mapNotNull null
+            val t = QuickTile.entries.firstOrNull { it.name == nom.trim() } ?: return@mapNotNull null
+            t to vals.split(',').mapNotNull { it.trim().toIntOrNull() }
+        }.toMap()
+    }
+
+    /**
+     * Les valeurs proposées parmi [all] (dans leur ordre) : celles gardées, ou toutes s'il en reste
+     * moins de deux (valeur disparue avec une version, réglage jamais fait).
+     */
+    fun kept(all: List<Int>, kept: List<Int>?): List<Int> {
+        val l = all.filter { kept == null || it in kept }
+        return if (l.size < 2) all else l
+    }
+
+    /** Propose ou retire [v] ; jamais sous deux valeurs. */
+    fun toggleValue(all: List<Int>, kept: List<Int>?, v: Int): List<Int> {
+        val actuel = kept(all, kept)
+        return if (v in actuel) { if (actuel.size > 2) actuel - v else actuel }
+        else all.filter { it in actuel || it == v }
+    }
+
+    /** À deux valeurs, le toucher passe à l'autre ; une valeur inconnue ou hors liste mène à la première. */
+    fun nextOfTwo(pair: List<Int>, current: Int?): Int = if (current == pair[0]) pair[1] else pair[0]
+
     /** La tuile du rang [de] passe au rang [vers]. */
     fun deplacer(tiles: List<QuickTile>, de: Int, vers: Int): List<QuickTile> {
         if (de !in tiles.indices || vers !in tiles.indices || de == vers) return tiles

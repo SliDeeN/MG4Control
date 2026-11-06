@@ -1040,6 +1040,8 @@
     <string name="quick_card_add">Ajouter une tuile</string>
     <string name="quick_card_preview">Aperçu du pop-up</string>
     <string name="quick_hint_mine">Les tuiles du pop-up, dans cet ordre. Faites glisser ⋮⋮ pour les déplacer, touchez − pour en retirer. Dans le pop-up, un appui long sur une tuile ramène ici.</string>
+    <string name="quick_values_label">Valeurs proposées dans le pop-up :</string>
+    <string name="quick_values_toggle">2 valeurs : bascule d\'un toucher</string>
     <string name="quick_by_firmware">selon le firmware</string>
     <string name="quick_defaults">Tuiles par défaut</string>
     <string name="quick_stopped_only">à l\'arrêt</string>

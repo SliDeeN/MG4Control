@@ -39,4 +39,28 @@ class QuickSettingsTest {
         assertEquals(listOf(QuickTile.REGEN, QuickTile.ELK_MODE, QuickTile.CRUISE), QuickSettings.deplacer(l, 2, 0))
         assertEquals(l, QuickSettings.deplacer(l, 0, 5))
     }
+
+    @Test
+    fun `valeurs proposees - toutes par defaut, deux au moins`() {
+        val regen = listOf(0, 1, 2, 3, 4, 5)
+        assertEquals(regen, QuickSettings.kept(regen, null))
+        assertEquals(listOf(2, 5), QuickSettings.kept(regen, listOf(5, 2)))
+        // Une seule valeur encore valable (l'autre a disparu) : toutes.
+        assertEquals(regen, QuickSettings.kept(regen, listOf(2, 99)))
+        assertEquals(listOf(0, 1, 2, 3, 5), QuickSettings.toggleValue(regen, null, 4))
+        assertEquals(listOf(2, 5), QuickSettings.toggleValue(regen, listOf(2, 5), 2))
+        assertEquals(listOf(1, 2, 5), QuickSettings.toggleValue(regen, listOf(2, 5), 1))
+    }
+
+    @Test
+    fun `valeurs proposees - aller-retour et bascule a deux`() {
+        val m = mapOf(QuickTile.REGEN to listOf(2, 5), QuickTile.ELK_MODE to listOf(1, 5))
+        assertEquals(m, QuickSettings.decodeValues(QuickSettings.encodeValues(m)))
+        assertEquals(mapOf(QuickTile.REGEN to listOf(2)), QuickSettings.decodeValues("WARP:1;REGEN:2,x;bad"))
+        assertTrue(QuickSettings.decodeValues(null).isEmpty())
+        assertEquals(5, QuickSettings.nextOfTwo(listOf(2, 5), 2))
+        assertEquals(2, QuickSettings.nextOfTwo(listOf(2, 5), 5))
+        assertEquals(2, QuickSettings.nextOfTwo(listOf(2, 5), 3))
+        assertEquals(2, QuickSettings.nextOfTwo(listOf(2, 5), null))
+    }
 }

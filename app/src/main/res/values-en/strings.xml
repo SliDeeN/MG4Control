@@ -1023,6 +1023,8 @@
     <string name="quick_card_add">Add a tile</string>
     <string name="quick_card_preview">Pop-up preview</string>
     <string name="quick_hint_mine">The pop-up tiles, in this order. Drag ⋮⋮ to move them, tap − to remove one. In the pop-up, a long press on a tile brings you here.</string>
+    <string name="quick_values_label">Values offered in the pop-up:</string>
+    <string name="quick_values_toggle">2 values: one tap toggles</string>
     <string name="quick_by_firmware">depends on the firmware</string>
     <string name="quick_defaults">Default tiles</string>
     <string name="quick_stopped_only">when stopped</string>

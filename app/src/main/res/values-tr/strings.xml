@@ -1023,6 +1023,8 @@
     <string name="quick_card_add">Kutucuk ekle</string>
     <string name="quick_card_preview">Pencere önizlemesi</string>
     <string name="quick_hint_mine">Penceredeki kutucuklar, bu sırayla. Taşımak için ⋮⋮ sürükleyin, kaldırmak için − dokunun. Pencerede bir kutucuğa uzun basmak buraya getirir.</string>
+    <string name="quick_values_label">Pencerede sunulan değerler:</string>
+    <string name="quick_values_toggle">2 değer: tek dokunuşla geçiş</string>
     <string name="quick_by_firmware">yazılıma göre</string>
     <string name="quick_defaults">Varsayılan kutucuklar</string>
     <string name="quick_stopped_only">dururken</string>

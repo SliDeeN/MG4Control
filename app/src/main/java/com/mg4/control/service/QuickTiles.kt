@@ -45,6 +45,27 @@ object QuickTiles {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, QuickSettings.encode(tiles)).apply()
     }
 
+    private const val KEY_VALUES = "values"
+
+    private fun valeursGardees(ctx: Context): Map<QuickTile, List<Int>> =
+        QuickSettings.decodeValues(ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_VALUES, null))
+
+    /** Les valeurs que le pop-up propose pour [t] : celles gardées sur la page de réglage, sinon toutes. */
+    fun proposees(ctx: Context, t: QuickTile): List<Option> {
+        val toutes = options(t)
+        val garde = QuickSettings.kept(toutes.map { it.valeur }, valeursGardees(ctx)[t])
+        return toutes.filter { it.valeur in garde }
+    }
+
+    /** Propose ou retire la valeur [v] de [t] (deux au moins) ; enregistré aussitôt. */
+    fun basculerValeur(ctx: Context, t: QuickTile, v: Int) {
+        val toutes = options(t).map { it.valeur }
+        val m = valeursGardees(ctx).toMutableMap()
+        val l = QuickSettings.toggleValue(toutes, m[t], v)
+        if (l == toutes) m.remove(t) else m[t] = l
+        ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY_VALUES, QuickSettings.encodeValues(m)).apply()
+    }
+
     // ── Description ───────────────────────────────────────────────────────────
 
     fun nom(t: QuickTile): Int = when (t) {

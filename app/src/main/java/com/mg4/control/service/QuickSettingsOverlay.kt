@@ -30,8 +30,9 @@ import kotlin.math.roundToInt
 
 /**
  * Pop-up Réglages rapides (issue #197, maquette C du 2026-11-05) : les tuiles choisies dans
- * Raccourcis › Réglages rapides, avec leur valeur lue sur la voiture. Toucher une tuile ouvre ses
- * valeurs juste dessous ; en toucher une l'écrit, puis la tuile est relue. Se ferme seule après le
+ * Raccourcis › Réglages rapides, avec leur valeur lue sur la voiture. Variante B (2026-11-06) : une
+ * tuile à deux valeurs proposées bascule d'un toucher ; au-delà, ses valeurs s'ouvrent dans une
+ * bulle collée à la tuile (au-dessus, ou dessous faute de place). Écrire relit la tuile. Se ferme seule après le
  * délai commun des pop-ups ([PopupDelay]), remis à zéro à chaque toucher ; un second appui du
  * raccourci, la croix ou un toucher à côté la referment.
  *
@@ -66,7 +67,9 @@ object QuickSettingsOverlay {
     private var echeance = 0L
     private var ouvertureEnCours = false
     private var grille: LinearLayout? = null
-    private var panneau: LinearLayout? = null
+    /** Carte + bulle des valeurs, posée par-dessus la carte. */
+    private var cadre: FrameLayout? = null
+    private var bulle: View? = null
     private var decompte: TextView? = null
     private var tick: Runnable? = null
 
@@ -166,7 +169,8 @@ object QuickSettingsOverlay {
             setBackgroundResource(R.drawable.bg_card_rounded)
             setPadding(dp(ctx, 20f), dp(ctx, 18f), dp(ctx, 20f), dp(ctx, 20f))
             isClickable = true
-            setOnClickListener { relancerDelai() }
+            // Toucher à côté des tuiles referme la bulle.
+            setOnClickListener { relancerDelai(); if (choisie != null) { choisie = null; peindre() } }
         }
         // En-tête : pictogramme, titre, décompte, croix.
         val tete = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
@@ -191,17 +195,11 @@ object QuickSettingsOverlay {
         grille = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         carte.addView(grille, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
             .also { it.topMargin = dp(ctx, 16f) })
-        panneau = LinearLayout(ctx).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(ctx, 14f), dp(ctx, 10f), dp(ctx, 14f), dp(ctx, 10f))
-            OverlayKit.fond(this, ctx.getColor(R.color.dash_bg), rayon = dp(ctx, 16f).toFloat())
-            visibility = View.GONE
-        }
-        carte.addView(panneau, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-            .also { it.topMargin = dp(ctx, 12f) })
+        val c = FrameLayout(ctx).apply { clipChildren = false }
+        c.addView(carte, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT))
+        cadre = c
         peindre()
-        racine.addView(carte, FrameLayout.LayoutParams(dp(ctx, LARGEUR_DP), FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        racine.addView(c, FrameLayout.LayoutParams(dp(ctx, LARGEUR_DP), FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
         return racine
     }
 
@@ -216,11 +214,12 @@ object QuickSettingsOverlay {
 
     private fun bloquee(t: QuickTile) = enRoute && QuickTiles.aLArret(t)
 
-    /** Redessine la grille et le panneau des valeurs. */
+    /** Redessine la grille et la bulle des valeurs. */
     private fun peindre() {
         val ctx = themed ?: return
         val g = grille ?: return
         g.removeAllViews()
+        var vueChoisie: View? = null
         val cases: List<QuickTile?> = tuiles + (if (tuiles.size < QuickSettings.MAX_TILES) listOf(null) else emptyList())
         cases.chunked(4).forEachIndexed { i, ligne ->
             val rangee = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; isBaselineAligned = false }
@@ -236,10 +235,18 @@ object QuickSettingsOverlay {
                                 Toast.makeText(ctx, R.string.quick_refused_driving, Toast.LENGTH_SHORT).show()
                                 return@setOnClickListener
                             }
-                            choisie = if (choisie == t) null else t
-                            peindre()
+                            val proposees = QuickTiles.proposees(ctx, t)
+                            if (proposees.size == 2) {
+                                // Deux valeurs : bascule directe, sans bulle.
+                                choisie = null
+                                ecrire(t, QuickSettings.nextOfTwo(proposees.map { it.valeur }, valeurs[t]))
+                            } else {
+                                choisie = if (choisie == t) null else t
+                                peindre()
+                            }
                         }
                         setOnLongClickListener { ouvrirPage(); true }
+                        if (t == choisie) vueChoisie = this
                     }
                 }
                 rangee.addView(cellule, LinearLayout.LayoutParams(0, dp(ctx, 104f), 1f).also { if (col > 0) it.marginStart = dp(ctx, 10f) })
@@ -247,7 +254,7 @@ object QuickSettingsOverlay {
             g.addView(rangee, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
                 .also { if (i > 0) it.topMargin = dp(ctx, 10f) })
         }
-        peindrePanneau(ctx)
+        peindreBulle(ctx, vueChoisie)
     }
 
     private fun valeurLibelle(ctx: Context, t: QuickTile): String {
@@ -255,23 +262,52 @@ object QuickSettingsOverlay {
         return QuickTiles.options(t).firstOrNull { it.valeur == v }?.let { QuickTiles.libelle(ctx, t, it) } ?: "—"
     }
 
-    private fun peindrePanneau(ctx: Context) {
-        val p = panneau ?: return
-        val t = choisie
-        p.removeAllViews()
-        if (t == null) { p.visibility = View.GONE; return }
-        p.visibility = View.VISIBLE
-        p.addView(texte(ctx, ctx.getString(QuickTiles.nom(t)), 18f, R.color.text_secondary).apply { setPadding(0, 0, dp(ctx, 10f), 0) })
+    /** La bulle des valeurs de la tuile choisie, centrée sur elle, au-dessus (ou dessous si pas de place). */
+    private fun peindreBulle(ctx: Context, tuile: View?) {
+        val c = cadre ?: return
+        bulle?.let { c.removeView(it) }
+        bulle = null
+        val t = choisie ?: return
+        if (tuile == null) return
         val actuelle = valeurs[t]
-        QuickTiles.options(t).forEach { o ->
+        val b = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(ctx, 10f), dp(ctx, 10f), dp(ctx, 10f), dp(ctx, 10f))
+            OverlayKit.fond(this, ctx.getColor(R.color.dash_card), ctx.getColor(R.color.dash_accent), dp(ctx, 2f), dp(ctx, 18f).toFloat())
+            elevation = dp(ctx, 8f).toFloat()
+            isClickable = true
+            visibility = View.INVISIBLE
+        }
+        QuickTiles.proposees(ctx, t).forEachIndexed { i, o ->
             val on = o.valeur == actuelle
-            p.addView(texte(ctx, QuickTiles.libelle(ctx, t, o), 19f, if (on) R.color.dash_on_accent else R.color.text_primary, gras = on).apply {
+            b.addView(texte(ctx, QuickTiles.libelle(ctx, t, o), 19f, if (on) R.color.dash_on_accent else R.color.text_primary, gras = on).apply {
                 gravity = Gravity.CENTER
-                setPadding(dp(ctx, 20f), 0, dp(ctx, 20f), 0)
+                setPadding(dp(ctx, 22f), 0, dp(ctx, 22f), 0)
                 if (on) OverlayKit.fond(this, ctx.getColor(R.color.dash_accent), rayon = dp(ctx, 14f).toFloat())
                 else OverlayKit.fond(this, ctx.getColor(R.color.dash_btn), ctx.getColor(R.color.dash_border), dp(ctx, 1f), dp(ctx, 14f).toFloat())
-                setOnClickListener { relancerDelai(); if (!on) ecrire(t, o.valeur) }
-            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(ctx, 56f)).also { it.marginStart = dp(ctx, 8f) })
+                setOnClickListener {
+                    relancerDelai()
+                    choisie = null
+                    if (on) peindre() else ecrire(t, o.valeur)
+                }
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(ctx, 60f)).also { if (i > 0) it.marginStart = dp(ctx, 8f) })
+        }
+        c.addView(b, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT))
+        bulle = b
+        // Placée une fois mesurée : position de la tuile dans le cadre.
+        c.post {
+            if (bulle !== b || !tuile.isAttachedToWindow) return@post
+            val pc = IntArray(2).also { c.getLocationInWindow(it) }
+            val pt = IntArray(2).also { tuile.getLocationInWindow(it) }
+            val x = pt[0] - pc[0]
+            val y = pt[1] - pc[1]
+            val ecart = dp(ctx, 8f)
+            val bord = dp(ctx, MARGE_FENETRE_DP)
+            b.translationX = (x + tuile.width / 2 - b.width / 2).coerceIn(bord, maxOf(bord, c.width - b.width - bord)).toFloat()
+            val dessus = y - b.height - ecart
+            b.translationY = (if (dessus >= 0) dessus else y + tuile.height + ecart).toFloat()
+            b.visibility = View.VISIBLE
         }
     }
 
@@ -321,7 +357,8 @@ object QuickSettingsOverlay {
         tick?.let { handler.removeCallbacks(it) }
         tick = null
         grille = null
-        panneau = null
+        cadre = null
+        bulle = null
         decompte = null
         val v = vue ?: return
         vue = null

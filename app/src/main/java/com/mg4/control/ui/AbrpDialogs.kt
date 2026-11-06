@@ -368,32 +368,4 @@ object AbrpDialogs {
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(ctx, 56f)).also { it.marginEnd = dp(ctx, 10f) }
         setOnClickListener { onClic() }
     }
-
-    /** Une rangée qui passe à la ligne, pour les puces des données. */
-    private class FlowRow(ctx: Context) : android.view.ViewGroup(ctx) {
-        private val ecart = AppDialog.dp(ctx, 8f)
-        override fun onMeasure(wSpec: Int, hSpec: Int) {
-            val largeur = MeasureSpec.getSize(wSpec)
-            var x = 0; var y = 0; var ligne = 0
-            for (i in 0 until childCount) {
-                val c = getChildAt(i)
-                c.measure(MeasureSpec.makeMeasureSpec(largeur, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
-                if (x > 0 && x + c.measuredWidth > largeur) { x = 0; y += ligne + ecart; ligne = 0 }
-                x += c.measuredWidth + ecart
-                ligne = maxOf(ligne, c.measuredHeight)
-            }
-            setMeasuredDimension(largeur, y + ligne)
-        }
-        override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-            val largeur = r - l
-            var x = 0; var y = 0; var ligne = 0
-            for (i in 0 until childCount) {
-                val c = getChildAt(i)
-                if (x > 0 && x + c.measuredWidth > largeur) { x = 0; y += ligne + ecart; ligne = 0 }
-                c.layout(x, y, x + c.measuredWidth, y + c.measuredHeight)
-                x += c.measuredWidth + ecart
-                ligne = maxOf(ligne, c.measuredHeight)
-            }
-        }
-    }
 }
