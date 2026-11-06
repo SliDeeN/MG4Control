@@ -10,6 +10,7 @@ class AppLanguageTest {
     @Test fun `une langue traduite de la voiture est reprise`() {
         assertEquals("de", AppLanguage.fromCar("de"))
         assertEquals("tr", AppLanguage.fromCar("TR"))
+        assertEquals("pl", AppLanguage.fromCar("pl"))
         assertEquals("it", AppLanguage.effective(null, "it"))
     }
 

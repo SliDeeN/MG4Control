@@ -49,7 +49,7 @@ class ChargePopupLayoutTest {
 
     @Test
     fun `se peint dans les sept langues`() {
-        for (langue in listOf("fr", "en", "de", "es", "it", "pt", "tr")) {
+        for (langue in listOf("fr", "en", "de", "es", "it", "pt", "tr", "pl")) {
             val loc = localise(langue)
             val themed = ContextThemeWrapper(loc, R.style.Theme_MG4Control)
             for (e in listOf(etat(), etat(finie = true, restant = null), etat(limite = null, restant = null))) {
@@ -62,7 +62,7 @@ class ChargePopupLayoutTest {
 
     @Test
     fun `A9 en LFP - barre inerte, heure de fin en grand, dans les sept langues`() {
-        for (langue in listOf("fr", "en", "de", "es", "it", "pt", "tr")) {
+        for (langue in listOf("fr", "en", "de", "es", "it", "pt", "tr", "pl")) {
             val loc = localise(langue)
             val themed = ContextThemeWrapper(loc, R.style.Theme_MG4Control)
             for (e in listOf(etat(), etat(finie = true, restant = null), etat(limite = null, restant = null))) {

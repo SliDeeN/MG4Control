@@ -8,7 +8,7 @@ package com.mg4.control.model
 object AppLanguage {
 
     /** Les langues traduites, dans l'ordre de la fenêtre de choix. */
-    val SUPPORTED = listOf("fr", "en", "de", "es", "pt", "it", "tr")
+    val SUPPORTED = listOf("fr", "en", "de", "es", "pt", "it", "tr", "pl")
 
     /** Ni choix ni langue de voiture connue : l'anglais, compris du plus grand nombre. */
     const val FALLBACK = "en"
