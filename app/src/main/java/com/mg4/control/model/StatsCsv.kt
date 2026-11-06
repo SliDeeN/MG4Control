@@ -50,7 +50,8 @@ object StatsCsv {
             listOf(
                 date.format(Date(t.startMs)), date.format(Date(t.endMs)),
                 minutes(t.durationMs),
-                nombre(t.distance, 1, virgule), t.distanceKm.toString(),
+                // odometer_km : le kilométrage total en fin de trajet (2026-11-06), vide avant.
+                nombre(t.distance, 1, virgule), t.odometerEndKm?.toString().orEmpty(),
                 if (t.energyKnown) nombre(t.netEnergyKwh, 1, virgule) else "",
                 if (t.energyKnown) nombre(t.energyKwh, 1, virgule) else "",
                 nombre(t.regenKwh, 1, virgule), nombre(t.climateKwh, 1, virgule),

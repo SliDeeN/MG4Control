@@ -18,7 +18,7 @@ class StatsCsvTest {
     private fun trajet(debut: Long = t0) = Trip(
         startMs = debut, endMs = debut + 25 * 60_000L, distanceKm = 23, energyKwh = 4.2f,
         climateKwh = 0.3f, accessoriesKwh = 0.1f, regenKwh = 0.8f, socStart = 80f, socEnd = 75.5f,
-        outsideTempC = 9.4f, integratedKm = 23.4f,
+        outsideTempC = 9.4f, integratedKm = 23.4f, odometerEndKm = 11_221,
     )
 
     private fun lignes(csv: String) = csv.removePrefix(StatsCsv.BOM).trimEnd().split("\r\n")
@@ -30,7 +30,7 @@ class StatsCsvTest {
         val l = lignes(csv)
         assertEquals(3, l.size)
         assertEquals(StatsCsv.TRIP_HEADERS.joinToString(";"), l[0])
-        assertTrue(l[1].startsWith("2026-11-03 08:00;2026-11-03 08:25;25;23,4;23;3,4;4,2;0,8;"))
+        assertTrue(l[1].startsWith("2026-11-03 08:00;2026-11-03 08:25;25;23,4;11221;3,4;4,2;0,8;"))
         assertTrue(l[2].startsWith("2026-11-03 09:00;"))
         assertEquals(StatsCsv.TRIP_HEADERS.size, l[1].split(";").size)
     }
@@ -38,7 +38,10 @@ class StatsCsvTest {
     @Test
     fun `anglais - point decimal`() {
         val l = lignes(StatsCsv.trips(listOf(trajet()), virgule = false, zone = utc))
-        assertTrue(l[1].contains(";23.4;23;3.4;4.2;0.8;"))
+        assertTrue(l[1].contains(";23.4;11221;3.4;4.2;0.8;"))
+        // Trajet d'avant la colonne : kilométrage inconnu, case vide.
+        assertTrue(lignes(StatsCsv.trips(listOf(trajet().copy(odometerEndKm = null)), virgule = false, zone = utc))[1]
+            .contains(";23.4;;3.4;"))
     }
 
     @Test

@@ -384,6 +384,7 @@ class StatsTracker(
             segments = TripSegments.build(p.segmentStarts, fin, p.integrated, parIntegration),
             curve = TripCurve.finish(p.curve),
             distanceCheckKm = if (p.integrated) p.checkKm.roundTenth() else null,
+            odometerEndKm = p.odometerLast?.takeIf { it > 0 },
         )
     }
 

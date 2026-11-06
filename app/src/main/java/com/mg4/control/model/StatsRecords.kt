@@ -98,6 +98,11 @@ data class Trip(
      * à comparer à [integratedKm] désormais intégrée à la seconde. Null avant ce contrôle.
      */
     val distanceCheckKm: Float? = null,
+    /**
+     * Kilométrage total de la voiture à la fin du trajet (2026-11-06, colonne `odometer_km` de
+     * l'export CSV). Null pour les trajets enregistrés avant, ou si l'odomètre n'a pas été lu.
+     */
+    val odometerEndKm: Int? = null,
 ) {
     val durationMs: Long get() = max(0L, endMs - startMs)
 
