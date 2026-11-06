@@ -49,6 +49,9 @@ interface RuleWords {
     fun speak(text: String): String
     fun navigate(dest: String): String
     fun notify(text: String): String
+    /** Envoi continu vers le compte ABRP [id] (issue #188). */
+    fun abrpStart(id: String): String = "ABRP → $id"
+    val abrpStop: String get() = "ABRP ■"
     val stop: String
     val unknown: String
 }
@@ -150,6 +153,8 @@ class RuleText(private val w: RuleWords) {
         RuleAction.Type.SET_VARIABLE -> if (a.key == null || a.value == null) w.unknown else w.setVariable(a.key, a.value)
         RuleAction.Type.SPEAK -> w.speak(a.text.orEmpty())
         RuleAction.Type.NAVIGATE -> a.text?.let { w.navigate(it) } ?: w.unknown
+        RuleAction.Type.ABRP_START -> a.text?.let { w.abrpStart(it) } ?: w.unknown
+        RuleAction.Type.ABRP_STOP -> w.abrpStop
         null -> w.unknown
     }
 

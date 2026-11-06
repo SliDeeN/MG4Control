@@ -135,6 +135,9 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
     override fun repeat(times: Int) = t(R.string.rule_repeat_fmt, times)
     override fun notify(text: String) = t(R.string.rule_act_notify_fmt, text)
     override val stop: String get() = t(R.string.rule_act_stop)
+    override fun abrpStart(id: String) =
+        t(R.string.abrp_rule_start_fmt, com.mg4.control.automation.AbrpStore.account(ctx, id)?.name ?: t(R.string.abrp_account_missing))
+    override val abrpStop: String get() = t(R.string.abrp_rule_stop)
 
     // ── Étape 3 ──
     private val regles by lazy { CustomRuleStore.all(ctx).associate { it.id to it.name } }

@@ -605,6 +605,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         R.string.rule_act_media, R.string.rule_act_sound, R.string.rule_act_speak -> Cat.MEDIA
         R.string.rule_act_notify, R.string.rule_act_open, R.string.rule_act_app, R.string.rule_act_navigate -> Cat.SCREEN_APPS
         R.string.rule_act_shortcut, R.string.rule_act_custom, R.string.rule_act_rule -> Cat.SHORTCUTS
+        R.string.abrp_rule_action -> Cat.CONNECTIONS
         else -> Cat.FLOW
     }
 
@@ -856,6 +857,9 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         ajouter(rangeeBoutons(box), R.string.rule_add_action) { action(null, profondeur) { n -> put(liste + n) } }
     }
 
+    /** Valeur « arrêter » du choix ABRP, à côté des identifiants de comptes. */
+    private val STOP_ABRP = "#abrp-stop"
+
     /** Raccourcis regroupés sous une entrée à eux dans le choix des actions. */
     private val MEDIA = listOf(ShortcutAction.MEDIA_PLAY_PAUSE, ShortcutAction.MEDIA_NEXT, ShortcutAction.MEDIA_PREVIOUS, ShortcutAction.AUDIO_SOURCE_CYCLE)
     private val VITRES = listOf(ShortcutAction.WINDOWS_CLOSE_ALL, ShortcutAction.WINDOWS_OPEN_ALL)
@@ -927,6 +931,15 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             ok(a.copy(type = RuleAction.Type.SPEAK, text = t))
         }
         fun naviguer(a: RuleAction) = choisirLieu(a.text) { id -> ok(a.copy(type = RuleAction.Type.NAVIGATE, text = id)) }
+        // ABRP (issue #188) : envoi continu vers un compte, ou arrêt. Les comptes se gèrent dans l'outil « Comptes ABRP ».
+        fun abrp(a: RuleAction) {
+            val comptes = com.mg4.control.automation.AbrpStore.accounts(ctx)
+            if (comptes.isEmpty() && a.type != RuleAction.Type.ABRP_STOP) return Toast.makeText(ctx, s(R.string.abrp_no_accounts), Toast.LENGTH_LONG).show()
+            valeurs(s(R.string.abrp_rule_action), comptes.map { s(R.string.abrp_rule_start_fmt, it.name) to it.id } + (s(R.string.abrp_rule_stop) to STOP_ABRP),
+                if (a.type == RuleAction.Type.ABRP_STOP) STOP_ABRP else a.text) { v ->
+                ok(if (v == STOP_ABRP) RuleAction(RuleAction.Type.ABRP_STOP) else RuleAction(RuleAction.Type.ABRP_START, text = v))
+            }
+        }
         fun repeter(a: RuleAction) = RuleValueDialogs.nombre(ctx, s(R.string.rule_repeat_title), null, a.count ?: 2, 2, RuleRun.MAX_REPEAT,
             texte = { "×$it" }) { n -> ok(a.copy(type = RuleAction.Type.REPEAT, count = n)) }
 
@@ -945,6 +958,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleAction.Type.SET_VARIABLE -> definir(actuelle)
             RuleAction.Type.SPEAK -> parler(actuelle)
             RuleAction.Type.NAVIGATE -> naviguer(actuelle)
+            RuleAction.Type.ABRP_START, RuleAction.Type.ABRP_STOP -> abrp(actuelle)
             RuleAction.Type.REPEAT -> repeter(actuelle)
             RuleAction.Type.IF, RuleAction.Type.STOP -> {}
             null -> liste(R.string.rule_choose_action, buildList {
@@ -965,6 +979,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 add(R.string.rule_act_notify to { message(RuleAction()) })
                 add(R.string.rule_act_speak to { parler(RuleAction()) })
                 add(R.string.rule_act_navigate to { naviguer(RuleAction()) })
+                if (com.mg4.control.automation.AbrpStore.available) add(R.string.abrp_rule_action to { abrp(RuleAction()) })
                 if (profondeur < PROFONDEUR_MAX - 1) {
                     add(R.string.rule_act_if to {
                         ok(RuleAction(RuleAction.Type.IF, condition = RuleCondition(RuleCondition.Type.ALL, children = emptyList()),

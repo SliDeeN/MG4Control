@@ -206,7 +206,9 @@ data class RuleTrigger(
  * - RUN_RULE : lancer l'automatisation [text] (ses conditions s'appliquent) ;
  * - SET_VARIABLE : la variable [key] prend la valeur [value] ;
  * - SPEAK : lire [text] à voix haute (lot 2) ;
- * - NAVIGATE : ouvrir la navigation vers le lieu [text] (identifiant ou « lat,lng », lot 2).
+ * - NAVIGATE : ouvrir la navigation vers le lieu [text] (identifiant ou « lat,lng », lot 2) ;
+ * - ABRP_START : envoi continu des données à ABRP vers le compte [text] (issue #188) ;
+ * - ABRP_STOP : arrêter l'envoi à ABRP.
  */
 data class RuleAction(
     val type: Type? = null,
@@ -225,6 +227,7 @@ data class RuleAction(
         SET, SHORTCUT, PROFILE, WAIT, IF, NOTIFY, STOP, REPEAT,
         WAIT_UNTIL, CONFIRM, PLAY_SOUND, OPEN_APP, CUSTOM_SHORTCUT, RULE_ENABLE, RUN_RULE, SET_VARIABLE,
         SPEAK, NAVIGATE,
+        ABRP_START, ABRP_STOP,
     }
 }
 

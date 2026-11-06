@@ -444,6 +444,8 @@ object CustomRules {
                         ?: return false
                     onMain { AndroidControls.navigate(ctx, lat, lng, lieu?.name ?: cible) }
                 }
+                RuleAction.Type.ABRP_START -> a.text?.let { AbrpStream.start(ctx, it) } ?: false
+                RuleAction.Type.ABRP_STOP -> { AbrpStream.stop(ctx, "« ${r.name} »"); true }
                 else -> false
             }
         }

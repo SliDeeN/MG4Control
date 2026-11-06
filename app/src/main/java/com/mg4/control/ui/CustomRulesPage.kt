@@ -129,13 +129,15 @@ class CustomRulesPage {
             }
         })
         box.addView(View(ctx).apply { layoutParams = LinearLayout.LayoutParams(0, 1, 1f) })
-        listOf<Pair<Int, () -> Unit>>(
-            R.string.rule_tool_history to { historique(ctx) },
-            R.string.rule_tool_variables to { variables(ctx) },
-            R.string.rule_tool_places to { lieux(ctx) },
-            R.string.rule_tool_export to { exporter(ctx) },
-            R.string.rule_tool_import to { importer(ctx) },
-        ).forEach { (libelle, action) ->
+        buildList<Pair<Int, () -> Unit>> {
+            add(R.string.rule_tool_history to { historique(ctx) })
+            add(R.string.rule_tool_variables to { variables(ctx) })
+            add(R.string.rule_tool_places to { lieux(ctx) })
+            // Comptes ABRP (issue #188) : version en ligne seulement.
+            if (com.mg4.control.automation.AbrpStore.available) add(R.string.abrp_tool to { comptesAbrp(ctx) })
+            add(R.string.rule_tool_export to { exporter(ctx) })
+            add(R.string.rule_tool_import to { importer(ctx) })
+        }.forEach { (libelle, action) ->
             box.addView(TextView(ctx).apply {
                 text = ctx.getString(libelle)
                 textSize = 19f
@@ -233,6 +235,26 @@ class CustomRulesPage {
             })
     }
 
+
+    /** Comptes ABRP : la liste, l'import du fichier de comptes, le fichier modèle (mêmes fenêtres que l'export). */
+    private fun comptesAbrp(ctx: Context) {
+        AbrpDialogs.comptes(ctx,
+            importer = {
+                importDialog = ImportDialog(ctx, com.mg4.control.model.AbrpConfigFile.FILE_NAME, parcourirFichier) { texte, ou ->
+                    AbrpDialogs.importer(ctx, texte, ou) { comptesAbrp(ctx) }
+                }.also { it.ouvrir() }
+            },
+            modele = {
+                exportDialog = ExportDialog(ctx,
+                    titre = ctx.getString(R.string.abrp_template_title),
+                    sousTitre = ctx.getString(R.string.abrp_template_subtitle),
+                    bouton = ctx.getString(R.string.abrp_template_go),
+                    titreFait = ctx.getString(R.string.abrp_template_done),
+                    fichiers = { listOf(com.mg4.control.model.AbrpConfigFile.FILE_NAME to AbrpDialogs.modele(ctx)) },
+                    parcourir = parcourirDossier,
+                ).also { it.ouvrir() }
+            })
+    }
 
     private companion object {
         /** Nom du fichier d'échange (le même qu'avant, pour retrouver les anciens exports). */

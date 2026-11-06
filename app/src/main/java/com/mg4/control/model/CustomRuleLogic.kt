@@ -418,7 +418,8 @@ class RuleRun(
             }
             RuleAction.Type.PLAY_SOUND, RuleAction.Type.OPEN_APP, RuleAction.Type.CUSTOM_SHORTCUT,
             RuleAction.Type.RULE_ENABLE, RuleAction.Type.RUN_RULE, RuleAction.Type.SET_VARIABLE,
-            RuleAction.Type.SPEAK, RuleAction.Type.NAVIGATE -> note(fx.perform(a), a)
+            RuleAction.Type.SPEAK, RuleAction.Type.NAVIGATE,
+            RuleAction.Type.ABRP_START, RuleAction.Type.ABRP_STOP -> note(fx.perform(a), a)
             null -> ligne("? ${describe(a)}")
         }
     }

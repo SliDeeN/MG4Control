@@ -40,17 +40,30 @@ android {
         }
     }
 
+    // Clé API de MG4Control pour ABRP (issue #188) : une clé « télémétrie seule » créée sur
+    // abetterrouteplanner.com/resources/api. Lue depuis l'environnement (CI : secret ABRP_API_KEY),
+    // une propriété Gradle (-Pmg4.abrp.apiKey) ou local.properties (ABRP_API_KEY=…) — JAMAIS commitée.
+    // Sans clé, l'envoi demande une clé personnelle dans le compte ABRP.
+    val abrpApiKey = (System.getenv("ABRP_API_KEY")
+        ?: (project.findProperty("mg4.abrp.apiKey") as String?)
+        ?: rootProject.file("local.properties").takeIf { it.exists() }?.readLines()
+            ?.firstOrNull { it.trim().startsWith("ABRP_API_KEY=") }?.substringAfter("=")
+        ?: "").trim().replace("\\", "").replace("\"", "")
+
     flavorDimensions += "dist"
     productFlavors {
         create("online") {
             dimension = "dist"
             buildConfigField("boolean", "OFFLINE", "false")
+            buildConfigField("String", "ABRP_API_KEY", "\"$abrpApiKey\"")
         }
         create("offline") {
             dimension = "dist"
             applicationIdSuffix = ".offline"
             versionNameSuffix = "-offline"
             buildConfigField("boolean", "OFFLINE", "true")
+            // Hors ligne : aucun accès réseau, donc pas d'ABRP.
+            buildConfigField("String", "ABRP_API_KEY", "\"\"")
         }
     }
 
