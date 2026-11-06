@@ -1499,7 +1499,7 @@
     <string name="rule_place_outside">Yerin dışında</string>
     <string name="rule_place_radius">Yer yarıçapı</string>
     <string name="rule_places_empty">Henüz yer yok: “Bir yer” koşulundan kaydedin (mevcut konum).</string>
-    <string name="rule_places_hint">Silmek için bir yere dokunun.</string>
+    <string name="rule_places_hint">Düzenlemek veya silmek için bir yere dokunun.</string>
     <string name="rule_play_sound_fmt">“%1$s” çal</string>
     <string name="rule_random_fmt">Zamanın %%%1$d kadarı</string>
     <string name="rule_random_hint">Tetiklemelerin bu yüzdesinde doğru.</string>
@@ -1567,7 +1567,11 @@
     <string name="rule_var_number">Bir sayı</string>
     <string name="rule_var_true">Doğru</string>
     <string name="rule_vars_empty">Henüz değişken yok: “Değişken ayarla” eylemiyle oluşturun.</string>
-    <string name="rule_vars_hint">Güncel değerler. Silmek için bir değişkene dokunun.</string>
+    <string name="rule_vars_hint">Mevcut değerler. Düzenlemek veya silmek için bir değişkene dokunun.</string>
+    <string name="rule_edit_rename">Yeniden adlandır</string>
+    <string name="rule_var_edit_value">Değeri değiştir</string>
+    <string name="rule_var_rename_taken">Bu ad başka bir değişken tarafından kullanılıyor.</string>
+    <string name="rule_place_move_here">Buraya taşı (mevcut konum)</string>
     <string name="rule_wait_until_fmt">%1$s olana kadar bekle (en çok %2$d sn)</string>
     <string name="rule_wait_until_hint">Süre dolunca kalan yine çalışır.</string>
     <string name="rule_wait_until_title">En fazla ne kadar?</string>

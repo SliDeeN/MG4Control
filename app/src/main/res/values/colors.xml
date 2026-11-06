@@ -70,4 +70,8 @@
     <color name="cluster_text">#FFFFFFFF</color>
     <color name="cluster_text_secondary">#FFB0B0B0</color>
     <color name="cluster_accent">#FF38BDF8</color>
+    <!-- Réglages rapides : tuile à bascule (deux valeurs choisies), sarcelle (2026-11-06). -->
+    <color name="quick_toggle_bg">#FFE1F5EE</color>
+    <color name="quick_toggle_border">#FF1D9E75</color>
+    <color name="quick_toggle_text">#FF085041</color>
 </resources>

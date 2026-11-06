@@ -128,6 +128,15 @@ class QuickSettingsPage {
         compteur?.text = "${tuiles.size} / ${QuickSettings.MAX_TILES}"
         @Suppress("NotifyDataSetChanged")
         adaptateur?.notifyDataSetChanged()
+        // Retour 2026-11-06 : la liste ne grandissait pas tout de suite après un ajout (liste dans
+        // un ScrollView, hauteur au contenu). On redemande sa mise en page après le passage de
+        // l'adaptateur, et on note les hauteurs pour le vérifier dans le journal.
+        liste?.let { rv ->
+            rv.post {
+                rv.requestLayout()
+                rv.post { AppLogger.i("MG4_QUICK", "Réglages rapides — liste : ${tuiles.size} tuiles, ${rv.childCount} rangées affichées, hauteur ${rv.height} px") }
+            }
+        }
         peindreCatalogue(ctx)
         peindreApercu()
     }
@@ -208,7 +217,7 @@ class QuickSettingsPage {
                         val t = ligne[col]!!
                         val val_ = valeurs[t]?.let { v -> QuickTiles.options(t).firstOrNull { it.valeur == v } }
                             ?.let { QuickTiles.libelle(ctx, t, it) } ?: "—"
-                        QuickTileViews.tuile(ctx, t, val_)
+                        QuickTileViews.tuile(ctx, t, val_, style = QuickTileViews.style(ctx, t, valeurs[t]))
                     }
                 }
                 rangee.addView(v, LinearLayout.LayoutParams(0, dp(ctx, 104f), 1f).also { if (col > 0) it.marginStart = dp(ctx, 10f) })

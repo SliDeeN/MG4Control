@@ -19,6 +19,7 @@ import android.widget.TextView
 import android.widget.Toast
 import com.mg4.control.MainActivity
 import com.mg4.control.R
+import com.mg4.control.accessibility.JoystickFocus
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.model.QuickSettings
@@ -71,9 +72,42 @@ object QuickSettingsOverlay {
     private var cadre: FrameLayout? = null
     private var bulle: View? = null
     private var decompte: TextView? = null
+    private var croix: View? = null
     private var tick: Runnable? = null
+    /** Joystick droit : focus sur la croix et les tuiles, ou sur les valeurs de la bulle ouverte. */
+    private var navigation: OverlayNavigation? = null
+    /** Dernière case de la grille au joystick (ligne 0 = la croix), gardée d'un dessin à l'autre. */
+    private var posGrille = JoystickFocus.Position(1, 0)
 
     fun isShowing(): Boolean = vue != null
+
+    /**
+     * Joystick droit (2026-11-06) : flèches = case suivante, clic = toucher. Bulle ouverte :
+     * gauche / droite parcourent ses valeurs, clic applique, haut / bas la referment.
+     */
+    fun naviguer(commande: JoystickFocus.Commande) {
+        handler.post {
+            if (vue == null) return@post
+            relancerDelai()
+            if (bulle != null && (commande == JoystickFocus.Commande.HAUT || commande == JoystickFocus.Commande.BAS)) {
+                choisie = null
+                peindre()
+                return@post
+            }
+            val nav = navigation ?: return@post
+            nav.recevoir(commande)
+            if (bulle == null && navigation === nav) posGrille = nav.position
+        }
+    }
+
+    /** Appui long, au joystick, de la touche qui l'a ouvert : le referme. */
+    fun fermerParRaccourci() {
+        handler.post {
+            if (vue == null) return@post
+            AppLogger.i(TAG, "Réglages rapides — appui long du joystick sur son raccourci → fermeture")
+            fermer()
+        }
+    }
 
     /** Raccourci : ouvre le pop-up, ou le referme s'il est déjà à l'écran. */
     fun toggle(context: Context) {
@@ -106,6 +140,7 @@ object QuickSettingsOverlay {
         tuiles = liste
         valeurs.clear(); valeurs.putAll(lus)
         choisie = null
+        posGrille = JoystickFocus.Position(1, 0)
         enRoute = roule
         delaiMs = PopupDelay.millis(app)
         val racine = try {
@@ -172,25 +207,30 @@ object QuickSettingsOverlay {
             // Toucher à côté des tuiles referme la bulle.
             setOnClickListener { relancerDelai(); if (choisie != null) { choisie = null; peindre() } }
         }
-        // En-tête : pictogramme, titre, décompte, croix.
+        // En-tête aux tailles du pop-up de charge (retour 2026-11-06) : picto 26 dp, titre 20 sp,
+        // décompte en pastille 14 sp, croix 44 dp.
         val tete = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-        tete.addView(FrameLayout(ctx).apply {
-            OverlayKit.fond(this, ctx.getColor(R.color.dash_accent_dim), rayon = dp(ctx, 14f).toFloat())
-            addView(ImageView(ctx).apply {
-                setImageResource(R.drawable.ic_cat_adjust)
-                imageTintList = ColorStateList.valueOf(ctx.getColor(R.color.dash_accent))
-            }, FrameLayout.LayoutParams(dp(ctx, 28f), dp(ctx, 28f), Gravity.CENTER))
-        }, LinearLayout.LayoutParams(dp(ctx, 52f), dp(ctx, 52f)))
-        tete.addView(texte(ctx, ctx.getString(R.string.quick_title), 24f, R.color.text_primary, gras = true),
-            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also { it.marginStart = dp(ctx, 14f) })
-        decompte = texte(ctx, "", 17f, R.color.text_secondary)
-        tete.addView(decompte)
-        tete.addView(texte(ctx, "✕", 22f, R.color.text_primary).apply {
+        tete.addView(ImageView(ctx).apply {
+            setImageResource(R.drawable.ic_cat_adjust)
+            imageTintList = ColorStateList.valueOf(ctx.getColor(R.color.dash_accent))
+        }, LinearLayout.LayoutParams(dp(ctx, 26f), dp(ctx, 26f)).also { it.marginStart = dp(ctx, 4f) })
+        tete.addView(texte(ctx, ctx.getString(R.string.quick_title), 20f, R.color.text_primary, gras = true),
+            LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).also { it.marginStart = dp(ctx, 10f) })
+        decompte = texte(ctx, "", 14f, R.color.dash_accent, gras = true).apply {
             gravity = Gravity.CENTER
-            OverlayKit.fond(this, ctx.getColor(R.color.dash_btn), ctx.getColor(R.color.dash_border), dp(ctx, 1f), dp(ctx, 14f).toFloat())
+            setPadding(dp(ctx, 14f), 0, dp(ctx, 14f), 0)
+            setBackgroundResource(R.drawable.bg_dialog_pill_accent)
+        }
+        tete.addView(decompte, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(ctx, 30f)))
+        croix = ImageView(ctx).apply {
+            setImageResource(R.drawable.ic_hvac_close)
+            scaleType = ImageView.ScaleType.CENTER
+            imageTintList = ColorStateList.valueOf(ctx.getColor(R.color.text_secondary))
+            contentDescription = ctx.getString(R.string.nav_close)
             setOnClickListener { fermer() }
-        }, LinearLayout.LayoutParams(dp(ctx, 56f), dp(ctx, 56f)).also { it.marginStart = dp(ctx, 14f) })
-        carte.addView(tete)
+        }
+        tete.addView(croix, LinearLayout.LayoutParams(dp(ctx, 44f), dp(ctx, 44f)).also { it.marginStart = dp(ctx, 8f) })
+        carte.addView(tete, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(ctx, 44f)))
 
         grille = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
         carte.addView(grille, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
@@ -220,6 +260,8 @@ object QuickSettingsOverlay {
         val g = grille ?: return
         g.removeAllViews()
         var vueChoisie: View? = null
+        val lignesJoystick = mutableListOf<List<View>>()
+        croix?.let { lignesJoystick += listOf(it) }
         val cases: List<QuickTile?> = tuiles + (if (tuiles.size < QuickSettings.MAX_TILES) listOf(null) else emptyList())
         cases.chunked(4).forEachIndexed { i, ligne ->
             val rangee = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; isBaselineAligned = false }
@@ -228,7 +270,8 @@ object QuickSettingsOverlay {
                 val cellule: View = when {
                     col >= ligne.size -> View(ctx).apply { visibility = View.INVISIBLE }
                     t == null -> QuickTileViews.ajout(ctx) { ouvrirPage() }
-                    else -> QuickTileViews.tuile(ctx, t, valeurLibelle(ctx, t), choisie = t == choisie, grisee = bloquee(t)).apply {
+                    else -> QuickTileViews.tuile(ctx, t, valeurLibelle(ctx, t), choisie = t == choisie, grisee = bloquee(t),
+                        style = QuickTileViews.style(ctx, t, valeurs[t])).apply {
                         setOnClickListener {
                             relancerDelai()
                             if (bloquee(t)) {
@@ -253,8 +296,18 @@ object QuickSettingsOverlay {
             }
             g.addView(rangee, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
                 .also { if (i > 0) it.topMargin = dp(ctx, 10f) })
+            lignesJoystick += (0 until ligne.size).map { rangee.getChildAt(it) }
         }
-        peindreBulle(ctx, vueChoisie)
+        val boutonsBulle = peindreBulle(ctx, vueChoisie)
+        navigation = if (boutonsBulle != null) {
+            val actuelle = choisie?.let { t -> QuickTiles.proposees(ctx, t).indexOfFirst { it.valeur == valeurs[t] } } ?: 0
+            OverlayNavigation(ctx, listOf(boutonsBulle.first), JoystickFocus.Position(0, actuelle.coerceAtLeast(0)), { relancerDelai() })
+        } else {
+            val l = posGrille.ligne.coerceIn(0, lignesJoystick.lastIndex)
+            posGrille = JoystickFocus.Position(l, posGrille.colonne.coerceIn(0, lignesJoystick[l].lastIndex))
+            OverlayNavigation(ctx, lignesJoystick, posGrille, { relancerDelai() })
+        }
+        navigation?.afficher()
     }
 
     private fun valeurLibelle(ctx: Context, t: QuickTile): String {
@@ -263,12 +316,12 @@ object QuickSettingsOverlay {
     }
 
     /** La bulle des valeurs de la tuile choisie, centrée sur elle, au-dessus (ou dessous si pas de place). */
-    private fun peindreBulle(ctx: Context, tuile: View?) {
-        val c = cadre ?: return
+    private fun peindreBulle(ctx: Context, tuile: View?): Pair<List<View>, View>? {
+        val c = cadre ?: return null
         bulle?.let { c.removeView(it) }
         bulle = null
-        val t = choisie ?: return
-        if (tuile == null) return
+        val t = choisie ?: return null
+        if (tuile == null) return null
         val actuelle = valeurs[t]
         val b = LinearLayout(ctx).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -295,6 +348,7 @@ object QuickSettingsOverlay {
         }
         c.addView(b, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT))
         bulle = b
+        val boutons = (0 until b.childCount).map { b.getChildAt(it) }
         // Placée une fois mesurée : position de la tuile dans le cadre.
         c.post {
             if (bulle !== b || !tuile.isAttachedToWindow) return@post
@@ -309,6 +363,7 @@ object QuickSettingsOverlay {
             b.translationY = (if (dessus >= 0) dessus else y + tuile.height + ecart).toFloat()
             b.visibility = View.VISIBLE
         }
+        return boutons to b
     }
 
     // ── Voiture ───────────────────────────────────────────────────────────────
@@ -358,6 +413,8 @@ object QuickSettingsOverlay {
         tick = null
         grille = null
         cadre = null
+        navigation = null
+        croix = null
         bulle = null
         decompte = null
         val v = vue ?: return
@@ -379,27 +436,59 @@ object QuickTileViews {
 
     private fun dp(ctx: Context, v: Float) = OverlayKit.dp(ctx, v)
 
-    fun tuile(ctx: Context, t: QuickTile, valeur: String, choisie: Boolean = false, grisee: Boolean = false): View =
+    /**
+     * Allure d'une tuile (2026-11-06) : [OUI] = réglage Oui / Non sur Oui (accent) ; [BASCULE] = deux
+     * valeurs choisies, un toucher passe à l'autre (sarcelle et « ⇄ », quelle que soit la valeur).
+     */
+    enum class Style { NORMAL, OUI, BASCULE }
+
+    /** L'allure de [t] d'après ses valeurs proposées et sa valeur lue [v]. */
+    fun style(ctx: Context, t: QuickTile, v: Int?): Style {
+        val toutes = QuickTiles.options(t)
+        val ouiNon = toutes.size == 2 && toutes.any { it.libelle == R.string.segment_yes }
+        return when {
+            ouiNon -> if (v == 1) Style.OUI else Style.NORMAL
+            QuickTiles.proposees(ctx, t).size == 2 -> Style.BASCULE
+            else -> Style.NORMAL
+        }
+    }
+
+    fun tuile(ctx: Context, t: QuickTile, valeur: String, choisie: Boolean = false, grisee: Boolean = false,
+              style: Style = Style.NORMAL): View =
         LinearLayout(ctx).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(ctx, 14f), dp(ctx, 12f), dp(ctx, 14f), dp(ctx, 12f))
-            OverlayKit.fond(this, ctx.getColor(if (choisie) R.color.dash_accent_dim else R.color.dash_btn),
-                ctx.getColor(if (choisie) R.color.dash_accent else R.color.dash_border), dp(ctx, if (choisie) 2f else 1f), dp(ctx, 16f).toFloat())
+            val (fond, bord, texteValeur) = when {
+                choisie -> Triple(R.color.dash_accent_dim, R.color.dash_accent, R.color.dash_accent)
+                style == Style.OUI -> Triple(R.color.dash_accent_dim, R.color.dash_accent, R.color.dash_accent)
+                style == Style.BASCULE -> Triple(R.color.quick_toggle_bg, R.color.quick_toggle_border, R.color.quick_toggle_text)
+                else -> Triple(R.color.dash_btn, R.color.dash_border, R.color.text_primary)
+            }
+            val texteNom = if (style == Style.BASCULE && !choisie) R.color.quick_toggle_text else R.color.text_secondary
+            OverlayKit.fond(this, ctx.getColor(fond), ctx.getColor(bord),
+                dp(ctx, if (choisie || style != Style.NORMAL) 2f else 1f), dp(ctx, 16f).toFloat())
             alpha = if (grisee) 0.45f else 1f
             addView(LinearLayout(ctx).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 addView(ImageView(ctx).apply {
                     setImageResource(QuickTiles.cat(t).icone)
-                    imageTintList = ColorStateList.valueOf(ctx.getColor(R.color.text_secondary))
+                    imageTintList = ColorStateList.valueOf(ctx.getColor(texteNom))
                 }, LinearLayout.LayoutParams(dp(ctx, 20f), dp(ctx, 20f)))
                 addView(TextView(ctx).apply {
                     text = ctx.getString(QuickTiles.nom(t))
                     setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f)
-                    setTextColor(ctx.getColor(R.color.text_secondary))
+                    setTextColor(ctx.getColor(texteNom))
                     maxLines = 1
                     ellipsize = android.text.TextUtils.TruncateAt.END
                     setPadding(dp(ctx, 8f), 0, 0, 0)
+                }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+                if (style == Style.BASCULE) addView(TextView(ctx).apply {
+                    text = "⇄"
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+                    setTypeface(typeface, android.graphics.Typeface.BOLD)
+                    setTextColor(ctx.getColor(R.color.quick_toggle_text))
+                    setPadding(dp(ctx, 6f), 0, 0, 0)
                 })
             })
             addView(View(ctx), LinearLayout.LayoutParams(0, 0, 1f))
@@ -407,7 +496,7 @@ object QuickTileViews {
                 text = valeur
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
                 setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setTextColor(ctx.getColor(if (choisie) R.color.dash_accent else R.color.text_primary))
+                setTextColor(ctx.getColor(texteValeur))
                 maxLines = 1
                 ellipsize = android.text.TextUtils.TruncateAt.END
             })

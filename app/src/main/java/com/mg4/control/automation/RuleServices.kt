@@ -59,6 +59,18 @@ object RuleVariables {
         ctx.getSharedPreferences(PREFS, 0).edit().putString(RuleLogic.variableName(name), value.trim().take(64)).apply()
 
     fun delete(ctx: Context, name: String) = ctx.getSharedPreferences(PREFS, 0).edit().remove(name).apply()
+
+    /** Renomme [old] en [new] (valeur gardée) et dans toutes les automatisations ; faux si [new] existe déjà. */
+    fun rename(ctx: Context, old: String, new: String): Boolean {
+        val n = RuleLogic.variableName(new)
+        if (n.isEmpty() || n == old) return false
+        val p = ctx.getSharedPreferences(PREFS, 0)
+        if (p.contains(n)) return false
+        val v = p.getString(old, "") ?: ""
+        p.edit().remove(old).putString(n, v).apply()
+        CustomRuleStore.renameVariable(ctx, old, n)
+        return true
+    }
 }
 
 /**

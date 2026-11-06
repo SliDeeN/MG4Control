@@ -120,7 +120,7 @@ object AbrpDialogs {
                 text = ctx.getString(titre); textSize = 18f; setTextColor(ctx.getColor(R.color.text_primary))
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             })
-            val seg = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+            val seg = segmentsCadre(ctx, 440f)
             r.addView(seg)
             AppDialog.segments(seg, valeurs.map(nom), valeurs.indexOf(actuelle).coerceAtLeast(0)) { i ->
                 AbrpStore.saveCadence(ctx, ecrire(valeurs[i])); maj()
@@ -185,7 +185,7 @@ object AbrpDialogs {
             visibility = if (personnelle) View.VISIBLE else View.GONE
         }
         if (AbrpStore.appKey.isNotBlank()) {
-            val seg = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL }
+            val seg = segmentsCadre(ctx, 520f).also { (it.layoutParams as LinearLayout.LayoutParams).topMargin = dp(ctx, 8f) }
             box.addView(seg)
             AppDialog.segments(seg, listOf(ctx.getString(R.string.abrp_key_choice_mg4), ctx.getString(R.string.abrp_key_choice_personal)),
                 if (personnelle) 1 else 0) { i -> personnelle = i == 1; cle.visibility = if (personnelle) View.VISIBLE else View.GONE }
@@ -367,5 +367,14 @@ object AbrpDialogs {
         isEnabled = actif
         layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(ctx, 56f)).also { it.marginEnd = dp(ctx, 10f) }
         setOnClickListener { onClic() }
+    }
+
+    /** Le cadre d'un choix à segments, à la taille de ceux de l'éditeur (60 dp de haut). */
+    private fun segmentsCadre(ctx: Context, largeurDp: Float) = LinearLayout(ctx).apply {
+        orientation = LinearLayout.HORIZONTAL
+        setBackgroundResource(R.drawable.bg_dialog_segments)
+        val p = dp(ctx, 4f)
+        setPadding(p, p, p, p)
+        layoutParams = LinearLayout.LayoutParams(dp(ctx, largeurDp), dp(ctx, 60f))
     }
 }

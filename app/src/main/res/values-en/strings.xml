@@ -1499,7 +1499,7 @@
     <string name="rule_place_outside">Outside the place</string>
     <string name="rule_place_radius">Place radius</string>
     <string name="rule_places_empty">No place yet: save one from an “A place” condition (current position).</string>
-    <string name="rule_places_hint">Tap a place to delete it.</string>
+    <string name="rule_places_hint">Tap a place to edit or delete it.</string>
     <string name="rule_play_sound_fmt">Play “%1$s”</string>
     <string name="rule_random_fmt">%1$d %% of the time</string>
     <string name="rule_random_hint">True for this percentage of triggers.</string>
@@ -1567,7 +1567,11 @@
     <string name="rule_var_number">A number</string>
     <string name="rule_var_true">True</string>
     <string name="rule_vars_empty">No variable yet: create them with the “Set a variable” action.</string>
-    <string name="rule_vars_hint">Current values. Tap a variable to delete it.</string>
+    <string name="rule_vars_hint">Current values. Tap a variable to edit or delete it.</string>
+    <string name="rule_edit_rename">Rename</string>
+    <string name="rule_var_edit_value">Change value</string>
+    <string name="rule_var_rename_taken">That name is already used by another variable.</string>
+    <string name="rule_place_move_here">Move here (current position)</string>
     <string name="rule_wait_until_fmt">Wait until %1$s (%2$d s max)</string>
     <string name="rule_wait_until_hint">When time runs out, the rest runs anyway.</string>
     <string name="rule_wait_until_title">How long at most?</string>

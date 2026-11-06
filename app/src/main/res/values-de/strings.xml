@@ -1499,7 +1499,7 @@
     <string name="rule_place_outside">Außerhalb des Orts</string>
     <string name="rule_place_radius">Radius des Orts</string>
     <string name="rule_places_empty">Noch kein Ort: über eine Bedingung „Ein Ort“ speichern (aktuelle Position).</string>
-    <string name="rule_places_hint">Tippen Sie auf einen Ort, um ihn zu löschen.</string>
+    <string name="rule_places_hint">Ort antippen, um ihn zu bearbeiten oder zu löschen.</string>
     <string name="rule_play_sound_fmt">„%1$s“ abspielen</string>
     <string name="rule_random_fmt">%1$d %% der Fälle</string>
     <string name="rule_random_hint">Bei diesem Anteil der Auslösungen wahr.</string>
@@ -1567,7 +1567,11 @@
     <string name="rule_var_number">Eine Zahl</string>
     <string name="rule_var_true">Wahr</string>
     <string name="rule_vars_empty">Noch keine Variable: mit der Aktion „Variable setzen“ anlegen.</string>
-    <string name="rule_vars_hint">Aktuelle Werte. Tippen Sie auf eine Variable, um sie zu löschen.</string>
+    <string name="rule_vars_hint">Aktuelle Werte. Variable antippen, um sie zu bearbeiten oder zu löschen.</string>
+    <string name="rule_edit_rename">Umbenennen</string>
+    <string name="rule_var_edit_value">Wert ändern</string>
+    <string name="rule_var_rename_taken">Dieser Name wird schon von einer anderen Variable verwendet.</string>
+    <string name="rule_place_move_here">Hierher verlegen (aktuelle Position)</string>
     <string name="rule_wait_until_fmt">Warten bis %1$s (max. %2$d s)</string>
     <string name="rule_wait_until_hint">Nach Ablauf läuft der Rest trotzdem.</string>
     <string name="rule_wait_until_title">Wie lange höchstens?</string>

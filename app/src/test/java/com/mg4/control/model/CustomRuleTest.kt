@@ -496,4 +496,19 @@ class CustomRuleTest {
         assertEquals("READY : non", t.condition(RuleCondition(RuleCondition.Type.NOT,
             children = listOf(RuleCondition(RuleCondition.Type.COMPARE, signal = RuleSignal.READY, op = RuleOp.IS_TRUE)))))
     }
+
+    @Test
+    fun `renommer une variable partout`() {
+        val v = { n: String -> RuleCondition(RuleCondition.Type.VARIABLE, text = n, op = RuleOp.EQUALS, value = "1") }
+        val r = CustomRule(name = "x",
+            triggers = listOf(RuleTrigger(RuleTrigger.Type.BECOMES, condition = v("degivre"))),
+            condition = RuleCondition(RuleCondition.Type.ALL, children = listOf(v("DEGIVRE"), v("AUTRE"))),
+            actions = listOf(RuleAction(RuleAction.Type.IF, condition = v("DEGIVRE"),
+                then = listOf(RuleAction(RuleAction.Type.SET_VARIABLE, key = "DEGIVRE", value = "0")))))
+        val n = RuleLogic.renameVariable(r, "DEGIVRE", "fait")
+        assertEquals("FAIT", n.triggers[0].condition?.text)
+        assertEquals(listOf("FAIT", "AUTRE"), n.condition?.children?.map { it.text })
+        assertEquals("FAIT", n.actions[0].condition?.text)
+        assertEquals("FAIT", n.actions[0].then?.single()?.key)
+    }
 }

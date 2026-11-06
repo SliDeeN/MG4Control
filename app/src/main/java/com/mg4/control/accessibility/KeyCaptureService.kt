@@ -16,6 +16,7 @@ import com.mg4.control.debug.AppLogger
 import com.mg4.control.service.HvacPopupOverlay
 import com.mg4.control.service.MG4ControlService
 import com.mg4.control.service.PreClimatePopupOverlay
+import com.mg4.control.service.QuickSettingsOverlay
 import com.mg4.control.service.ProfileConfirmOverlay
 import com.mg4.control.service.ProfilePickerOverlay
 import com.mg4.control.shortcut.PressType
@@ -232,12 +233,14 @@ class KeyCaptureService : AccessibilityService() {
                 val confirmation = ProfileConfirmOverlay.isShowing()
                 val profils = ProfilePickerOverlay.isShowing()
                 val preclim = PreClimatePopupOverlay.isShowing()
-                if (confirmation || profils || preclim || HvacPopupOverlay.isShowing()) {
+                // Réglages rapides (2026-11-06) : avant le pop-up HVAC, qui garde la dernière place.
+                val rapides = QuickSettingsOverlay.isShowing()
+                if (confirmation || profils || preclim || rapides || HvacPopupOverlay.isShowing()) {
                     navigationEnCours.add(code)
                     // Pop-up HVAC, clic central : l'appui maintenu fait avancer le débit en AUTO.
                     // Il passe avant l'appui long qui refermerait le pop-up par son raccourci : une
                     // même touche ne peut pas faire les deux, et le pop-up se ferme aussi autrement.
-                    if (!confirmation && !profils && !preclim && commande == JoystickFocus.Commande.VALIDER) {
+                    if (!confirmation && !profils && !preclim && !rapides && commande == JoystickFocus.Commande.VALIDER) {
                         AppLogger.i(TAG, "touche $code — pop-up HVAC → clic central enfoncé")
                         centresHvac.add(code)
                         HvacPopupOverlay.centreEnfonce()
@@ -257,6 +260,10 @@ class KeyCaptureService : AccessibilityService() {
                                 AppLogger.i(TAG, "touche $code — pop-up pré-climatisation → ${commande.name}")
                                 PreClimatePopupOverlay.naviguer(commande)
                             }
+                            rapides -> {
+                                AppLogger.i(TAG, "touche $code — pop-up Réglages rapides → ${commande.name}")
+                                QuickSettingsOverlay.naviguer(commande)
+                            }
                             else -> {
                                 AppLogger.i(TAG, "touche $code — pop-up HVAC → ${commande.name}")
                                 HvacPopupOverlay.naviguer(commande)
@@ -271,6 +278,9 @@ class KeyCaptureService : AccessibilityService() {
                         } else null
                         preclim -> if (ouvreEnAppuiLong(code, ShortcutAction.PRE_CLIMATE)) {
                             { PreClimatePopupOverlay.fermerParRaccourci() }
+                        } else null
+                        rapides -> if (ouvreEnAppuiLong(code, ShortcutAction.QUICK_SETTINGS)) {
+                            { QuickSettingsOverlay.fermerParRaccourci() }
                         } else null
                         else -> if (ouvreEnAppuiLong(code, ShortcutAction.HVAC_POPUP)) {
                             { HvacPopupOverlay.fermerParRaccourci() }

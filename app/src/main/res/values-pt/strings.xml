@@ -1499,7 +1499,7 @@
     <string name="rule_place_outside">Fora do local</string>
     <string name="rule_place_radius">Raio do local</string>
     <string name="rule_places_empty">Nenhum local: guarda-se a partir de uma condição «Um local» (posição atual).</string>
-    <string name="rule_places_hint">Toque num local para o eliminar.</string>
+    <string name="rule_places_hint">Toque num local para o alterar ou eliminar.</string>
     <string name="rule_play_sound_fmt">Reproduzir «%1$s»</string>
     <string name="rule_random_fmt">%1$d %% das vezes</string>
     <string name="rule_random_hint">Verdadeira nesta percentagem de disparos.</string>
@@ -1567,7 +1567,11 @@
     <string name="rule_var_number">Um número</string>
     <string name="rule_var_true">Verdadeiro</string>
     <string name="rule_vars_empty">Nenhuma variável: criam-se com a ação «Definir uma variável».</string>
-    <string name="rule_vars_hint">Valores atuais. Toque numa variável para a eliminar.</string>
+    <string name="rule_vars_hint">Valores atuais. Toque numa variável para a alterar ou eliminar.</string>
+    <string name="rule_edit_rename">Renomear</string>
+    <string name="rule_var_edit_value">Alterar o valor</string>
+    <string name="rule_var_rename_taken">Esse nome já é usado por outra variável.</string>
+    <string name="rule_place_move_here">Colocar aqui (posição atual)</string>
     <string name="rule_wait_until_fmt">Aguardar até %1$s (máx. %2$d s)</string>
     <string name="rule_wait_until_hint">Esgotado o tempo, o resto corre na mesma.</string>
     <string name="rule_wait_until_title">Quanto tempo no máximo?</string>

@@ -1499,7 +1499,7 @@
     <string name="rule_place_outside">Fuera del lugar</string>
     <string name="rule_place_radius">Radio del lugar</string>
     <string name="rule_places_empty">Ningún lugar: se guardan desde una condición «Un lugar» (posición actual).</string>
-    <string name="rule_places_hint">Toque un lugar para eliminarlo.</string>
+    <string name="rule_places_hint">Toque un lugar para modificarlo o eliminarlo.</string>
     <string name="rule_play_sound_fmt">Reproducir «%1$s»</string>
     <string name="rule_random_fmt">%1$d %% de las veces</string>
     <string name="rule_random_hint">Cierta en este porcentaje de disparos.</string>
@@ -1567,7 +1567,11 @@
     <string name="rule_var_number">Un número</string>
     <string name="rule_var_true">Verdadero</string>
     <string name="rule_vars_empty">Ninguna variable: se crean con la acción «Definir una variable».</string>
-    <string name="rule_vars_hint">Valores actuales. Toque una variable para eliminarla.</string>
+    <string name="rule_vars_hint">Valores actuales. Toque una variable para modificarla o eliminarla.</string>
+    <string name="rule_edit_rename">Renombrar</string>
+    <string name="rule_var_edit_value">Cambiar el valor</string>
+    <string name="rule_var_rename_taken">Ese nombre ya lo usa otra variable.</string>
+    <string name="rule_place_move_here">Situar aquí (posición actual)</string>
     <string name="rule_wait_until_fmt">Esperar a que %1$s (máx. %2$d s)</string>
     <string name="rule_wait_until_hint">Al agotarse el tiempo, el resto se ejecuta igualmente.</string>
     <string name="rule_wait_until_title">¿Cuánto tiempo como máximo?</string>

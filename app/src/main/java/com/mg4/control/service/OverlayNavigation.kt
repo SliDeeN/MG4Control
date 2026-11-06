@@ -53,7 +53,8 @@ internal class OverlayNavigation(
     /** Surligner sans service d'accessibilité promettrait une navigation qui ne viendra pas. */
     private val actif = KeyCaptureService.isEnabled(context)
 
-    private var position = depart
+    var position = depart
+        private set
     private var surlignee: View? = null
 
     /** Pose l'anneau sur la cellule de départ, si le joystick peut effectivement naviguer. */

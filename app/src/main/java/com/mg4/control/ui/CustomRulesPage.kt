@@ -173,9 +173,29 @@ class CustomRulesPage {
         AppDialog.choisir(ctx, titre = ctx.getString(R.string.rule_tool_variables), sousTitre = ctx.getString(R.string.rule_vars_hint),
             choix = v.map { (k, x) -> AppDialog.Choix("$k = $x") }, annuler = ctx.getString(R.string.nav_close)) { rang ->
             val nom = v.keys.elementAt(rang)
-            AppDialog.confirmer(ctx, titre = ctx.getString(R.string.rule_delete_confirm_fmt, nom), ton = AppDialog.Ton.DANGER,
-                oui = ctx.getString(R.string.rule_delete), non = ctx.getString(R.string.profile_cancel),
-                onOui = { RuleVariables.delete(ctx, nom) })
+            variable(ctx, nom, v[nom].orEmpty())
+        }
+    }
+
+    /** Une variable : renommer (partout dans les automatisations), changer sa valeur, la supprimer. */
+    private fun variable(ctx: Context, nom: String, valeur: String) {
+        val gestes = listOf(R.string.rule_edit_rename, R.string.rule_var_edit_value, R.string.rule_delete)
+        AppDialog.choisir(ctx, titre = "$nom = $valeur", choix = gestes.map { AppDialog.Choix(ctx.getString(it)) },
+            annuler = ctx.getString(R.string.profile_cancel), icone = R.drawable.ic_dialog_edit) { rang ->
+            when (gestes[rang]) {
+                R.string.rule_edit_rename -> RuleValueDialogs.texte(ctx, ctx.getString(R.string.rule_edit_rename), nom) { n ->
+                    if (com.mg4.control.model.RuleLogic.variableName(n) == nom) return@texte
+                    if (!RuleVariables.rename(ctx, nom, n)) Toast.makeText(ctx, R.string.rule_var_rename_taken, Toast.LENGTH_LONG).show()
+                    else variables(ctx)
+                }
+                R.string.rule_var_edit_value -> RuleValueDialogs.texte(ctx, ctx.getString(R.string.rule_var_edit_value), valeur) { n ->
+                    RuleVariables.set(ctx, nom, n)
+                    variables(ctx)
+                }
+                else -> AppDialog.confirmer(ctx, titre = ctx.getString(R.string.rule_delete_confirm_fmt, nom), ton = AppDialog.Ton.DANGER,
+                    oui = ctx.getString(R.string.rule_delete), non = ctx.getString(R.string.profile_cancel),
+                    onOui = { RuleVariables.delete(ctx, nom) })
+            }
         }
     }
 
@@ -188,10 +208,38 @@ class CustomRulesPage {
         }
         AppDialog.choisir(ctx, titre = ctx.getString(R.string.rule_tool_places), sousTitre = ctx.getString(R.string.rule_places_hint),
             choix = l.map { AppDialog.Choix("${it.name} · ${it.radius} m") }, annuler = ctx.getString(R.string.nav_close)) { rang ->
-            val p = l[rang]
-            AppDialog.confirmer(ctx, titre = ctx.getString(R.string.rule_delete_confirm_fmt, p.name), ton = AppDialog.Ton.DANGER,
-                oui = ctx.getString(R.string.rule_delete), non = ctx.getString(R.string.profile_cancel),
-                onOui = { RulePlaces.save(ctx, l.filterNot { it.id == p.id }) })
+            lieu(ctx, l[rang])
+        }
+    }
+
+    /** Un lieu : renommer, changer le rayon, le placer ici, le supprimer (les automatisations le suivent par son id). */
+    private fun lieu(ctx: Context, p: com.mg4.control.model.RulePlace) {
+        fun remplacer(n: com.mg4.control.model.RulePlace) {
+            RulePlaces.save(ctx, RulePlaces.all(ctx).map { if (it.id == p.id) n else it })
+            lieux(ctx)
+        }
+        val gestes = listOf(R.string.rule_edit_rename, R.string.rule_place_radius, R.string.rule_place_move_here, R.string.rule_delete)
+        AppDialog.choisir(ctx, titre = "${p.name} · ${p.radius} m", choix = gestes.map { AppDialog.Choix(ctx.getString(it)) },
+            annuler = ctx.getString(R.string.profile_cancel), icone = R.drawable.ic_dialog_edit) { rang ->
+            when (gestes[rang]) {
+                R.string.rule_edit_rename -> RuleValueDialogs.texte(ctx, ctx.getString(R.string.rule_place_name), p.name) { n ->
+                    if (n.isNotBlank()) remplacer(p.copy(name = n.trim()))
+                }
+                R.string.rule_place_radius -> RuleValueDialogs.nombre(ctx, ctx.getString(R.string.rule_place_radius), null, p.radius, 50, 5_000,
+                    texte = { "$it m" }, pas = { v, sens -> v + sens * (if (sens > 0 && v < 500 || sens < 0 && v <= 500) 50 else 250) }) { r ->
+                    remplacer(p.copy(radius = r))
+                }
+                R.string.rule_place_move_here -> {
+                    Toast.makeText(ctx, R.string.rule_place_locating, Toast.LENGTH_SHORT).show()
+                    com.mg4.control.automation.AndroidControls.locate(ctx) { loc ->
+                        if (loc == null) Toast.makeText(ctx, R.string.rule_place_no_fix, Toast.LENGTH_LONG).show()
+                        else remplacer(p.copy(lat = loc.latitude, lng = loc.longitude))
+                    }
+                }
+                else -> AppDialog.confirmer(ctx, titre = ctx.getString(R.string.rule_delete_confirm_fmt, p.name), ton = AppDialog.Ton.DANGER,
+                    oui = ctx.getString(R.string.rule_delete), non = ctx.getString(R.string.profile_cancel),
+                    onOui = { RulePlaces.save(ctx, RulePlaces.all(ctx).filterNot { it.id == p.id }) })
+            }
         }
     }
 

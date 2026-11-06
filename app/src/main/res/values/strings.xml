@@ -1516,7 +1516,7 @@
     <string name="rule_place_outside">Hors du lieu</string>
     <string name="rule_place_radius">Rayon du lieu</string>
     <string name="rule_places_empty">Aucun lieu : ils s\'enregistrent depuis une condition « Un lieu » (position actuelle).</string>
-    <string name="rule_places_hint">Touchez un lieu pour le supprimer.</string>
+    <string name="rule_places_hint">Touchez un lieu pour le modifier ou le supprimer.</string>
     <string name="rule_play_sound_fmt">Jouer « %1$s »</string>
     <string name="rule_random_fmt">%1$d %% des fois</string>
     <string name="rule_random_hint">Vraie à ce pourcentage des déclenchements.</string>
@@ -1584,7 +1584,11 @@
     <string name="rule_var_number">Un nombre</string>
     <string name="rule_var_true">Vrai</string>
     <string name="rule_vars_empty">Aucune variable : elles se créent avec l\'action « Définir une variable ».</string>
-    <string name="rule_vars_hint">Valeurs actuelles. Touchez une variable pour la supprimer.</string>
+    <string name="rule_vars_hint">Valeurs actuelles. Touchez une variable pour la modifier ou la supprimer.</string>
+    <string name="rule_edit_rename">Renommer</string>
+    <string name="rule_var_edit_value">Modifier la valeur</string>
+    <string name="rule_var_rename_taken">Ce nom est déjà pris par une autre variable.</string>
+    <string name="rule_place_move_here">Placer ici (position actuelle)</string>
     <string name="rule_wait_until_fmt">Attendre que %1$s (%2$d s max.)</string>
     <string name="rule_wait_until_hint">Délai écoulé : la suite part quand même.</string>
     <string name="rule_wait_until_title">Combien de temps au plus ?</string>

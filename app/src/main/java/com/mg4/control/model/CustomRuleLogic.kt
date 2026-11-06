@@ -133,6 +133,32 @@ object RuleLogic {
         return out
     }
 
+    /**
+     * La règle avec la variable [old] renommée [new] partout : conditions « variable » (déclencheurs,
+     * Et si, blocs) et actions « définir une variable ». Les noms sont comparés normalisés.
+     */
+    fun renameVariable(rule: CustomRule, old: String, new: String): CustomRule {
+        val o = variableName(old)
+        val n = variableName(new)
+        fun c(x: RuleCondition?, d: Int): RuleCondition? {
+            if (x == null || d > MAX_DEPTH) return x
+            val t = if (x.type == RuleCondition.Type.VARIABLE && x.text != null && variableName(x.text) == o) n else x.text
+            return x.copy(text = t, children = x.children?.map { c(it, d + 1)!! })
+        }
+        fun a(l: List<RuleAction>?, d: Int): List<RuleAction>? {
+            if (l == null || d > MAX_DEPTH) return l
+            return l.map {
+                val k = if (it.type == RuleAction.Type.SET_VARIABLE && it.key != null && variableName(it.key) == o) n else it.key
+                it.copy(key = k, condition = c(it.condition, d + 1), then = a(it.then, d + 1), otherwise = a(it.otherwise, d + 1))
+            }
+        }
+        return rule.copy(
+            triggers = rule.triggers.map { it.copy(condition = c(it.condition, 0)) },
+            condition = c(rule.condition, 0) ?: rule.condition,
+            actions = a(rule.actions, 0).orEmpty(),
+        )
+    }
+
     /** Les lieux dont une règle a besoin : seule leur appartenance est calculée. */
     fun places(rule: CustomRule): Set<String> {
         val out = mutableSetOf<String>()

@@ -1499,7 +1499,7 @@
     <string name="rule_place_outside">Fuori dal luogo</string>
     <string name="rule_place_radius">Raggio del luogo</string>
     <string name="rule_places_empty">Nessun luogo: si salvano da una condizione «Un luogo» (posizione attuale).</string>
-    <string name="rule_places_hint">Tocca un luogo per eliminarlo.</string>
+    <string name="rule_places_hint">Tocca un luogo per modificarlo o eliminarlo.</string>
     <string name="rule_play_sound_fmt">Riproduci «%1$s»</string>
     <string name="rule_random_fmt">%1$d %% delle volte</string>
     <string name="rule_random_hint">Vera in questa percentuale di attivazioni.</string>
@@ -1567,7 +1567,11 @@
     <string name="rule_var_number">Un numero</string>
     <string name="rule_var_true">Vero</string>
     <string name="rule_vars_empty">Nessuna variabile: si creano con l\'azione «Imposta una variabile».</string>
-    <string name="rule_vars_hint">Valori attuali. Tocca una variabile per eliminarla.</string>
+    <string name="rule_vars_hint">Valori attuali. Tocca una variabile per modificarla o eliminarla.</string>
+    <string name="rule_edit_rename">Rinomina</string>
+    <string name="rule_var_edit_value">Modifica il valore</string>
+    <string name="rule_var_rename_taken">Questo nome è già usato da un\'altra variabile.</string>
+    <string name="rule_place_move_here">Sposta qui (posizione attuale)</string>
     <string name="rule_wait_until_fmt">Attendi che %1$s (max %2$d s)</string>
     <string name="rule_wait_until_hint">Scaduto il tempo, il resto parte comunque.</string>
     <string name="rule_wait_until_title">Per quanto tempo al massimo?</string>

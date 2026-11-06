@@ -71,6 +71,11 @@ object CustomRuleStore {
         true
     }
 
+    /** La variable [old] renommée [new] dans toutes les automatisations. */
+    fun renameVariable(ctx: Context, old: String, new: String) = synchronized(LOCK) {
+        write(ctx, all(ctx).map { com.mg4.control.model.RuleLogic.renameVariable(it, old, new) })
+    }
+
     fun setEnabled(ctx: Context, id: String, enabled: Boolean) = synchronized(LOCK) {
         write(ctx, all(ctx).map { if (it.id == id) it.copy(enabled = enabled) else it })
     }
