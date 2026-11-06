@@ -152,9 +152,12 @@ object MG4Hardware {
     // Volume média — ancien SDK (SWI133/68/165) : SmartSoundManager.getVolume/setVolume/getMaxVolume(type).
     // Même SDK systemsettings/BaseManager que GeneralManager (singleton sInstance + init(Context, listener)).
     private const val SMART_SOUND_MANAGER_CLASS = "com.saicmotor.sdk.systemsettings.SmartSoundManager"
-    // Public : le raccourci « luminosité - » doit clamper sur CE plancher pour que son log dise
-    // la vérité. Le redéfinir de son côté le ferait diverger le jour où cette valeur change.
-    const val BRIGHTNESS_MIN_PERCENT = 5   // plancher de sécurité : ne jamais éteindre l'écran
+    // Plancher de luminosité. Ancien SDK (SWI133/68/165) : 0, comme le système d'origine —
+    // GeneralManager.decreaseBrightnessMin() écrit 0 et l'écran reste allumé ; avec 5 % (natif 12),
+    // un écran baissé à la main sous 12 ne pouvait plus être atteint (« luminosité − » sans effet,
+    // forum SWI68 du 2026-11-06). A9 : 5 %, comportement du bas de plage jamais vérifié.
+    private const val BRIGHTNESS_MIN_PERCENT_OLD_SDK = 0
+    private const val BRIGHTNESS_MIN_PERCENT_A9 = 5
 
     // SWI69/SWI131 : accès via CarAdapterClient → queryClient(0x8) → CarVehicleSettingClient
     // Architecture réelle : CarAdapterClient se connecte à com.saicmotor.caradapter.CarAdapterService,
@@ -1032,6 +1035,13 @@ object MG4Hardware {
     /** Luminosité écran disponible : ancien SDK (133/68/165) ou A9 (132/131/69). */
     fun hasBrightnessControl(): Boolean = FirmwareInfo.getGeneration() != FirmwareInfo.Gen.UNKNOWN
 
+    /**
+     * Plancher de luminosité en % pour ce firmware. Public : raccourcis, curseurs et automatisme
+     * clampent sur CETTE valeur — la redéfinir ailleurs la ferait diverger.
+     */
+    fun brightnessMinPercent(): Int =
+        if (isA9Brightness()) BRIGHTNESS_MIN_PERCENT_A9 else BRIGHTNESS_MIN_PERCENT_OLD_SDK
+
     /** Lit la luminosité écran en % (0–100), ou -1 si indisponible. */
     /**
      * [journal] faux : sans ligne dans le journal. La luminosité automatique relit l'écran chaque
@@ -1042,11 +1052,10 @@ object MG4Hardware {
         if (isA9Brightness()) getBrightnessA9() else getBrightnessOldSdk(journal)
 
     /**
-     * Règle la luminosité écran en % (0–100). Plancher de sécurité à BRIGHTNESS_MIN_PERCENT
-     * pour ne jamais éteindre l'écran.
+     * Règle la luminosité écran en % (0–100), jamais sous [brightnessMinPercent].
      */
     fun setScreenBrightnessPercent(pct: Int, journal: Boolean = true): Boolean {
-        val clamped = pct.coerceIn(BRIGHTNESS_MIN_PERCENT, 100)
+        val clamped = pct.coerceIn(brightnessMinPercent(), 100)
         return if (isA9Brightness()) setBrightnessA9(clamped, journal) else setBrightnessOldSdk(clamped, journal)
     }
 

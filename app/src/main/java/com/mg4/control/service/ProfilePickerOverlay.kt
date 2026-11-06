@@ -419,6 +419,7 @@ object ProfilePickerOverlay {
         if (briVisible) {
             val slider   = view.findViewById<Slider>(R.id.overlay_bri_slider)
             val briValue = view.findViewById<TextView>(R.id.overlay_bri_value)
+            slider.valueFrom = MG4Hardware.brightnessMinPercent().toFloat()
             view.findViewById<ImageView>(R.id.overlay_bri_icon).imageTintList = ColorStateList.valueOf(p.accent)
             OverlayKit.fond(view.findViewById(R.id.overlay_bri_presets), p.bouton, rayon = p.rayonTuile)
 
@@ -479,7 +480,7 @@ object ProfilePickerOverlay {
                 val cur = MG4Hardware.getScreenBrightnessPercent()
                 handler.post {
                     if (overlayView == null) return@post
-                    if (cur >= 0) slider.value = cur.coerceIn(5, 100).toFloat()  // label via le listener
+                    if (cur >= 0) slider.value = cur.toFloat().coerceIn(slider.valueFrom, slider.valueTo)  // label via le listener
                     else briValue.text = "--%"
                 }
             }

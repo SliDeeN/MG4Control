@@ -587,14 +587,14 @@ class AutomationFragment : Fragment() {
         }
     }
 
-    /** Curseur 5–100 % par pas de 5, aligné sur le pas : le Slider refuse toute autre valeur. */
+    /** Curseur plancher–100 % par pas de 5, aligné sur le pas : le Slider refuse toute autre valeur. */
     private fun bindPercentSlider(
         view: View, sliderId: Int, valueId: Int, key: String, initial: Int,
         prefs: android.content.SharedPreferences,
     ) {
         val slider = view.findViewById<Slider>(sliderId)
         val valeur = view.findViewById<TextView>(valueId)
-        val min = AutoBrightnessSettings.MIN_PERCENT
+        val min = AutoBrightnessSettings.minPercent()
         val pas = AutoBrightnessSettings.STEP_PERCENT
         slider.valueFrom = min.toFloat()
         slider.valueTo   = AutoBrightnessSettings.MAX_PERCENT.toFloat()

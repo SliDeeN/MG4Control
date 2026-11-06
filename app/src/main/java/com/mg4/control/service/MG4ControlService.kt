@@ -824,7 +824,10 @@ class MG4ControlService : Service() {
                 // On CLAMPE, jamais de bouclage : repasser de 100 % au plancher d'une seule
                 // pression, de nuit, serait le pire moment pour une surprise. Le plancher vient
                 // du matériel — le redéfinir ici le ferait diverger.
-                val cible = (actuel + pas).coerceIn(MG4Hardware.BRIGHTNESS_MIN_PERCENT, 100)
+                val min = MG4Hardware.brightnessMinPercent()
+                // « − » ne remonte jamais un écran déjà sous le plancher (réglé ailleurs plus bas).
+                val cible = if (pas < 0 && actuel <= min) actuel
+                            else (actuel + pas).coerceIn(min, 100)
                 AppLogger.i(TAG, "SHORTCUT luminosité : $actuel% → $cible%")
                 if (cible != actuel) MG4Hardware.setScreenBrightnessPercent(cible)
             }
