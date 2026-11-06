@@ -113,7 +113,9 @@ object StatsExport {
 
     private fun versDossier(dossier: File, fichiers: List<Pair<String, String>>, montre: String): Resultat {
         if (!dossier.isDirectory && !dossier.mkdirs()) return Resultat.Echec(dossier.absolutePath)
-        fichiers.forEach { (nom, texte) -> File(dossier, nom).writeText(texte, Charsets.UTF_8) }
+        fichiers.forEach { (nom, texte) ->
+            java.io.FileOutputStream(File(dossier, nom)).use { o -> o.write(texte.toByteArray(Charsets.UTF_8)); o.fd.sync() }
+        }
         return Resultat.Ok(montre, fichiers.map { it.first })
     }
 
@@ -135,7 +137,16 @@ object StatsExport {
         return fichiers.map { (nom, texte) ->
             val doc = enfant(ctx, arbre, parentId, nom)?.let { DocumentsContract.buildDocumentUriUsingTree(arbre, it) }
                 ?: DocumentsContract.createDocument(r, parent, mime(nom), nom) ?: return null
-            r.openOutputStream(doc, "wt")?.use { it.write(texte.toByteArray(Charsets.UTF_8)) } ?: return null
+            // Écrit puis SYNCHRONISÉ (2026-11-06) : sur une clé USB, Android garde les données en
+            // mémoire et ne les pose que plus tard ; une clé retirée juste après l'export gardait
+            // un fichier de 0 Ko. Une fois sync() rendu, « Enregistré » dit vrai.
+            r.openFileDescriptor(doc, "wt")?.use { pfd ->
+                java.io.FileOutputStream(pfd.fileDescriptor).let { o ->
+                    o.write(texte.toByteArray(Charsets.UTF_8))
+                    o.flush()
+                    runCatching { o.fd.sync() }.onFailure { AppLogger.w(TAG, "export : sync de $nom impossible (${it.message})") }
+                }
+            } ?: return null
             nom
         }
     }
