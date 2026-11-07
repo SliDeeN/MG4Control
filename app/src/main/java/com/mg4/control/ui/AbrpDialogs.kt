@@ -187,8 +187,17 @@ object AbrpDialogs {
         if (AbrpStore.appKey.isNotBlank()) {
             val seg = segmentsCadre(ctx, 520f).also { (it.layoutParams as LinearLayout.LayoutParams).topMargin = dp(ctx, 8f) }
             box.addView(seg)
+            // Clé partagée (2026-11-07) : 2 envois/s au total chez ABRP, d'où ce bandeau tant qu'elle est choisie.
+            val avert = bandeau(ctx, ctx.getString(R.string.abrp_key_shared_warning)).apply {
+                visibility = if (personnelle) View.GONE else View.VISIBLE
+            }
+            box.addView(avert)
             AppDialog.segments(seg, listOf(ctx.getString(R.string.abrp_key_choice_mg4), ctx.getString(R.string.abrp_key_choice_personal)),
-                if (personnelle) 1 else 0) { i -> personnelle = i == 1; cle.visibility = if (personnelle) View.VISIBLE else View.GONE }
+                if (personnelle) 1 else 0) { i ->
+                personnelle = i == 1
+                cle.visibility = if (personnelle) View.VISIBLE else View.GONE
+                avert.visibility = if (personnelle) View.GONE else View.VISIBLE
+            }
         } else {
             box.addView(note(ctx, ctx.getString(R.string.abrp_no_app_key), alerte = true))
         }
@@ -278,7 +287,11 @@ object AbrpDialogs {
      * est ajouté s'il reste de la place. Le jeton n'est ni affiché ni journalisé.
      */
     fun importer(ctx: Context, texte: String?, ou: String, apres: () -> Unit) {
-        val lus = texte?.let { AbrpConfigFile.parse(it) }.orEmpty().filter { !it.token.isNullOrBlank() }
+        // Un compte avec jeton, ou une clé seule pour un compte qui existe déjà (configuration rapide).
+        val existants = AbrpStore.accounts(ctx)
+        val lus = texte?.let { AbrpConfigFile.parse(it) }.orEmpty().filter { e ->
+            !e.token.isNullOrBlank() || (e.apiKey != null && existants.any { it.name.equals(e.name, ignoreCase = true) })
+        }
         if (lus.isEmpty()) {
             AppDialog.confirmer(ctx, titre = ctx.getString(R.string.abrp_title), message = ctx.getString(R.string.abrp_import_none_fmt, ou),
                 ton = AppDialog.Ton.ALERTE, oui = ctx.getString(R.string.nav_close))
@@ -288,7 +301,10 @@ object AbrpDialogs {
             var n = 0
             lus.forEach { e ->
                 val deja = AbrpStore.accounts(ctx).firstOrNull { it.name.equals(e.name, ignoreCase = true) }
-                val c = (deja ?: AbrpAccount(name = e.name)).copy(token = e.token!!, apiKey = e.apiKey ?: deja?.apiKey.orEmpty())
+                val c = (deja ?: AbrpAccount(name = e.name)).copy(
+                    token = e.token?.takeIf { it.isNotBlank() } ?: deja?.token.orEmpty(),
+                    // null = choix gardé ; « » = clé MG4Control ; sinon la clé personnelle.
+                    apiKey = e.apiKey ?: deja?.apiKey.orEmpty())
                 if (AbrpStore.save(ctx, c)) n++
             }
             Toast.makeText(ctx, ctx.getString(R.string.abrp_import_done_fmt, n), Toast.LENGTH_LONG).show()
@@ -301,9 +317,16 @@ object AbrpDialogs {
     }
 
     /** Le fichier modèle : les comptes existants (sans jeton), ou un compte « ABRP » à remplir. */
-    fun modele(ctx: Context): String = AbrpConfigFile.template(
-        listOf(ctx.getString(R.string.abrp_template_comment1), ctx.getString(R.string.abrp_template_comment2), ctx.getString(R.string.abrp_template_comment3)),
-        AbrpStore.accounts(ctx).map { it.name })
+    fun modele(ctx: Context): String {
+        // Les explications du fichier dans la langue choisie dans MG4Control (2026-11-07), quel que
+        // soit le contexte qui demande le fichier. Les mots-clés (token, api_key) restent fixes :
+        // un fichier rempli dans une langue s'importe dans toutes les autres.
+        val l = com.mg4.control.util.LocaleHelper.applyLocale(ctx)
+        return AbrpConfigFile.template(
+            listOf(R.string.abrp_template_comment1, R.string.abrp_template_comment2, R.string.abrp_template_comment3,
+                R.string.abrp_template_comment4, R.string.abrp_template_comment5).map { l.getString(it) },
+            AbrpStore.accounts(ctx).map { it.name })
+    }
 
     private fun nomChamp(f: AbrpField): Int = when (f) {
         AbrpField.SOC -> R.string.abrp_f_soc
@@ -328,6 +351,18 @@ object AbrpDialogs {
         textSize = 18f
         setTextColor(ctx.getColor(R.color.text_primary))
         setPadding(0, dp(ctx, 14f), 0, dp(ctx, 4f))
+    }
+
+    /** Bandeau d'avertissement orange, comme dans la maquette validée (variante A). */
+    private fun bandeau(ctx: Context, t: String) = TextView(ctx).apply {
+        text = "⚠  $t"
+        textSize = 16f
+        setTextColor(ctx.getColor(R.color.dash_warn))
+        val p = dp(ctx, 12f)
+        setPadding(p, dp(ctx, 10f), p, dp(ctx, 10f))
+        com.mg4.control.service.OverlayKit.fond(this, ctx.getColor(R.color.dash_warn_dim), rayon = dp(ctx, 12f).toFloat())
+        layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            .also { it.topMargin = dp(ctx, 8f) }
     }
 
     private fun note(ctx: Context, t: String, alerte: Boolean = false) = TextView(ctx).apply {

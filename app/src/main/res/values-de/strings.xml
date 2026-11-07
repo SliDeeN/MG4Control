@@ -1794,7 +1794,10 @@
     <string name="abrp_template_done">Vorlagendatei erstellt</string>
     <string name="abrp_template_comment1">ABRP-Konten für MG4Control: ein Konto pro Abschnitt [Name].</string>
     <string name="abrp_template_comment2">token: das Token aus ABRP › Einstellungen › Fahrzeug › Live-Daten › Generic.</string>
-    <string name="abrp_template_comment3">api_key: optional (sonst der Schlüssel von MG4Control). Löschen Sie diese Datei nach dem Import.</string>
+    <string name="abrp_template_comment3">api_key: leer = aktuelle Wahl bleibt (MG4Control-Schlüssel für ein neues Konto: geteilt, insgesamt 2 Sendungen/s). Tragen Sie Ihren persönlichen Schlüssel ein, um Ablehnungen zu vermeiden.</string>
+    <string name="abrp_template_comment4">Ein api_key vor den Abschnitten gilt für alle Konten ohne eigenen; api_key = mg4control stellt den MG4Control-Schlüssel wieder her.</string>
+    <string name="abrp_template_comment5">Löschen Sie diese Datei nach dem Import.</string>
+    <string name="abrp_key_shared_warning">Von allen MG4Control-Nutzern geteilter Schlüssel: ABRP begrenzt ihn auf insgesamt 2 Sendungen pro Sekunde. Zu Stoßzeiten können Sendungen abgelehnt werden und die Live-Verfolgung ruckeln. Ein persönlicher Schlüssel (kostenlos) vermeidet das.</string>
     <string name="abrp_rule_action">ABRP: Live-Daten</string>
     <string name="abrp_rule_start_fmt">ABRP: fortlaufend senden an „%1$s“</string>
     <string name="abrp_rule_stop">ABRP: Senden beenden</string>

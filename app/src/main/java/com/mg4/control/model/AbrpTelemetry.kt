@@ -152,11 +152,20 @@ data class AbrpCadence(
  * ```
  *
  * Un fichier sans section (celui d'EVABRPUploader) donne un seul compte, nommé [defaultName].
+ *
+ * Clé API (2026-11-07) : une `api_key` seule avant les sections vaut pour tous les comptes qui
+ * n'ont pas la leur ; `api_key = mg4control` remet la clé de MG4Control ([USE_APP_KEY]) ; vide ou
+ * absente = le choix actuel du compte est gardé (`null`). Une section sans jeton mais avec une clé
+ * met seulement à jour la clé d'un compte existant du même nom.
  */
 object AbrpConfigFile {
     const val FILE_NAME = "mg4control_abrp.txt"
 
     data class Entry(val name: String, val token: String?, val apiKey: String?)
+
+    /** [Entry.apiKey] « reprendre la clé de MG4Control » (`api_key = mg4control`). */
+    const val USE_APP_KEY = ""
+    private const val MOT_CLE_APPLI = "mg4control"
 
     fun parse(text: String, defaultName: String = "ABRP"): List<Entry> {
         val out = mutableListOf<Entry>()
@@ -164,8 +173,12 @@ object AbrpConfigFile {
         var token: String? = null
         var key: String? = null
         var vu = false
+        var commune: String? = null
         fun fermer() {
-            if (vu && (token != null || key != null)) out += Entry((name ?: defaultName).take(MAX_NAME), token, key)
+            // Avant toute section, une clé sans jeton n'est pas un compte : c'est la clé de tous.
+            if (name == null && token == null && key != null) commune = key
+            else if (vu && (token != null || key != null || (name != null && commune != null)))
+                out += Entry((name ?: defaultName).take(MAX_NAME), token, key ?: commune)
             token = null; key = null; vu = false
         }
         for (brute in text.replace("﻿", "").split('\n')) {
@@ -183,7 +196,7 @@ object AbrpConfigFile {
             val v = l.substring(i + 1).trim().trim('"').ifEmpty { null } ?: continue
             when (k) {
                 "token", "user_token" -> { token = v; vu = true }
-                "api_key", "apikey" -> { key = v; vu = true }
+                "api_key", "apikey" -> { key = if (v.equals(MOT_CLE_APPLI, ignoreCase = true)) USE_APP_KEY else v; vu = true }
                 "name", "nom" -> { name = v; vu = true }
             }
         }
@@ -195,10 +208,11 @@ object AbrpConfigFile {
     fun template(comment: List<String>, names: List<String>): String = buildString {
         comment.forEach { append("# ").append(it).append('\n') }
         append('\n')
+        append("api_key = \n\n")
         (names.ifEmpty { listOf("ABRP") }).forEach { n ->
             append('[').append(n).append("]\n")
             append("token = \n")
-            append("# api_key = \n\n")
+            append("api_key = \n\n")
         }
     }
 

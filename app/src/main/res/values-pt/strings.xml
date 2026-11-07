@@ -1794,7 +1794,10 @@
     <string name="abrp_template_done">Ficheiro modelo criado</string>
     <string name="abrp_template_comment1">Contas ABRP para o MG4Control: uma conta por secção [Nome].</string>
     <string name="abrp_template_comment2">token: o token do ABRP › Definições › Veículo › Dados em direto › Generic.</string>
-    <string name="abrp_template_comment3">api_key: opcional (senão, a chave do MG4Control). Apague este ficheiro depois de o importar.</string>
+    <string name="abrp_template_comment3">api_key: vazia = escolha atual mantida (chave MG4Control para uma conta nova: partilhada, limitada a 2 envios/s no total). Coloque a sua chave pessoal para evitar recusas.</string>
+    <string name="abrp_template_comment4">Uma api_key antes das secções vale para todas as contas sem a sua; api_key = mg4control volta à chave MG4Control.</string>
+    <string name="abrp_template_comment5">Elimine este ficheiro depois de o importar.</string>
+    <string name="abrp_key_shared_warning">Chave partilhada por todos os utilizadores do MG4Control: o ABRP limita-a a 2 envios por segundo no total. Nas horas de maior uso, alguns envios podem ser recusados e o acompanhamento em direto ficar irregular. Uma chave pessoal (gratuita) evita isto.</string>
     <string name="abrp_rule_action">ABRP: dados em direto</string>
     <string name="abrp_rule_start_fmt">ABRP: envio contínuo para «%1$s»</string>
     <string name="abrp_rule_stop">ABRP: parar o envio</string>

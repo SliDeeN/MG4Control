@@ -99,9 +99,26 @@ class AbrpTelemetryTest {
     fun `modele relu sans compte`() {
         val m = AbrpConfigFile.template(listOf("ligne"), listOf("Paul", "Marie"))
         assertTrue(m.startsWith("# ligne\n"))
-        assertTrue(m.contains("[Paul]\ntoken = \n"))
-        // Jetons vides : rien d'importable tant qu'il n'est pas rempli.
+        assertTrue(m.contains("[Paul]\ntoken = \napi_key = \n"))
+        // La clé commune, avant les sections.
+        assertTrue(m.contains("\napi_key = \n\n[Paul]"))
+        // Jetons et clés vides : rien d'importable tant qu'il n'est pas rempli.
         assertTrue(AbrpConfigFile.parse(m).isEmpty())
+    }
+
+    @Test
+    fun `cle commune, cle propre, retour a la cle MG4Control`() {
+        val l = AbrpConfigFile.parse("api_key = commune\n[Paul]\ntoken = t1\n[Marie]\ntoken = t2\napi_key = perso\n" +
+            "[Luc]\ntoken = t3\napi_key = MG4Control\n[Zoe]\n")
+        assertEquals(listOf(
+            AbrpConfigFile.Entry("Paul", "t1", "commune"),
+            AbrpConfigFile.Entry("Marie", "t2", "perso"),
+            AbrpConfigFile.Entry("Luc", "t3", AbrpConfigFile.USE_APP_KEY),
+            // Sans jeton : seulement la clé, pour un compte qui existe déjà.
+            AbrpConfigFile.Entry("Zoe", null, "commune"),
+        ), l)
+        // Sans clé commune, une section vide n'est rien.
+        assertTrue(AbrpConfigFile.parse("[Zoe]\n").isEmpty())
     }
 
     @Test

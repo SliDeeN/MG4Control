@@ -1794,7 +1794,10 @@
     <string name="abrp_template_done">Template file created</string>
     <string name="abrp_template_comment1">ABRP accounts for MG4Control: one account per [Name] section.</string>
     <string name="abrp_template_comment2">token: the token from ABRP › Settings › Car › Live data › Generic.</string>
-    <string name="abrp_template_comment3">api_key: optional (otherwise MG4Control\'s key). Delete this file after importing it.</string>
+    <string name="abrp_template_comment3">api_key: empty = current choice kept (MG4Control key for a new account: shared, limited to 2 sends/s in total). Put your personal key to avoid refusals.</string>
+    <string name="abrp_template_comment4">An api_key before the sections applies to every account without its own; api_key = mg4control switches back to the MG4Control key.</string>
+    <string name="abrp_template_comment5">Delete this file after importing it.</string>
+    <string name="abrp_key_shared_warning">Key shared by every MG4Control user: ABRP limits it to 2 sends per second in total. At busy times, sends may be refused and live tracking may stutter. A personal key (free) avoids this.</string>
     <string name="abrp_rule_action">ABRP: live data</string>
     <string name="abrp_rule_start_fmt">ABRP: keep sending to “%1$s”</string>
     <string name="abrp_rule_stop">ABRP: stop sending</string>

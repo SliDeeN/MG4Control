@@ -1794,7 +1794,10 @@
     <string name="abrp_template_done">Plik szablonu utworzony</string>
     <string name="abrp_template_comment1">Konta ABRP dla MG4Control: jedno konto na sekcję [Nazwa].</string>
     <string name="abrp_template_comment2">token: token z ABRP › Ustawienia › Samochód › Dane na żywo › Generic.</string>
-    <string name="abrp_template_comment3">api_key: opcjonalnie (w przeciwnym razie klucz MG4Control). Usuń ten plik po zaimportowaniu.</string>
+    <string name="abrp_template_comment3">api_key: puste = bieżący wybór zachowany (klucz MG4Control dla nowego konta: wspólny, łącznie 2 wysyłki/s). Wpisz swój klucz osobisty, aby uniknąć odrzuceń.</string>
+    <string name="abrp_template_comment4">api_key przed sekcjami dotyczy wszystkich kont bez własnego; api_key = mg4control przywraca klucz MG4Control.</string>
+    <string name="abrp_template_comment5">Usuń ten plik po zaimportowaniu.</string>
+    <string name="abrp_key_shared_warning">Klucz wspólny dla wszystkich użytkowników MG4Control: ABRP ogranicza go łącznie do 2 wysyłek na sekundę. W godzinach szczytu część wysyłek może zostać odrzucona, a śledzenie na żywo może się zacinać. Klucz osobisty (bezpłatny) tego unika.</string>
     <string name="abrp_rule_action">ABRP: dane na żywo</string>
     <string name="abrp_rule_start_fmt">ABRP: wysyłaj stale do „%1$s”</string>
     <string name="abrp_rule_stop">ABRP: zatrzymaj wysyłanie</string>

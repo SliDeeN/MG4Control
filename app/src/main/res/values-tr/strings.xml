@@ -1794,7 +1794,10 @@
     <string name="abrp_template_done">Şablon dosyası oluşturuldu</string>
     <string name="abrp_template_comment1">MG4Control için ABRP hesapları: her [Ad] bölümü bir hesap.</string>
     <string name="abrp_template_comment2">token: ABRP › Ayarlar › Araç › Canlı veri › Generic altındaki jeton.</string>
-    <string name="abrp_template_comment3">api_key: isteğe bağlı (yoksa MG4Control anahtarı). İçe aktardıktan sonra bu dosyayı silin.</string>
+    <string name="abrp_template_comment3">api_key: boş = mevcut seçim korunur (yeni hesap için MG4Control anahtarı: paylaşılan, toplamda 2 gönderim/s ile sınırlı). Reddedilmeleri önlemek için kişisel anahtarınızı girin.</string>
+    <string name="abrp_template_comment4">Bölümlerden önceki bir api_key, kendi anahtarı olmayan tüm hesaplar için geçerlidir; api_key = mg4control MG4Control anahtarına geri döner.</string>
+    <string name="abrp_template_comment5">İçe aktardıktan sonra bu dosyayı silin.</string>
+    <string name="abrp_key_shared_warning">Tüm MG4Control kullanıcılarının paylaştığı anahtar: ABRP bunu toplamda saniyede 2 gönderimle sınırlar. Yoğun saatlerde bazı gönderimler reddedilebilir ve canlı takip kesintili olabilir. Kişisel bir anahtar (ücretsiz) bunu önler.</string>
     <string name="abrp_rule_action">ABRP: canlı veri</string>
     <string name="abrp_rule_start_fmt">ABRP: «%1$s» hesabına sürekli gönder</string>
     <string name="abrp_rule_stop">ABRP: gönderimi durdur</string>
