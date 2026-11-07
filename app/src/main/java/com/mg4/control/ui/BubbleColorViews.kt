@@ -304,5 +304,7 @@ internal object CouleurDialog {
             setOnClickListener { surOk(selecteur.couleur()); dialog?.dismiss() }
         }
         dialog = AppDialog.afficher(ctx, vue, 760f)
+        // Le code couleur se tape au clavier : même fenêtre de saisie que les autres (#224).
+        dialog?.let { AppDialog.saisie(it, vue) }
     }
 }

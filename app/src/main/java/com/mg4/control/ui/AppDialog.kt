@@ -82,7 +82,10 @@ internal object AppDialog {
         // dont la première étape est une liste) reçoit FLAG_ALT_FOCUSABLE_IM : le clavier ne
         // s'ouvre alors jamais, même en touchant le champ ajouté plus tard (2026-11-05).
         window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
-        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN)
+        // Fermé à l'ouverture seulement. ALWAYS_HIDDEN le refermait à CHAQUE retour du focus sur
+        // la fenêtre : un clavier qui prend le focus un instant (soupçonné sur SWI68, #224) se
+        // refermait aussitôt ouvert.
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN)
         // Le focus repose sur la carte quand le clavier est fermé : sans ça, Android le rendrait
         // au premier champ, et le clavier pourrait revenir.
         racine.isFocusableInTouchMode = true
@@ -143,10 +146,40 @@ internal object AppDialog {
                         return true
                     }
                 }
-                return origine.dispatchTouchEvent(e)
+                val traite = origine.dispatchTouchEvent(e)
+                if (e.actionMasked == MotionEvent.ACTION_UP) {
+                    val x = e.rawX.toInt()
+                    val y = e.rawY.toInt()
+                    window.decorView.post { montrerClavier(window, x, y) }
+                }
+                return traite
             }
         }
         g
+    }
+
+    /**
+     * Champ touché dans une fenêtre de saisie : le clavier est DEMANDÉ, au lieu de compter sur le
+     * seul toucher (issue #224, SWI68 : clavier absent au renommage d'une touche, deuxième cas après
+     * le nom de variable). Le drapeau qui bloque le clavier est réeffacé au passage, et la ligne
+     * MG4_UI dit ce que la fenêtre et le système répondent — de quoi trancher au prochain cas.
+     */
+    private fun montrerClavier(window: Window, x: Int, y: Int) {
+        val champ = window.decorView.findFocus() as? EditText ?: return
+        val r = android.graphics.Rect()
+        if (!champ.getGlobalVisibleRect(r)) return
+        val o = IntArray(2)
+        window.decorView.getLocationOnScreen(o)
+        // getGlobalVisibleRect est relatif à la fenêtre : on le ramène à l'écran, comme rawX / rawY.
+        r.offset(o[0], o[1])
+        if (!r.contains(x, y)) return
+        val avant = window.attributes.flags
+        window.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+        val imm = champ.context.getSystemService(InputMethodManager::class.java) ?: return
+        val montre = imm.showSoftInput(champ, InputMethodManager.SHOW_IMPLICIT)
+        com.mg4.control.debug.AppLogger.i("MG4_UI", "clavier demandé : accepté=$montre, actif=${imm.isActive(champ)}, " +
+            "focus fenêtre=${champ.hasWindowFocus()}, drapeaux=0x${Integer.toHexString(avant)}, " +
+            "mode=0x${Integer.toHexString(window.attributes.softInputMode)}, toucher=${champ.isInTouchMode}")
     }
 
     /** Affiche [vue] et rend la fenêtre, à refermer par `dismiss()`. */
