@@ -62,6 +62,7 @@ class StatsFragment : Fragment() {
         const val PAGE_GENERAL = 0
         const val PAGE_TRIPS = 1
         const val PAGE_CHARGES = 2
+        var pageRetenue = PAGE_GENERAL
         /** Période courte du résumé, en jours. L'autre choix est « tout l'historique ». */
         const val SHORT_PERIOD_DAYS = 30
         const val TAG = "MG4_STATS"
@@ -83,7 +84,10 @@ class StatsFragment : Fragment() {
      * faire défiler jusqu'à une vue qui n'est plus dans l'arbre.
      */
     private val priceFields = mutableListOf<Pair<EditText, () -> String>>()
-    private var page = PAGE_GENERAL
+    /** Sous-onglet ouvert, retenu le temps de la session : revenir sur Statistiques rouvre le même (2026-11-07). */
+    private var page: Int
+        get() = pageRetenue
+        set(v) { pageRetenue = v }
     private var shortPeriod = true
     /** Ligne dépliée d'une liste, repérée par l'horodatage de son enregistrement. */
     private var expanded: Long? = null

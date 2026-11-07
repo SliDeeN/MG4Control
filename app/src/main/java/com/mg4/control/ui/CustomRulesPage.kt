@@ -88,8 +88,13 @@ class CustomRulesPage {
             carte.findViewById<TextView>(R.id.rule_summary).text = resume(ctx, texte, r)
             carte.findViewById<TextView>(R.id.rule_last_run).text = derniere(ctx, CustomRules.lastRun(ctx, r.id))
             carte.findViewById<Switch>(R.id.rule_switch).apply {
+                // Toutes les cartes portent le même identifiant : au retour de l'éditeur, Android
+                // rendait à CHAQUE interrupteur l'état sauvegardé du dernier, et l'écoute
+                // l'enregistrait (2026-11-07). L'état vient du stockage, jamais de la vue.
+                isSaveEnabled = false
                 isChecked = r.enabled
                 setOnCheckedChangeListener { _, on ->
+                    if (on == CustomRuleStore.all(ctx).firstOrNull { it.id == r.id }?.enabled) return@setOnCheckedChangeListener
                     CustomRuleStore.setEnabled(ctx, r.id, on)
                     CustomRules.refresh(ctx)
                     post { dessiner() }

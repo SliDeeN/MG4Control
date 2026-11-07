@@ -41,6 +41,9 @@ import kotlinx.coroutines.withContext
 class ProfileEditFragment : Fragment() {
 
     companion object {
+        /** Sous-onglet rouvert à la prochaine édition de profil, le temps de la session (2026-11-07). */
+        private var ongletRetenu = 0
+
         /** Bornes des curseurs de climatisation — les VRAIES limites sont lues sur le véhicule
          *  au moment d'appliquer, et la consigne y est clampée. Celles-ci ne servent qu'à la
          *  saisie, et doivent couvrir tous les firmwares (A9 accepte 17–33 °C et 1–11). */
@@ -907,6 +910,7 @@ class ProfileEditFragment : Fragment() {
         if (usable.isEmpty()) return
 
         fun select(target: ViewGroup) {
+            ongletRetenu = tabs.indexOfFirst { it.second === target }
             tabs.forEach { (btn, page) ->
                 val on = page === target
                 page.visibility = if (on) View.VISIBLE else View.GONE
@@ -915,6 +919,7 @@ class ProfileEditFragment : Fragment() {
             scroll?.scrollTo(0, 0)   // changer d'onglet en gardant le scroll précédent désoriente
         }
         usable.forEach { (btn, page) -> btn.setOnClickListener { select(page) } }
-        select(usable.first().second)
+        val retenu = tabs.getOrNull(ongletRetenu)?.takeIf { it in usable }
+        select((retenu ?: usable.first()).second)
     }
 }

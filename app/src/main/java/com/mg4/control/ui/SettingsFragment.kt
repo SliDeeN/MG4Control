@@ -97,6 +97,7 @@ class SettingsFragment : Fragment() {
 
     /** Index, dans le rail, de l'onglet ouvert — sauvegardé pour survivre à un recreate(). */
     private var selectedCategory = 0
+        set(v) { field = v; ongletRetenu = v }
 
     /** Aperçu du combiné (carte Écran conducteur) : animé seulement quand l'écran est au premier plan. */
     private var apercuCombine: ClusterSettingsPreview? = null
@@ -111,6 +112,8 @@ class SettingsFragment : Fragment() {
 
     companion object {
         private const val STATE_CATEGORY = "settings_category"
+        /** Sous-onglet rouvert en revenant sur Réglages, le temps de la session (2026-11-07). */
+        private var ongletRetenu = 0
 
         /**
          * Argument : ouvrir l'écran sur le choix du firmware (onglet Infos, pastilles en vue).
@@ -1018,7 +1021,7 @@ class SettingsFragment : Fragment() {
         }
         usable.forEach { (btn, page) -> btn.setOnClickListener { select(page) } }
         // Un onglet mémorisé peut ne plus être disponible (page vidée entre-temps) : repli sur le premier.
-        val restored = savedInstanceState?.getInt(STATE_CATEGORY, -1)?.let { tabs.getOrNull(it) }
+        val restored = tabs.getOrNull(savedInstanceState?.getInt(STATE_CATEGORY, -1) ?: ongletRetenu)
         // Arrivée depuis « Firmware non reconnu » : droit sur l'onglet où il se choisit. À la
         // première création seulement — après le choix l'activité se recrée, et c'est alors
         // l'onglet mémorisé qui compte.

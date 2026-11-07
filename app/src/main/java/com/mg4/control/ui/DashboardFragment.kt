@@ -46,6 +46,7 @@ class DashboardFragment : Fragment() {
     // ── ViewPager ────────────────────────────────────────────────────────────
     /** Onglet courant du rail : 0=Conduite, 1=Securite, 2=Confort, 3=Vitres. Remplace pager.currentItem. */
     private var currentTab = 0
+        set(v) { field = v; ongletRetenu = v }
 
     /** Onglet Vitres (V0 de test) : logique tactile et sondes dans sa propre classe. */
 
@@ -211,6 +212,8 @@ class DashboardFragment : Fragment() {
     // ═════════════════════════════════════════════════════════════════════════
 
     private companion object {
+        /** Sous-onglet rouvert en revenant sur le tableau de bord, le temps de la session (2026-11-07). */
+        var ongletRetenu = 0
         const val TAB_SAFETY = 1
         const val TAB_COMFORT = 2
         /** Tag des appuis « Sens de l'air » : le même que le filtre de la sonde MG4_AIR. */
@@ -286,7 +289,8 @@ class DashboardFragment : Fragment() {
         }
 
         tabs.forEachIndexed { i, (btn, _) -> btn.setOnClickListener { select(i) } }
-        select(tabs.indexOfFirst { it.second === usable.first().second })
+        val retenu = tabs.getOrNull(ongletRetenu)?.takeIf { t -> usable.any { it.second === t.second } }
+        select(tabs.indexOfFirst { it.second === (retenu ?: usable.first()).second })
     }
 
     // ═════════════════════════════════════════════════════════════════════════

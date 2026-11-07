@@ -65,6 +65,8 @@ class ShortcutsFragment : Fragment() {
     companion object {
         /** Page à ouvrir au prochain affichage, demandée par un pop-up (voir MainActivity). */
         var pageDemandee: String? = null
+        /** Sous-onglet rouvert en revenant sur Raccourcis, le temps de la session (2026-11-07). */
+        private var ongletRetenu = 0
     }
 
     private val quickPage = QuickSettingsPage()
@@ -822,6 +824,7 @@ class ShortcutsFragment : Fragment() {
         tabs.forEach { (btn, page) ->
             btn.setOnClickListener {
                 tabs.forEach { (_, p) -> p.visibility = if (p === page) View.VISIBLE else View.GONE }
+                ongletRetenu = tabs.indexOfFirst { it.second === page }
                 // Revenir sur la page du cycle repart de ce qui est ENREGISTRÉ : une composition
                 // abandonnée sans « Sauvegarder » ne doit pas se faire passer pour le réglage
                 // en vigueur.
@@ -837,8 +840,9 @@ class ShortcutsFragment : Fragment() {
             }
         }
         reselectTabs = { apply() }
-        tabs.first().second.visibility = View.VISIBLE
-        tabs.drop(1).forEach { (_, p) -> p.visibility = View.GONE }
+        // Le sous-onglet retenu ; s'il n'est plus utilisable, apply() retombe sur le premier.
+        val depart = tabs.getOrNull(ongletRetenu)?.second ?: tabs.first().second
+        tabs.forEach { (_, p) -> p.visibility = if (p === depart) View.VISIBLE else View.GONE }
         apply()
     }
 
