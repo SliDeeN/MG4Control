@@ -123,7 +123,7 @@
       <a class="btn btn-ghost" href="#installation"><span data-l="fr">Installation</span><span data-l="en">Installation</span></a>
     </div>
     <div class="hero-meta">
-      <span><span data-l="fr">7 langues</span><span data-l="en">7 languages</span></span>
+      <span><span data-l="fr">8 langues</span><span data-l="en">8 languages</span></span>
       <span><span data-l="fr">7 firmwares : SWI133 · SWI132 · SWI68 · SWI69 · SWI131 · SWI165 · SWI173</span><span data-l="en">7 firmwares: SWI133 · SWI132 · SWI68 · SWI69 · SWI131 · SWI165 · SWI173</span></span>
       <span><span data-l="fr">Licence GPL v3</span><span data-l="en">GPL v3 licence</span></span>
     </div>
@@ -131,7 +131,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.0</span>
-        <b><span data-l="fr">16 nouveautés dans cette version</span><span data-l="en">16 new things in this release</span></b>
+        <b><span data-l="fr">20 nouveautés dans cette version</span><span data-l="en">20 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -144,12 +144,16 @@
         <a href="#f-drivecycle" data-feature="f-drivecycle"><span data-l="fr">🔁 Cycle des modes de conduite</span><span data-l="en">🔁 Drive mode cycle</span></a>
         <a href="#f-runrule" data-feature="f-runrule"><span data-l="fr">▶️ Lancer une automatisation d'un bouton</span><span data-l="en">▶️ Run an automation from a button</span></a>
         <a href="#f-bubblecolor" data-feature="f-bubblecolor"><span data-l="fr">🔵 Couleur des bulles</span><span data-l="en">🔵 Bubble colours</span></a>
+        <a href="#f-survcam" data-feature="f-survcam"><span data-l="fr">📹 Surveillance : la dashcam filme</span><span data-l="en">📹 Surveillance: the dashcam records</span></a>
+        <a href="#f-abrp" data-feature="f-abrp"><span data-l="fr">🗺️ Données en direct vers ABRP</span><span data-l="en">🗺️ Live data to ABRP</span></a>
+        <a href="#f-onepedal" data-feature="f-onepedal"><span data-l="fr">🦶 1 Pédale : retour au niveau d'avant</span><span data-l="en">🦶 One Pedal: back to the previous level</span></a>
         <a href="#f-keepac" data-feature="f-keepac"><span data-l="fr">❄️ Garder l'A/C coupé</span><span data-l="en">❄️ Keep the A/C off</span></a>
         <a href="#f-bri0" data-feature="f-bri0"><span data-l="fr">🔅 Luminosité jusqu'à 0 %</span><span data-l="en">🔅 Brightness down to 0 %</span></a>
         <a href="#f-preclim-watts" data-feature="f-preclim-watts"><span data-l="fr">⚡ Garde-voiture : puissance en watts</span><span data-l="en">⚡ Car keeper: power in watts</span></a>
         <a href="#f-stats-profile" data-feature="f-stats-profile"><span data-l="fr">👥 Statistiques par profil</span><span data-l="en">👥 Statistics per profile</span></a>
         <a href="#f-tripgraph" data-feature="f-tripgraph"><span data-l="fr">📈 Graphique de chaque trajet</span><span data-l="en">📈 Graph of every trip</span></a>
         <a href="#f-csv" data-feature="f-csv"><span data-l="fr">📤 Export CSV</span><span data-l="en">📤 CSV export</span></a>
+        <a href="#f-autolang" data-feature="f-autolang"><span data-l="fr">🇵🇱 Nouvelle langue : polonais</span><span data-l="en">🇵🇱 New language: Polish</span></a>
         <a href="#f-silentupd" data-feature="f-silentupd"><span data-l="fr">⬇️ Mises à jour qui s'installent seules</span><span data-l="en">⬇️ Updates that install themselves</span></a>
       </div>
     </div>
@@ -673,13 +677,22 @@
         <p data-l="en">Replaces the old Shortcuts, Advanced and List sub-tabs. The left and right ★ buttons work right away with short and long presses, through the vehicle's signal: if the stock launcher already uses the button, it keeps priority. A double press, a per-profile setting or any other key go through <b>advanced capture</b> (accessibility service, see below). A banner says whether it is on; “Add a button” waits for a key press; the ⋮ menu renames a key (a name is suggested from its code: Home, Back, Volume +…). The “Enable” switch, at the end of the pills, only affects the steering-wheel keys. Comfort and safety actions re-read the vehicle state on every press: nothing is ever written blind.</p>
       </details>
     </div>
+    <div class="pt is-new" id="f-onepedal" data-hl-key="sc-onepedal" data-go="shortcuts:onepedal">
+      <h3><span data-l="fr">1 Pédale : retour au niveau d'avant</span><span data-l="en">One Pedal: back to the previous level</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="fr">Le second appui coupe le One Pedal et, par défaut, la voiture remet d'elle-même la régénération qu'elle avait avant (#226).</p>
+      <p data-l="en">The second press turns One Pedal off and, by default, the car brings back the regeneration it had before by itself (#226).</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Dans Raccourcis › 1 Pédale : « Comme avant » (défaut) ou un niveau fixe, Faible, Moyen, Fort ou Adaptatif. Un niveau choisi dans une version précédente repasse sur « Comme avant », et Off n'est plus proposé. L'état du One Pedal est aussi lu sur son propre réglage, pour le raccourci, les bulles et les automatisations.</p>
+        <p data-l="en">In Shortcuts › One Pedal: “As before” (default) or a fixed level, Low, Medium, High or Adaptive. A level chosen in an earlier version goes back to “As before”, and Off is no longer offered. One Pedal's state is also read from its own setting, for the shortcut, the bubbles and the automations.</p>
+      </details>
+    </div>
     <div class="pt" data-hl-key="sc-onepedal" data-go="shortcuts:onepedal">
       <h3><span data-l="fr">Réglages à la demande</span><span data-l="en">Settings on demand</span></h3>
       <p data-l="fr">1 Pédale, ADAS, cycles, Réglages rapides ont leur pastille dès que l'action est attribuée à une touche ou à une bulle.</p>
       <p data-l="en">One Pedal, ADAS, the cycles and Quick settings get their pill as soon as the action is assigned to a key or a bubble.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr"><b>Regen de retour du mode 1 Pédale</b> : niveau rétabli au second appui (Fort par défaut). <b>Alternance ADAS</b> : les deux modes entre lesquels le bouton bascule (ACC ↔ Off par défaut).</p>
-        <p data-l="en"><b>One Pedal fallback regen</b>: the level restored on the second press (High by default). <b>ADAS alternation</b>: the two modes the button toggles between (ACC ↔ Off by default).</p>
+        <p data-l="fr"><b>1 Pédale</b> : au second appui, « Comme avant » (la voiture remet son niveau d'avant) ou un niveau fixe. <b>Alternance ADAS</b> : les deux modes entre lesquels le bouton bascule (ACC ↔ Off par défaut).</p>
+        <p data-l="en"><b>One Pedal</b>: on the second press, “As before” (the car restores its previous level) or a fixed level. <b>ADAS alternation</b>: the two modes the button toggles between (ACC ↔ Off by default).</p>
       </details>
     </div>
     <div class="pt" id="f-regen" data-hl-key="sc-regen" data-demo="regenCycle">
@@ -741,8 +754,8 @@
       <p data-l="fr">Jusqu'à 8 tuiles de votre choix par-dessus l'écran : maintien de voie, régulateur / limiteur, récupération, chauffage de la batterie, mode de conduite… (#197).</p>
       <p data-l="en">Up to 8 tiles of your choice on top of the screen: lane keeping, cruise / limiter, regeneration, battery heating, drive mode… (#197).</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Les tuiles se choisissent et se rangent dans Raccourcis › Réglages rapides : sortie de voie et sa sensibilité, régulateur / limiteur (ACC, TJA ou ICA et limiteur, exclusifs côté voiture, font une seule tuile), anti-collision, panneaux, survitesse, feux de route auto, récupération (1 Pédale comprise), mode de conduite, économie d'énergie, chauffage de la batterie, A/C, recirculation, dégivrages, sièges, volant chauffant, luminosité. Toucher une tuile ouvre ses valeurs ; le choix part aussitôt à la voiture et est relu. Un réglage que la voiture n'accepte qu'à l'arrêt est grisé en roulant. Le pop-up se ferme par sa croix, d'un second appui sur le raccourci ou seul après le délai des pop-ups.</p>
-        <p data-l="en">Tiles are chosen and ordered in Shortcuts › Quick settings: lane departure and its sensitivity, cruise / limiter (ACC, TJA or ICA and the limiter, mutually exclusive on the car, make one tile), forward collision, traffic signs, overspeed, automatic high beam, regeneration (One Pedal included), drive mode, energy saving, battery heating, A/C, recirculation, defrosters, seats, heated wheel, brightness. Tapping a tile opens its values; the choice goes to the car straight away and is read back. A setting the car only accepts when stopped is greyed out while driving. The pop-up closes with its cross, a second press of the shortcut or by itself after the pop-up delay.</p>
+        <p data-l="fr">Les tuiles se choisissent et se rangent dans Raccourcis › Réglages rapides : sortie de voie et sa sensibilité, régulateur / limiteur (ACC, TJA ou ICA et limiteur, exclusifs côté voiture, font une seule tuile), anti-collision, panneaux, survitesse, feux de route auto, récupération (1 Pédale comprise), mode de conduite, économie d'énergie, chauffage de la batterie, A/C, recirculation, dégivrages, sièges, volant chauffant, luminosité. Une tuile à deux valeurs bascule d'un toucher (marque ⇄) ; les autres ouvrent leurs valeurs dans une bulle accrochée à la tuile, et vous choisissez dans Raccourcis › Réglages rapides quelles valeurs sont proposées. Le choix part aussitôt à la voiture et est relu. Le joystick droit passe d'une tuile à l'autre et dans la bulle. Un réglage que la voiture n'accepte qu'à l'arrêt est grisé en roulant. Le pop-up se ferme par sa croix, d'un second appui sur le raccourci ou seul après le délai des pop-ups.</p>
+        <p data-l="en">Tiles are chosen and ordered in Shortcuts › Quick settings: lane departure and its sensitivity, cruise / limiter (ACC, TJA or ICA and the limiter, mutually exclusive on the car, make one tile), forward collision, traffic signs, overspeed, automatic high beam, regeneration (One Pedal included), drive mode, energy saving, battery heating, A/C, recirculation, defrosters, seats, heated wheel, brightness. A two-value tile toggles with one tap (⇄ mark); the others open their values in a bubble attached to the tile, and you choose in Shortcuts › Quick settings which values are offered. The choice goes to the car straight away and is read back. The right joystick moves between tiles and inside the bubble. A setting the car only accepts when stopped is greyed out while driving. The pop-up closes with its cross, a second press of the shortcut or by itself after the pop-up delay.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-runrule" data-hl-key="sc-btn1" data-demo="runRule">
@@ -793,7 +806,7 @@
       <table>
         <thead><tr><th><span data-l="fr">Catégorie</span><span data-l="en">Category</span></th><th><span data-l="fr">Actions (filtrées selon le firmware)</span><span data-l="en">Actions (filtered by firmware)</span></th></tr></thead>
         <tbody>
-          <tr><td><span data-l="fr">Conduite</span><span data-l="en">Driving</span></td><td data-l="fr">1 Pédale (bascule avec le niveau de retour) · Cycle Régénération Personnalisé · Cycle des modes de conduite · Éco. énergie · Chauffage de la batterie</td><td data-l="en">One Pedal (toggles with the fallback level) · Custom Regeneration Cycle · Drive mode cycle · Energy saving · Battery heating</td></tr>
+          <tr><td><span data-l="fr">Conduite</span><span data-l="en">Driving</span></td><td data-l="fr">1 Pédale (bascule ; au retour, le niveau d'avant ou un niveau fixe) · Cycle Régénération Personnalisé · Cycle des modes de conduite · Éco. énergie · Chauffage de la batterie</td><td data-l="en">One Pedal (toggles; back to the previous level or a fixed one) · Custom Regeneration Cycle · Drive mode cycle · Energy saving · Battery heating</td></tr>
           <tr><td><span data-l="fr">Vitres</span><span data-l="en">Windows</span></td><td data-l="fr">Ouvrir toutes les vitres · Fermer toutes les vitres</td><td data-l="en">Open all windows · Close all windows</td></tr>
           <tr><td><span data-l="fr">Sécurité</span><span data-l="en">Safety</span></td><td data-l="fr">ESC · Somnolence · Somnolence : sensibilité · Système anticollision (alternance de mode) · ADAS (alternance) · Panneaux (TSR) · Alerte survitesse · Alerte changement de limite · Son</td><td data-l="en">ESC · Drowsiness · Drowsiness: sensitivity · Collision system (mode alternation) · ADAS (alternation) · Traffic signs (TSR) · Overspeed alert · Speed-limit change alert · Sound</td></tr>
           <tr><td><span data-l="fr">Confort</span><span data-l="en">Comfort</span></td><td data-l="fr">Siège chauffant gauche / droit (cycle) · Volant chauffant · Clim ON/OFF · Clim : A/C · Clim : température ± · Clim : ventilation ± · Dégivrage avant / arrière · Recirculation (cycle) · Débit en AUTO (cycle) · Luminosité ± (pas de 10 %) · Feux de route automatiques · Pop-up HVAC</td><td data-l="en">Left / right heated seat (cycle) · Heated wheel · Climate ON/OFF · Climate: A/C · Climate: temperature ± · Climate: fan ± · Front / rear defrost · Recirculation (cycle) · Airflow in AUTO (cycle) · Brightness ± (10% steps) · Automatic high beam · HVAC pop-up</td></tr>
@@ -895,13 +908,22 @@
         <p data-l="en">Dog mode is picked under “Now”. The screen stays on and shows, in large type, a message that all is well, the set temperature, the outside one, how long the climate has been running and the battery level. A warning reminds you to check regularly that the mode is still active: a battery that is too low, locking with the key or a fault would stop the climate.</p>
       </details>
     </div>
-    <div class="pt" id="f-surveillance" data-hl-key="preclim-surv" data-demo="surveillance">
-      <h3><span data-l="fr">Mode Surveillance</span><span data-l="en">Surveillance mode</span></h3>
-      <p data-l="fr">Avec une application caméra 360°, la voiture reste éveillée et verrouillée pour filmer, clim coupée.</p>
-      <p data-l="en">With a 360° camera app, the car stays awake and locked to record, with the climate off.</p>
+    <div class="pt is-new" id="f-surveillance" data-hl-key="preclim-surv" data-demo="surveillance">
+      <h3><span data-l="fr">Mode Surveillance</span><span data-l="en">Surveillance mode</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="fr">Avec une application caméra 360°, la voiture reste éveillée et verrouillée, clim coupée, et MG4Control lance lui-même l'enregistrement continu.</p>
+      <p data-l="en">With a 360° camera app, the car stays awake and locked with the climate off, and MG4Control starts continuous recording itself.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Proposé seulement si l'application caméra (MG4-360-Camera-App ou sa version MG4_Dashcam) est installée. Durée au choix jusqu'à 2 h ; seuls l'écran et les caméras consomment, environ 0,2 kW. L'écran affiche, dans un cadre rouge fixe, « SURVEILLANCE CAMÉRA » et « Ce véhicule est filmé en continu, à 360°. ». Mêmes arrêts que la pré-climatisation : batterie faible, déverrouillage ou voiture qui roule. Vos réglages de clim sont rétablis à la fin.</p>
-        <p data-l="en">Only offered if the camera app (MG4-360-Camera-App or its MG4_Dashcam version) is installed. Duration up to 2 h; only the screen and the cameras draw power, about 0.2 kW. The screen shows, in a fixed red frame, “CAMERA SURVEILLANCE” and a notice that the vehicle is being filmed all around. Same stops as pre-conditioning: low battery, unlocking or the car moving. Your climate settings are restored at the end.</p>
+        <p data-l="fr">Durée au choix jusqu'à 2 h ; seuls l'écran et les caméras consomment, environ 0,2 kW. L'écran affiche, dans un cadre rouge fixe, « SURVEILLANCE CAMÉRA » et « Ce véhicule est filmé en continu, à 360°. », avec une pastille <b>REC</b> en haut à droite et la durée filmée (grise et figée quand la caméra d'origine de la voiture prend la main). Mêmes arrêts que la pré-climatisation : batterie faible, déverrouillage ou voiture qui roule ; l'enregistrement s'arrête avec la surveillance, et vos réglages de clim sont rétablis à la fin. Il faut une appli dashcam : sans elle, « Démarrer » est grisé. La fenêtre se règle au toucher, voiture en P ; le joystick garde ses fonctions habituelles.</p>
+        <p data-l="en">Duration up to 2 h; only the screen and the cameras draw power, about 0.2 kW. The screen shows, in a fixed red frame, “CAMERA SURVEILLANCE” and a notice that the vehicle is being filmed all around, with a <b>REC</b> badge in the top-right corner and the recorded time (grey and frozen while the car's own camera takes over). Same stops as pre-conditioning: low battery, unlocking or the car moving; recording stops with the surveillance, and your climate settings are restored at the end. A dashcam app is needed: without one, Start is greyed out. The window is set by touch, car in P; the joystick keeps its usual functions.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-survcam" data-hl-key="sc-preclim-cam" data-go="shortcuts:preclim">
+      <h3><span data-l="fr">Caméra de surveillance</span><span data-l="en">Surveillance camera</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="fr">MG4-360-Camera-App filme dès « Démarrer » et s'arrête à la fin ; une carte des réglages montre l'appli trouvée et teste la clé USB.</p>
+      <p data-l="en">MG4-360-Camera-App records from “Start” and stops at the end; a settings card shows the app found and tests the USB drive.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Dans Raccourcis › Garde-voiture : l'appli détectée (relue à chaque affichage de l'onglet), l'interrupteur « Lancer l'enregistrement automatiquement » (activé par défaut), l'emplacement (celui de l'appli : un dossier « surveillance » sur la clé USB) et « Tester la clé USB », avec l'espace libre et une durée d'enregistrement estimée. Dans la fenêtre, une ligne dit si l'appli filmera et la place restante ; sinon un bandeau prévient au-dessus des boutons : enregistrement automatique coupé, appli qui ne sait pas être pilotée, version trop ancienne — l'enregistrement se lance alors à la main dans l'appli. Toute appli caméra peut s'y brancher : deux commandes publiques, START et STOP, déclarées pour MG4Control. Dans la maquette, choisissez l'appli installée en bas de la carte.</p>
+        <p data-l="en">In Shortcuts › Car keeper: the detected app (checked again each time the tab is shown), the “Start recording automatically” switch (on by default), the location (the app's own: a “surveillance” folder on the USB drive) and “Test USB drive”, with the free space and an estimated recording time. In the window, a line says whether the app will record and the space left; otherwise a banner warns above the buttons: automatic recording off, an app that can't be controlled, a version too old — recording is then started by hand in the app. Any camera app can plug in: two public commands, START and STOP, declared for MG4Control. In the mockup, pick the installed app at the bottom of the card.</p>
       </details>
     </div>
     <div class="pt" id="f-preclim-screen" data-hl-key="preclim-screen" data-demo="preclimRun">
@@ -1033,8 +1055,8 @@
       <p data-l="fr">De nombreux déclencheurs, conditions et actions, à combiner librement ; les automatisations existantes restent à part.</p>
       <p data-l="en">Many triggers, conditions and actions to combine freely; the existing automations stay separate.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr"><b>Quand</b> : une valeur du véhicule qui devient vraie ou qui change, une heure, toutes les X minutes, lever ou coucher du soleil, démarrage de l'écran, porte avant ouverte, charge, prise, verrouillage, téléphone, lancement manuel… <b>Et si</b> : heure, jours, saison, hasard, variables, lieux (GPS) et une soixantaine de valeurs, en groupes Toutes / Au moins une / Aucune. <b>Alors</b> : réglages du véhicule et de la clim, luminosité, volume, média, vitres, son, ouvrir une appli, raccourci perso, une autre automatisation, variables, attendre, attendre que, Si / Sinon, Répéter, question Oui / Non, message vocal, navigation. Une règle ne part que sur un « vrai » franc : une valeur illisible ne déclenche rien. Le Mode Garage les suspend toutes. Dans la maquette, les règles tournent vraiment (véhicule virtuel, heure de votre appareil).</p>
-        <p data-l="en"><b>When</b>: a vehicle value becoming true or changing, a time, every X minutes, sunrise or sunset, screen start-up, front door opened, charging, plug, lock, phone, manual run… <b>And if</b>: time, days, season, random, variables, places (GPS) and some sixty values, in All / At least one / None groups. <b>Then</b>: vehicle and climate settings, brightness, volume, media, windows, sound, open an app, custom shortcut, another automation, variables, wait, wait until, If / Else, Repeat, Yes / No question, voice message, navigation. A rule only fires on a clear “true”: an unreadable value triggers nothing. Garage mode suspends them all. In the mockup, the rules really run (virtual vehicle, your device's time).</p>
+        <p data-l="fr"><b>Quand</b> : une valeur du véhicule qui devient vraie ou qui change, une heure, toutes les X minutes, lever ou coucher du soleil, démarrage de l'écran, passage en READY ou sortie de READY, passage en P ou en D, porte avant ouverte ou portes refermées, charge, prise, verrouillage, téléphone connecté ou déconnecté, changement de profil actif, lancement manuel… <b>Et si</b> : heure, jours, saison, hasard, variables, lieux (GPS) et une soixantaine de valeurs, en groupes Toutes / Au moins une / Aucune. <b>Alors</b> : réglages du véhicule et de la clim (aussi à la valeur d'une variable), luminosité, volume, média (lecture, pause), vitres, son (bip ou vos sons importés d'une clé USB), ouvrir une appli, raccourci perso, lancer ou arrêter une autre automatisation, retenir une valeur dans une variable, ajouter ou retirer, attendre, attendre que, Si / Sinon, Répéter, question Oui / Non, message vocal, navigation, données en direct vers ABRP. Une règle ne part que sur un « vrai » franc : une valeur illisible ne déclenche rien. Le Mode Garage les suspend toutes. Dans la maquette, les règles tournent vraiment (véhicule virtuel, heure de votre appareil).</p>
+        <p data-l="en"><b>When</b>: a vehicle value becoming true or changing, a time, every X minutes, sunrise or sunset, screen start-up, going READY or leaving READY, shifting to P or D, front door opened or front doors closed, charging, plug, lock, phone connected or disconnected, active profile changing, manual run… <b>And if</b>: time, days, season, random, variables, places (GPS) and some sixty values, in All / At least one / None groups. <b>Then</b>: vehicle and climate settings (also to a variable's value), brightness, volume, media (play, pause), windows, sound (beep or your own sounds imported from a USB drive), open an app, custom shortcut, run or stop another automation, remember a value in a variable, add or subtract, wait, wait until, If / Else, Repeat, Yes / No question, voice message, navigation, live data to ABRP. A rule only fires on a clear “true”: an unreadable value triggers nothing. Garage mode suspends them all. In the mockup, the rules really run (virtual vehicle, your device's time).</p>
       </details>
     </div>
     <div class="pt is-new" id="f-rule-editor" data-hl-key="rule-act" data-demo="ruleEdit">
@@ -1042,14 +1064,23 @@
       <p data-l="fr">Chaque choix dans une fenêtre à étapes avec Retour ; les longues listes s'ouvrent en grand, avec catégories, recherche et « Récents ».</p>
       <p data-l="en">Every choice in a step window with Back; long lists open large, with categories, search and “Recent”.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Les valeurs se règlent aux boutons − et +, sans clavier. Rien n'est enregistré avant « Enregistrer » ; « Tester » lance la version affichée. Options : que faire si la règle est redéclenchée avant d'avoir fini, anti-rebond, seulement en READY. La page garde 30 règles au plus, un interrupteur général, l'historique des 20 dernières exécutions avec leur journal, les variables et les lieux ; export et import en JSON (Téléchargements, clé USB ou autre dossier).</p>
-        <p data-l="en">Values are set with − and + buttons, without a keyboard. Nothing is stored until “Save”; “Test” runs the version on screen. Options: what to do when the rule is triggered again before it has finished, debounce, only in READY. The page keeps 30 rules at most, a master switch, the history of the last 20 runs with their log, variables and places; JSON export and import (Downloads, USB drive or another folder).</p>
+        <p data-l="fr">Les valeurs se règlent aux boutons − et +, sans clavier. Rien n'est enregistré avant « Enregistrer » ; « Tester » lance la version affichée. Options : que faire si la règle est redéclenchée avant d'avoir fini, anti-rebond, seulement en READY. La page garde 30 règles au plus, un interrupteur général, l'historique des 20 dernières exécutions avec leur journal, les variables (à renommer partout d'un coup, modifier ou supprimer) et les lieux (à renommer, agrandir, déplacer à la position actuelle ou supprimer) ; export et import en JSON (Téléchargements, clé USB ou autre dossier). <b>Copier</b>, <b>Couper</b> et <b>Coller</b> dans chaque menu ⋮ : « Coller » n'apparaît que là où l'élément a sa place. La carte d'une règle résume ce que fait un bloc Si / Sinon (« si X → A ; sinon → B »).</p>
+        <p data-l="en">Values are set with − and + buttons, without a keyboard. Nothing is stored until “Save”; “Test” runs the version on screen. Options: what to do when the rule is triggered again before it has finished, debounce, only in READY. The page keeps 30 rules at most, a master switch, the history of the last 20 runs with their log, variables (renamed everywhere at once, changed or deleted) and places (renamed, resized, moved to the current position or deleted); JSON export and import (Downloads, USB drive or another folder). <b>Copy</b>, <b>Cut</b> and <b>Paste</b> in every ⋮ menu: “Paste” only shows where the item fits. A rule's card sums up what an If / Else block does (“if X → A; else → B”).</p>
       </details>
     </div>
     <div class="pt is-new" id="f-rule-tpl" data-hl-key="rule-tpl" data-demo="ruleTpl">
       <h3><span data-l="fr">Modèles</span><span data-l="en">Templates</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.0</span></h3>
-      <p data-l="fr">Des règles prêtes à adapter : message au démarrage, départ du matin en hiver, clim quand il fait chaud, volant ou siège chauffant coupé après un temps (#173), luminosité selon le soleil (#198)…</p>
-      <p data-l="en">Rules ready to adapt: startup message, winter morning departure, climate when it's hot, heated wheel or seat off after a while (#173), brightness from the sun (#198)…</p>
+      <p data-l="fr">Des règles prêtes à adapter : message au démarrage, départ du matin en hiver, clim quand il fait chaud, volant ou siège chauffant coupé après un temps (#173), luminosité selon le soleil (#198), ABRP selon le profil (#188)…</p>
+      <p data-l="en">Rules ready to adapt: startup message, winter morning departure, climate when it's hot, heated wheel or seat off after a while (#173), brightness from the sun (#198), ABRP by profile (#188)…</p>
+    </div>
+    <div class="pt is-new" id="f-abrp" data-hl-key="rule-act" data-demo="ruleEdit">
+      <h3><span data-l="fr">Données en direct vers ABRP</span><span data-l="en">Live data to ABRP</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="fr">Une action « ABRP : données en direct » envoie niveau de batterie, puissance, vitesse et charge à A Better Route Planner, pour des itinéraires qui suivent la voiture (#188).</p>
+      <p data-l="en">An “ABRP: live data” action sends battery level, power, speed and charging to A Better Route Planner, for routes that follow the car (#188).</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Version en ligne seulement. Comptes ABRP saisis à l'écran ou importés d'un fichier sur clé USB (un fichier modèle est fourni, clé API comprise) ; cadence réglable en roulant, en charge et à l'arrêt ; position envoyée seulement si vous l'acceptez. La clé partagée de MG4Control est limitée par ABRP à 2 envois par seconde pour tous les utilisateurs réunis : un avertissement le rappelle et renvoie vers une clé personnelle gratuite. Modèle « ABRP selon le profil » pour suivre le profil actif.</p>
+        <p data-l="en">Online version only. ABRP accounts typed in or imported from a file on a USB drive (a template file is provided, API key included); adjustable cadence while driving, charging and parked; position sent only if you allow it. MG4Control's shared key is limited by ABRP to 2 sends per second for all users together: a warning says so and points to a free personal key. “ABRP by profile” template to follow the active profile.</p>
+      </details>
     </div>
   </div>
 </section>
@@ -1397,8 +1428,8 @@
   <div class="points three">
     <div class="pt" data-hl-key="s-lang" data-go="settings:0">
       <h3><span data-l="fr">Langues</span><span data-l="en">Languages</span></h3>
-      <p data-l="fr">Sept langues, demandées au tout premier lancement et modifiables ensuite.</p>
-      <p data-l="en">Seven languages, asked on the very first launch and changeable later.</p>
+      <p data-l="fr">Huit langues, demandées au tout premier lancement et modifiables ensuite.</p>
+      <p data-l="en">Eight languages, asked on the very first launch and changeable later.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
         <p data-l="fr">Français, English, Deutsch, Español, Português, Italiano et Türkçe. Au premier lancement, sept grandes tuiles : chaque langue s'y écrit dans sa propre langue.</p>
         <p data-l="en">Français, English, Deutsch, Español, Português, Italiano and Türkçe. On first launch, seven large tiles: each language is written in its own language.</p>
@@ -1503,8 +1534,8 @@
       <p data-l="fr">Le menu principal est une colonne à gauche, les sous-onglets sont des pastilles, textes et boutons sont plus grands.</p>
       <p data-l="en">The main menu is a column on the left, sub-tabs are pills, text and buttons are larger.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Le logo MG4Control ramène au tableau de bord (cinq appuis révèlent le Diagnostic). Les interrupteurs deviennent des segments « Non | Oui », les profils s'affichent en grille, les modes de conduite en tuiles. Un libellé de bouton passe sur deux lignes s'il y a la place, sinon il finit par « … », selon la langue et la taille du texte. Les longues listes ont un champ de recherche.</p>
-        <p data-l="en">The MG4Control logo brings you back to the dashboard (five taps reveal the Diagnostic). Switches become “No | Yes” segments, profiles show as a grid, drive modes as tiles. A button label goes on two lines when there is room, otherwise it ends with “…”, depending on the language and the text size. Long lists have a search field.</p>
+        <p data-l="fr">Le logo MG4Control ramène au tableau de bord (cinq appuis révèlent le Diagnostic). Les interrupteurs deviennent des segments « Non | Oui », les profils s'affichent en grille, les modes de conduite en tuiles. Un libellé de bouton passe sur deux lignes s'il y a la place, sinon il finit par « … », selon la langue et la taille du texte. Les longues listes ont un champ de recherche. Chaque écran rouvre le dernier sous-onglet affiché, jusqu'au redémarrage de l'appli.</p>
+        <p data-l="en">The MG4Control logo brings you back to the dashboard (five taps reveal the Diagnostic). Switches become “No | Yes” segments, profiles show as a grid, drive modes as tiles. A button label goes on two lines when there is room, otherwise it ends with “…”, depending on the language and the text size. Long lists have a search field. Every screen reopens the last sub-tab shown, until the app restarts.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-navside" data-hl-key="s-navside" data-demo="navSide">
@@ -1539,13 +1570,13 @@
         <p data-l="en">Android Auto and CarPlay fill the screen: the climate area at the top then opens the HVAC pop-up instead of the stock panel. Switch in Settings › Interface, off by default, suspended in Garage mode.</p>
       </details>
     </div>
-    <div class="pt" id="f-autolang" data-hl-key="s-lang" data-demo="lang">
-      <h3><span data-l="fr">Langue de la voiture</span><span data-l="en">Car language</span></h3>
+    <div class="pt is-new" id="f-autolang" data-hl-key="s-lang" data-demo="lang">
+      <h3><span data-l="fr">Langue de la voiture</span><span data-l="en">Car language</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.0</span></h3>
       <p data-l="fr">Au premier lancement, MG4Control prend la langue de la voiture si elle est traduite ; sinon il vous la demande.</p>
       <p data-l="en">On first launch, MG4Control takes the car's language if it is translated; otherwise it asks you.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Sept langues : français, anglais, allemand, espagnol, italien, portugais et turc. Les pop-ups affichés avant la première ouverture de l'application suivent aussi cette langue. Un choix déjà fait n'est pas modifié.</p>
-        <p data-l="en">Seven languages: French, English, German, Spanish, Italian, Portuguese and Turkish. Pop-ups shown before the app is first opened follow that language too. A choice already made is left unchanged.</p>
+        <p data-l="fr">Huit langues : français, anglais, allemand, espagnol, italien, portugais, turc et, nouveau, polonais. Les pop-ups affichés avant la première ouverture de l'application suivent aussi cette langue. Un choix déjà fait n'est pas modifié.</p>
+        <p data-l="en">Eight languages: French, English, German, Spanish, Italian, Portuguese, Turkish and, new, Polish. Pop-ups shown before the app is first opened follow that language too. A choice already made is left unchanged.</p>
       </details>
     </div>
   </div>

@@ -6,7 +6,7 @@ param([string]$Res, [string]$Out, [string]$ResBeta = '')
 # ASCII only on purpose: Windows PowerShell 5.1 reads scripts without BOM as ANSI.
 
 $ARROW_ESC = [string][char]92 + "u2192"
-$langs = [ordered]@{ fr = 'values'; en = 'values-en'; de = 'values-de'; es = 'values-es'; it = 'values-it'; pt = 'values-pt'; tr = 'values-tr' }
+$langs = [ordered]@{ fr = 'values'; en = 'values-en'; de = 'values-de'; es = 'values-es'; it = 'values-it'; pt = 'values-pt'; tr = 'values-tr'; pl = 'values-pl' }
 
 function Read-Strings([string]$dir) {
   $map = [ordered]@{}
@@ -17,6 +17,9 @@ function Read-Strings([string]$dir) {
   $xml.Load($path)
   foreach ($n in $xml.SelectNodes('/resources/string')) {
     $v = $n.InnerText
+    # Android drops the double quotes around a whole string (used to keep leading/trailing spaces).
+    $q = [string][char]34
+    if ($v.Length -ge 2 -and $v.StartsWith($q) -and $v.EndsWith($q) -and -not $v.EndsWith([string][char]92 + $q)) { $v = $v.Substring(1, $v.Length - 2) }
     $v = $v.Replace('\''', '''').Replace('\"', '"').Replace('\n', "`n").Replace('\t', ' ').Replace($ARROW_ESC, [string][char]0x2192)
     $map[$n.GetAttribute('name')] = $v
   }

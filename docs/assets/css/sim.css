@@ -1447,3 +1447,36 @@
 /* Tableau de bord 2.7.0 : modes de conduite en tuiles */
 .b.mode { height: 84px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
 .b.mode .ico { width: 28px; height: 28px; }
+
+/* ── 2.7.0-beta.3 : caméra de surveillance, bandeau du Garde-voiture, REC, Réglages rapides ── */
+.pcp.ban .pcp-body { height: 252px; }
+.pcp.ban .pcp-foot { margin-top: 8px; }
+.pcp.ban .pcp-left, .pcp.ban .pcp-right { gap: 6px; }
+.pcp-ban { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 6px 14px; border-radius: 12px; border: 1px solid var(--dash-warn); background: var(--dash-warn-dim); }
+.pcp-ban .mw-ico { flex: none; width: 24px; height: 24px; color: var(--dash-warn); }
+.pcp-ban b { display: block; font-size: calc(14px * var(--ts, 1)); }
+.pcp-ban span { display: block; font-size: calc(13px * var(--ts, 1)); color: var(--text-primary); }
+.pcp-ban.red { border-color: var(--dash-danger); background: var(--dash-danger-dim); }
+.pcp-ban.red .mw-ico { color: var(--dash-danger); }
+.pcp-cam { font-size: calc(13px * var(--ts, 1)); text-align: center; }
+.pcp-cam i, .pcs-rec i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--dash-danger); margin-right: 8px; vertical-align: 0; }
+.pcp-foot .mw-b.off { background: var(--dash-btn); border-color: var(--dash-border); color: var(--text-secondary); opacity: .35; cursor: default; }
+.pcs-rec { position: absolute; top: 22px; right: 26px; z-index: 3; padding: 6px 16px; border-radius: 22px; border: 1px solid #F43F5E; background: rgba(244,63,94,.16); color: #F4F4F5; font-size: 18px; font-weight: 700; }
+.cam-st { display: flex; gap: 12px; align-items: flex-start; padding: 6px 0 10px; }
+.cam-st .mw-ico { flex: none; width: 26px; height: 26px; margin-top: 2px; }
+.cam-st.ok .mw-ico { color: var(--dash-eco); } .cam-st.warn .mw-ico { color: var(--dash-warn); } .cam-st.lo .mw-ico { color: var(--dash-text-lo); }
+.cam-st b { display: block; font-size: calc(16px * var(--ts, 1)); }
+.cam-st span { display: block; font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); }
+.cam-opts.dis { opacity: .38; pointer-events: none; }
+.cam-demo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--dash-border); }
+.cam-demo span { font-size: 12px; color: var(--text-secondary); margin-right: 4px; }
+.rl-add.paste { color: var(--dash-accent); }
+.qs-cell { position: relative; }
+.qs-cell .qs-tile { width: 100%; }
+.qs-tile.two { border-color: #14B8A6; }
+.qs-tile.lit { background: var(--dash-accent-dim); border-color: var(--dash-accent); }
+.qs-tg { font-style: normal; color: #14B8A6; margin-left: 4px; }
+.qs-bub { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; min-width: 100%; border-radius: 14px; border: 1px solid var(--dash-accent); background: var(--dash-card); box-shadow: 0 6px 18px rgba(0,0,0,.35); }
+.qs-bub.below { bottom: auto; top: calc(100% + 6px); }
+.qs-bub button { flex: 1 0 auto; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--dash-border); background: var(--dash-section); color: var(--text-primary); font: inherit; cursor: pointer; }
+.qs-bub button.on { background: var(--dash-accent); border-color: var(--dash-accent); color: var(--dash-on-accent, #0C111B); }

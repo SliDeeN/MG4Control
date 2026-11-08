@@ -170,7 +170,7 @@
         enabled: true,
         map: { btn1_single: 'PROFILE_PICKER', btn1_long: 'ONE_PEDAL', btn2_single: 'NONE', btn2_long: 'ADAS_CYCLE' },
         extra: {},
-        fallback: 'HIGH', adasA: 3, adasB: 0, aebA: 1, aebB: 2,
+        fallback: 'PREV', adasA: 3, adasB: 0, aebA: 1, aebB: 2,
         regenCycle: null,          // séquence composée (null = ordre d'origine)
         profileCycle: null,        // cycle de profils composé (null = tous les profils, dans l'ordre de la liste)
         audioCycle: null,          // cycle de sources audio composé (null = radio puis Bluetooth)
@@ -209,7 +209,7 @@
       // Boutons flottants : un jeu par profil (FloatingSets), masquage en marche arrière commun.
       floating: { hideReverse: true, sets: {}, color: '#A6C8FF' },
       // Garde-voiture : derniers choix de la fenêtre et réglages de sa page (PreClimateSettings).
-      preclim: { mode: 'now', dur: 60, temp: 21, fan: 4, dog: false, surv: false, at: { h: 7, m: 30, run: 15, runs: 2, pause: 10 },
+      preclim: { cam: 'ok', camAuto: true, usb: null, mode: 'now', dur: 60, temp: 21, fan: 4, dog: false, surv: false, at: { h: 7, m: 30, run: 15, runs: 2, pause: 10 },
                  lock: 20, soc: 20, screen: 'dim', cluster: true, unlock: true },
       pc: null,                    // programme en cours (pcStart)
       // Sons d'automatisation : un son par moment au plus (SoundAutomationSettings).
@@ -339,13 +339,15 @@
 
   // ── Écritures véhicule ────────────────────────────────────────────────────
   const car = () => state.car;
+  /** Écrit la régénération ; en passant en One Pedal, la voiture retient le niveau d'avant (issue #226). */
+  function putRegen(c, l) { if (l === 'ONE_PEDAL' && c.regen !== 'ONE_PEDAL') c.regenPrev = c.regen; c.regen = l; }
   const W = {
     drive(m) { if (!gateOk()) return false; car().driveMode = m; return true; },
     regen(l) {
       if (!gateOk()) return false;
       const c = car();
       if (c.driveMode === 'SNOW' || (c.energy && l !== 'ONE_PEDAL')) return false;
-      c.regen = l; return true;
+      putRegen(c, l); return true;
     },
     energy(on) { if (!gateOk()) return false; if (car().driveMode === 'SNOW') return false; car().energy = on; return true; },
     adas(i) { if (!gateOk()) return false; car().adas = i; return true; },
@@ -399,7 +401,7 @@
     const drivingOk = drive || safety ? gateOk(true) : true;
     if (drivingOk && drive) {
       c.driveMode = p.driveMode;
-      if (p.driveMode !== 'SNOW' && p.regenOn !== false) c.regen = p.regen;
+      if (p.driveMode !== 'SNOW' && p.regenOn !== false) putRegen(c, p.regen);
       if (k.known) c.energy = p.driveMode === 'SNOW' ? false : p.energy;
       // Les trois réglages du mode Personnalisé, écrits seulement si le profil est en CUSTOM.
       if (p.driveMode === 'CUSTOM') {
@@ -430,7 +432,9 @@
       if (p.seatApply) { c.seatL = p.seatL; c.seatR = p.seatR; }
     }
     if (comfort && p.hvac && p.hvac.enabled && k.clim) applyProfileClimate(p.hvac);
-    state.activeProfileId = p.id;   // « profil actif » des raccourcis par profil
+    const changed = state.activeProfileId !== p.id;
+    state.activeProfileId = p.id;
+    if (changed) setTimeout(() => ruleEvent('profile_change'), 0);   // « profil actif » des raccourcis par profil
     Object.assign(state.settings, clCfg(p.id));   // son écran conducteur
     soundFire('profile');
     if (opts.manual) state.lastManual = p.id;
@@ -678,7 +682,7 @@
     if (state.auto.bri.on && caps().bri) autoBrightness();
     commit();
     emit('ignition', { trace });
-    if (state.car.ready) ruleEvent('ready');
+    if (state.car.ready) { ruleEvent('ready'); ruleEvent('ready_on'); }
     return trace;
   }
 
@@ -734,6 +738,7 @@
     const c = car(), k = caps();
     if (!c.ready) return [];
     c.ready = false;
+    setTimeout(() => ruleEvent('ready_off'), 0);
     const trace = [L('Sortie de READY', 'Leaving READY')];
     if (!garage()) {
       // Baisse du volume : sur les firmwares sans capteur de porte, c'est ce signal qui sert.
@@ -895,7 +900,9 @@
   }
   function pcStart(r) {
     const cl = car().clim;
-    state.pc = { req: JSON.parse(JSON.stringify(r)), phase: 'cd', left: r.lock, min: 0, plan: pcPlan(r),
+    // Surveillance : l'appli caméra pilotable filme dès « Démarrer » (START), si l'interrupteur est allumé.
+    const rec = !!(r.surv && state.preclim.cam === 'ok' && state.preclim.camAuto);
+    state.pc = { req: JSON.parse(JSON.stringify(r)), phase: 'cd', left: r.lock, min: 0, plan: pcPlan(r), rec,
                  snap: { power: cl.power, ac: cl.ac, auto: cl.auto, temp: cl.temp, fan: cl.fan }, hidden: false, wake: Date.now(), startHM: nowHM() };
     // « Maintenant » : la clim démarre tout de suite ; surveillance et « À une heure » : coupée.
     if (r.surv || (r.mode === 'at' && !r.dog)) cl.power = false; else pcClim(true);
@@ -1039,10 +1046,12 @@
       case 'NONE': return '';
       case 'ONE_PEDAL': {
         const v = c.regen !== 'ONE_PEDAL';   // état lu sur le véhicule
-        const lvl = v ? 'ONE_PEDAL' : sc.fallback;
+        // Second appui : « Comme avant » (défaut) = la voiture remet le niveau d'avant ; sinon le niveau choisi.
+        const fixe = ['LOW', 'MEDIUM', 'HIGH', 'ADAPTIVE'].includes(sc.fallback) ? sc.fallback : null;
+        const lvl = v ? 'ONE_PEDAL' : fixe || (c.regenPrev && c.regenPrev !== 'ONE_PEDAL' ? c.regenPrev : 'MEDIUM');
         if (!gateOk()) return '';
         if (c.driveMode === 'SNOW') { msg = L('Régénération indisponible en mode SNOW', 'Regeneration unavailable in SNOW mode'); break; }
-        c.regen = lvl; msg = S('drive_section_regen') + ' → ' + regenName(lvl); break;
+        putRegen(c, lvl); msg = S('drive_section_regen') + ' → ' + regenName(lvl); break;
       }
       case 'REGEN_CYCLE': {
         // Repart du niveau LU sur le véhicule ; hors séquence → premier cran.
@@ -1514,7 +1523,11 @@
     every: { cat: 'time', def: { min: 15 }, name: () => S('rule_trg_every'), txt: (t) => S('rule_every_fmt', t.min) },
     sunrise: { cat: 'time', name: () => S('rule_sunrise'), txt: () => S('rule_sunrise') },
     sunset: { cat: 'time', name: () => S('rule_sunset'), txt: () => S('rule_sunset') },
-    manual: { cat: 'time', name: () => S('rule_trg_manual'), txt: () => S('rule_trg_manual') }
+    manual: { cat: 'time', name: () => S('rule_trg_manual'), txt: () => S('rule_trg_manual') },
+    ready_on: { cat: 'car', name: () => S('rule_trg_ready_on'), txt: () => S('rule_trg_ready_on') },
+    ready_off: { cat: 'car', name: () => S('rule_trg_ready_off'), txt: () => S('rule_trg_ready_off') },
+    door_close: { cat: 'car', ok: (k) => k.doorSensor, name: () => S('rule_event_door_close'), txt: () => S('rule_event_door_close') },
+    profile_change: { cat: 'car', name: () => S('rule_trg_profile_changes'), txt: () => S('rule_trg_profile_changes') }
   };
   const R_COND = {
     time_range: { cat: 'time', def: { a: [22, 0], b: [6, 0] }, name: () => S('rule_cond_time'), txt: (c) => S('rule_range_fmt', hm(c.a[0], c.a[1]), hm(c.b[0], c.b[1])),
@@ -1541,7 +1554,11 @@
     confirm: { cat: 'flow', def: { msg: '' }, name: () => S('rule_act_confirm'), txt: (a) => S('rule_confirm_fmt', a.msg) },
     wait: { cat: 'flow', def: { s: 10 }, name: () => S('rule_act_wait'), txt: (a) => S('rule_act_wait_fmt', a.s) },
     if: { cat: 'flow', name: () => S('rule_act_if'), txt: (a) => S('rule_act_if_fmt', R_COND[a.c.k].txt(a.c)) },
-    stop: { cat: 'flow', name: () => S('rule_act_stop'), txt: () => S('rule_act_stop') }
+    stop: { cat: 'flow', name: () => S('rule_act_stop'), txt: () => S('rule_act_stop') },
+    media: { cat: 'screen', def: { play: false }, name: () => S('rule_act_media'), txt: (a) => S('rule_set_fmt', S('rule_act_media'), S(a.play ? 'rule_act_media_play' : 'rule_act_media_pause')) },
+    sound: { cat: 'screen', name: () => S('rule_act_sound'), txt: () => S('rule_set_fmt', S('rule_act_sound'), S('rule_sound_beep')) },
+    stop_rule: { cat: 'shortcuts', name: () => S('rule_rule_stop'), txt: (a) => S('rule_stop_rule_fmt', ruleName(a.id)) },
+    abrp: { cat: 'driving', def: { on: true }, name: () => S('abrp_rule_action'), txt: (a) => (a.on ? S('abrp_rule_start_fmt', L('Ma MG4', 'My MG4')) : S('abrp_rule_stop')) }
   };
   const R_CAT = { trg: { car: 'rule_cat_car', charge: 'rule_cat_charge', time: 'rule_cat_time' },
     cond: { car: 'rule_cat_car', charge: 'rule_cat_battery', time: 'rule_cat_time' },
@@ -1557,8 +1574,15 @@
     for (let i = 1; i < ps.length; i += 2) l = l[+ps[i]][ps[i + 1]];
     return l;
   }
+  /** Texte de résumé d'une action : un bloc Si / Sinon dit ce qu'il fait (« si X → A ; sinon → B »). */
+  const unq = (t) => t.replace(/^"|"$/g, '');
+  function rSumAct(a) {
+    if (a.k !== 'if') return rTxt('act', a);
+    const l = (x) => (x.length ? x.map(rSumAct).join(' · ') : '—');
+    return S('rule_sum_if_fmt', R_COND[a.c.k].txt(a.c), l(a.then)) + (a.else.length ? unq(S('rule_sum_else_fmt', l(a.else))) : '');
+  }
   function rSummary(r) {
-    const join = (l, kind, sep) => (l.length ? l.map((x) => rTxt(kind, x)).join(sep) : null);
+    const join = (l, kind, sep) => (l.length ? l.map((x) => (kind === 'act' ? rSumAct(x) : rTxt(kind, x))).join(sep) : null);
     return S('rule_summary_fmt', join(r.trg, 'trg', S('rule_or')) || '—', join(r.cond, 'cond', S('rule_and')) || S('rule_always'), join(r.act, 'act', ' · ') || '—');
   }
   /** Modèles (CustomRuleTemplates) : de quoi démarrer, à adapter dans l'éditeur. */
@@ -1665,6 +1689,10 @@
       case 'shortcut': runAction(a.a); return true;
       case 'run_rule': { const r = state.rules.list.find((x) => x.id === a.id); if (!r) return false; runRule(r, S('rule_trg_manual')); return true; }
       case 'notify': toastActive(a.msg || '…', 3000); return true;
+      case 'media': c.media.playing = !!a.play; hud((a.play ? '▶ ' : '⏸ ') + S(a.play ? 'rule_act_media_play' : 'rule_act_media_pause')); return true;
+      case 'sound': hud('🔔 ' + S('rule_sound_beep')); return true;
+      case 'stop_rule': return !!state.rules.list.find((x) => x.id === a.id);
+      case 'abrp': hud(a.on ? S('abrp_running_fmt', L('Ma MG4', 'My MG4')) : S('abrp_rule_stop')); return true;
       case 'speak': hud('🗣 « ' + (a.msg || '…') + ' »'); return true;
       default: return false;
     }
@@ -1914,7 +1942,10 @@
       const plan = pc.plan, last = plan[plan.length - 1][1], off = hmIn(last - pc.min);
       const cur = plan.find(([a, b]) => pc.min >= a && pc.min < b), next = plan.find(([a]) => a > pc.min);
       if (r.surv) {
-        return '<div class="a-pcs surv" data-hl="preclim-screen"><div class="pcs-surv">' + MW.cam + '<div class="pcs-st">' + esc(S('preclim_surv_screen_title')) + '</div><div class="pcs-p">' + esc(S('preclim_surv_screen_text')) + '</div>' +
+        // Pastille REC (variante A) : temps filmé, d'après l'état renvoyé par l'appli caméra.
+        const rs = Math.round(pc.min * 60), two = (x) => String(x).padStart(2, '0');
+        const recTag = pc.rec ? '<div class="pcs-rec" data-hl="preclim-rec"><i></i>' + esc(S('preclim_surv_rec', two(Math.floor(rs / 3600)) + ':' + two(Math.floor(rs / 60) % 60) + ':' + two(rs % 60))) + '</div>' : '';
+        return '<div class="a-pcs surv" data-hl="preclim-screen">' + recTag + '<div class="pcs-surv">' + MW.cam + '<div class="pcs-st">' + esc(S('preclim_surv_screen_title')) + '</div><div class="pcs-p">' + esc(S('preclim_surv_screen_text')) + '</div>' +
           '<div class="pcs-status">' + esc(S('preclim_surv_status', pc.startHM, c.soc + ' % · ' + pcPowerW(), off)) + '</div></div>' + btns + '</div>';
       }
       // Particules bleues si la clim refroidit, orange si elle chauffe ; seulement clim en marche.
@@ -2342,7 +2373,7 @@
     setLang() {
       const cur = appLang();
       const b = (code) => '<button class="b nc' + (cur === code ? ' on' : '') + '" data-a="lang" data-v="' + code + '">' + esc(S('settings_language_' + code)) + '</button>';
-      return '<div class="a-sec" data-hl="s-lang"><div class="a-h">' + esc(S('settings_language')) + '</div><div class="a-grid g3">' + b('fr') + b('en') + b('de') + b('es') + b('pt') + b('it') + b('tr') + '</div></div>';
+      return '<div class="a-sec" data-hl="s-lang"><div class="a-h">' + esc(S('settings_language')) + '</div><div class="a-grid g3">' + b('fr') + b('en') + b('de') + b('es') + b('pt') + b('it') + b('tr') + b('pl') + '</div></div>';
     }
     setUi() {
       const s = state.settings, k = caps();
@@ -2501,11 +2532,14 @@
       return '<select class="a-select" style="flex:1" data-c="' + dataC + '" ' + (attrs || '') + '>' + list.map((a) =>
         '<option value="' + a + '"' + (a === cur ? ' selected' : '') + '>' + esc(a === cur ? this.actionLabel(a, extra) : S(ACTION_KEY[a])) + '</option>').join('') + '</select>';
     }
+    /** Raccourci One Pedal, second appui (issue #226) : « Comme avant » (défaut) ou un niveau fixe. */
     scOnePedal() {
-      const sc = state.sc;
-      const f = (l, key) => '<button class="b' + (sc.fallback === l ? ' on' : '') + '" data-a="scFallback" data-v="' + l + '">' + esc(S(key)) + '</button>';
-      return '<div class="a-sec" data-hl="sc-onepedal"><div class="a-h">' + esc(S('shortcuts_cfg_one_pedal')) + '</div><div class="a-row"><span class="a-sub" style="min-width:70px;margin:0">' + esc(S('shortcuts_cfg_retour')) + '</span><div class="a-grid g5" style="flex:1">' +
-        f('OFF', 'regen_off') + f('LOW', 'regen_low') + f('MEDIUM', 'regen_medium') + f('HIGH', 'regen_high') + f('ADAPTIVE', 'regen_adaptive_short') + '</div></div></div>';
+      const sc = state.sc, cur = ['LOW', 'MEDIUM', 'HIGH', 'ADAPTIVE'].includes(sc.fallback) ? sc.fallback : 'PREV';
+      const f = (l, key) => '<button class="b' + (cur === l ? ' on' : '') + '" data-a="scFallback" data-v="' + l + '">' + esc(S(key)) + '</button>';
+      const desc = cur === 'PREV' ? S('shortcuts_onepedal_desc_prev') : S('shortcuts_onepedal_desc_fixed', regenName(cur));
+      return '<div class="a-sec" data-hl="sc-onepedal"><div class="a-h">' + esc(S('shortcuts_cfg_one_pedal')) + '</div>' +
+        '<div class="a-grid" style="grid-template-columns:1.8fr 1fr 1fr 1fr 1fr">' + f('PREV', 'shortcuts_onepedal_prev') + f('LOW', 'regen_low') + f('MEDIUM', 'regen_medium') + f('HIGH', 'regen_high') + f('ADAPTIVE', 'regen_adaptive') + '</div>' +
+        '<div class="a-desc" style="margin-top:8px">' + esc(desc) + '</div></div>';
     }
     scAdasCfg() {
       const sc = state.sc;
@@ -2573,7 +2607,26 @@
         '<div class="a-row"><span class="lbl" style="flex:0 0 300px">' + esc(S('preclim_cfg_screen')) + '</span><div class="a-grid g3" style="flex:1">' + scr('normal', 'preclim_screen_normal') + scr('dim', 'preclim_screen_dim') + scr('off', 'preclim_screen_off') + '</div></div>' +
         (k.cluster ? '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_cluster')) + '<small>' + esc(S('preclim_cfg_cluster_desc')) + '</small></span>' + sw(p.cluster, 'pcCluster') + '</div>' : '') +
         '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_unlock')) + '<small>' + esc(S('preclim_cfg_unlock_desc')) + '</small></span>' + sw(p.unlock, 'pcUnlockSw') + '</div>' +
-        '<div class="a-desc" style="margin-top:8px;color:var(--dash-warn)">⚠ ' + esc(S('preclim_cfg_warning')) + '</div></div>';
+        '<div class="a-desc" style="margin-top:8px;color:var(--dash-warn)">⚠ ' + esc(S('preclim_cfg_warning')) + '</div></div>' + this.camCard();
+    }
+    /** Carte « Caméra de surveillance » (2026-11-08) : appli détectée, enregistrement auto, emplacement, test de la clé. */
+    camCard() {
+      const p = state.preclim, ok = p.cam === 'ok';
+      const st = { ok: ['ok', S('preclim_cam_found', 'MG4 360 Camera'), S('preclim_cam_found_desc', 'com.drivehub.kamera')],
+        old: ['warn', S('preclim_cam_old', 'MG4 360 Camera'), S('preclim_cam_old_desc')],
+        incompat: ['warn', S('preclim_cam_incompat', 'MG4 Dashcam'), S('preclim_cam_incompat_desc')],
+        none: ['lo', S('preclim_cam_none'), S('preclim_cam_none_desc')] }[p.cam];
+      const demo = '<div class="cam-demo"><span>' + esc(L('Démo — appli installée :', 'Demo — installed app:')) + '</span>' +
+        [['ok', L('Pilotable', 'Controllable')], ['old', L('Trop ancienne', 'Too old')], ['incompat', L('Non compatible', 'Incompatible')], ['none', L('Aucune', 'None')]].map(([v, t]) =>
+          '<button class="b sm' + (p.cam === v ? ' on' : '') + '" data-a="pcCam" data-v="' + v + '">' + esc(t) + '</button>').join('') + '</div>';
+      const usb = p.usb === 'testing' ? S('preclim_cam_usb_testing') : p.usb === 'ok' ? S('preclim_cam_usb_ok', appLang() === 'fr' ? '41,2 Go' : '41.2 GB', appLang() === 'fr' ? '64 Go' : '64 GB', '9 h 09') : S('preclim_cam_usb_untested');
+      return '<div class="a-sec" data-hl="sc-preclim-cam"><div class="a-h">' + esc(S('preclim_cam_title')) + '</div>' +
+        '<div class="cam-st ' + st[0] + '">' + MW.cam + '<div><b>' + esc(st[1]) + '</b><span>' + esc(st[2]) + '</span></div></div>' +
+        '<div class="cam-opts' + (ok ? '' : ' dis') + '">' +
+        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cam_auto')) + '<small>' + esc(S('preclim_cam_auto_desc')) + '</small></span>' + sw(p.camAuto && ok, 'pcCamAuto') + '</div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cam_place')) + '<small>' + esc(S('preclim_cam_place_desc')) + '</small></span></div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cam_usb')) + '<small' + (p.usb === 'ok' ? ' style="color:var(--dash-eco)"' : '') + '>' + esc(usb) + '</small></span>' +
+        '<button class="b" style="flex:0 0 auto;padding:0 18px" data-a="pcUsbTest"' + (ok ? '' : ' disabled') + '>' + esc(S('preclim_cam_usb_test')) + '</button></div></div>' + demo + '</div>';
     }
     /** Page « Boutons flottants » : un profil à la fois, ses bulles, l'édition, la copie, les options. */
     scFloating() {
@@ -3395,7 +3448,7 @@
     /**
      * Fenêtre du Garde-voiture (PreClimatePopupOverlay) : « Maintenant » (durée, mode chien,
      * surveillance) ou « À une heure » (cycles) à gauche ; la clim, ou la surveillance clim coupée, à droite.
-     * La maquette suppose l'application caméra 360° installée : sans elle, le bouton Surveillance n'existe pas.
+     * Appli caméra : celle choisie dans la carte « Caméra de surveillance » (démonstration) ; sans appli, Démarrer est grisé.
      */
     /** « Démarrer » validé : la fenêtre se ferme, le décompte part. */
     pcLaunch() {
@@ -3422,18 +3475,26 @@
           (a.runs > 1 ? step(S('preclim_pause'), clDur(a.pause), 'pcAtPause') : '');
       }
       const warn = (key, red) => '<div class="pcp-warn' + (red ? ' red' : '') + '">' + MW.warning + '<span>' + esc(S(key)) + '</span></div>';
+      const cam = p.cam, filmera = surv && cam === 'ok' && p.camAuto, camName = 'MG4 360 Camera';
+      const camLine = filmera ? '<div class="pcp-cam"><i></i>' + esc(S('preclim_surv_cam_on', camName)) + ' · ' + esc(S('preclim_surv_cam_usb_ok', appLang() === 'fr' ? '41 Go' : '41 GB')) + '</div>' : '';
+      const ban = !surv || filmera ? null : cam === 'ok' ? [S('preclim_surv_ban_off_title'), S('preclim_surv_ban_off_text', camName), false]
+        : cam === 'old' ? [S('preclim_surv_ban_old_title', camName), S('preclim_surv_ban_old_text'), false]
+        : cam === 'incompat' ? [S('preclim_surv_ban_incompat_title', 'MG4 Dashcam'), S('preclim_surv_ban_incompat_text'), false]
+        : [S('preclim_surv_ban_none_title'), S('preclim_surv_ban_none_text'), true];
+      const banner = ban ? '<div class="pcp-ban' + (ban[2] ? ' red' : '') + '" data-hl="preclim-cam-ban">' + (ban[2] ? MW.cam : MW.warning) + '<div><b>' + esc(ban[0]) + '</b><span>' + esc(ban[1]) + '</span></div></div>' : '';
+      const blocked = surv && cam === 'none';
       const right = surv
-        ? '<div class="ov-cap">' + esc(S('preclim_surv_off_title')) + '</div><div class="pcp-text">' + esc(S('preclim_surv_off_text')) + '</div>' + warn('preclim_surv_warning', true)
+        ? '<div class="ov-cap">' + esc(S('preclim_surv_off_title')) + '</div><div class="pcp-text">' + esc(S('preclim_surv_off_text')) + '</div>' + camLine + warn('preclim_surv_warning', true)
         : '<div class="ov-cap">' + esc(S('preclim_clim_caption')) + '</div>' + step(S('preclim_temp'), S('preclim_value_celsius', p.temp), 'pcTemp') + step(S('preclim_fan'), String(p.fan), 'pcFan') +
           '<div class="pcp-text">' + esc(S('preclim_current', S('preclim_summary', cl.temp + ' °C', cl.auto ? S('clim_auto') : cl.fan))) + '</div>' + (dog ? warn('preclim_dog_warning') : '');
       const plan = pcPlan(Object.assign({}, p, { dog, surv })), off = hmIn(plan[plan.length - 1][1] + p.lock / 60);
       const planTxt = surv ? S('preclim_plan_surv', off) : dog ? S('preclim_plan_dog', off) : now ? S('preclim_plan_now', off) : S('preclim_plan_at', hmIn(plan[0][0]), off);
       const icon = surv ? MW.cam : dog ? MW.paw : MW.fan;
-      return '<div class="a-scrim" data-a="pcBg"><div class="ov-card pcp' + (surv ? ' surv' : '') + '" data-hl="preclim-popup">' +
+      return '<div class="a-scrim" data-a="pcBg"><div class="ov-card pcp' + (surv ? ' surv' : '') + (banner ? ' ban' : '') + '" data-hl="preclim-popup">' +
         '<div class="ov-head">' + icon + '<div class="ov-title">' + esc(S(surv ? 'preclim_surv' : dog ? 'preclim_dog' : 'preclim_title')) + '</div><button class="ov-x" data-a="pcClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>' +
-        '<div class="pcp-body"><div class="ov-pan pcp-left">' + tabs + left + '</div><div class="ov-pan pcp-right">' + right + '</div></div>' +
+        '<div class="pcp-body"><div class="ov-pan pcp-left">' + tabs + left + '</div><div class="ov-pan pcp-right">' + right + '</div></div>' + banner +
         '<div class="pcp-foot"><span>' + esc(planTxt) + '</span><button class="mw-b sm" data-a="pcClose"><span>' + esc(S('preclim_cancel')) + '</span></button>' +
-        '<button class="mw-b sm ' + (surv ? 'd' : 'p') + '" data-a="pcGo"><span>' + esc(S('preclim_start')) + '</span></button></div></div></div>';
+        '<button class="mw-b sm ' + (blocked ? 'off' : surv ? 'd' : 'p') + '" data-a="pcGo"' + (blocked ? ' disabled' : '') + '><span>' + esc(S('preclim_start')) + '</span></button></div></div></div>';
     }
     /**
      * Pop-up de charge (overlay_charge_popup.xml, 1140 × 400 dp) : à gauche le niveau, la barre qui
@@ -3728,14 +3789,16 @@
     toggleQuick() { const o = this.ui.overlay; if (o && o.type === 'quick') return this.closeOverlay(); this.openQuick(); }
     quickHtml(o) {
       const tiles = qtTiles(), moving = car().speed > 3;
-      const grid = tiles.map((t) => {
-        const off = moving && QT[t].stop;
-        return '<button class="qs-tile' + (o.sel === t ? ' on' : '') + (off ? ' dis' : '') + '" data-a="qsTile" data-v="' + t + '"' + (off ? ' disabled' : '') + '><span>' + esc(S(QT[t].key)) + '</span><b>' + esc(qtValue(t)) + '</b>' +
-          (off ? '<small>' + esc(S('quick_stopped_only')) + '</small>' : '') + '</button>';
+      const grid = tiles.map((t, i) => {
+        const off = moving && QT[t].stop, opts = QT[t].opts(), two = opts.length === 2, yn = two && opts[0][0] === true || two && opts[1][0] === true;
+        const lit = yn && QT[t].get() === true;
+        // Bulle des valeurs, accrochée à la tuile (au-dessus ; en dessous pour la première rangée).
+        const cur = QT[t].get();
+        const bub = o.sel === t ? '<div class="qs-bub' + (i < 4 ? ' below' : '') + '">' + opts.map(([v, lab]) => '<button class="' + (v === cur ? 'on' : '') + '" data-a="qsSet" data-v="' + esc(JSON.stringify(v)) + '">' + esc(lab) + '</button>').join('') + '</div>' : '';
+        return '<div class="qs-cell"><button class="qs-tile' + (o.sel === t ? ' on' : '') + (two ? ' two' : '') + (lit ? ' lit' : '') + (off ? ' dis' : '') + '" data-a="qsTile" data-v="' + t + '"' + (off ? ' disabled' : '') + '><span>' + esc(S(QT[t].key)) + (two ? ' <i class="qs-tg">⇄</i>' : '') + '</span><b>' + esc(qtValue(t)) + '</b>' +
+          (off ? '<small>' + esc(S('quick_stopped_only')) + '</small>' : '') + '</button>' + bub + '</div>';
       }).join('');
-      const cur = o.sel && QT[o.sel] ? QT[o.sel].get() : null;
-      const panel = o.sel && QT[o.sel] ? '<div class="ov-pan qs-pan"><div class="ov-cap">' + esc(S(QT[o.sel].key)) + '</div><div class="ov-seg">' +
-        QT[o.sel].opts().map(([v, lab]) => '<button class="' + (v === cur ? 'on' : '') + '" data-a="qsSet" data-v="' + esc(JSON.stringify(v)) + '">' + esc(lab) + '</button>').join('') + '</div></div>' : '';
+      const panel = '';
       return '<div class="a-scrim" data-a="qsBg"><div class="ov-card qs-card" data-hl="quick-popup"><div class="ov-head">' + ico('cat_adjust') + '<div class="ov-title">' + esc(S('quick_title')) + '</div>' +
         '<span class="ov-cd" data-cd>' + esc(S('quick_closes_in', o.left)) + '</span><button class="ov-x" data-a="qsClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>' +
         '<div class="qs-grid">' + grid + '</div>' + panel + '</div></div>';
@@ -3778,7 +3841,9 @@
       const r = e.rule;
       const line = (kind, path, i, it, depth) => {
         const last = rList(r, path).length - 1;
+        const pv = kind + '|' + path + '|' + i;
         const tools = '<span class="rl-tools"><button data-a="rUp" data-v="' + path + '|' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button data-a="rDown" data-v="' + path + '|' + i + '"' + (i < last ? '' : ' disabled') + '>↓</button>' +
+          '<button data-a="rCopy" data-v="' + pv + '" title="' + esc(S('rule_menu_copy')) + '">⧉</button><button data-a="rCut" data-v="' + pv + '" title="' + esc(S('rule_menu_cut')) + '">✂</button>' +
           '<button class="x" data-a="rDelLine" data-v="' + path + '|' + i + '">✕</button></span>';
         let h = '<div class="rl-line" style="margin-left:' + depth * 26 + 'px"><button class="rl-txt" data-a="rEditLine" data-v="' + kind + '|' + path + '|' + i + '">' + esc(rTxt(kind, it)) + '</button>' + tools + '</div>';
         if (kind === 'act' && it.k === 'if') {
@@ -3786,14 +3851,19 @@
             const p = path + '.' + i + '.' + b;
             h += '<div class="rl-branch" style="margin-left:' + (depth + 1) * 26 + 'px">' + esc(b === 'then' ? S('rule_if_condition') : S('rule_if_else')) + '</div>' +
               it[b].map((x, j) => line('act', p, j, x, depth + 2)).join('') +
-              '<button class="rl-add" style="margin-left:' + (depth + 2) * 26 + 'px" data-a="rAdd" data-v="act|' + p + '">+ ' + esc(S('rule_add_action')) + '</button>';
+              '<button class="rl-add" style="margin-left:' + (depth + 2) * 26 + 'px" data-a="rAdd" data-v="act|' + p + '">+ ' + esc(S('rule_add_action')) + '</button>' + paste('act', p, depth + 2);
           });
         }
         return h;
       };
+      // « Coller » n'apparaît que là où l'élément copié a sa place (même section).
+      const clip = this.ui.rClip;
+      function paste(kind, path, depth) {
+        return clip && clip.kind === kind ? '<button class="rl-add paste" style="margin-left:' + (depth || 0) * 26 + 'px" data-a="rPaste" data-v="' + kind + '|' + path + '">📋 ' + esc(S('rule_paste')) + ' · ' + esc(rTxt(kind, clip.item)) + '</button>' : '';
+      }
       const sec = (kind, titleKey, hintKey, emptyKey, addKey) => '<div class="a-card rl-sec" data-hl="rule-' + kind + '"><div class="rl-sh">' + esc(S(titleKey)) + '</div><div class="a-desc">' + esc(S(hintKey)) + '</div>' +
         (r[kind].length ? r[kind].map((it, i) => line(kind, kind, i, it, 0)).join('') : '<div class="a-desc rl-empty">' + esc(S(emptyKey)) + '</div>') +
-        '<button class="rl-add" data-a="rAdd" data-v="' + kind + '|' + kind + '">+ ' + esc(S(addKey)) + '</button></div>';
+        '<button class="rl-add" data-a="rAdd" data-v="' + kind + '|' + kind + '">+ ' + esc(S(addKey)) + '</button>' + paste(kind, kind, 0) + '</div>';
       const o = r.opt;
       const opts = '<div class="a-card rl-sec" data-hl="rule-opt"><div class="rl-sh">' + esc(S('rule_sec_options')) + '</div>' +
         '<div class="a-row"><span class="lbl">' + esc(S('rule_opt_if_running')) + '</span><div class="a-grid g2" style="flex:0 0 360px"><button class="b sm' + (o.restart ? '' : ' on') + '" data-a="rOptRestart" data-v="0">' + esc(S('rule_opt_ignore')) + '</button>' +
@@ -3828,7 +3898,8 @@
           // Grande fenêtre (Assistant.afficherGrand) : catégories à gauche, recherche, grille à droite.
           const defs = R_DEF[d.kind], cats = R_CAT[d.kind], k = caps(), q = (d.q || '').toLowerCase();
           const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-          const all = Object.keys(defs).filter((x) => !defs[x].ok || defs[x].ok(k)).filter((x) => !(d.kind === 'act' && x === 'if' && d.path !== 'act'));
+          // Conditions : leur « ok » est le test de la condition, pas une compatibilité du firmware.
+          const all = Object.keys(defs).filter((x) => d.kind === 'cond' || !defs[x].ok || defs[x].ok(k)).filter((x) => !(d.kind === 'act' && x === 'if' && d.path !== 'act'));
           const hit = all.filter((x) => !q || norm(defs[x].name()).indexOf(norm(q)) >= 0);
           const cat = d.cat && hit.some((x) => defs[x].cat === d.cat) ? d.cat : null;
           const shown = hit.filter((x) => !cat || defs[x].cat === cat);
@@ -3901,7 +3972,10 @@
         case 'volume': body = stepper('v', S('rule_sig_volume'), '', 0, car().volMax); break;
         case 'wait': body = stepper('s', S('rule_wait_title'), ' s', 1, 30); break;
         case 'windows': body = seg('close', [[true, S('shortcuts_action_windows_close')], [false, S('shortcuts_action_windows_open')]]); break;
+        case 'media': body = seg('play', [[true, S('rule_act_media_play')], [false, S('rule_act_media_pause')]]); break;
+        case 'abrp': body = seg('on', [[true, S('abrp_rule_start_fmt', L('Ma MG4', 'My MG4'))], [false, S('abrp_rule_stop')]]); break;
         case 'profile': body = '<div class="mw-grid" data-sk="rvp">' + state.profiles.map((p) => '<button class="mw-choice' + (it.id === p.id ? ' on' : '') + '" data-a="rvSet" data-v="' + esc('id=' + JSON.stringify(p.id)) + '">' + modePill(p) + '<b>' + esc(p.name) + '</b></button>').join('') + '</div>'; break;
+        case 'stop_rule':
         case 'run_rule': body = '<div class="mw-grid" data-sk="rvr">' + state.rules.list.filter((r) => !this.ui.rEdit || r.id !== this.ui.rEdit.rule.id).map((r) => '<button class="mw-choice' + (it.id === r.id ? ' on' : '') + '" data-a="rvSet" data-v="' + esc('id=' + JSON.stringify(r.id)) + '"><b>' + esc(r.name) + '</b></button>').join('') + '</div>'; break;
         case 'shortcut': body = '<div class="mw-grid long" data-sk="rvs">' + availableActions().filter((a) => !['NONE', 'APPLY_PROFILE', 'OPEN_CUSTOM_APP', 'CUSTOM', 'RUN_RULE'].includes(a)).map((a) =>
           '<button class="mw-choice' + (it.a === a ? ' on' : '') + '" data-a="rvSet" data-v="' + esc('a=' + JSON.stringify(a)) + '"><b>' + esc(S(ACTION_KEY[a])) + '</b></button>').join('') + '</div>'; break;
@@ -3918,11 +3992,11 @@
     rulePicked(kind, path, k) {
       const d = R_DEF[kind][k], it = Object.assign({ k }, rClone(d.def || {}));
       if (kind === 'act' && k === 'profile') it.id = (state.profiles[0] || {}).id;
-      if (kind === 'act' && k === 'run_rule') { const o = state.rules.list.find((r) => !this.ui.rEdit || r.id !== this.ui.rEdit.rule.id); it.id = o ? o.id : null; }
+      if (kind === 'act' && (k === 'run_rule' || k === 'stop_rule')) { const o = state.rules.list.find((r) => !this.ui.rEdit || r.id !== this.ui.rEdit.rule.id); it.id = o ? o.id : null; }
       if (kind === 'act' && k === 'if') Object.assign(it, { c: { k: 'sun_up', is: true }, then: [], else: [] });
       if ((kind === 'act' && (k === 'notify' || k === 'speak' || k === 'confirm'))) it.msg = '';
       if (kind === 'cond' && k === 'time_range') { it.a0 = 22; it.a1 = 0; it.b0 = 6; it.b1 = 0; }
-      const simple = !d.def && !['profile', 'run_rule', 'if'].includes(k);
+      const simple = !d.def && !['profile', 'run_rule', 'stop_rule', 'if'].includes(k);
       if (simple) { rList(this.ui.rEdit.rule, path).push(it); this.ui.dialog = null; return this.render(); }
       this.ui.dialog = { type: 'rVal', kind, path, idx: null, item: it, back: { kind, path } };
       this.render();
@@ -3968,11 +4042,18 @@
         case 'qsDefaults': state.quick.tiles = null; commit(); return true;
         case 'qsOpen': this.openQuick(); return true;
         case 'qsClose': case 'qsBg': this.closeOverlay(); return true;
-        case 'qsTile': { const o = u.overlay; if (o) { o.sel = o.sel === v ? null : v; o.left = popupDelay(); } this.render(); return true; }
+        case 'qsTile': {
+          const o = u.overlay; if (!o) return true;
+          o.left = popupDelay();
+          const opts = QT[v].opts();
+          // Deux valeurs proposées : un toucher bascule, sans bulle.
+          if (opts.length === 2) { o.sel = null; const cur = QT[v].get(), nx = opts.find(([x]) => x !== cur) || opts[0]; if (QT[v].set(nx[0]) === false) this.toast(S('quick_write_failed')); commit(); return true; }
+          o.sel = o.sel === v ? null : v; this.render(); return true;
+        }
         case 'qsSet': {
           const o = u.overlay; if (!o || !o.sel) return true;
           const val = JSON.parse(v), ok = QT[o.sel].set(val);
-          o.left = popupDelay();
+          o.left = popupDelay(); o.sel = null;   // la valeur choisie part, la bulle se referme
           if (ok === false) this.toast(S('quick_write_failed')); commit(); return true;
         }
         // Mes automatisations : liste
@@ -4011,6 +4092,18 @@
           u.dialog = { type: 'rVal', kind, path, idx: +i, item: copy }; this.render(); return true;
         }
         case 'rDelLine': { const [p, i] = pathIdx(); rList(e.rule, p).splice(i, 1); this.render(); return true; }
+        case 'rCopy': case 'rCut': {
+          const [kind, p, i] = v.split('|'), l = rList(e.rule, p), it = l[+i];
+          u.rClip = { kind, item: rClone(it) };
+          if (a === 'rCut') l.splice(+i, 1);
+          this.toast(S('rule_copied', rTxt(kind, it))); this.render(); return true;
+        }
+        case 'rPaste': {
+          const [kind, p] = v.split('|'), c = u.rClip; if (!c || c.kind !== kind) return true;
+          // Une automatisation ne peut pas se lancer elle-même.
+          if (c.item.k === 'run_rule' && c.item.id === e.rule.id) { this.toast(S('rule_paste_self'), 3000); return true; }
+          rList(e.rule, p).push(rClone(c.item)); this.render(); return true;
+        }
         case 'rUp': case 'rDown': { const [p, i] = pathIdx(), l = rList(e.rule, p), j = a === 'rUp' ? i - 1 : i + 1; if (j >= 0 && j < l.length) [l[i], l[j]] = [l[j], l[i]]; this.render(); return true; }
         // Fenêtre de valeur
         case 'rvStep': {
@@ -4085,7 +4178,7 @@
           const tile = (code) => '<button class="mw-lang" data-a="pickLang" data-v="' + code + '"><b>' + esc(S('settings_language_' + code)) + '</b><span>' + code.toUpperCase() + '</span></button>';
           const title = S('settings_language_pick_title'), en = 'Choose your language';
           return win(820, '<span class="mw-badge mid">' + MW.language + '</span><div class="mw-ct">' + esc(title) + '</div>' + (title !== en ? '<div class="mw-s center">' + en + '</div>' : '') +
-            '<div class="mw-langs">' + ['fr', 'en', 'de', 'es'].map(tile).join('') + '</div><div class="mw-langs three">' + ['pt', 'it', 'tr'].map(tile).join('') + '</div>', 'c');
+            '<div class="mw-langs">' + ['fr', 'en', 'de', 'es'].map(tile).join('') + '</div><div class="mw-langs">' + ['pt', 'it', 'tr', 'pl'].map(tile).join('') + '</div>', 'c');
         }
         case 'update': {
           // Trois états sous le même en-tête (UpdateDialogManager) : les nouveautés et les actions,
@@ -4601,6 +4694,8 @@
         case 'pcAtPause': state.preclim.at.pause = clamp(state.preclim.at.pause + n * 5, 5, 60); return r();
         case 'pcGo': {
           if (c.speed > 0) return this.toast(S('preclim_need_park'), 3000);
+          // Surveillance sans aucune appli dashcam : rien ne filmerait, le départ est refusé.
+          if (state.preclim.mode === 'now' && state.preclim.surv && state.preclim.cam === 'none') return this.toast(S('preclim_surv_need_app'), 3000);
           // Rappel avant le départ : la clé, et les trois façons de déverrouiller.
           if (state.preclim.unlock) { u.dialog = { type: 'pcUnlock' }; return r(); }
           return this.pcLaunch();
@@ -4608,6 +4703,9 @@
         case 'pcUnlockNever': state.preclim.unlock = false; u.dialog = null; return this.pcLaunch();
         case 'pcUnlockOk': u.dialog = null; return this.pcLaunch();
         case 'pcUnlockSw': state.preclim.unlock = !state.preclim.unlock; return r();
+        case 'pcCam': state.preclim.cam = v; state.preclim.usb = null; return r();
+        case 'pcCamAuto': if (state.preclim.cam === 'ok') state.preclim.camAuto = !state.preclim.camAuto; return r();
+        case 'pcUsbTest': state.preclim.usb = 'testing'; r(); setTimeout(() => { state.preclim.usb = 'ok'; commit(); }, 1200); return;
         // Garde-voiture : écran de suivi
         case 'pcHide': if (state.pc) state.pc.hidden = true; return r();
         case 'pcStop': if (state.pc) pcEnd(state.pc.phase === 'cd' ? 'cancelled' : 'stopped'); return;
@@ -5481,6 +5579,7 @@
     const c = car(), d = state.door;
     c.doors[side] = open;
     if (open && caps().doorSensor) { soundFire('door'); ruleEvent('door'); }
+    if (!open && caps().doorSensor && !c.doors.L && !c.doors.R) ruleEvent('door_close');
     if (!caps().doorSensor || !d.on || garage()) return commit();
     if (open && d[side]) hud(L('Porte ouverte : ', 'Door open: ') + doorDrop());
     else if (!open && !c.doors.L && !c.doors.R) { const m = doorRestore(); if (m) hud(L('Portes fermées : ', 'Doors closed: ') + m); }
