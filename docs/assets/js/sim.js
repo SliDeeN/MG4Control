@@ -1648,8 +1648,11 @@
     let ok = 0, ko = 0;
     j.push('▶ ' + (why || S('rule_test')));
     if (!test) {
-      if (r.opt && r.opt.ready && !car().ready) { j.push('■ ' + S('rule_opt_ready')); return rDone(r, j, 0, 0, true); }
-      for (const c of r.cond) { const d = R_COND[c.k]; const v = d && d.ok(c); j.push((v ? '✓ ' : '✗ ') + rTxt('cond', c)); if (!v) return rDone(r, j, 0, 0, true); }
+      if (r.opt && r.opt.ready && !car().ready) { j.push('■ ' + S('rule_opt_ready')); return rDone(r, j, 0, 0, { short: S('rule_skip_short_not_ready'), long: S('rule_skip_not_ready'), by: why }); }
+      for (const c of r.cond) {
+        const d = R_COND[c.k]; const v = d && d.ok(c); j.push((v ? '✓ ' : '✗ ') + rTxt('cond', c));
+        if (!v) return rDone(r, j, 0, 0, { short: S('rule_skip_short_conditions'), long: S('rule_skip_conditions_fmt', rTxt('cond', c)), by: why });
+      }
     }
     const steps = async (list) => {
       for (const a of list) {
@@ -1670,8 +1673,9 @@
     return rDone(r, j, ok, ko, false, t0);
   }
   function rDone(r, j, ok, ko, skipped) {
-    if (!skipped) r.last = { at: nowHM(), ok, ko };
-    state.rules.hist.unshift({ id: r.id, name: r.name, at: nowHM(), ok, ko, skipped, journal: j });
+    // Un refus reste sur la carte jusqu'à la prochaine exécution (RuleHistory.skipIsNewer).
+    if (!skipped) { r.last = { at: nowHM(), ok, ko }; r.skip = null; } else r.skip = { at: nowHM(), why: skipped.short };
+    state.rules.hist.unshift({ id: r.id, name: r.name, at: nowHM(), ok, ko, skipped: skipped || false, journal: j });
     state.rules.hist.length = Math.min(state.rules.hist.length, 20);
     commit();
   }
@@ -3848,7 +3852,8 @@
       const list = R.list.length ? R.list.map((r) => {
         const off = !r.on || !R.engine;
         return '<div class="a-card rl-card' + (off ? ' off' : '') + '" data-hl="rule-card"><div class="a-row"><span class="a-title rl-name" data-a="rEdit" data-v="' + r.id + '">' + esc(r.name) + '</span>' + sw(r.on, 'rOn', false, r.id) + '</div>' +
-          '<div class="rl-sum">' + esc(rSummary(r)) + '</div><div class="rl-foot"><span class="a-desc">' + esc(r.last ? S('rule_last_run_fmt', r.last.at, r.last.ok, r.last.ko) : S('rule_never_run')) + '</span>' +
+          '<div class="rl-sum">' + esc(rSummary(r)) + '</div><div class="rl-foot"><span class="a-desc">' + esc(r.last ? S('rule_last_run_fmt', r.last.at, r.last.ok, r.last.ko) : S('rule_never_run')) +
+          (r.skip ? '<span class="rl-skip">' + esc(S('rule_last_skip_fmt', r.skip.at, r.skip.why)) + '</span>' : '') + '</span>' +
           '<button class="b sm primary" data-a="rEdit" data-v="' + r.id + '">' + esc(S('rule_menu_edit')) + '</button><button class="b sm" data-a="rTest" data-v="' + r.id + '">' + esc(S('rule_test')) + '</button>' +
           '<button class="b sm danger" data-a="rDel" data-v="' + r.id + '">' + esc(S('rule_delete')) + '</button></div></div>';
       }).join('') : '<div class="a-desc" style="text-align:center;padding:20px">' + esc(S('rule_empty')) + '</div>';
@@ -3930,9 +3935,16 @@
         }
         case 'rVal': return this.ruleValueDialog(d, h);
         case 'rHist': {
-          const H = state.rules.hist;
-          return win(1000, head(MW.list, S('rule_tool_history'), null) + '<div class="mw-scroll rl-hist" data-sk="hist">' + (H.length ? H.map((x) => '<div class="rl-hrow"><b>' + esc(x.at + ' · ' + x.name) + '</b>' +
-            x.journal.map((l) => '<div>' + esc(l) + '</div>').join('') + '</div>').join('') : '<div class="a-desc">' + esc(S('rule_never_run')) + '</div>') + '</div>' +
+          // Toutes / Exécutées / Ignorées (2026-11-08) ; une entrée ignorée dit pourquoi.
+          const all = state.rules.hist, f = d.f || 'all';
+          const H = all.filter((x) => f === 'all' || (f === 'skip' ? !!x.skipped : !x.skipped));
+          const seg = '<div class="ov-seg mw-seg mt12">' + [['all', 'rule_hist_filter_all'], ['runs', 'rule_hist_filter_runs'], ['skip', 'rule_hist_filter_skipped']]
+            .map(([v, k]) => '<button' + (f === v ? ' class="on"' : '') + ' data-a="rHistF" data-v="' + v + '">' + esc(S(k)) + '</button>').join('') + '</div>';
+          const row = (x) => '<div class="rl-hrow' + (x.skipped ? ' skip' : '') + '"><b>' + esc(x.at + ' · ' + x.name) + '</b>' +
+            (x.skipped ? (x.skipped.by ? '<div>' + esc(S('rule_hist_by_fmt', x.skipped.by)) + '</div>' : '') + '<div class="rl-skip">' + esc(S('rule_hist_skipped_fmt', x.skipped.long || S('rule_skip_short_conditions'))) + '</div>'
+              : x.journal.map((l) => '<div>' + esc(l) + '</div>').join('')) + '</div>';
+          return win(1000, head(MW.list, S('rule_tool_history'), S('rule_hist_count_fmt', all.length, 20)) + seg + '<div class="mw-scroll rl-hist mt12" data-sk="hist">' +
+            (H.length ? H.map(row).join('') : '<div class="a-desc">' + esc(all.length ? S('rule_hist_empty_filter') : S('rule_never_run')) + '</div>') + '</div>' +
             '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
         }
         case 'rInfo':
@@ -4096,7 +4108,8 @@
         case 'rTest': { const r = R.list.find((x) => x.id === v); if (r) { runRule(r, S('rule_test'), true); this.toast(S('rule_test_started', r.name)); } return true; }
         case 'rDel': u.dialog = { type: 'rDelete', id: v }; this.render(); return true;
         case 'rDelOk': R.list = R.list.filter((x) => x.id !== u.dialog.id); u.dialog = null; commit(); return true;
-        case 'rHist': u.dialog = { type: 'rHist' }; this.render(); return true;
+        case 'rHist': u.dialog = { type: 'rHist', f: 'all' }; this.render(); return true;
+        case 'rHistF': if (u.dialog) u.dialog.f = v; this.render(); return true;
         // Variables et lieux : la maquette n'en crée pas, la fenêtre « vide » de l'appli s'affiche.
         case 'rVars': u.dialog = { type: 'rInfo', title: S('rule_tool_variables'), msg: S('rule_vars_empty') }; this.render(); return true;
         case 'rPlaces': u.dialog = { type: 'rInfo', title: S('rule_tool_places'), msg: S('rule_places_empty') }; this.render(); return true;
@@ -4594,7 +4607,7 @@
             name = p.name.trim().slice(0, Math.max(1, 30 - suf.length)).trimEnd() + suf;
             if (!taken.includes(name.toLowerCase())) break;
           }
-          const copy = Object.assign(JSON.parse(JSON.stringify(p)), { id: uid(), name });
+          const copy = Object.assign(JSON.parse(JSON.stringify(p)), { id: uid(), name, bt: null });   // sans téléphone (ProfileCopy.duplicate)
           state.profiles.splice(state.profiles.indexOf(p) + 1, 0, copy);
           r(); return this.toast(S('profile_duplicated_fmt', name));
         }

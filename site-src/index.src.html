@@ -131,13 +131,14 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.0</span>
-        <b><span data-l="fr">20 nouveautés dans cette version</span><span data-l="en">20 new things in this release</span></b>
+        <b><span data-l="fr">22 nouveautés dans cette version</span><span data-l="en">22 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
         <a href="#f-look270" data-feature="f-look270"><span data-l="fr">🎨 Nouveau look : menu à gauche, pastilles</span><span data-l="en">🎨 New look: menu on the left, pills</span></a>
         <a href="#f-navside" data-feature="f-navside"><span data-l="fr">↔️ Menu côté conducteur</span><span data-l="en">↔️ Menu on the driver's side</span></a>
         <a href="#f-rules" data-feature="f-rules"><span data-l="fr">🤖 Mes automatisations (expérimental)</span><span data-l="en">🤖 My automations (experimental)</span></a>
+        <a href="#f-rule-skip" data-feature="f-rule-skip"><span data-l="fr">🚫 Déclenchements ignorés visibles</span><span data-l="en">🚫 Ignored triggers shown</span></a>
         <a href="#f-rule-tpl" data-feature="f-rule-tpl"><span data-l="fr">📋 Modèles prêts à l'emploi</span><span data-l="en">📋 Ready-made templates</span></a>
         <a href="#f-wheel" data-feature="f-wheel"><span data-l="fr">🎮 Boutons physiques : une carte par touche</span><span data-l="en">🎮 Hardware buttons: one card per key</span></a>
         <a href="#f-quick" data-feature="f-quick"><span data-l="fr">🎛️ Pop-up Réglages rapides</span><span data-l="en">🎛️ Quick settings pop-up</span></a>
@@ -150,6 +151,7 @@
         <a href="#f-keepac" data-feature="f-keepac"><span data-l="fr">❄️ Garder l'A/C coupé</span><span data-l="en">❄️ Keep the A/C off</span></a>
         <a href="#f-bri0" data-feature="f-bri0"><span data-l="fr">🔅 Luminosité jusqu'à 0 %</span><span data-l="en">🔅 Brightness down to 0 %</span></a>
         <a href="#f-preclim-watts" data-feature="f-preclim-watts"><span data-l="fr">⚡ Garde-voiture : puissance en watts</span><span data-l="en">⚡ Car keeper: power in watts</span></a>
+        <a href="#f-profilecopy" data-feature="f-profilecopy"><span data-l="fr">📑 Dupliquer et renommer un profil</span><span data-l="en">📑 Duplicate and rename a profile</span></a>
         <a href="#f-stats-profile" data-feature="f-stats-profile"><span data-l="fr">👥 Statistiques par profil</span><span data-l="en">👥 Statistics per profile</span></a>
         <a href="#f-tripgraph" data-feature="f-tripgraph"><span data-l="fr">📈 Graphique de chaque trajet</span><span data-l="en">📈 Graph of every trip</span></a>
         <a href="#f-csv" data-feature="f-csv"><span data-l="fr">📤 Export CSV</span><span data-l="en">📤 CSV export</span></a>
@@ -475,8 +477,8 @@
       <p data-l="fr">Jusqu'à 10 profils (5 avant la 2.6.9), avec un résumé, un profil par défaut et l'application immédiate.</p>
       <p data-l="en">Up to 10 profiles (5 before 2.6.9), with a summary, a default profile and instant apply.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Chaque carte affiche le nom, un résumé (mode · régénération · ADAS) et le badge <b>PAR DÉFAUT</b>, avec Appliquer maintenant, Modifier, Définir par défaut et Supprimer (avec confirmation). Le résumé ne cite que ce que le profil applique : une catégorie coupée n'y figure pas. Au-delà de cinq profils, le sélecteur fait défiler ses cartes et la page « Cycle profils » passe sur deux rangées.</p>
-        <p data-l="en">Each card shows the name, a summary (mode · regeneration · ADAS) and the <b>DEFAULT</b> badge, with Apply now, Edit, Set default and Delete (with confirmation). The summary only lists what the profile applies: a category that is switched off is left out. Beyond five profiles, the picker scrolls its cards and the “Profile cycle” page moves to two rows.</p>
+        <p data-l="fr">Chaque carte affiche le nom, un résumé (mode · régénération · ADAS) et le badge <b>PAR DÉFAUT</b>, avec Appliquer maintenant, Modifier et Définir par défaut ; le menu ⋮ porte Dupliquer, Renommer et Supprimer (avec confirmation). Le résumé ne cite que ce que le profil applique : une catégorie coupée n'y figure pas. Au-delà de cinq profils, le sélecteur fait défiler ses cartes et la page « Cycle profils » passe sur deux rangées.</p>
+        <p data-l="en">Each card shows the name, a summary (mode · regeneration · ADAS) and the <b>DEFAULT</b> badge, with Apply now, Edit and Set default; the ⋮ menu holds Duplicate, Rename and Delete (with confirmation). The summary only lists what the profile applies: a category that is switched off is left out. Beyond five profiles, the picker scrolls its cards and the “Profile cycle” page moves to two rows.</p>
       </details>
     </div>
     <div class="pt" id="f-profileorder" data-hl-key="plist" data-go="profiles">
@@ -486,6 +488,15 @@
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
         <p data-l="fr">La carte se soulève et suit le doigt, la liste défile seule près de ses bords, et un bandeau indique la position où elle sera posée ; l'ordre est enregistré au relâcher. Cet ordre est celui du sélecteur de profils, des boutons de la page « Cycle profils » et du cycle par défaut (un cycle composé garde le sien). En cas de conflit Bluetooth, c'est aussi la priorité : à la fin du délai, le premier des profils en conflit s'applique. Essayez dans la maquette : appui long sur une carte de l'onglet Profils.</p>
         <p data-l="en">The card lifts and follows your finger, the list scrolls by itself near its edges, and a banner shows the position it will land in; the order is saved on release. This order is the profile picker's, the “Profile cycle” page buttons' and the default cycle's (a composed cycle keeps its own). In a Bluetooth conflict it is also the priority: when the delay runs out, the first of the conflicting profiles is applied. Try it in the mockup: long-press a card in the Profiles tab.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-profilecopy" data-hl-key="plist" data-go="profiles">
+      <h3><span data-l="fr">Dupliquer et renommer</span><span data-l="en">Duplicate and rename</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="fr">Le menu ⋮ d'une carte copie le profil en « &lt;nom&gt; Copie », juste après l'original, et le renomme sans ouvrir l'éditeur.</p>
+      <p data-l="en">A card's ⋮ menu copies the profile as “&lt;name&gt; Copy”, right after the original, and renames it without opening the editor.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">La copie reprend tous les réglages du profil, sauf le téléphone Bluetooth associé (un téléphone n'appelle qu'un profil) et le rôle de profil par défaut. Si le nom est pris : « Copie 2 », « Copie 3 »… ; le nom tient en 30 caractères. Au-delà de 10 profils, la copie est refusée. Essayez dans la maquette : ⋮ sur une carte de l'onglet Profils.</p>
+        <p data-l="en">The copy takes every setting of the profile except the linked Bluetooth phone (a phone calls one profile only) and the default-profile role. If the name is taken: “Copy 2”, “Copy 3”…; the name fits in 30 characters. Beyond 10 profiles, the copy is refused. Try it in the mockup: ⋮ on a card in the Profiles tab.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="rail" data-go="profileEdit:0">
@@ -922,8 +933,8 @@
       <p data-l="fr">MG4-360-Camera-App filme dès « Démarrer » et s'arrête à la fin ; une carte des réglages montre l'appli trouvée et teste la clé USB.</p>
       <p data-l="en">MG4-360-Camera-App records from “Start” and stops at the end; a settings card shows the app found and tests the USB drive.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
-        <p data-l="fr">Dans Raccourcis › Garde-voiture : l'appli détectée (relue à chaque affichage de l'onglet), l'interrupteur « Lancer l'enregistrement automatiquement » (activé par défaut), l'emplacement (celui de l'appli : un dossier « surveillance » sur la clé USB) et « Tester la clé USB », avec l'espace libre et une durée d'enregistrement estimée. Dans la fenêtre, une ligne dit si l'appli filmera et la place restante ; sinon un bandeau prévient au-dessus des boutons : enregistrement automatique coupé, appli qui ne sait pas être pilotée, version trop ancienne — l'enregistrement se lance alors à la main dans l'appli. Toute appli caméra peut s'y brancher : deux commandes publiques, START et STOP, déclarées pour MG4Control. Dans la maquette, choisissez l'appli installée en bas de la carte.</p>
-        <p data-l="en">In Shortcuts › Car keeper: the detected app (checked again each time the tab is shown), the “Start recording automatically” switch (on by default), the location (the app's own: a “surveillance” folder on the USB drive) and “Test USB drive”, with the free space and an estimated recording time. In the window, a line says whether the app will record and the space left; otherwise a banner warns above the buttons: automatic recording off, an app that can't be controlled, a version too old — recording is then started by hand in the app. Any camera app can plug in: two public commands, START and STOP, declared for MG4Control. In the mockup, pick the installed app at the bottom of the card.</p>
+        <p data-l="fr">Dans Raccourcis › Garde-voiture : l'appli détectée (relue à chaque affichage de l'onglet), l'interrupteur « Lancer l'enregistrement automatiquement » (activé par défaut), l'emplacement (celui de l'appli : un dossier « surveillance » sur la clé USB) et « Tester la clé USB », avec l'espace libre et une durée d'enregistrement estimée. Dans la fenêtre, une ligne dit si l'appli filmera et la place restante ; sinon un bandeau prévient dans la colonne de droite : enregistrement automatique coupé, appli qui ne sait pas être pilotée, version trop ancienne — l'enregistrement se lance alors à la main dans l'appli. Toute appli caméra peut s'y brancher : deux commandes publiques, START et STOP, déclarées pour MG4Control. Dans la maquette, choisissez l'appli installée en bas de la carte.</p>
+        <p data-l="en">In Shortcuts › Car keeper: the detected app (checked again each time the tab is shown), the “Start recording automatically” switch (on by default), the location (the app's own: a “surveillance” folder on the USB drive) and “Test USB drive”, with the free space and an estimated recording time. In the window, a line says whether the app will record and the space left; otherwise a banner warns in the right-hand column: automatic recording off, an app that can't be controlled, a version too old — recording is then started by hand in the app. Any camera app can plug in: two public commands, START and STOP, declared for MG4Control. In the mockup, pick the installed app at the bottom of the card.</p>
       </details>
     </div>
     <div class="pt" id="f-preclim-screen" data-hl-key="preclim-screen" data-demo="preclimRun">
@@ -1066,6 +1077,15 @@
       <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
         <p data-l="fr">Les valeurs se règlent aux boutons − et +, sans clavier. Rien n'est enregistré avant « Enregistrer » ; « Tester » lance la version affichée. Options : que faire si la règle est redéclenchée avant d'avoir fini, anti-rebond, seulement en READY. La page garde 30 règles au plus, un interrupteur général, l'historique des 20 dernières exécutions avec leur journal, les variables (à renommer partout d'un coup, modifier ou supprimer) et les lieux (à renommer, agrandir, déplacer à la position actuelle ou supprimer) ; export et import en JSON (Téléchargements, clé USB ou autre dossier). <b>Copier</b>, <b>Couper</b> et <b>Coller</b> dans chaque menu ⋮ : « Coller » n'apparaît que là où l'élément a sa place. La carte d'une règle résume ce que fait un bloc Si / Sinon (« si X → A ; sinon → B »).</p>
         <p data-l="en">Values are set with − and + buttons, without a keyboard. Nothing is stored until “Save”; “Test” runs the version on screen. Options: what to do when the rule is triggered again before it has finished, debounce, only in READY. The page keeps 30 rules at most, a master switch, the history of the last 20 runs with their log, variables (renamed everywhere at once, changed or deleted) and places (renamed, resized, moved to the current position or deleted); JSON export and import (Downloads, USB drive or another folder). <b>Copy</b>, <b>Cut</b> and <b>Paste</b> in every ⋮ menu: “Paste” only shows where the item fits. A rule's card sums up what an If / Else block does (“if X → A; else → B”).</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-rule-skip" data-hl-key="rules-tools" data-demo="rules">
+      <h3><span data-l="fr">Déclenchements ignorés</span><span data-l="en">Ignored triggers</span><span class="badge-new"><span data-l="fr">Nouveau</span><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="fr">Quand une automatisation se déclenche mais ne s'exécute pas, sa carte le dit en orange, avec la raison.</p>
+      <p data-l="en">When an automation is triggered but doesn't run, its card says so in orange, with the reason.</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span><span data-l="en">Learn more</span></summary>
+        <p data-l="fr">Raisons : condition fausse (avec la valeur lue), condition illisible, voiture pas en READY, règle encore en cours, anti-rebond ou Mode Garage. L'historique les garde aussi, avec le déclencheur qui les a lancées, et se filtre en Toutes / Exécutées / Ignorées ; les refus identiques qui se suivent sont regroupés (×N). La ligne orange disparaît à la prochaine exécution.</p>
+        <p data-l="en">Reasons: a false condition (with the value read), an unreadable condition, car not in READY, rule still running, debounce or Garage mode. The history keeps them too, with the trigger that started them, and filters into All / Run / Ignored; identical refusals in a row are grouped (×N). The orange line goes away at the next run.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-rule-tpl" data-hl-key="rule-tpl" data-demo="ruleTpl">

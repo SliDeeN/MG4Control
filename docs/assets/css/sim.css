@@ -460,6 +460,7 @@
 .rl-tools-row { gap: 8px; flex-wrap: wrap; }
 .rl-tool { height: 46px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--dash-border); background: var(--dash-btn); color: var(--text-primary); font: inherit; font-size: calc(15px * var(--ts, 1)); cursor: pointer; }
 .rl-tool:hover { border-color: var(--dash-accent); }
+.rl-skip { display: block; color: var(--dash-warn); }
 /* Pages de réglage des raccourcis : choix en vert plein, libellés en capitales (highlightConfig). */
 .sc-cfg .a-sec .a-grid .b { text-transform: uppercase; letter-spacing: .08em; font-weight: 500; }
 .sc-cfg .a-sec .a-grid .b.on { background: #2E7D32; border-color: #2E7D32; color: #fff; font-weight: 700; }
