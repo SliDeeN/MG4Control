@@ -1380,6 +1380,23 @@
     <string name="rule_never_run">Jamais exécutée</string>
     <string name="rule_run_time_unknown">heure inconnue</string>
     <string name="rule_last_run_fmt">Dernière exécution : %1$s · %2$d ok, %3$d en échec</string>
+    <!-- Carte : « 1 action réussie » = actions de la dernière exécution ; compteurs en pastilles (2026-11-08). -->
+    <string name="rule_last_run_actions_fmt">Dernière exécution : %1$s · %2$s, %3$d en échec</string>
+    <plurals name="rule_actions_ok">
+        <item quantity="one">%d action réussie</item>
+        <item quantity="many">%d actions réussies</item>
+        <item quantity="other">%d actions réussies</item>
+    </plurals>
+    <plurals name="rule_runs_count">
+        <item quantity="one">%d lancée</item>
+        <item quantity="many">%d lancées</item>
+        <item quantity="other">%d lancées</item>
+    </plurals>
+    <plurals name="rule_skips_count">
+        <item quantity="one">%d ignorée</item>
+        <item quantity="many">%d ignorées</item>
+        <item quantity="other">%d ignorées</item>
+    </plurals>
     <string name="rule_delete_confirm_fmt">Supprimer « %1$s » ?</string>
     <string name="rule_test_started">« %1$s » : actions lancées</string>
     <string name="rule_max_reached">%1$d automatisations au plus.</string>

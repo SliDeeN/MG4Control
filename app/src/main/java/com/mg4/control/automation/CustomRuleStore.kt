@@ -5,6 +5,7 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.model.CustomRule
+import com.mg4.control.model.RuleCounts
 import com.mg4.control.model.RuleHistoryEntry
 import com.mg4.control.model.RuleLastRun
 
@@ -84,7 +85,8 @@ object CustomRuleStore {
         write(ctx, all(ctx).filterNot { it.id == id })
         val runs = lastRuns(ctx) - id
         prefs(ctx).edit().putString(KEY_RUNS, gson.toJson(runs, typeRuns))
-            .putString(KEY_SKIPS, gson.toJson(lastSkips(ctx) - id, typeSkips)).apply()
+            .putString(KEY_SKIPS, gson.toJson(lastSkips(ctx) - id, typeSkips))
+            .putString(KEY_COUNTS, gson.toJson(counts(ctx) - id, typeCounts)).apply()
     }
 
     // ── Interrupteur général ──
@@ -113,8 +115,26 @@ object CustomRuleStore {
 
     fun addSkip(ctx: Context, id: String, name: String, skip: com.mg4.control.model.RuleSkip) = synchronized(LOCK) {
         val l = com.mg4.control.model.RuleHistory.addSkip(history(ctx), RuleHistoryEntry(id, name, skip = skip), HISTORY_MAX)
+        val n = counts(ctx)
         prefs(ctx).edit().putString(KEY_HISTORY, gson.toJson(l, typeHistory))
-            .putString(KEY_SKIPS, gson.toJson(lastSkips(ctx) + (id to skip), typeSkips)).apply()
+            .putString(KEY_SKIPS, gson.toJson(lastSkips(ctx) + (id to skip), typeSkips))
+            .putString(KEY_COUNTS, gson.toJson(n + (id to (n[id] ?: RuleCounts()).plusSkip()), typeCounts)).apply()
+    }
+
+    // ── Compteurs par règle (2026-11-08) : lancements et refus, depuis la création ──
+    private const val KEY_COUNTS = "run_counts_json"
+    private val typeCounts = object : TypeToken<Map<String, RuleCounts>>() {}.type
+
+    fun counts(ctx: Context): Map<String, RuleCounts> {
+        val json = prefs(ctx).getString(KEY_COUNTS, null) ?: return emptyMap()
+        return runCatching { gson.fromJson<Map<String, RuleCounts>>(json, typeCounts) }.getOrNull().orEmpty()
+    }
+
+    /** Une exécution lancée (déclencheur ou à la main, jamais « Tester »). */
+    fun countRun(ctx: Context, id: String) = synchronized(LOCK) {
+        if (all(ctx).none { it.id == id }) return@synchronized
+        val n = counts(ctx)
+        prefs(ctx).edit().putString(KEY_COUNTS, gson.toJson(n + (id to (n[id] ?: RuleCounts()).plusRun()), typeCounts)).apply()
     }
 
     fun lastSkips(ctx: Context): Map<String, com.mg4.control.model.RuleSkip> {

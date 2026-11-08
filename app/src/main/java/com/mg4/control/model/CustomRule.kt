@@ -296,6 +296,16 @@ data class RuleSkip(
     fun sameAs(o: RuleSkip): Boolean = reason == o.reason && detail == o.detail && minutes == o.minutes
 }
 
+/**
+ * Compteurs d'une règle (variante 3, 2026-11-08) : exécutions lancées par un déclencheur ou à la
+ * main (pas « Tester ») et déclenchements ignorés, chaque refus compté même regroupé (×N) dans
+ * l'historique. Depuis la création ; une modification les garde, supprimer ou importer repart de zéro.
+ */
+data class RuleCounts(val runs: Int = 0, val skips: Int = 0) {
+    fun plusRun() = copy(runs = runs + 1)
+    fun plusSkip() = copy(skips = skips + 1)
+}
+
 /** Historique : ajout d'une exécution, ou d'un refus regroupé avec le dernier refus identique. */
 object RuleHistory {
 

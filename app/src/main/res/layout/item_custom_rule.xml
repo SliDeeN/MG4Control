@@ -27,6 +27,34 @@
             android:maxLines="1"
             android:ellipsize="end" />
 
+        <!-- Compteurs (variante 3, 2026-11-08) : lancements, puis déclenchements ignorés en orange ;
+             chacun caché tant qu'il vaut 0. -->
+        <TextView
+            android:id="@+id/rule_runs"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_rule_pill"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="5dp"
+            android:textColor="@color/text_secondary"
+            android:textSize="17sp"
+            android:maxLines="1"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/rule_skips"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:background="@drawable/bg_warn_rounded"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="5dp"
+            android:textColor="@color/dash_warn"
+            android:textSize="17sp"
+            android:maxLines="1"
+            android:visibility="gone" />
+
         <com.mg4.control.ui.widget.SegmentSwitch
             android:id="@+id/rule_switch"
             android:layout_width="wrap_content"

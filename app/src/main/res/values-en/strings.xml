@@ -1363,6 +1363,19 @@
     <string name="rule_never_run">Never run</string>
     <string name="rule_run_time_unknown">unknown time</string>
     <string name="rule_last_run_fmt">Last run: %1$s · %2$d ok, %3$d failed</string>
+    <string name="rule_last_run_actions_fmt">Last run: %1$s · %2$s, %3$d failed</string>
+    <plurals name="rule_actions_ok">
+        <item quantity="one">%d action succeeded</item>
+        <item quantity="other">%d actions succeeded</item>
+    </plurals>
+    <plurals name="rule_runs_count">
+        <item quantity="one">%d run</item>
+        <item quantity="other">%d runs</item>
+    </plurals>
+    <plurals name="rule_skips_count">
+        <item quantity="one">%d ignored</item>
+        <item quantity="other">%d ignored</item>
+    </plurals>
     <string name="rule_delete_confirm_fmt">Delete “%1$s”?</string>
     <string name="rule_test_started">“%1$s”: actions started</string>
     <string name="rule_max_reached">%1$d automations at most.</string>

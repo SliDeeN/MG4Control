@@ -1363,6 +1363,19 @@
     <string name="rule_never_run">Noch nie ausgeführt</string>
     <string name="rule_run_time_unknown">Uhrzeit unbekannt</string>
     <string name="rule_last_run_fmt">Zuletzt: %1$s · %2$d ok, %3$d fehlgeschlagen</string>
+    <string name="rule_last_run_actions_fmt">Zuletzt: %1$s · %2$s, %3$d fehlgeschlagen</string>
+    <plurals name="rule_actions_ok">
+        <item quantity="one">%d Aktion erfolgreich</item>
+        <item quantity="other">%d Aktionen erfolgreich</item>
+    </plurals>
+    <plurals name="rule_runs_count">
+        <item quantity="one">%d× ausgeführt</item>
+        <item quantity="other">%d× ausgeführt</item>
+    </plurals>
+    <plurals name="rule_skips_count">
+        <item quantity="one">%d× ignoriert</item>
+        <item quantity="other">%d× ignoriert</item>
+    </plurals>
     <string name="rule_delete_confirm_fmt">„%1$s“ löschen?</string>
     <string name="rule_test_started">„%1$s“: Aktionen gestartet</string>
     <string name="rule_max_reached">Höchstens %1$d Automationen.</string>

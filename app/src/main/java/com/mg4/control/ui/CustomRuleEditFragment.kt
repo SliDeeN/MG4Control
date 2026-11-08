@@ -182,7 +182,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         val message = if (run == null) s(R.string.rule_never_run) else {
             val quand = run.atMs?.let { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it)) }
                 ?: s(R.string.rule_run_time_unknown)
-            val entete = s(R.string.rule_last_run_fmt, quand, run.done, run.failed)
+            val entete = s(R.string.rule_last_run_actions_fmt, quand,
+                ctx.resources.getQuantityString(R.plurals.rule_actions_ok, run.done, run.done), run.failed)
             val lignes = run.journal.orEmpty()
             if (lignes.isEmpty()) entete else entete + "\n\n" + lignes.joinToString("\n")
         }

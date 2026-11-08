@@ -1363,6 +1363,19 @@
     <string name="rule_never_run">Hiç çalışmadı</string>
     <string name="rule_run_time_unknown">saat bilinmiyor</string>
     <string name="rule_last_run_fmt">Son çalışma: %1$s · %2$d başarılı, %3$d başarısız</string>
+    <string name="rule_last_run_actions_fmt">Son çalışma: %1$s · %2$s, %3$d başarısız</string>
+    <plurals name="rule_actions_ok">
+        <item quantity="one">%d eylem başarılı</item>
+        <item quantity="other">%d eylem başarılı</item>
+    </plurals>
+    <plurals name="rule_runs_count">
+        <item quantity="one">%d kez çalıştı</item>
+        <item quantity="other">%d kez çalıştı</item>
+    </plurals>
+    <plurals name="rule_skips_count">
+        <item quantity="one">%d kez yok sayıldı</item>
+        <item quantity="other">%d kez yok sayıldı</item>
+    </plurals>
     <string name="rule_delete_confirm_fmt">“%1$s” silinsin mi?</string>
     <string name="rule_test_started">“%1$s”: eylemler başlatıldı</string>
     <string name="rule_max_reached">En fazla %1$d otomasyon.</string>

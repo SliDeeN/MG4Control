@@ -207,7 +207,7 @@ object CustomRules {
         }
         // Une version en cours d'essai remplace celle qui tournait : on teste ce qu'on voit.
         enCours.remove(r.id)?.cancel()
-        lancer(r, "test")
+        lancer(r, "test", compter = false)
     }
 
     // ── Chargement (fil mg4-rules) ───────────────────────────────────────────
@@ -386,9 +386,11 @@ object CustomRules {
     // ── Exécution ────────────────────────────────────────────────────────────
 
     /** Sur le fil mg4-rules (départs comptés là) ; les actions, dans une coroutine. */
-    private fun lancer(r: CustomRule, origine: String, by: String? = null) {
+    /** [compter] : faux pour « Tester », qui n'est pas un déclenchement (compteur de la carte). */
+    private fun lancer(r: CustomRule, origine: String, by: String? = null, compter: Boolean = true) {
         val ctx = app ?: return
         departs[r.id] = SystemClock.elapsedRealtime()
+        if (compter) CustomRuleStore.countRun(ctx, r.id)
         AppLogger.i(TAG, "« ${r.name} » ($origine) : ${r.actions.size} action(s)")
         // Le journal dit les actions comme l'éditeur : dans la langue de l'appli.
         val texte = RuleText(AndroidRuleWords(ctx))

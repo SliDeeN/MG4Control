@@ -615,4 +615,20 @@ class CustomRuleTest {
         assertTrue(RuleHistory.skipIsNewer(null, RuleSkip(atMs = 2)))
         assertFalse(RuleHistory.skipIsNewer(RuleLastRun(atMs = 1), null))
     }
+
+    @Test
+    fun `counters add runs and skips independently`() {
+        val c = RuleCounts().plusRun().plusSkip().plusRun().plusSkip().plusSkip()
+        assertEquals(RuleCounts(runs = 2, skips = 3), c)
+    }
+
+    @Test
+    fun `counters survive a JSON round trip, missing fields default to zero`() {
+        val g = com.google.gson.Gson()
+        val t = object : com.google.gson.reflect.TypeToken<Map<String, RuleCounts>>() {}.type
+        val back: Map<String, RuleCounts> = g.fromJson(g.toJson(mapOf("a" to RuleCounts(4, 1)), t), t)
+        assertEquals(RuleCounts(4, 1), back["a"])
+        val partiel: Map<String, RuleCounts> = g.fromJson("""{"b":{"runs":2}}""", t)
+        assertEquals(RuleCounts(runs = 2, skips = 0), partiel["b"])
+    }
 }

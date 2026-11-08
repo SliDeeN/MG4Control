@@ -1363,6 +1363,22 @@
     <string name="rule_never_run">Nunca executada</string>
     <string name="rule_run_time_unknown">hora desconhecida</string>
     <string name="rule_last_run_fmt">Última execução: %1$s · %2$d ok, %3$d falhadas</string>
+    <string name="rule_last_run_actions_fmt">Última execução: %1$s · %2$s, %3$d falhadas</string>
+    <plurals name="rule_actions_ok">
+        <item quantity="one">%d ação concluída</item>
+        <item quantity="many">%d ações concluídas</item>
+        <item quantity="other">%d ações concluídas</item>
+    </plurals>
+    <plurals name="rule_runs_count">
+        <item quantity="one">%d execução</item>
+        <item quantity="many">%d execuções</item>
+        <item quantity="other">%d execuções</item>
+    </plurals>
+    <plurals name="rule_skips_count">
+        <item quantity="one">%d ignorada</item>
+        <item quantity="many">%d ignoradas</item>
+        <item quantity="other">%d ignoradas</item>
+    </plurals>
     <string name="rule_delete_confirm_fmt">Eliminar «%1$s»?</string>
     <string name="rule_test_started">«%1$s»: ações iniciadas</string>
     <string name="rule_max_reached">No máximo %1$d automatizações.</string>

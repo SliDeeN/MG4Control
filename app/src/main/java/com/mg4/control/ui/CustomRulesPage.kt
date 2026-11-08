@@ -81,11 +81,24 @@ class CustomRulesPage {
         val gonfleur = LayoutInflater.from(ctx)
         // Grisées : une automatisation coupée, et toutes quand l'interrupteur général est coupé.
         val moteur = CustomRuleStore.isEngineEnabled(ctx)
+        val compteurs = CustomRuleStore.counts(ctx)
         for (r in regles) {
             val carte = gonfleur.inflate(R.layout.item_custom_rule, liste, false)
             val active = moteur && r.enabled
-            listOf(R.id.rule_name, R.id.rule_summary, R.id.rule_last_run, R.id.rule_edit, R.id.rule_test, R.id.rule_delete)
+            listOf(R.id.rule_name, R.id.rule_runs, R.id.rule_skips, R.id.rule_summary, R.id.rule_last_run, R.id.rule_edit, R.id.rule_test, R.id.rule_delete)
                 .forEach { carte.findViewById<View>(it).alpha = if (active) 1f else ALPHA_COUPEE }
+            // Compteurs (variante 3) : simples pastilles, sans action au toucher.
+            val n = compteurs[r.id]
+            carte.findViewById<TextView>(R.id.rule_runs).apply {
+                val v = n?.runs ?: 0
+                visibility = if (v > 0) View.VISIBLE else View.GONE
+                text = ctx.resources.getQuantityString(R.plurals.rule_runs_count, v, v)
+            }
+            carte.findViewById<TextView>(R.id.rule_skips).apply {
+                val v = n?.skips ?: 0
+                visibility = if (v > 0) View.VISIBLE else View.GONE
+                text = ctx.resources.getQuantityString(R.plurals.rule_skips_count, v, v)
+            }
             if (!moteur) carte.findViewById<View>(R.id.rule_switch).alpha = ALPHA_COUPEE
             carte.findViewById<TextView>(R.id.rule_name).text = r.name
             carte.findViewById<TextView>(R.id.rule_summary).text = resume(ctx, texte, r)
@@ -441,8 +454,10 @@ class CustomRulesPage {
      */
     private fun derniere(ctx: Context, run: RuleLastRun?, skip: RuleSkip?): CharSequence {
         val format = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
-        val ligne = if (run == null) ctx.getString(R.string.rule_never_run) else ctx.getString(R.string.rule_last_run_fmt,
-            run.atMs?.let { format.format(Date(it)) } ?: ctx.getString(R.string.rule_run_time_unknown), run.done, run.failed)
+        // « 1 action réussie » : le nombre d'actions de CETTE exécution, pas un compteur de lancements.
+        val ligne = if (run == null) ctx.getString(R.string.rule_never_run) else ctx.getString(R.string.rule_last_run_actions_fmt,
+            run.atMs?.let { format.format(Date(it)) } ?: ctx.getString(R.string.rule_run_time_unknown),
+            ctx.resources.getQuantityString(R.plurals.rule_actions_ok, run.done, run.done), run.failed)
         if (skip == null || !RuleHistory.skipIsNewer(run, skip)) return ligne
         val refus = ctx.getString(R.string.rule_last_skip_fmt,
             skip.atMs?.let { format.format(Date(it)) } ?: ctx.getString(R.string.rule_run_time_unknown), raison(ctx, skip, longue = false))
