@@ -1867,4 +1867,25 @@
     <string name="shortcuts_onepedal_prev">Comme avant</string>
     <string name="shortcuts_onepedal_desc_prev">Couper le One Pedal remet le niveau de régénération d’avant (réglage par défaut).</string>
     <string name="shortcuts_onepedal_desc_fixed">Couper le One Pedal passe toujours en régénération %1$s.</string>
+
+    <!-- Mes automatisations : déclenchements refusés, historique filtrable (2026-11-08) -->
+    <string name="rule_last_skip_fmt">Dernier déclenchement : %1$s · ignorée : %2$s</string>
+    <string name="rule_skip_short_conditions">conditions fausses</string>
+    <string name="rule_skip_short_unknown">conditions illisibles</string>
+    <string name="rule_skip_short_not_ready">pas en READY</string>
+    <string name="rule_skip_short_busy">déjà en cours</string>
+    <string name="rule_skip_short_cooldown">anti-rebond</string>
+    <string name="rule_skip_conditions_fmt">conditions fausses : %1$s</string>
+    <string name="rule_skip_unknown_fmt">conditions illisibles : %1$s</string>
+    <string name="rule_skip_read_fmt">%1$s (lue : %2$s)</string>
+    <string name="rule_skip_not_ready">voiture pas en READY (option « Seulement voiture en READY »)</string>
+    <string name="rule_skip_busy">elle tournait encore (option « Laisser finir »)</string>
+    <string name="rule_skip_cooldown_fmt">moins de %1$d min depuis la dernière exécution (anti-rebond)</string>
+    <string name="rule_hist_by_fmt">déclenchée par « %1$s »</string>
+    <string name="rule_hist_skipped_fmt">ignorée : %1$s</string>
+    <string name="rule_hist_filter_all">Toutes</string>
+    <string name="rule_hist_filter_runs">Exécutées</string>
+    <string name="rule_hist_filter_skipped">Ignorées</string>
+    <string name="rule_hist_empty_filter">Rien dans cette catégorie.</string>
+    <string name="rule_hist_count_fmt">%1$d / %2$d entrées · les refus identiques sont regroupés (×N)</string>
 </resources>

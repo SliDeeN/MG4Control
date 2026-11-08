@@ -1850,4 +1850,25 @@
     <string name="shortcuts_onepedal_prev">Jak wcześniej</string>
     <string name="shortcuts_onepedal_desc_prev">Wyłączenie One Pedal przywraca poprzedni poziom rekuperacji (domyślnie).</string>
     <string name="shortcuts_onepedal_desc_fixed">Wyłączenie One Pedal zawsze przełącza na rekuperację %1$s.</string>
+
+    <!-- Mes automatisations : déclenchements refusés, historique filtrable (2026-11-08) -->
+    <string name="rule_last_skip_fmt">Ostatnie wyzwolenie: %1$s · pominięta: %2$s</string>
+    <string name="rule_skip_short_conditions">warunki fałszywe</string>
+    <string name="rule_skip_short_unknown">warunki nieczytelne</string>
+    <string name="rule_skip_short_not_ready">nie w READY</string>
+    <string name="rule_skip_short_busy">już trwa</string>
+    <string name="rule_skip_short_cooldown">antydrganie</string>
+    <string name="rule_skip_conditions_fmt">warunki fałszywe: %1$s</string>
+    <string name="rule_skip_unknown_fmt">warunki nieczytelne: %1$s</string>
+    <string name="rule_skip_read_fmt">%1$s (odczyt: %2$s)</string>
+    <string name="rule_skip_not_ready">samochód nie w READY (opcja „Tylko gdy samochód jest w READY”)</string>
+    <string name="rule_skip_busy">wciąż trwała (opcja „Pozwól jej skończyć”)</string>
+    <string name="rule_skip_cooldown_fmt">mniej niż %1$d min od ostatniego uruchomienia (antydrganie)</string>
+    <string name="rule_hist_by_fmt">wyzwolona przez „%1$s”</string>
+    <string name="rule_hist_skipped_fmt">pominięta: %1$s</string>
+    <string name="rule_hist_filter_all">Wszystkie</string>
+    <string name="rule_hist_filter_runs">Wykonane</string>
+    <string name="rule_hist_filter_skipped">Pominięte</string>
+    <string name="rule_hist_empty_filter">Nic w tej kategorii.</string>
+    <string name="rule_hist_count_fmt">%1$d / %2$d wpisów · identyczne odmowy są grupowane (×N)</string>
 </resources>

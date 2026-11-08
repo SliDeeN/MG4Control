@@ -1850,4 +1850,25 @@
     <string name="shortcuts_onepedal_prev">As before</string>
     <string name="shortcuts_onepedal_desc_prev">Turning One Pedal off brings back the previous regeneration level (default).</string>
     <string name="shortcuts_onepedal_desc_fixed">Turning One Pedal off always switches to %1$s regeneration.</string>
+
+    <!-- Mes automatisations : déclenchements refusés, historique filtrable (2026-11-08) -->
+    <string name="rule_last_skip_fmt">Last trigger: %1$s · ignored: %2$s</string>
+    <string name="rule_skip_short_conditions">conditions false</string>
+    <string name="rule_skip_short_unknown">conditions unreadable</string>
+    <string name="rule_skip_short_not_ready">not READY</string>
+    <string name="rule_skip_short_busy">already running</string>
+    <string name="rule_skip_short_cooldown">debounce</string>
+    <string name="rule_skip_conditions_fmt">conditions false: %1$s</string>
+    <string name="rule_skip_unknown_fmt">conditions unreadable: %1$s</string>
+    <string name="rule_skip_read_fmt">%1$s (read: %2$s)</string>
+    <string name="rule_skip_not_ready">car not READY (option “Only when the car is READY”)</string>
+    <string name="rule_skip_busy">it was still running (option “Let it finish”)</string>
+    <string name="rule_skip_cooldown_fmt">less than %1$d min since the last run (debounce)</string>
+    <string name="rule_hist_by_fmt">triggered by “%1$s”</string>
+    <string name="rule_hist_skipped_fmt">ignored: %1$s</string>
+    <string name="rule_hist_filter_all">All</string>
+    <string name="rule_hist_filter_runs">Run</string>
+    <string name="rule_hist_filter_skipped">Ignored</string>
+    <string name="rule_hist_empty_filter">Nothing in this category.</string>
+    <string name="rule_hist_count_fmt">%1$d / %2$d entries · identical refusals are grouped (×N)</string>
 </resources>

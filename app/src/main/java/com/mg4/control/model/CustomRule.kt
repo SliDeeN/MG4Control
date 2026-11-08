@@ -255,15 +255,82 @@ data class RuleAction(
  * [journal] : une ligne par action, dans la langue de l'appli (le Journal de l'éditeur).
  * Dans `model` comme le reste : enregistré par Gson, il doit garder ses noms une fois minifié.
  */
-/** Une ligne de l'historique des exécutions (les 20 dernières, toutes automatisations). */
-data class RuleHistoryEntry(val id: String = "", val name: String = "", val run: RuleLastRun = RuleLastRun())
+/**
+ * Une ligne de l'historique (les 20 dernières, toutes automatisations) : une exécution ([run]), ou
+ * depuis le 2026-11-08 un déclenchement refusé ([skip] non nul, [run] alors sans objet).
+ */
+data class RuleHistoryEntry(
+    val id: String = "",
+    val name: String = "",
+    val run: RuleLastRun = RuleLastRun(),
+    val skip: RuleSkip? = null,
+)
 
 data class RuleLastRun(
     val atMs: Long? = null,
     val done: Int = 0,
     val failed: Int = 0,
     val journal: List<String>? = null,
+    /** Ce qui l'a déclenchée, dans la langue de l'appli (« Le profil actif change »). */
+    val by: String? = null,
 )
+
+/**
+ * Déclenchement refusé (2026-11-08) : la règle est partie, mais ne s'est pas exécutée.
+ * [detail] : pour des conditions fausses ou illisibles, la première en cause, en texte ;
+ * [value] : ce qui a été lu pour elle ; [minutes] : l'anti-rebond. [count] : refus identiques
+ * regroupés en une ligne (×N) — le texte de [reason] est écrit à l'affichage.
+ */
+data class RuleSkip(
+    val atMs: Long? = null,
+    val by: String? = null,
+    val reason: Reason? = null,
+    val detail: String? = null,
+    val value: String? = null,
+    val minutes: Int? = null,
+    val count: Int = 1,
+) {
+    enum class Reason { CONDITIONS, UNKNOWN, NOT_READY, BUSY, COOLDOWN, GARAGE }
+
+    /** Même refus, à la valeur lue près : il se regroupe avec le précédent. */
+    fun sameAs(o: RuleSkip): Boolean = reason == o.reason && detail == o.detail && minutes == o.minutes
+}
+
+/** Historique : ajout d'une exécution, ou d'un refus regroupé avec le dernier refus identique. */
+object RuleHistory {
+
+    fun addRun(list: List<RuleHistoryEntry>, e: RuleHistoryEntry, max: Int): List<RuleHistoryEntry> =
+        (listOf(e) + list).take(max)
+
+    /**
+     * Un refus identique au DERNIER enregistré pour cette règle (rien d'autre d'elle entre-temps)
+     * prend sa place : compteur + 1, heure et valeur lue du nouveau, et remonte en tête. Sinon il
+     * s'ajoute. Une règle « toutes les 5 min » aux conditions fausses tient ainsi sur une ligne.
+     */
+    fun addSkip(list: List<RuleHistoryEntry>, e: RuleHistoryEntry, max: Int): List<RuleHistoryEntry> {
+        val s = e.skip ?: return addRun(list, e, max)
+        val i = list.indexOfFirst { it.id == e.id }
+        val prev = list.getOrNull(i)?.skip
+        if (prev == null || !prev.sameAs(s)) return addRun(list, e, max)
+        val fusion = e.copy(skip = s.copy(count = prev.count.coerceAtLeast(1) + 1))
+        return (listOf(fusion) + list.filterIndexed { j, _ -> j != i }).take(max)
+    }
+
+    enum class Filter { ALL, RUNS, SKIPPED }
+
+    fun filter(list: List<RuleHistoryEntry>, f: Filter): List<RuleHistoryEntry> = when (f) {
+        Filter.ALL -> list
+        Filter.RUNS -> list.filter { it.skip == null }
+        Filter.SKIPPED -> list.filter { it.skip != null }
+    }
+
+    /** Le refus est-il plus récent que la dernière exécution ? (la carte ne montre alors que lui en plus) */
+    fun skipIsNewer(run: RuleLastRun?, skip: RuleSkip?): Boolean {
+        val s = skip?.atMs ?: return skip != null && run == null
+        val r = run?.atMs ?: return true
+        return s > r
+    }
+}
 
 /**
  * Ce que le moteur a lu au moment d'évaluer. Seuls les signaux utiles aux règles actives sont lus

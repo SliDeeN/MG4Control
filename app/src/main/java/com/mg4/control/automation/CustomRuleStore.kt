@@ -83,7 +83,8 @@ object CustomRuleStore {
     fun delete(ctx: Context, id: String) = synchronized(LOCK) {
         write(ctx, all(ctx).filterNot { it.id == id })
         val runs = lastRuns(ctx) - id
-        prefs(ctx).edit().putString(KEY_RUNS, gson.toJson(runs, typeRuns)).apply()
+        prefs(ctx).edit().putString(KEY_RUNS, gson.toJson(runs, typeRuns))
+            .putString(KEY_SKIPS, gson.toJson(lastSkips(ctx) - id, typeSkips)).apply()
     }
 
     // ── Interrupteur général ──
@@ -102,8 +103,23 @@ object CustomRuleStore {
             .getOrNull().orEmpty().filterNotNull()
 
     fun addHistory(ctx: Context, id: String, name: String, run: RuleLastRun) = synchronized(LOCK) {
-        val l = (listOf(RuleHistoryEntry(id, name, run)) + history(ctx)).take(HISTORY_MAX)
+        val l = com.mg4.control.model.RuleHistory.addRun(history(ctx), RuleHistoryEntry(id, name, run), HISTORY_MAX)
         prefs(ctx).edit().putString(KEY_HISTORY, gson.toJson(l, typeHistory)).apply()
+    }
+
+    // ── Déclenchements refusés (2026-11-08) : dans l'historique, regroupés, et le dernier par règle ──
+    private const val KEY_SKIPS = "last_skips_json"
+    private val typeSkips = object : TypeToken<Map<String, com.mg4.control.model.RuleSkip>>() {}.type
+
+    fun addSkip(ctx: Context, id: String, name: String, skip: com.mg4.control.model.RuleSkip) = synchronized(LOCK) {
+        val l = com.mg4.control.model.RuleHistory.addSkip(history(ctx), RuleHistoryEntry(id, name, skip = skip), HISTORY_MAX)
+        prefs(ctx).edit().putString(KEY_HISTORY, gson.toJson(l, typeHistory))
+            .putString(KEY_SKIPS, gson.toJson(lastSkips(ctx) + (id to skip), typeSkips)).apply()
+    }
+
+    fun lastSkips(ctx: Context): Map<String, com.mg4.control.model.RuleSkip> {
+        val json = prefs(ctx).getString(KEY_SKIPS, null) ?: return emptyMap()
+        return runCatching { gson.fromJson<Map<String, com.mg4.control.model.RuleSkip>>(json, typeSkips) }.getOrNull().orEmpty()
     }
 
     fun lastRuns(ctx: Context): Map<String, RuleLastRun> {

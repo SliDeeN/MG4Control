@@ -15,7 +15,10 @@ import com.mg4.control.automation.CustomRuleStore
 import com.mg4.control.automation.CustomRules
 import com.mg4.control.model.CustomRule
 import com.mg4.control.model.CustomRuleTemplates
+import com.mg4.control.model.RuleHistory
+import com.mg4.control.model.RuleHistoryEntry
 import com.mg4.control.model.RuleLastRun
+import com.mg4.control.model.RuleSkip
 import com.mg4.control.model.RuleText
 import com.mg4.control.automation.RulePlaces
 import com.mg4.control.automation.RuleVariables
@@ -86,7 +89,8 @@ class CustomRulesPage {
             if (!moteur) carte.findViewById<View>(R.id.rule_switch).alpha = ALPHA_COUPEE
             carte.findViewById<TextView>(R.id.rule_name).text = r.name
             carte.findViewById<TextView>(R.id.rule_summary).text = resume(ctx, texte, r)
-            carte.findViewById<TextView>(R.id.rule_last_run).text = derniere(ctx, CustomRules.lastRun(ctx, r.id))
+            carte.findViewById<TextView>(R.id.rule_last_run).text =
+                derniere(ctx, CustomRules.lastRun(ctx, r.id), CustomRules.lastSkip(ctx, r.id))
             carte.findViewById<Switch>(R.id.rule_switch).apply {
                 // Toutes les cartes portent le même identifiant : au retour de l'éditeur, Android
                 // rendait à CHAQUE interrupteur l'état sauvegardé du dernier, et l'écoute
@@ -156,16 +160,125 @@ class CustomRulesPage {
         }
     }
 
+    /**
+     * Historique (2026-11-08) : exécutions (▶) et déclenchements refusés (⊘, avec la raison et le
+     * nombre de refus identiques regroupés), filtre Toutes / Exécutées / Ignorées.
+     */
     private fun historique(ctx: Context) {
-        val h = CustomRuleStore.history(ctx)
-        val texte = if (h.isEmpty()) ctx.getString(R.string.rule_never_run) else h.joinToString("\n\n") { e ->
-            val quand = e.run.atMs?.let { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it)) }
-                ?: ctx.getString(R.string.rule_run_time_unknown)
-            "$quand — ${e.name} : ${e.run.done} ✓ · ${e.run.failed} ✗" +
-                e.run.journal.orEmpty().take(6).joinToString("") { "\n   $it" }
+        val vue = LayoutInflater.from(ctx).inflate(R.layout.dialog_rule_value, null)
+        vue.findViewById<View>(R.id.rule_value_cancel).visibility = View.GONE
+        vue.findViewById<View>(R.id.rule_value_back).visibility = View.GONE
+        vue.findViewById<TextView>(R.id.rule_value_title).text = ctx.getString(R.string.rule_tool_history)
+        val sousTitre = vue.findViewById<TextView>(R.id.rule_value_subtitle)
+        val corps = vue.findViewById<LinearLayout>(R.id.rule_value_body)
+        val toutes = CustomRuleStore.history(ctx)
+        val filtres = RuleHistory.Filter.values()
+        val seg = LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setBackgroundResource(R.drawable.bg_dialog_segments)
+            val p = AppDialog.dp(ctx, 4f)
+            setPadding(p, p, p, p)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, AppDialog.dp(ctx, 60f))
         }
-        AppDialog.confirmer(ctx, titre = ctx.getString(R.string.rule_tool_history), message = texte,
-            icone = R.drawable.ic_dialog_list, oui = ctx.getString(R.string.nav_close))
+        corps.addView(seg)
+        val liste = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
+        // Hauteur fixe : vingt entrées dépasseraient l'écran de la voiture.
+        corps.addView(android.widget.ScrollView(ctx).apply {
+            addView(liste)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, AppDialog.dp(ctx, 420f)).apply {
+                topMargin = AppDialog.dp(ctx, 10f)
+            }
+        })
+        fun dessiner(f: RuleHistory.Filter) {
+            val l = RuleHistory.filter(toutes, f)
+            sousTitre.text = ctx.getString(R.string.rule_hist_count_fmt, l.size, CustomRuleStore.HISTORY_MAX)
+            liste.removeAllViews()
+            if (l.isEmpty()) {
+                liste.addView(TextView(ctx).apply {
+                    text = ctx.getString(if (toutes.isEmpty()) R.string.rule_never_run else R.string.rule_hist_empty_filter)
+                    textSize = 17f
+                    setTextColor(ctx.getColor(R.color.text_secondary))
+                    setPadding(0, AppDialog.dp(ctx, 12f), 0, 0)
+                })
+                return
+            }
+            l.forEach { liste.addView(entree(ctx, it)) }
+        }
+        AppDialog.segments(seg, listOf(ctx.getString(R.string.rule_hist_filter_all), ctx.getString(R.string.rule_hist_filter_runs),
+            ctx.getString(R.string.rule_hist_filter_skipped)), 0) { dessiner(filtres[it]) }
+        dessiner(RuleHistory.Filter.ALL)
+        lateinit var dialog: android.app.AlertDialog
+        vue.findViewById<TextView>(R.id.rule_value_ok).apply {
+            text = ctx.getString(R.string.nav_close)
+            setOnClickListener { dialog.dismiss() }
+        }
+        dialog = AppDialog.afficher(ctx, vue, 1000f)
+    }
+
+    /** Une entrée de l'historique : ▶ exécution, ⊘ déclenchement refusé (grisé, raison en orange). */
+    private fun entree(ctx: Context, e: RuleHistoryEntry): View {
+        val format = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+        val s = e.skip
+        val quand = (s?.atMs ?: e.run.atMs)?.let { format.format(Date(it)) } ?: ctx.getString(R.string.rule_run_time_unknown)
+        val titre = android.text.SpannableStringBuilder()
+        val vert = ctx.getColor(R.color.dash_eco)
+        val orange = ctx.getColor(R.color.dash_warn)
+        fun couleur(texte: String, c: Int) {
+            val d = titre.length
+            titre.append(texte)
+            titre.setSpan(android.text.style.ForegroundColorSpan(c), d, titre.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        val details = mutableListOf<String>()
+        if (s == null) {
+            couleur("▶  ", vert)
+            titre.append("$quand — ${e.name} : ")
+            couleur("${e.run.done} ✓", vert)
+            titre.append(" · ")
+            couleur("${e.run.failed} ✗", if (e.run.failed > 0) ctx.getColor(R.color.dash_danger) else ctx.getColor(R.color.text_secondary))
+            e.run.by?.let { details += ctx.getString(R.string.rule_hist_by_fmt, it) }
+            details += e.run.journal.orEmpty().take(6)
+        } else {
+            couleur("⊘  ", orange)
+            titre.append("$quand — ${e.name}")
+            if (s.count > 1) titre.append("  ×${s.count}")
+            s.by?.let { details += ctx.getString(R.string.rule_hist_by_fmt, it) }
+            details += ctx.getString(R.string.rule_hist_skipped_fmt, raison(ctx, s, longue = true))
+        }
+        return LinearLayout(ctx).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, AppDialog.dp(ctx, 8f), 0, AppDialog.dp(ctx, 8f))
+            addView(TextView(ctx).apply {
+                text = titre
+                textSize = 18f
+                setTextColor(ctx.getColor(if (s == null) R.color.text_primary else R.color.text_secondary))
+            })
+            details.forEachIndexed { i, d ->
+                addView(TextView(ctx).apply {
+                    text = d
+                    textSize = 15f
+                    // La raison d'un refus en orange ; le reste en texte secondaire.
+                    setTextColor(if (s != null && i == details.lastIndex) orange else ctx.getColor(R.color.text_secondary))
+                    setPadding(AppDialog.dp(ctx, 28f), 0, 0, 0)
+                })
+            }
+        }
+    }
+
+    /** Raison d'un refus : courte pour la carte, longue (condition en cause, valeur lue) pour l'historique. */
+    private fun raison(ctx: Context, s: RuleSkip, longue: Boolean): String {
+        val cond = s.detail?.let { d -> s.value?.let { ctx.getString(R.string.rule_skip_read_fmt, d, it) } ?: d }
+        return when (s.reason) {
+            RuleSkip.Reason.CONDITIONS -> if (longue && cond != null) ctx.getString(R.string.rule_skip_conditions_fmt, cond)
+                else ctx.getString(R.string.rule_skip_short_conditions)
+            RuleSkip.Reason.UNKNOWN -> if (longue && cond != null) ctx.getString(R.string.rule_skip_unknown_fmt, cond)
+                else ctx.getString(R.string.rule_skip_short_unknown)
+            RuleSkip.Reason.NOT_READY -> ctx.getString(if (longue) R.string.rule_skip_not_ready else R.string.rule_skip_short_not_ready)
+            RuleSkip.Reason.BUSY -> ctx.getString(if (longue) R.string.rule_skip_busy else R.string.rule_skip_short_busy)
+            RuleSkip.Reason.COOLDOWN -> if (longue) ctx.getString(R.string.rule_skip_cooldown_fmt, s.minutes ?: 0)
+                else ctx.getString(R.string.rule_skip_short_cooldown)
+            RuleSkip.Reason.GARAGE -> ctx.getString(R.string.settings_garage_mode)
+            null -> ctx.getString(R.string.rule_unknown)
+        }
     }
 
     private fun variables(ctx: Context) {
@@ -322,11 +435,22 @@ class CustomRulesPage {
     private fun resume(ctx: Context, t: RuleText, r: CustomRule): String =
         ctx.getString(R.string.rule_summary_fmt, t.triggers(r), t.conditions(r), t.actions(r))
 
-    private fun derniere(ctx: Context, run: RuleLastRun?): String {
-        if (run == null) return ctx.getString(R.string.rule_never_run)
-        val quand = run.atMs?.let { DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(it)) }
-            ?: ctx.getString(R.string.rule_run_time_unknown)
-        return ctx.getString(R.string.rule_last_run_fmt, quand, run.done, run.failed)
+    /**
+     * Bas de la carte : la dernière exécution, et dessous en orange le dernier déclenchement refusé
+     * s'il est plus récent (variante A, 2026-11-08).
+     */
+    private fun derniere(ctx: Context, run: RuleLastRun?, skip: RuleSkip?): CharSequence {
+        val format = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
+        val ligne = if (run == null) ctx.getString(R.string.rule_never_run) else ctx.getString(R.string.rule_last_run_fmt,
+            run.atMs?.let { format.format(Date(it)) } ?: ctx.getString(R.string.rule_run_time_unknown), run.done, run.failed)
+        if (skip == null || !RuleHistory.skipIsNewer(run, skip)) return ligne
+        val refus = ctx.getString(R.string.rule_last_skip_fmt,
+            skip.atMs?.let { format.format(Date(it)) } ?: ctx.getString(R.string.rule_run_time_unknown), raison(ctx, skip, longue = false))
+        return android.text.SpannableStringBuilder(ligne).append("\n").apply {
+            val d = length
+            append(refus)
+            setSpan(android.text.style.ForegroundColorSpan(ctx.getColor(R.color.dash_warn)), d, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
     }
 
     private fun supprimer(ctx: Context, r: CustomRule) {

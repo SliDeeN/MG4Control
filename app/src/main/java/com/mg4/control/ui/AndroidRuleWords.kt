@@ -186,6 +186,8 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
     override fun speak(text: String) = t(R.string.rule_speak_fmt, text)
     override fun navigate(dest: String) = t(R.string.rule_navigate_fmt, placeName(dest))
     override val unknown: String get() = t(R.string.rule_unknown)
+    override val on: String get() = t(R.string.rule_on)
+    override val off: String get() = t(R.string.rule_off)
 
     companion object {
         fun signalRes(s: RuleSignal): Int = when (s) {

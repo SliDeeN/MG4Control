@@ -57,6 +57,9 @@ interface RuleWords {
     val abrpStop: String get() = "ABRP ■"
     val stop: String
     val unknown: String
+    /** « oui » / « non » d'une valeur lue (historique) ; l'écran les traduit. */
+    val on: String get() = "true"
+    val off: String get() = "false"
     // 2026-11-06 : mémoriser une valeur lue, régler avec une variable, bip intégré.
     fun saveValue(signal: String, variable: String): String = "$variable ← $signal"
     fun setFromVariable(key: String, variable: String): String = set(key, "$" + variable)
@@ -70,6 +73,29 @@ interface RuleWords {
 class RuleText(private val w: RuleWords) {
 
     fun time(minute: Int): String = String.format(Locale.US, "%d:%02d", minute / 60, minute % 60)
+
+    /**
+     * Ce qui a été lu pour la condition [c] (2026-11-08, historique : « lue : 12 °C ») ; `null` si
+     * rien de lisible ou sans objet (groupe, hasard, saison…).
+     */
+    fun readValue(c: RuleCondition?, s: RuleState): String? = when (c?.type) {
+        RuleCondition.Type.COMPARE -> c.signal?.let { sig ->
+            when (val v = s.values[sig]) {
+                null -> null
+                is Boolean -> if (v) w.on else w.off
+                is Number -> v.toDouble().let { n ->
+                    (if (n % 1.0 == 0.0) n.toLong().toString() else String.format(Locale.US, "%.1f", n)) + w.unit(sig)
+                }
+                is Collection<*> -> v.joinToString(", ") { w.value(sig, it.toString()) }
+                else -> w.value(sig, v.toString())
+            }
+        }
+        RuleCondition.Type.VARIABLE -> c.text?.let { s.variables[RuleLogic.variableName(it)] }
+        RuleCondition.Type.TIME_RANGE -> s.minuteOfDay?.let { time(it) }
+        RuleCondition.Type.WEEKDAYS -> s.weekday?.let { w.days(listOf(it)) }
+        RuleCondition.Type.PLACE -> c.text?.let { s.places[it] }?.let { if (it) w.on else w.off }
+        else -> null
+    }
 
     fun trigger(t: RuleTrigger): String = when (t.type) {
         RuleTrigger.Type.EVENT -> t.event?.let { w.event(it) } ?: w.unknown

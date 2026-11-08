@@ -537,4 +537,82 @@ class CustomRuleTest {
         assertEquals("\$AVANT", n.actions[1].value)
         assertEquals("12", n.actions[2].value)
     }
+
+    // ── Déclenchements refusés et historique (2026-11-08) ──────────────────
+
+    @Test
+    fun `la condition en cause est la premiere fausse d'un groupe Toutes, en descendant`() {
+        val temp = cmp(RuleSignal.OUTSIDE_TEMP, RuleOp.ABOVE, 28.0)
+        val ready = cmp(RuleSignal.READY, RuleOp.IS_TRUE)
+        val s = etat(RuleSignal.OUTSIDE_TEMP to 12.0, RuleSignal.READY to true)
+        assertEquals(temp, RuleLogic.firstFailing(groupe(RuleCondition.Type.ALL, ready, groupe(RuleCondition.Type.ALL, temp)), s))
+        assertNull(RuleLogic.firstFailing(groupe(RuleCondition.Type.ALL, ready), s))
+        // « Au moins une » de plusieurs : le groupe lui-même ; d'une seule : elle.
+        val ou = groupe(RuleCondition.Type.ANY, temp, cmp(RuleSignal.READY, RuleOp.IS_FALSE))
+        assertEquals(ou, RuleLogic.firstFailing(ou, s))
+        assertEquals(temp, RuleLogic.firstFailing(groupe(RuleCondition.Type.ANY, temp), s))
+        // Illisible : la condition inconnue est en cause.
+        assertEquals(temp, RuleLogic.firstFailing(groupe(RuleCondition.Type.ALL, ready, temp), etat(RuleSignal.READY to true)))
+    }
+
+    @Test
+    fun `valeur lue pour la condition en cause`() {
+        val t = RuleText(Mots)
+        val s = etat(RuleSignal.OUTSIDE_TEMP to 12.0, RuleSignal.READY to false, RuleSignal.PROFILE to "p1", minute = 9 * 60 + 5)
+        assertEquals("12 °C", t.readValue(cmp(RuleSignal.OUTSIDE_TEMP, RuleOp.ABOVE, 28.0), s))
+        assertEquals("false", t.readValue(cmp(RuleSignal.READY, RuleOp.IS_TRUE), s))
+        assertEquals("p1", t.readValue(cmp(RuleSignal.PROFILE, RuleOp.EQUALS, t = "p2"), s))
+        assertEquals("9:05", t.readValue(RuleCondition(RuleCondition.Type.TIME_RANGE, from = 60, to = 120), s))
+        assertNull(t.readValue(cmp(RuleSignal.SOC, RuleOp.BELOW, 20.0), s))
+        assertNull(t.readValue(groupe(RuleCondition.Type.ALL), s))
+        assertEquals("12.5 °C", t.readValue(cmp(RuleSignal.OUTSIDE_TEMP, RuleOp.ABOVE, 28.0), etat(RuleSignal.OUTSIDE_TEMP to 12.5)))
+    }
+
+    private fun refus(id: String, why: RuleSkip.Reason, at: Long, detail: String? = null, value: String? = null) =
+        RuleHistoryEntry(id, id, skip = RuleSkip(atMs = at, reason = why, detail = detail, value = value))
+
+    private fun execution(id: String, at: Long) = RuleHistoryEntry(id, id, RuleLastRun(atMs = at, done = 1))
+
+    @Test
+    fun `un refus identique au dernier de la regle se regroupe et remonte en tete`() {
+        var h = RuleHistory.addSkip(emptyList(), refus("a", RuleSkip.Reason.CONDITIONS, 1, "T > 28", "12"), 20)
+        h = RuleHistory.addRun(h, execution("b", 2), 20)
+        h = RuleHistory.addSkip(h, refus("a", RuleSkip.Reason.CONDITIONS, 3, "T > 28", "13"), 20)
+        assertEquals(2, h.size)
+        assertEquals("a", h[0].id)
+        assertEquals(2, h[0].skip!!.count)
+        assertEquals(3L, h[0].skip!!.atMs)
+        assertEquals("13", h[0].skip!!.value)
+    }
+
+    @Test
+    fun `un refus different, ou apres une execution de la regle, fait une nouvelle ligne`() {
+        var h = RuleHistory.addSkip(emptyList(), refus("a", RuleSkip.Reason.NOT_READY, 1), 20)
+        h = RuleHistory.addSkip(h, refus("a", RuleSkip.Reason.BUSY, 2), 20)
+        assertEquals(2, h.size)
+        h = RuleHistory.addRun(h, execution("a", 3), 20)
+        h = RuleHistory.addSkip(h, refus("a", RuleSkip.Reason.BUSY, 4), 20)
+        assertEquals(4, h.size)
+        assertEquals(1, h[0].skip!!.count)
+        // Autre condition en cause : pas le même refus.
+        h = RuleHistory.addSkip(h, refus("a", RuleSkip.Reason.BUSY, 5), 20)
+        h = RuleHistory.addSkip(h, refus("a", RuleSkip.Reason.CONDITIONS, 6, "X"), 20)
+        h = RuleHistory.addSkip(h, refus("a", RuleSkip.Reason.CONDITIONS, 7, "Y"), 20)
+        assertEquals(6, h.size)
+    }
+
+    @Test
+    fun `historique borne, filtre et refus plus recent que la derniere execution`() {
+        var h = emptyList<RuleHistoryEntry>()
+        repeat(25) { h = RuleHistory.addSkip(h, refus("r$it", RuleSkip.Reason.NOT_READY, it.toLong()), 20) }
+        assertEquals(20, h.size)
+        h = RuleHistory.addRun(h, execution("x", 99), 20)
+        assertEquals(1, RuleHistory.filter(h, RuleHistory.Filter.RUNS).size)
+        assertEquals(19, RuleHistory.filter(h, RuleHistory.Filter.SKIPPED).size)
+        assertEquals(20, RuleHistory.filter(h, RuleHistory.Filter.ALL).size)
+        assertTrue(RuleHistory.skipIsNewer(RuleLastRun(atMs = 1), RuleSkip(atMs = 2)))
+        assertFalse(RuleHistory.skipIsNewer(RuleLastRun(atMs = 3), RuleSkip(atMs = 2)))
+        assertTrue(RuleHistory.skipIsNewer(null, RuleSkip(atMs = 2)))
+        assertFalse(RuleHistory.skipIsNewer(RuleLastRun(atMs = 1), null))
+    }
 }

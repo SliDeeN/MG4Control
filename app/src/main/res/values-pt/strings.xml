@@ -1850,4 +1850,25 @@
     <string name="shortcuts_onepedal_prev">Como antes</string>
     <string name="shortcuts_onepedal_desc_prev">Desligar o One Pedal repõe o nível de regeneração anterior (predefinição).</string>
     <string name="shortcuts_onepedal_desc_fixed">Desligar o One Pedal passa sempre para a regeneração %1$s.</string>
+
+    <!-- Mes automatisations : déclenchements refusés, historique filtrable (2026-11-08) -->
+    <string name="rule_last_skip_fmt">Último disparo: %1$s · ignorada: %2$s</string>
+    <string name="rule_skip_short_conditions">condições falsas</string>
+    <string name="rule_skip_short_unknown">condições ilegíveis</string>
+    <string name="rule_skip_short_not_ready">fora de READY</string>
+    <string name="rule_skip_short_busy">já em curso</string>
+    <string name="rule_skip_short_cooldown">antirressalto</string>
+    <string name="rule_skip_conditions_fmt">condições falsas: %1$s</string>
+    <string name="rule_skip_unknown_fmt">condições ilegíveis: %1$s</string>
+    <string name="rule_skip_read_fmt">%1$s (lido: %2$s)</string>
+    <string name="rule_skip_not_ready">carro fora de READY (opção «Só com o carro em READY»)</string>
+    <string name="rule_skip_busy">ainda estava a correr (opção «Deixar terminar»)</string>
+    <string name="rule_skip_cooldown_fmt">menos de %1$d min desde a última execução (antirressalto)</string>
+    <string name="rule_hist_by_fmt">disparada por «%1$s»</string>
+    <string name="rule_hist_skipped_fmt">ignorada: %1$s</string>
+    <string name="rule_hist_filter_all">Todas</string>
+    <string name="rule_hist_filter_runs">Executadas</string>
+    <string name="rule_hist_filter_skipped">Ignoradas</string>
+    <string name="rule_hist_empty_filter">Nada nesta categoria.</string>
+    <string name="rule_hist_count_fmt">%1$d / %2$d entradas · as recusas idênticas são agrupadas (×N)</string>
 </resources>

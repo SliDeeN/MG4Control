@@ -1850,4 +1850,25 @@
     <string name="shortcuts_onepedal_prev">Önceki gibi</string>
     <string name="shortcuts_onepedal_desc_prev">One Pedal kapatılınca önceki rejenerasyon seviyesi geri gelir (varsayılan).</string>
     <string name="shortcuts_onepedal_desc_fixed">One Pedal kapatılınca her zaman %1$s rejenerasyona geçilir.</string>
+
+    <!-- Mes automatisations : déclenchements refusés, historique filtrable (2026-11-08) -->
+    <string name="rule_last_skip_fmt">Son tetikleme: %1$s · yok sayıldı: %2$s</string>
+    <string name="rule_skip_short_conditions">koşullar yanlış</string>
+    <string name="rule_skip_short_unknown">koşullar okunamadı</string>
+    <string name="rule_skip_short_not_ready">READY değil</string>
+    <string name="rule_skip_short_busy">zaten çalışıyor</string>
+    <string name="rule_skip_short_cooldown">sıçrama önleme</string>
+    <string name="rule_skip_conditions_fmt">koşullar yanlış: %1$s</string>
+    <string name="rule_skip_unknown_fmt">koşullar okunamadı: %1$s</string>
+    <string name="rule_skip_read_fmt">%1$s (okunan: %2$s)</string>
+    <string name="rule_skip_not_ready">araç READY değil (“Yalnızca araç READY iken” seçeneği)</string>
+    <string name="rule_skip_busy">hâlâ çalışıyordu (“Bitmesini bekle” seçeneği)</string>
+    <string name="rule_skip_cooldown_fmt">son çalışmadan bu yana %1$d dk’dan az (sıçrama önleme)</string>
+    <string name="rule_hist_by_fmt">tetikleyen: “%1$s”</string>
+    <string name="rule_hist_skipped_fmt">yok sayıldı: %1$s</string>
+    <string name="rule_hist_filter_all">Tümü</string>
+    <string name="rule_hist_filter_runs">Çalışanlar</string>
+    <string name="rule_hist_filter_skipped">Yok sayılanlar</string>
+    <string name="rule_hist_empty_filter">Bu kategoride bir şey yok.</string>
+    <string name="rule_hist_count_fmt">%1$d / %2$d kayıt · aynı retler gruplanır (×N)</string>
 </resources>

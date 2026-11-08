@@ -27,6 +27,7 @@ import com.mg4.control.model.RuleLastRun
 import com.mg4.control.model.RuleLogic
 import com.mg4.control.model.RuleRun
 import com.mg4.control.model.RuleSignal
+import com.mg4.control.model.RuleSkip
 import com.mg4.control.model.RuleState
 import com.mg4.control.model.RuleText
 import com.mg4.control.model.RuleTrigger
@@ -120,6 +121,25 @@ object CustomRules {
     /** La dernière exécution connue : celle de cette session, sinon celle enregistrée. */
     fun lastRun(context: Context, id: String): RuleLastRun? = dernieres[id] ?: CustomRuleStore.lastRuns(context)[id]
 
+    /** Dernier déclenchement refusé (conditions, READY, en cours, anti-rebond, Mode Garage). */
+    private val dernieresRefus = ConcurrentHashMap<String, RuleSkip>()
+
+    fun lastSkip(context: Context, id: String): RuleSkip? = dernieresRefus[id] ?: CustomRuleStore.lastSkips(context)[id]
+
+    /** Texte d'un déclencheur, pour l'historique (« déclenchée par … »). */
+    private fun par(ctx: Context, t: RuleTrigger): String? = runCatching { RuleText(AndroidRuleWords(ctx)).trigger(t) }.getOrNull()
+
+    /**
+     * Déclenchée mais pas exécutée (2026-11-08) : l'historique et la carte le montrent, avec la
+     * raison — sinon seul le journal du diagnostic le disait, et la règle semblait ne jamais partir.
+     */
+    private fun ignorer(ctx: Context, r: CustomRule, by: String?, skip: RuleSkip) {
+        val s = skip.copy(atMs = System.currentTimeMillis().takeIf { StatsTracker.clockPlausible(it) }, by = by)
+        dernieresRefus[r.id] = s
+        CustomRuleStore.addSkip(ctx, r.id, r.name, s)
+        principal.post { surChangement?.invoke() }
+    }
+
     /** Démarrage du service : charge les règles, puis l'événement « démarrage de l'écran ». */
     fun start(context: Context) {
         app = context.applicationContext
@@ -158,7 +178,7 @@ object CustomRules {
      * Lancement à la main : bouton du volant, bulle, ou action « Lancer une automatisation ». Les
      * conditions de la règle s'appliquent, comme pour tout déclencheur.
      */
-    fun runManual(context: Context, id: String?, origine: String) {
+    fun runManual(context: Context, id: String?, origine: String, by: String? = null) {
         app = context.applicationContext
         if (id == null) return
         fil.post {
@@ -176,7 +196,7 @@ object CustomRules {
                 return@post
             }
             rafale.addLast(maintenant)
-            declencher(r, origine)
+            declencher(r, origine, by ?: context.getString(com.mg4.control.R.string.rule_trg_manual))
         }
     }
 
@@ -296,7 +316,7 @@ object CustomRules {
                     t.type == RuleTrigger.Type.CHANGES && w is ChangeWatch -> t.condition?.signal?.let { w.onValue(etat.values[it]) } ?: false
                     else -> false
                 }
-                if (part) declencher(r, "déclencheur ${i + 1}")
+                if (part) declencher(r, "déclencheur ${i + 1}", par(ctx, t))
             }
         }
     }
@@ -318,38 +338,55 @@ object CustomRules {
         val ctx = app ?: return
         recharger()
         actives(ctx).filter { r -> r.triggers.any { it.type == RuleTrigger.Type.EVENT && it.event == e } }
-            .forEach { declencher(it, e.name) }
+            .forEach { r -> declencher(r, e.name, r.triggers.firstOrNull { it.type == RuleTrigger.Type.EVENT && it.event == e }?.let { par(ctx, it) }) }
     }
 
-    private fun declencher(r: CustomRule, origine: String) {
+    /** [by] : ce qui l'a déclenchée, en texte (historique) ; [origine] : pour le journal. */
+    private fun declencher(r: CustomRule, origine: String, by: String?) {
         val ctx = app ?: return
         if (GarageMode.isOn(ctx)) {
             AppLogger.i(TAG, "« ${r.name} » ($origine) : Mode Garage, rien")
+            ignorer(ctx, r, by, RuleSkip(reason = RuleSkip.Reason.GARAGE))
             return
         }
         val etat = lire(ctx, RuleLogic.signals(r), RuleLogic.usesClock(r), RuleLogic.places(r))
         val conditions = RuleLogic.evaluate(r.condition, etat)
         if (conditions != true) {
             AppLogger.i(TAG, "« ${r.name} » ($origine) : conditions ${if (conditions == false) "fausses" else "inconnues"}, rien")
+            // La première condition en cause et ce qui a été lu pour elle.
+            val texte = RuleText(AndroidRuleWords(ctx))
+            val enCause = RuleLogic.firstFailing(r.condition, etat)
+            ignorer(ctx, r, by, RuleSkip(
+                reason = if (conditions == false) RuleSkip.Reason.CONDITIONS else RuleSkip.Reason.UNKNOWN,
+                detail = enCause?.let { texte.condition(it) }, value = texte.readValue(enCause, etat)))
             return
         }
         val maintenant = SystemClock.elapsedRealtime()
         when (RuleGate.decide(r, isRunning(r.id), departs[r.id], maintenant, ReadyWatcher.ready)) {
-            RuleGate.Decision.START -> lancer(r, origine)
+            RuleGate.Decision.START -> lancer(r, origine, by)
             RuleGate.Decision.RESTART -> {
                 enCours.remove(r.id)?.cancel()
-                lancer(r, "$origine, relancée")
+                lancer(r, "$origine, relancée", by)
             }
-            RuleGate.Decision.BUSY -> AppLogger.i(TAG, "« ${r.name} » ($origine) : déjà en cours, ignorée")
-            RuleGate.Decision.COOLDOWN -> AppLogger.i(TAG, "« ${r.name} » ($origine) : moins de ${r.cooldownMinutes} min depuis la dernière, ignorée")
-            RuleGate.Decision.NOT_READY -> AppLogger.i(TAG, "« ${r.name} » ($origine) : voiture pas en READY, ignorée")
+            RuleGate.Decision.BUSY -> {
+                AppLogger.i(TAG, "« ${r.name} » ($origine) : déjà en cours, ignorée")
+                ignorer(ctx, r, by, RuleSkip(reason = RuleSkip.Reason.BUSY))
+            }
+            RuleGate.Decision.COOLDOWN -> {
+                AppLogger.i(TAG, "« ${r.name} » ($origine) : moins de ${r.cooldownMinutes} min depuis la dernière, ignorée")
+                ignorer(ctx, r, by, RuleSkip(reason = RuleSkip.Reason.COOLDOWN, minutes = r.cooldownMinutes))
+            }
+            RuleGate.Decision.NOT_READY -> {
+                AppLogger.i(TAG, "« ${r.name} » ($origine) : voiture pas en READY, ignorée")
+                ignorer(ctx, r, by, RuleSkip(reason = RuleSkip.Reason.NOT_READY))
+            }
         }
     }
 
     // ── Exécution ────────────────────────────────────────────────────────────
 
     /** Sur le fil mg4-rules (départs comptés là) ; les actions, dans une coroutine. */
-    private fun lancer(r: CustomRule, origine: String) {
+    private fun lancer(r: CustomRule, origine: String, by: String? = null) {
         val ctx = app ?: return
         departs[r.id] = SystemClock.elapsedRealtime()
         AppLogger.i(TAG, "« ${r.name} » ($origine) : ${r.actions.size} action(s)")
@@ -361,7 +398,7 @@ object CustomRules {
                 run.run(r.actions)
             } finally {
                 val heure = System.currentTimeMillis().takeIf { StatsTracker.clockPlausible(it) }
-                val bilan = RuleLastRun(heure, run.done, run.failed, run.journal.toList())
+                val bilan = RuleLastRun(heure, run.done, run.failed, run.journal.toList(), by)
                 dernieres[r.id] = bilan
                 CustomRuleStore.setLastRun(ctx, r.id, bilan)
                 CustomRuleStore.addHistory(ctx, r.id, r.name, bilan)
@@ -480,7 +517,7 @@ object CustomRules {
                     val id = a.text ?: return false
                     // Une règle qui se relance elle-même tournerait en rond.
                     if (id == r.id || CustomRuleStore.all(ctx).none { it.id == id }) return false
-                    runManual(ctx, id, "lancée par « ${r.name} »")
+                    runManual(ctx, id, "lancée par « ${r.name} »", "« ${r.name} »")
                     true
                 }
                 RuleAction.Type.SET_VARIABLE -> {

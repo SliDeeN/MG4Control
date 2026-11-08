@@ -14,6 +14,22 @@ object RuleLogic {
     /** Imbrication maximale des groupes et des blocs Si : au-delà, le nœud est inconnu / sauté. */
     const val MAX_DEPTH = 6
 
+    /**
+     * La condition qui empêche [c] d'être vraie (2026-11-08, pour l'historique) : dans un groupe
+     * « Toutes », la première qui n'est pas vraie, en descendant ; un groupe « Au moins une » d'une
+     * seule condition se lit comme elle ; sinon le groupe lui-même. `null` si [c] est vraie.
+     */
+    fun firstFailing(c: RuleCondition?, s: RuleState, depth: Int = 0): RuleCondition? {
+        if (c == null || depth > MAX_DEPTH || evaluate(c, s, depth) == true) return null
+        val enfants = c.children.orEmpty()
+        return when (c.type) {
+            RuleCondition.Type.ALL -> enfants.firstOrNull { evaluate(it, s, depth + 1) != true }
+                ?.let { firstFailing(it, s, depth + 1) ?: it } ?: c
+            RuleCondition.Type.ANY -> if (enfants.size == 1) firstFailing(enfants[0], s, depth + 1) ?: c else c
+            else -> c
+        }
+    }
+
     fun evaluate(c: RuleCondition?, s: RuleState, depth: Int = 0): Boolean? {
         if (c == null || depth > MAX_DEPTH) return null
         val enfants = c.children.orEmpty()
