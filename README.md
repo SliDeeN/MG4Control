@@ -220,10 +220,18 @@ En haut de la page, **« Réglage pour : »** choisit le profil dont on règle l
 avancée active) ; un appui qui n'a rien de propre à ce profil affiche « Comme tous : … », la
 fonction réglée pour tous les profils.
 
-Les réglages d'action — **repli du mode 1 Pédale**, **crans du cycle ADAS**, **cycle de
+Les réglages d'action — **retour du mode 1 Pédale**, **crans du cycle ADAS**, **cycle de
 régénération**, **cycle des modes**, **cycle de profils**, **cycle de sources**, **Réglages
 rapides** — ont chacun leur pastille, qui apparaît dès que la fonction est attribuée à une touche
 ou à un bouton flottant.
+
+**1 Pédale** (#226) : le premier appui active le One Pedal, le second le coupe. Par défaut
+(« Comme avant »), MG4Control ne fait que couper le One Pedal et la voiture remet d'elle-même le
+niveau de régénération qu'elle avait avant ; la pastille *1 Pédale* permet de choisir à la place un
+niveau fixe — Faible, Moyen, Fort ou Adaptatif. Un niveau choisi dans une version précédente repasse
+sur « Comme avant », et Off n'est plus proposé. L'état du One Pedal est lu sur le niveau de
+régénération **ou** sur le réglage One Pedal lui-même, pour le raccourci, les bulles et les
+automatisations.
 
 Le cycle de régénération se compose sur sa page : toucher un mode l'ajoute **en fin de cycle**,
 le toucher à nouveau le retire, et l'ordre des appuis est celui du cycle. Les cinq modes proposés
@@ -265,8 +273,14 @@ régulateur / limiteur (ACC, TJA ou ICA et limiteur, exclusifs côté voiture, n
 anti-collision, panneaux, alerte survitesse, feux de route automatiques, récupération (1 Pédale
 comprise), mode de conduite, économie d'énergie, chauffage de la batterie, A/C, recirculation,
 dégivrages, sièges, volant chauffant, luminosité. Par défaut : sortie de voie, régulateur /
-limiteur, récupération, chauffage de la batterie et mode de conduite. Toucher une tuile ouvre ses
-valeurs dessous ; le choix part aussitôt à la voiture, puis est relu. Un réglage que la voiture
+limiteur, récupération, chauffage de la batterie et mode de conduite. Une tuile à deux valeurs
+bascule d'un toucher (marque ⇄, couleur turquoise ; une tuile Oui / Non allumée prend la couleur
+d'accent) ; les autres ouvrent leurs valeurs dans une **bulle accrochée à la tuile** (au-dessus, ou
+dessous faute de place), et des puces de la page *Réglages rapides* choisissent quelles valeurs elle
+propose (deux au moins, toutes par défaut). Le choix part aussitôt à la voiture, puis est relu. Le
+joystick droit passe d'une tuile à l'autre et à la croix, et règle la bulle (gauche / droite, clic
+central pour appliquer, haut / bas pour la refermer) ; un appui long sur la touche qui l'a ouvert le
+referme. Un réglage que la voiture
 n'accepte qu'à l'arrêt est grisé en roulant. Le pop-up se ferme par sa croix, par un second appui
 sur le raccourci ou seul après le délai des pop-ups, relancé à chaque toucher.
 
@@ -312,7 +326,8 @@ car le cycle repart de la dernière source choisie, pas de celle qui joue.
 
 #### Garde-voiture : pré-climatisation, mode chien, surveillance
 Le raccourci **Garde-voiture** (#130, #180) garde la voiture **allumée et verrouillée** pendant
-votre absence. Sa fenêtre démarre toujours sur « Maintenant » ; la voiture doit être en P.
+votre absence. Sa fenêtre démarre toujours sur « Maintenant » et se règle au toucher (le joystick
+garde ses fonctions habituelles) ; la voiture doit être en P, vérifié avant toute chose.
 
 - **Pré-climatisation** — *Maintenant* : la clim tourne 15 min, 30 min, 1 h ou 2 h. *À une
   heure* : premier cycle, durée d'un cycle, nombre de cycles (5 au plus) et pause entre deux ; la
@@ -321,11 +336,27 @@ votre absence. Sa fenêtre démarre toujours sur « Maintenant » ; la voiture d
 - **Mode chien** (*Maintenant* seulement) : clim pendant 2 h, écran jamais atténué, avec en grand
   un message rassurant pour les passants, la consigne, la température extérieure, la durée et la
   batterie. Un avertissement rappelle de vérifier régulièrement que le mode tourne toujours.
-- **Mode Surveillance** : proposé seulement si une application caméra 360°
+- **Mode Surveillance** : il faut une application dashcam
   ([MG4-360-Camera-App](https://github.com/jamakr4/MG4-360-Camera-App) ou
-  [MG4_Dashcam](https://github.com/Tommasov/MG4_Dashcam)) est installée. La voiture reste allumée
-  et verrouillée pour que les caméras filment, **clim coupée** (environ 0,2 kW), jusqu'à 2 h ;
-  l'écran affiche un avertissement rouge fixe « SURVEILLANCE CAMÉRA ».
+  [MG4_Dashcam](https://github.com/Tommasov/MG4_Dashcam)) — sans elle, *Démarrer* est grisé. La
+  voiture reste allumée et verrouillée, **clim coupée** (environ 0,2 kW), jusqu'à 2 h ; l'écran
+  affiche un avertissement rouge fixe « SURVEILLANCE CAMÉRA », avec une pastille **REC** en haut à
+  droite et la durée filmée (grise et figée quand la caméra d'origine de la voiture prend la main).
+
+**Enregistrement par l'appli caméra** (#180) : avec une version pilotable de MG4-360-Camera-App,
+MG4Control lance l'enregistrement continu dès *Démarrer* (durée de la surveillance plus le décompte,
+120 min au plus) et l'arrête à toutes les fins. La page *Garde-voiture* a une carte **Caméra de
+surveillance** : l'appli détectée (relue à chaque affichage de l'onglet), l'interrupteur *Lancer
+l'enregistrement automatiquement* (activé par défaut), l'emplacement (celui de l'appli : un dossier
+« surveillance » sur la clé USB si elle est branchée, sinon en mémoire interne) et *Tester la clé
+USB*, avec l'espace libre et une durée d'enregistrement estimée. Dans la fenêtre, une ligne dit que
+l'appli filmera et la place sur la clé ; sinon un bandeau prévient au-dessus des boutons :
+enregistrement automatique coupé, appli que MG4Control ne sait pas piloter, ou version trop
+ancienne — l'enregistrement se lance alors à la main dans l'appli. Un échec d'enregistrement
+n'arrête pas la surveillance. L'état renvoyé par l'appli ne sert qu'à l'affichage. Toute appli
+caméra peut s'y brancher en déclarant pour `com.mg4.control.action.SHORTCUT` deux actions
+`<préfixe>.action.START_CONTINUOUS` et `STOP_CONTINUOUS` (contrat détaillé dans
+[l'issue #96 de MG4-360-Camera-App](https://github.com/jamakr4/MG4-360-Camera-App/issues/96)).
 
 Sur ces trois écrans, la ligne d'état donne aussi la puissance tirée de la batterie, en watts (#210).
 
@@ -471,16 +502,20 @@ colonne, façon Home Assistant. Les automatisations ci-dessus restent à part, t
 > Vos retours sont les bienvenus.
 
 - **Quand** : une valeur du véhicule qui devient vraie ou qui change, une heure, toutes les X
-  minutes, lever ou coucher du soleil (± décalage), démarrage de l'écran, porte avant ouverte (là
-  où la voiture la signale), charge, prise, verrouillage, téléphone, lancement manuel…
+  minutes, lever ou coucher du soleil (± décalage), démarrage de l'écran, passage en READY ou sortie
+  de READY, passage en P ou en D, porte avant ouverte ou portes avant refermées (là où la voiture le
+  signale), charge, prise, verrouillage, téléphone connecté ou déconnecté, changement de profil
+  actif, lancement manuel…
 - **Et si** : groupes *Toutes* / *Au moins une* / *Aucune*, imbriqués sur trois niveaux — heure,
   jours, saison, hasard, variables, lieux (GPS) et une soixantaine de valeurs du véhicule et
   d'Android (récupération, ADAS, clim, sièges, verrouillage, luminosité, volume, Wi-Fi, Bluetooth,
   Android Auto / CarPlay, média, appel, soleil levé…)
-- **Alors** : réglages du véhicule et de la clim, luminosité, volume, média, vitres, son, ouvrir
-  une appli, raccourci perso, lancer ou activer une autre automatisation, variables, attendre,
-  attendre que, Si / Sinon, Répéter, question Oui / Non en bandeau, message vocal, navigation ;
-  Wi-Fi, Bluetooth et point d'accès à l'essai
+- **Alors** : réglages du véhicule et de la clim (aussi à la valeur d'une variable, `$NOM`),
+  luminosité, volume, média (dont lecture et pause), vitres, son (bip avec son volume, ou vos sons
+  importés d'une clé USB, 12 au plus, au volume choisi), ouvrir une appli, raccourci perso, lancer,
+  activer ou arrêter une autre automatisation, retenir une valeur dans une variable, ajouter ou
+  retirer, attendre, attendre que, Si / Sinon, Répéter, question Oui / Non en bandeau, message vocal,
+  navigation, données en direct vers ABRP ; Wi-Fi, Bluetooth et point d'accès à l'essai
 - **Options** : que faire si elle est redéclenchée avant d'avoir fini (laisser finir ou
   recommencer), anti-rebond, seulement en READY
 
@@ -489,10 +524,26 @@ liste s'ouvre en grand, avec catégories, recherche et « Récents ». Les valeu
 boutons − et +, sans clavier. Rien n'est enregistré avant *Enregistrer*, et *Tester* lance la
 version affichée. Des **modèles** servent de départ, dont l'arrêt du volant ou d'un siège chauffant
 après un temps (#173) et la luminosité selon le soleil (#198). La page garde 30 règles au plus, un
-interrupteur général, l'historique des 20 dernières exécutions avec leur journal, les variables et
-les lieux enregistrés ; export et import en JSON (Téléchargements, clé USB ou autre dossier — une
-règle importée arrive coupée). Une règle se lance aussi depuis une touche ou une bulle (*Lancer une
-automatisation*).
+interrupteur général, l'historique des 20 dernières exécutions avec leur journal, les variables
+(renommées partout d'un coup, modifiées ou supprimées) et les lieux (renommés, agrandis, déplacés à
+la position actuelle ou supprimés) ; export et import en JSON (Téléchargements, clé USB ou autre
+dossier — une règle importée arrive coupée). Une règle se lance aussi depuis une touche ou une bulle
+(*Lancer une automatisation*). Chaque menu ⋮ propose **Copier** et **Couper** ; *Coller* n'apparaît
+que là où l'élément a sa place (type de section, profondeur) et refuse une automatisation qui se
+lancerait elle-même. La carte d'une règle résume ce que fait un bloc Si / Sinon (« si X → A ;
+sinon → B ») ; le sélecteur *Toutes / Au moins une / Aucune* s'intitule « Conditions remplies : » et
+n'apparaît qu'à partir de deux conditions.
+
+**Données en direct vers ABRP** (#188, version en ligne seulement) : l'action *ABRP : données en
+direct* envoie à A Better Route Planner le niveau de batterie, la puissance, la vitesse, l'état de
+charge et, si vous l'acceptez, la position, pour un compte choisi ; la même action, réglée sur
+*Arrêter l'envoi*, le coupe.
+Les comptes se gèrent dans *Mes automatisations › Comptes ABRP* : saisis à l'écran, ou importés du
+fichier `mg4control_abrp.txt` d'une clé USB (un fichier modèle commenté est fourni, avec la clé API
+par compte ou commune). Cadence réglable en roulant, en charge et à l'arrêt. La clé partagée de
+MG4Control est limitée par ABRP à 2 envois par seconde pour tous les utilisateurs réunis : un
+avertissement le rappelle tant qu'elle est choisie et renvoie vers une clé personnelle gratuite. Le
+modèle **ABRP selon le profil** suit le profil actif.
 
 La voiture n'est relevée (toutes les 2 s) que si une règle active en a besoin, et une règle ne part
 que sur un « vrai » franc : une valeur illisible ne déclenche rien, et « devient vrai » exige
@@ -542,7 +593,9 @@ grossiers à cette échelle) ; un point est gardé par relevé de 10 s, avec l'a
 **Export CSV** (#206) : *Exporter* écrit trois fichiers prêts pour un tableur — trajets, recharges
 et portions de trajet par profil — dans Téléchargements/MG4Control, sur une clé USB (dossier
 MG4Control) ou dans un dossier au choix. La dernière destination est retenue, un fichier du même nom
-est remplacé, et chaque fichier est écrit jusqu'au support avant d'annoncer « Enregistré ».
+est remplacé, et chaque fichier est écrit jusqu'au support avant d'annoncer « Enregistré ». La
+colonne `odometer_km` donne le kilométrage total de la voiture à la fin du trajet (vide pour un trajet
+enregistré avant cette version).
 
 D'où viennent les chiffres :
 
@@ -700,9 +753,10 @@ Statistiques.
 
 ### Réglages
 Écran organisé en **quatre onglets** :
-- **Langues** : français, anglais, allemand, espagnol, italien, portugais, turc — au premier
-  lancement, MG4Control prend la langue de la voiture si elle est traduite (les pop-ups affichés
-  avant la première ouverture aussi), sinon il la demande dans une fenêtre à sept grandes tuiles
+- **Langues** : français, anglais, allemand, espagnol, italien, portugais, turc et polonais — au
+  premier lancement, MG4Control prend la langue de la voiture si elle est traduite (les pop-ups
+  affichés avant la première ouverture aussi), sinon il la demande dans une fenêtre à huit grandes
+  tuiles
 - **Interface** : écran affiché au démarrage, apparence (auto / sombre / clair), taille du texte
   (standard / grand / très grand), **plein écran** (barres d'état et de navigation masquées,
   désactivé par défaut), **délai avant la fermeture des pop-ups** (1 à 60 s, 10 par défaut),
@@ -731,7 +785,7 @@ gros boutons, et plus aucune saisie au clavier.
 |---|---|
 | Sélecteur de profils | Plein cadre : une carte par profil (mode de conduite en couleur, profil en cours marqué « Actif »), luminosité (Nuit / Moyen / Jour et curseur), Ouvrir MG4Control, Garde-voiture, Éteindre la voiture |
 | Pop-up HVAC | Plein cadre : chauffages, température et ventilation au joystick, AUTO et son débit, A/C, ECO et recirculation |
-| Pop-up Réglages rapides | Plein cadre : les tuiles choisies, les valeurs de la tuile touchée dessous |
+| Pop-up Réglages rapides | Plein cadre : les tuiles choisies, les valeurs de la tuile touchée dans une bulle accrochée à elle |
 | Garde-voiture | Fenêtre de lancement (Maintenant / À une heure, mode chien, surveillance), puis écran de suivi plein cadre |
 | Pop-up de charge | Plein cadre : niveau et limite de charge, courbe depuis le début, heure de fin, puissance, énergie, autonomie gagnée, coût, durée |
 | Confirmation d'une automatisation | Bandeau en bas de l'écran : mesure, seuil, profil proposé, NON / OUI — ou la question Oui / Non d'une de vos automatisations |
@@ -1016,6 +1070,8 @@ MG4Control/
 │   │   │   ├── TripCurve.kt           # Graphique d'un trajet : points relevés, barres choisies à l'affichage
 │   │   │   ├── StatsCsv.kt            # Export CSV : trajets, recharges, portions par profil
 │   │   │   ├── QuickSettings.kt       # Pop-up Réglages rapides : tuiles choisies
+│   │   │   ├── DashcamRemoteModel.kt  # Appli caméra : contrat, détection, compteur REC, place sur la clé
+│   │   │   ├── AbrpTelemetry.kt       # ABRP : relevé envoyé et cadence
 │   │   │   ├── BubbleColors.kt        # Boutons flottants : pastilles de couleur, contraste du texte
 │   │   │   ├── PowerSmoother.kt       # Garde-voiture : puissance tirée de la batterie, lissée
 │   │   │   ├── CustomRule.kt          # Mes automatisations : modèle (+ CustomRuleLogic, CustomRuleText, CustomRuleTemplates)
@@ -1048,6 +1104,7 @@ MG4Control/
 │   │   ├── shortcut/
 │   │   │   ├── RegenCycle.kt          # Séquence du cycle de régénération choisie par l'utilisateur
 │   │   │   ├── DriveModeCycle.kt      # Modes retenus du cycle des modes de conduite
+│   │   │   ├── OnePedalReturn.kt      # 1 Pédale au second appui : « Comme avant » ou niveau fixe
 │   │   │   └── ShortcutAction.kt      # Catalogue des actions, partagé par les deux systèmes
 │   │   │
 │   │   ├── bluetooth/
@@ -1067,6 +1124,8 @@ MG4Control/
 │   │   │   ├── CustomRules.kt              # Mes automatisations : moteur, relevés, déclencheurs
 │   │   │   ├── CustomRuleStore.kt          # Mes automatisations : règles enregistrées (30 au plus)
 │   │   │   ├── RuleServices.kt             # Mes automatisations : écritures, Android, position
+│   │   │   ├── AbrpStore.kt                # Comptes ABRP, clé API, import du fichier modèle
+│   │   │   ├── AbrpStream.kt               # Envoi continu vers ABRP (cadence, journal résumé)
 │   │   │   ├── AcKeepOff.kt                # Garder l'A/C coupé quand la consigne change
 │   │   │   └── ClimateAutomationDecision.kt
 │   │   │
@@ -1080,6 +1139,9 @@ MG4Control/
 │   │   │   ├── WheelButtonsPage.kt    # Boutons physiques : une carte par touche, Court / Long / Double
 │   │   │   ├── QuickSettingsPage.kt   # Page Réglages rapides : choix et ordre des tuiles
 │   │   │   ├── CustomRulesPage.kt     # Mes automatisations : liste, historique, variables, lieux
+│   │   │   ├── AbrpDialogs.kt         # Comptes ABRP : liste, fenêtre d'un compte, fichier modèle
+│   │   │   ├── DashcamUi.kt           # Textes du test de la clé USB de l'appli caméra
+│   │   │   ├── FlowRow.kt             # Rangée qui passe à la ligne (puces des Réglages rapides, ABRP)
 │   │   │   ├── CustomRuleEditFragment.kt # Éditeur Quand / Et si / Alors (une colonne)
 │   │   │   ├── Assistant.kt           # Fenêtre à étapes de l'éditeur (Retour, chemin, grande fenêtre)
 │   │   │   ├── RuleValueDialogs.kt    # Valeurs d'une règle, sans clavier
@@ -1115,6 +1177,7 @@ MG4Control/
 │   │   │   ├── ChargeMonitor.kt       # Suivi de charge en arrière-plan (pop-up et statistiques)
 │   │   │   ├── ChargePopupOverlay.kt  # Pop-up de charge (plein cadre)
 │   │   │   ├── PreClimate.kt          # Garde-voiture : programme, verrouillage, arrêts (+ fenêtre et écran de suivi)
+│   │   │   ├── DashcamRemote.kt       # Surveillance : START / STOP de l'appli caméra, état REC, test de la clé
 │   │   │   ├── FloatingButtonsOverlay.kt # Bulles par-dessus les applications (+ FloatingButtonState, FloatingHalo)
 │   │   │   ├── CustomShortcutRunner.kt # Exécution d'un raccourci perso
 │   │   │   ├── QuickSettingsOverlay.kt # Pop-up Réglages rapides (+ QuickTiles, lecture et écriture des tuiles)
@@ -1138,7 +1201,8 @@ MG4Control/
 │   │   │   ├── NavSide.kt             # Côté du menu : Auto / Gauche / Droite
 │   │   │   ├── ButtonLines.kt         # Libellés de bouton sur deux lignes, sinon « … »
 │   │   │   ├── FirmwareHelper.kt      # Lecture version firmware complète (async)
-│   │   │   ├── LocaleHelper.kt        # Gestion de la langue (7 langues) et de la taille du texte
+│   │   │   ├── LocaleHelper.kt        # Gestion de la langue (8 langues) et de la taille du texte
+│   │   │   ├── DashcamApp.kt          # Garde-voiture : appli caméra pilotable, ancienne ou absente
 │   │   │   ├── ThemeHelper.kt         # Thème auto / sombre / clair
 │   │   │   └── DataUsage.kt           # Consommation de données (interface Ethernet)
 │   │   │
@@ -1329,7 +1393,8 @@ maître) ou en pied de page (Annuler / Enregistrer).
 | Réglages | Langues · Interface · Réglages avancés · Infos |
 
 Un onglet dont la page n'a plus aucune section visible sur le firmware courant est **masqué** —
-mieux vaut pas d'onglet qu'un onglet qui ouvre une page vide.
+mieux vaut pas d'onglet qu'un onglet qui ouvre une page vide. Chaque écran rouvre le dernier
+sous-onglet affiché, le temps de la session.
 
 ### Dimensionnement
 Tailles reprises de DiAuto-MG4, calées sur la lisibilité au volant : titres **22sp**, textes
@@ -1398,7 +1463,7 @@ propose que le type (*Broadcast receiver*) et la chaîne d'action.
 
 | Action | Effet |
 |---|---|
-| `com.mg4.control.action.ONE_PEDAL` | Bascule 1 pédale ↔ niveau de repli |
+| `com.mg4.control.action.ONE_PEDAL` | Bascule 1 Pédale ; au retour, le niveau d'avant ou le niveau choisi |
 | `com.mg4.control.action.ENERGY_SAVING_TOGGLE` | Économie d'énergie |
 | `com.mg4.control.action.PROFILE_PICKER` | Ouvre le sélecteur de profil à l'écran |
 | `com.mg4.control.action.OPEN_APP` | Ouvre MG4Control |
@@ -1795,9 +1860,16 @@ At the top of the page, **"Settings for:"** picks the profile whose keys you are
 (advanced capture on); a press with nothing of its own for that profile shows "Like all: …", the
 action set for all profiles.
 
-The action settings — **One Pedal fallback**, **ADAS cycle notches**, **regeneration cycle**,
+The action settings — **One Pedal return**, **ADAS cycle notches**, **regeneration cycle**,
 **mode cycle**, **profile cycle**, **source cycle**, **Quick settings** — each get their own pill,
 which appears as soon as the action is assigned to a key or a floating button.
+
+**One Pedal** (#226): the first press turns One Pedal on, the second turns it off. By default
+("As before"), MG4Control only turns One Pedal off and the car brings back the regeneration level
+it had before by itself; the *1 Pedal* pill lets you pick a fixed level instead — Low, Medium,
+High or Adaptive. A level chosen in an earlier version goes back to "As before", and Off is no
+longer offered. One Pedal's state is read from the regeneration level **or** from the One Pedal
+setting itself, for the shortcut, the bubbles and the automations.
 
 The regeneration cycle is composed on its page: tapping a mode appends it **at the end of the
 cycle**, tapping it again removes it, and the order of your taps is the order of the cycle. The five
@@ -1838,8 +1910,13 @@ sensitivity, cruise / limiter (ACC, TJA or ICA and the limiter, mutually exclusi
 a single tile), forward collision, traffic signs, overspeed alert, automatic high beam,
 regeneration (One Pedal included), drive mode, energy saving, battery heating, A/C,
 recirculation, defrosters, seats, heated steering wheel, brightness. By default: lane departure,
-cruise / limiter, regeneration, battery heating and drive mode. Tapping a tile opens its values
-below; the choice goes to the car straight away, then is read back. A setting the car only
+cruise / limiter, regeneration, battery heating and drive mode. A two-value tile toggles with
+one tap (⇄ mark, teal; a Yes / No tile that is on takes the accent colour); the others open their
+values in a **bubble attached to the tile** (above, or below when there is no room), and chips on
+the *Quick settings* page choose which values it offers (at least two, all by default). The choice
+goes to the car straight away, then is read back. The right joystick moves between the tiles and
+the close button, and works the bubble (left / right, centre click to apply, up / down to close
+it); a long press on the key that opened it closes it. A setting the car only
 accepts when stopped is greyed out while driving. The pop-up closes with its cross, with a second
 press on the shortcut, or by itself after the pop-up delay, restarted on every touch.
 
@@ -1885,7 +1962,8 @@ the one playing.
 
 #### Car keeper: pre-conditioning, dog mode, surveillance
 The **Car keeper** shortcut (#130, #180) keeps the car **on and locked** while you are away. Its
-window always starts on "Now"; the car must be in P.
+window always starts on "Now" and is set by touch (the joystick keeps its usual functions); the
+car must be in P, checked before anything else.
 
 - **Pre-conditioning** — *Now*: the climate runs for 15 min, 30 min, 1 h or 2 h. *At a time*:
   first cycle, cycle length, number of cycles (5 at most) and pause between them; the climate stays
@@ -1894,11 +1972,27 @@ window always starts on "Now"; the car must be in P.
 - **Dog mode** (*Now* only): climate for 2 h, screen never dimmed, showing in large type a
   reassuring message for passers-by, the setpoint, the outside temperature, the running time and
   the battery. A warning reminds you to check regularly that the mode is still running.
-- **Surveillance mode**: only offered when a 360° camera app
+- **Surveillance mode**: a dashcam app is needed
   ([MG4-360-Camera-App](https://github.com/jamakr4/MG4-360-Camera-App) or
-  [MG4_Dashcam](https://github.com/Tommasov/MG4_Dashcam)) is installed. The car stays on and locked
-  so the cameras can record, **climate off** (about 0.2 kW), for up to 2 h; the screen shows a fixed
-  red "CAMERA SURVEILLANCE" warning.
+  [MG4_Dashcam](https://github.com/Tommasov/MG4_Dashcam)) — without one, *Start* is greyed out. The
+  car stays on and locked, **climate off** (about 0.2 kW), for up to 2 h; the screen shows a fixed
+  red "CAMERA SURVEILLANCE" warning, with a **REC** badge in the top-right corner and the recorded
+  time (grey and frozen while the car's own camera takes over).
+
+**Recording by the camera app** (#180): with a controllable version of MG4-360-Camera-App,
+MG4Control starts continuous recording as soon as you press *Start* (surveillance duration plus the
+countdown, 120 min at most) and stops it however surveillance ends. The *Car keeper* page has a
+**Surveillance camera** card: the detected app (checked again each time the tab is shown), the
+*Start recording automatically* switch (on by default), the location (the app's own: a
+"surveillance" folder on the USB drive when one is plugged in, otherwise internal storage) and
+*Test USB drive*, with the free space and an estimated recording time. In the window, a line says
+the app will record and the space on the drive; otherwise a banner warns above the buttons:
+automatic recording off, an app MG4Control can't control, or a version too old — recording is then
+started by hand in the app. A recording failure doesn't stop the surveillance. The state sent back
+by the app is only used for display. Any camera app can plug in by declaring, for
+`com.mg4.control.action.SHORTCUT`, two actions `<prefix>.action.START_CONTINUOUS` and
+`STOP_CONTINUOUS` (full contract in
+[MG4-360-Camera-App issue #96](https://github.com/jamakr4/MG4-360-Camera-App/issues/96)).
 
 On these three screens, the status line also gives the power drawn from the battery, in watts (#210).
 
@@ -2038,16 +2132,19 @@ of Home Assistant. The automations above stay separate, as they are.
 > feedback is welcome.
 
 - **When**: a vehicle value becoming true or changing, a time, every X minutes, sunrise or sunset
-  (± offset), screen start-up, front door opened (where the car reports it), charging, plug,
-  lock, phone, manual run…
+  (± offset), screen start-up, going READY or leaving READY, shifting to P or D, front door opened
+  or front doors closed (where the car reports it), charging, plug, lock, phone connected or
+  disconnected, active profile changing, manual run…
 - **And if**: *All* / *At least one* / *None* groups, nested three levels deep — time, days,
   season, random, variables, places (GPS) and some sixty vehicle and Android values
   (regeneration, ADAS, climate, seats, lock, brightness, volume, Wi-Fi, Bluetooth, Android Auto /
   CarPlay, media, call, sun up…)
-- **Then**: vehicle and climate settings, brightness, volume, media, windows, sound, open an app,
-  custom shortcut, run or enable another automation, variables, wait, wait until, If / Else,
-  Repeat, Yes / No question in a banner, voice message, navigation; Wi-Fi, Bluetooth and hotspot
-  on trial
+- **Then**: vehicle and climate settings (also to a variable's value, `$NAME`), brightness,
+  volume, media (including play and pause), windows, sound (beep with its volume, or your own
+  sounds imported from a USB drive, 12 at most, at the chosen volume), open an app, custom
+  shortcut, run, enable or stop another automation, remember a value in a variable, add or
+  subtract, wait, wait until, If / Else, Repeat, Yes / No question in a banner, voice message,
+  navigation, live data to ABRP; Wi-Fi, Bluetooth and hotspot on trial
 - **Options**: what to do when it is triggered again before it has finished (let it finish or
   restart), debounce, only in READY
 
@@ -2056,9 +2153,22 @@ with categories, search and "Recent". Values are set with − and + buttons, wit
 Nothing is stored until *Save*, and *Test* runs the version on screen. **Templates** give a
 starting point, including switching the heated steering wheel or a seat off after a while (#173)
 and brightness from the sun (#198). The page keeps 30 rules at most, a master switch, the history
-of the last 20 runs with their log, the saved variables and places; JSON export and import
+of the last 20 runs with their log, variables (renamed everywhere at once, changed or deleted) and
+places (renamed, resized, moved to the current position or deleted); JSON export and import
 (Downloads, USB drive or another folder — an imported rule arrives switched off). A rule can also
-be run from a key or a bubble (*Run an automation*).
+be run from a key or a bubble (*Run an automation*). Every ⋮ menu offers **Copy** and **Cut**;
+*Paste* only shows where the item fits (section type, nesting depth) and refuses an automation that
+would start itself. A rule's card sums up what an If / Else block does ("if X → A; else → B"); the
+*All / At least one / None* selector reads "Conditions met:" and only shows from two conditions.
+
+**Live data to ABRP** (#188, online version only): the *ABRP: live data* action sends A Better
+Route Planner the battery level, power, speed, charging state and, if you allow it, the position,
+for a chosen account; the same action, set to *Stop sending*, turns it off. Accounts are managed in *My automations ›
+ABRP accounts*: typed on screen, or imported from the `mg4control_abrp.txt` file on a USB drive (a
+commented template file is provided, with the API key per account or shared). Adjustable cadence
+while driving, charging and parked. MG4Control's shared key is limited by ABRP to 2 sends per second
+for all users together: a warning says so while it is selected and points to a free personal key.
+The **ABRP by profile** template follows the active profile.
 
 The car is only read (every 2 s) when an active rule needs it, and a rule only fires on a clear
 "true": an unreadable value triggers nothing, and "becomes true" requires having seen "false"
@@ -2105,7 +2215,8 @@ altitude (about 5 KB per hour). A trip recorded before 2.7.0 has no graph.
 **CSV export** (#206): *Export* writes three spreadsheet-ready files — trips, charges and trip
 stretches per profile — to Downloads/MG4Control, a USB drive (MG4Control folder) or a folder of your
 choice. The last destination is remembered, a file with the same name is replaced, and each file is
-flushed to the storage before "Saved" is shown.
+flushed to the storage before "Saved" is shown. The `odometer_km` column gives the car's total
+mileage at the end of the trip (empty for a trip recorded before this version).
 
 Where the figures come from:
 
@@ -2256,9 +2367,9 @@ charge into the Statistics tab.
 
 ### Settings
 Screen organised into **four tabs**:
-- **Languages**: French, English, German, Spanish, Italian, Portuguese, Turkish — on first launch,
-  MG4Control takes the car's language if it is translated (pop-ups shown before the app is first
-  opened too), otherwise it asks in a window with seven large tiles
+- **Languages**: French, English, German, Spanish, Italian, Portuguese, Turkish and Polish — on
+  first launch, MG4Control takes the car's language if it is translated (pop-ups shown before the
+  app is first opened too), otherwise it asks in a window with eight large tiles
 - **Interface**: screen shown at startup, appearance (auto / dark / light), text size (standard /
   large / extra large), **full screen** (status and navigation bars hidden, off by default),
   **pop-up closing delay** (1 to 60 s, 10 by default), **charging pop-up** (off by default),
@@ -2286,7 +2397,7 @@ no more keyboard input.
 |---|---|
 | Profile picker | Full frame: one card per profile (drive mode in colour, current profile marked "Active"), brightness (Night / Medium / Day and a slider), Open MG4Control, Car keeper, Power the car off |
 | HVAC pop-up | Full frame: heating, temperature and fan speed on the joystick, AUTO and its airflow, A/C, ECO and recirculation |
-| Quick settings pop-up | Full frame: the chosen tiles, the values of the tapped tile below |
+| Quick settings pop-up | Full frame: the chosen tiles, the values of the tapped tile in a bubble attached to it |
 | Car keeper | Start window (Now / At a time, dog mode, surveillance), then a full-frame follow-up screen |
 | Charging pop-up | Full frame: level and charge limit, curve since the start, end time, power, energy, range gained, cost, duration |
 | Automation confirmation | Banner at the bottom of the screen: reading, threshold, proposed profile, NO / YES — or the Yes / No question of one of your automations |
@@ -2563,6 +2674,8 @@ MG4Control/
 │   │   │   ├── TripCurve.kt           # Trip graph: recorded points, bars chosen when drawing
 │   │   │   ├── StatsCsv.kt            # CSV export: trips, charges, stretches per profile
 │   │   │   ├── QuickSettings.kt       # Quick settings pop-up: chosen tiles
+│   │   │   ├── DashcamRemoteModel.kt  # Camera app: contract, detection, REC clock, space on the drive
+│   │   │   ├── AbrpTelemetry.kt       # ABRP: reading sent and cadence
 │   │   │   ├── BubbleColors.kt        # Floating buttons: colour swatches, text contrast
 │   │   │   ├── PowerSmoother.kt       # Car keeper: smoothed power drawn from the battery
 │   │   │   ├── CustomRule.kt          # My automations: model (+ CustomRuleLogic, CustomRuleText, CustomRuleTemplates)
@@ -2595,6 +2708,7 @@ MG4Control/
 │   │   ├── shortcut/
 │   │   │   ├── RegenCycle.kt          # User-composed regeneration cycle sequence
 │   │   │   ├── DriveModeCycle.kt      # Modes kept in the drive mode cycle
+│   │   │   ├── OnePedalReturn.kt      # One Pedal second press: "As before" or a fixed level
 │   │   │   └── ShortcutAction.kt      # Action catalogue, shared by both systems
 │   │   │
 │   │   ├── bluetooth/
@@ -2614,6 +2728,8 @@ MG4Control/
 │   │   │   ├── CustomRules.kt              # My automations: engine, readings, triggers
 │   │   │   ├── CustomRuleStore.kt          # My automations: saved rules (30 at most)
 │   │   │   ├── RuleServices.kt             # My automations: writes, Android, position
+│   │   │   ├── AbrpStore.kt                # ABRP accounts, API key, template file import
+│   │   │   ├── AbrpStream.kt               # Continuous sending to ABRP (cadence, summarised log)
 │   │   │   ├── AcKeepOff.kt                # Keep the A/C off when the setpoint changes
 │   │   │   └── ClimateAutomationDecision.kt
 │   │   │
@@ -2627,6 +2743,9 @@ MG4Control/
 │   │   │   ├── WheelButtonsPage.kt    # Hardware buttons: one card per key, Short / Long / Double
 │   │   │   ├── QuickSettingsPage.kt   # Quick settings page: choice and order of the tiles
 │   │   │   ├── CustomRulesPage.kt     # My automations: list, history, variables, places
+│   │   │   ├── AbrpDialogs.kt         # ABRP accounts: list, account window, template file
+│   │   │   ├── DashcamUi.kt           # Texts of the camera app's USB drive test
+│   │   │   ├── FlowRow.kt             # Wrapping row (Quick settings chips, ABRP)
 │   │   │   ├── CustomRuleEditFragment.kt # When / And if / Then editor (single column)
 │   │   │   ├── Assistant.kt           # The editor's step window (Back, path, large window)
 │   │   │   ├── RuleValueDialogs.kt    # A rule's values, without a keyboard
@@ -2662,6 +2781,7 @@ MG4Control/
 │   │   │   ├── ChargeMonitor.kt       # Background charge tracking (pop-up and statistics)
 │   │   │   ├── ChargePopupOverlay.kt  # Charging pop-up (full frame)
 │   │   │   ├── PreClimate.kt          # Car keeper: program, locking, stops (+ window and follow-up screen)
+│   │   │   ├── DashcamRemote.kt       # Surveillance: camera app START / STOP, REC state, drive test
 │   │   │   ├── FloatingButtonsOverlay.kt # Bubbles on top of every app (+ FloatingButtonState, FloatingHalo)
 │   │   │   ├── CustomShortcutRunner.kt # Runs a custom shortcut
 │   │   │   ├── QuickSettingsOverlay.kt # Quick settings pop-up (+ QuickTiles, reading and writing the tiles)
@@ -2685,7 +2805,8 @@ MG4Control/
 │   │   │   ├── NavSide.kt             # Menu side: Auto / Left / Right
 │   │   │   ├── ButtonLines.kt         # Button labels on two lines, otherwise "…"
 │   │   │   ├── FirmwareHelper.kt      # Full firmware version string reader (async)
-│   │   │   ├── LocaleHelper.kt        # Language management (7 languages) and text size
+│   │   │   ├── LocaleHelper.kt        # Language management (8 languages) and text size
+│   │   │   ├── DashcamApp.kt          # Car keeper: camera app controllable, outdated or missing
 │   │   │   ├── ThemeHelper.kt         # Auto / dark / light theme
 │   │   │   └── DataUsage.kt           # Data usage (Ethernet interface)
 │   │   │
@@ -2868,7 +2989,7 @@ to no sub-tab stays in a persistent header (profile name, master switch) or foot
 | Settings | Languages · Interface · Advanced · Info |
 
 A tab whose page has no visible section left on the current firmware is **hidden** — better no tab
-than a tab opening an empty page.
+than a tab opening an empty page. Every screen reopens the last sub-tab shown, for the session.
 
 ### Sizing
 Sizes taken from DiAuto-MG4, tuned for readability while driving: titles **22sp**, text
@@ -2935,7 +3056,7 @@ the type (*Broadcast receiver*) and the action string.
 
 | Action | Effect |
 |---|---|
-| `com.mg4.control.action.ONE_PEDAL` | Toggle 1-pedal ↔ fallback regen level |
+| `com.mg4.control.action.ONE_PEDAL` | Toggle One Pedal; when turned off, the previous level or the chosen one |
 | `com.mg4.control.action.ENERGY_SAVING_TOGGLE` | Energy saving |
 | `com.mg4.control.action.PROFILE_PICKER` | Show the on-screen profile picker |
 | `com.mg4.control.action.OPEN_APP` | Open MG4Control |
