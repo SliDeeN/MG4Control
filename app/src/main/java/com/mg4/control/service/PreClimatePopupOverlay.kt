@@ -56,8 +56,6 @@ object PreClimatePopupOverlay {
     private const val FAN_MAX_REPLI = 7
     /** Durées non choisissables en mode chien. */
     private const val ALPHA_GRISE = 0.35f
-    /** Hauteur ajoutée à la carte quand le bandeau caméra de la surveillance est là (variante B). */
-    private const val BANDEAU_DP = 76f
 
     private val handler = Handler(Looper.getMainLooper())
     private val lecture = Executors.newSingleThreadExecutor()
@@ -212,8 +210,7 @@ object PreClimatePopupOverlay {
         val bandeauIcone: ImageView = racine.findViewById(R.id.preclim_surv_cam_banner_icon)
         val bandeauTitre: TextView = racine.findViewById(R.id.preclim_surv_cam_banner_title)
         val bandeauTexte: TextView = racine.findViewById(R.id.preclim_surv_cam_banner_text)
-        /** La carte elle-même (premier enfant du fond) : elle grandit avec le bandeau. */
-        val carte: View = (racine as android.view.ViewGroup).getChildAt(0)
+        val texteClimCoupee: View = racine.findViewById(R.id.preclim_surv_off_text)
         val avertChien: TextView = racine.findViewById(R.id.preclim_dog_warning)
         val annuler: TextView = racine.findViewById(R.id.preclim_cancel)
         val demarrer: TextView = racine.findViewById(R.id.preclim_start)
@@ -435,9 +432,10 @@ object PreClimatePopupOverlay {
 
     /**
      * Surveillance et appli caméra (2026-11-08). Appli pilotable et enregistrement auto : une
-     * ligne sous « Clim coupée » (point rouge, place sur la clé). Sinon un bandeau sur toute la
-     * largeur au-dessus des boutons (variante B) : orange quand l'enregistrement se lance à la
-     * main, rouge sans appli — Démarrer est alors grisé. La carte grandit de [BANDEAU_DP].
+     * ligne sous « Clim coupée » (point rouge, place sur la clé). Sinon un avertissement dans la
+     * colonne de droite, à la place du texte « 0,2 kW » (proposition 1, 2026-11-08 — le bandeau
+     * pleine largeur faisait déborder la carte de l'écran) : orange quand l'enregistrement se lance
+     * à la main, rouge sans appli — Démarrer est alors grisé.
      */
     private fun peindreCamera(v: Vues, surv: Boolean) {
         val pilotable = camera as? DashcamApp.Detection.Pilotable
@@ -479,17 +477,9 @@ object PreClimatePopupOverlay {
             v.bandeauIcone.setImageResource(if (bandeau.third) R.drawable.ic_preclim_cctv else R.drawable.ic_dialog_warning)
             v.bandeauIcone.imageTintList = ColorStateList.valueOf(vif)
         }
-        if ((v.bandeauCamera.visibility == View.VISIBLE) != visible) {
-            v.bandeauCamera.visibility = if (visible) View.VISIBLE else View.GONE
-            // La place vient de la carte, pas des colonnes : elle grandit tant que le bandeau est là.
-            // Carte déjà réduite pour tenir dans une petite fenêtre : sa taille est figée, on
-            // laisse les colonnes céder la place.
-            if (v.carte.scaleY >= 1f) {
-                v.carte.layoutParams = v.carte.layoutParams.apply {
-                    height = v.dp(HAUTEUR_DP + if (visible) BANDEAU_DP else 0f)
-                }
-            }
-        }
+        v.bandeauCamera.visibility = if (visible) View.VISIBLE else View.GONE
+        // La ligne du bas dit déjà « clim coupée · écran allumé » : le texte « 0,2 kW » cède sa place.
+        v.texteClimCoupee.visibility = if (visible) View.GONE else View.VISIBLE
     }
 
     /** Bouton à bascule du bas (mode chien, surveillance) : cerclé de [vif] quand il est choisi. */
