@@ -37,6 +37,7 @@ import com.mg4.control.shortcut.DriveModeCycle
 import com.mg4.control.model.DriveMode
 import com.mg4.control.shortcut.ProfileCycle
 import com.mg4.control.shortcut.RegenCycle
+import com.mg4.control.shortcut.OnePedalReturn
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.util.FirmwareInfo
@@ -187,6 +188,8 @@ class ShortcutsFragment : Fragment() {
     /** Rejoue la sélection d'onglet après un changement de visibilité (le rail peut apparaître
      *  ou disparaître quand l'utilisateur attribue ou retire une action). */
     private var reselectTabs: (() -> Unit)? = null
+    /** Relit l'appli caméra de la carte du Garde-voiture (installée ou retirée entre-temps). */
+    private var rafraichirCamera: (() -> Unit)? = null
 
 
     override fun onResume() {
@@ -202,6 +205,8 @@ class ShortcutsFragment : Fragment() {
         // suivre, sinon il resterait sur "inactif" apres avoir active le service.
         wheelPage.refresh()
         floatingPage.surPageVisible(rootView?.findViewById<View>(R.id.page_sc_floating)?.visibility == View.VISIBLE)
+        // Retour d'une installation de l'appli caméra : la carte la voit sans redémarrer MG4Control.
+        rafraichirCamera?.invoke()
     }
 
     override fun onPause() {
@@ -746,6 +751,7 @@ class ShortcutsFragment : Fragment() {
         // passe pas forcément. Chacun a désormais sa page.
         val tabs = listOf(
             view.findViewById<MaterialButton>(R.id.btn_sc_cat_classic)  to view.findViewById<ViewGroup>(R.id.page_sc_classic),
+            view.findViewById<MaterialButton>(R.id.btn_sc_sub_onepedal) to view.findViewById<ViewGroup>(R.id.page_sc_onepedal),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_adas)     to view.findViewById<ViewGroup>(R.id.page_sc_adas),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_regen)    to view.findViewById<ViewGroup>(R.id.page_sc_regen),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_drivemode) to view.findViewById<ViewGroup>(R.id.page_sc_drivemode),
@@ -765,6 +771,7 @@ class ShortcutsFragment : Fragment() {
         // déclenche. C'est la règle qui manquait aux deux premières, dont les réglages ne
         // regardaient que les emplacements classiques.
         val pagesReglage = mapOf(
+            page(R.id.page_sc_onepedal) to ShortcutAction.ONE_PEDAL,
             page(R.id.page_sc_adas)     to ShortcutAction.ADAS_CYCLE,
             pageCycle                   to ShortcutAction.REGEN_CYCLE,
             page(R.id.page_sc_drivemode) to ShortcutAction.DRIVE_MODE_CYCLE,
@@ -836,6 +843,7 @@ class ShortcutsFragment : Fragment() {
                 if (page === pageSources) rechargerCycleSources?.invoke()
                 if (page.id == R.id.page_sc_custom) customPage.peindre()
                 if (page.id == R.id.page_sc_quick) quickPage.refresh()
+                if (page.id == R.id.page_sc_preclim) rafraichirCamera?.invoke()
                 scroll?.scrollTo(0, 0)
                 apply()
             }
@@ -896,6 +904,8 @@ class ShortcutsFragment : Fragment() {
             applyEnabledUI(checked)
         }
 
+        setupOnePedalReturn(view)
+
         // ADAS — modes A et B : tous les firmwares connus utilisent les indices 0-4
         // (Off/Lim.Manuel/Lim.Auto/ACC/ICA|TJA). La conversion index→hardware est faite dans le service.
         setupConfigRow("shortcut_adas_mode_a", 0, view,
@@ -906,6 +916,34 @@ class ShortcutsFragment : Fragment() {
             R.id.sc_adas_b_0 to 0, R.id.sc_adas_b_1 to 1, R.id.sc_adas_b_2 to 2,
             R.id.sc_adas_b_3 to 3, R.id.sc_adas_b_4 to 4
         )
+    }
+
+    /**
+     * One Pedal, second appui (issue #226) : « Comme avant » ([OnePedalReturn.PREVIOUS], défaut)
+     * laisse la voiture remettre le niveau d'avant ; sinon le niveau choisi est imposé.
+     */
+    private fun setupOnePedalReturn(view: View) {
+        val boutons = mapOf(
+            OnePedalReturn.PREVIOUS to view.findViewById<MaterialButton>(R.id.sc_onepedal_prev),
+            RegenLevel.LOW.value      to view.findViewById(R.id.sc_fallback_low),
+            RegenLevel.MEDIUM.value   to view.findViewById(R.id.sc_fallback_medium),
+            RegenLevel.HIGH.value     to view.findViewById(R.id.sc_fallback_high),
+            RegenLevel.ADAPTIVE.value to view.findViewById(R.id.sc_fallback_adaptive),
+        )
+        val description = view.findViewById<TextView>(R.id.tv_onepedal_return_desc)
+        fun peindre(choix: Int) {
+            highlightConfig(boutons, choix)
+            description.text = if (choix == OnePedalReturn.PREVIOUS) getString(R.string.shortcuts_onepedal_desc_prev)
+                else getString(R.string.shortcuts_onepedal_desc_fixed, boutons[choix]?.text ?: "")
+        }
+        boutons.forEach { (valeur, bouton) ->
+            bouton?.setOnClickListener {
+                saveInt(OnePedalReturn.KEY, valeur)
+                peindre(valeur)
+            }
+        }
+        val enregistre = prefs.getInt(OnePedalReturn.KEY, OnePedalReturn.PREVIOUS)
+        peindre(if (enregistre in boutons.keys) enregistre else OnePedalReturn.PREVIOUS)
     }
 
     private fun setupConfigRow(
@@ -1026,21 +1064,27 @@ class ShortcutsFragment : Fragment() {
         val options = view.findViewById<View>(R.id.group_preclim_cam_options)
         val usb = view.findViewById<TextView>(R.id.tv_preclim_cam_usb)
         val tester = view.findViewById<MaterialButton>(R.id.btn_preclim_cam_usb_test)
-        val d = DashcamApp.detecter(ctx)
-        val (couleur, textes) = when (d) {
-            is DashcamApp.Detection.Pilotable -> R.color.dash_eco to
-                (getString(R.string.preclim_cam_found, d.nom) to getString(R.string.preclim_cam_found_desc, d.commandes.packageName))
-            is DashcamApp.Detection.Ancienne -> R.color.dash_warn to
-                if (d.aMettreAJour) getString(R.string.preclim_cam_old, d.nom) to getString(R.string.preclim_cam_old_desc)
-                else getString(R.string.preclim_cam_incompat, d.nom) to getString(R.string.preclim_cam_incompat_desc)
-            else -> R.color.dash_text_lo to
-                (getString(R.string.preclim_cam_none) to getString(R.string.preclim_cam_none_desc))
+        // Relue à l'ouverture de l'écran, à chaque affichage de l'onglet et au retour dans
+        // l'appli : installer l'appli caméra ne doit pas obliger à redémarrer MG4Control.
+        fun peindre() {
+            val d = DashcamApp.detecter(ctx)
+            val (couleur, textes) = when (d) {
+                is DashcamApp.Detection.Pilotable -> R.color.dash_eco to
+                    (getString(R.string.preclim_cam_found, d.nom) to getString(R.string.preclim_cam_found_desc, d.commandes.packageName))
+                is DashcamApp.Detection.Ancienne -> R.color.dash_warn to
+                    if (d.aMettreAJour) getString(R.string.preclim_cam_old, d.nom) to getString(R.string.preclim_cam_old_desc)
+                    else getString(R.string.preclim_cam_incompat, d.nom) to getString(R.string.preclim_cam_incompat_desc)
+                else -> R.color.dash_text_lo to
+                    (getString(R.string.preclim_cam_none) to getString(R.string.preclim_cam_none_desc))
+            }
+            icone.imageTintList = ColorStateList.valueOf(ctx.getColor(couleur))
+            titre.text = textes.first
+            description.text = textes.second
+            setChildrenEnabled(options, d.pilotable)
+            options.alpha = if (d.pilotable) 1f else 0.38f
         }
-        icone.imageTintList = ColorStateList.valueOf(ctx.getColor(couleur))
-        titre.text = textes.first
-        description.text = textes.second
-        setChildrenEnabled(options, d.pilotable)
-        options.alpha = if (d.pilotable) 1f else 0.38f
+        peindre()
+        rafraichirCamera = { if (isAdded) peindre() }
         view.findViewById<Switch>(R.id.switch_preclim_cam_auto).apply {
             isChecked = PreClimateSettings.dashcamAuto(ctx)
             setOnCheckedChangeListener { _, coche ->

@@ -42,6 +42,13 @@
 
                 <com.mg4.control.ui.widget.RailButton
                     style="@style/Widget.MG4.CategoryTab"
+                    android:id="@+id/btn_sc_sub_onepedal"
+                    android:text="@string/shortcuts_cat_onepedal"
+                    android:visibility="gone"
+                    app:icon="@drawable/ic_rail_pedal" />
+
+                <com.mg4.control.ui.widget.RailButton
+                    style="@style/Widget.MG4.CategoryTab"
                     android:id="@+id/btn_sc_sub_adas"
                     android:text="@string/shortcuts_cat_adas"
                     android:visibility="gone"
@@ -204,9 +211,147 @@
 
                 </LinearLayout>
 
-                <!-- Page « 1 Pédale » (niveau de régénération au retour) retirée le 2026-11-08,
-                     issue #226 : couper le One Pedal suffit, la voiture remet d'elle-même le niveau
-                     d'avant. -->
+                <!-- ═══ Config : 1 Pédale — page de sous-onglet ═══ -->
+                <!-- Retirée le 2026-11-08 (issue #226) puis remise le même jour à sa demande, avec un
+                     choix de plus : « Comme avant » (défaut) laisse la voiture remettre d'elle-même le
+                     niveau d'avant ; sinon un niveau fixe. Variante A de la maquette : une rangée. -->
+                <LinearLayout
+                    android:id="@+id/page_sc_onepedal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/config_onepedal_section"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/bg_card_rounded"
+                        android:layout_marginEnd="5dp"
+                        android:paddingBottom="14dp">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/shortcuts_cfg_one_pedal"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="19sp"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.10"
+                            android:textAllCaps="true"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp"
+                            android:paddingBottom="8dp" />
+
+                        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/dash_border" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="12dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/sc_onepedal_prev"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1.8"
+                            android:layout_marginStart="0dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="@string/shortcuts_onepedal_prev"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/bg_button"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/sc_fallback_low"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="5dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="@string/regen_low"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/bg_button"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/sc_fallback_medium"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="5dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="@string/regen_medium"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/bg_button"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/sc_fallback_high"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="5dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="@string/regen_high"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/bg_button"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/sc_fallback_adaptive"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="5dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="@string/regen_adaptive"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/bg_button"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/tv_onepedal_return_desc"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="18sp"
+                            android:paddingStart="14dp"
+                            android:paddingEnd="14dp"
+                            android:paddingTop="10dp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
 
                 <!-- ═══ Config : ADAS — page de sous-onglet ═══ -->
                 <LinearLayout

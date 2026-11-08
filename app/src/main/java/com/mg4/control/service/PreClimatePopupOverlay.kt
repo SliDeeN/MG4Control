@@ -18,8 +18,6 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import com.mg4.control.R
-import com.mg4.control.accessibility.JoystickFocus
-import com.mg4.control.accessibility.KeyCaptureService
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.model.PreClimateMode
@@ -41,9 +39,9 @@ import kotlin.math.roundToInt
  * (7 crans sur l'ancien SDK, 11 sur A9) ; l'A/C est activé par défaut. « Démarrer » passe la main
  * à [PreClimate], qui affiche l'écran de suivi.
  *
- * Joystick droit : focus sur les cases ([OverlayNavigation]), départ sur « Démarrer ». Pas de
- * fermeture au délai : c'est une fenêtre de réglage, elle reste jusqu'à la croix, « Annuler » ou un
- * second appui du raccourci. Fil principal seulement.
+ * Au toucher seulement depuis le 2026-11-08 (sa demande) : la fenêtre se règle à l'arrêt, le
+ * joystick droit n'y navigue plus et garde ses fonctions habituelles. Pas de fermeture au délai :
+ * elle reste jusqu'à la croix, « Annuler » ou un second appui du raccourci. Fil principal seulement.
  */
 object PreClimatePopupOverlay {
 
@@ -70,7 +68,6 @@ object PreClimatePopupOverlay {
     private var demarrage = false
     private var vues: Vues? = null
     private var req: PreClimateRequest? = null
-    private var navigation: OverlayNavigation? = null
     /**
      * Appli caméra (issue #180), lue à l'ouverture : la surveillance est proposée à tous depuis le
      * 2026-11-08 ; l'appli ne fait que dire, sous « Clim coupée », si quelque chose sera filmé.
@@ -80,16 +77,6 @@ object PreClimatePopupOverlay {
     private var cleUsb: DashcamRemote.Usb? = null
 
     fun isShowing(): Boolean = vue != null
-
-    /** Joystick droit, depuis [KeyCaptureService] ; sans effet si le pop-up s'est fermé. */
-    fun naviguer(commande: JoystickFocus.Commande) {
-        handler.post { navigation?.recevoir(commande) }
-    }
-
-    /** Appui long, au joystick, de la touche qui l'a ouvert : le referme. */
-    fun fermerParRaccourci() {
-        handler.post { if (vue != null) fermer("appui long du joystick sur son raccourci") }
-    }
 
     /** Raccourci : ouvre le pop-up, ou le referme s'il est déjà là. */
     fun toggle(context: Context) {
@@ -157,8 +144,6 @@ object PreClimatePopupOverlay {
         vues = v
         demarrage = false
         peindre()
-        // Après la mise en page : la navigation lit la position des cases à l'écran.
-        v.racine.post { naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, Int.MAX_VALUE)) }
         AppLogger.i(TAG, "Pop-up affiché — clim ${clim.temp ?: "?"} °C, ventilation ${if (clim.auto) "AUTO" else clim.fan ?: "?"}, " +
             "bornes ${clim.tempMin}–${clim.tempMax} °C / ${clim.fanMin}–${clim.fanMax}, " +
             "appli caméra : ${when (val c = camera) {
@@ -180,7 +165,6 @@ object PreClimatePopupOverlay {
             vue = null
             vues = null
             gestionnaire = null
-            navigation = null
             AppLogger.i(TAG, "Pop-up fermé ($raison)")
         }
     }
@@ -276,12 +260,10 @@ object PreClimatePopupOverlay {
             it.moins.imageTintList = ColorStateList.valueOf(v.texte)
             it.plus.imageTintList = ColorStateList.valueOf(v.texte)
         }
-        repereJoystick(v)
 
         // Mode : « Maintenant » d'abord, toujours choisi à l'ouverture.
         AppDialog.segments(v.modes, listOf(v.s(R.string.preclim_mode_now), v.s(R.string.preclim_mode_at)), 0) { rang ->
             changer { it.copy(mode = if (rang == 0) PreClimateMode.NOW else PreClimateMode.AT_TIME) }
-            naviguerDepuis(JoystickFocus.Position(0, rang))
         }
         (0 until v.modes.childCount).forEach { v.cases += v.modes.getChildAt(it) as TextView }
 
@@ -326,13 +308,10 @@ object PreClimatePopupOverlay {
 
         v.chien.setOnClickListener {
             changer { it.copy(dog = !it.dog, surveillance = false) }
-            // Les durées entrent dans la navigation ou en sortent : on la refait, sur ce bouton.
-            naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, 0))
         }
-        // Surveillance : exclusive du mode chien ; la clim sort de la navigation.
+        // Surveillance : exclusive du mode chien.
         v.surveillance.setOnClickListener {
             changer { it.copy(surveillance = !it.surveillance, dog = false) }
-            naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, 1))
         }
         v.demarrer.setOnClickListener { demarrer(app) }
         brancherRappel(app, v)
@@ -576,92 +555,18 @@ object PreClimatePopupOverlay {
             surDepart = { fermer("démarrage") })
     }
 
-    /** Joystick sur OK au départ, anneau orange : gauche et droite passent d'un bouton à l'autre. */
+    /** Rappel avant le départ, par-dessus la carte. */
     private fun montrerRappel(v: Vues) {
-        effacerAnneaux(v)
         v.rappel.visibility = View.VISIBLE
-        navigation = OverlayNavigation(
-            context = v.themed,
-            grille = listOf(listOf<View>(v.rappelJamais, v.rappelOk)),
-            depart = JoystickFocus.Position(0, 1),
-            surDeplacement = {},
-            couleurAnneau = v.alerte,
-        ).also { it.afficher() }
         AppLogger.i(TAG, "Rappel avant le départ affiché")
     }
 
-    /** Retour au réglage, joystick sur « Démarrer ». */
+    /** Retour au réglage. */
     private fun cacherRappel(raison: String) {
         val v = vues ?: return
         if (v.rappel.visibility != View.VISIBLE) return
         v.rappel.visibility = View.GONE
-        v.rappelJamais.foreground = null
-        v.rappelOk.foreground = null
-        naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, Int.MAX_VALUE))
         AppLogger.i(TAG, "Rappel avant le départ fermé ($raison)")
-    }
-
-    // ── Joystick ─────────────────────────────────────────────────────────────
-
-    /**
-     * (Re)construit la navigation : les cases dépendent du mode. [depart] : ligne et colonne de
-     * départ (une ligne au-delà de la dernière = la dernière, « Démarrer »).
-     */
-    private fun naviguerDepuis(depart: JoystickFocus.Position) {
-        val v = vues ?: return
-        val r = req ?: return
-        val lignes = buildList<List<View>> {
-            add(v.cases + v.fermer)
-            if (r.mode == PreClimateMode.NOW) {
-                // Surveillance : pas de réglages de clim à atteindre.
-                add((if (r.dog) emptyList() else v.puces) +
-                    (if (r.surveillance) emptyList() else listOf(v.temp.moins, v.temp.plus)))
-                if (!r.surveillance) add(listOf(v.ventil.moins, v.ventil.plus))
-            } else {
-                add(listOf(v.premier.moins, v.premier.plus, v.temp.moins, v.temp.plus))
-                add(listOf(v.duree.moins, v.duree.plus, v.ventil.moins, v.ventil.plus))
-                add(listOf(v.cycles.moins, v.cycles.plus))
-                add(listOf(v.pause.moins, v.pause.plus))
-            }
-            val bloque = r.mode == PreClimateMode.NOW && r.surveillance && !camera.presente
-            add((if (r.mode != PreClimateMode.NOW) emptyList()
-                else listOf<View>(v.chien, v.surveillance)) +
-                (if (bloque) listOf(v.annuler) else listOf(v.annuler, v.demarrer)))
-        }
-        effacerAnneaux(v)
-        val ligne = depart.ligne.coerceIn(0, lignes.lastIndex)
-        navigation = OverlayNavigation(
-            context = v.themed,
-            grille = lignes,
-            depart = JoystickFocus.Position(ligne, depart.colonne.coerceIn(0, lignes[ligne].lastIndex)),
-            surDeplacement = {},
-        ).also { it.afficher() }
-    }
-
-    /** L'anneau de l'ancienne navigation resterait sur sa case, peut-être d'un autre mode. */
-    private fun effacerAnneaux(v: Vues) {
-        (v.cases + v.puces + listOf(v.premier, v.duree, v.cycles, v.pause, v.temp, v.ventil).flatMap { listOf(it.moins, it.plus) } +
-            listOf(v.fermer, v.chien, v.surveillance, v.annuler, v.demarrer)).forEach { it.foreground = null }
-    }
-
-    /** Repère de l'en-tête, comme celui du sélecteur de profils. */
-    private fun repereJoystick(v: Vues) {
-        val utilisable = KeyCaptureService.isEnabled(v.loc)
-        val couleur = if (utilisable) v.accent else v.alerte
-        val titre = v.racine.findViewById<TextView>(R.id.preclim_joy_title)
-        titre.text = if (utilisable) v.s(R.string.hvac_popup_joystick_title)
-            else v.s(R.string.hvac_popup_joystick_off_title) + " · " + v.s(R.string.hvac_popup_joystick_off_text)
-        titre.setTextColor(couleur)
-        titre.compoundDrawableTintList = ColorStateList.valueOf(couleur)
-        listOf(R.id.preclim_joy_move, R.id.preclim_joy_ok).forEach { id ->
-            v.racine.findViewById<TextView>(id).apply {
-                visibility = if (utilisable) View.VISIBLE else View.GONE
-                setTextColor(v.texte)
-                compoundDrawableTintList = ColorStateList.valueOf(v.accent)
-            }
-        }
-        OverlayKit.fond(v.racine.findViewById(R.id.preclim_joy_chip),
-            if (utilisable) v.accentDoux else v.alerteDoux, rayon = v.dp(15f).toFloat())
     }
 
     // ── Mise en forme ────────────────────────────────────────────────────────

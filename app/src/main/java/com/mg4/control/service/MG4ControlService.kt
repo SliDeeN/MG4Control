@@ -47,6 +47,7 @@ import com.mg4.control.shortcut.DriveModeCycle
 import com.mg4.control.shortcut.RegenCycle
 import com.mg4.control.update.UpdateChecker
 import com.mg4.control.update.UpdateNotifier
+import com.mg4.control.shortcut.OnePedalReturn
 import com.mg4.control.shortcut.ShortcutAction
 import com.mg4.control.shortcut.ToggleTracker
 import com.mg4.control.util.FirmwareInfo
@@ -1168,9 +1169,16 @@ class MG4ControlService : Service() {
     private fun writeToggle(action: ShortcutAction, on: Boolean) {
         when (action) {
             ShortcutAction.ONE_PEDAL -> {
-                // Issue #226 (2026-11-08) : couper le One Pedal suffit — la voiture remet d'elle-même
-                // le niveau de régénération d'avant (vérifié en voiture). On n'en impose plus aucun.
-                if (on) MG4Hardware.setRegenLevel(RegenLevel.ONE_PEDAL) else MG4Hardware.setOnePedal(false)
+                // Issue #226 (2026-11-08) : par défaut, couper le One Pedal suffit — la voiture remet
+                // d'elle-même le niveau d'avant (vérifié en voiture) ; sinon le niveau choisi dans
+                // Raccourcis › 1 Pédale.
+                val impose = if (on) null else OnePedalReturn.levelFor(
+                    getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE).getInt(OnePedalReturn.KEY, OnePedalReturn.PREVIOUS))
+                when {
+                    on -> MG4Hardware.setRegenLevel(RegenLevel.ONE_PEDAL)
+                    impose != null -> MG4Hardware.setRegenLevel(impose)
+                    else -> MG4Hardware.setOnePedal(false)
+                }
             }
             ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.setEnergySavingMode(on)
             ShortcutAction.TSR_TOGGLE           -> MG4Hardware.setTsrMode(on)

@@ -1843,4 +1843,11 @@
     <string name="preclim_surv_ban_none_title">Nie wykryto aplikacji dashcam</string>
     <string name="preclim_surv_ban_none_text">Nadzór potrzebuje aplikacji kamery do nagrywania. Zainstaluj MG4-360-Camera-App, aby z niego korzystać.</string>
     <string name="preclim_surv_need_app">Nadzór niemożliwy: nie wykryto aplikacji dashcam.</string>
+
+    <!-- Raccourci One Pedal, second appui (issue #226, 2026-11-08) -->
+    <string name="shortcuts_cat_onepedal">1 pedał</string>
+    <string name="shortcuts_cfg_one_pedal">1 pedał — przy drugim naciśnięciu</string>
+    <string name="shortcuts_onepedal_prev">Jak wcześniej</string>
+    <string name="shortcuts_onepedal_desc_prev">Wyłączenie One Pedal przywraca poprzedni poziom rekuperacji (domyślnie).</string>
+    <string name="shortcuts_onepedal_desc_fixed">Wyłączenie One Pedal zawsze przełącza na rekuperację %1$s.</string>
 </resources>

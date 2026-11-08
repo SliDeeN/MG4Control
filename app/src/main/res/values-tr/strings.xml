@@ -1843,4 +1843,11 @@
     <string name="preclim_surv_ban_none_title">Dashcam uygulaması bulunamadı</string>
     <string name="preclim_surv_ban_none_text">Gözetimin kayıt için bir kamera uygulamasına ihtiyacı var. Kullanmak için MG4-360-Camera-App’i yükleyin.</string>
     <string name="preclim_surv_need_app">Gözetim mümkün değil: dashcam uygulaması bulunamadı.</string>
+
+    <!-- Raccourci One Pedal, second appui (issue #226, 2026-11-08) -->
+    <string name="shortcuts_cat_onepedal">Tek pedal</string>
+    <string name="shortcuts_cfg_one_pedal">Tek pedal — ikinci basışta</string>
+    <string name="shortcuts_onepedal_prev">Önceki gibi</string>
+    <string name="shortcuts_onepedal_desc_prev">One Pedal kapatılınca önceki rejenerasyon seviyesi geri gelir (varsayılan).</string>
+    <string name="shortcuts_onepedal_desc_fixed">One Pedal kapatılınca her zaman %1$s rejenerasyona geçilir.</string>
 </resources>

@@ -15,7 +15,6 @@ import com.mg4.control.MainActivity
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.service.HvacPopupOverlay
 import com.mg4.control.service.MG4ControlService
-import com.mg4.control.service.PreClimatePopupOverlay
 import com.mg4.control.service.QuickSettingsOverlay
 import com.mg4.control.service.ProfileConfirmOverlay
 import com.mg4.control.service.ProfilePickerOverlay
@@ -232,15 +231,16 @@ class KeyCaptureService : AccessibilityService() {
             if (commande != null && event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0) {
                 val confirmation = ProfileConfirmOverlay.isShowing()
                 val profils = ProfilePickerOverlay.isShowing()
-                val preclim = PreClimatePopupOverlay.isShowing()
                 // Réglages rapides (2026-11-06) : avant le pop-up HVAC, qui garde la dernière place.
                 val rapides = QuickSettingsOverlay.isShowing()
-                if (confirmation || profils || preclim || rapides || HvacPopupOverlay.isShowing()) {
+                // Le pop-up du Garde-voiture n'en fait plus partie (2026-11-08) : il se règle à
+                // l'arrêt, au toucher, et le joystick garde ses fonctions pendant qu'il est ouvert.
+                if (confirmation || profils || rapides || HvacPopupOverlay.isShowing()) {
                     navigationEnCours.add(code)
                     // Pop-up HVAC, clic central : l'appui maintenu fait avancer le débit en AUTO.
                     // Il passe avant l'appui long qui refermerait le pop-up par son raccourci : une
                     // même touche ne peut pas faire les deux, et le pop-up se ferme aussi autrement.
-                    if (!confirmation && !profils && !preclim && !rapides && commande == JoystickFocus.Commande.VALIDER) {
+                    if (!confirmation && !profils && !rapides && commande == JoystickFocus.Commande.VALIDER) {
                         AppLogger.i(TAG, "touche $code — pop-up HVAC → clic central enfoncé")
                         centresHvac.add(code)
                         HvacPopupOverlay.centreEnfonce()
@@ -255,10 +255,6 @@ class KeyCaptureService : AccessibilityService() {
                             profils -> {
                                 AppLogger.i(TAG, "touche $code — navigation popup profils → ${commande.name}")
                                 ProfilePickerOverlay.naviguer(commande)
-                            }
-                            preclim -> {
-                                AppLogger.i(TAG, "touche $code — pop-up pré-climatisation → ${commande.name}")
-                                PreClimatePopupOverlay.naviguer(commande)
                             }
                             rapides -> {
                                 AppLogger.i(TAG, "touche $code — pop-up Réglages rapides → ${commande.name}")
@@ -275,9 +271,6 @@ class KeyCaptureService : AccessibilityService() {
                         confirmation -> null
                         profils -> if (ouvreEnAppuiLong(code, ShortcutAction.PROFILE_PICKER)) {
                             { ProfilePickerOverlay.fermerParRaccourci(this) }
-                        } else null
-                        preclim -> if (ouvreEnAppuiLong(code, ShortcutAction.PRE_CLIMATE)) {
-                            { PreClimatePopupOverlay.fermerParRaccourci() }
                         } else null
                         rapides -> if (ouvreEnAppuiLong(code, ShortcutAction.QUICK_SETTINGS)) {
                             { QuickSettingsOverlay.fermerParRaccourci() }

@@ -50,52 +50,6 @@
                 android:maxLines="1"
                 android:ellipsize="end" />
 
-            <LinearLayout
-                android:id="@+id/preclim_joy_chip"
-                android:layout_width="wrap_content"
-                android:layout_height="30dp"
-                android:orientation="horizontal"
-                android:gravity="center_vertical"
-                android:paddingStart="12dp"
-                android:paddingEnd="14dp">
-
-                <TextView
-                    android:id="@+id/preclim_joy_title"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:drawableStart="@drawable/ic_hvac_target"
-                    android:drawablePadding="6dp"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:maxLines="1"
-                    android:ellipsize="end" />
-
-                <TextView
-                    android:id="@+id/preclim_joy_move"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:drawableStart="@drawable/ic_overlay_stick_move"
-                    android:drawablePadding="3dp"
-                    android:text="@string/overlay_joy_navigate"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:maxLines="1" />
-
-                <TextView
-                    android:id="@+id/preclim_joy_ok"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="14dp"
-                    android:drawableStart="@drawable/ic_hvac_stick_click"
-                    android:drawablePadding="4dp"
-                    android:text="@string/overlay_joy_validate"
-                    android:textSize="12sp"
-                    android:textStyle="bold"
-                    android:maxLines="1" />
-
-            </LinearLayout>
-
             <ImageView
                 android:id="@+id/preclim_close"
                 android:layout_width="44dp"

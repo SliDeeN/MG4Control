@@ -1843,4 +1843,11 @@
     <string name="preclim_surv_ban_none_title">Ninguna app de dashcam detectada</string>
     <string name="preclim_surv_ban_none_text">La vigilancia necesita una app de cámara para grabar. Instala MG4-360-Camera-App para usarla.</string>
     <string name="preclim_surv_need_app">Vigilancia imposible: ninguna app de dashcam detectada.</string>
+
+    <!-- Raccourci One Pedal, second appui (issue #226, 2026-11-08) -->
+    <string name="shortcuts_cat_onepedal">1 Pedal</string>
+    <string name="shortcuts_cfg_one_pedal">1 Pedal — en la segunda pulsación</string>
+    <string name="shortcuts_onepedal_prev">Como antes</string>
+    <string name="shortcuts_onepedal_desc_prev">Al desactivar One Pedal vuelve el nivel de regeneración anterior (por defecto).</string>
+    <string name="shortcuts_onepedal_desc_fixed">Al desactivar One Pedal se pasa siempre a la regeneración %1$s.</string>
 </resources>
