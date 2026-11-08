@@ -1871,4 +1871,12 @@
     <string name="rule_hist_filter_skipped">Pominięte</string>
     <string name="rule_hist_empty_filter">Nic w tej kategorii.</string>
     <string name="rule_hist_count_fmt">%1$d / %2$d wpisów · identyczne odmowy są grupowane (×N)</string>
+
+    <!-- Profils : menu ⋮ de la carte, dupliquer et renommer (2026-11-08) -->
+    <string name="profile_menu">Więcej opcji</string>
+    <string name="profile_duplicate">Duplikuj</string>
+    <string name="profile_rename">Zmień nazwę</string>
+    <string name="profile_copy_word">Kopia</string>
+    <string name="profile_duplicated_fmt">Utworzono profil „%1$s”: ustawienia skopiowane, bez powiązanego telefonu.</string>
+    <string name="profile_rename_title">Nazwa profilu</string>
 </resources>

@@ -1871,4 +1871,12 @@
     <string name="rule_hist_filter_skipped">Ignored</string>
     <string name="rule_hist_empty_filter">Nothing in this category.</string>
     <string name="rule_hist_count_fmt">%1$d / %2$d entries · identical refusals are grouped (×N)</string>
+
+    <!-- Profils : menu ⋮ de la carte, dupliquer et renommer (2026-11-08) -->
+    <string name="profile_menu">More options</string>
+    <string name="profile_duplicate">Duplicate</string>
+    <string name="profile_rename">Rename</string>
+    <string name="profile_copy_word">Copy</string>
+    <string name="profile_duplicated_fmt">Profile “%1$s” created: settings copied, without a paired phone.</string>
+    <string name="profile_rename_title">Profile name</string>
 </resources>

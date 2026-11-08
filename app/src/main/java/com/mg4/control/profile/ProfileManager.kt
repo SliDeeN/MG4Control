@@ -124,6 +124,32 @@ class ProfileManager(private val context: Context) {
         return change
     }
 
+    /**
+     * Duplique le profil [profileId] (2026-11-08) : la copie, nommée « <nom> [word] », est rangée
+     * juste après lui. `null` si le profil n'existe plus ou si les [MAX_PROFILES] sont atteints.
+     */
+    fun duplicate(profileId: String, word: String): DrivingProfile? {
+        val copie = synchronized(MUTATION_LOCK) {
+            val list = getAll()
+            if (list.size >= MAX_PROFILES) return null
+            val original = list.firstOrNull { it.id == profileId } ?: return null
+            val c = com.mg4.control.model.ProfileCopy.duplicate(original,
+                com.mg4.control.model.ProfileCopy.name(original.name, word, list.map { it.name }))
+            persist(com.mg4.control.model.ProfileCopy.insertAfter(list, profileId, c))
+            c
+        }
+        triggerBackup()
+        return copie
+    }
+
+    /** Renomme un profil depuis sa carte, sans passer par l'éditeur. `false` si nom vide ou profil absent. */
+    fun rename(profileId: String, name: String): Boolean {
+        val nom = name.trim().take(com.mg4.control.model.ProfileCopy.NAME_MAX)
+        if (nom.isEmpty()) return false
+        val p = getById(profileId) ?: return false
+        return save(p.copy(name = nom))
+    }
+
     fun delete(profileId: String) {
         synchronized(MUTATION_LOCK) {
             val list = getAll().toMutableList()

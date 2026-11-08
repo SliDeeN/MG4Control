@@ -69,21 +69,22 @@ class ProfileFragment : Fragment() {
             onEdit = { profile ->
                 openEditor(existing = profile, data = profile)
             },
-            onDelete = { profile ->
-                AppDialog.confirmer(
-                    requireContext(),
-                    titre = getString(R.string.profile_delete_title, profile.name),
-                    ton = AppDialog.Ton.DANGER,
-                    icone = R.drawable.ic_dialog_trash,
-                    oui = getString(R.string.profile_delete),
-                    non = getString(R.string.profile_cancel),
-                    onOui = {
-                        manager.delete(profile.id)
-                        refreshList()
-                    },
-                )
-            }
+            onMenu = { profile -> menuProfil(profile) }
         )
+        supprimer = { profile ->
+            AppDialog.confirmer(
+                requireContext(),
+                titre = getString(R.string.profile_delete_title, profile.name),
+                ton = AppDialog.Ton.DANGER,
+                icone = R.drawable.ic_dialog_trash,
+                oui = getString(R.string.profile_delete),
+                non = getString(R.string.profile_cancel),
+                onOui = {
+                    manager.delete(profile.id)
+                    refreshList()
+                },
+            )
+        }
 
         val liste = view.findViewById<RecyclerView>(R.id.recycler_profiles).apply {
             // Refonte 2.7.0 : une grille de trois colonnes de cartes.
@@ -153,6 +154,40 @@ class ProfileFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         refreshList()
+    }
+
+    /** Confirmation de suppression (bouton d'avant, désormais dans le menu ⋮). */
+    private var supprimer: (DrivingProfile) -> Unit = {}
+
+    /**
+     * Menu ⋮ d'une carte (2026-11-08, maquette C) : Dupliquer — la copie « <nom> Copie » se range
+     * juste après, sans ouvrir l'éditeur —, Renommer depuis la page, Supprimer.
+     */
+    private fun menuProfil(profile: DrivingProfile) {
+        val ctx = requireContext()
+        val gestes = listOf<Pair<String, () -> Unit>>(
+            getString(R.string.profile_duplicate) to {
+                val copie = manager.duplicate(profile.id, getString(R.string.profile_copy_word))
+                if (copie == null) {
+                    Toast.makeText(ctx, getString(R.string.profile_max_reached, ProfileManager.MAX_PROFILES), Toast.LENGTH_SHORT).show()
+                } else {
+                    refreshList()
+                    Toast.makeText(ctx, getString(R.string.profile_duplicated_fmt, copie.name), Toast.LENGTH_LONG).show()
+                }
+            },
+            getString(R.string.profile_rename) to {
+                RuleValueDialogs.texte(ctx, getString(R.string.profile_rename_title), profile.name) { nom ->
+                    if (manager.rename(profile.id, nom)) refreshList()
+                }
+            },
+            getString(R.string.profile_delete) to { supprimer(profile) },
+        )
+        AppDialog.choisir(ctx,
+            titre = profile.name,
+            icone = R.drawable.ic_dialog_edit,
+            choix = gestes.map { AppDialog.Choix(it.first) },
+            annuler = getString(R.string.profile_cancel),
+        ) { rang -> gestes[rang].second() }
     }
 
     private fun refreshList() {

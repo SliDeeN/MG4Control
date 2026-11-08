@@ -1871,4 +1871,12 @@
     <string name="rule_hist_filter_skipped">Ignoradas</string>
     <string name="rule_hist_empty_filter">Nada nesta categoria.</string>
     <string name="rule_hist_count_fmt">%1$d / %2$d entradas · as recusas idênticas são agrupadas (×N)</string>
+
+    <!-- Profils : menu ⋮ de la carte, dupliquer et renommer (2026-11-08) -->
+    <string name="profile_menu">Mais opções</string>
+    <string name="profile_duplicate">Duplicar</string>
+    <string name="profile_rename">Mudar o nome</string>
+    <string name="profile_copy_word">Cópia</string>
+    <string name="profile_duplicated_fmt">Perfil «%1$s» criado: definições copiadas, sem telefone associado.</string>
+    <string name="profile_rename_title">Nome do perfil</string>
 </resources>

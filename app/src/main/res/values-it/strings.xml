@@ -1871,4 +1871,12 @@
     <string name="rule_hist_filter_skipped">Ignorate</string>
     <string name="rule_hist_empty_filter">Niente in questa categoria.</string>
     <string name="rule_hist_count_fmt">%1$d / %2$d voci · i rifiuti identici sono raggruppati (×N)</string>
+
+    <!-- Profils : menu ⋮ de la carte, dupliquer et renommer (2026-11-08) -->
+    <string name="profile_menu">Altre opzioni</string>
+    <string name="profile_duplicate">Duplica</string>
+    <string name="profile_rename">Rinomina</string>
+    <string name="profile_copy_word">Copia</string>
+    <string name="profile_duplicated_fmt">Profilo «%1$s» creato: impostazioni copiate, senza telefono associato.</string>
+    <string name="profile_rename_title">Nome del profilo</string>
 </resources>

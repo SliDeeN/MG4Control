@@ -1871,4 +1871,12 @@
     <string name="rule_hist_filter_skipped">Yok sayılanlar</string>
     <string name="rule_hist_empty_filter">Bu kategoride bir şey yok.</string>
     <string name="rule_hist_count_fmt">%1$d / %2$d kayıt · aynı retler gruplanır (×N)</string>
+
+    <!-- Profils : menu ⋮ de la carte, dupliquer et renommer (2026-11-08) -->
+    <string name="profile_menu">Diğer seçenekler</string>
+    <string name="profile_duplicate">Çoğalt</string>
+    <string name="profile_rename">Yeniden adlandır</string>
+    <string name="profile_copy_word">Kopya</string>
+    <string name="profile_duplicated_fmt">“%1$s” profili oluşturuldu: ayarlar kopyalandı, eşlenmiş telefon olmadan.</string>
+    <string name="profile_rename_title">Profil adı</string>
 </resources>

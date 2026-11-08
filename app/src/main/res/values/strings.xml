@@ -1888,4 +1888,12 @@
     <string name="rule_hist_filter_skipped">Ignorées</string>
     <string name="rule_hist_empty_filter">Rien dans cette catégorie.</string>
     <string name="rule_hist_count_fmt">%1$d / %2$d entrées · les refus identiques sont regroupés (×N)</string>
+
+    <!-- Profils : menu ⋮ de la carte, dupliquer et renommer (2026-11-08) -->
+    <string name="profile_menu">Plus d’options</string>
+    <string name="profile_duplicate">Dupliquer</string>
+    <string name="profile_rename">Renommer</string>
+    <string name="profile_copy_word">Copie</string>
+    <string name="profile_duplicated_fmt">Profil « %1$s » créé : réglages copiés, sans téléphone associé.</string>
+    <string name="profile_rename_title">Nom du profil</string>
 </resources>

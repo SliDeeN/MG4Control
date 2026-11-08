@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Carte de profil (refonte 2.7.0) : une grille de trois colonnes. Nom et badges en tête, résumé
-     sur deux lignes (cartes de même hauteur), « Appliquer » en grand, puis Modifier / Par défaut /
-     Supprimer. Le profil actif prend un fond et un cadre d'accent (ProfileAdapter). -->
+     sur deux lignes (cartes de même hauteur), « Appliquer » en grand, puis Modifier / Par défaut.
+     Le menu ⋮ (2026-11-08, maquette C) porte Dupliquer, Renommer et Supprimer. Le profil actif
+     prend un fond et un cadre d'accent (ProfileAdapter). -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -69,6 +70,17 @@
             android:paddingVertical="5dp"
             android:layout_marginStart="8dp"
             android:visibility="gone" />
+
+        <!-- Menu ⋮ : Dupliquer, Renommer, Supprimer -->
+        <ImageButton
+            android:id="@+id/btn_profile_menu"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="6dp"
+            android:layout_marginEnd="-10dp"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_more_vert"
+            android:contentDescription="@string/profile_menu" />
 
     </LinearLayout>
 
@@ -140,7 +152,6 @@
             android:layout_height="64dp"
             android:layout_weight="1"
             android:layout_marginStart="5dp"
-            android:layout_marginEnd="5dp"
             android:insetTop="0dp"
             android:insetBottom="0dp"
             android:paddingHorizontal="4dp"
@@ -153,29 +164,6 @@
             app:backgroundTint="@color/dash_btn"
             app:strokeWidth="1dp"
             app:strokeColor="@color/dash_border"
-            app:cornerRadius="14dp" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_delete"
-            android:layout_width="0dp"
-            android:layout_height="64dp"
-            android:layout_weight="1"
-            android:layout_marginStart="5dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:paddingHorizontal="4dp"
-            android:text="@string/profile_delete"
-            android:textColor="@color/dash_danger"
-            android:textSize="19sp"
-            android:textAllCaps="false"
-            android:maxLines="1"
-            app:autoSizeTextType="uniform"
-            app:autoSizeMinTextSize="13sp"
-            app:autoSizeMaxTextSize="19sp"
-            app:autoSizeStepGranularity="1sp"
-            app:backgroundTint="@color/dash_danger_dim"
-            app:strokeWidth="1dp"
-            app:strokeColor="@color/dash_danger"
             app:cornerRadius="14dp" />
 
     </LinearLayout>

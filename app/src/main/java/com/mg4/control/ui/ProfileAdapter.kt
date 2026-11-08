@@ -19,7 +19,8 @@ class ProfileAdapter(
     private val onApply: (DrivingProfile) -> Unit,
     private val onSetDefault: (DrivingProfile) -> Unit,
     private val onEdit: (DrivingProfile) -> Unit,
-    private val onDelete: (DrivingProfile) -> Unit
+    /** Menu ⋮ de la carte : Dupliquer, Renommer, Supprimer (2026-11-08). */
+    private val onMenu: (DrivingProfile) -> Unit
 ) : RecyclerView.Adapter<ProfileAdapter.VH>() {
 
     class VH(view: View) : RecyclerView.ViewHolder(view) {
@@ -30,7 +31,7 @@ class ProfileAdapter(
         val btnApply: Button    = view.findViewById(R.id.btn_apply)
         val btnDefault: Button  = view.findViewById(R.id.btn_set_default)
         val btnEdit: Button     = view.findViewById(R.id.btn_edit)
-        val btnDelete: Button   = view.findViewById(R.id.btn_delete)
+        val btnMenu: View       = view.findViewById(R.id.btn_profile_menu)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH =
@@ -78,7 +79,7 @@ class ProfileAdapter(
         holder.btnApply.setOnClickListener   { if (!clicsBloques) onApply(profile) }
         holder.btnDefault.setOnClickListener { if (!clicsBloques) onSetDefault(profile) }
         holder.btnEdit.setOnClickListener    { if (!clicsBloques) onEdit(profile) }
-        holder.btnDelete.setOnClickListener  { if (!clicsBloques) onDelete(profile) }
+        holder.btnMenu.setOnClickListener    { if (!clicsBloques) onMenu(profile) }
     }
 
     override fun getItemCount() = profiles.size

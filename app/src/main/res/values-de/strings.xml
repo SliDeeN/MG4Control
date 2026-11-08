@@ -1871,4 +1871,12 @@
     <string name="rule_hist_filter_skipped">Ignoriert</string>
     <string name="rule_hist_empty_filter">Nichts in dieser Kategorie.</string>
     <string name="rule_hist_count_fmt">%1$d / %2$d Einträge · gleiche Ablehnungen werden zusammengefasst (×N)</string>
+
+    <!-- Profils : menu ⋮ de la carte, dupliquer et renommer (2026-11-08) -->
+    <string name="profile_menu">Weitere Optionen</string>
+    <string name="profile_duplicate">Duplizieren</string>
+    <string name="profile_rename">Umbenennen</string>
+    <string name="profile_copy_word">Kopie</string>
+    <string name="profile_duplicated_fmt">Profil „%1$s“ erstellt: Einstellungen kopiert, ohne gekoppeltes Telefon.</string>
+    <string name="profile_rename_title">Profilname</string>
 </resources>
