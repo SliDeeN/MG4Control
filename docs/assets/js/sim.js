@@ -431,6 +431,7 @@
       if (p.steeringApply) c.steering = p.steeringOn;
       if (p.seatApply) { c.seatL = p.seatL; c.seatR = p.seatR; }
     }
+    if (comfort && k.beam && p.beam != null) c.highBeam = p.beam;
     if (comfort && p.hvac && p.hvac.enabled && k.clim) applyProfileClimate(p.hvac);
     const changed = state.activeProfileId !== p.id;
     state.activeProfileId = p.id;
@@ -2017,11 +2018,12 @@
 
     // ── Dashboard ──────────────────────────────────────────────────────────
     dashHtml() {
-      return this.railLayout('dash', [
+      // Même cadre que les autres écrans : marges et espace sous les pastilles.
+      return '<div class="a-page">' + this.railLayout('dash', [
         { label: S('profile_cat_drive'), icon: 'steering', page: this.dashDrive() },
         { label: S('profile_cat_safety'), icon: 'shield', page: this.dashSafety() },
         { label: S('profile_cat_comfort'), icon: 'armchair', page: this.dashComfort() }
-      ]);
+      ], 'dash-pages') + '</div>';
     }
     dashDrive() {
       const c = car(), k = caps();
@@ -2133,6 +2135,11 @@
           '<div data-hl="heat-seats"><div class="a-sub">' + esc(S('climate_seat_right')) + '</div>' + seat('R', c.seatR) + '</div>' +
           '</div></div>';
       }
+      if (k.beam) {
+        const hb = (on, key) => '<button class="b' + (c.highBeam === on ? ' on' : '') + '" data-a="highBeam" data-v="' + (on ? 1 : 0) + '">' + esc(S(key)) + '</button>';
+        h += '<div class="a-card" data-hl="highbeam"><div class="a-h">' + esc(S('card_lighting')) + '</div><div class="a-sub">' + esc(S('lighting_auto_high_beam')) + '</div>' +
+          '<div class="a-grid g2">' + hb(true, 'common_on') + hb(false, 'common_off') + '</div></div>';
+      }
       if (k.clim) {
         const cl = c.clim;
         h += '<div class="a-card" data-hl="clim"><div class="a-h">' + esc(S('clim_card_title')) + '</div>' +
@@ -2142,23 +2149,18 @@
           range('climFan', cl.fMin, cl.fMax, cl.fan) + '</div></div></div>';
         const tg = (a, on, key) => '<button class="b' + (on ? ' on' : '') + '" data-a="' + a + '">' + esc(S(key)) + '</button>';
         const lp = (n, key) => '<button class="b' + (cl.loop === n ? ' on' : '') + '" data-a="climLoop" data-v="' + n + '">' + esc(S(key)) + '</button>';
-        h += '<div class="a-card" data-hl="climmodes"><div class="a-h">' + esc(S('clim_modes_title')) + '</div><div class="a-cols sep">' +
-          '<div><div class="a-sub">' + esc(S('clim_section_switches')) + '</div><div class="a-grid">' + tg('climPower', cl.power, 'clim_power') + tg('climAc', cl.ac, 'clim_ac') + tg('climAuto', cl.auto, 'clim_auto') + tg('climEco', cl.eco, 'clim_eco') + '</div></div>' +
-          '<div><div class="a-sub">' + esc(S('clim_section_loop')) + '</div><div class="a-grid">' + lp(0, 'clim_loop_inner') + lp(1, 'clim_loop_outside') + lp(2, 'clim_loop_auto') + '</div></div>' +
-          '</div></div>';
-        // Débit d'air en mode AUTO (issue #178) : réglage de la voiture, 0 = fort, 1 = moyen, 2 = faible.
         const av = (n) => '<button class="b' + (cl.autoVol === n ? ' on' : '') + '" data-a="climAutoVol" data-v="' + n + '">' + esc(S(AUTOVOL_KEY[n])) + '</button>';
-        h += '<div class="a-card" data-hl="autovol"><div class="a-h">' + esc(S('clim_section_autovol')) + '</div><div class="a-grid g3">' + av(2) + av(1) + av(0) + '</div></div>';
+        h += '<div class="a-card" data-hl="climmodes"><div class="a-h">' + esc(S('clim_modes_title')) + '</div><div class="a-cols sep">' +
+          '<div><div class="a-sub">' + esc(S('clim_section_switches')) + '</div><div class="a-grid g1">' + tg('climPower', cl.power, 'clim_power') + tg('climAc', cl.ac, 'clim_ac') + tg('climAuto', cl.auto, 'clim_auto') + tg('climEco', cl.eco, 'clim_eco') + '</div></div>' +
+          '<div><div class="a-sub">' + esc(S('clim_section_loop')) + '</div><div class="a-grid g1">' + lp(0, 'clim_loop_inner') + lp(1, 'clim_loop_outside') + lp(2, 'clim_loop_auto') + '</div></div>' +
+          // Débit d'air en mode AUTO (issue #178) : réglage de la voiture, 0 = fort, 1 = moyen, 2 = faible.
+          '<div data-hl="autovol"><div class="a-sub">' + esc(S('clim_section_autovol')) + '</div><div class="a-grid g1">' + av(0) + av(1) + av(2) + '</div></div>' +
+          '</div></div>';
         // Sens de l'air : boutons cumulables ; la lunette arrière est le dégivrage arrière.
         const ab = (a, on, key, icon) => '<button class="b air' + (on ? ' on' : '') + '" data-a="' + a + '">' + AIR_ICON[icon] + '<span>' + esc(S(key)) + '</span></button>';
         h += '<div class="a-card" data-hl="airflow"><div class="a-h">' + esc(S('clim_section_airflow')) + '</div><div class="a-grid g4">' +
           ab('airFace', cl.air.face, 'clim_air_face', 'face') + ab('airFeet', cl.air.feet, 'clim_air_feet', 'feet') +
           ab('airWs', cl.air.ws, 'clim_air_windshield_front', 'ws') + ab('climDefR', cl.defR, 'clim_air_windshield_rear', 'rear') + '</div></div>';
-      }
-      if (k.beam) {
-        const hb = (on, key) => '<button class="b' + (c.highBeam === on ? ' on' : '') + '" data-a="highBeam" data-v="' + (on ? 1 : 0) + '">' + esc(S(key)) + '</button>';
-        h += '<div class="a-card" data-hl="highbeam"><div class="a-h">' + esc(S('card_lighting')) + '</div><div class="a-row"><span class="lbl">' + esc(S('lighting_auto_high_beam')) + '</span>' +
-          '<div class="a-grid g2" style="flex:0 0 260px">' + hb(true, 'common_on') + hb(false, 'common_off') + '</div></div></div>';
       }
       return h;
     }
@@ -2183,16 +2185,16 @@
         const def = p.id === state.defaultId, act = p.id === state.activeProfileId;
         return '<div class="p-item' + (act ? ' act' : '') + '" data-hl="plist" data-pid="' + p.id + '"><div class="p-top">' + grip + '<span class="p-name">' + esc(p.name) + '</span>' +
           (act ? '<span class="p-badge act">' + esc(S('overlay_profile_active')) + '</span>' : '') +
-          (def ? '<span class="p-badge" data-hl="pdefault">' + esc(S('profile_default_badge')) + '</span>' : '') + '</div>' +
+          (def ? '<span class="p-badge" data-hl="pdefault">' + esc(S('profile_default_badge')) + '</span>' : '') +
+          '<button class="p-more" data-a="pMenu" data-v="' + p.id + '" aria-label="' + esc(S('profile_menu')) + '">⋮</button></div>' +
           '<div class="p-sum">' + esc(this.profileSummary(p).replace(/^: /, '')) + '</div><div class="p-btns" data-hl="pbtns">' +
-          '<button class="b primary full" data-a="pApply" data-v="' + p.id + '">' + esc(S('profile_apply_now')) + '</button>' +
-          '<div class="p-row3"><button class="b" data-a="pEdit" data-v="' + p.id + '">' + esc(S('profile_edit')) + '</button>' +
-          '<button class="b" data-a="pDefault" data-v="' + p.id + '">' + esc(S('profile_set_default')) + '</button>' +
-          '<button class="b danger" data-a="pDel" data-v="' + p.id + '">' + esc(S('profile_delete')) + '</button></div></div></div>';
+          '<button class="b solid full" data-a="pApply" data-v="' + p.id + '">' + esc(S('profile_apply_now')) + '</button>' +
+          '<div class="p-row2"><button class="b" data-a="pEdit" data-v="' + p.id + '">' + esc(S('profile_edit')) + '</button>' +
+          '<button class="b" data-a="pDefault" data-v="' + p.id + '">' + esc(S('profile_set_default')) + '</button></div></div></div>';
       }).join('');
       const empty = '<div class="a-desc" style="text-align:center;padding:40px 0">' + esc(L('Aucun profil. Créez-en un avec « Nouveau profil ».', 'No profile yet. Create one with “New profile”.')) + '</div>';
       return '<div class="a-page"><div class="a-scroll">' + (items ? '<div class="p-grid">' + items + '</div>' : empty) + '</div>' +
-        '<button class="b green full" data-a="pNew" data-hl="pnew">' + esc(S('profile_add')) + ' (' + state.profiles.length + '/' + MAX_PROFILES + ')</button></div>';
+        '<button class="b primary full up p-new" data-a="pNew" data-hl="pnew">' + esc(S('profile_add')) + '</button></div>';
     }
 
     /**
@@ -2241,10 +2243,9 @@
     }
     editHtml() {
       const e = this.ui.edit; if (!e) return '';
-      const head = '<div class="a-card" style="padding:10px 14px;border-radius:12px"><div class="a-row" style="min-height:40px">' +
-        '<span class="a-title" style="flex:0 0 auto">' + esc(e._new ? S('profile_add') : S('profile_edit')) + '</span>' +
-        '<input class="a-input" style="flex:1" data-c="eName" data-fid="eName" maxlength="24" placeholder="' + esc(S('profile_name_hint')) + '" value="' + esc(e.name) + '" data-hl="ename">' +
-        '<span class="lbl" style="flex:0 0 auto;font-size:15px">' + esc(S('profile_set_as_default')) + '</span>' + sw(e._default, 'eDefault') + '</div></div>';
+      const head = '<div class="pe-head"><span class="a-title" style="flex:0 0 auto">' + esc(e._new ? S('profile_add') : S('profile_edit')) + '</span>' +
+        '<input class="a-input pe-name" data-c="eName" data-fid="eName" maxlength="30" placeholder="' + esc(S('profile_name_hint')) + '" value="' + esc(e.name) + '" data-hl="ename">' +
+        '<div class="pe-def"><span class="lbl">' + esc(S('profile_set_as_default')) + '</span>' + sw(e._default, 'eDefault') + '</div></div>';
       // Une page sans aucun réglage sur ce firmware reste absente du rail, comme avant.
       const cat = (key, content, tail) => ({
         label: S('profile_cat_' + key), off: !catOn(e, key), icon: { drive: 'steering', safety: 'shield', comfort: 'armchair' }[key],
@@ -2255,8 +2256,8 @@
         cat('safety', this.editSafety(e)),
         cat('comfort', this.editComfort(e), this.editBt(e))
       ]);
-      const foot = '<div class="a-grid g2"><button class="b" data-a="eCancel">' + esc(S('profile_cancel')) + '</button><button class="b green" data-a="eSave" data-hl="esave">' + esc(S('profile_save')) + '</button></div>';
-      return '<div class="a-page">' + head + body + foot + '</div>';
+      const foot = '<div class="pe-foot"><button class="b up" data-a="eCancel">' + esc(S('profile_cancel')) + '</button><button class="b primary up" data-a="eSave" data-hl="esave">' + esc(S('profile_save')) + '</button></div>';
+      return '<div class="a-page pe-page">' + head + body + foot + '</div>';
     }
     /**
      * Interrupteur général d'une catégorie : coupée, la page se replie sur une phrase et le
@@ -2275,7 +2276,7 @@
       const rg = (l, key) => { const en = regenOn && (ok || (l === 'ONE_PEDAL' && !snow)); return '<button class="b' + (e.regen === l ? ' on' : '') + (en ? '' : ' dis') + '" data-a="eRegen" data-v="' + l + '"' + (en ? '' : ' disabled') + '>' + esc(S(key)) + '</button>'; };
       const custom = e.driveMode === 'CUSTOM'
         ? this.customCard({ power: e.customPower, steer: e.customSteer, pedal: e.customPedal }, 'eCustom', 'p-custom') : '';
-      return '<div class="a-sec"><div class="a-h">' + esc(S('drive_section_mode')) + '</div><div class="a-grid g3">' + dm('ECO') + dm('NORMAL') + dm('SPORT') + dm('SNOW') + dm('CUSTOM') + '</div>' +
+      return '<div class="a-sec"><div class="a-h">' + esc(S('drive_section_mode')) + '</div><div class="a-grid g3">' + dm('ECO') + dm('NORMAL') + dm('SPORT') + '</div><div class="a-grid g2" style="margin-top:8px">' + dm('SNOW') + dm('CUSTOM') + '</div>' +
         (k.known ? '<button class="b full' + (e.energy ? ' on' : '') + (snow ? ' dis' : '') + '" style="margin-top:5px" data-a="eEnergy"' + (snow ? ' disabled' : '') + '>' + esc(S('drive_energy_saving')) + '</button>' : '') + '</div>' + custom +
         '<div class="a-sec" data-hl="p-regen"><div class="a-row"><span class="lbl"><b>' + esc(S('drive_section_regen')) + '</b></span>' + sw(regenOn, 'eRegenOn') + '</div><div class="a-grid g3">' +
         rg('OFF', 'regen_off') + rg('LOW', 'regen_low') + rg('MEDIUM', 'regen_medium') + rg('HIGH', 'regen_high') + rg('ADAPTIVE', 'regen_adaptive_short') + rg('ONE_PEDAL', 'regen_one_pedal_short') + '</div>' +
@@ -2320,6 +2321,12 @@
           '<div class="a-sub">' + esc(S('climate_seat_left')) + '</div><div class="a-grid g4">' + lv('eSeatL', e.seatL) + '</div>' +
           '<div class="a-sub" style="margin-top:8px">' + esc(S('climate_seat_right')) + '</div><div class="a-grid g4">' + lv('eSeatR', e.seatR) + '</div></div>';
       }
+      if (k.beam) {
+        const on = e.beam != null, cur = e.beam !== false;
+        const hb = (v, key) => '<button class="b' + (cur === v ? ' on' : '') + (on ? '' : ' dis') + '" data-a="eBeam" data-v="' + (v ? 1 : 0) + '"' + (on ? '' : ' disabled') + '>' + esc(S(key)) + '</button>';
+        h += '<div class="a-sec" data-hl="p-beam"><div class="a-row"><span class="lbl"><b>' + esc(S('lighting_auto_high_beam')) + '</b></span>' + sw(on, 'eBeamOn') + '</div>' +
+          '<div class="a-grid g2">' + hb(false, 'climate_off') + hb(true, 'climate_on') + '</div></div>';
+      }
       if (k.clim) h += this.editHvac(e.hvac);
       return h;
     }
@@ -2334,8 +2341,8 @@
       const on = hv.enabled, dimOff = on && hv.power ? '' : ' dim';
       const b = (a, active, label, v, dis) => '<button class="b sm' + (active ? ' on' : '') + (dis ? ' dis' : '') + '" data-a="' + a + '"' + (v != null ? ' data-v="' + v + '"' : '') + (dis ? ' disabled' : '') + '>' + label + '</button>';
       let h = '<div class="a-sec" data-hl="p-hvac"><div class="a-row"><span class="lbl"><b>' + esc(S('profile_hvac_title')) + '</b></span>' + sw(on, 'hvOn') + '</div>';
-      if (on) {
-        const off = !hv.power;
+      {
+        const off = !on || !hv.power;
         const air = hv.air;
         const has = (bit) => air != null && (air & bit) !== 0;
         // Comme fragment_profile_edit.xml : icône de 28 dp au-dessus d'un texte de 12 sp.
@@ -2367,7 +2374,7 @@
         { label: S('settings_cat_ui'), icon: 'palette', page: this.setUi() },
         { label: S('settings_cat_advanced'), icon: 'adjustments', page: this.setAdv() },
         { label: S('settings_cat_info'), icon: 'info', page: this.setInfo() }
-      ]);
+      ], 'set-pages');
       return '<div class="a-page">' + body + '</div>';
     }
     setLang() {
@@ -2379,25 +2386,26 @@
       const s = state.settings, k = caps();
       const ds = (v, key) => '<button class="b' + (s.defaultScreen === v ? ' on' : '') + '" data-a="defScreen" data-v="' + v + '">' + esc(S(key)) + '</button>';
       const th = (v, key) => '<button class="b' + (s.theme === v ? ' on' : '') + '" data-a="theme" data-v="' + v + '">' + esc(S(key)) + '</button>';
-      return '<div class="a-sec" data-hl="s-default"><div class="a-h">' + esc(S('settings_default_screen')) + '</div><div class="a-grid g3">' + ds('dashboard', 'settings_default_screen_dashboard') + ds('profiles', 'nav_profiles') + ds('shortcuts', 'nav_shortcuts') + '</div></div>' +
+      const desc = (key) => '<div class="a-desc">' + esc(S(key)) + '</div>';
+      return '<div class="set-2col">' +
+        '<div class="a-sec" data-hl="s-default"><div class="a-h">' + esc(S('settings_default_screen')) + '</div><div class="a-grid g3">' + ds('dashboard', 'settings_default_screen_dashboard') + ds('profiles', 'nav_profiles') + ds('shortcuts', 'nav_shortcuts') + '</div></div>' +
         '<div class="a-sec" data-hl="s-theme"><div class="a-h">' + esc(S('settings_theme')) + '</div><div class="a-grid g3">' + th('auto', 'settings_theme_auto') + th('dark', 'settings_theme_dark') + th('light', 'settings_theme_light') + '</div></div>' +
         '<div class="a-sec" data-hl="s-textsize"><div class="a-h">' + esc(S('settings_text_size')) + '</div><div class="a-grid g3">' +
           ['standard', 'large', 'xlarge'].map((v) => '<button class="b' + (s.textSize === v ? ' on' : '') + '" data-a="textSize" data-v="' + v + '">' + esc(S('settings_text_size_' + v)) + '</button>').join('') + '</div></div>' +
-        '<div class="a-sec" data-hl="s-popupdelay"><div class="a-h">' + esc(S('settings_popup_delay')) + '</div>' +
-          '<div class="a-row"><div style="flex:1">' + range('popupDelay', 1, 60, popupDelay()) + '</div><span class="a-val" data-out="popupDelay">' + popupDelay() + ' s</span></div>' +
-          '<div class="a-desc">' + esc(S('settings_popup_delay_desc')) + '</div></div>' +
         '<div class="a-sec" data-hl="s-fullscreen"><div class="a-h">' + esc(S('settings_fullscreen')) + '</div>' +
-          '<div class="a-row"><span class="lbl">' + esc(S('settings_fullscreen_switch')) + '<small>' + esc(S('settings_fullscreen_desc')) + '</small></span>' + sw(s.fullscreen, 'fullscreen') + '</div></div>' +
+          '<div class="a-row"><span class="lbl">' + esc(S('settings_fullscreen_switch')) + '</span>' + sw(s.fullscreen, 'fullscreen') + '</div>' + desc('settings_fullscreen_desc') + '</div>' +
+        '<div class="a-sec" data-hl="s-hvaczone"><div class="a-h">' + esc(S('floating_hvac_zone')) + '</div>' +
+          '<div class="a-row"><span class="lbl">' + esc(S('floating_hvac_zone_desc')) + '</span>' + sw(s.hvacZone, 'hvacZone') + '</div></div>' +
+        '<div class="a-sec" data-hl="s-popupdelay"><div class="a-h">' + esc(S('settings_popup_delay')) + '</div>' +
+          '<div class="a-row"><div style="flex:1">' + range('popupDelay', 1, 60, popupDelay()) + '</div><span class="a-val" data-out="popupDelay">' + popupDelay() + ' s</span></div>' + desc('settings_popup_delay_desc') + '</div>' +
+        // Pop-up de charge (ChargePopupSettings) : tous les firmwares, activé par défaut.
+        '<div class="a-sec" data-hl="s-chargepopup"><div class="a-h">' + esc(S('settings_charge_popup')) + '</div>' +
+          '<div class="a-row"><span class="lbl">' + esc(S('settings_charge_popup_switch')) + '</span>' + sw(s.chargePopup, 'chargePopup') + '</div>' + desc('settings_charge_popup_desc') + '</div>' +
         // Côté du menu (NavSide) : Auto suit le volant lu sur la voiture.
         '<div class="a-sec" data-hl="s-navside"><div class="a-h">' + esc(S('settings_nav_side')) + '</div><div class="a-grid g3">' +
           ['auto', 'left', 'right'].map((v) => '<button class="b' + ((s.navSide || 'auto') === v ? ' on' : '') + '" data-a="navSide" data-v="' + v + '">' + esc(S('settings_nav_side_' + v)) + '</button>').join('') + '</div>' +
           '<div class="a-desc">' + esc(S('settings_nav_side_desc', S(car().rhd ? 'settings_nav_side_detected_right' : 'settings_nav_side_detected_left'))) + '</div></div>' +
-        '<div class="a-sec" data-hl="s-hvaczone"><div class="a-h">' + esc(S('floating_hvac_zone')) + '</div>' +
-          '<div class="a-row"><span class="lbl">' + esc(S('floating_hvac_zone_desc')) + '</span>' + sw(s.hvacZone, 'hvacZone') + '</div></div>' +
-        // Pop-up de charge (ChargePopupSettings) : tous les firmwares, activé par défaut.
-        '<div class="a-sec" data-hl="s-chargepopup"><div class="a-h">' + esc(S('settings_charge_popup')) + '</div>' +
-          '<div class="a-row"><span class="lbl">' + esc(S('settings_charge_popup_switch')) + '<small>' + esc(S('settings_charge_popup_desc')) + '</small></span>' + sw(s.chargePopup, 'chargePopup') + '</div></div>' +
-        (k.cluster ? this.setCluster() : '');
+        '</div>' + (k.cluster ? this.setCluster() : '');
     }
     /**
      * Carte « Écran conducteur » : SWI133, SWI68 et SWI165 seulement, absente ailleurs
@@ -2482,20 +2490,21 @@
         row('s-update', S('settings_auto_update_desc'), '', sw(s.autoUpdate, 'autoUpdate')) +
         row('s-updoverlay', S('settings_update_overlay'), S('settings_update_overlay_desc'), sw(s.updOverlay && s.autoUpdate, 'updOverlay', !s.autoUpdate)) +
         row('s-beta', S('settings_beta_channel'), S('settings_beta_channel_desc'), sw(s.beta, 'beta'));
-      if (k.power) h += '<div class="a-row" data-hl="s-power" style="padding:6px 0;border-bottom:1px solid var(--dash-border)"><span class="lbl">' + esc(S('settings_vehicle_power_desc')) + '</span><button class="b danger sm" style="padding:0 18px" data-a="powerOff">' + esc(S('settings_vehicle_power_btn')) + '</button></div>';
+      if (k.power) h += '<div class="a-row" data-hl="s-power" style="padding:6px 0;border-bottom:1px solid var(--dash-border)"><span class="lbl">' + esc(S('settings_vehicle_power_desc')) + '</span><button class="b primary up" style="flex:0 0 auto;padding:0 18px" data-a="powerOff">' + esc(S('settings_vehicle_power_btn')) + '</button></div>';
       h += '<div data-hl="s-gate">' + row('s-gate', S('settings_speed_gate_desc'), '', sw(s.gate, 'gate')) +
         '<div class="a-row"><span class="lbl' + (s.gate ? '' : ' dim') + '">' + esc(S('settings_speed_gate_max_label')) + '</span><input class="a-input num" type="number" min="0" max="250" data-c="gateMax" data-fid="gateMax" value="' + s.gateMax + '"' + (s.gate ? '' : ' disabled') + ' placeholder="' + esc(S('settings_speed_gate_max_hint')) + '"></div></div></div>';
-      // Garder l'A/C coupé (#208) : désactivé par défaut.
-      if (k.clim) h += '<div class="a-sec" data-hl="s-keepac"><div class="a-h">' + esc(S('settings_keep_ac_title')) + '</div>' + row('s-keepac', S('settings_keep_ac'), S('settings_keep_ac_desc'), sw(s.keepAcOff, 'keepAc')) + '</div>';
+      let top = '';
       // Ce que règle AUTO (issue #160) : la ventilation toujours ; le sens de l'air et la recirculation au choix.
       if (k.clim) {
-        h += '<div class="a-sec" data-hl="s-autoscope"><div class="a-h">' + esc(S('settings_auto_scope_title')) + '</div><div class="a-desc">' + esc(S('settings_auto_scope_desc')) + '</div>' +
+        top += '<div class="a-sec" data-hl="s-autoscope"><div class="a-h">' + esc(S('settings_auto_scope_title')) + '</div><div class="a-desc">' + esc(S('settings_auto_scope_desc')) + '</div>' +
           row('s-autoscope', S('settings_auto_scope_fan'), S('settings_auto_scope_fan_desc'), sw(true, 'noop', true)) +
           row('s-autoscope', S('settings_auto_scope_air'), S(s.scopeAir ? 'settings_auto_scope_air_car' : 'settings_auto_scope_air_kept'), sw(s.scopeAir, 'scopeAir')) +
           row('s-autoscope', S('settings_auto_scope_loop'), S(s.scopeLoop ? 'settings_auto_scope_loop_car' : 'settings_auto_scope_loop_kept'), sw(s.scopeLoop, 'scopeLoop')) +
           '<div class="a-desc" style="margin-top:6px">' + esc(S('settings_auto_scope_note')) + '</div></div>';
       }
-      return h;
+      // Garder l'A/C coupé (#208) : désactivé par défaut.
+      if (k.clim) top += '<div class="a-sec" data-hl="s-keepac"><div class="a-h">' + esc(S('settings_keep_ac_title')) + '</div>' + row('s-keepac', S('settings_keep_ac'), S('settings_keep_ac_desc'), sw(s.keepAcOff, 'keepAc')) + '</div>';
+      return top + h;
     }
     setInfo() {
       const k = caps(), u = this.ui;
@@ -2505,12 +2514,12 @@
       const chips = ['SWI133', 'SWI132', 'SWI68', 'SWI69', 'SWI131', 'SWI165'].map((g) =>
         '<button class="fw-chip' + (gen() === g ? ' on' : '') + (unknownMode ? ' tap' : '') + '" ' + (unknownMode ? 'data-a="force" data-v="' + g + '"' : 'tabindex="-1"') + '>' + g + '</button>').join('');
       const du = [['data_usage_today', '38 Mo'], ['data_usage_week', '212 Mo'], ['data_usage_month', '0,9 Go'], ['data_usage_30d', '1,2 Go']]
-        .map(([key, v]) => '<div><small>' + esc(S(key)) + '</small><b>' + v + '</b></div>').join('');
-      return '<div class="a-sec" data-hl="s-maint"><div class="a-h">' + esc(S('settings_maintenance')) + '</div><div class="a-grid g2">' + upd + apk + '</div>' +
-        '<button class="b full" style="margin-top:5px" data-a="about" data-hl="s-about">' + esc(S('btn_infos')) + '</button>' +
-        '<button class="b full" style="margin-top:5px" data-a="androidSet" data-hl="s-androidset">' + esc(S('btn_android_settings')) + '</button>' +
-        (state.diagUnlocked ? '<button class="b full warn on" style="margin-top:5px" data-a="diag" data-hl="s-diag">' + esc(S('btn_diagnostic')) + '</button>' : '') + '</div>' +
-        '<div class="a-sec" data-hl="s-fw"><div class="a-h">' + esc(S('settings_firmware_version')) + '</div><div class="fw-chips">' + chips + '</div>' +
+        .map(([key, v]) => '<div class="du-row"><span>' + esc(S(key)) + '</span><b>' + (appLang() === 'fr' ? v : v.replace(',', '.').replace('Mo', 'MB').replace('Go', 'GB')) + '</b></div>').join('');
+      return '<div class="a-sec" data-hl="s-maint"><div class="a-h">' + esc(S('settings_maintenance')) + '</div><div class="a-grid g2 up2">' + upd + apk + '</div>' +
+        '<button class="b full up" style="margin-top:8px" data-a="about" data-hl="s-about">' + esc(S('btn_infos')) + '</button>' +
+        '<button class="b full up" style="margin-top:8px" data-a="androidSet" data-hl="s-androidset">' + esc(S('btn_android_settings')) + '</button>' +
+        (state.diagUnlocked ? '<button class="b full warn on" style="margin-top:5px" data-a="diag" data-hl="s-diag">' + esc(S('btn_diagnostic')) + '</button>' : '') +
+        '<div class="fw-box" data-hl="s-fw"><span>' + esc(S('settings_firmware_version')) + '</span><div class="fw-chips">' + chips + '</div></div>' +
         (unknownMode ? '<div class="a-desc" style="margin-top:6px">' + esc(L('Firmware non reconnu : touchez une pastille pour forcer un mode de compatibilité.', 'Unrecognised firmware: tap a chip to force a compatibility mode.')) + '</div>' : '') + '</div>' +
         '<div class="a-sec" data-hl="s-data"><div class="a-h">' + esc(S('data_usage_title')) + '</div><div class="du">' + du + '</div></div>';
     }
@@ -2600,11 +2609,13 @@
     /** Page « Garde-voiture » : apparaît quand l'action est attribuée (PreClimateSettings). */
     scPreclim() {
       const p = state.preclim, k = caps();
-      const sl = (id, label, min, max, val, step) => '<div class="a-row"><span class="lbl" style="flex:0 0 300px">' + esc(label) + '</span><div style="flex:1">' + range(id, min, max, val, false, '', step) + '</div><span class="a-val" data-out="' + id + '">' + esc(outText(id, val)) + '</span></div>';
+      const sl = (id, label, min, max, val, step) => '<div class="a-row"><span class="lbl">' + esc(label) + '</span><div class="pc-step">' +
+        '<button class="b" data-a="pcStep" data-v="' + id + ':-' + step + ':' + min + ':' + max + '"' + (val <= min ? ' disabled' : '') + '>−</button><b>' + esc(outText(id, val)) + '</b>' +
+        '<button class="b" data-a="pcStep" data-v="' + id + ':' + step + ':' + min + ':' + max + '"' + (val >= max ? ' disabled' : '') + '>+</button></div></div>';
       const scr = (v, key) => '<button class="b' + (p.screen === v ? ' on' : '') + '" data-a="pcScreenMode" data-v="' + v + '">' + esc(S(key)) + '</button>';
       return '<div class="a-sec" data-hl="sc-preclim"><div class="a-h">' + esc(S('shortcuts_cat_preclim')) + '</div><div class="a-desc">' + esc(S('preclim_cfg_hint')) + '</div>' +
         sl('pcLock', S('preclim_cfg_lock'), 10, 60, p.lock, 5) + sl('pcSoc', S('preclim_cfg_soc'), 10, 40, p.soc, 5) +
-        '<div class="a-row"><span class="lbl" style="flex:0 0 300px">' + esc(S('preclim_cfg_screen')) + '</span><div class="a-grid g3" style="flex:1">' + scr('normal', 'preclim_screen_normal') + scr('dim', 'preclim_screen_dim') + scr('off', 'preclim_screen_off') + '</div></div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_screen')) + '</span><div class="a-grid g3" style="flex:0 0 470px">' + scr('normal', 'preclim_screen_normal') + scr('dim', 'preclim_screen_dim') + scr('off', 'preclim_screen_off') + '</div></div>' +
         (k.cluster ? '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_cluster')) + '<small>' + esc(S('preclim_cfg_cluster_desc')) + '</small></span>' + sw(p.cluster, 'pcCluster') + '</div>' : '') +
         '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_unlock')) + '<small>' + esc(S('preclim_cfg_unlock_desc')) + '</small></span>' + sw(p.unlock, 'pcUnlockSw') + '</div>' +
         '<div class="a-desc" style="margin-top:8px;color:var(--dash-warn)">⚠ ' + esc(S('preclim_cfg_warning')) + '</div></div>' + this.camCard();
@@ -2635,32 +2646,37 @@
       const pid = u.flEdit;
       if (!pid) return '<div class="a-sec" data-hl="sc-floating"><div class="a-desc">' + esc(S('shortcuts_no_profiles')) + '</div></div>';
       const set = flSet(pid), prof = ps.find((p) => p.id === pid);
-      const chips = '<div class="cl-chips">' + ps.map((p) => '<button class="cl-chip' + (p.id === pid ? ' on' : '') + '" data-a="flProf" data-v="' + p.id + '">' + esc(p.name) +
-        ' <small>' + flSet(p.id).list.length + '/6' + (p.id === state.activeProfileId ? ' ●' : '') + '</small></button>').join('') + '</div>';
-      let h = '<div class="a-sec" data-hl="sc-floating"><div class="a-row"><span class="lbl" style="font-weight:700;font-size:18px">' + esc(S('shortcuts_cat_floating')) + '</span>' + sw(set.on, 'flOn') + '</div>' +
-        '<div class="a-desc">' + esc(S('floating_desc')) + '</div><div class="a-sub" style="margin-top:8px">' + esc(S('floating_profiles_title')) + '</div>' + chips +
-        '<div class="a-desc">' + esc(S('floating_profiles_info')) + '</div></div>';
+      const chips = '<div class="fl-ptiles">' + ps.map((p) => '<button class="fl-ptile' + (p.id === pid ? ' on' : '') + '" data-a="flProf" data-v="' + p.id + '"><b>' + esc(p.name) + '</b>' +
+        '<small>' + (p.id === state.activeProfileId ? esc(S('settings_cluster_profile_current')) + ' · ' : '') + flSet(p.id).list.length + '/6</small></button>').join('') + '</div>';
+      let h = '<div class="a-sec" data-hl="sc-floating"><div class="a-h">' + esc(S('shortcuts_cat_floating')) + '</div>' +
+        '<div class="fl-for"><span class="lbl">' + esc(S('floating_profiles_title')) + '</span><span class="a-desc">' + esc(S('floating_profiles_info')) + '</span></div>' + chips +
+        '<div class="a-row fl-switch"><span class="lbl"><b>' + esc(prof ? S('floating_switch_title_profile', prof.name) : S('floating_switch_title')) + '</b><small>' + esc(S(set.on ? 'floating_state_on' : 'floating_state_off')) + '</small></span>' + sw(set.on, 'flOn') + '</div>';
       const sizeName = (b) => (b.size === 0 ? S('floating_size_small') : b.size === 50 ? S('floating_size_medium') : b.size === 100 ? S('floating_size_large') : S('floating_size_value', b.size));
-      h += '<div class="a-sec" data-hl="fl-list">' + (set.list.length ? set.list.map((b) => '<div class="fl-row"><span class="fl-dot' + (b.bold ? ' bold' : '') + '">' + esc(flTitle(b)) + '</span>' +
+      h += '<div data-hl="fl-list">' + (set.list.length ? set.list.map((b) => '<div class="fl-row"><span class="fl-dot' + (b.bold ? ' bold' : '') + '">' + esc(flTitle(b)) + '</span>' +
           '<span class="lbl">' + esc(flTitle(b)) + '<small>' + esc(b.bar ? S('floating_loc_bar') + ' · ' + this.actionLabel(b.action, b) : S('floating_summary', this.actionLabel(b.action, b), sizeName(b), b.text)) + '</small></span>' +
           '<button class="b sm' + (u.flEditing === b.id ? ' on' : '') + '" data-a="flEditB" data-v="' + b.id + '">' + esc(S('floating_edit')) + '</button><button class="b sm danger" data-a="flDel" data-v="' + b.id + '">' + esc(S('floating_delete')) + '</button></div>' +
           (u.flEditing === b.id ? this.flEditor(b, set.list.indexOf(b)) : '')).join('')
-        : '<div class="a-desc" style="padding:10px 0">' + esc(S('floating_empty')) + '</div>') +
-        '<button class="b primary full' + (set.list.length >= 6 ? ' dis' : '') + '" style="margin-top:8px" data-a="flAdd"' + (set.list.length >= 6 ? ' disabled' : '') + '>' + esc(set.list.length >= 6 ? S('floating_full') : S('floating_add')) + '</button></div>';
+        : '<div class="a-desc" style="padding:10px 0 4px">' + esc(S('floating_empty')) + '</div>') + '</div>' +
+        '<div class="a-grid g2" style="margin-top:8px"><button class="b' + (set.list.length >= 6 ? ' dis' : '') + '" data-a="flAdd"' + (set.list.length >= 6 ? ' disabled' : '') + '>' + esc(set.list.length >= 6 ? S('floating_full') : S('floating_add')) + '</button>' +
+        '<button class="b" data-a="flCopy" data-hl="fl-copy">' + esc(S('floating_copy')) + '</button></div>';
       // Copie vers d'autres profils : leurs bulles sont remplacées.
       const others = ps.filter((p) => p.id !== pid);
       if (others.length) {
-        h += '<div class="a-sec" data-hl="fl-copy"><button class="b full" data-a="flCopy">' + esc(S('floating_copy')) + '</button>' +
+        h += '<div>' +
           (u.flCopy ? '<div class="a-desc" style="margin-top:8px">' + esc(S('floating_copy_info', prof ? prof.name : '')) + '</div><div class="cl-chips">' +
             others.map((p) => '<button class="cl-chip' + (u.flCopy.includes(p.id) ? ' on' : '') + '" data-a="flCopyTo" data-v="' + p.id + '">' + esc(p.name) + '</button>').join('') + '</div>' +
             '<div class="a-row"><span class="lbl" style="color:var(--text-secondary)">' + esc(S('floating_copy_note')) + '</span><button class="b sm primary" style="padding:0 16px" data-a="flCopyGo">' + esc(S('floating_copy_go')) + '</button></div>' : '') + '</div>';
       }
-      const SW = ['#A6C8FF', '#38BDF8', '#22C55E', '#A3E635', '#F59E0B', '#F97316', '#F43F5E', '#E879F9', '#E5E7EB'];
-      h += '<div class="a-sec" data-hl="fl-color"><div class="a-h">' + esc(S('floating_color')) + '</div><div class="a-desc">' + esc(S('floating_color_desc')) + '</div><div class="fl-swatches">' +
-        SW.map((c) => '<button class="fl-sw' + ((state.floating.color || SW[0]) === c ? ' on' : '') + '" style="background:' + c + '" data-a="flColor" data-v="' + c + '" aria-label="' + c + '"></button>').join('') + '</div></div>';
-      h += '<div class="a-sec" data-hl="fl-options"><div class="a-h">' + esc(S('floating_options')) + '</div>' +
+      const SW = ['#A6C8FF', '#38BDF8', '#22C55E', '#FACC15', '#F97316', '#F43F5E', '#E879F9', '#A78BFA', '#EEF2F8'];
+      const col = state.floating.color || SW[0];
+      h += '<div class="a-sub fl-opt" data-hl="fl-options">' + esc(S('floating_options')) + '</div>' +
         '<div class="a-row"><span class="lbl">' + esc(S('floating_hide_reverse')) + '</span>' + sw(state.floating.hideReverse, 'flReverse') + '</div>' +
-        '<div class="a-row"><span class="lbl">' + esc(S('floating_reset')) + '</span><button class="b sm" style="padding:0 16px" data-a="flReset">' + esc(S('floating_reset_btn')) + '</button></div></div>';
+        '<div data-hl="fl-color"><div class="lbl" style="margin-top:6px">' + esc(S('floating_color')) + '</div><div class="a-desc">' + esc(S('floating_color_desc')) + '</div><div class="fl-swatches">' +
+        SW.map((c) => '<button class="fl-sw' + (col.toUpperCase() === c ? ' on' : '') + '" style="background:' + c + '" data-a="flColor" data-v="' + c + '" aria-label="' + c + '"></button>').join('') +
+        '<span class="fl-sw wheel" aria-hidden="true"></span></div>' +
+        '<div class="a-row fl-code"><span class="lbl" style="flex:0 0 auto">' + esc(S('color_code')) + '</span><input class="a-input" style="width:130px" maxlength="7" data-c="flColorCode" data-fid="flColorCode" value="' + esc(col.toUpperCase()) + '">' +
+        '<button class="b primary sm" style="padding:0 16px" data-a="flColorDef">' + esc(S('color_default')) + '</button><span style="flex:1"></span></div></div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('floating_reset')) + '</span><button class="b" style="flex:0 0 auto;padding:0 26px" data-a="flReset">' + esc(S('floating_reset_btn')) + '</button></div></div>';
       return h;
     }
     /** Édition d'une bulle : la vraie bulle suit à l'écran (pas d'aperçu à part). */
@@ -2962,8 +2978,8 @@
     }
     periodRow() {
       const p = state.stats.period;
-      return '<div class="a-grid g2" style="margin-bottom:8px"><button class="b sm' + (p ? ' on' : '') + '" data-a="stPeriod" data-v="30">' + esc(S('stats_period_short', 30)) + '</button>' +
-        '<button class="b sm' + (!p ? ' on' : '') + '" data-a="stPeriod" data-v="0">' + esc(S('stats_period_all')) + '</button></div>';
+      return '<div class="st-chips"><button class="st-chip' + (p ? ' on' : '') + '" data-a="stPeriod" data-v="30">' + esc(S('stats_period_short', 30)) + '</button>' +
+        '<button class="st-chip' + (!p ? ' on' : '') + '" data-a="stPeriod" data-v="0">' + esc(S('stats_period_all')) + '</button></div>';
     }
     statsGeneral() {
       const st = state.stats, s = this.statsSummary();
@@ -3025,13 +3041,15 @@
       const list = s.trips.map((t, i) => ({ t, i, km: part(t) })).filter((x) => x.km > 0);
       const km = list.reduce((a, x) => a + x.km, 0), kmAll = s.trips.reduce((a, t) => a + t.km, 0) || 1;
       const color = (id) => { const i = state.profiles.findIndex((p) => p.id === id); return ['#A6C8FF', '#7FD4A8', '#F7C873', '#E9A0D8', '#9FD6E8', '#F29E8E'][i % 6] || '#A6C8FF'; };
-      const chips = '<div class="cl-chips st-prof" data-hl="st-profile"><span class="a-sub" style="margin:0 6px 0 0">' + esc(S('stats_filter_profile')) + '</span>' +
-        [{ id: '', name: S('stats_filter_all') }].concat(state.profiles).map((p) => '<button class="cl-chip' + ((pid || '') === p.id ? ' on' : '') + '" data-a="stProf" data-v="' + p.id + '">' + esc(p.name) + '</button>').join('') + '</div>';
-      let h = '<div class="a-sec" data-hl="st-trips"><div class="a-h">' + esc(S('stats_cat_trips')) + '</div>' + this.periodRow() + chips + this.tiles([
+      const seen = new Set(); s.trips.forEach((t) => (t.segs || []).forEach((g) => { if (g.pid) seen.add(g.pid); }));
+      const used = state.profiles.filter((p) => seen.has(p.id));
+      const chips = used.length ? '<div class="st-chips st-prof" data-hl="st-profile"><span class="st-cap">' + esc(S('stats_filter_profile')) + '</span>' +
+        [{ id: '', name: S('stats_filter_all') }].concat(used).map((p) => '<button class="st-chip' + ((pid || '') === p.id ? ' on' : '') + '" data-a="stProf" data-v="' + p.id + '">' + esc(p.name) + '</button>').join('') + '</div>' : '';
+      let h = '<div class="a-sec" data-hl="st-trips"><div class="st-title">' + esc(S('stats_cat_trips')) + '</div>' + this.periodRow() + chips + this.tiles([
         [S('stats_tile_trips'), String(list.length)], [S('stats_tile_distance'), this.num(km, 1) + ' km'],
         [S('stats_tile_longest'), this.num(list.reduce((a, x) => Math.max(a, x.km), 0), 1) + ' km'], [S('stats_tile_cost'), this.money(s.driving * km / kmAll)]
       ]) + '</div>';
-      if (!list.length) return h + '<div class="a-desc" style="text-align:center;padding:16px">' + esc(S('stats_no_trip')) + '</div>';
+      if (!list.length) return h + '<div class="a-sec st-empty">' + esc(S('stats_no_trip')) + '</div>';
       list.forEach(({ t, i, km: kp }) => {
         const cons = t.short ? '≈ ' + Math.round(t.kwh / t.km * 100) + ' kWh/100 km' : this.num(t.kwh / t.km * 100, 1) + ' kWh/100 km';
         const open = u.statsOpen === 't' + i;
@@ -3114,12 +3132,12 @@
       const banner = st.batteryConfirmed ? '' : '<div class="st-banner" data-hl="st-banner"><div class="a-row"><span class="lbl">' + esc(S('stats_battery_banner', st.battery + ' kWh')) + '</span>' +
         '<button class="b sm" style="padding:0 14px" data-a="stBatOk">' + esc(S('stats_battery_banner_ok')) + '</button>' +
         '<button class="b sm on warn" style="padding:0 14px" data-a="stBatChange">' + esc(S('stats_battery_banner_change')) + '</button></div></div>';
-      let h = banner + '<div class="a-sec" data-hl="st-charges"><div class="a-h">' + esc(S('stats_cat_charges')) + '</div>' + this.periodRow() + this.tiles([
+      let h = banner + '<div class="a-sec" data-hl="st-charges"><div class="st-title">' + esc(S('stats_cat_charges')) + '</div>' + this.periodRow() + this.tiles([
         [S('stats_tile_charged'), this.num(s.charged, 1) + ' kWh'], [S('stats_tile_cost_total'), this.money(s.chargeCost)],
         [S('stats_tile_avg_price'), s.avgPrice != null ? this.num(s.avgPrice, 3) + ' ' + st.currency : '—'],
         [S('stats_tile_sessions'), s.charges.length + ' · ' + s.ac + ' AC / ' + s.dc + ' DC']
       ]) + '</div>';
-      if (!s.charges.length) return h + '<div class="a-desc" style="text-align:center;padding:16px">' + esc(S('stats_no_charge')) + '</div>';
+      if (!s.charges.length) return h + '<div class="a-sec st-empty">' + esc(S('stats_no_charge')) + '</div>';
       s.charges.forEach((c) => {
         const i = st.charges.indexOf(c);
         const open = u.statsOpen === 'c' + i;
@@ -3656,7 +3674,9 @@
      */
     shortcutsHtml() {
       const sc = state.sc;
-      const master = '<div class="a-master" data-hl="sc-master"><span>' + esc(S('shortcuts_enabled_short')) + '</span>' + sw(sc.enabled, 'scOn') + '</div>';
+      const cur = String(this.ui.tabs.sc || 'classic');
+      const master = cur === 'classic' ? '<div class="a-master" data-hl="sc-master"><span>' + esc(S('shortcuts_enabled_short')) + '</span>' + sw(sc.enabled, 'scOn') + '</div>' : '';
+      const cfg = ['onepedal', 'adas', 'regen', 'drivemode', 'profiles', 'sources', 'preclim'].includes(cur) ? 'sc-cfg' : '';
       const body = this.railLayout('sc', [
         { id: 'classic', label: S('shortcuts_cat_classic'), icon: 'steering', page: this.wheelPage(), hl: 'sc-wheel' },
         { id: 'onepedal', label: S('shortcuts_cat_onepedal'), icon: 'pedal', page: this.assigned('ONE_PEDAL') ? this.scOnePedal() : '', hl: 'sc-sub-onepedal' },
@@ -3670,7 +3690,7 @@
         { id: 'quick', label: S('shortcuts_cat_quick'), icon: 'cat_adjust', page: this.assigned('QUICK_SETTINGS') || this.ui.qsPage ? this.scQuick() : '', hl: 'sc-sub-quick' },
         { id: 'floating', label: S('shortcuts_cat_floating'), icon: 'circle_dot', page: this.scFloating(), hl: 'sc-floating' },
         { id: 'custom', label: S('shortcuts_cat_custom'), icon: 'wand', page: this.scCustom(), hl: 'sc-custom' }
-      ], '', master);
+      ], cfg, master);
       return '<div class="a-page">' + body + '</div>';
     }
     /** Fonction attribuée à une touche, une bulle ou (Réglages rapides) une automatisation. */
@@ -3738,7 +3758,7 @@
           [{ id: '', name: S('adv_sc_all_profiles') }].concat(state.profiles).map((p) => '<button class="cl-chip' + (scope === p.id ? ' on' : '') + '" data-a="wkScope" data-v="' + p.id + '">' + esc(p.name) +
             (p.id && p.id === state.activeProfileId ? ' ●' : '') + '</button>').join('') + '</div></div>';
       }
-      const presses = [['single', 'adv_sc_press_short'], ['long', 'adv_sc_press_long_lbl'], ['double', 'adv_sc_press_double']];
+      const presses = [['single', 'shortcuts_press_single'], ['long', 'shortcuts_press_long'], ['double', 'wheel_press_double']];
       h += '<div class="wk-grid">' + this.wheelKeys().map((code) => {
         const rows = presses.map(([p, key]) => {
           const sl = this.wheelSlot(code, p, scope);
@@ -3746,7 +3766,7 @@
             : this.actionSelect(sl.action, 'wkSel', 'data-key="' + code + '" data-press="' + p + '"', sl.extra) + (sl.inherited ? '<span class="wk-inh">' + esc(S('wheel_inherited_fmt', this.actionLabel(sl.inherited.action, sl.inherited))) + '</span>' : '');
           return '<div class="wk-row' + (sl.locked ? ' locked' : '') + '"><span class="wk-p">' + esc(S(key)) + '</span><div class="wk-v">' + sel + '</div></div>';
         }).join('');
-        return '<div class="a-card wk-card" data-hl="' + (code === 17 ? 'sc-btn1' : code === 286 ? 'sc-btn2' : 'wk-key') + '"><div class="wk-head"><span class="wk-t">' + esc(this.wheelName(code)) + '</span><small>' + code + '</small>' +
+        return '<div class="a-card wk-card" data-hl="' + (code === 17 ? 'sc-btn1' : code === 286 ? 'sc-btn2' : 'wk-key') + '"><div class="wk-head"><span class="wk-t">' + esc(this.wheelName(code)) + '</span><small></small>' +
           '<button class="wk-menu" data-a="wkMenu" data-v="' + code + '" aria-label="' + esc(S('rule_menu_title')) + '">⋮</button></div>' + rows + '</div>';
       }).join('') +
         '<button class="a-card wk-add' + (u.adv.rec ? ' rec' : '') + (sc.advService ? '' : ' dis') + '" data-a="wkAdd" data-hl="adv-key"' + (sc.advService ? '' : ' disabled') + '><b>' + esc(u.adv.rec ? S('wheel_capture_title') : '+ ' + S('wheel_add_key')) + '</b><small>' + esc(u.adv.rec ? S('wheel_capture_msg') : S('wheel_add_key_hint')) + '</small></button></div>';
@@ -3811,7 +3831,7 @@
         { label: S('nav_profiles'), icon: 'users', page: cards.p1 + cards.p2 },
         { label: S('clim_card_title'), icon: 'temperature', page: cards.c5 + cards.c4 },
         { label: S('automation_cat_screen'), icon: 'sun', page: cards.c3 },
-        { label: S('automation_cat_leave'), icon: 'door_exit', page: this.doorCard() + this.windowsCard() },
+        { label: S('automation_cat_leave'), icon: 'door_exit', page: this.windowsCard() + this.doorCard() },
         { label: S('sound_title'), icon: 'music', page: k.door ? cards.c6 : '' },
         { id: 'rules', label: S('rule_page_title'), icon: 'branch', page: this.rulesPage(), hl: 'auto-rules' }
       ]);
@@ -3819,21 +3839,20 @@
     /** Page « Mes automatisations » (CustomRulesPage) : interrupteur général, liste, outils. */
     rulesPage() {
       const R = state.rules, u = this.ui;
-      const head = '<div class="a-card rl-head" data-hl="rules-head"><div class="a-row"><span class="a-title" style="flex:1">' + esc(S('rule_page_title')) + ' <small class="rl-count">' + esc(S('rule_count_fmt', R.list.length, RULES_MAX)) + '</small></span>' +
-        '<span class="lbl" style="flex:0 0 auto">' + esc(S('rule_engine_switch')) + '</span>' + sw(R.engine, 'rEngine') +
-        '<button class="b primary" style="padding:0 18px" data-a="rNew" data-hl="rules-new">+ ' + esc(S('rule_new')) + '</button></div>' +
-        '<div class="a-desc">🧪 ' + esc(L('Expérimental : tout n\'a pas encore été essayé en voiture. La démonstration exécute vraiment les règles dans la maquette (véhicule virtuel, heure de votre appareil).',
-          'Experimental: not everything has been tried in the car yet. The demo really runs the rules in the mockup (virtual vehicle, your device\'s time).')) + '</div></div>';
+      const tool = (key, a) => '<button class="rl-tool" data-a="' + a + '">' + esc(S(key)) + '</button>';
+      const head = '<div class="rl-head" data-hl="rules-head"><div class="a-row"><span class="a-title" style="flex:1">' + esc(S('rule_page_title')) + ' <small class="rl-count">' + esc(S('rule_count_fmt', R.list.length, RULES_MAX)) + '</small></span>' +
+        '<button class="b solid rl-new" data-a="rNew" data-hl="rules-new">' + esc(S('rule_new')) + '</button></div>' +
+        '<div class="a-row rl-tools-row" data-hl="rules-tools"><span class="lbl" style="flex:0 0 auto">' + esc(S('rule_engine_switch')) + '</span>' + sw(R.engine, 'rEngine') + '<span style="flex:1"></span>' +
+        tool('rule_tool_history', 'rHist') + tool('rule_tool_variables', 'rVars') + tool('rule_tool_places', 'rPlaces') + tool('abrp_tool', 'rAbrp') +
+        tool('rule_tool_export', 'rExport') + tool('rule_tool_import', 'rImport') + '</div></div>';
       const list = R.list.length ? R.list.map((r) => {
         const off = !r.on || !R.engine;
         return '<div class="a-card rl-card' + (off ? ' off' : '') + '" data-hl="rule-card"><div class="a-row"><span class="a-title rl-name" data-a="rEdit" data-v="' + r.id + '">' + esc(r.name) + '</span>' + sw(r.on, 'rOn', false, r.id) + '</div>' +
           '<div class="rl-sum">' + esc(rSummary(r)) + '</div><div class="rl-foot"><span class="a-desc">' + esc(r.last ? S('rule_last_run_fmt', r.last.at, r.last.ok, r.last.ko) : S('rule_never_run')) + '</span>' +
-          '<button class="b sm" data-a="rTest" data-v="' + r.id + '">' + esc(S('rule_test')) + '</button><button class="b sm" data-a="rEdit" data-v="' + r.id + '">' + esc(S('rule_menu_edit')) + '</button>' +
+          '<button class="b sm primary" data-a="rEdit" data-v="' + r.id + '">' + esc(S('rule_menu_edit')) + '</button><button class="b sm" data-a="rTest" data-v="' + r.id + '">' + esc(S('rule_test')) + '</button>' +
           '<button class="b sm danger" data-a="rDel" data-v="' + r.id + '">' + esc(S('rule_delete')) + '</button></div></div>';
       }).join('') : '<div class="a-desc" style="text-align:center;padding:20px">' + esc(S('rule_empty')) + '</div>';
-      const tools = '<div class="a-card" data-hl="rules-tools"><div class="a-grid g3"><button class="b" data-a="rHist">' + esc(S('rule_tool_history')) + ' (' + R.hist.length + ')</button>' +
-        '<button class="b" data-a="rExport">' + esc(S('rule_tool_export')) + '</button><button class="b" data-a="rImport">' + esc(S('rule_tool_import')) + '</button></div></div>';
-      return head + list + tools;
+      return head + list;
     }
     /** Éditeur (CustomRuleEditFragment) : une colonne Quand / Et si / Alors / Options, rien d'écrit avant Enregistrer. */
     ruleEditHtml() {
@@ -3915,6 +3934,17 @@
           return win(1000, head(MW.list, S('rule_tool_history'), null) + '<div class="mw-scroll rl-hist" data-sk="hist">' + (H.length ? H.map((x) => '<div class="rl-hrow"><b>' + esc(x.at + ' · ' + x.name) + '</b>' +
             x.journal.map((l) => '<div>' + esc(l) + '</div>').join('') + '</div>').join('') : '<div class="a-desc">' + esc(S('rule_never_run')) + '</div>') + '</div>' +
             '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
+        }
+        case 'rInfo':
+          return confirm({ ico: MW.info, title: d.title, msg: d.msg, yes: S('nav_close') });
+        case 'rAbrp': {
+          // AbrpDialogs.comptes : un compte d'exemple, les trois tuiles, puis Fermer.
+          const tile = (key) => '<button class="mw-choice" data-a="rAbrpDemo"><b>' + esc(S(key)) + '</b></button>';
+          return win(900, head(MW.list, S('abrp_title'), S('abrp_subtitle_fmt', 1, 5)) +
+            '<div class="mw-pan mt14"><div class="a-row"><span class="lbl"><b>' + esc(L('Ma MG4', 'My MG4')) + '</b><br><small>••••1a2b · ' + esc(S('abrp_key_mg4')) + '</small></span>' +
+            '<button class="b sm" data-a="rAbrpDemo">' + esc(S('abrp_edit')) + '</button></div></div>' +
+            '<div class="mw-grid three mt14">' + tile('abrp_add') + tile('abrp_import_usb') + tile('abrp_template') + '</div>' +
+            '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose', 'p') + '</div>');
         }
         case 'rAsk':
           return confirm({ title: d.msg || '?', yes: S('rule_on'), no: S('rule_off'), yesAct: 'rAskYes', noAct: 'rAskNo' });
@@ -4015,6 +4045,7 @@
         case 'navSide': state.settings.navSide = v; commit(); return true;
         case 'keepAc': state.settings.keepAcOff = !state.settings.keepAcOff; commit(); return true;
         case 'flColor': state.floating.color = v; commit(); return true;
+        case 'flColorDef': state.floating.color = null; commit(); return true;
         case 'stProf': u.stProf = v || null; this.render(); return true;
         case 'stBand': state.stats.band = state.stats.band === v ? null : v; commit(); return true;
         case 'stExport': u.dialog = { type: 'export', what: 'stats', dest: 'dl', title: S('stats_export_title'), sub: S('stats_export_subtitle', state.stats.trips.length, state.stats.charges.length), go: S('stats_export') }; this.render(); return true;
@@ -4066,6 +4097,11 @@
         case 'rDel': u.dialog = { type: 'rDelete', id: v }; this.render(); return true;
         case 'rDelOk': R.list = R.list.filter((x) => x.id !== u.dialog.id); u.dialog = null; commit(); return true;
         case 'rHist': u.dialog = { type: 'rHist' }; this.render(); return true;
+        // Variables et lieux : la maquette n'en crée pas, la fenêtre « vide » de l'appli s'affiche.
+        case 'rVars': u.dialog = { type: 'rInfo', title: S('rule_tool_variables'), msg: S('rule_vars_empty') }; this.render(); return true;
+        case 'rPlaces': u.dialog = { type: 'rInfo', title: S('rule_tool_places'), msg: S('rule_places_empty') }; this.render(); return true;
+        case 'rAbrp': u.dialog = { type: 'rAbrp' }; this.render(); return true;
+        case 'rAbrpDemo': this.toast(L('Démonstration : dans l\'appli, le compte se saisit au clavier ou s\'importe depuis la clé USB.', 'Demo: in the app, the account is typed in or imported from the USB drive.'), 3200); return true;
         case 'rExport': u.dialog = { type: 'export', what: 'rules', dest: 'dl', title: S('rule_export_title'), sub: S('rule_export_subtitle', R.list.length), go: S('rule_tool_export') }; this.render(); return true;
         case 'rImport': this.toast(L('Démonstration : l\'import lit un fichier JSON exporté par MG4Control (règles ajoutées coupées).', 'Demo: import reads a JSON file exported by MG4Control (rules added switched off).'), 3200); return true;
         case 'rAskYes': case 'rAskNo': { const d = u.dialog; clearTimeout(this._askT); u.dialog = null; this.render(); if (d && d.done) d.done(a === 'rAskYes'); return true; }
@@ -4141,7 +4177,7 @@
           if (val === 'CUSTOM') { u.dialog = state.sc.custom.length ? { type: 'pickCustom', then } : { type: 'custom', cs: { id: null, name: '', kind: 'APP' }, then }; this.render(); return true; }
           this.setWheel(code, press, scope, val); return true;
         }
-        case 'wkName': if (u.dialog) u.dialog.name = t.value; return true;
+        case 'wkName': case 'pName': if (u.dialog) u.dialog.name = t.value; return true;
         case 'rName': if (u.rEdit) u.rEdit.rule.name = t.value; return true;
         case 'rQ': if (u.dialog) { u.dialog.q = t.value; this.render(); } return true;
         case 'rvMsg': if (u.dialog) u.dialog.item.msg = t.value; return true;
@@ -4328,6 +4364,16 @@
             '<div class="mw-cols mt12">' + time('start', 'stats_complete_start') + time('end', 'stats_complete_end') + '</div>' +
             '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + B(S('stats_save'), 'stCompleteOk', 'p') + '</div>');
         }
+        case 'pMenu': {
+          // AppDialog.choisir : le nom du profil en titre, les trois gestes en tuiles.
+          const p = state.profiles.find((x) => x.id === d.id);
+          return win(760, head(MW.list, p ? p.name : '', null) + '<div class="mw-grid three">' +
+            [['profile_duplicate', 'pDup'], ['profile_rename', 'pRename'], ['profile_delete', 'pDel']].map(([k, a]) => '<button class="mw-choice" data-a="' + a + '" data-v="' + d.id + '"><b>' + esc(S(k)) + '</b></button>').join('') +
+            '</div><div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + '</div>');
+        }
+        case 'pRename':
+          return win(620, head(MW.list, S('profile_rename_title'), null) + '<input class="a-input" style="width:100%" data-c="pName" data-fid="pName" maxlength="30" value="' + esc(d.name) + '">' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(S('rule_save'), 'pRenameOk', 'p') + '</div>');
         case 'delProfile': {
           const p = state.profiles.find((x) => x.id === d.id);
           return confirm({ tone: 'danger', ico: MW.trash, title: S('profile_delete_title', p ? p.name : ''), yes: S('profile_delete'), no: S('profile_cancel'), yesAct: 'delOk' });
@@ -4482,9 +4528,9 @@
         case 'close': this.ui.screen = 'dashboard'; return this.render();
         case 'tab': { const [key, i] = v.split(':'); u.tabs[key] = key === 'sc' || isNaN(+i) ? i : +i; const sc2 = this.app.querySelector('.a-scroll'); if (sc2) sc2.scrollTop = 0; this._lastKey = null; return this.render(); }
         case 'logo':
-          if (state.diagUnlocked) return;
-          u.logoTaps++;
-          if (u.logoTaps >= 5) { u.logoTaps = 0; state.diagUnlocked = true; commit(); this.toast(S('diagnostic_unlocked')); }
+          // Comme MainActivity : le logo ramène au tableau de bord ; cinq appuis ouvrent le diagnostic.
+          if (!state.diagUnlocked && ++u.logoTaps >= 5) { u.logoTaps = 0; state.diagUnlocked = true; commit(); this.toast(S('diagnostic_unlocked')); }
+          if (u.screen !== 'dashboard') { u.screen = 'dashboard'; u.rEdit = null; this.render(); }
           return;
         case 'reopen':
           setTimeout(() => ruleEvent('app_start'), 600);
@@ -4533,6 +4579,30 @@
           state.defaultId = v; r(); return this.toast('Profil par défaut : ' + (p ? p.name : ''));
         }
         case 'pDel': u.dialog = { type: 'delProfile', id: v }; return this.render();
+        // Menu ⋮ de la carte (ProfileFragment.menuProfil) : Dupliquer, Renommer, Supprimer.
+        case 'pMenu': u.dialog = { type: 'pMenu', id: v }; return this.render();
+        case 'pDup': {
+          u.dialog = null;
+          const p = state.profiles.find((x) => x.id === v);
+          if (!p) return this.render();
+          if (state.profiles.length >= MAX_PROFILES) { this.render(); return this.toast(S('profile_max_reached', MAX_PROFILES)); }
+          // ProfileCopy.name : « <nom> Copie », puis « Copie 2 »… ; le tout tient en 30 caractères.
+          const taken = state.profiles.map((x) => x.name.toLowerCase()), word = S('profile_copy_word');
+          let name = '';
+          for (let n = 1; ; n++) {
+            const suf = ' ' + word + (n > 1 ? ' ' + n : '');
+            name = p.name.trim().slice(0, Math.max(1, 30 - suf.length)).trimEnd() + suf;
+            if (!taken.includes(name.toLowerCase())) break;
+          }
+          const copy = Object.assign(JSON.parse(JSON.stringify(p)), { id: uid(), name });
+          state.profiles.splice(state.profiles.indexOf(p) + 1, 0, copy);
+          r(); return this.toast(S('profile_duplicated_fmt', name));
+        }
+        case 'pRename': { const p = state.profiles.find((x) => x.id === v); u.dialog = p ? { type: 'pRename', id: v, name: p.name } : null; return this.render(); }
+        case 'pRenameOk': {
+          const d = u.dialog, p = d && state.profiles.find((x) => x.id === d.id), n = ((d && d.name) || '').trim().slice(0, 30);
+          u.dialog = null; if (p && n) p.name = n; return r();
+        }
         case 'delOk': state.profiles = state.profiles.filter((x) => x.id !== u.dialog.id); if (state.defaultId === u.dialog.id) state.defaultId = null; u.dialog = null; return r();
         case 'pNew':
           if (state.profiles.length >= MAX_PROFILES) return this.toast(S('profile_max_reached', MAX_PROFILES));
@@ -4559,6 +4629,8 @@
         case 'eDms': e.dms = n === 1; return this.render();
         case 'eDmsSen': e.dmsSen = n; return this.render();
         case 'eSteerApply': e.steeringApply = !e.steeringApply; return this.render();
+        case 'eBeamOn': e.beam = e.beam == null ? true : null; return this.render();
+        case 'eBeam': e.beam = v === '1'; return this.render();
         case 'eSteer': e.steeringOn = n === 1; return this.render();
         case 'eSeatApply': e.seatApply = !e.seatApply; return this.render();
         case 'eSeatL': e.seatL = n; return this.render();
@@ -4712,6 +4784,10 @@
         case 'pcWake': if (state.pc) state.pc.wake = Date.now(); return r();
         case 'pcDone': state.pc = null; return r();
         case 'pcScreenMode': state.preclim.screen = v; return r();
+        case 'pcStep': {
+          const [id, d, min, max] = v.split(':'), key = id === 'pcLock' ? 'lock' : 'soc';
+          state.preclim[key] = clamp(state.preclim[key] + +d, +min, +max); return r();
+        }
         case 'pcCluster': state.preclim.cluster = !state.preclim.cluster; return r();
         case 'hpAc': if (u.overlay) u.overlay.left = u.overlay.total; c.clim.ac = !c.clim.ac; return r();
         // Chauffages : le niveau d'un siège se choisit d'un toucher — l'application y amène la voiture
@@ -5007,6 +5083,7 @@
         case 'climFan': setClimAuto(false); c.clim.fan = +t.value; return commit();
         case 'pcLock': state.preclim.lock = +t.value; return commit();
         case 'pcSoc': state.preclim.soc = +t.value; return commit();
+        case 'flColorCode': if (/^#[0-9a-f]{6}$/i.test(t.value.trim())) state.floating.color = t.value.trim().toUpperCase(); return commit();
         case 'flTitle': if (fb) { const v = t.value.trim().slice(0, 24); fb.title = !v || v === flActionName(fb) ? null : v; } return commit();
         case 'flAction': if (fb) { const [act, cid] = t.value.split(':'); fb.action = act; fb.customId = cid || null; } return commit();
         // Taille de la bulle : aimantée à ±3 % autour de Petit, Moyen et Grand.
@@ -5549,8 +5626,9 @@
     t.style.setProperty('--p', (max > min ? ((v - min) / (max - min)) * 100 : 0) + '%');
   }
   function keyName(code) {
-    const n = KEY_NAMES[code];
-    if (n) return appLang() === 'fr' ? n[0] : n[1];
+    const k = { 17: 'wheel_key_star_left', 286: 'wheel_key_star_right', 18: 'wheel_key_star_right', 297: 'wheel_key_joy_up', 298: 'wheel_key_joy_down',
+      299: 'wheel_key_joy_left', 300: 'wheel_key_joy_right', 301: 'wheel_key_joy_center' }[code];
+    if (k) return S(k);
     return S('adv_sc_key_unknown', code);
   }
   function qrBox(size) {
