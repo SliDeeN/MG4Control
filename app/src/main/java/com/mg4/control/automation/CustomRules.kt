@@ -18,7 +18,6 @@ import com.mg4.control.model.ChargeLimit
 import com.mg4.control.model.ChangeWatch
 import com.mg4.control.model.CustomRule
 import com.mg4.control.model.PeriodicWatch
-import com.mg4.control.model.RegenLevel
 import com.mg4.control.model.RuleAction
 import com.mg4.control.model.RuleEffects
 import com.mg4.control.model.RuleEvent
@@ -563,7 +562,7 @@ object CustomRules {
         RuleSignal.PROFILE -> ActiveProfile.id(ctx)
         RuleSignal.DRIVE_MODE -> MG4Hardware.getDriveMode()?.name
         RuleSignal.REGEN -> MG4Hardware.getRegenLevel()?.name
-        RuleSignal.ONE_PEDAL -> MG4Hardware.getRegenLevel()?.let { it == RegenLevel.ONE_PEDAL }
+        RuleSignal.ONE_PEDAL -> MG4Hardware.isOnePedalOn()
         RuleSignal.ENERGY_SAVING -> MG4Hardware.isEnergySavingOn()
         RuleSignal.AEB -> MG4Hardware.isAebEnabled()
         RuleSignal.TSR -> MG4Hardware.isTsrOn()

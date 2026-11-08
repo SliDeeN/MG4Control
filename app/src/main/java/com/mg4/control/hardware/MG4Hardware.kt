@@ -2169,6 +2169,22 @@ object MG4Hardware {
         }
     }
 
+    /**
+     * One Pedal actif ? (issue #226, 2026-11-08) Deux voies : le niveau de régénération à 6 (ce que
+     * SWI133 rend) OU la propriété One Pedal elle-même à 1 — celle où l'on écrit pour l'activer —
+     * pour un firmware qui ne passerait pas le niveau à 6. `null` si aucune n'est lisible.
+     */
+    fun isOnePedalOn(): Boolean? {
+        val niveau = getRegenLevel()
+        val propre = runCatching {
+            val cpm = sCarPropertyManager ?: return@runCatching null
+            cpm.javaClass.getMethod("getIntProperty", Int::class.java, Int::class.java)
+                .invoke(cpm, PROP_ONE_PEDAL, AREA_GLOBAL) as? Int
+        }.getOrNull()
+        if (niveau == null && propre == null) return null
+        return niveau == RegenLevel.ONE_PEDAL || propre == 1
+    }
+
     fun setOnePedal(enabled: Boolean): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setOnePedal → ${if (enabled) "On" else "Off"}")
         val intVal = if (enabled) 1 else 0

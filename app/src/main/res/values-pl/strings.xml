@@ -60,9 +60,7 @@
     <string name="shortcuts_open_custom_prefix">Uruchom</string>
 
     <!-- Shortcut config -->
-    <string name="shortcuts_cfg_one_pedal">1 pedał — powrót odzysku</string>
     <string name="shortcuts_cfg_adas">ADAS — po kolei</string>
-    <string name="shortcuts_cfg_retour">Powrót</string>
     <string name="shortcuts_cfg_mode1">Tryb 1</string>
     <string name="shortcuts_cfg_mode2">Tryb 2</string>
 
@@ -600,7 +598,6 @@
     <string name="adv_sc_list_title">Lista skrótów</string>
 
     <!-- Cycle de régénération personnalisable -->
-    <string name="shortcuts_cat_onepedal">1 pedał</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Cykl odzysku</string>
     <string name="shortcuts_action_drive_cycle">Cykl trybów jazdy</string>

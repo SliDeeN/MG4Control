@@ -60,9 +60,7 @@
     <string name="shortcuts_open_custom_prefix">Starten</string>
 
     <!-- Kurzbefehl-Konfiguration -->
-    <string name="shortcuts_cfg_one_pedal">1 Pedal — Regen zurück</string>
     <string name="shortcuts_cfg_adas">ADAS — Wechsel</string>
-    <string name="shortcuts_cfg_retour">Zurück</string>
     <string name="shortcuts_cfg_mode1">Modus 1</string>
     <string name="shortcuts_cfg_mode2">Modus 2</string>
 
@@ -600,7 +598,6 @@
     <string name="adv_sc_list_title">Kürzelliste</string>
 
     <!-- Cycle de régénération personnalisable -->
-    <string name="shortcuts_cat_onepedal">1 Pedal</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Regen-Zyklus</string>
     <string name="shortcuts_action_drive_cycle">Fahrmodus-Zyklus</string>

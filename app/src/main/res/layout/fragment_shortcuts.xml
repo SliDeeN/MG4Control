@@ -42,13 +42,6 @@
 
                 <com.mg4.control.ui.widget.RailButton
                     style="@style/Widget.MG4.CategoryTab"
-                    android:id="@+id/btn_sc_sub_onepedal"
-                    android:text="@string/shortcuts_cat_onepedal"
-                    android:visibility="gone"
-                    app:icon="@drawable/ic_rail_pedal" />
-
-                <com.mg4.control.ui.widget.RailButton
-                    style="@style/Widget.MG4.CategoryTab"
                     android:id="@+id/btn_sc_sub_adas"
                     android:text="@string/shortcuts_cat_adas"
                     android:visibility="gone"
@@ -211,63 +204,9 @@
 
                 </LinearLayout>
 
-                <!-- ═══ Config : 1 Pédale — page de sous-onglet ═══ -->
-                <!-- Ces réglages vivaient dans la page « Raccourcis », révélés par une fonction
-                     qui ne consultait QUE les quatre emplacements classiques : les attribuer
-                     depuis l'onglet avancé n'affichait donc jamais leur réglage. Chacun a
-                     désormais sa page, révélée par le rail selon la même règle que le cycle. -->
-                <LinearLayout
-                    android:id="@+id/page_sc_onepedal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:visibility="gone">
-
-            <!-- ── Config : 1 Pédale (regen de retour) ──────────────── -->
-            <LinearLayout
-                    android:id="@+id/config_onepedal_section"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:background="@drawable/bg_card_rounded"
-                android:layout_marginEnd="5dp">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/shortcuts_cfg_one_pedal"
-                    android:textColor="@color/dash_text_lo"
-                    android:textSize="19sp"
-                    android:textStyle="bold"
-                    android:letterSpacing="0.10"
-                    android:textAllCaps="true"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="8dp" />
-
-                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/dash_border" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="0dp"
-                    android:layout_weight="1"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp">
-
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:minWidth="52dp" android:text="@string/shortcuts_cfg_retour" android:textColor="@color/dash_text_lo" android:textSize="19sp" android:letterSpacing="0.06" android:textAllCaps="true" />
-                    <com.google.android.material.button.MaterialButton android:id="@+id/sc_fallback_off"      android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginStart="6dp" android:text="@string/regen_off"           android:textColor="@color/text_secondary" android:textSize="19sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
-                    <com.google.android.material.button.MaterialButton android:id="@+id/sc_fallback_low"      android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/regen_low"           android:textColor="@color/text_secondary" android:textSize="19sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
-                    <com.google.android.material.button.MaterialButton android:id="@+id/sc_fallback_medium"   android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/regen_medium"        android:textColor="@color/text_secondary" android:textSize="19sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
-                    <com.google.android.material.button.MaterialButton android:id="@+id/sc_fallback_high"     android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/regen_high"          android:textColor="@color/text_secondary" android:textSize="19sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
-                    <com.google.android.material.button.MaterialButton android:id="@+id/sc_fallback_adaptive" android:layout_width="0dp" android:layout_height="64dp" android:layout_weight="1" android:layout_marginStart="5dp" android:text="@string/regen_adaptive_short" android:textColor="@color/text_secondary" android:textSize="19sp" app:backgroundTint="@color/bg_button" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
-
-                </LinearLayout>
-            </LinearLayout>
-
-                </LinearLayout>
+                <!-- Page « 1 Pédale » (niveau de régénération au retour) retirée le 2026-11-08,
+                     issue #226 : couper le One Pedal suffit, la voiture remet d'elle-même le niveau
+                     d'avant. -->
 
                 <!-- ═══ Config : ADAS — page de sous-onglet ═══ -->
                 <LinearLayout

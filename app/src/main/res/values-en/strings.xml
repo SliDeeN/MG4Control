@@ -60,9 +60,7 @@
     <string name="shortcuts_open_custom_prefix">Launch</string>
 
     <!-- Shortcut config -->
-    <string name="shortcuts_cfg_one_pedal">1 Pedal — Return regen</string>
     <string name="shortcuts_cfg_adas">ADAS — Cycle</string>
-    <string name="shortcuts_cfg_retour">Return</string>
     <string name="shortcuts_cfg_mode1">Mode 1</string>
     <string name="shortcuts_cfg_mode2">Mode 2</string>
 
@@ -600,7 +598,6 @@
     <string name="adv_sc_list_title">Shortcut list</string>
 
     <!-- Cycle de régénération personnalisable -->
-    <string name="shortcuts_cat_onepedal">1 Pedal</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Regen cycle</string>
     <string name="shortcuts_action_drive_cycle">Drive mode cycle</string>

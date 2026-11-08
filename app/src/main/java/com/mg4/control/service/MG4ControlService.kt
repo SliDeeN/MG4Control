@@ -1155,7 +1155,7 @@ class MG4ControlService : Service() {
     /** État lu sur le véhicule, `null` s'il est illisible (ou si la lecture échoue). */
     private fun readToggle(action: ShortcutAction): Boolean? = runCatching {
         when (action) {
-            ShortcutAction.ONE_PEDAL -> MG4Hardware.getRegenLevel()?.let { it == RegenLevel.ONE_PEDAL }
+            ShortcutAction.ONE_PEDAL -> MG4Hardware.isOnePedalOn()
             ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.isEnergySavingOn()
             ShortcutAction.TSR_TOGGLE           -> MG4Hardware.isTsrOn()
             ShortcutAction.SOUND_WARNING        -> MG4Hardware.isSoundWarningOn()
@@ -1168,12 +1168,9 @@ class MG4ControlService : Service() {
     private fun writeToggle(action: ShortcutAction, on: Boolean) {
         when (action) {
             ShortcutAction.ONE_PEDAL -> {
-                // One Pedal coupé : retour au niveau de régénération choisi dans les Raccourcis.
-                val niveau = if (on) RegenLevel.ONE_PEDAL else RegenLevel.fromValue(
-                    getSharedPreferences(PREFS_SHORTCUTS, MODE_PRIVATE)
-                        .getInt("shortcut_one_pedal_fallback", RegenLevel.HIGH.value)
-                )
-                MG4Hardware.setRegenLevel(niveau)
+                // Issue #226 (2026-11-08) : couper le One Pedal suffit — la voiture remet d'elle-même
+                // le niveau de régénération d'avant (vérifié en voiture). On n'en impose plus aucun.
+                if (on) MG4Hardware.setRegenLevel(RegenLevel.ONE_PEDAL) else MG4Hardware.setOnePedal(false)
             }
             ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.setEnergySavingMode(on)
             ShortcutAction.TSR_TOGGLE           -> MG4Hardware.setTsrMode(on)

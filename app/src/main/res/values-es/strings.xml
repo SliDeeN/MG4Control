@@ -60,9 +60,7 @@
     <string name="shortcuts_open_custom_prefix">Iniciar</string>
 
     <!-- Configuración atajos -->
-    <string name="shortcuts_cfg_one_pedal">1 Pedal — Regen vuelta</string>
     <string name="shortcuts_cfg_adas">ADAS — Ciclo</string>
-    <string name="shortcuts_cfg_retour">Volver</string>
     <string name="shortcuts_cfg_mode1">Modo 1</string>
     <string name="shortcuts_cfg_mode2">Modo 2</string>
 
@@ -600,7 +598,6 @@
     <string name="adv_sc_list_title">Lista de atajos</string>
 
     <!-- Cycle de régénération personnalisable -->
-    <string name="shortcuts_cat_onepedal">1 Pedal</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Ciclo regen</string>
     <string name="shortcuts_action_drive_cycle">Ciclo de modos de conducción</string>

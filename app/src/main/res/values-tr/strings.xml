@@ -60,9 +60,7 @@
     <string name="shortcuts_open_custom_prefix">Başlat</string>
 
     <!-- Shortcut config -->
-    <string name="shortcuts_cfg_one_pedal">Tek pedal — Dönüş seviyesi</string>
     <string name="shortcuts_cfg_adas">ADAS — Döngü</string>
-    <string name="shortcuts_cfg_retour">Dönüş</string>
     <string name="shortcuts_cfg_mode1">Mod 1</string>
     <string name="shortcuts_cfg_mode2">Mod 2</string>
 
@@ -600,7 +598,6 @@
     <string name="adv_sc_list_title">Kısayol listesi</string>
 
     <!-- Cycle de régénération personnalisable -->
-    <string name="shortcuts_cat_onepedal">Tek pedal</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Rejenerasyon döngüsü</string>
     <string name="shortcuts_action_drive_cycle">Sürüş modu döngüsü</string>

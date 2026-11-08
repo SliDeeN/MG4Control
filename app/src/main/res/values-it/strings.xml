@@ -60,9 +60,7 @@
     <string name="shortcuts_open_custom_prefix">Avvia</string>
 
     <!-- Configurazione scorciatoie -->
-    <string name="shortcuts_cfg_one_pedal">1 Pedale — Regen ritorno</string>
     <string name="shortcuts_cfg_adas">ADAS — Ciclo</string>
-    <string name="shortcuts_cfg_retour">Indietro</string>
     <string name="shortcuts_cfg_mode1">Modalità 1</string>
     <string name="shortcuts_cfg_mode2">Modalità 2</string>
 
@@ -600,7 +598,6 @@
     <string name="adv_sc_list_title">Elenco scorciatoie</string>
 
     <!-- Cycle de régénération personnalisable -->
-    <string name="shortcuts_cat_onepedal">1 Pedale</string>
     <string name="shortcuts_cat_adas">ADAS</string>
     <string name="shortcuts_cat_regen_cycle">Ciclo regen</string>
     <string name="shortcuts_action_drive_cycle">Ciclo modalità di guida</string>

@@ -21,7 +21,7 @@ object FloatingButtonState {
      */
     fun bascule(action: ShortcutAction, clim: () -> MG4Hardware.ClimateState?): Boolean? = runCatching {
         when (action) {
-            ShortcutAction.ONE_PEDAL -> MG4Hardware.getRegenLevel()?.let { it == RegenLevel.ONE_PEDAL }
+            ShortcutAction.ONE_PEDAL -> MG4Hardware.isOnePedalOn()
             ShortcutAction.ENERGY_SAVING_TOGGLE -> MG4Hardware.isEnergySavingOn()
             ShortcutAction.TSR_TOGGLE -> MG4Hardware.isTsrOn()
             ShortcutAction.SOUND_WARNING -> MG4Hardware.isSoundWarningOn()

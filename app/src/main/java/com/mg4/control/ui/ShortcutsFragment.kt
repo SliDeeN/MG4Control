@@ -746,7 +746,6 @@ class ShortcutsFragment : Fragment() {
         // passe pas forcément. Chacun a désormais sa page.
         val tabs = listOf(
             view.findViewById<MaterialButton>(R.id.btn_sc_cat_classic)  to view.findViewById<ViewGroup>(R.id.page_sc_classic),
-            view.findViewById<MaterialButton>(R.id.btn_sc_sub_onepedal) to view.findViewById<ViewGroup>(R.id.page_sc_onepedal),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_adas)     to view.findViewById<ViewGroup>(R.id.page_sc_adas),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_regen)    to view.findViewById<ViewGroup>(R.id.page_sc_regen),
             view.findViewById<MaterialButton>(R.id.btn_sc_sub_drivemode) to view.findViewById<ViewGroup>(R.id.page_sc_drivemode),
@@ -766,7 +765,6 @@ class ShortcutsFragment : Fragment() {
         // déclenche. C'est la règle qui manquait aux deux premières, dont les réglages ne
         // regardaient que les emplacements classiques.
         val pagesReglage = mapOf(
-            page(R.id.page_sc_onepedal) to ShortcutAction.ONE_PEDAL,
             page(R.id.page_sc_adas)     to ShortcutAction.ADAS_CYCLE,
             pageCycle                   to ShortcutAction.REGEN_CYCLE,
             page(R.id.page_sc_drivemode) to ShortcutAction.DRIVE_MODE_CYCLE,
@@ -897,15 +895,6 @@ class ShortcutsFragment : Fragment() {
             saveBoolean("shortcut_enabled", checked)
             applyEnabledUI(checked)
         }
-
-        // One Pedal — regen de retour
-        setupConfigRow("shortcut_one_pedal_fallback", RegenLevel.HIGH.value, view,
-            R.id.sc_fallback_off      to RegenLevel.OFF.value,
-            R.id.sc_fallback_low      to RegenLevel.LOW.value,
-            R.id.sc_fallback_medium   to RegenLevel.MEDIUM.value,
-            R.id.sc_fallback_high     to RegenLevel.HIGH.value,
-            R.id.sc_fallback_adaptive to RegenLevel.ADAPTIVE.value
-        )
 
         // ADAS — modes A et B : tous les firmwares connus utilisent les indices 0-4
         // (Off/Lim.Manuel/Lim.Auto/ACC/ICA|TJA). La conversion index→hardware est faite dans le service.
