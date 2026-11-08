@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ScrollView
+import android.widget.ImageView
 import android.widget.Switch
 import android.widget.Toast
 import android.widget.TextView
@@ -20,6 +21,8 @@ import com.mg4.control.util.CustomShortcutSettings
 import com.mg4.control.accessibility.AdvancedShortcuts
 import com.mg4.control.accessibility.KeyCaptureService
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.service.DashcamRemote
+import com.mg4.control.util.DashcamApp
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateScreenMode
@@ -1017,6 +1020,57 @@ class ShortcutsFragment : Fragment() {
             }
         }
         peindre()
+        setupCameraCard(view)
+    }
+
+    /**
+     * Carte « Caméra de surveillance » (issue #180, 2026-11-08) : l'appli caméra détectée, le
+     * lancement automatique de l'enregistrement avec la surveillance et le test de la clé USB.
+     * Sans appli pilotable, les options restent visibles mais grisées, avec un message ; sans
+     * aucune appli dashcam, le message dit que la surveillance ne démarre pas.
+     */
+    private fun setupCameraCard(view: View) {
+        val ctx = requireContext()
+        val icone = view.findViewById<ImageView>(R.id.iv_preclim_cam_status)
+        val titre = view.findViewById<TextView>(R.id.tv_preclim_cam_status)
+        val description = view.findViewById<TextView>(R.id.tv_preclim_cam_status_desc)
+        val options = view.findViewById<View>(R.id.group_preclim_cam_options)
+        val usb = view.findViewById<TextView>(R.id.tv_preclim_cam_usb)
+        val tester = view.findViewById<MaterialButton>(R.id.btn_preclim_cam_usb_test)
+        val d = DashcamApp.detecter(ctx)
+        val (couleur, textes) = when (d) {
+            is DashcamApp.Detection.Pilotable -> R.color.dash_eco to
+                (getString(R.string.preclim_cam_found, d.nom) to getString(R.string.preclim_cam_found_desc, d.commandes.packageName))
+            is DashcamApp.Detection.Ancienne -> R.color.dash_warn to
+                if (d.aMettreAJour) getString(R.string.preclim_cam_old, d.nom) to getString(R.string.preclim_cam_old_desc)
+                else getString(R.string.preclim_cam_incompat, d.nom) to getString(R.string.preclim_cam_incompat_desc)
+            else -> R.color.dash_text_lo to
+                (getString(R.string.preclim_cam_none) to getString(R.string.preclim_cam_none_desc))
+        }
+        icone.imageTintList = ColorStateList.valueOf(ctx.getColor(couleur))
+        titre.text = textes.first
+        description.text = textes.second
+        setChildrenEnabled(options, d.pilotable)
+        options.alpha = if (d.pilotable) 1f else 0.38f
+        view.findViewById<Switch>(R.id.switch_preclim_cam_auto).apply {
+            isChecked = PreClimateSettings.dashcamAuto(ctx)
+            setOnCheckedChangeListener { _, coche ->
+                PreClimateSettings.setDashcamAuto(ctx, coche)
+                AppLogger.i(DashcamRemote.TAG, "enregistrement automatique ${if (coche) "activé" else "désactivé"}")
+            }
+        }
+        tester.setOnClickListener {
+            usb.text = getString(R.string.preclim_cam_usb_testing)
+            usb.setTextColor(ctx.getColor(R.color.text_secondary))
+            tester.isEnabled = false
+            DashcamRemote.testerUsb(ctx) { u ->
+                if (!isAdded) return@testerUsb
+                val t = DashcamUi.reglages(ctx, u)
+                usb.text = t.texte
+                usb.setTextColor(ctx.getColor(if (t.niveau == DashcamUi.Niveau.OK) R.color.dash_eco else R.color.dash_warn))
+                tester.isEnabled = true
+            }
+        }
     }
 
     private fun highlightConfig(map: Map<Int, MaterialButton?>, active: Int) {

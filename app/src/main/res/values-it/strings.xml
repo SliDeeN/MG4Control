@@ -1804,4 +1804,46 @@
     <string name="abrp_account_missing">account eliminato</string>
     <string name="rule_tpl_abrp_profile">ABRP in base al profilo</string>
     <string name="abrp_no_accounts">Nessun account ABRP: aggiungine uno in Le mie automazioni › Account ABRP.</string>
+
+    <!-- Caméra de surveillance (issue #180, 2026-11-08) -->
+    <string name="preclim_surv_rec">REC · %1$s</string>
+    <string name="preclim_surv_rec_paused">REC in pausa · %1$s</string>
+    <string name="preclim_cam_title">Telecamera di sorveglianza</string>
+    <string name="preclim_cam_found">%1$s rilevata</string>
+    <string name="preclim_cam_found_desc">Registrazione controllabile (%1$s).</string>
+    <string name="preclim_cam_old">%1$s rilevata, ma questa versione è troppo vecchia</string>
+    <string name="preclim_cam_old_desc">Aggiorna l’app per la registrazione automatica, oppure avvia tu la registrazione prima di avviare la sorveglianza.</string>
+    <string name="preclim_cam_none">Nessuna app fotocamera compatibile</string>
+    <string name="preclim_cam_none_desc">La sorveglianza ha bisogno di un’app fotocamera per registrare. Installa MG4-360-Camera-App per usarla.</string>
+    <string name="preclim_cam_auto">Avvia la registrazione automaticamente</string>
+    <string name="preclim_cam_auto_desc">All’avvio della sorveglianza, MG4Control chiede all’app di registrare in continuo, poi la ferma alla fine.</string>
+    <string name="preclim_cam_place">Posizione</string>
+    <string name="preclim_cam_place_desc">Quella dell’app fotocamera: una cartella «surveillance» sulla chiavetta USB se collegata, altrimenti nella memoria interna, secondo la sua impostazione di archiviazione.</string>
+    <string name="preclim_cam_usb">Chiavetta USB</string>
+    <string name="preclim_cam_usb_test">Prova la chiavetta USB</string>
+    <string name="preclim_cam_usb_untested">Non ancora provata.</string>
+    <string name="preclim_cam_usb_testing">Prova in corso…</string>
+    <string name="preclim_cam_usb_ok">Chiavetta OK · %1$s liberi su %2$s · circa %3$s di registrazione</string>
+    <string name="preclim_cam_usb_low">Chiavetta OK, ma solo %1$s liberi · circa %2$s. Le clip di sorveglianza più vecchie verranno cancellate man mano.</string>
+    <string name="preclim_cam_usb_none">Nessuna chiavetta USB rilevata.</string>
+    <string name="preclim_cam_usb_full">Chiavetta USB piena.</string>
+    <string name="preclim_cam_usb_multiple">Più chiavette USB collegate: scegline una nell’app fotocamera.</string>
+    <string name="preclim_cam_usb_unwritable">Impossibile scrivere sulla chiavetta USB.</string>
+    <string name="preclim_cam_usb_noanswer">L’app fotocamera non ha risposto.</string>
+    <string name="preclim_surv_cam_on">%1$s registrerà in continuo da «Avvia»</string>
+    <string name="preclim_surv_cam_usb_ok">chiavetta USB: %1$s liberi</string>
+    <string name="preclim_surv_cam_usb_low">chiavetta quasi piena (%1$s)</string>
+    <string name="preclim_surv_cam_usb_none">nessuna chiavetta USB rilevata</string>
+    <string name="preclim_surv_cam_usb_problem">controlla la chiavetta USB</string>
+    <string name="preclim_cam_incompat">%1$s rilevata, ma MG4Control non può controllarla</string>
+    <string name="preclim_cam_incompat_desc">Avvia tu la registrazione nell’app prima di avviare la sorveglianza.</string>
+    <string name="preclim_surv_ban_off_title">Registrazione automatica disattivata</string>
+    <string name="preclim_surv_ban_off_text">Avvia tu la registrazione in %1$s prima di partire, oppure attivala nelle impostazioni del Custode dell’auto.</string>
+    <string name="preclim_surv_ban_incompat_title">%1$s: avvio manuale</string>
+    <string name="preclim_surv_ban_incompat_text">MG4Control non può controllare questa app. Avvia tu la registrazione nell’app prima di partire.</string>
+    <string name="preclim_surv_ban_old_title">%1$s: versione troppo vecchia</string>
+    <string name="preclim_surv_ban_old_text">Aggiorna l’app per la registrazione automatica, oppure avvia tu la registrazione prima di partire.</string>
+    <string name="preclim_surv_ban_none_title">Nessuna app dashcam rilevata</string>
+    <string name="preclim_surv_ban_none_text">La sorveglianza ha bisogno di un’app fotocamera per registrare. Installa MG4-360-Camera-App per usarla.</string>
+    <string name="preclim_surv_need_app">Sorveglianza impossibile: nessuna app dashcam rilevata.</string>
 </resources>

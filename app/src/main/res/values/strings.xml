@@ -1821,4 +1821,46 @@
     <string name="abrp_account_missing">compte supprimé</string>
     <string name="rule_tpl_abrp_profile">ABRP selon le profil</string>
     <string name="abrp_no_accounts">Aucun compte ABRP : ajoutez-en un dans Mes automatisations › Comptes ABRP.</string>
+
+    <!-- Caméra de surveillance (issue #180, 2026-11-08) -->
+    <string name="preclim_surv_rec">REC · %1$s</string>
+    <string name="preclim_surv_rec_paused">REC en pause · %1$s</string>
+    <string name="preclim_cam_title">Caméra de surveillance</string>
+    <string name="preclim_cam_found">%1$s détectée</string>
+    <string name="preclim_cam_found_desc">Pilotage de l’enregistrement disponible (%1$s).</string>
+    <string name="preclim_cam_old">%1$s détectée, mais cette version est trop ancienne</string>
+    <string name="preclim_cam_old_desc">Mettez l’appli à jour pour l’enregistrement automatique, ou lancez vous-même l’enregistrement avant de démarrer la surveillance.</string>
+    <string name="preclim_cam_none">Aucune appli caméra compatible</string>
+    <string name="preclim_cam_none_desc">La surveillance a besoin d’une appli caméra pour filmer. Installez MG4-360-Camera-App pour l’utiliser.</string>
+    <string name="preclim_cam_auto">Lancer l’enregistrement automatiquement</string>
+    <string name="preclim_cam_auto_desc">Au démarrage de la surveillance, MG4Control demande à l’appli de filmer en continu, puis l’arrête à la fin.</string>
+    <string name="preclim_cam_place">Emplacement</string>
+    <string name="preclim_cam_place_desc">Celui de l’appli caméra : un dossier « surveillance » sur la clé USB si elle est branchée, sinon en mémoire interne, selon son réglage de stockage.</string>
+    <string name="preclim_cam_usb">Clé USB</string>
+    <string name="preclim_cam_usb_test">Tester la clé USB</string>
+    <string name="preclim_cam_usb_untested">Pas encore testée.</string>
+    <string name="preclim_cam_usb_testing">Test en cours…</string>
+    <string name="preclim_cam_usb_ok">Clé OK · %1$s libres sur %2$s · environ %3$s d’enregistrement</string>
+    <string name="preclim_cam_usb_low">Clé OK, mais seulement %1$s libres · environ %2$s. Les clips de surveillance les plus anciens seront effacés au fur et à mesure.</string>
+    <string name="preclim_cam_usb_none">Aucune clé USB détectée.</string>
+    <string name="preclim_cam_usb_full">Clé USB pleine.</string>
+    <string name="preclim_cam_usb_multiple">Plusieurs clés USB branchées : choisissez-en une dans l’appli caméra.</string>
+    <string name="preclim_cam_usb_unwritable">Impossible d’écrire sur la clé USB.</string>
+    <string name="preclim_cam_usb_noanswer">L’appli caméra n’a pas répondu.</string>
+    <string name="preclim_surv_cam_on">%1$s filmera en continu dès « Démarrer »</string>
+    <string name="preclim_surv_cam_usb_ok">clé USB : %1$s libres</string>
+    <string name="preclim_surv_cam_usb_low">clé presque pleine (%1$s)</string>
+    <string name="preclim_surv_cam_usb_none">pas de clé USB détectée</string>
+    <string name="preclim_surv_cam_usb_problem">clé USB à vérifier</string>
+    <string name="preclim_cam_incompat">%1$s détectée, mais elle ne peut pas être pilotée par MG4Control</string>
+    <string name="preclim_cam_incompat_desc">Lancez vous-même l’enregistrement dans l’appli avant de démarrer la surveillance.</string>
+    <string name="preclim_surv_ban_off_title">Enregistrement automatique désactivé</string>
+    <string name="preclim_surv_ban_off_text">Lancez vous-même l’enregistrement dans %1$s avant de démarrer, ou activez-le dans les réglages du Garde-voiture.</string>
+    <string name="preclim_surv_ban_incompat_title">%1$s : lancement manuel</string>
+    <string name="preclim_surv_ban_incompat_text">Cette appli ne peut pas être pilotée par MG4Control. Lancez vous-même l’enregistrement dans l’appli avant de démarrer.</string>
+    <string name="preclim_surv_ban_old_title">%1$s : version trop ancienne</string>
+    <string name="preclim_surv_ban_old_text">Mettez l’appli à jour pour l’enregistrement automatique, ou lancez vous-même l’enregistrement avant de démarrer.</string>
+    <string name="preclim_surv_ban_none_title">Aucune appli dashcam détectée</string>
+    <string name="preclim_surv_ban_none_text">La surveillance a besoin d’une appli caméra pour filmer. Installez MG4-360-Camera-App pour l’utiliser.</string>
+    <string name="preclim_surv_need_app">Surveillance impossible : aucune appli dashcam détectée.</string>
 </resources>

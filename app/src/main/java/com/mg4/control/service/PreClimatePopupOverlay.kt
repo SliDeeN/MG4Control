@@ -5,7 +5,10 @@ import android.content.res.ColorStateList
 import android.graphics.PixelFormat
 import android.os.Handler
 import android.os.Looper
+import android.text.SpannableStringBuilder
+import android.text.Spanned
 import android.text.format.DateFormat
+import android.text.style.ForegroundColorSpan
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -23,6 +26,7 @@ import com.mg4.control.model.PreClimateMode
 import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateRequest
 import com.mg4.control.ui.AppDialog
+import com.mg4.control.ui.DashcamUi
 import com.mg4.control.util.DashcamApp
 import com.mg4.control.util.PreClimateSettings
 import java.util.Calendar
@@ -54,6 +58,8 @@ object PreClimatePopupOverlay {
     private const val FAN_MAX_REPLI = 7
     /** Durées non choisissables en mode chien. */
     private const val ALPHA_GRISE = 0.35f
+    /** Hauteur ajoutée à la carte quand le bandeau caméra de la surveillance est là (variante B). */
+    private const val BANDEAU_DP = 76f
 
     private val handler = Handler(Looper.getMainLooper())
     private val lecture = Executors.newSingleThreadExecutor()
@@ -65,8 +71,13 @@ object PreClimatePopupOverlay {
     private var vues: Vues? = null
     private var req: PreClimateRequest? = null
     private var navigation: OverlayNavigation? = null
-    /** Appli caméra 360° installée (issue #180) : sans elle, pas de bouton « Surveillance ». Lue à l'ouverture. */
-    private var surveillanceDispo = false
+    /**
+     * Appli caméra (issue #180), lue à l'ouverture : la surveillance est proposée à tous depuis le
+     * 2026-11-08 ; l'appli ne fait que dire, sous « Clim coupée », si quelque chose sera filmé.
+     */
+    private var camera: DashcamApp.Detection = DashcamApp.Detection.Absente
+    /** Réponse au test de la clé USB lancé à l'ouverture ; `null` tant qu'elle n'est pas là. */
+    private var cleUsb: DashcamRemote.Usb? = null
 
     fun isShowing(): Boolean = vue != null
 
@@ -112,13 +123,12 @@ object PreClimatePopupOverlay {
             temp = lu?.tempC, fan = r?.ventilationReelle ?: lu?.lastManualFan, auto = r?.enAuto == true,
             ac = lu?.acOn, on = lu?.powerOn)
         val dernier = PreClimateSettings.lastRequest(app, PreClimate.minuteDuJour(), clim.temp, clim.fan)
-        val camera = DashcamApp.installee(app)
-        surveillanceDispo = camera != null
+        camera = DashcamApp.detecter(app)
+        cleUsb = null
         req = dernier.copy(
             tempC = dernier.tempC.coerceIn(clim.tempMin, clim.tempMax),
             fan = dernier.fan.coerceIn(clim.fanMin, clim.fanMax),
-            // Surveillance cochée la dernière fois, mais l'appli caméra a été désinstallée depuis.
-            surveillance = dernier.surveillance && surveillanceDispo)
+        )
         val c = OverlayKit.contextes(app, LARGEUR_DP, HAUTEUR_DP)
         val v = try {
             val racine = LayoutInflater.from(c.themed).inflate(R.layout.overlay_preclim_setup, null)
@@ -151,7 +161,16 @@ object PreClimatePopupOverlay {
         v.racine.post { naviguerDepuis(JoystickFocus.Position(Int.MAX_VALUE, Int.MAX_VALUE)) }
         AppLogger.i(TAG, "Pop-up affiché — clim ${clim.temp ?: "?"} °C, ventilation ${if (clim.auto) "AUTO" else clim.fan ?: "?"}, " +
             "bornes ${clim.tempMin}–${clim.tempMax} °C / ${clim.fanMin}–${clim.fanMax}, " +
-            "appli caméra ${camera ?: "absente : pas de Surveillance"}")
+            "appli caméra : ${when (val c = camera) {
+                is DashcamApp.Detection.Pilotable -> "${c.nom}, pilotable"
+                is DashcamApp.Detection.Ancienne -> "${c.nom}, version non pilotable"
+                else -> "aucune"
+            }}")
+        // La ligne caméra du mode Surveillance dit s'il reste de la place sur la clé (≤ 8 s).
+        if (camera.pilotable && PreClimateSettings.dashcamAuto(app)) {
+            val ouverte = v.racine
+            DashcamRemote.testerUsb(app) { u -> if (vue === ouverte) { cleUsb = u; peindre() } }
+        }
     }
 
     fun fermer(raison: String) {
@@ -204,6 +223,13 @@ object PreClimatePopupOverlay {
         val panneauSurveillance: View = racine.findViewById(R.id.preclim_surv_panel)
         val iconeClimCoupee: ImageView = racine.findViewById(R.id.preclim_surv_off_icon)
         val avertSurveillance: TextView = racine.findViewById(R.id.preclim_surv_warning)
+        val cameraSurveillance: TextView = racine.findViewById(R.id.preclim_surv_camera)
+        val bandeauCamera: View = racine.findViewById(R.id.preclim_surv_cam_banner)
+        val bandeauIcone: ImageView = racine.findViewById(R.id.preclim_surv_cam_banner_icon)
+        val bandeauTitre: TextView = racine.findViewById(R.id.preclim_surv_cam_banner_title)
+        val bandeauTexte: TextView = racine.findViewById(R.id.preclim_surv_cam_banner_text)
+        /** La carte elle-même (premier enfant du fond) : elle grandit avec le bandeau. */
+        val carte: View = (racine as android.view.ViewGroup).getChildAt(0)
         val avertChien: TextView = racine.findViewById(R.id.preclim_dog_warning)
         val annuler: TextView = racine.findViewById(R.id.preclim_cancel)
         val demarrer: TextView = racine.findViewById(R.id.preclim_start)
@@ -391,7 +417,7 @@ object PreClimatePopupOverlay {
 
         // Surveillance (issue #180) : clim coupée à la place de ses réglages, titre et Démarrer en rouge.
         val surv = maintenant && r.surveillance
-        v.surveillance.visibility = if (maintenant && surveillanceDispo) View.VISIBLE else View.GONE
+        v.surveillance.visibility = if (maintenant) View.VISIBLE else View.GONE
         peindreBascule(v, v.surveillance, surv, v.danger, v.dangerDoux)
         v.titre.text = v.s(if (surv) R.string.preclim_surv else R.string.preclim_title)
         v.icone.setImageResource(if (surv) R.drawable.ic_preclim_cctv else R.drawable.ic_hvac_ac)
@@ -401,13 +427,20 @@ object PreClimatePopupOverlay {
         v.arretsSurveillance.text = v.s(R.string.preclim_surv_stops, PreClimateSettings.minSoc(v.loc))
         listOf(v.ligneTemp, v.ligneVentil, v.barre, v.actuels).forEach { it.visibility = if (surv) View.GONE else View.VISIBLE }
         v.panneauSurveillance.visibility = if (surv) View.VISIBLE else View.GONE
-        if (surv) {
+        peindreCamera(v, surv)
+        if (surv && !camera.presente) {
+            // Aucune appli dashcam : la surveillance ne peut pas démarrer (2026-11-08).
+            OverlayKit.fond(v.demarrer, v.bouton, v.bordure, v.dp(1f), v.dp(12f).toFloat())
+            v.demarrer.setTextColor(v.texte2)
+            v.demarrer.alpha = ALPHA_GRISE
+        } else if (surv) {
             OverlayKit.fond(v.demarrer, v.danger, rayon = v.dp(12f).toFloat())
             v.demarrer.setTextColor(v.blanc)
         } else {
             v.demarrer.setBackgroundResource(R.drawable.bg_dialog_primary)
             v.demarrer.setTextColor(v.surAccent)
         }
+        if (!(surv && !camera.presente)) v.demarrer.alpha = 1f
         v.plan.text = when {
             surv -> v.s(R.string.preclim_plan_surv, heure(v, (mur + max).roundToInt()))
             maintenant && r.dog -> v.s(R.string.preclim_plan_dog, heure(v, (mur + max).roundToInt()))
@@ -417,6 +450,65 @@ object PreClimatePopupOverlay {
                 val debuts = cycles.joinToString(" · ") { heure(v, it.first) }
                 val premiers = if (PreClimatePlan.isTomorrow(r.firstMinuteOfDay, mur)) v.s(R.string.preclim_tomorrow, debuts) else debuts
                 v.s(R.string.preclim_plan_at, premiers, heure(v, cycles.last().second))
+            }
+        }
+    }
+
+    /**
+     * Surveillance et appli caméra (2026-11-08). Appli pilotable et enregistrement auto : une
+     * ligne sous « Clim coupée » (point rouge, place sur la clé). Sinon un bandeau sur toute la
+     * largeur au-dessus des boutons (variante B) : orange quand l'enregistrement se lance à la
+     * main, rouge sans appli — Démarrer est alors grisé. La carte grandit de [BANDEAU_DP].
+     */
+    private fun peindreCamera(v: Vues, surv: Boolean) {
+        val pilotable = camera as? DashcamApp.Detection.Pilotable
+        val auto = PreClimateSettings.dashcamAuto(v.loc)
+        val filmera = surv && pilotable != null && auto
+        v.cameraSurveillance.visibility = if (filmera) View.VISIBLE else View.GONE
+        if (filmera && pilotable != null) {
+            val texte = SpannableStringBuilder("●  ")
+            texte.setSpan(ForegroundColorSpan(v.danger), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            texte.append(v.s(R.string.preclim_surv_cam_on, pilotable.nom))
+            DashcamUi.popup(v.loc, cleUsb)?.let { cle ->
+                texte.append(" · ")
+                val debut = texte.length
+                texte.append(cle.texte)
+                if (cle.niveau == DashcamUi.Niveau.ALERTE)
+                    texte.setSpan(ForegroundColorSpan(v.alerte), debut, texte.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            v.cameraSurveillance.text = texte
+            v.cameraSurveillance.setTextColor(v.texte)
+        }
+
+        val c = camera
+        val bandeau: Triple<String, String, Boolean>? = when {
+            !surv || filmera -> null
+            pilotable != null -> Triple(v.s(R.string.preclim_surv_ban_off_title),
+                v.s(R.string.preclim_surv_ban_off_text, pilotable.nom), false)
+            c is DashcamApp.Detection.Ancienne && c.aMettreAJour -> Triple(v.s(R.string.preclim_surv_ban_old_title, c.nom),
+                v.s(R.string.preclim_surv_ban_old_text), false)
+            c is DashcamApp.Detection.Ancienne -> Triple(v.s(R.string.preclim_surv_ban_incompat_title, c.nom),
+                v.s(R.string.preclim_surv_ban_incompat_text), false)
+            else -> Triple(v.s(R.string.preclim_surv_ban_none_title), v.s(R.string.preclim_surv_ban_none_text), true)
+        }
+        val visible = bandeau != null
+        if (bandeau != null) {
+            val (vif, doux) = if (bandeau.third) v.danger to v.dangerDoux else v.alerte to v.alerteDoux
+            v.bandeauTitre.text = bandeau.first
+            v.bandeauTexte.text = bandeau.second
+            OverlayKit.fond(v.bandeauCamera, doux, vif, v.dp(1f), v.dp(12f).toFloat())
+            v.bandeauIcone.setImageResource(if (bandeau.third) R.drawable.ic_preclim_cctv else R.drawable.ic_dialog_warning)
+            v.bandeauIcone.imageTintList = ColorStateList.valueOf(vif)
+        }
+        if ((v.bandeauCamera.visibility == View.VISIBLE) != visible) {
+            v.bandeauCamera.visibility = if (visible) View.VISIBLE else View.GONE
+            // La place vient de la carte, pas des colonnes : elle grandit tant que le bandeau est là.
+            // Carte déjà réduite pour tenir dans une petite fenêtre : sa taille est figée, on
+            // laisse les colonnes céder la place.
+            if (v.carte.scaleY >= 1f) {
+                v.carte.layoutParams = v.carte.layoutParams.apply {
+                    height = v.dp(HAUTEUR_DP + if (visible) BANDEAU_DP else 0f)
+                }
             }
         }
     }
@@ -442,7 +534,12 @@ object PreClimatePopupOverlay {
      * possible — pas en P, le refus vient tout de suite, sans faire lire le rappel pour rien.
      */
     private fun demarrer(app: Context) {
-        if (req == null || demarrage) return
+        val r0 = req ?: return
+        if (demarrage) return
+        if (r0.mode == PreClimateMode.NOW && r0.surveillance && !camera.presente) {
+            AppLogger.i(TAG, "Pop-up — Démarrer ignoré : surveillance sans appli dashcam")
+            return
+        }
         AppLogger.i(TAG, "Pop-up — Démarrer")
         if (!PreClimateSettings.unlockReminder(app)) { lancer(app); return }
         demarrage = true
@@ -526,9 +623,10 @@ object PreClimatePopupOverlay {
                 add(listOf(v.cycles.moins, v.cycles.plus))
                 add(listOf(v.pause.moins, v.pause.plus))
             }
+            val bloque = r.mode == PreClimateMode.NOW && r.surveillance && !camera.presente
             add((if (r.mode != PreClimateMode.NOW) emptyList()
-                else if (surveillanceDispo) listOf<View>(v.chien, v.surveillance) else listOf<View>(v.chien)) +
-                listOf(v.annuler, v.demarrer))
+                else listOf<View>(v.chien, v.surveillance)) +
+                (if (bloque) listOf(v.annuler) else listOf(v.annuler, v.demarrer)))
         }
         effacerAnneaux(v)
         val ligne = depart.ligne.coerceIn(0, lignes.lastIndex)

@@ -31,6 +31,7 @@ import com.mg4.control.model.PreClimateMode
 import com.mg4.control.model.PreClimatePlan
 import com.mg4.control.model.PreClimateScreenMode
 import com.mg4.control.model.PreClimateTrend
+import com.mg4.control.service.DashcamRemote
 import com.mg4.control.service.OverlayKit
 import com.mg4.control.service.PreClimate
 import com.mg4.control.service.PreClimateScreen
@@ -117,12 +118,15 @@ class PreClimateActivity : Activity() {
     override fun onStart() {
         super.onStart()
         PreClimate.ecouteur = ecoute
+        // État de l'appli caméra : la pastille « REC » suit sans attendre le relevé suivant.
+        DashcamRemote.ecouteur = { if (PreClimate.etat?.req?.surveillance == true) peindreRec() }
         val e = PreClimate.etat
         if (e == null) finish() else peindre(e)
     }
 
     override fun onStop() {
         if (PreClimate.ecouteur === ecoute) PreClimate.ecouteur = null
+        DashcamRemote.ecouteur = null
         super.onStop()
     }
 
@@ -187,6 +191,7 @@ class PreClimateActivity : Activity() {
         val survIcone: ImageView = racine.findViewById(R.id.preclim_surv_icon)
         val survTitre: TextView = racine.findViewById(R.id.preclim_surv_title)
         val survEtat: TextView = racine.findViewById(R.id.preclim_surv_status)
+        val survRec: TextView = racine.findViewById(R.id.preclim_surv_rec)
         val survMasquer: TextView = racine.findViewById(R.id.preclim_surv_hide)
         val survArreter: TextView = racine.findViewById(R.id.preclim_surv_stop)
         val fin: View = racine.findViewById(R.id.preclim_end)
@@ -379,10 +384,29 @@ class PreClimateActivity : Activity() {
         v.chienEtat.text = v.s(R.string.preclim_dog_status, heure(e.startWallMinute.toInt()), batterieEtPuissance(e))
     }
 
-    /** Surveillance (issue #180) : l'avertissement est fixe ; seule la ligne d'état change. */
+    /** Surveillance (issue #180) : l'avertissement est fixe ; la ligne d'état et « REC » changent. */
     private fun peindreSurveillance(e: PreClimate.Etat) {
         v.survEtat.text = v.s(R.string.preclim_surv_status, heure(e.startWallMinute.toInt()), batterieEtPuissance(e),
             heure((e.startWallMinute + e.req.maxMin).roundToInt()))
+        peindreRec()
+    }
+
+    /**
+     * Pastille « REC » (2026-11-08, variante A) : point rouge fixe et durée filmée, d'après l'état
+     * annoncé par l'appli caméra ([DashcamRemote]) ; grise en pause, absente si rien ne filme.
+     */
+    private fun peindreRec() {
+        val rec = DashcamRemote.rec()
+        if (rec == null) { v.survRec.visibility = View.GONE; return }
+        val couleur = if (rec.enPause) v.texteBas else v.danger
+        val texte = v.s(if (rec.enPause) R.string.preclim_surv_rec_paused else R.string.preclim_surv_rec, rec.duree)
+        v.survRec.text = SpannableStringBuilder("●  $texte").apply {
+            setSpan(ForegroundColorSpan(couleur), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        v.survRec.setTextColor(if (rec.enPause) v.texteBas else v.texte)
+        OverlayKit.fond(v.survRec, if (rec.enPause) v.bouton else v.dangerDoux, if (rec.enPause) v.bordure else v.danger,
+            v.dp(1f), v.dp(22f).toFloat())
+        v.survRec.visibility = View.VISIBLE
     }
 
     private fun peindreVerrou(e: PreClimate.Etat) = when (e.lock) {

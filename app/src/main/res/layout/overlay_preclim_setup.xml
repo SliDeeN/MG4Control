@@ -251,11 +251,23 @@
                         android:textColor="@color/text_secondary"
                         android:textSize="14sp" />
 
+                    <!-- Appli caméra (2026-11-08) : filmera ou non, place sur la clé USB. Une ligne,
+                         la hauteur du panneau est comptée (pop-up de 440 dp). -->
+                    <TextView
+                        android:id="@+id/preclim_surv_camera"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:gravity="center"
+                        android:textSize="14sp"
+                        android:maxLines="1"
+                        android:ellipsize="end" />
+
                     <TextView
                         android:id="@+id/preclim_surv_warning"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="10dp"
+                        android:layout_marginTop="8dp"
                         android:padding="10dp"
                         android:drawableStart="@drawable/ic_dialog_warning"
                         android:drawablePadding="10dp"
@@ -295,6 +307,60 @@
                     android:layout_height="wrap_content"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
+                    android:maxLines="2"
+                    android:ellipsize="end" />
+
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <!-- Surveillance : avertissement caméra (2026-11-08, variante B), sur toute la largeur
+             au-dessus des boutons — pas d'appli pilotable, enregistrement auto coupé, ou aucune
+             appli (alors Démarrer est grisé). Fond, icône et textes peints par le code ; la carte
+             grandit de BANDEAU_DP quand il est là. -->
+        <LinearLayout
+            android:id="@+id/preclim_surv_cam_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="14dp"
+            android:paddingEnd="14dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/preclim_surv_cam_banner_icon"
+                android:layout_width="26dp"
+                android:layout_height="26dp"
+                android:layout_marginEnd="12dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_dialog_warning" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/preclim_surv_cam_banner_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:maxLines="1"
+                    android:ellipsize="end" />
+
+                <TextView
+                    android:id="@+id/preclim_surv_cam_banner_text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/text_primary"
+                    android:textSize="14sp"
                     android:maxLines="2"
                     android:ellipsize="end" />
 

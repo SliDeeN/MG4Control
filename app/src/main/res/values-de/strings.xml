@@ -1804,4 +1804,46 @@
     <string name="abrp_account_missing">gelöschtes Konto</string>
     <string name="rule_tpl_abrp_profile">ABRP nach Profil</string>
     <string name="abrp_no_accounts">Kein ABRP-Konto: Fügen Sie eines unter Meine Automatisierungen › ABRP-Konten hinzu.</string>
+
+    <!-- Caméra de surveillance (issue #180, 2026-11-08) -->
+    <string name="preclim_surv_rec">REC · %1$s</string>
+    <string name="preclim_surv_rec_paused">REC pausiert · %1$s</string>
+    <string name="preclim_cam_title">Überwachungskamera</string>
+    <string name="preclim_cam_found">%1$s erkannt</string>
+    <string name="preclim_cam_found_desc">Aufnahme steuerbar (%1$s).</string>
+    <string name="preclim_cam_old">%1$s erkannt, aber diese Version ist zu alt</string>
+    <string name="preclim_cam_old_desc">Aktualisieren Sie die App für die automatische Aufnahme, oder starten Sie die Aufnahme selbst, bevor Sie die Überwachung starten.</string>
+    <string name="preclim_cam_none">Keine kompatible Kamera-App</string>
+    <string name="preclim_cam_none_desc">Die Überwachung braucht eine Kamera-App zum Aufnehmen. Installieren Sie MG4-360-Camera-App, um sie zu nutzen.</string>
+    <string name="preclim_cam_auto">Aufnahme automatisch starten</string>
+    <string name="preclim_cam_auto_desc">Beim Start der Überwachung bittet MG4Control die App, durchgehend aufzunehmen, und beendet die Aufnahme am Ende.</string>
+    <string name="preclim_cam_place">Speicherort</string>
+    <string name="preclim_cam_place_desc">Der der Kamera-App: ein Ordner „surveillance“ auf dem USB-Stick, falls angeschlossen, sonst im internen Speicher, je nach ihrer Speichereinstellung.</string>
+    <string name="preclim_cam_usb">USB-Stick</string>
+    <string name="preclim_cam_usb_test">USB-Stick testen</string>
+    <string name="preclim_cam_usb_untested">Noch nicht getestet.</string>
+    <string name="preclim_cam_usb_testing">Test läuft…</string>
+    <string name="preclim_cam_usb_ok">Stick OK · %1$s frei von %2$s · etwa %3$s Aufnahme</string>
+    <string name="preclim_cam_usb_low">Stick OK, aber nur %1$s frei · etwa %2$s. Die ältesten Überwachungsclips werden nach und nach gelöscht.</string>
+    <string name="preclim_cam_usb_none">Kein USB-Stick gefunden.</string>
+    <string name="preclim_cam_usb_full">USB-Stick voll.</string>
+    <string name="preclim_cam_usb_multiple">Mehrere USB-Sticks angeschlossen: Wählen Sie einen in der Kamera-App.</string>
+    <string name="preclim_cam_usb_unwritable">Schreiben auf den USB-Stick nicht möglich.</string>
+    <string name="preclim_cam_usb_noanswer">Die Kamera-App hat nicht geantwortet.</string>
+    <string name="preclim_surv_cam_on">%1$s nimmt ab „Starten“ durchgehend auf</string>
+    <string name="preclim_surv_cam_usb_ok">USB-Stick: %1$s frei</string>
+    <string name="preclim_surv_cam_usb_low">Stick fast voll (%1$s)</string>
+    <string name="preclim_surv_cam_usb_none">kein USB-Stick gefunden</string>
+    <string name="preclim_surv_cam_usb_problem">USB-Stick prüfen</string>
+    <string name="preclim_cam_incompat">%1$s erkannt, aber MG4Control kann sie nicht steuern</string>
+    <string name="preclim_cam_incompat_desc">Starten Sie die Aufnahme selbst in der App, bevor Sie die Überwachung starten.</string>
+    <string name="preclim_surv_ban_off_title">Automatische Aufnahme aus</string>
+    <string name="preclim_surv_ban_off_text">Starten Sie die Aufnahme selbst in %1$s, bevor Sie starten, oder schalten Sie sie in den Einstellungen des Fahrzeugwächters ein.</string>
+    <string name="preclim_surv_ban_incompat_title">%1$s: manueller Start</string>
+    <string name="preclim_surv_ban_incompat_text">MG4Control kann diese App nicht steuern. Starten Sie die Aufnahme selbst in der App, bevor Sie starten.</string>
+    <string name="preclim_surv_ban_old_title">%1$s: Version zu alt</string>
+    <string name="preclim_surv_ban_old_text">Aktualisieren Sie die App für die automatische Aufnahme, oder starten Sie die Aufnahme selbst, bevor Sie starten.</string>
+    <string name="preclim_surv_ban_none_title">Keine Dashcam-App gefunden</string>
+    <string name="preclim_surv_ban_none_text">Die Überwachung braucht eine Kamera-App zum Aufnehmen. Installieren Sie MG4-360-Camera-App, um sie zu nutzen.</string>
+    <string name="preclim_surv_need_app">Überwachung nicht möglich: keine Dashcam-App gefunden.</string>
 </resources>

@@ -1804,4 +1804,46 @@
     <string name="abrp_account_missing">silinmiş hesap</string>
     <string name="rule_tpl_abrp_profile">Profile göre ABRP</string>
     <string name="abrp_no_accounts">ABRP hesabı yok: Otomasyonlarım › ABRP hesapları bölümünden ekleyin.</string>
+
+    <!-- Caméra de surveillance (issue #180, 2026-11-08) -->
+    <string name="preclim_surv_rec">REC · %1$s</string>
+    <string name="preclim_surv_rec_paused">REC duraklatıldı · %1$s</string>
+    <string name="preclim_cam_title">Gözetim kamerası</string>
+    <string name="preclim_cam_found">%1$s bulundu</string>
+    <string name="preclim_cam_found_desc">Kayıt kontrol edilebilir (%1$s).</string>
+    <string name="preclim_cam_old">%1$s bulundu, ancak bu sürüm çok eski</string>
+    <string name="preclim_cam_old_desc">Otomatik kayıt için uygulamayı güncelleyin veya gözetimi başlatmadan önce kaydı kendiniz başlatın.</string>
+    <string name="preclim_cam_none">Uyumlu kamera uygulaması yok</string>
+    <string name="preclim_cam_none_desc">Gözetimin kayıt için bir kamera uygulamasına ihtiyacı var. Kullanmak için MG4-360-Camera-App’i yükleyin.</string>
+    <string name="preclim_cam_auto">Kaydı otomatik başlat</string>
+    <string name="preclim_cam_auto_desc">Gözetim başladığında MG4Control uygulamadan sürekli kayıt yapmasını ister, sonunda kaydı durdurur.</string>
+    <string name="preclim_cam_place">Konum</string>
+    <string name="preclim_cam_place_desc">Kamera uygulamasınınki: USB bellek takılıysa üzerinde bir “surveillance” klasörü, değilse dahili bellek, uygulamanın depolama ayarına göre.</string>
+    <string name="preclim_cam_usb">USB bellek</string>
+    <string name="preclim_cam_usb_test">USB belleği test et</string>
+    <string name="preclim_cam_usb_untested">Henüz test edilmedi.</string>
+    <string name="preclim_cam_usb_testing">Test ediliyor…</string>
+    <string name="preclim_cam_usb_ok">Bellek tamam · %2$s içinde %1$s boş · yaklaşık %3$s kayıt</string>
+    <string name="preclim_cam_usb_low">Bellek tamam, ancak yalnızca %1$s boş · yaklaşık %2$s. En eski gözetim klipleri gerektikçe silinir.</string>
+    <string name="preclim_cam_usb_none">USB bellek bulunamadı.</string>
+    <string name="preclim_cam_usb_full">USB bellek dolu.</string>
+    <string name="preclim_cam_usb_multiple">Birden fazla USB bellek takılı: kamera uygulamasında birini seçin.</string>
+    <string name="preclim_cam_usb_unwritable">USB belleğe yazılamıyor.</string>
+    <string name="preclim_cam_usb_noanswer">Kamera uygulaması yanıt vermedi.</string>
+    <string name="preclim_surv_cam_on">%1$s “Başlat”tan itibaren sürekli kayıt yapacak</string>
+    <string name="preclim_surv_cam_usb_ok">USB bellek: %1$s boş</string>
+    <string name="preclim_surv_cam_usb_low">bellek neredeyse dolu (%1$s)</string>
+    <string name="preclim_surv_cam_usb_none">USB bellek bulunamadı</string>
+    <string name="preclim_surv_cam_usb_problem">USB belleği kontrol edin</string>
+    <string name="preclim_cam_incompat">%1$s bulundu, ancak MG4Control onu kontrol edemiyor</string>
+    <string name="preclim_cam_incompat_desc">Gözetimi başlatmadan önce kaydı uygulamada kendiniz başlatın.</string>
+    <string name="preclim_surv_ban_off_title">Otomatik kayıt kapalı</string>
+    <string name="preclim_surv_ban_off_text">Başlatmadan önce kaydı %1$s içinde kendiniz başlatın veya Araç bekçisi ayarlarından açın.</string>
+    <string name="preclim_surv_ban_incompat_title">%1$s: elle başlatma</string>
+    <string name="preclim_surv_ban_incompat_text">MG4Control bu uygulamayı kontrol edemiyor. Başlatmadan önce kaydı uygulamada kendiniz başlatın.</string>
+    <string name="preclim_surv_ban_old_title">%1$s: sürüm çok eski</string>
+    <string name="preclim_surv_ban_old_text">Otomatik kayıt için uygulamayı güncelleyin veya başlatmadan önce kaydı kendiniz başlatın.</string>
+    <string name="preclim_surv_ban_none_title">Dashcam uygulaması bulunamadı</string>
+    <string name="preclim_surv_ban_none_text">Gözetimin kayıt için bir kamera uygulamasına ihtiyacı var. Kullanmak için MG4-360-Camera-App’i yükleyin.</string>
+    <string name="preclim_surv_need_app">Gözetim mümkün değil: dashcam uygulaması bulunamadı.</string>
 </resources>

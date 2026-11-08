@@ -555,6 +555,25 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
 
+        <!-- Enregistrement de l'appli caméra (2026-11-08, variante A) : pastille en haut à droite,
+             point rouge FIXE + durée filmée ; grise « en pause » quand la caméra d'origine prend
+             la main ; absente si rien ne filme (pas d'appli, échec : sans message, sa décision). -->
+        <TextView
+            android:id="@+id/preclim_surv_rec"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="30dp"
+            android:layout_marginEnd="34dp"
+            android:paddingStart="18dp"
+            android:paddingEnd="18dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:visibility="gone" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"

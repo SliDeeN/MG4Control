@@ -89,6 +89,10 @@
     <queries>
         <package android:name="com.tommasov.mg4dashcam" />
         <package android:name="com.drivehub.kamera" />
+        <!-- Applis qui déclarent des fonctions pour MG4Control (dont la caméra pilotable). -->
+        <intent>
+            <action android:name="com.mg4.control.action.SHORTCUT" />
+        </intent>
     </queries>
 
     <application

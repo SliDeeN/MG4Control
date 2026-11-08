@@ -1804,4 +1804,46 @@
     <string name="abrp_account_missing">usunięte konto</string>
     <string name="rule_tpl_abrp_profile">ABRP według profilu</string>
     <string name="abrp_no_accounts">Brak konta ABRP: dodaj je w Moje automatyzacje › Konta ABRP.</string>
+
+    <!-- Caméra de surveillance (issue #180, 2026-11-08) -->
+    <string name="preclim_surv_rec">REC · %1$s</string>
+    <string name="preclim_surv_rec_paused">REC wstrzymane · %1$s</string>
+    <string name="preclim_cam_title">Kamera nadzoru</string>
+    <string name="preclim_cam_found">Wykryto %1$s</string>
+    <string name="preclim_cam_found_desc">Nagrywaniem można sterować (%1$s).</string>
+    <string name="preclim_cam_old">Wykryto %1$s, ale ta wersja jest zbyt stara</string>
+    <string name="preclim_cam_old_desc">Zaktualizuj aplikację, aby nagrywanie uruchamiało się automatycznie, albo uruchom nagrywanie samodzielnie przed rozpoczęciem nadzoru.</string>
+    <string name="preclim_cam_none">Brak zgodnej aplikacji kamery</string>
+    <string name="preclim_cam_none_desc">Nadzór potrzebuje aplikacji kamery do nagrywania. Zainstaluj MG4-360-Camera-App, aby z niego korzystać.</string>
+    <string name="preclim_cam_auto">Uruchamiaj nagrywanie automatycznie</string>
+    <string name="preclim_cam_auto_desc">Po rozpoczęciu nadzoru MG4Control prosi aplikację o ciągłe nagrywanie, a na końcu je zatrzymuje.</string>
+    <string name="preclim_cam_place">Lokalizacja</string>
+    <string name="preclim_cam_place_desc">Ta z aplikacji kamery: folder „surveillance” na pendrivie, jeśli jest podłączony, w przeciwnym razie pamięć wewnętrzna, zależnie od jej ustawienia zapisu.</string>
+    <string name="preclim_cam_usb">Pendrive USB</string>
+    <string name="preclim_cam_usb_test">Testuj pendrive USB</string>
+    <string name="preclim_cam_usb_untested">Jeszcze nie testowano.</string>
+    <string name="preclim_cam_usb_testing">Testowanie…</string>
+    <string name="preclim_cam_usb_ok">Pendrive OK · wolne %1$s z %2$s · około %3$s nagrania</string>
+    <string name="preclim_cam_usb_low">Pendrive OK, ale wolne tylko %1$s · około %2$s. Najstarsze klipy z nadzoru będą usuwane na bieżąco.</string>
+    <string name="preclim_cam_usb_none">Nie wykryto pendrive’a USB.</string>
+    <string name="preclim_cam_usb_full">Pendrive USB jest pełny.</string>
+    <string name="preclim_cam_usb_multiple">Podłączono kilka pendrive’ów USB: wybierz jeden w aplikacji kamery.</string>
+    <string name="preclim_cam_usb_unwritable">Nie można zapisać na pendrivie USB.</string>
+    <string name="preclim_cam_usb_noanswer">Aplikacja kamery nie odpowiedziała.</string>
+    <string name="preclim_surv_cam_on">%1$s będzie nagrywać w sposób ciągły od „Start”</string>
+    <string name="preclim_surv_cam_usb_ok">pendrive USB: wolne %1$s</string>
+    <string name="preclim_surv_cam_usb_low">pendrive prawie pełny (%1$s)</string>
+    <string name="preclim_surv_cam_usb_none">nie wykryto pendrive’a USB</string>
+    <string name="preclim_surv_cam_usb_problem">sprawdź pendrive USB</string>
+    <string name="preclim_cam_incompat">Wykryto %1$s, ale MG4Control nie może nią sterować</string>
+    <string name="preclim_cam_incompat_desc">Uruchom nagrywanie samodzielnie w aplikacji przed rozpoczęciem nadzoru.</string>
+    <string name="preclim_surv_ban_off_title">Automatyczne nagrywanie wyłączone</string>
+    <string name="preclim_surv_ban_off_text">Uruchom nagrywanie samodzielnie w %1$s przed startem albo włącz je w ustawieniach Opiekuna auta.</string>
+    <string name="preclim_surv_ban_incompat_title">%1$s: uruchamianie ręczne</string>
+    <string name="preclim_surv_ban_incompat_text">MG4Control nie może sterować tą aplikacją. Uruchom nagrywanie samodzielnie w aplikacji przed startem.</string>
+    <string name="preclim_surv_ban_old_title">%1$s: zbyt stara wersja</string>
+    <string name="preclim_surv_ban_old_text">Zaktualizuj aplikację, aby nagrywanie uruchamiało się automatycznie, albo uruchom nagrywanie samodzielnie przed startem.</string>
+    <string name="preclim_surv_ban_none_title">Nie wykryto aplikacji dashcam</string>
+    <string name="preclim_surv_ban_none_text">Nadzór potrzebuje aplikacji kamery do nagrywania. Zainstaluj MG4-360-Camera-App, aby z niego korzystać.</string>
+    <string name="preclim_surv_need_app">Nadzór niemożliwy: nie wykryto aplikacji dashcam.</string>
 </resources>

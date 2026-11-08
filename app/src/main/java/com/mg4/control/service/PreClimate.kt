@@ -149,10 +149,17 @@ object PreClimate {
                 principal.post { surRefus(R.string.preclim_clim_unreachable) }
                 return@post
             }
+            // Surveillance sans aucune appli dashcam : rien ne filmerait (sa décision, 2026-11-08).
+            // Le pop-up grise déjà Démarrer ; ceci couvre un départ venu d'ailleurs.
+            if (req.surveillance && req.mode == PreClimateMode.NOW && !DashcamApp.detecter(app).presente) {
+                AppLogger.w(TAG, "refusée : surveillance sans appli dashcam")
+                principal.post { surRefus(R.string.preclim_surv_need_app) }
+                return@post
+            }
             PreClimateSettings.saveRequest(app, req)
             appContext = app
-            // Surveillance : seulement avec l'appli caméra 360° (le pop-up ne la propose pas sans elle).
-            val surveillance = req.surveillance && req.mode == PreClimateMode.NOW && DashcamApp.installee(app) != null
+            // Surveillance : il faut une appli dashcam (vérifié plus haut) ; pilotable, elle filme d'office.
+            val surveillance = req.surveillance && req.mode == PreClimateMode.NOW
             val borne = req.copy(
                 tempC = req.tempC.coerceIn(clim.tempMin, clim.tempMax),
                 fan = req.fan.coerceIn(clim.fanMin, clim.fanMax),
@@ -202,6 +209,8 @@ object PreClimate {
             if (borne.mode == PreClimateMode.NOW) {
                 if (borne.surveillance) couperPourSurveillance() else appliquer(borne)
             }
+            // L'appli caméra filme dès « Démarrer », décompte compris (sa décision, 2026-11-08).
+            if (borne.surveillance) DashcamRemote.demarrer(app, borne.maxMin, PreClimateSettings.lockSeconds(app))
             travail.postDelayed(tick, TICK_MS)
         }
     }
@@ -383,6 +392,8 @@ object PreClimate {
         if (e.phase == Phase.ENDED) return
         travail.removeCallbacks(tick)
         AppLogger.i(TAG, "fin : $fin")
+        // Avant l'extinction ; sans effet si l'appli caméra n'a pas été lancée.
+        if (e.req.surveillance) DashcamRemote.arreter(fin.name)
 
         val pas = PreClimateClimate.restoreSteps(e.snapshot, presetApplied, MG4Hardware.getClimateState()?.powerOn)
         val ok = pas.map { p ->
