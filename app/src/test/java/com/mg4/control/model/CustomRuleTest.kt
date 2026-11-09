@@ -646,13 +646,17 @@ class CustomRuleTest {
         assertEquals(RuleEvent.APP_START, r.triggers.single().event)
         assertEquals(RuleAction(RuleAction.Type.ABRP_START, text = "acc1"), r.actions.single())
         assertFalse(r.onlyWhenReady)
-        assertTrue(CustomRuleTemplates.sendsToAbrp(listOf(r)))
+        val comptes = setOf("acc1", "acc2")
+        assertTrue(CustomRuleTemplates.sendsToAbrp(listOf(r), comptes))
         // Un envoi rangé dans un bloc Si compte aussi ; un simple arrêt, non.
         val dansUnSi = CustomRule(actions = listOf(RuleAction(RuleAction.Type.IF, then = emptyList(),
             otherwise = listOf(RuleAction(RuleAction.Type.ABRP_START, text = "acc2")))))
-        assertTrue(CustomRuleTemplates.sendsToAbrp(listOf(dansUnSi)))
-        assertFalse(CustomRuleTemplates.sendsToAbrp(listOf(CustomRule(actions = listOf(RuleAction(RuleAction.Type.ABRP_STOP))))))
-        assertFalse(CustomRuleTemplates.sendsToAbrp(emptyList()))
+        assertTrue(CustomRuleTemplates.sendsToAbrp(listOf(dansUnSi), comptes))
+        assertFalse(CustomRuleTemplates.sendsToAbrp(listOf(CustomRule(actions = listOf(RuleAction(RuleAction.Type.ABRP_STOP)))), comptes))
+        assertFalse(CustomRuleTemplates.sendsToAbrp(emptyList(), comptes))
+        // Compte supprimé puis recréé (nouvel identifiant), ou règle coupée : la proposition revient.
+        assertFalse(CustomRuleTemplates.sendsToAbrp(listOf(r), setOf("nouveau")))
+        assertFalse(CustomRuleTemplates.sendsToAbrp(listOf(r.copy(enabled = false)), comptes))
     }
 
     @Test

@@ -39,13 +39,17 @@ class TripCurveView(context: Context) : View(context) {
     private val stripH = 40 * dp
     private val gap = 12 * dp
     private val axisH = 18 * dp
-    private val left = 44 * dp
     private val right = 6 * dp
     private val top = 6 * dp
 
     private val texte = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = context.getColor(R.color.dash_text_lo); textSize = 11 * sp
     }
+    /**
+     * Marge des étiquettes de gauche : la plus large possible (« 888 km/h », « 8888 m »), et non plus
+     * 44 dp fixes — « 93 km/h » y était coupé en « 3 km/h » (essai du 2026-11-09).
+     */
+    private val left = maxOf(44 * dp, listOf("888 km/h", "8888 m", "-60").maxOf { texte.measureText(it) } + 10 * dp)
     private val grille = Paint().apply { color = context.getColor(R.color.dash_border); strokeWidth = 1 * dp }
     private val barre = Paint(Paint.ANTI_ALIAS_FLAG)
     private val trait = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -161,9 +165,10 @@ class TripCurveView(context: Context) : View(context) {
         fun y(x: Float) = bas - stripH * ((x - mn) / (mx - mn)).coerceIn(0f, 1f)
         canvas.drawLine(left, bas, width - right, bas, grille)
         if (pic != null) {
+            // En chemin, pas en drawLine : l'accélération graphique ignore les pointillés d'une ligne.
             pointille.color = couleur
             val yp = y(pic)
-            canvas.drawLine(left, yp, width - right, yp, pointille)
+            canvas.drawPath(Path().apply { moveTo(left, yp); lineTo(width - right, yp) }, pointille)
         }
         canvas.drawText(etiquetteHaut, left - 6 * dp - texte.measureText(etiquetteHaut), debut + 10 * dp, texte)
         canvas.drawText(etiquetteBas, left - 6 * dp - texte.measureText(etiquetteBas), bas, texte)

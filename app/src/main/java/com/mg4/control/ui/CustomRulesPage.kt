@@ -422,7 +422,8 @@ class CustomRulesPage {
      * dessus ; elle n'existe qu'une fois enregistrée. « Plus tard » rouvre la liste des comptes.
      */
     private fun proposerAutomatisationAbrp(ctx: Context, compte: com.mg4.control.model.AbrpAccount) {
-        if (CustomRuleTemplates.sendsToAbrp(CustomRuleStore.all(ctx))) return comptesAbrp(ctx)
+        val comptes = com.mg4.control.automation.AbrpStore.accounts(ctx).map { it.id }.toSet()
+        if (CustomRuleTemplates.sendsToAbrp(CustomRuleStore.all(ctx), comptes)) return comptesAbrp(ctx)
         AppDialog.confirmer(ctx,
             titre = ctx.getString(R.string.abrp_rule_prompt_title, compte.name),
             message = ctx.getString(R.string.abrp_rule_prompt_msg),

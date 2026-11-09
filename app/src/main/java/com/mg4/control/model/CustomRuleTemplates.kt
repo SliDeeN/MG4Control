@@ -127,12 +127,16 @@ object CustomRuleTemplates {
         actions = listOf(RuleAction(RuleAction.Type.ABRP_START, text = accountId)),
     )
 
-    /** Une automatisation envoie-t-elle déjà vers ABRP (blocs Si / Sinon et Répéter compris) ? */
-    fun sendsToAbrp(rules: List<CustomRule>): Boolean {
+    /**
+     * Une automatisation ACTIVE envoie-t-elle déjà vers un compte ABRP qui EXISTE ([accountIds]) —
+     * blocs Si / Sinon et Répéter compris ? Une règle qui vise un compte supprimé ne compte pas :
+     * compte supprimé puis recréé, la proposition doit revenir (essai du 2026-11-09).
+     */
+    fun sendsToAbrp(rules: List<CustomRule>, accountIds: Set<String>): Boolean {
         fun dans(l: List<RuleAction>?): Boolean = l.orEmpty().any {
-            it.type == RuleAction.Type.ABRP_START || dans(it.then) || dans(it.otherwise)
+            (it.type == RuleAction.Type.ABRP_START && it.text in accountIds) || dans(it.then) || dans(it.otherwise)
         }
-        return rules.any { dans(it.actions) }
+        return rules.any { it.enabled && dans(it.actions) }
     }
 
     fun abrpByProfile(name: String, pairs: List<Pair<String, String>>, firstAccount: String): CustomRule {
