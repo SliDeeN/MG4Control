@@ -219,6 +219,9 @@ object CustomRules {
     private fun actives(ctx: Context): List<CustomRule> =
         if (CustomRuleStore.isEngineEnabled(ctx)) regles.filter { it.enabled } else emptyList()
 
+    /** Le premier chargement des règles depuis le démarrage du service a eu lieu. */
+    private var chargeUneFois = false
+
     private fun recharger(force: Boolean = false) {
         val ctx = app ?: return
         val json = CustomRuleStore.rawJson(ctx)
@@ -226,10 +229,14 @@ object CustomRules {
             brut = json
             regles = CustomRuleStore.decode(json)
             val maintenant = SystemClock.elapsedRealtime()
+            // « Passage en READY » rattrapé si l'écran vient de s'allumer (RuleLogic.catchesUpAtBoot).
+            val premier = !chargeUneFois
+            chargeUneFois = true
+            if (premier && maintenant < RuleLogic.BOOT_WINDOW_MS) AppLogger.i(TAG, "écran allumé depuis ${maintenant / 1000} s : « passage en READY » rattrapé si déjà en READY")
             suivis = regles.associate { r ->
                 r.id to r.triggers.map {
                     when (it.type) {
-                        RuleTrigger.Type.BECOMES -> TriggerWatch()
+                        RuleTrigger.Type.BECOMES -> TriggerWatch(armed = RuleLogic.catchesUpAtBoot(it, premier, maintenant))
                         RuleTrigger.Type.TIME, RuleTrigger.Type.SUN -> TimeWatch()
                         RuleTrigger.Type.PERIODIC -> PeriodicWatch(maintenant)
                         RuleTrigger.Type.CHANGES -> ChangeWatch()

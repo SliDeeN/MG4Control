@@ -97,6 +97,21 @@ object RuleLogic {
     const val MEDIA_PLAY = "play"
     const val MEDIA_PAUSE = "pause"
 
+    /**
+     * Rattrapage au démarrage (2026-11-09) : la voiture mise en READY avant que l'écran central ait
+     * fini de démarrer, MG4Control lisait READY dès sa première lecture et « passage en READY » ne
+     * partait jamais (il exige d'avoir vu « pas READY »). Ce déclencheur-là, et lui seul, est armé
+     * au premier chargement s'il a lieu dans les [BOOT_WINDOW_MS] qui suivent l'allumage de l'écran :
+     * un redémarrage de MG4Control en roulant (mise à jour, plantage) ne relance rien.
+     */
+    const val BOOT_WINDOW_MS = 5 * 60_000L
+
+    fun catchesUpAtBoot(t: RuleTrigger, firstLoad: Boolean, sinceBootMs: Long): Boolean {
+        if (!firstLoad || sinceBootMs >= BOOT_WINDOW_MS || t.type != RuleTrigger.Type.BECOMES) return false
+        val c = t.condition ?: return false
+        return c.type == RuleCondition.Type.COMPARE && c.signal == RuleSignal.READY && c.op == RuleOp.IS_TRUE
+    }
+
     /** La valeur d'une variable augmentée de [delta] (absente ou non numérique = 0). */
     fun addTo(current: String?, delta: Double): String =
         storedValue((current?.toDoubleOrNull() ?: 0.0) + delta)!!
@@ -263,8 +278,12 @@ object RuleLogic {
  * service (READY déjà là après un redémarrage de l'appli) ne part pas — comme dans Home Assistant.
  * Une lecture inconnue ne change rien : un relevé raté ne réarme pas et n'interrompt pas l'attente.
  */
-class TriggerWatch {
-    private var arme = false
+class TriggerWatch(armed: Boolean = false) {
+    /**
+     * [armed] (2026-11-09) : déjà armé, comme si « faux » avait été vu — pour « passage en READY »
+     * quand l'écran central démarre alors que la voiture est déjà en READY (voir [RuleLogic.catchesUpAtBoot]).
+     */
+    private var arme = armed
     private var depuis: Long? = null
 
     fun onValue(v: Boolean?, now: Long, forMs: Long): Boolean {

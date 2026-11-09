@@ -617,6 +617,29 @@ class CustomRuleTest {
     }
 
     @Test
+    fun `ready already on when the screen boots counts as going READY, once, only at boot`() {
+        val ready = RuleTrigger(RuleTrigger.Type.BECOMES,
+            condition = RuleCondition(RuleCondition.Type.COMPARE, signal = RuleSignal.READY, op = RuleOp.IS_TRUE))
+        val off = ready.copy(condition = ready.condition!!.copy(op = RuleOp.IS_FALSE))
+        val heat = ready.copy(condition = RuleCondition(RuleCondition.Type.COMPARE, signal = RuleSignal.STEERING_HEAT, op = RuleOp.IS_TRUE))
+        assertTrue(RuleLogic.catchesUpAtBoot(ready, firstLoad = true, sinceBootMs = 40_000L))
+        // Pas un rechargement (règle modifiée), pas un redémarrage de MG4Control en roulant, pas un autre signal.
+        assertFalse(RuleLogic.catchesUpAtBoot(ready, firstLoad = false, sinceBootMs = 40_000L))
+        assertFalse(RuleLogic.catchesUpAtBoot(ready, firstLoad = true, sinceBootMs = RuleLogic.BOOT_WINDOW_MS))
+        assertFalse(RuleLogic.catchesUpAtBoot(off, firstLoad = true, sinceBootMs = 40_000L))
+        assertFalse(RuleLogic.catchesUpAtBoot(heat, firstLoad = true, sinceBootMs = 40_000L))
+
+        // Armée : le premier READY lu part, une fois ; il faut ensuite revoir « pas READY ».
+        val w = TriggerWatch(armed = true)
+        assertTrue(w.onValue(true, 0L, 0L))
+        assertFalse(w.onValue(true, 1_000L, 0L))
+        assertFalse(w.onValue(false, 2_000L, 0L))
+        assertTrue(w.onValue(true, 3_000L, 0L))
+        // Sans rattrapage, comme avant : READY dès la première lecture ne part pas.
+        assertFalse(TriggerWatch().onValue(true, 0L, 0L))
+    }
+
+    @Test
     fun `android actions never close the car, Android or MG4Control`() {
         val moi = "com.mg4.control"
         assertTrue(AndroidActions.closable("com.spotify.music", moi, system = false))
