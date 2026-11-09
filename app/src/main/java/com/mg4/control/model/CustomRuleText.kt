@@ -67,6 +67,10 @@ interface RuleWords {
     fun variableAdd(name: String, delta: String): String = "$name $delta"
     fun ruleStop(id: String): String = "stop $id"
     fun media(play: Boolean): String = if (play) "play" else "pause"
+    // 2026-11-09 : actions Android.
+    fun androidKey(home: Boolean): String = if (home) "home" else "back"
+    fun closeApp(pkg: String): String = "close $pkg"
+    fun openSettings(page: String): String = "settings $page"
 }
 
 /** Les phrases d'une automatisation, pour sa carte, les lignes de l'éditeur et le journal. */
@@ -234,6 +238,13 @@ class RuleText(private val w: RuleWords) {
         RuleAction.Type.NAVIGATE -> a.text?.let { w.navigate(it) } ?: w.unknown
         RuleAction.Type.ABRP_START -> a.text?.let { w.abrpStart(it) } ?: w.unknown
         RuleAction.Type.ABRP_STOP -> w.abrpStop
+        RuleAction.Type.ANDROID_KEY -> when (a.value) {
+            AndroidActions.KEY_HOME -> w.androidKey(true)
+            AndroidActions.KEY_BACK -> w.androidKey(false)
+            else -> w.unknown
+        }
+        RuleAction.Type.CLOSE_APP -> a.text?.let { w.closeApp(it) } ?: w.unknown
+        RuleAction.Type.OPEN_SETTINGS -> a.value?.takeIf { it in AndroidActions.SETTINGS_PAGES }?.let { w.openSettings(it) } ?: w.unknown
         null -> w.unknown
     }
 

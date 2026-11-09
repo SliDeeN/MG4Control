@@ -617,6 +617,32 @@ class CustomRuleTest {
     }
 
     @Test
+    fun `android actions never close the car, Android or MG4Control`() {
+        val moi = "com.mg4.control"
+        assertTrue(AndroidActions.closable("com.spotify.music", moi, system = false))
+        assertTrue(AndroidActions.closable("com.google.android.apps.youtube.music", moi, system = false))
+        assertFalse(AndroidActions.closable(moi, moi, system = false))
+        assertFalse(AndroidActions.closable("com.spotify.music", moi, system = true))
+        assertFalse(AndroidActions.closable("android", moi, system = false))
+        assertFalse(AndroidActions.closable("com.android.systemui", moi, system = false))
+        assertFalse(AndroidActions.closable("com.saicmotor.media", moi, system = false))
+        assertFalse(AndroidActions.closable("", moi, system = false))
+        assertFalse(AndroidActions.closable(null, moi, system = false))
+    }
+
+    @Test
+    fun `android settings pages are intent actions, and actions read as text`() {
+        assertTrue(AndroidActions.SETTINGS_PAGES.values.all { it.startsWith("android.settings.") })
+        val t = RuleText(Mots)
+        assertEquals("home", t.action(RuleAction(RuleAction.Type.ANDROID_KEY, value = AndroidActions.KEY_HOME)))
+        assertEquals("back", t.action(RuleAction(RuleAction.Type.ANDROID_KEY, value = AndroidActions.KEY_BACK)))
+        assertEquals("close com.spotify.music", t.action(RuleAction(RuleAction.Type.CLOSE_APP, text = "com.spotify.music")))
+        assertEquals("settings wifi", t.action(RuleAction(RuleAction.Type.OPEN_SETTINGS, value = "wifi")))
+        // Une page inconnue (règle importée d'une autre version) ne s'affiche pas comme valide.
+        assertEquals(Mots.unknown, t.action(RuleAction(RuleAction.Type.OPEN_SETTINGS, value = "nope")))
+    }
+
+    @Test
     fun `counters add runs and skips independently`() {
         val c = RuleCounts().plusRun().plusSkip().plusRun().plusSkip().plusSkip()
         assertEquals(RuleCounts(runs = 2, skips = 3), c)

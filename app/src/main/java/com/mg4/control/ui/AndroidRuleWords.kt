@@ -183,6 +183,24 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
     override fun variableAdd(name: String, delta: String) = t(R.string.rule_var_add_fmt, name, delta)
     override fun ruleStop(id: String) = t(R.string.rule_stop_rule_fmt, regles[id] ?: id)
     override fun media(play: Boolean) = t(if (play) R.string.rule_act_media_play else R.string.rule_act_media_pause)
+    // Actions Android (2026-11-09).
+    override fun androidKey(home: Boolean) = t(if (home) R.string.rule_android_home else R.string.rule_android_back)
+    override fun closeApp(pkg: String) = t(R.string.rule_close_app_fmt, appli(pkg))
+    override fun openSettings(page: String) = t(R.string.rule_open_settings_fmt, settingsPage(page))
+    /** Nom d'une page des paramètres Android ([com.mg4.control.model.AndroidActions.SETTINGS_PAGES]). */
+    fun settingsPage(page: String): String = t(when (page) {
+        "wifi" -> R.string.rule_settings_page_wifi
+        "bluetooth" -> R.string.rule_settings_page_bluetooth
+        "hotspot" -> R.string.rule_settings_page_hotspot
+        "sound" -> R.string.rule_settings_page_sound
+        "display" -> R.string.rule_settings_page_display
+        "apps" -> R.string.rule_settings_page_apps
+        "accessibility" -> R.string.rule_settings_page_accessibility
+        "date" -> R.string.rule_settings_page_date
+        "language" -> R.string.rule_settings_page_language
+        "storage" -> R.string.rule_settings_page_storage
+        else -> R.string.rule_unknown
+    })
     override fun speak(text: String) = t(R.string.rule_speak_fmt, text)
     override fun navigate(dest: String) = t(R.string.rule_navigate_fmt, placeName(dest))
     override val unknown: String get() = t(R.string.rule_unknown)

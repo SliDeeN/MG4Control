@@ -13,6 +13,7 @@ import com.mg4.control.hardware.EnergyReader
 import com.mg4.control.hardware.MG4Hardware
 import com.mg4.control.hardware.ProjectionReader
 import com.mg4.control.hardware.ReadyWatcher
+import com.mg4.control.model.AndroidActions
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.ChargeLimit
 import com.mg4.control.model.ChangeWatch
@@ -539,6 +540,14 @@ object CustomRules {
                 }
                 RuleAction.Type.ABRP_START -> a.text?.let { AbrpStream.start(ctx, it) } ?: false
                 RuleAction.Type.ABRP_STOP -> { AbrpStream.stop(ctx, "« ${r.name} »"); true }
+                // Actions Android (2026-11-09). Retour : hors du fil principal (sendKeySync l'interdit).
+                RuleAction.Type.ANDROID_KEY -> when (a.value) {
+                    AndroidActions.KEY_HOME -> onMain { AndroidControls.goHome(ctx) }
+                    AndroidActions.KEY_BACK -> AndroidControls.pressBack()
+                    else -> false
+                }
+                RuleAction.Type.CLOSE_APP -> a.text?.let { AndroidControls.forceStop(ctx, it) } ?: false
+                RuleAction.Type.OPEN_SETTINGS -> a.value?.let { p -> onMain { AndroidControls.openSettingsPage(ctx, p) } } ?: false
                 else -> false
             }
         }

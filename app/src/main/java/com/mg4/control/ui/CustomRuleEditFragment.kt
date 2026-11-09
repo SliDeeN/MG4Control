@@ -24,6 +24,7 @@ import com.mg4.control.automation.CustomRuleStore
 import com.mg4.control.automation.CustomRules
 import com.mg4.control.bluetooth.BluetoothProfileManager
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.model.AndroidActions
 import com.mg4.control.model.CustomRule
 import com.mg4.control.model.DriveMode
 import com.mg4.control.model.RegenLevel
@@ -663,7 +664,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     private fun catAction(res: Int): Cat = when (res) {
         R.string.rule_act_set, R.string.rule_act_profile, R.string.rule_act_windows -> Cat.CAR
         R.string.rule_act_media, R.string.rule_act_sound, R.string.rule_act_speak -> Cat.MEDIA
-        R.string.rule_act_notify, R.string.rule_act_open, R.string.rule_act_app, R.string.rule_act_navigate -> Cat.SCREEN_APPS
+        R.string.rule_act_notify, R.string.rule_act_open, R.string.rule_act_app, R.string.rule_act_navigate,
+        R.string.rule_act_android -> Cat.SCREEN_APPS
         R.string.rule_act_shortcut, R.string.rule_act_custom, R.string.rule_act_rule -> Cat.SHORTCUTS
         R.string.abrp_rule_action -> Cat.CONNECTIONS
         else -> Cat.FLOW
@@ -1048,6 +1050,36 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 ok(if (v == STOP_ABRP) RuleAction(RuleAction.Type.ABRP_STOP) else RuleAction(RuleAction.Type.ABRP_START, text = v))
             }
         }
+        // Actions Android (2026-11-09) : accueil, retour, fermer une appli, page des paramètres.
+        fun android(a: RuleAction) {
+            val ACCUEIL = "#home"; val RETOUR = "#back"; val FERMER = "#close"; val PAGE = "#settings"
+            val deja = when (a.type) {
+                RuleAction.Type.ANDROID_KEY -> if (a.value == AndroidActions.KEY_BACK) RETOUR else ACCUEIL
+                RuleAction.Type.CLOSE_APP -> FERMER
+                RuleAction.Type.OPEN_SETTINGS -> PAGE
+                else -> null
+            }
+            valeurs(s(R.string.rule_act_android), listOf(s(R.string.rule_android_home) to ACCUEIL, s(R.string.rule_android_back) to RETOUR,
+                s(R.string.rule_android_close_app) to FERMER, s(R.string.rule_android_settings) to PAGE), deja) { v ->
+                when (v) {
+                    ACCUEIL -> ok(RuleAction(RuleAction.Type.ANDROID_KEY, value = AndroidActions.KEY_HOME))
+                    RETOUR -> ok(RuleAction(RuleAction.Type.ANDROID_KEY, value = AndroidActions.KEY_BACK))
+                    FERMER -> {
+                        // Les applis de la voiture, d'Android et MG4Control ne sont pas proposées.
+                        val apps = com.mg4.control.automation.AndroidControls.closableApps(ctx)
+                        if (apps.isEmpty()) Toast.makeText(ctx, s(R.string.rule_close_app_none), Toast.LENGTH_LONG).show()
+                        else valeurs(s(R.string.rule_close_app_title), apps, a.text.takeIf { a.type == RuleAction.Type.CLOSE_APP }) { p ->
+                            ok(RuleAction(RuleAction.Type.CLOSE_APP, text = p))
+                        }
+                    }
+                    else -> valeurs(s(R.string.rule_settings_page_title),
+                        AndroidActions.SETTINGS_PAGES.keys.map { mots.settingsPage(it) to it },
+                        a.value.takeIf { a.type == RuleAction.Type.OPEN_SETTINGS }) { p ->
+                        ok(RuleAction(RuleAction.Type.OPEN_SETTINGS, value = p))
+                    }
+                }
+            }
+        }
         fun repeter(a: RuleAction) = RuleValueDialogs.nombre(ctx, s(R.string.rule_repeat_title), null, a.count ?: 2, 2, RuleRun.MAX_REPEAT,
             texte = { "×$it" }) { n -> ok(a.copy(type = RuleAction.Type.REPEAT, count = n)) }
 
@@ -1072,6 +1104,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleAction.Type.NAVIGATE -> naviguer(actuelle)
             RuleAction.Type.ABRP_START, RuleAction.Type.ABRP_STOP -> abrp(actuelle)
             RuleAction.Type.REPEAT -> repeter(actuelle)
+            RuleAction.Type.ANDROID_KEY, RuleAction.Type.CLOSE_APP, RuleAction.Type.OPEN_SETTINGS -> android(actuelle)
             RuleAction.Type.IF, RuleAction.Type.STOP -> {}
             null -> liste(R.string.rule_choose_action, buildList {
                 add(R.string.rule_act_set to { choisirReglage(RuleAction(), ok) })
@@ -1082,6 +1115,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 add(R.string.rule_act_profile to { profil(RuleAction()) })
                 add(R.string.rule_act_sound to { son(RuleAction()) })
                 add(R.string.rule_act_app to { appli(RuleAction()) })
+                add(R.string.rule_act_android to { android(RuleAction()) })
                 add(R.string.rule_act_custom to { perso(RuleAction()) })
                 add(R.string.rule_act_rule to { automatisation(RuleAction()) })
                 add(R.string.rule_act_variable to { definir(RuleAction()) })

@@ -496,7 +496,8 @@ class RuleRun(
             RuleAction.Type.RULE_ENABLE, RuleAction.Type.RUN_RULE, RuleAction.Type.SET_VARIABLE,
             RuleAction.Type.SPEAK, RuleAction.Type.NAVIGATE,
             RuleAction.Type.ABRP_START, RuleAction.Type.ABRP_STOP, RuleAction.Type.SAVE_VALUE,
-            RuleAction.Type.VARIABLE_ADD, RuleAction.Type.RULE_STOP, RuleAction.Type.MEDIA -> note(fx.perform(a), a)
+            RuleAction.Type.VARIABLE_ADD, RuleAction.Type.RULE_STOP, RuleAction.Type.MEDIA,
+            RuleAction.Type.ANDROID_KEY, RuleAction.Type.CLOSE_APP, RuleAction.Type.OPEN_SETTINGS -> note(fx.perform(a), a)
             null -> ligne("? ${describe(a)}")
         }
     }

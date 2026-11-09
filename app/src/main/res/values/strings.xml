@@ -1460,6 +1460,27 @@
     <string name="rule_act_stop">Arrêter</string>
     <string name="rule_unknown">?</string>
     <string name="rule_act_app">Ouvrir une appli</string>
+    <!-- Actions Android des automatisations (2026-11-09). -->
+    <string name="rule_act_android">Android (accueil, retour…)</string>
+    <string name="rule_android_home">Retour à l\'accueil</string>
+    <string name="rule_android_back">Retour (touche précédent)</string>
+    <string name="rule_android_close_app">Fermer une appli</string>
+    <string name="rule_android_settings">Ouvrir une page des paramètres Android</string>
+    <string name="rule_close_app_title">Appli à fermer</string>
+    <string name="rule_close_app_none">Aucune appli à fermer : les applis de la voiture, d\'Android et MG4Control ne sont pas proposées.</string>
+    <string name="rule_close_app_fmt">Fermer %1$s</string>
+    <string name="rule_settings_page_title">Page des paramètres Android</string>
+    <string name="rule_open_settings_fmt">Paramètres Android : %1$s</string>
+    <string name="rule_settings_page_wifi">Wi-Fi</string>
+    <string name="rule_settings_page_bluetooth">Bluetooth</string>
+    <string name="rule_settings_page_hotspot">Point d\'accès et partage de connexion</string>
+    <string name="rule_settings_page_sound">Son</string>
+    <string name="rule_settings_page_display">Affichage</string>
+    <string name="rule_settings_page_apps">Applications</string>
+    <string name="rule_settings_page_accessibility">Accessibilité</string>
+    <string name="rule_settings_page_date">Date et heure</string>
+    <string name="rule_settings_page_language">Langues</string>
+    <string name="rule_settings_page_storage">Stockage</string>
     <string name="rule_act_confirm">Demander confirmation</string>
     <string name="rule_act_custom">Raccourci perso</string>
     <string name="rule_act_media">Média</string>

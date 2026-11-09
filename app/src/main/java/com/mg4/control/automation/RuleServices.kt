@@ -220,6 +220,72 @@ object AndroidControls {
         true
     }.getOrDefault(false)
 
+    // ── Actions Android (2026-11-09) ──
+
+    /** L'écran d'accueil (le lanceur SAIC). Sur le fil principal. */
+    fun goHome(ctx: Context): Boolean = runCatching {
+        ctx.startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    }.onFailure { AppLogger.w(TAG, "accueil refusé : ${it.message}") }.getOrDefault(false)
+
+    /**
+     * La touche Retour, pour l'appli au premier plan : un appui envoyé au système, comme les renvois
+     * des raccourcis avancés (uid système). `sendKeySync` refuse le fil principal : jamais depuis lui.
+     */
+    fun pressBack(): Boolean = runCatching {
+        val t = android.os.SystemClock.uptimeMillis()
+        val i = android.app.Instrumentation()
+        i.sendKeySync(android.view.KeyEvent(t, t, android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_BACK, 0))
+        i.sendKeySync(android.view.KeyEvent(t, android.os.SystemClock.uptimeMillis(), android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_BACK, 0))
+        true
+    }.onFailure { AppLogger.w(TAG, "touche Retour refusée : ${it.message}") }.getOrDefault(false)
+
+    /** Appli système (préinstallée par la ROM) : jamais fermée de force. Inconnue : traitée comme système. */
+    fun isSystemApp(ctx: Context, paquet: String): Boolean = runCatching {
+        val f = ctx.packageManager.getApplicationInfo(paquet, 0).flags
+        (f and (android.content.pm.ApplicationInfo.FLAG_SYSTEM or android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP)) != 0
+    }.getOrDefault(true)
+
+    /** Les applis qu'on peut fermer, pour le choix de l'éditeur : nom → paquet, triées. */
+    fun closableApps(ctx: Context): List<Pair<String, String>> {
+        val pm = ctx.packageManager
+        return pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
+            .map { it.loadLabel(pm).toString() to it.activityInfo.packageName }
+            .distinctBy { it.second }
+            .filter { com.mg4.control.model.AndroidActions.closable(it.second, ctx.packageName, isSystemApp(ctx, it.second)) }
+            .sortedBy { it.first.lowercase() }
+    }
+
+    /**
+     * Arrêt forcé d'une appli (`ActivityManager.forceStopPackage`, caché, permis à l'uid système) :
+     * plus de son, plus d'écran, plus de service. Refusé pour les applis protégées
+     * ([com.mg4.control.model.AndroidActions.closable]), revérifié ici au cas où la règle serait importée.
+     */
+    fun forceStop(ctx: Context, paquet: String): Boolean {
+        if (!com.mg4.control.model.AndroidActions.closable(paquet, ctx.packageName, isSystemApp(ctx, paquet))) {
+            AppLogger.w(TAG, "fermeture de $paquet refusée : appli protégée ou absente")
+            return false
+        }
+        return runCatching {
+            val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            am.javaClass.getMethod("forceStopPackage", String::class.java).invoke(am, paquet)
+            AppLogger.i(TAG, "appli fermée : $paquet")
+            true
+        }.onFailure { AppLogger.w(TAG, "fermeture de $paquet impossible : ${it.message}") }.getOrDefault(false)
+    }
+
+    /** Une page des paramètres Android ([com.mg4.control.model.AndroidActions.SETTINGS_PAGES]). Sur le fil principal. */
+    fun openSettingsPage(ctx: Context, page: String): Boolean {
+        val action = com.mg4.control.model.AndroidActions.SETTINGS_PAGES[page] ?: return false
+        val i = Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (i.resolveActivity(ctx.packageManager) == null) {
+            AppLogger.w(TAG, "page des paramètres « $page » ($action) absente de ce firmware")
+            return false
+        }
+        return runCatching { ctx.startActivity(i); true }
+            .onFailure { AppLogger.w(TAG, "page des paramètres « $page » refusée : ${it.message}") }.getOrDefault(false)
+    }
+
     /** Navigation vers un point : Google Maps / Waze s'ils comprennent `google.navigation:`, sinon `geo:`. */
     fun navigate(ctx: Context, lat: Double, lng: Double, nom: String): Boolean {
         val point = String.format(Locale.US, "%.6f,%.6f", lat, lng)

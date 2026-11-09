@@ -246,6 +246,8 @@ data class RuleAction(
         ABRP_START, ABRP_STOP,
         SAVE_VALUE,
         VARIABLE_ADD, RULE_STOP, MEDIA,
+        // 2026-11-09 : actions Android (AndroidActions) — [value] = home / back ; [text] = paquet ; [value] = page.
+        ANDROID_KEY, CLOSE_APP, OPEN_SETTINGS,
     }
 }
 
