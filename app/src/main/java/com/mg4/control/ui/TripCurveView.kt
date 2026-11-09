@@ -52,6 +52,11 @@ class TripCurveView(context: Context) : View(context) {
         style = Paint.Style.STROKE; strokeWidth = 1.5f * dp; strokeJoin = Paint.Join.ROUND
     }
     private val aire = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
+    /** Maximum du trajet dans les bandes vitesse et altitude. */
+    private val pointille = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE; strokeWidth = 1 * dp
+        pathEffect = android.graphics.DashPathEffect(floatArrayOf(4 * dp, 4 * dp), 0f)
+    }
 
     private val cSobre = context.getColor(R.color.dash_eco)
     private val cNormal = context.getColor(R.color.dash_accent)
@@ -107,17 +112,27 @@ class TripCurveView(context: Context) : View(context) {
         }
 
         var haut = bas
+        // Variante A (2026-11-09) : chaque bande à l'échelle du trajet, son maximum en pointillé.
         if (showSpeed) {
             val v = points.map { it.speedKmh }
-            val mx = max(130f, ceil((v.filterNotNull().maxOrNull() ?: 0f) / 10f) * 10f)
-            haut = bande(canvas, haut, v, 0f, mx, cVitesse, entier(mx), "km/h", c, ::x)
+            val pic = v.filterNotNull().maxOrNull()?.let { ceil(it) }
+            // Plancher : un trajet en ville ne doit pas étirer ses petites variations sur toute la bande.
+            val mx = max(VITESSE_MIN, pic ?: 0f)
+            haut = bande(canvas, haut, v, 0f, mx, cVitesse, "${entier(mx)} km/h", "0", c, ::x, pic)
         }
         if (showAltitude) {
             val a = points.map { it.altitudeM }
             val connus = a.filterNotNull()
-            val mn = if (connus.isEmpty()) 0f else floor(connus.min() / 50f) * 50f
-            val mx = if (connus.isEmpty()) 100f else max(mn + 50f, ceil(connus.max() / 50f) * 50f)
-            haut = bande(canvas, haut, a, mn, mx, C_ALTITUDE, "${entier(mx)} m", "${entier(mn)} m", c, ::x)
+            var mn = if (connus.isEmpty()) 0f else floor(connus.min())
+            var mx = if (connus.isEmpty()) 100f else ceil(connus.max())
+            // Écart minimal : quelques mètres de bruit GPS ne doivent pas ressembler à une côte.
+            if (mx - mn < ALTITUDE_ECART_MIN) {
+                val milieu = (mx + mn) / 2f
+                mn = floor(milieu - ALTITUDE_ECART_MIN / 2f)
+                mx = mn + ALTITUDE_ECART_MIN
+            }
+            val pic = connus.maxOrNull()?.let { ceil(it) }
+            haut = bande(canvas, haut, a, mn, mx, C_ALTITUDE, "${entier(mx)} m", "${entier(mn)} m", c, ::x, pic)
         }
 
         // Kilomètres : un pas rond, six repères au plus.
@@ -132,15 +147,24 @@ class TripCurveView(context: Context) : View(context) {
         }
     }
 
-    /** Une bande sous les barres : aire et trait, coupés là où la valeur manque. Rend son bas. */
+    /**
+     * Une bande sous les barres : aire et trait, coupés là où la valeur manque. Rend son bas.
+     * [pic] : le maximum du trajet, tracé en pointillé de la couleur de la bande.
+     */
     private fun bande(canvas: Canvas, depuis: Float, v: List<Float?>, mn: Float, mx: Float, couleur: Int,
-                      etiquetteHaut: String, etiquetteBas: String, c: CurveBars, x: (Float) -> Float): Float {
+                      etiquetteHaut: String, etiquetteBas: String, c: CurveBars, x: (Float) -> Float,
+                      pic: Float? = null): Float {
         // Chaque valeur au milieu de sa barre.
         fun milieu(i: Int) = x((i * c.stepKm + min((i + 1) * c.stepKm, c.totalKm)) / 2f)
         val debut = depuis + gap
         val bas = debut + stripH
         fun y(x: Float) = bas - stripH * ((x - mn) / (mx - mn)).coerceIn(0f, 1f)
         canvas.drawLine(left, bas, width - right, bas, grille)
+        if (pic != null) {
+            pointille.color = couleur
+            val yp = y(pic)
+            canvas.drawLine(left, yp, width - right, yp, pointille)
+        }
         canvas.drawText(etiquetteHaut, left - 6 * dp - texte.measureText(etiquetteHaut), debut + 10 * dp, texte)
         canvas.drawText(etiquetteBas, left - 6 * dp - texte.measureText(etiquetteBas), bas, texte)
         trait.color = couleur
@@ -185,6 +209,10 @@ class TripCurveView(context: Context) : View(context) {
         /** Seuils des couleurs, en kWh/100 km. */
         const val SOBRE = 14f
         const val NORMAL = 22f
+        /** Haut minimal de la bande vitesse, en km/h. */
+        const val VITESSE_MIN = 30f
+        /** Écart minimal de la bande altitude, en mètres. */
+        const val ALTITUDE_ECART_MIN = 10f
         /** Violet lisible sur les deux thèmes. */
         val C_ALTITUDE = Color.rgb(0x9B, 0x7F, 0xD4)
     }
