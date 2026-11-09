@@ -61,9 +61,9 @@ import kotlin.math.roundToInt
  * Module MG4Control sur le combiné (Réglages › Interface, 2026-10-14).
  *
  * Le combiné est un calculateur à part ; seule sa zone centrale vient de l'écran central, par un
- * écran Android à lui (le n° 1, 800 × 480 px), où SystemUI lance l'appli SAIC du combiné. Réservé à
- * SWI133, SWI68 et SWI165 ([ClusterModuleSettings.SUPPORTED]) : sur A9, le combiné ne montre pas
- * cet écran.
+ * écran Android à lui (le n° 1, 800 × 480 px), où l'appli SAIC du combiné dessine. Réservé à SWI133,
+ * SWI68, SWI165 et aux voitures qui ont cette appli ([ClusterModuleSettings.isSupported], issue #231 :
+ * `caripk` sur SWI173) ; sur les autres A9, le combiné ne montre pas cet écran.
  * Le module est une fenêtre de 260 × 260 px posée sur cet écran, à la place du carré de cette
  * appli. Il suit l'onglet choisi au volant : sur Navigation et Musique, le module réglé pour
  * l'onglet, ou rien — la fenêtre devient alors transparente et la page d'origine reparaît.

@@ -89,6 +89,9 @@
     <queries>
         <package android:name="com.tommasov.mg4dashcam" />
         <package android:name="com.drivehub.kamera" />
+        <!-- Appli SAIC du combiné : l'écran conducteur n'est proposé que si elle est là (issue #231). -->
+        <package android:name="com.saicmotor.hmi.clusterprojection" />
+        <package android:name="com.saicmotor.caripk" />
         <!-- Applis qui déclarent des fonctions pour MG4Control (dont la caméra pilotable). -->
         <intent>
             <action android:name="com.mg4.control.action.SHORTCUT" />

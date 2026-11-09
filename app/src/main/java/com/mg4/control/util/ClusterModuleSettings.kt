@@ -40,12 +40,35 @@ object ClusterModuleSettings {
 
     /**
      * Firmwares où le combiné montre l'image de l'écran central : SWI133 (vu en voiture le
-     * 2026-10-14), SWI68 et SWI165 (même appli SAIC du combiné, lancée par SystemUI). Pas les A9 :
-     * essai SWI69 du 2026-10-14, rien ne s'affiche, même en annonçant au combiné une image prête.
+     * 2026-10-14), SWI68 et SWI165 (même appli SAIC du combiné, lancée par SystemUI). Acceptés
+     * d'office ; ailleurs, c'est la présence de l'appli qui alimente le combiné qui décide ([IMAGE_APPS]).
      */
     val SUPPORTED = setOf(FirmwareInfo.Gen.SWI133, FirmwareInfo.Gen.SWI68, FirmwareInfo.Gen.SWI165)
 
-    fun isSupported(): Boolean = supportedOn(FirmwareInfo.getGeneration())
+    /**
+     * Applis SAIC qui donnent au combiné l'image de l'écran central (issue #231, vérifié sur les
+     * extractions le 2026-11-09) : `clusterprojection` sur SWI133, SWI68, SWI165 ; `caripk` sur SWI173
+     * (A9 : elle annonce au combiné une image prête — ce qui manquait à l'essai SWI69). Absentes de
+     * SWI69, SWI131 et SWI132, où rien ne s'affiche. Une finition inconnue qui en a une a donc les
+     * onglets Navigation / Musique avec l'image de l'écran central.
+     */
+    val IMAGE_APPS = listOf("com.saicmotor.hmi.clusterprojection", "com.saicmotor.caripk")
+
+    /** Appli trouvée, « » si aucune ; lue une fois (les applis système ne changent pas en route). */
+    @Volatile private var appliImage: String? = null
+
+    /** Le paquet de l'appli qui alimente le combiné, ou `null`. */
+    fun imageApp(): String? {
+        appliImage?.let { return it.ifEmpty { null } }
+        val ctx = com.mg4.control.hardware.MG4Hardware.appContext() ?: return null
+        val trouvee = IMAGE_APPS.firstOrNull { p -> runCatching { ctx.packageManager.getPackageInfo(p, 0) }.isSuccess }
+        appliImage = trouvee ?: ""
+        com.mg4.control.debug.AppLogger.i("MG4_CLUSTER", "chaîne d'image du combiné : ${trouvee ?: "aucune appli SAIC"} " +
+            "(firmware ${FirmwareInfo.getGeneration()}) → écran conducteur ${if (supportedOn(FirmwareInfo.getGeneration(), trouvee != null)) "proposé" else "non proposé"}")
+        return trouvee
+    }
+
+    fun isSupported(): Boolean = supportedOn(FirmwareInfo.getGeneration(), imageApp() != null)
     const val KEY_REFRESH = "cluster_refresh_ms"
     /** Unité de la consommation (2026-10-15), Wh/km par défaut. */
     const val KEY_UNIT = "cluster_consumption_unit"
@@ -186,7 +209,8 @@ object ClusterModuleSettings {
 
     // ── Sans Android ─────────────────────────────────────────────────────────
 
-    fun supportedOn(gen: FirmwareInfo.Gen): Boolean = gen in SUPPORTED
+    /** Firmware validé, ou appli SAIC du combiné présente ([hasImageApp]) — issue #231. */
+    fun supportedOn(gen: FirmwareInfo.Gen, hasImageApp: Boolean = false): Boolean = gen in SUPPORTED || hasImageApp
 
     fun isEnabled(c: ClusterConfig): Boolean = c.enabled == true
 
