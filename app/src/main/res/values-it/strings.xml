@@ -1094,6 +1094,27 @@
     <string name="floating_color">Colore delle bolle</string>
     <string name="floating_color_desc">Per tutte le bolle di tutti i profili. Ogni bolla può avere il suo in «Modifica».</string>
     <string name="floating_field_color">Colore</string>
+    <string name="floating_look_title">Aspetto</string>
+    <string name="floating_field_opacity">Opacità dello sfondo</string>
+    <string name="floating_opacity_value">%1$d %%</string>
+    <string name="floating_field_fill">Sfondo</string>
+    <string name="floating_fill_dark">Scuro</string>
+    <string name="floating_fill_tint">Colorato</string>
+    <string name="floating_fill_light">Chiaro</string>
+    <string name="floating_field_border">Bordo</string>
+    <string name="floating_border_color">Colore</string>
+    <string name="floating_border_none">Nessuno</string>
+    <string name="floating_field_dim">Attenua a riposo</string>
+    <string name="floating_dim_hint" formatted="false">40 % dopo 5 s senza tocchi; un tocco avvia l\'azione e la rende nitida.</string>
+    <string name="floating_look_copy">Copia l\'aspetto di…</string>
+    <string name="floating_look_all">Applica a tutte le bolle</string>
+    <string name="floating_look_copy_title">Copia l\'aspetto di</string>
+    <string name="floating_look_copy_none">Nessun\'altra bolla.</string>
+    <string name="floating_look_copied">Aspetto di «%1$s» copiato</string>
+    <string name="floating_look_applied">Aspetto applicato alle %1$d bolle di questo profilo</string>
+    <string name="floating_look_from_profile_fmt">%1$s (%2$s)</string>
+    <string name="floating_look_no_border">senza bordo</string>
+    <string name="floating_look_dimmed">attenuata</string>
     <string name="color_default">Predefinito</string>
     <string name="color_custom">Personalizzato…</string>
     <string name="color_code">Codice</string>
@@ -1837,6 +1858,11 @@
     <string name="abrp_account_missing">account eliminato</string>
     <string name="rule_tpl_abrp_profile">ABRP in base al profilo</string>
     <string name="abrp_no_accounts">Nessun account ABRP: aggiungine uno in Le mie automazioni › Account ABRP.</string>
+    <string name="abrp_rule_prompt_title">Account «%1$s» aggiunto</string>
+    <string name="abrp_rule_prompt_msg">L\'invio ad ABRP non parte da solo: serve un\'automazione che lo avvii. MG4Control può prepararla: invierà i dati a questo account appena si avvia lo schermo. Dovrai solo controllarla e salvarla.</string>
+    <string name="abrp_rule_prompt_create">Crea l\'automazione</string>
+    <string name="abrp_rule_prompt_later">Più tardi</string>
+    <string name="rule_tpl_abrp_account_fmt">ABRP · %1$s</string>
 
     <!-- Caméra de surveillance (issue #180, 2026-11-08) -->
     <string name="preclim_surv_rec">REC · %1$s</string>

@@ -1094,6 +1094,27 @@
     <string name="floating_color">Bubble colour</string>
     <string name="floating_color_desc">For every bubble, in every profile. Each bubble can have its own in “Edit”.</string>
     <string name="floating_field_color">Colour</string>
+    <string name="floating_look_title">Appearance</string>
+    <string name="floating_field_opacity">Background opacity</string>
+    <string name="floating_opacity_value">%1$d %%</string>
+    <string name="floating_field_fill">Background</string>
+    <string name="floating_fill_dark">Dark</string>
+    <string name="floating_fill_tint">Tinted</string>
+    <string name="floating_fill_light">Light</string>
+    <string name="floating_field_border">Border</string>
+    <string name="floating_border_color">Colour</string>
+    <string name="floating_border_none">None</string>
+    <string name="floating_field_dim">Dim when idle</string>
+    <string name="floating_dim_hint" formatted="false">40 % after 5 s without a touch; a touch runs the action and brings it back.</string>
+    <string name="floating_look_copy">Copy the look of…</string>
+    <string name="floating_look_all">Apply to all bubbles</string>
+    <string name="floating_look_copy_title">Copy the look of</string>
+    <string name="floating_look_copy_none">No other bubble.</string>
+    <string name="floating_look_copied">Look of “%1$s” copied</string>
+    <string name="floating_look_applied">Look applied to the %1$d bubbles of this profile</string>
+    <string name="floating_look_from_profile_fmt">%1$s (%2$s)</string>
+    <string name="floating_look_no_border">no border</string>
+    <string name="floating_look_dimmed">dimmed</string>
     <string name="color_default">Default</string>
     <string name="color_custom">Custom…</string>
     <string name="color_code">Code</string>
@@ -1834,6 +1855,11 @@
     <string name="abrp_account_missing">deleted account</string>
     <string name="rule_tpl_abrp_profile">ABRP by profile</string>
     <string name="abrp_no_accounts">No ABRP account: add one in My automations › ABRP accounts.</string>
+    <string name="abrp_rule_prompt_title">Account “%1$s” added</string>
+    <string name="abrp_rule_prompt_msg">Sending to ABRP doesn\'t start by itself: an automation has to start it. MG4Control can prepare it: it will send the data to this account as soon as the screen starts. You\'ll only have to check it and save it.</string>
+    <string name="abrp_rule_prompt_create">Create the automation</string>
+    <string name="abrp_rule_prompt_later">Later</string>
+    <string name="rule_tpl_abrp_account_fmt">ABRP · %1$s</string>
 
     <!-- Caméra de surveillance (issue #180, 2026-11-08) -->
     <string name="preclim_surv_rec">REC · %1$s</string>

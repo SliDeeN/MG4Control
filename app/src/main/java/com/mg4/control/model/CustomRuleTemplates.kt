@@ -117,6 +117,24 @@ object CustomRuleTemplates {
      * arrête l'envoi. Des blocs Si à plat, un par paire (profil, compte) : pas d'imbrication, donc
      * autant de paires qu'on veut, toutes modifiables dans l'éditeur. Sans profil : le premier compte.
      */
+    /**
+     * Proposée juste après l'ajout d'un compte ABRP (2026-11-09) : au démarrage de l'écran, l'envoi
+     * continu vers ce compte. Ouverte dans l'éditeur, elle n'existe qu'une fois enregistrée.
+     */
+    fun abrpOnScreenStart(name: String, accountId: String): CustomRule = CustomRule(
+        name = name,
+        triggers = listOf(RuleTrigger(RuleTrigger.Type.EVENT, event = RuleEvent.APP_START)),
+        actions = listOf(RuleAction(RuleAction.Type.ABRP_START, text = accountId)),
+    )
+
+    /** Une automatisation envoie-t-elle déjà vers ABRP (blocs Si / Sinon et Répéter compris) ? */
+    fun sendsToAbrp(rules: List<CustomRule>): Boolean {
+        fun dans(l: List<RuleAction>?): Boolean = l.orEmpty().any {
+            it.type == RuleAction.Type.ABRP_START || dans(it.then) || dans(it.otherwise)
+        }
+        return rules.any { dans(it.actions) }
+    }
+
     fun abrpByProfile(name: String, pairs: List<Pair<String, String>>, firstAccount: String): CustomRule {
         val profil = { id: String -> compare(RuleSignal.PROFILE, RuleOp.EQUALS, text = id) }
         val actions = if (pairs.isEmpty()) listOf(RuleAction(RuleAction.Type.ABRP_START, text = firstAccount))

@@ -1094,6 +1094,27 @@
     <string name="floating_color">Farbe der Blasen</string>
     <string name="floating_color_desc">Für alle Blasen aller Profile. Jede Blase kann unter „Bearbeiten“ ihre eigene haben.</string>
     <string name="floating_field_color">Farbe</string>
+    <string name="floating_look_title">Aussehen</string>
+    <string name="floating_field_opacity">Deckkraft des Hintergrunds</string>
+    <string name="floating_opacity_value">%1$d %%</string>
+    <string name="floating_field_fill">Hintergrund</string>
+    <string name="floating_fill_dark">Dunkel</string>
+    <string name="floating_fill_tint">Getönt</string>
+    <string name="floating_fill_light">Hell</string>
+    <string name="floating_field_border">Rand</string>
+    <string name="floating_border_color">Farbe</string>
+    <string name="floating_border_none">Keiner</string>
+    <string name="floating_field_dim">Im Ruhezustand abblenden</string>
+    <string name="floating_dim_hint" formatted="false">40 % nach 5 s ohne Berührung; eine Berührung startet die Aktion und macht sie wieder klar.</string>
+    <string name="floating_look_copy">Aussehen kopieren von…</string>
+    <string name="floating_look_all">Auf alle Bubbles anwenden</string>
+    <string name="floating_look_copy_title">Aussehen kopieren von</string>
+    <string name="floating_look_copy_none">Keine andere Bubble.</string>
+    <string name="floating_look_copied">Aussehen von „%1$s“ kopiert</string>
+    <string name="floating_look_applied">Aussehen auf die %1$d Bubbles dieses Profils angewendet</string>
+    <string name="floating_look_from_profile_fmt">%1$s (%2$s)</string>
+    <string name="floating_look_no_border">ohne Rand</string>
+    <string name="floating_look_dimmed">abgeblendet</string>
     <string name="color_default">Standard</string>
     <string name="color_custom">Eigene…</string>
     <string name="color_code">Code</string>
@@ -1834,6 +1855,11 @@
     <string name="abrp_account_missing">gelöschtes Konto</string>
     <string name="rule_tpl_abrp_profile">ABRP nach Profil</string>
     <string name="abrp_no_accounts">Kein ABRP-Konto: Fügen Sie eines unter Meine Automatisierungen › ABRP-Konten hinzu.</string>
+    <string name="abrp_rule_prompt_title">Konto „%1$s“ hinzugefügt</string>
+    <string name="abrp_rule_prompt_msg">Das Senden an ABRP startet nicht von selbst: Eine Automatisierung muss es starten. MG4Control kann sie vorbereiten: Sie sendet die Daten an dieses Konto, sobald der Bildschirm startet. Sie müssen sie nur noch prüfen und speichern.</string>
+    <string name="abrp_rule_prompt_create">Automatisierung erstellen</string>
+    <string name="abrp_rule_prompt_later">Später</string>
+    <string name="rule_tpl_abrp_account_fmt">ABRP · %1$s</string>
 
     <!-- Caméra de surveillance (issue #180, 2026-11-08) -->
     <string name="preclim_surv_rec">REC · %1$s</string>

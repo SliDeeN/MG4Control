@@ -21,6 +21,7 @@ import android.view.WindowManager
 import android.widget.TextView
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.model.BubbleLook
 import com.mg4.control.model.FloatingButton
 import com.mg4.control.model.FloatingButtonStyle
 import com.mg4.control.model.FloatingButtons
@@ -82,11 +83,11 @@ object FloatingButtonsOverlay {
      * La couleur est celle de la bulle, sinon la générale — bleu de la refonte par défaut
      * ([FloatingButtonSettings.colorOf], 2026-11-04).
      */
-    private val FOND = Color.argb(0xE6, 0x17, 0x17, 0x1A)
-    private val BORDURE_DEPLACEMENT = Color.rgb(0xF5, 0x9E, 0x0B)
-    private val TEXTE = Color.rgb(0xE5, 0xE5, 0xE5)
-    /** Bascule coupée : le fond s'efface ; activée : plein, de la couleur de la bordure. */
-    private val FOND_COUPE = Color.argb(0x59, 0x17, 0x17, 0x1A)
+    // Fond, texte, bordure : BubbleLook (issue #230) ; sans réglage, le rendu d'avant (fond sombre 90 %).
+    /** Contour du texte d'une bulle presque sans fond, pour qu'il se lise sur la carte. */
+    private val CONTOUR_TEXTE = Color.argb(0xCC, 0, 0, 0)
+    /** Fondu vers l'atténuation au repos. */
+    private const val ATTENUATION_MS = 400L
     /** Seconde lecture de la valeur : si la voiture n'avait pas encore suivi à la première. */
     private const val VALEUR_RELUE_MS = 1_600L
 
@@ -113,6 +114,8 @@ object FloatingButtonsOverlay {
         var enDeplacement = false
         /** Barre du haut : bord gauche de la fenêtre sur l'écran réel (le rail, quand il est affiché). */
         var decalage = 0
+        /** Atténuation au repos à venir, ou `null` ([reveiller]). */
+        var attenuer: Runnable? = null
     }
 
     /** Relecture de l'origine des fenêtres de la barre du haut (rail affiché ou caché). */
@@ -270,7 +273,7 @@ object FloatingButtonsOverlay {
 
     private fun retirerTout() {
         val wm = fenetres
-        bulles.values.forEach { b -> b.eclair?.let(main::removeCallbacks) }
+        bulles.values.forEach { b -> b.eclair?.let(main::removeCallbacks); b.attenuer?.let(main::removeCallbacks) }
         bulles.values.forEach { b -> runCatching { wm?.removeViewImmediate(b.vue) } }
         bulles.clear()
         main.removeCallbacks(recalage)
@@ -355,6 +358,7 @@ object FloatingButtonsOverlay {
         try {
             wm.addView(vue, params)
             bulles[b.id] = bulle
+            reveiller(bulle)
         } catch (e: Exception) {
             AppLogger.e(TAG, "bouton « ${vue.text} » non posé : ${e.javaClass.simpleName} ${e.message}")
         }
@@ -396,6 +400,7 @@ object FloatingButtonsOverlay {
                 .isSuccess
             if (!ok) continue
             bulles[b.id] = bulle
+            reveiller(bulle)
             if (auto || x + decalage != voulu.roundToInt()) {
                 bulle.bouton = b.copy(x = ((x + decalage + largeur / 2f) / largeurEcran.coerceAtLeast(1)).coerceIn(0f, 1f))
                 FloatingButtonSettings.update(ctx, bulle.bouton)
@@ -436,6 +441,11 @@ object FloatingButtonsOverlay {
                     fenetreY = bulle.params.y
                     deplacement = false
                     annule = false
+                    // Atténuée au repos : nette dès le toucher, et l'action part quand même (issue #230).
+                    bulle.attenuer?.let(main::removeCallbacks)
+                    bulle.attenuer = null
+                    bulle.vue.animate().cancel()
+                    bulle.vue.alpha = 1f
                     bulle.vue.animate().scaleX(ENFONCEE).scaleY(ENFONCEE).setDuration(ENFONCE_MS).start()
                     main.postDelayed(appuiLong, APPUI_LONG_MS)
                 }
@@ -476,6 +486,7 @@ object FloatingButtonsOverlay {
                             apresAppui(ctx, bulle)
                         }
                     }
+                    reveiller(bulle)
                 }
                 MotionEvent.ACTION_CANCEL -> {
                     main.removeCallbacks(appuiLong)
@@ -487,6 +498,7 @@ object FloatingButtonsOverlay {
                     } else {
                         relacher(bulle.vue)
                     }
+                    reveiller(bulle)
                 }
             }
             true
@@ -575,21 +587,39 @@ object FloatingButtonsOverlay {
         vue.scaleY = vue.scaleX
     }
 
-    /** Fond, bordure et couleur du texte : bascule activée = plein, coupée = presque transparent. */
+    /**
+     * Fond, bordure et couleur du texte selon l'apparence de la bulle ([BubbleLook], issue #230) :
+     * bascule activée = pleine, coupée = fond effacé ; presque sans fond, le texte prend un contour.
+     */
     private fun habiller(vue: TextView, b: FloatingButton, deplacement: Boolean, etat: Boolean?) {
         val densite = vue.resources.displayMetrics.density
         val hauteur = (FloatingButtons.heightDp(b.size) * densite).roundToInt()
-        val couleur = FloatingButtonSettings.colorOf(vue.context, b)
-        vue.setTextColor(if (etat == true) com.mg4.control.model.BubbleColors.textOn(couleur) else TEXTE)
+        val p = BubbleLook.paint(b, FloatingButtonSettings.colorOf(vue.context, b), etat, deplacement)
+        vue.setTextColor(p.text)
+        if (p.halo) vue.setShadowLayer(3 * densite, 0f, 0f, CONTOUR_TEXTE) else vue.setShadowLayer(0f, 0f, 0f, 0)
         vue.background = GradientDrawable().apply {
             cornerRadius = hauteur / 2f
-            setColor(when (etat) {
-                true -> couleur
-                false -> FOND_COUPE
-                null -> FOND
-            })
-            setStroke((2 * densite).roundToInt(), if (deplacement) BORDURE_DEPLACEMENT else couleur)
+            setColor(p.background)
+            if (p.border != null) setStroke((2 * densite).roundToInt(), p.border)
         }
+    }
+
+    /**
+     * Atténuation au repos (issue #230) : la bulle redevient nette, et repasse à [BubbleLook.DIM_ALPHA]
+     * après [BubbleLook.DIM_AFTER_MS] sans toucher si elle est réglée ainsi. Le toucher qui la réveille
+     * lance aussi son action (choix du 2026-11-09).
+     */
+    private fun reveiller(bulle: Bulle) {
+        bulle.attenuer?.let(main::removeCallbacks)
+        bulle.attenuer = null
+        bulle.vue.alpha = 1f
+        if (!BubbleLook.dims(bulle.bouton)) return
+        val r = Runnable {
+            bulle.attenuer = null
+            if (!bulle.enDeplacement) bulle.vue.animate().alpha(BubbleLook.DIM_ALPHA).setDuration(ATTENUATION_MS).start()
+        }
+        bulle.attenuer = r
+        main.postDelayed(r, BubbleLook.DIM_AFTER_MS)
     }
 
     private fun appliquerVisibilite() {

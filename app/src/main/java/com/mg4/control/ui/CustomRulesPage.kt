@@ -415,14 +415,41 @@ class CustomRulesPage {
     }
 
 
+    /**
+     * Un compte ABRP vient d'être ajouté (2026-11-09, suggestion d'un utilisateur) : l'envoi ne part
+     * pas tout seul, il faut une automatisation. Sauf si une automatisation envoie déjà vers ABRP,
+     * on propose de la préparer — au démarrage de l'écran, vers ce compte — et l'éditeur s'ouvre
+     * dessus ; elle n'existe qu'une fois enregistrée. « Plus tard » rouvre la liste des comptes.
+     */
+    private fun proposerAutomatisationAbrp(ctx: Context, compte: com.mg4.control.model.AbrpAccount) {
+        if (CustomRuleTemplates.sendsToAbrp(CustomRuleStore.all(ctx))) return comptesAbrp(ctx)
+        AppDialog.confirmer(ctx,
+            titre = ctx.getString(R.string.abrp_rule_prompt_title, compte.name),
+            message = ctx.getString(R.string.abrp_rule_prompt_msg),
+            icone = R.drawable.ic_dialog_info,
+            oui = ctx.getString(R.string.abrp_rule_prompt_create),
+            non = ctx.getString(R.string.abrp_rule_prompt_later),
+            onOui = {
+                if (CustomRuleStore.all(ctx).size >= CustomRuleStore.MAX_RULES) {
+                    Toast.makeText(ctx, ctx.getString(R.string.rule_max_reached, CustomRuleStore.MAX_RULES), Toast.LENGTH_LONG).show()
+                } else {
+                    val regle = CustomRuleTemplates.abrpOnScreenStart(ctx.getString(R.string.rule_tpl_abrp_account_fmt, compte.name), compte.id)
+                    ouvrir(CustomRuleEditFragment.ARG_NEW_RULE to CustomRuleStore.encode(listOf(regle)).removeSurrounding("[", "]"))
+                }
+            },
+            onNon = { comptesAbrp(ctx) },
+        )
+    }
+
     /** Comptes ABRP : la liste, l'import du fichier de comptes, le fichier modèle (mêmes fenêtres que l'export). */
     private fun comptesAbrp(ctx: Context) {
         AbrpDialogs.comptes(ctx,
             importer = {
                 importDialog = ImportDialog(ctx, com.mg4.control.model.AbrpConfigFile.FILE_NAME, parcourirFichier) { texte, ou ->
-                    AbrpDialogs.importer(ctx, texte, ou) { comptesAbrp(ctx) }
+                    AbrpDialogs.importer(ctx, texte, ou, nouveaux = { l -> proposerAutomatisationAbrp(ctx, l.first()) }) { comptesAbrp(ctx) }
                 }.also { it.ouvrir() }
             },
+            nouveau = { a -> proposerAutomatisationAbrp(ctx, a) },
             modele = {
                 exportDialog = ExportDialog(ctx,
                     titre = ctx.getString(R.string.abrp_template_title),

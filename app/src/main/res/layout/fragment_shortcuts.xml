@@ -2086,6 +2086,197 @@
                                 android:layout_marginTop="8dp"
                                 android:orientation="vertical" />
 
+                            <!-- Apparence (issue #230, 2026-11-09) : opacité du fond, fond, bordure,
+                                 atténuation au repos ; copiée d'une autre bulle ou appliquée à toutes. -->
+                            <TextView
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="18dp"
+                                android:text="@string/floating_look_title"
+                                android:textColor="@color/dash_text_lo"
+                                android:textSize="17sp"
+                                android:textStyle="bold"
+                                android:letterSpacing="0.10"
+                                android:textAllCaps="true" />
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="6dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_opacity"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="19sp" />
+
+                                <com.google.android.material.slider.Slider
+                                    android:id="@+id/slider_floating_opacity"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:valueFrom="0"
+                                    android:valueTo="100"
+                                    android:value="90"
+                                    android:stepSize="5"
+                                    app:labelBehavior="gone"
+                                    app:thumbRadius="14dp"
+                                    app:trackHeight="10dp"
+                                    app:thumbColor="@color/dash_accent"
+                                    app:trackColorActive="@color/dash_accent"
+                                    app:trackColorInactive="@color/dash_border" />
+
+                                <TextView
+                                    android:id="@+id/tv_floating_opacity"
+                                    android:layout_width="96dp"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="end"
+                                    android:textColor="@color/text_primary"
+                                    android:textSize="19sp" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_fill"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="19sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_fill_dark"
+                                    android:layout_width="0dp"
+                                    android:layout_height="64dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="@string/floating_fill_dark"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_fill_tint"
+                                    android:layout_width="0dp"
+                                    android:layout_height="64dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="@string/floating_fill_tint"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_fill_light"
+                                    android:layout_width="0dp"
+                                    android:layout_height="64dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/floating_fill_light"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <TextView
+                                    android:layout_width="170dp"
+                                    android:layout_height="wrap_content"
+                                    android:text="@string/floating_field_border"
+                                    android:textColor="@color/text_secondary"
+                                    android:textSize="19sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_border_on"
+                                    android:layout_width="0dp"
+                                    android:layout_height="64dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="4dp"
+                                    android:text="@string/floating_border_color"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_border_off"
+                                    android:layout_width="0dp"
+                                    android:layout_height="64dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/floating_border_none"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="10dp"
+                                android:orientation="horizontal"
+                                android:gravity="center_vertical">
+
+                                <LinearLayout
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    android:layout_weight="1"
+                                    android:orientation="vertical">
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:text="@string/floating_field_dim"
+                                        android:textColor="@color/text_secondary"
+                                        android:textSize="19sp" />
+
+                                    <TextView
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginTop="2dp"
+                                        android:text="@string/floating_dim_hint"
+                                        android:textColor="@color/dash_text_lo"
+                                        android:textSize="16sp" />
+
+                                </LinearLayout>
+
+                                <com.mg4.control.ui.widget.SegmentSwitch
+                                    android:id="@+id/switch_floating_dim"
+                                    android:layout_marginHorizontal="8dp"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content" />
+
+                            </LinearLayout>
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="12dp"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_look_copy"
+                                    android:layout_width="0dp"
+                                    android:layout_height="64dp"
+                                    android:layout_weight="1"
+                                    android:layout_marginEnd="8dp"
+                                    android:text="@string/floating_look_copy"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btn_floating_look_all"
+                                    android:layout_width="0dp"
+                                    android:layout_height="64dp"
+                                    android:layout_weight="1"
+                                    android:text="@string/floating_look_all"
+                                    android:insetTop="0dp" android:insetBottom="0dp" android:textAllCaps="false" android:textColor="@color/text_primary" android:textSize="18sp" app:backgroundTint="@color/dash_btn" app:strokeWidth="1dp" app:strokeColor="@color/dash_border" app:cornerRadius="14dp" />
+
+                            </LinearLayout>
+
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btn_floating_close"
                                 android:layout_width="180dp"

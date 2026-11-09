@@ -640,6 +640,22 @@ class CustomRuleTest {
     }
 
     @Test
+    fun `new ABRP account rule starts sending at screen start, and existing senders are found`() {
+        val r = CustomRuleTemplates.abrpOnScreenStart("ABRP · Ma MG4", "acc1")
+        assertEquals(RuleTrigger.Type.EVENT, r.triggers.single().type)
+        assertEquals(RuleEvent.APP_START, r.triggers.single().event)
+        assertEquals(RuleAction(RuleAction.Type.ABRP_START, text = "acc1"), r.actions.single())
+        assertFalse(r.onlyWhenReady)
+        assertTrue(CustomRuleTemplates.sendsToAbrp(listOf(r)))
+        // Un envoi rangé dans un bloc Si compte aussi ; un simple arrêt, non.
+        val dansUnSi = CustomRule(actions = listOf(RuleAction(RuleAction.Type.IF, then = emptyList(),
+            otherwise = listOf(RuleAction(RuleAction.Type.ABRP_START, text = "acc2")))))
+        assertTrue(CustomRuleTemplates.sendsToAbrp(listOf(dansUnSi)))
+        assertFalse(CustomRuleTemplates.sendsToAbrp(listOf(CustomRule(actions = listOf(RuleAction(RuleAction.Type.ABRP_STOP))))))
+        assertFalse(CustomRuleTemplates.sendsToAbrp(emptyList()))
+    }
+
+    @Test
     fun `android actions never close the car, Android or MG4Control`() {
         val moi = "com.mg4.control"
         assertTrue(AndroidActions.closable("com.spotify.music", moi, system = false))

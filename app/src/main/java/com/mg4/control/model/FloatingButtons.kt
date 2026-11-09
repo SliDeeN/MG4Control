@@ -44,6 +44,15 @@ data class FloatingButton(
     val customId: String? = null,
     /** Couleur de la bulle, ARGB (2026-11-04) ; `null` = la couleur générale ([BubbleColors]). */
     val color: Int? = null,
+    // Apparence (issue #230, 2026-11-09), par bulle ; `null` = comme avant la fonction ([BubbleLook]).
+    /** Opacité du fond, 0 à 100 ; `null` = [BubbleLook.OPACITY_DEFAULT]. */
+    val opacity: Int? = null,
+    /** Fond : [BubbleLook.FILL_DARK], [BubbleLook.FILL_TINT] ou [BubbleLook.FILL_LIGHT] ; `null` = sombre. */
+    val fill: String? = null,
+    /** Bordure de la couleur de la bulle ; `null` = oui. */
+    val border: Boolean? = null,
+    /** Atténuée au repos ([BubbleLook.DIM_ALPHA] après [BubbleLook.DIM_AFTER_MS]) ; `null` = non. */
+    val dimIdle: Boolean? = null,
 )
 
 object FloatingButtons {

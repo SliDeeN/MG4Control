@@ -1094,6 +1094,27 @@
     <string name="floating_color">Kolor baniek</string>
     <string name="floating_color_desc">Dla wszystkich baniek we wszystkich profilach. Każda bańka może mieć własny w „Edytuj”.</string>
     <string name="floating_field_color">Kolor</string>
+    <string name="floating_look_title">Wygląd</string>
+    <string name="floating_field_opacity">Krycie tła</string>
+    <string name="floating_opacity_value">%1$d %%</string>
+    <string name="floating_field_fill">Tło</string>
+    <string name="floating_fill_dark">Ciemne</string>
+    <string name="floating_fill_tint">Barwione</string>
+    <string name="floating_fill_light">Jasne</string>
+    <string name="floating_field_border">Obramowanie</string>
+    <string name="floating_border_color">Kolor</string>
+    <string name="floating_border_none">Brak</string>
+    <string name="floating_field_dim">Przygaszaj w spoczynku</string>
+    <string name="floating_dim_hint" formatted="false">40 % po 5 s bez dotyku; dotknięcie uruchamia akcję i przywraca wyrazistość.</string>
+    <string name="floating_look_copy">Skopiuj wygląd z…</string>
+    <string name="floating_look_all">Zastosuj do wszystkich bąbelków</string>
+    <string name="floating_look_copy_title">Skopiuj wygląd z</string>
+    <string name="floating_look_copy_none">Brak innego bąbelka.</string>
+    <string name="floating_look_copied">Skopiowano wygląd „%1$s”</string>
+    <string name="floating_look_applied">Wygląd zastosowany do %1$d bąbelków tego profilu</string>
+    <string name="floating_look_from_profile_fmt">%1$s (%2$s)</string>
+    <string name="floating_look_no_border">bez obramowania</string>
+    <string name="floating_look_dimmed">przygaszony</string>
     <string name="color_default">Domyślny</string>
     <string name="color_custom">Własny…</string>
     <string name="color_code">Kod</string>
@@ -1840,6 +1861,11 @@
     <string name="abrp_account_missing">usunięte konto</string>
     <string name="rule_tpl_abrp_profile">ABRP według profilu</string>
     <string name="abrp_no_accounts">Brak konta ABRP: dodaj je w Moje automatyzacje › Konta ABRP.</string>
+    <string name="abrp_rule_prompt_title">Dodano konto „%1$s”</string>
+    <string name="abrp_rule_prompt_msg">Wysyłanie do ABRP nie rusza samo: potrzebna jest automatyzacja, która je uruchomi. MG4Control może ją przygotować: wyśle dane na to konto zaraz po uruchomieniu ekranu. Wystarczy ją sprawdzić i zapisać.</string>
+    <string name="abrp_rule_prompt_create">Utwórz automatyzację</string>
+    <string name="abrp_rule_prompt_later">Później</string>
+    <string name="rule_tpl_abrp_account_fmt">ABRP · %1$s</string>
 
     <!-- Caméra de surveillance (issue #180, 2026-11-08) -->
     <string name="preclim_surv_rec">REC · %1$s</string>

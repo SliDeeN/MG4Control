@@ -1094,6 +1094,27 @@
     <string name="floating_color">Color de las burbujas</string>
     <string name="floating_color_desc">Para todas las burbujas de todos los perfiles. Cada burbuja puede tener el suyo en «Editar».</string>
     <string name="floating_field_color">Color</string>
+    <string name="floating_look_title">Apariencia</string>
+    <string name="floating_field_opacity">Opacidad del fondo</string>
+    <string name="floating_opacity_value">%1$d %%</string>
+    <string name="floating_field_fill">Fondo</string>
+    <string name="floating_fill_dark">Oscuro</string>
+    <string name="floating_fill_tint">Tintado</string>
+    <string name="floating_fill_light">Claro</string>
+    <string name="floating_field_border">Borde</string>
+    <string name="floating_border_color">Color</string>
+    <string name="floating_border_none">Ninguno</string>
+    <string name="floating_field_dim">Atenuar en reposo</string>
+    <string name="floating_dim_hint" formatted="false">40 % tras 5 s sin tocar; un toque lanza la acción y la vuelve nítida.</string>
+    <string name="floating_look_copy">Copiar la apariencia de…</string>
+    <string name="floating_look_all">Aplicar a todas las burbujas</string>
+    <string name="floating_look_copy_title">Copiar la apariencia de</string>
+    <string name="floating_look_copy_none">No hay otra burbuja.</string>
+    <string name="floating_look_copied">Apariencia de «%1$s» copiada</string>
+    <string name="floating_look_applied">Apariencia aplicada a las %1$d burbujas de este perfil</string>
+    <string name="floating_look_from_profile_fmt">%1$s (%2$s)</string>
+    <string name="floating_look_no_border">sin borde</string>
+    <string name="floating_look_dimmed">atenuada</string>
     <string name="color_default">Predeterminado</string>
     <string name="color_custom">Personalizado…</string>
     <string name="color_code">Código</string>
@@ -1837,6 +1858,11 @@
     <string name="abrp_account_missing">cuenta eliminada</string>
     <string name="rule_tpl_abrp_profile">ABRP según el perfil</string>
     <string name="abrp_no_accounts">Ninguna cuenta ABRP: añada una en Mis automatizaciones › Cuentas ABRP.</string>
+    <string name="abrp_rule_prompt_title">Cuenta «%1$s» añadida</string>
+    <string name="abrp_rule_prompt_msg">El envío a ABRP no empieza solo: hace falta una automatización que lo inicie. MG4Control puede prepararla: enviará los datos a esta cuenta en cuanto arranque la pantalla. Solo tendrá que revisarla y guardarla.</string>
+    <string name="abrp_rule_prompt_create">Crear la automatización</string>
+    <string name="abrp_rule_prompt_later">Más tarde</string>
+    <string name="rule_tpl_abrp_account_fmt">ABRP · %1$s</string>
 
     <!-- Caméra de surveillance (issue #180, 2026-11-08) -->
     <string name="preclim_surv_rec">REC · %1$s</string>

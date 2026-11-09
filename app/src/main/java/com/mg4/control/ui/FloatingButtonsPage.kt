@@ -16,6 +16,7 @@ import androidx.fragment.app.Fragment
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.slider.Slider
 import com.mg4.control.R
+import com.mg4.control.model.BubbleLook
 import com.mg4.control.model.ClusterConfigs
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.model.FloatingButton
@@ -378,7 +379,7 @@ class FloatingButtonsPage {
             if (b.id == choisi) ctx.getString(R.string.floating_edit_heading_name, FloatingButtons.title(b, nom))
             else ctx.getString(R.string.floating_summary, nom,
                 if (FloatingButtons.inTopBar(b)) ctx.getString(R.string.floating_loc_bar) else nomTaille(b.size),
-                FloatingButtons.textFor(b))
+                FloatingButtons.textFor(b)) + (resumeApparence(ctx, b)?.let { " · $it" } ?: "")
     }
 
     /** Pendant l'édition, les lignes sont repeintes sur place : reconstruire la liste ferait perdre la saisie. */
@@ -476,6 +477,98 @@ class FloatingButtonsPage {
             fermerEdition()
             peindreListe()
         }
+        brancherApparence()
+    }
+
+    // ── Apparence (issue #230, 2026-11-09) ──────────────────────────────────────
+
+    private fun brancherApparence() {
+        racine.findViewById<Slider>(R.id.slider_floating_opacity).addOnChangeListener { _, valeur, parUtilisateur ->
+            if (!parUtilisateur) return@addOnChangeListener
+            bouton(choisi)?.let { modifier(it.copy(opacity = valeur.toInt()), repeindreChamps = false) }
+        }
+        listOf(R.id.btn_floating_fill_dark to BubbleLook.FILL_DARK, R.id.btn_floating_fill_tint to BubbleLook.FILL_TINT,
+            R.id.btn_floating_fill_light to BubbleLook.FILL_LIGHT).forEach { (id, fond) ->
+            racine.findViewById<View>(id).setOnClickListener {
+                bouton(choisi)?.let { modifier(it.copy(fill = fond.takeIf { f -> f != BubbleLook.FILL_DARK }), repeindreChamps = false) }
+            }
+        }
+        racine.findViewById<View>(R.id.btn_floating_border_on).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(border = null), repeindreChamps = false) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_border_off).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(border = false), repeindreChamps = false) }
+        }
+        racine.findViewById<Switch>(R.id.switch_floating_dim).setOnCheckedChangeListener { _, on ->
+            if (majTitre) return@setOnCheckedChangeListener
+            bouton(choisi)?.let { modifier(it.copy(dimIdle = if (on) true else null), repeindreChamps = false) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_look_copy).setOnClickListener { copierApparence() }
+        racine.findViewById<View>(R.id.btn_floating_look_all).setOnClickListener { appliquerATous() }
+    }
+
+    /** Les autres bulles, de ce profil d'abord puis des autres (nommés) : leurs quatre réglages recopiés. */
+    private fun copierApparence() {
+        val ctx = fragment?.context ?: return
+        val b = bouton(choisi) ?: return
+        val inconnue = ctx.getString(R.string.floating_unknown_action)
+        fun nom(o: FloatingButton) = FloatingButtons.title(o, o.actionLabel.ifEmpty { inconnue })
+        val ici = FloatingButtonSettings.buttons(ctx).filter { it.id != b.id }.map { nom(it) to it }
+        val ailleurs = profils.filter { it.id != profilRegle }.flatMap { p ->
+            FloatingProfiles.buttonsOf(p).map { ctx.getString(R.string.floating_look_from_profile_fmt, nom(it), p.name) to it }
+        }
+        val choix = ici + ailleurs
+        if (choix.isEmpty()) {
+            Toast.makeText(ctx, R.string.floating_look_copy_none, Toast.LENGTH_SHORT).show()
+            return
+        }
+        AppDialog.choisir(ctx, titre = ctx.getString(R.string.floating_look_copy_title),
+            choix = choix.map { AppDialog.Choix(it.first) }, annuler = ctx.getString(R.string.profile_cancel)) { rang ->
+            val source = choix[rang].second
+            modifier(BubbleLook.copy(source, b))
+            Toast.makeText(ctx, ctx.getString(R.string.floating_look_copied, nom(source)), Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    /** L'apparence de la bulle ouverte, donnée à toutes les bulles du profil réglé. */
+    private fun appliquerATous() {
+        val ctx = fragment?.context ?: return
+        val b = bouton(choisi) ?: return
+        val liste = FloatingButtonSettings.buttons(ctx)
+        FloatingButtonSettings.save(ctx, liste.map { if (it.id == b.id) it else BubbleLook.copy(b, it) })
+        majLignes()
+        racine.removeCallbacks(rafraichir)
+        racine.postDelayed(rafraichir, RAFRAICHIR_MS)
+        Toast.makeText(ctx, ctx.getString(R.string.floating_look_applied, liste.size), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun peindreApparence(ctx: Context, b: FloatingButton, repeindreChamps: Boolean) {
+        if (repeindreChamps) {
+            majTitre = true
+            racine.findViewById<Switch>(R.id.switch_floating_dim).isChecked = BubbleLook.dims(b)
+            majTitre = false
+            racine.findViewById<Slider>(R.id.slider_floating_opacity).value =
+                (BubbleLook.opacity(b) / BubbleLook.OPACITY_STEP * BubbleLook.OPACITY_STEP).toFloat()
+        }
+        racine.findViewById<TextView>(R.id.tv_floating_opacity).text = ctx.getString(R.string.floating_opacity_value, BubbleLook.opacity(b))
+        val fond = BubbleLook.fill(b)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_fill_dark), fond == BubbleLook.FILL_DARK)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_fill_tint), fond == BubbleLook.FILL_TINT)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_fill_light), fond == BubbleLook.FILL_LIGHT)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_border_on), BubbleLook.border(b))
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_border_off), !BubbleLook.border(b))
+    }
+
+    /** « 35 % · teinté · sans bordure · atténuée », seulement si la bulle n'a plus l'allure d'avant. */
+    private fun resumeApparence(ctx: Context, b: FloatingButton): String? {
+        if (b.opacity == null && b.fill == null && b.border == null && b.dimIdle == null) return null
+        return BubbleLook.summary(b, { f ->
+            ctx.getString(when (f) {
+                BubbleLook.FILL_TINT -> R.string.floating_fill_tint
+                BubbleLook.FILL_LIGHT -> R.string.floating_fill_light
+                else -> R.string.floating_fill_dark
+            }).lowercase()
+        }, ctx.getString(R.string.floating_look_no_border), ctx.getString(R.string.floating_look_dimmed))
     }
 
     /** Enregistre [b], repeint l'édition (les champs, sauf pendant la frappe), puis les bulles. */
@@ -542,6 +635,7 @@ class FloatingButtonsPage {
         }
         racine.findViewById<MaterialButton>(R.id.btn_floating_action).strokeColor =
             ColorStateList.valueOf(ctx.getColor(R.color.dash_border))
+        peindreApparence(ctx, b, repeindreChamps)
     }
 
     private companion object {

@@ -1111,6 +1111,28 @@
     <string name="floating_color">Couleur des bulles</string>
     <string name="floating_color_desc">Pour toutes les bulles, de tous les profils. Chaque bulle peut avoir la sienne dans « Modifier ».</string>
     <string name="floating_field_color">Couleur</string>
+    <!-- Apparence des boutons flottants (issue #230, 2026-11-09). -->
+    <string name="floating_look_title">Apparence</string>
+    <string name="floating_field_opacity">Opacité du fond</string>
+    <string name="floating_opacity_value">%1$d %%</string>
+    <string name="floating_field_fill">Fond</string>
+    <string name="floating_fill_dark">Sombre</string>
+    <string name="floating_fill_tint">Teinté</string>
+    <string name="floating_fill_light">Clair</string>
+    <string name="floating_field_border">Bordure</string>
+    <string name="floating_border_color">Couleur</string>
+    <string name="floating_border_none">Aucune</string>
+    <string name="floating_field_dim">Atténuer au repos</string>
+    <string name="floating_dim_hint" formatted="false">40 % après 5 s sans toucher ; un toucher lance l\'action et la rend nette.</string>
+    <string name="floating_look_copy">Copier l\'apparence de…</string>
+    <string name="floating_look_all">Appliquer à toutes les bulles</string>
+    <string name="floating_look_copy_title">Copier l\'apparence de</string>
+    <string name="floating_look_copy_none">Aucune autre bulle.</string>
+    <string name="floating_look_copied">Apparence de « %1$s » copiée</string>
+    <string name="floating_look_applied">Apparence appliquée aux %1$d bulles de ce profil</string>
+    <string name="floating_look_from_profile_fmt">%1$s (%2$s)</string>
+    <string name="floating_look_no_border">sans bordure</string>
+    <string name="floating_look_dimmed">atténuée</string>
     <string name="color_default">Par défaut</string>
     <string name="color_custom">Personnalisée…</string>
     <string name="color_code">Code</string>
@@ -1856,6 +1878,12 @@
     <string name="abrp_account_missing">compte supprimé</string>
     <string name="rule_tpl_abrp_profile">ABRP selon le profil</string>
     <string name="abrp_no_accounts">Aucun compte ABRP : ajoutez-en un dans Mes automatisations › Comptes ABRP.</string>
+    <!-- Après l'ajout d'un compte ABRP : proposer l'automatisation qui lance l'envoi (2026-11-09). -->
+    <string name="abrp_rule_prompt_title">Compte « %1$s » ajouté</string>
+    <string name="abrp_rule_prompt_msg">L\'envoi vers ABRP ne démarre pas tout seul : il faut une automatisation qui le lance. MG4Control peut la préparer : elle enverra les données vers ce compte dès le démarrage de l\'écran. Il ne vous restera qu\'à la vérifier et à l\'enregistrer.</string>
+    <string name="abrp_rule_prompt_create">Créer l\'automatisation</string>
+    <string name="abrp_rule_prompt_later">Plus tard</string>
+    <string name="rule_tpl_abrp_account_fmt">ABRP · %1$s</string>
 
     <!-- Caméra de surveillance (issue #180, 2026-11-08) -->
     <string name="preclim_surv_rec">REC · %1$s</string>

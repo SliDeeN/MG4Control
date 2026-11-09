@@ -35,7 +35,8 @@ object AbrpDialogs {
      * Les comptes. [importer] et [modele] ouvrent les fenêtres d'import et d'export de la page
      * (leurs sélecteurs de fichiers sont enregistrés par le fragment).
      */
-    fun comptes(ctx: Context, importer: () -> Unit, modele: () -> Unit) {
+    /** [nouveau] : un compte vient d'être AJOUTÉ (pas modifié) ; la liste est alors fermée. */
+    fun comptes(ctx: Context, importer: () -> Unit, modele: () -> Unit, nouveau: (AbrpAccount) -> Unit = {}) {
         lateinit var dialog: AlertDialog
         val vue = LayoutInflater.from(ctx).inflate(R.layout.dialog_rule_value, null)
         val corps = vue.findViewById<LinearLayout>(R.id.rule_value_body)
@@ -63,10 +64,11 @@ object AbrpDialogs {
             }
             val boutons = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, dp(ctx, 12f), 0, 0) }
             boutons.addView(tuile(ctx, ctx.getString(R.string.abrp_add), comptes.size < AbrpStore.MAX_ACCOUNTS) {
-                if (AbrpStore.consent(ctx)) compte(ctx, null) { dessiner() }
+                val ajout = { a: AbrpAccount -> dialog.dismiss(); nouveau(a) }
+                if (AbrpStore.consent(ctx)) compte(ctx, null, ajout) { dessiner() }
                 else AppDialog.confirmer(ctx, titre = ctx.getString(R.string.abrp_consent_title), message = ctx.getString(R.string.abrp_consent_msg),
                     ton = AppDialog.Ton.ALERTE, oui = ctx.getString(R.string.abrp_consent_ok), non = ctx.getString(R.string.profile_cancel),
-                    onOui = { AbrpStore.setConsent(ctx); compte(ctx, null) { dessiner() } })
+                    onOui = { AbrpStore.setConsent(ctx); compte(ctx, null, ajout) { dessiner() } })
             })
             boutons.addView(tuile(ctx, ctx.getString(R.string.abrp_import_usb), true) { dialog.dismiss(); importer() })
             boutons.addView(tuile(ctx, ctx.getString(R.string.abrp_template), true) { dialog.dismiss(); modele() })
@@ -140,7 +142,8 @@ object AbrpDialogs {
     }
 
     /** Un compte : nom, jeton, clé, données envoyées, Tester, Supprimer. [a] nul = nouveau compte. */
-    fun compte(ctx: Context, a: AbrpAccount?, apres: () -> Unit) {
+    /** [ajoute] : appelé après [apres] quand [a] était nul, c'est-à-dire pour un compte créé. */
+    fun compte(ctx: Context, a: AbrpAccount?, ajoute: ((AbrpAccount) -> Unit)? = null, apres: () -> Unit) {
         lateinit var dialog: AlertDialog
         val base = a ?: AbrpAccount()
         var personnelle = base.apiKey.isNotBlank() || AbrpStore.appKey.isBlank()
@@ -276,6 +279,7 @@ object AbrpDialogs {
                 if (AbrpStream.status.running && AbrpStream.status.accountId == l.id) AbrpStream.start(ctx, l.id)
                 dialog.dismiss()
                 apres()
+                if (a == null) ajoute?.invoke(l)
             }
         }
         dialog = AppDialog.afficher(ctx, vue, LARGEUR_DP)
@@ -286,7 +290,8 @@ object AbrpDialogs {
      * Import du fichier de comptes : un compte de même nom (sans casse) est mis à jour, un nouveau
      * est ajouté s'il reste de la place. Le jeton n'est ni affiché ni journalisé.
      */
-    fun importer(ctx: Context, texte: String?, ou: String, apres: () -> Unit) {
+    /** [nouveaux] : comptes AJOUTÉS par l'import (pas ceux mis à jour) ; appelé à la place de [apres] s'il y en a. */
+    fun importer(ctx: Context, texte: String?, ou: String, nouveaux: (List<AbrpAccount>) -> Unit = {}, apres: () -> Unit) {
         // Un compte avec jeton, ou une clé seule pour un compte qui existe déjà (configuration rapide).
         val existants = AbrpStore.accounts(ctx)
         val lus = texte?.let { AbrpConfigFile.parse(it) }.orEmpty().filter { e ->
@@ -299,16 +304,17 @@ object AbrpDialogs {
         }
         val faire = {
             var n = 0
+            val ajoutes = mutableListOf<AbrpAccount>()
             lus.forEach { e ->
                 val deja = AbrpStore.accounts(ctx).firstOrNull { it.name.equals(e.name, ignoreCase = true) }
                 val c = (deja ?: AbrpAccount(name = e.name)).copy(
                     token = e.token?.takeIf { it.isNotBlank() } ?: deja?.token.orEmpty(),
                     // null = choix gardé ; « » = clé MG4Control ; sinon la clé personnelle.
                     apiKey = e.apiKey ?: deja?.apiKey.orEmpty())
-                if (AbrpStore.save(ctx, c)) n++
+                if (AbrpStore.save(ctx, c)) { n++; if (deja == null) ajoutes += c }
             }
             Toast.makeText(ctx, ctx.getString(R.string.abrp_import_done_fmt, n), Toast.LENGTH_LONG).show()
-            apres()
+            if (ajoutes.isNotEmpty()) nouveaux(ajoutes) else apres()
         }
         if (AbrpStore.consent(ctx)) faire()
         else AppDialog.confirmer(ctx, titre = ctx.getString(R.string.abrp_consent_title), message = ctx.getString(R.string.abrp_consent_msg),
