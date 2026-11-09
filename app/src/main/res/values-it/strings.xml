@@ -1802,7 +1802,9 @@
     <string name="abrp_cadence_charging">In ricarica</string>
     <string name="abrp_cadence_parked">Parcheggiata, senza ricarica</string>
     <string name="abrp_cadence_parked_never">Mai</string>
-    <string name="abrp_data_estimate_fmt">≈ %1$d KB per ora di guida</string>
+    <string name="abrp_data_estimate_all_fmt">Dati stimati all\'ora: in marcia ≈ %1$d KB · in carica ≈ %2$d KB · fermo ≈ %3$d KB</string>
+    <string name="abrp_data_estimate_no_parked_fmt">Dati stimati all\'ora: in marcia ≈ %1$d KB · in carica ≈ %2$d KB · fermo: nulla</string>
+    <string name="abrp_cadence_parked_note">Fermo = auto accesa in P, schermo attivo, senza carica. Ad auto spenta non viene inviato nulla, qualunque sia la cadenza.</string>
     <string name="abrp_no_app_key">Questa versione non ha una chiave API di MG4Control: ogni account richiede una chiave personale.</string>
     <string name="abrp_account_title_new">Nuovo account ABRP</string>
     <string name="abrp_account_title_edit">Account ABRP</string>

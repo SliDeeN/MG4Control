@@ -1805,7 +1805,9 @@
     <string name="abrp_cadence_charging">Podczas ładowania</string>
     <string name="abrp_cadence_parked">Na postoju, bez ładowania</string>
     <string name="abrp_cadence_parked_never">Nigdy</string>
-    <string name="abrp_data_estimate_fmt">≈ %1$d KB na godzinę jazdy</string>
+    <string name="abrp_data_estimate_all_fmt">Szacowane dane na godzinę: w jeździe ≈ %1$d KB · podczas ładowania ≈ %2$d KB · na postoju ≈ %3$d KB</string>
+    <string name="abrp_data_estimate_no_parked_fmt">Szacowane dane na godzinę: w jeździe ≈ %1$d KB · podczas ładowania ≈ %2$d KB · na postoju: nic</string>
+    <string name="abrp_cadence_parked_note">Postój = auto włączone na P, ekran włączony, bez ładowania. Przy wyłączonym aucie nic nie jest wysyłane, niezależnie od częstotliwości.</string>
     <string name="abrp_no_app_key">Ta wersja nie ma klucza API MG4Control: każde konto wymaga klucza osobistego.</string>
     <string name="abrp_account_title_new">Nowe konto ABRP</string>
     <string name="abrp_account_title_edit">Konto ABRP</string>

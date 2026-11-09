@@ -1799,7 +1799,9 @@
     <string name="abrp_cadence_charging">Şarjda</string>
     <string name="abrp_cadence_parked">Park halinde, şarj yok</string>
     <string name="abrp_cadence_parked_never">Asla</string>
-    <string name="abrp_data_estimate_fmt">Sürüş saati başına ≈ %1$d KB</string>
+    <string name="abrp_data_estimate_all_fmt">Saatlik tahmini veri: sürüşte ≈ %1$d KB · şarjda ≈ %2$d KB · park halinde ≈ %3$d KB</string>
+    <string name="abrp_data_estimate_no_parked_fmt">Saatlik tahmini veri: sürüşte ≈ %1$d KB · şarjda ≈ %2$d KB · park halinde: yok</string>
+    <string name="abrp_cadence_parked_note">Park halinde = araç P\'de açık, ekran açık, şarj yok. Araç kapalıyken, sıklık ne olursa olsun hiçbir şey gönderilmez.</string>
     <string name="abrp_no_app_key">Bu sürümde MG4Control API anahtarı yok: her hesap kişisel bir anahtar gerektirir.</string>
     <string name="abrp_account_title_new">Yeni ABRP hesabı</string>
     <string name="abrp_account_title_edit">ABRP hesabı</string>

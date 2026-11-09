@@ -113,8 +113,14 @@ object AbrpDialogs {
         })
         val estimation = TextView(ctx).apply { textSize = 16f; setTextColor(ctx.getColor(R.color.text_secondary)) }
         fun maj() {
-            // Un relevé ≈ 1,2 Ko avec l'en-tête HTTPS (mesure d'EVABRPUploader : environ 1 Ko).
-            estimation.text = ctx.getString(R.string.abrp_data_estimate_fmt, (3600 / AbrpStore.cadence(ctx).drivingSeconds) * 6 / 5)
+            // Les trois situations (issue #232) ; à l'arrêt, « rien » si l'envoi y est coupé.
+            val c = AbrpStore.cadence(ctx)
+            val roulant = AbrpCadence.kbPerHour(c.drivingSeconds)
+            val charge = AbrpCadence.kbPerHour(c.chargingSeconds)
+            estimation.text = (if (c.parkedMinutes > 0) ctx.getString(R.string.abrp_data_estimate_all_fmt, roulant, charge,
+                AbrpCadence.kbPerHour(c.parkedMinutes * 60))
+            else ctx.getString(R.string.abrp_data_estimate_no_parked_fmt, roulant, charge)) +
+                "\n" + ctx.getString(R.string.abrp_cadence_parked_note)
         }
         fun rangee(titre: Int, valeurs: List<Int>, actuelle: Int, nom: (Int) -> String, ecrire: (Int) -> AbrpCadence) {
             val r = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; minimumHeight = dp(ctx, 64f) }
@@ -141,8 +147,10 @@ object AbrpDialogs {
         box.addView(estimation)
     }
 
-    /** Un compte : nom, jeton, clé, données envoyées, Tester, Supprimer. [a] nul = nouveau compte. */
-    /** [ajoute] : appelé après [apres] quand [a] était nul, c'est-à-dire pour un compte créé. */
+    /**
+     * Un compte : nom, jeton, clé, données envoyées, Tester, Supprimer. [a] nul = nouveau compte ;
+     * [ajoute] est alors appelé après [apres] avec le compte créé.
+     */
     fun compte(ctx: Context, a: AbrpAccount?, ajoute: ((AbrpAccount) -> Unit)? = null, apres: () -> Unit) {
         lateinit var dialog: AlertDialog
         val base = a ?: AbrpAccount()

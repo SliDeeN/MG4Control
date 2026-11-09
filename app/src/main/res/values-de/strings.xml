@@ -1799,7 +1799,9 @@
     <string name="abrp_cadence_charging">Beim Laden</string>
     <string name="abrp_cadence_parked">Geparkt, ohne Laden</string>
     <string name="abrp_cadence_parked_never">Nie</string>
-    <string name="abrp_data_estimate_fmt">≈ %1$d KB pro Fahrstunde</string>
+    <string name="abrp_data_estimate_all_fmt">Geschätzte Daten pro Stunde: Fahrt ≈ %1$d KB · Laden ≈ %2$d KB · Stillstand ≈ %3$d KB</string>
+    <string name="abrp_data_estimate_no_parked_fmt">Geschätzte Daten pro Stunde: Fahrt ≈ %1$d KB · Laden ≈ %2$d KB · Stillstand: keine</string>
+    <string name="abrp_cadence_parked_note">Stillstand = Auto an in P, Bildschirm an, ohne Laden. Bei ausgeschaltetem Auto wird nichts gesendet, egal welcher Takt.</string>
     <string name="abrp_no_app_key">Diese Version hat keinen MG4Control-API-Schlüssel: Jedes Konto braucht einen eigenen Schlüssel.</string>
     <string name="abrp_account_title_new">Neues ABRP-Konto</string>
     <string name="abrp_account_title_edit">ABRP-Konto</string>

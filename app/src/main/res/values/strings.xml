@@ -1822,7 +1822,9 @@
     <string name="abrp_cadence_charging">En charge</string>
     <string name="abrp_cadence_parked">À l\'arrêt, hors charge</string>
     <string name="abrp_cadence_parked_never">Jamais</string>
-    <string name="abrp_data_estimate_fmt">≈ %1$d Ko par heure de route</string>
+    <string name="abrp_data_estimate_all_fmt">Données estimées, par heure : en roulant ≈ %1$d Ko · en charge ≈ %2$d Ko · à l\'arrêt ≈ %3$d Ko</string>
+    <string name="abrp_data_estimate_no_parked_fmt">Données estimées, par heure : en roulant ≈ %1$d Ko · en charge ≈ %2$d Ko · à l\'arrêt : rien</string>
+    <string name="abrp_cadence_parked_note">À l\'arrêt = voiture allumée en P, écran actif, sans charge. Voiture éteinte, rien n\'est envoyé, quelle que soit la cadence.</string>
     <string name="abrp_no_app_key">Cette version n\'a pas de clé API MG4Control : chaque compte a besoin d\'une clé personnelle.</string>
     <string name="abrp_account_title_new">Nouveau compte ABRP</string>
     <string name="abrp_account_title_edit">Compte ABRP</string>

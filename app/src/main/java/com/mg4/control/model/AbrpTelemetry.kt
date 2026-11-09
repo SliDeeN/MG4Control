@@ -137,7 +137,14 @@ data class AbrpCadence(
         const val DEFAULT_PARKED_MIN = 15
         val DRIVING_CHOICES = listOf(10, 30, 60)
         val CHARGING_CHOICES = listOf(30, 60, 300)
-        val PARKED_CHOICES = listOf(15, 0)
+        /** 1 et 5 min ajoutées le 2026-11-09 (issue #232) ; 15 reste le défaut, 0 = jamais. */
+        val PARKED_CHOICES = listOf(1, 5, 15, 0)
+
+        /** Un relevé ≈ 1,2 Ko avec l'en-tête HTTPS (mesure d'EVABRPUploader : environ 1 Ko). */
+        const val REPORT_BYTES = 1_200
+
+        /** Données par heure, en Ko, à un relevé toutes les [seconds] secondes ; 0 sans relevé. */
+        fun kbPerHour(seconds: Int): Int = if (seconds <= 0) 0 else (3600 / seconds) * REPORT_BYTES / 1000
     }
 }
 

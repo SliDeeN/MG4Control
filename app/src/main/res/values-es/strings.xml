@@ -1802,7 +1802,9 @@
     <string name="abrp_cadence_charging">Cargando</string>
     <string name="abrp_cadence_parked">Aparcado, sin cargar</string>
     <string name="abrp_cadence_parked_never">Nunca</string>
-    <string name="abrp_data_estimate_fmt">≈ %1$d KB por hora de conducción</string>
+    <string name="abrp_data_estimate_all_fmt">Datos estimados por hora: conduciendo ≈ %1$d KB · cargando ≈ %2$d KB · parado ≈ %3$d KB</string>
+    <string name="abrp_data_estimate_no_parked_fmt">Datos estimados por hora: conduciendo ≈ %1$d KB · cargando ≈ %2$d KB · parado: nada</string>
+    <string name="abrp_cadence_parked_note">Parado = coche encendido en P, pantalla activa, sin cargar. Con el coche apagado no se envía nada, sea cual sea la cadencia.</string>
     <string name="abrp_no_app_key">Esta versión no tiene clave API de MG4Control: cada cuenta necesita una clave personal.</string>
     <string name="abrp_account_title_new">Nueva cuenta ABRP</string>
     <string name="abrp_account_title_edit">Cuenta ABRP</string>

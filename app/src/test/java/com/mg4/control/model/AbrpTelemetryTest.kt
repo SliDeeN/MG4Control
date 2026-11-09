@@ -65,6 +65,20 @@ class AbrpTelemetryTest {
     }
 
     @Test
+    fun `a l'arret jusqu'a une minute, 15 min par defaut, et estimation des donnees`() {
+        assertEquals(listOf(1, 5, 15, 0), AbrpCadence.PARKED_CHOICES)
+        assertEquals(15, AbrpCadence().parkedMinutes)
+        val uneMinute = AbrpCadence(parkedMinutes = 1)
+        assertEquals(60_000L, uneMinute.intervalMs(parked = true, charging = false))
+        assertFalse(uneMinute.due(59_000L, 1L, parked = true, charging = false, changed = false))
+        assertTrue(uneMinute.due(61_000L, 1L, parked = true, charging = false, changed = false))
+        // Même calcul qu'avant pour la route (30 s ≈ 144 Ko/h) ; à l'arrêt coupé : rien.
+        assertEquals(144, AbrpCadence.kbPerHour(30))
+        assertEquals(72, AbrpCadence.kbPerHour(60))
+        assertEquals(0, AbrpCadence.kbPerHour(0))
+    }
+
+    @Test
     fun `premier releve et transitions partent tout de suite`() {
         val c = AbrpCadence()
         assertTrue(c.due(1_000L, 0L, parked = true, charging = false, changed = false))

@@ -1799,7 +1799,9 @@
     <string name="abrp_cadence_charging">While charging</string>
     <string name="abrp_cadence_parked">Parked, not charging</string>
     <string name="abrp_cadence_parked_never">Never</string>
-    <string name="abrp_data_estimate_fmt">≈ %1$d KB per hour of driving</string>
+    <string name="abrp_data_estimate_all_fmt">Estimated data per hour: driving ≈ %1$d KB · charging ≈ %2$d KB · parked ≈ %3$d KB</string>
+    <string name="abrp_data_estimate_no_parked_fmt">Estimated data per hour: driving ≈ %1$d KB · charging ≈ %2$d KB · parked: none</string>
+    <string name="abrp_cadence_parked_note">Parked = car on in P, screen on, not charging. With the car off, nothing is sent, whatever the rate.</string>
     <string name="abrp_no_app_key">This build has no MG4Control API key: every account needs a personal key.</string>
     <string name="abrp_account_title_new">New ABRP account</string>
     <string name="abrp_account_title_edit">ABRP account</string>
