@@ -5291,7 +5291,11 @@ object MG4Hardware {
 
     fun mediaPrevious(): Boolean = commandeMedia(CmdMedia.PRECEDENT)
 
-    fun mediaPlayPause(): Boolean = commandeMedia(CmdMedia.LECTURE_PAUSE)
+    /** Bascule du raccourci : même vérification que la pause en quittant (issue #235). */
+    fun mediaPlayPause(): Boolean {
+        val joue = mediaJoue()
+        return verifierOuSecourir(pause = joue, commandeMedia(CmdMedia.LECTURE_PAUSE))
+    }
 
     /**
      * Un média joue-t-il ? Même lecture que la bascule Lecture/Pause : la source déclarée par le
@@ -5319,7 +5323,7 @@ object MG4Hardware {
             AppLogger.i(MEDIA_TAG, "pause demandée : rien ne joue — aucune action")
             return false
         }
-        return commandeMedia(CmdMedia.LECTURE_PAUSE)
+        return commandeMedia(CmdMedia.LECTURE_PAUSE).let { envoyee -> verifierOuSecourir(pause = true, envoyee) }
     }
 
     /**
@@ -5331,7 +5335,76 @@ object MG4Hardware {
             AppLogger.i(MEDIA_TAG, "reprise demandée : un média joue déjà — aucune action")
             return false
         }
-        return commandeMedia(CmdMedia.LECTURE_PAUSE)
+        return commandeMedia(CmdMedia.LECTURE_PAUSE).let { envoyee -> verifierOuSecourir(pause = false, envoyee) }
+    }
+
+    // ── Pause / reprise VÉRIFIÉES (issue #235, 2026-11-09) ───────────────────────
+    //
+    // Sur SWI133, Android Auto par `CPAA_PLAYER_ACTION` : la commande est ACCEPTÉE (tx 2 → true)
+    // mais rien ne s'arrête — l'état relu reste « en lecture » (journaux du 2026-11-09). Le code
+    // tenait l'envoi pour un succès et n'essayait rien d'autre. Désormais l'état est relu après
+    // chaque voie ; s'il n'a pas changé, on passe à la suivante. Toutes sont des commandes
+    // EXPLICITES (pause, lecture), jamais des bascules : une voie de trop ne peut rien inverser.
+
+    /** Le temps qu'une source suive avant qu'on relise son état. */
+    private const val VERIF_MEDIA_MS = 800L
+
+    /** Paquet de la dernière session mise en pause par [secoursMedia] : c'est elle qu'on relance. */
+    @Volatile private var sSessionEnPause: String? = null
+
+    /** La session de la projection qui, elle, n'honore rien (mesuré SWI132) : jamais utilisée. */
+    private const val SESSION_PROJECTION_MUETTE = "com.allgo.remoteui.mediabrowserservice"
+
+    private fun etatVoulu(pause: Boolean): Boolean {
+        Thread.sleep(VERIF_MEDIA_MS)
+        return mediaJoue() != pause
+    }
+
+    private fun verifierOuSecourir(pause: Boolean, envoyee: Boolean): Boolean {
+        if (envoyee && etatVoulu(pause)) return true
+        AppLogger.w(MEDIA_TAG, "${if (pause) "pause" else "reprise"} ${if (envoyee) "envoyée mais sans effet constaté" else "non envoyée"} " +
+            "— voies de secours")
+        return secoursMedia(pause)
+    }
+
+    /**
+     * Voies de secours, chacune vérifiée : (1) le service allgo de la projection, (2) la session
+     * média qui joue (pause) ou celle qu'on a mise en pause (reprise) — sauf la session muette de
+     * la projection —, (3) la touche média d'Android, qui atteint la session active (Android Auto,
+     * DiAuto…). Rend vrai dès que l'état voulu est constaté.
+     */
+    private fun secoursMedia(pause: Boolean): Boolean {
+        val src = mediaSourceCourante()
+        if (src == SRC_AA || src == SRC_CARPLAY) {
+            val ok = ruiEnvoyer(if (pause) RUI_PAUSE else RUI_PLAY)
+            AppLogger.i(MEDIA_TAG, "secours 1 : service allgo ${if (pause) "pause" else "lecture"} → $ok")
+            if (ok && etatVoulu(pause)) return true
+        }
+        val parSession = runCatching {
+            val msm = sAppContext?.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
+            val sessions = msm?.getActiveSessions(null).orEmpty().filter { it.packageName != SESSION_PROJECTION_MUETTE }
+            val cible = if (pause) sessions.firstOrNull { it.playbackState?.state == PlaybackState.STATE_PLAYING }
+                else sessions.firstOrNull { it.packageName == sSessionEnPause }
+            if (cible == null) false else {
+                if (pause) { cible.transportControls.pause(); sSessionEnPause = cible.packageName }
+                else cible.transportControls.play()
+                AppLogger.i(MEDIA_TAG, "secours 2 : session ${cible.packageName} ${if (pause) "pause" else "lecture"}")
+                true
+            }
+        }.getOrDefault(false)
+        if (parSession && etatVoulu(pause)) return true
+        val audio = sAppContext?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+        val touche = if (pause) KeyEvent.KEYCODE_MEDIA_PAUSE else KeyEvent.KEYCODE_MEDIA_PLAY
+        val parTouche = runCatching {
+            audio?.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, touche))
+            audio?.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, touche))
+            audio != null
+        }.getOrDefault(false)
+        AppLogger.i(MEDIA_TAG, "secours 3 : touche média ${KeyEvent.keyCodeToString(touche)} → $parTouche")
+        if (parTouche && etatVoulu(pause)) return true
+        AppLogger.w(MEDIA_TAG, "${if (pause) "pause" else "reprise"} : aucune voie n'a pris effet " +
+            "(source ${nomSource(src)})")
+        return false
     }
 
     /**
