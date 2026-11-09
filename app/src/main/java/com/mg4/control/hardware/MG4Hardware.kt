@@ -5263,13 +5263,13 @@ object MG4Hardware {
                 // L'état n'est lu que si la commande en dépend : inutile d'imposer une lecture
                 // binder à « piste suivante », qui n'en a que faire.
                 val joue = cmd == CmdMedia.LECTURE_PAUSE && enLecture(cible)
-                // SWI133 par le SDK SAIC, tous les autres par le service allgo. Les deux voies
-                // sont exclusives selon le firmware : celle qui est absente échoue sans effet.
-                mediaTransact(ACT_CPAA, DESC_CPAA, when (cmd) {
-                    CmdMedia.SUIVANT -> 4
-                    CmdMedia.PRECEDENT -> 3
-                    CmdMedia.LECTURE_PAUSE -> if (joue) 2 else 1
-                }) || ruiMedia(cmd, joue)
+                // Lecture / pause : le service allgo D'ABORD (issue #235, 2026-11-09). Sur SWI133,
+                // la voie SAIC accepte la commande sans qu'Android Auto obéisse, alors qu'allgo
+                // — installé là aussi — agit tout de suite : la passer en premier supprime ~0,8 s
+                // d'attente vérifiée. Ailleurs (SWI68, 165, A9) allgo était déjà la seule voie.
+                // Pistes suivante / précédente : inchangées, la voie SAIC d'abord sur SWI133.
+                if (cmd == CmdMedia.LECTURE_PAUSE) ruiMedia(cmd, joue) || mediaTransact(ACT_CPAA, DESC_CPAA, if (joue) 2 else 1)
+                else mediaTransact(ACT_CPAA, DESC_CPAA, if (cmd == CmdMedia.SUIVANT) 4 else 3) || ruiMedia(cmd, joue)
             }
 
             else -> {
