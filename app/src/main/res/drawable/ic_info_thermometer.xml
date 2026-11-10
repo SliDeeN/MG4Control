@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bulle d'information « température » (issue #236, 2026-11-10) : le flocon des catégories
+     trompait par 30 °C. Contour d'après Tabler Icons (MIT), comme ic_cat_*. Blanc : la vue colore
+     le pictogramme. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M10,13.5a4,4 0,1 0,4 0v-8.5a2,2 0,0 0,-4 0v8.5 M10,9h4" />
+</vector>

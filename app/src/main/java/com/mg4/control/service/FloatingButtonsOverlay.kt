@@ -639,8 +639,10 @@ object FloatingButtonsOverlay {
         return when (s) {
             RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.CHARGE_LIMIT, RuleSignal.BATTERY_HEAT -> R.drawable.ic_cat_battery
             RuleSignal.PLUGGED, RuleSignal.CHARGE_DC -> R.drawable.ic_cat_plug
-            RuleSignal.OUTSIDE_TEMP, RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO,
-            RuleSignal.HVAC_TEMP, RuleSignal.FAN, RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR -> R.drawable.ic_cat_snow
+            // Les températures (extérieure, consigne) : un thermomètre, pas le flocon de la clim.
+            RuleSignal.OUTSIDE_TEMP, RuleSignal.HVAC_TEMP -> R.drawable.ic_info_thermometer
+            RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO,
+            RuleSignal.FAN, RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR -> R.drawable.ic_cat_snow
             RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT -> R.drawable.ic_cat_seat
             RuleSignal.STEERING_HEAT -> R.drawable.ic_cat_steering
             RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM,
