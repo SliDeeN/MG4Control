@@ -53,6 +53,13 @@ data class FloatingButton(
     val border: Boolean? = null,
     /** Atténuée au repos ([BubbleLook.DIM_ALPHA] après [BubbleLook.DIM_AFTER_MS]) ; `null` = non. */
     val dimIdle: Boolean? = null,
+    // Bulle d'information (issue #236, 2026-11-10) ; `null` partout = bulle-titre d'avant ([BubbleInfo]).
+    /** Information affichée : nom d'un [RuleSignal] ou [BubbleInfo.TIME] ; `null` = le titre. */
+    val info: String? = null,
+    /** [BubbleInfo.STYLE_VALUE], [BubbleInfo.STYLE_LABEL] (défaut) ou [BubbleInfo.STYLE_ICON]. */
+    val infoStyle: String? = null,
+    /** Au toucher : `false` = rien (affichage seul) ; `null` = l'action, comme avant. */
+    val tapAction: Boolean? = null,
 )
 
 object FloatingButtons {

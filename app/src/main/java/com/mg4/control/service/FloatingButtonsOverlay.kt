@@ -21,7 +21,10 @@ import android.view.WindowManager
 import android.widget.TextView
 import com.mg4.control.debug.AppLogger
 import com.mg4.control.hardware.MG4Hardware
+import com.mg4.control.R
+import com.mg4.control.model.BubbleInfo
 import com.mg4.control.model.BubbleLook
+import com.mg4.control.model.RuleSignal
 import com.mg4.control.model.FloatingButton
 import com.mg4.control.model.FloatingButtonStyle
 import com.mg4.control.model.FloatingButtons
@@ -116,6 +119,8 @@ object FloatingButtonsOverlay {
         var decalage = 0
         /** Atténuation au repos à venir, ou `null` ([reveiller]). */
         var attenuer: Runnable? = null
+        /** Bulle d'information : le dernier texte affiché (libellé et valeur), ou `null`. */
+        var infoTexte: CharSequence? = null
     }
 
     /** Relecture de l'origine des fenêtres de la barre du haut (rail affiché ou caché). */
@@ -168,7 +173,9 @@ object FloatingButtonsOverlay {
         if (boutons.isEmpty()) {
             rapportTour = 0
             etatTour = 0
+            infoTour = 0
             bascules = emptyList()
+            infosPosees = emptyList()
             return
         }
         val wm = ctx.getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -185,8 +192,18 @@ object FloatingButtonsOverlay {
         } else {
             rapportTour = 0
         }
-        bascules = boutons.mapNotNull { b ->
+        // Une bulle d'information se colore selon SA valeur (oui / non), pas selon son action.
+        bascules = boutons.filter { !BubbleInfo.isInfo(it) }.mapNotNull { b ->
             action(b)?.takeIf { FloatingButtonStyle.kind(it) == FloatingKind.TOGGLE }?.let { b.id to it }
+        }
+        mots = com.mg4.control.ui.AndroidRuleWords(ctx)
+        infosPosees = boutons.filter { BubbleInfo.isInfo(it) }.map { it.id to it.info }
+        if (infosPosees.isNotEmpty()) {
+            val tour = infoTour + 1
+            infoTour = tour
+            lecteur.post { lireInfos(tour, 0) }
+        } else {
+            infoTour = 0
         }
         if (bascules.isNotEmpty()) {
             val tour = etatTour + 1
@@ -200,7 +217,10 @@ object FloatingButtonsOverlay {
 
     private fun action(b: FloatingButton): ShortcutAction? = ShortcutAction.entries.firstOrNull { it.name == b.action }
 
-    private fun titre(bulle: Bulle): String = FloatingButtons.title(bulle.bouton, bulle.bouton.actionLabel)
+    /** Ce qu'affiche la bulle : son titre, ou pour une bulle d'information sa dernière valeur. */
+    private fun titre(bulle: Bulle): CharSequence =
+        if (BubbleInfo.isInfo(bulle.bouton)) bulle.infoTexte ?: texteInfo(bulle.vue.context, bulle.bouton, BubbleInfo.UNKNOWN)
+        else FloatingButtons.title(bulle.bouton, bulle.bouton.actionLabel)
 
     /** Relit les bascules posées, puis recommence tant que le tour est le bon (fil mg4-float). */
     private fun lireBascules(tour: Int) {
@@ -234,8 +254,20 @@ object FloatingButtonsOverlay {
 
     /** Après un appui court : relit la bascule (deux fois), ou montre la nouvelle valeur. */
     private fun apresAppui(ctx: Context, bulle: Bulle) {
-        val a = action(bulle.bouton) ?: return
         val id = bulle.bouton.id
+        // Bulle d'information : la valeur relue peu après (l'action a pu la changer) ; pas d'éclair,
+        // c'est la valeur elle-même qui s'affiche.
+        if (BubbleInfo.isInfo(bulle.bouton)) {
+            val cle = bulle.bouton.info
+            listOf(FloatingButtonStyle.READBACK_MS, VALEUR_RELUE_MS).forEach { delai ->
+                lecteur.postDelayed({
+                    val (texte, etat) = lireInfo(ctx, cle)
+                    main.post { bulles[id]?.let { majInfo(it, texte, etat) } }
+                }, delai)
+            }
+            return
+        }
+        val a = action(bulle.bouton) ?: return
         when (FloatingButtonStyle.kind(a)) {
             FloatingKind.TOGGLE -> {
                 lecteur.postDelayed({ relire(listOf(id to a)) }, FloatingButtonStyle.READBACK_MS)
@@ -336,7 +368,8 @@ object FloatingButtonsOverlay {
     @SuppressLint("ClickableViewAccessibility")
     private fun poser(ctx: Context, wm: WindowManager, b: FloatingButton) {
         val vue = TextView(ctx)
-        peindre(vue, b, FloatingButtons.title(b, b.actionLabel), deplacement = false)
+        peindre(vue, b, if (BubbleInfo.isInfo(b)) texteInfo(ctx, b, BubbleInfo.UNKNOWN) else FloatingButtons.title(b, b.actionLabel),
+            deplacement = false)
         vue.measure(View.MeasureSpec.UNSPECIFIED, View.MeasureSpec.UNSPECIFIED)
         val taille = ecran(wm)
         if (FloatingButtons.inTopBar(b) && poserEnHaut(ctx, wm, b, vue)) return
@@ -479,6 +512,8 @@ object FloatingButtonsOverlay {
                             peindre(bulle.vue, bulle.bouton, titre(bulle), deplacement = false, etat = bulle.etat)
                             enregistrerPlace(ctx, bulle)
                         }
+                        // Bulle d'information « au toucher : rien » (issue #236) : seul l'appui long agit.
+                        !annule && !BubbleInfo.tapRuns(bulle.bouton) -> relacher(bulle.vue)
                         !annule -> {
                             relacher(bulle.vue)
                             halo(ctx, bulle)
@@ -561,7 +596,7 @@ object FloatingButtonsOverlay {
      * texte sur deux lignes au plus. [etat] : celui d'une bascule (`null` = inconnu ou autre action).
      * Sert aussi aux pastilles de la page de réglage.
      */
-    fun peindre(vue: TextView, b: FloatingButton, titre: String, deplacement: Boolean, etat: Boolean? = null) {
+    fun peindre(vue: TextView, b: FloatingButton, titre: CharSequence, deplacement: Boolean, etat: Boolean? = null) {
         val densite = vue.resources.displayMetrics.density
         val enHaut = FloatingButtons.inTopBar(b)
         // Dans la barre du haut : sa hauteur, moins une petite marge, et une seule ligne.
@@ -582,9 +617,107 @@ object FloatingButtonsOverlay {
         val marge = if (enHaut) (10 * densite).roundToInt() else (hauteur * 0.35f).roundToInt()
         val vertical = if (enHaut) 0 else (6 * densite).roundToInt()
         vue.setPadding(marge, vertical, marge, vertical)
+        // Bulle d'information « icône + valeur » (issue #236) : l'icône à gauche, à la taille du texte.
+        val icone = if (BubbleInfo.isInfo(b) && BubbleInfo.style(b) == BubbleInfo.STYLE_ICON)
+            runCatching { vue.context.getDrawable(iconeInfo(b.info)) }.getOrNull()?.mutate() else null
+        icone?.let { d ->
+            val cote = (FloatingButtons.textFor(b) * vue.resources.displayMetrics.scaledDensity * 1.15f).roundToInt()
+            d.setBounds(0, 0, cote, cote)
+        }
+        vue.setCompoundDrawablesRelative(icone, null, null, null)
+        vue.compoundDrawablePadding = (6 * densite).roundToInt()
         habiller(vue, b, deplacement, etat)
         vue.scaleX = if (deplacement) 1.1f else 1f
         vue.scaleY = vue.scaleX
+    }
+
+    // ── Bulles d'information (issue #236, 2026-11-10) ───────────────────────────
+
+    /** Icône de l'information (dessins des catégories de l'éditeur d'automatisations). */
+    private fun iconeInfo(cle: String?): Int {
+        val s = BubbleInfo.signal(cle) ?: return R.drawable.ic_cat_clock
+        return when (s) {
+            RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.CHARGE_LIMIT, RuleSignal.BATTERY_HEAT -> R.drawable.ic_cat_battery
+            RuleSignal.PLUGGED, RuleSignal.CHARGE_DC -> R.drawable.ic_cat_plug
+            RuleSignal.OUTSIDE_TEMP, RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO,
+            RuleSignal.HVAC_TEMP, RuleSignal.FAN, RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR -> R.drawable.ic_cat_snow
+            RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT -> R.drawable.ic_cat_seat
+            RuleSignal.STEERING_HEAT -> R.drawable.ic_cat_steering
+            RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM,
+            RuleSignal.LOCKED, RuleSignal.KEY_AWAY, RuleSignal.FRONT_DOOR -> R.drawable.ic_cat_shield
+            RuleSignal.BRIGHTNESS, RuleSignal.NIGHT, RuleSignal.SUN_UP -> R.drawable.ic_cat_screen
+            RuleSignal.VOLUME, RuleSignal.MEDIA_PLAYING, RuleSignal.IN_CALL, RuleSignal.PROJECTION -> R.drawable.ic_cat_music
+            RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.HOTSPOT_ON, RuleSignal.WIFI_SSID, RuleSignal.BT_DEVICE,
+            RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> R.drawable.ic_cat_wifi
+            RuleSignal.PROFILE -> R.drawable.ic_cat_star
+            else -> R.drawable.ic_cat_car
+        }
+    }
+
+    /** Mots des automatisations (noms des valeurs, unités, modes…), refaits à chaque pose. */
+    @Volatile private var mots: com.mg4.control.ui.AndroidRuleWords? = null
+
+    /** Libellé d'une bulle d'information : son titre saisi, sinon le nom de la valeur. */
+    private fun libelleInfo(ctx: Context, b: FloatingButton): String =
+        b.customTitle?.trim()?.takeIf { it.isNotEmpty() }
+            ?: BubbleInfo.signal(b.info)?.let { s -> (mots ?: com.mg4.control.ui.AndroidRuleWords(ctx)).signal(s) }
+            ?: ctx.getString(R.string.floating_info_time)
+
+    /**
+     * Texte d'une bulle d'information pour la valeur [valeur] : la valeur seule, ou le libellé en
+     * petit au-dessus (sur une ligne « libellé valeur » dans la barre du haut, faute de hauteur).
+     */
+    fun texteInfo(ctx: Context, b: FloatingButton, valeur: String): CharSequence {
+        if (BubbleInfo.style(b) != BubbleInfo.STYLE_LABEL) return valeur
+        val libelle = libelleInfo(ctx, b)
+        val sep = if (FloatingButtons.inTopBar(b)) " " else "\n"
+        return android.text.SpannableStringBuilder(libelle).apply {
+            setSpan(android.text.style.RelativeSizeSpan(0.62f), 0, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            append(sep).append(valeur)
+        }
+    }
+
+    /** Valeur lue d'une information (fil mg4-float) ; le texte et l'état oui / non. */
+    private fun lireInfo(ctx: Context, cle: String?): Pair<String, Boolean?> {
+        val m = mots ?: com.mg4.control.ui.AndroidRuleWords(ctx).also { mots = it }
+        if (cle == BubbleInfo.TIME) {
+            val maintenant = System.currentTimeMillis()
+            // Horloge d'usine au réveil (~2019) : pas d'heure plutôt qu'une heure fausse.
+            if (!com.mg4.control.model.StatsTracker.clockPlausible(maintenant)) return BubbleInfo.UNKNOWN to null
+            return android.text.format.DateFormat.getTimeFormat(ctx).format(java.util.Date(maintenant)) to null
+        }
+        val s = BubbleInfo.signal(cle) ?: return BubbleInfo.UNKNOWN to null
+        val v = com.mg4.control.automation.CustomRules.readSignal(ctx, s)
+        val unite = m.unit(s).ifEmpty { BubbleInfo.extraUnit(s) }
+        return BubbleInfo.format(v, unite, ctx.getString(R.string.common_on), ctx.getString(R.string.common_off),
+            { m.value(s, it) }) to BubbleInfo.toggleState(v)
+    }
+
+    /** Tour de relecture des informations ; 0 = aucune. */
+    @Volatile private var infoTour = 0
+    /** Bulles d'information posées (id, clé), pour le fil de lecture. */
+    @Volatile private var infosPosees: List<Pair<String, String?>> = emptyList()
+
+    /** Fil mg4-float : chaque seconde l'heure et la vitesse, toutes les 5 s le reste. */
+    private fun lireInfos(tour: Int, tic: Int) {
+        if (infoTour != tour) return
+        val ctx = app
+        if (ctx != null && !marcheArriere) {
+            val lus = infosPosees.filter { (_, cle) -> tic % BubbleInfo.SLOW_EVERY == 0 || BubbleInfo.fast(cle) }
+                .map { (id, cle) -> lireInfo(ctx, cle).let { (texte, etat) -> Triple(id, texte, etat) } }
+            if (lus.isNotEmpty()) main.post { lus.forEach { (id, texte, etat) -> bulles[id]?.let { majInfo(it, texte, etat) } } }
+        }
+        lecteur.postDelayed({ lireInfos(tour, tic + 1) }, BubbleInfo.TICK_MS)
+    }
+
+    /** Nouvelle valeur : le texte (sauf pendant un déplacement ou une valeur affichée), et la couleur d'un oui / non. */
+    private fun majInfo(bulle: Bulle, valeur: String, etat: Boolean?) {
+        val texte = texteInfo(bulle.vue.context, bulle.bouton, valeur)
+        if (bulle.infoTexte?.toString() != texte.toString()) {
+            bulle.infoTexte = texte
+            if (!bulle.enDeplacement && bulle.eclair == null) bulle.vue.text = texte
+        }
+        teinter(bulle, etat)
     }
 
     /**
@@ -596,6 +729,7 @@ object FloatingButtonsOverlay {
         val hauteur = (FloatingButtons.heightDp(b.size) * densite).roundToInt()
         val p = BubbleLook.paint(b, FloatingButtonSettings.colorOf(vue.context, b), etat, deplacement)
         vue.setTextColor(p.text)
+        vue.compoundDrawablesRelative[0]?.setTint(p.text)   // icône d'une bulle d'information
         if (p.halo) vue.setShadowLayer(3 * densite, 0f, 0f, CONTOUR_TEXTE) else vue.setShadowLayer(0f, 0f, 0f, 0)
         vue.background = GradientDrawable().apply {
             cornerRadius = hauteur / 2f

@@ -1133,6 +1133,21 @@
     <string name="floating_look_from_profile_fmt">%1$s (%2$s)</string>
     <string name="floating_look_no_border">sans bordure</string>
     <string name="floating_look_dimmed">atténuée</string>
+    <!-- Bulles d'information (issue #236, 2026-11-10). -->
+    <string name="floating_field_content">Contenu</string>
+    <string name="floating_content_title">Titre</string>
+    <string name="floating_content_info">Information</string>
+    <string name="floating_field_info">Information</string>
+    <string name="floating_info_pick_title">Information affichée</string>
+    <string name="floating_info_time">Heure</string>
+    <string name="floating_field_info_style">Affichage</string>
+    <string name="floating_info_style_value">Valeur</string>
+    <string name="floating_info_style_label">Libellé + valeur</string>
+    <string name="floating_info_style_icon">Icône + valeur</string>
+    <string name="floating_field_tap">Au toucher</string>
+    <string name="floating_tap_action">Lancer l\'action</string>
+    <string name="floating_tap_none">Rien</string>
+    <string name="floating_tap_none_short">affichage seul</string>
     <string name="color_default">Par défaut</string>
     <string name="color_custom">Personnalisée…</string>
     <string name="color_code">Code</string>

@@ -604,6 +604,12 @@ object CustomRules {
 
     private fun clim() = if (MG4Hardware.hasClimateControl()) MG4Hardware.getClimateState() else null
 
+    /**
+     * Une valeur lue comme pour une condition — pour les bulles d'information (issue #236). Hors
+     * du fil principal (lectures binder) ; `null` si illisible.
+     */
+    fun readSignal(ctx: Context, s: RuleSignal): Any? = runCatching { lireUn(ctx, s) }.getOrNull()
+
     private fun lireUn(ctx: Context, s: RuleSignal): Any? = when (s) {
         RuleSignal.READY -> ReadyWatcher.ready
         RuleSignal.GEAR -> RuleSignal.gearText(MG4Hardware.readGearRaw())
