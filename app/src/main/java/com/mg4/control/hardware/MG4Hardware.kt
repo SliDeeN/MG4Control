@@ -304,13 +304,28 @@ object MG4Hardware {
     }
 
     /**
-     * Lit l'état d'allumage courant via CarPropertyManager.
-     * Retourne -1 si CPM non prêt, 0 si propriété non supportée.
+     * État d'allumage courant ([CarIgnitionItem]).
+     *
+     * ⚠️ D'abord Katman5 (VehicleConditionManager), puis CarPropertyManager. Sur SWI133, la
+     * propriété CPM 0x11400409 rend **0** (non supportée — indiscernable d'OFF) même voiture en
+     * route, alors que Katman5 signale bien IGNITION_RUN : journaux du 2026-11-08/09, « allumage=0 »
+     * en permanence. La garde d'allumage de [setEsc] refusait donc TOUTE commande ESC.
+     * Retourne -1 si rien n'est lisible.
      */
     fun getCurrentIgnitionState(): Int {
+        sVcm?.let { vcm ->
+            val direct = runCatching { vcm.javaClass.getMethod("getVehicleIgnition").invoke(vcm) as? Int }.getOrNull()
+            if (direct != null && direct >= 0) return direct
+        }
+        if (sLastVcmIgnitionState >= 0) return sLastVcmIgnitionState
         val v0 = getIntPropertyCPM(PROP_IGNITION_STATE, 0)
         if (v0 > 0) return v0
-        return getIntPropertyCPM(PROP_IGNITION_STATE, AREA_GLOBAL)
+        val v1 = getIntPropertyCPM(PROP_IGNITION_STATE, AREA_GLOBAL)
+        if (v1 > 0) return v1
+        // Sans Katman5 (A9) et avec une propriété CPM muette : une voiture CONNUE en READY est
+        // forcément contact mis — 0 serait alors « non supportée », pas « éteinte ».
+        if (ReadyWatcher.ready == true) return CarIgnitionItem.RUN
+        return v1
     }
 
     /**

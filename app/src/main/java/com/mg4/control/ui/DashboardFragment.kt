@@ -127,6 +127,19 @@ class DashboardFragment : Fragment() {
         }
     }
 
+    /**
+     * Relecture périodique de l'ESC et de la somnolence, écran visible (2026-11-10) : changés depuis
+     * l'écran de la voiture, ils restaient affichés dans leur ancien état. Sautée pendant une
+     * écriture ([safetyWriteInFlight]) pour ne pas effacer la peinture du clic.
+     */
+    private val safetyPoll = object : Runnable {
+        override fun run() {
+            if (!safetyWriteInFlight) refreshSafetyDmsEsc()
+            view?.postDelayed(this, SAFETY_POLL_MS)
+        }
+    }
+    @Volatile private var safetyWriteInFlight = false
+
     private var btnAebSenLow: Button? = null
     private var btnAebSenStandard: Button? = null
     private var btnAebSenHigh: Button? = null
@@ -191,6 +204,9 @@ class DashboardFragment : Fragment() {
         }
         refreshElk()  // SWI133 — sVsm133 indépendant de Katman4
         MG4Hardware.whenKatman4Ready { if (isAdded) refreshSafetyDmsEsc() }
+        if (MG4Hardware.hasDrowsinessAndEsc()) MG4Hardware.whenKatman4Ready {
+            if (isAdded) view?.run { removeCallbacks(safetyPoll); postDelayed(safetyPoll, SAFETY_POLL_MS) }
+        }
         MG4Hardware.whenKatman4Ready { if (isAdded) refreshHighBeam() }
         if (MG4Hardware.hasBatteryHeating()) {
             view?.removeCallbacks(batteryHeatPoll)
@@ -205,6 +221,7 @@ class DashboardFragment : Fragment() {
         super.onPause()
         stopClimatePolling()   // pas de sondage binder quand l'écran n'est plus visible
         view?.removeCallbacks(batteryHeatPoll)
+        view?.removeCallbacks(safetyPoll)
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -220,6 +237,8 @@ class DashboardFragment : Fragment() {
         const val CLIM_UI_TAG = "MG4_AIR"
         /** Relecture du chauffage de la batterie et de son décompte, écran visible. */
         const val BATTERY_HEAT_POLL_MS = 15_000L
+        /** ESC et somnolence relus toutes les 2 s, écran visible. */
+        const val SAFETY_POLL_MS = 2_000L
         /** Relectures (une par seconde) au plus après une consigne : au-delà de la fenêtre de 15 s. */
         const val BATTERY_HEAT_CONFIRM_TRIES = 16
     }
@@ -1186,15 +1205,21 @@ class DashboardFragment : Fragment() {
      * que l'état obtenu ferait mentir l'écran.
      */
     private fun writeSafety(refresh: () -> Unit = { refreshSafetyDmsEsc() }, action: () -> Unit) {
+        // La relecture périodique attend la fin de l'écriture : elle effacerait la peinture du clic.
+        safetyWriteInFlight = true
         CoroutineScope(Dispatchers.IO).launch {
-            action()
-            // ⚠️ Relire IMMÉDIATEMENT après l'écriture rend l'ancienne valeur : le calculateur
-            // n'a pas encore appliqué la consigne. C'est ce qui faisait rester l'affichage sur
-            // OFF alors que le réglage venait bien de passer à ON. L'UI d'origine ne relit pas
-            // non plus — elle peint l'état demandé et attend le callback de changement.
-            // Ici : peinture optimiste au clic (déjà faite), puis relecture qui fait autorité.
-            delay(700)
-            withContext(Dispatchers.Main) { if (isAdded) refresh() }
+            try {
+                action()
+                // ⚠️ Relire IMMÉDIATEMENT après l'écriture rend l'ancienne valeur : le calculateur
+                // n'a pas encore appliqué la consigne. C'est ce qui faisait rester l'affichage sur
+                // OFF alors que le réglage venait bien de passer à ON. L'UI d'origine ne relit pas
+                // non plus — elle peint l'état demandé et attend le callback de changement.
+                // Ici : peinture optimiste au clic (déjà faite), puis relecture qui fait autorité.
+                delay(700)
+                withContext(Dispatchers.Main) { if (isAdded) refresh() }
+            } finally {
+                safetyWriteInFlight = false
+            }
         }
     }
 
