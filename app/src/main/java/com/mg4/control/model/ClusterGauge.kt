@@ -94,6 +94,18 @@ enum class DistanceUnit(val key: String, val short: String, val factor: Float) {
     KM("km", "km", 1f),
     MILES("mi", "mi", 1.609344f);
 
+    /** Une distance en km, dans cette unité (2026-11-10, réglage général). */
+    fun fromKm(km: Float): Float = km / factor
+
+    /** Une valeur « par 100 km » (kWh, coût), par 100 de cette unité : 20 kWh/100 km = 32,2 kWh/100 mi. */
+    fun per100FromKm(perHundredKm: Float): Float = perHundredKm * factor
+
+    /** Une vitesse en km/h, dans cette unité. */
+    fun speedFromKmh(kmh: Float): Float = kmh / factor
+
+    /** « km/h » ou « mph ». */
+    val speedShort: String get() = if (this == MILES) "mph" else "km/h"
+
     companion object {
         /** Choix « Auto » enregistré : comme la voiture. */
         const val AUTO = "auto"

@@ -329,6 +329,9 @@
     <string name="settings_nav_side_detected_left">volant à gauche</string>
     <string name="settings_nav_side_detected_right">volant à droite</string>
     <string name="settings_nav_side_detected_unknown">non lu dans la voiture, menu à gauche</string>
+    <!-- Unité de distance générale (2026-11-10). -->
+    <string name="settings_distance_unit">Unité de distance</string>
+    <string name="settings_distance_unit_desc">Statistiques, écran conducteur et bulles d\'information. Auto suit l\'unité réglée dans la voiture. L\'export CSV reste en km.</string>
     <string name="settings_text_size">Taille du texte</string>
     <string name="settings_popup_delay">Délai avant fermeture des pop-ups</string>
     <string name="settings_popup_delay_desc">Sélecteur de profils, confirmation d\'automatisation et pop-up HVAC. Chaque action relance le délai.</string>
@@ -829,7 +832,7 @@
     <string name="stats_tile_regen">Énergie récupérée</string>
     <string name="stats_tile_charged">Énergie rechargée</string>
     <string name="stats_tile_cost">Coût estimé</string>
-    <string name="stats_tile_cost_per100">Coût aux 100 km</string>
+    <string name="stats_tile_cost_per100">Coût aux 100 %1$s</string>
     <string name="stats_tile_trips">Trajets</string>
     <string name="stats_filter_profile">Profil</string>
     <string name="stats_filter_all">Tous</string>
@@ -867,7 +870,7 @@
     <string name="stats_battery_banner_ok">C’est la bonne</string>
     <string name="stats_battery_banner_change">Changer</string>
     <string name="stats_skip_short_label">Ignorer les petits trajets</string>
-    <string name="stats_min_trip_label">Distance minimale (km)</string>
+    <string name="stats_min_trip_label">Distance minimale (%1$s)</string>
     <string name="stats_skip_short_note">Un trajet plus court n’est pas enregistré : ses kilomètres et son énergie ne comptent plus dans les totaux. Les trajets déjà enregistrés sont conservés.</string>
     <string name="stats_retention_30d">30 jours</string>
     <string name="stats_retention_3m">3 mois</string>
@@ -914,7 +917,6 @@
     <string name="stats_energy_mixed">mesurée en partie, le reste estimé d’après les charges déjà vues</string>
     <string name="stats_energy_learned">estimée d’après les charges déjà vues</string>
     <string name="stats_energy_percent">estimée d’après le niveau de batterie</string>
-    <string name="stats_unit_per100" translatable="false">kWh/100 km</string>
 
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
     <string name="settings_cluster">Écran conducteur</string>
@@ -939,7 +941,6 @@
     <string name="settings_cluster_row_pill">Pastille</string>
     <string name="settings_cluster_row_gauge">Jauge</string>
     <string name="settings_cluster_row_average">Moyenne</string>
-    <string name="settings_cluster_row_distance">Distance</string>
     <string name="cluster_distance_km">km</string>
     <string name="cluster_distance_miles">miles</string>
     <string name="cluster_distance_auto">Auto</string>

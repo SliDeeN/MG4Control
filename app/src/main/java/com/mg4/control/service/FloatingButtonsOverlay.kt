@@ -689,8 +689,11 @@ object FloatingButtonsOverlay {
             return android.text.format.DateFormat.getTimeFormat(ctx).format(java.util.Date(maintenant)) to null
         }
         val s = BubbleInfo.signal(cle) ?: return BubbleInfo.UNKNOWN to null
-        val v = com.mg4.control.automation.CustomRules.readSignal(ctx, s)
-        val unite = m.unit(s).ifEmpty { BubbleInfo.extraUnit(s) }
+        val lu = com.mg4.control.automation.CustomRules.readSignal(ctx, s)
+        // Vitesse et autonomie dans l'unité générale ; en Auto, relue dans la voiture (ce fil, binder).
+        val converti = BubbleInfo.inDistanceUnit(s, lu, com.mg4.control.util.DistanceSetting.unitReading(ctx))
+        val v = converti?.first ?: lu
+        val unite = converti?.second ?: m.unit(s).ifEmpty { BubbleInfo.extraUnit(s) }
         return BubbleInfo.format(v, unite, ctx.getString(R.string.common_on), ctx.getString(R.string.common_off),
             { m.value(s, it) }) to BubbleInfo.toggleState(v)
     }

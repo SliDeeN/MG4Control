@@ -9,6 +9,7 @@ import android.graphics.RectF
 import android.view.View
 import com.mg4.control.R
 import com.mg4.control.model.CurveBars
+import com.mg4.control.model.DistanceUnit
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
@@ -32,6 +33,12 @@ class TripCurveView(context: Context) : View(context) {
         set(v) { field = v; requestLayout(); invalidate() }
     var showAltitude = false
         set(v) { field = v; requestLayout(); invalidate() }
+    /**
+     * Unité de distance générale (2026-11-10) : barres en kWh/100 mi, vitesse en mph, axe en miles.
+     * Les relevés restent en km ; seule la lecture change. L'altitude reste en mètres.
+     */
+    var distance = DistanceUnit.KM
+        set(v) { field = v; invalidate() }
 
     private val dp = resources.displayMetrics.density
     private val sp = resources.displayMetrics.scaledDensity
@@ -83,14 +90,17 @@ class TripCurveView(context: Context) : View(context) {
         fun x(km: Float) = left + largeur * km / total
         // Largeur d'une barre entière, à l'écran ; la dernière peut être plus courte.
         val pas = largeur * c.stepKm / total
-        val valeurs = points.map { it.kwhPer100 }
-        val hi = max(HI, ceil(valeurs.max() / 5f) * 5f).coerceAtMost(80f)
-        val lo = min(LO, floor(valeurs.min() / 5f) * 5f).coerceAtLeast(-60f)
+        // Les couleurs se décident sur les relevés (kWh/100 km) ; la hauteur, dans l'unité affichée.
+        val brutes = points.map { it.kwhPer100 }
+        val valeurs = brutes.map { distance.per100FromKm(it) }
+        val hi = max(distance.per100FromKm(HI), ceil(valeurs.max() / 5f) * 5f).coerceAtMost(distance.per100FromKm(80f))
+        val lo = min(distance.per100FromKm(LO), floor(valeurs.min() / 5f) * 5f).coerceAtLeast(distance.per100FromKm(-60f))
         val bas = top + mainH
         fun y(v: Float) = top + mainH * (hi - v.coerceIn(lo, hi)) / (hi - lo)
+        val reperes = if (distance == DistanceUnit.MILES) listOf(15f, 30f, 45f) else listOf(10f, 20f, 30f)
 
         // Lignes de l'échelle : les repères habituels, et le bas et le haut quand l'échelle s'élargit.
-        (listOf(lo, 0f, 10f, 20f, 30f, hi).distinct().filter { it in lo..hi }).forEach { v ->
+        ((listOf(lo, 0f) + reperes + hi).distinct().filter { it in lo..hi }).forEach { v ->
             val yy = y(v)
             grille.alpha = if (v == 0f) 255 else 110
             canvas.drawLine(left, yy, width - right, yy, grille)
@@ -102,10 +112,11 @@ class TripCurveView(context: Context) : View(context) {
         val ecart = if (pas >= 4 * dp) 1.5f * dp else 0f
         val r = RectF()
         valeurs.forEachIndexed { i, v ->
+            val b = brutes[i]
             barre.color = when {
-                v < 0f -> cRegen
-                v < SOBRE -> cSobre
-                v <= NORMAL -> cNormal
+                b < 0f -> cRegen
+                b < SOBRE -> cSobre
+                b <= NORMAL -> cNormal
                 else -> cGourmand
             }
             val x0 = x(i * c.stepKm) + ecart / 2
@@ -118,11 +129,12 @@ class TripCurveView(context: Context) : View(context) {
         var haut = bas
         // Variante A (2026-11-09) : chaque bande à l'échelle du trajet, son maximum en pointillé.
         if (showSpeed) {
-            val v = points.map { it.speedKmh }
+            val v = points.map { p -> p.speedKmh?.let { distance.speedFromKmh(it) } }
             val pic = v.filterNotNull().maxOrNull()?.let { ceil(it) }
             // Plancher : un trajet en ville ne doit pas étirer ses petites variations sur toute la bande.
-            val mx = max(VITESSE_MIN, pic ?: 0f)
-            haut = bande(canvas, haut, v, 0f, mx, cVitesse, "${entier(mx)} km/h", "0", c, ::x, pic)
+            val plancher = if (distance == DistanceUnit.MILES) VITESSE_MIN_MPH else VITESSE_MIN
+            val mx = max(plancher, pic ?: 0f)
+            haut = bande(canvas, haut, v, 0f, mx, cVitesse, "${entier(mx)} ${distance.speedShort}", "0", c, ::x, pic)
         }
         if (showAltitude) {
             val a = points.map { it.altitudeM }
@@ -139,15 +151,16 @@ class TripCurveView(context: Context) : View(context) {
             haut = bande(canvas, haut, a, mn, mx, C_ALTITUDE, "${entier(mx)} m", "${entier(mn)} m", c, ::x, pic)
         }
 
-        // Kilomètres : un pas rond, six repères au plus.
-        val graduation = listOf(1f, 2f, 5f, 10f, 20f, 50f, 100f, 200f).firstOrNull { total / it <= 6f } ?: 500f
-        var km = 0f
-        while (km <= total + 0.01f) {
-            val etiquette = "${entier(km)} km"
-            val xe = (x(km) - texte.measureText(etiquette) / 2)
+        // Distance : un pas rond dans l'unité affichée, six repères au plus.
+        val totalU = distance.fromKm(total)
+        val graduation = listOf(1f, 2f, 5f, 10f, 20f, 50f, 100f, 200f).firstOrNull { totalU / it <= 6f } ?: 500f
+        var d = 0f
+        while (d <= totalU + 0.01f) {
+            val etiquette = "${entier(d)} ${distance.short}"
+            val xe = (x(d * distance.factor) - texte.measureText(etiquette) / 2)
                 .coerceIn(left, width - right - texte.measureText(etiquette))
             canvas.drawText(etiquette, xe, haut + axisH - 4 * dp, texte)
-            km += graduation
+            d += graduation
         }
     }
 
@@ -216,6 +229,8 @@ class TripCurveView(context: Context) : View(context) {
         const val NORMAL = 22f
         /** Haut minimal de la bande vitesse, en km/h. */
         const val VITESSE_MIN = 30f
+        /** Le même en mph. */
+        const val VITESSE_MIN_MPH = 20f
         /** Écart minimal de la bande altitude, en mètres. */
         const val ALTITUDE_ECART_MIN = 10f
         /** Violet lisible sur les deux thèmes. */

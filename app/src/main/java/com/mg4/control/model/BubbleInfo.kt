@@ -1,6 +1,7 @@
 package com.mg4.control.model
 
 import java.util.Locale
+import kotlin.math.roundToInt
 
 /**
  * Bulle d'information (issue #236, 2026-11-10, maquette validée) : au lieu de son titre, une bulle
@@ -71,6 +72,21 @@ object BubbleInfo {
         }
         is Collection<*> -> value.joinToString(", ") { name(it.toString()) }.ifEmpty { UNKNOWN }
         else -> value.toString().takeIf { it.isNotBlank() }?.let(name) ?: UNKNOWN
+    }
+
+    /**
+     * Vitesse et autonomie dans l'unité de distance générale (2026-11-10) : la valeur (en miles,
+     * arrondie à l'entier) et son unité ; `null` pour les autres informations. En km, rien ne change.
+     */
+    fun inDistanceUnit(s: RuleSignal, value: Any?, unit: DistanceUnit): Pair<Any?, String>? {
+        val n = (value as? Number)?.toFloat()?.takeUnless { it.isNaN() }
+        return when (s) {
+            RuleSignal.SPEED ->
+                (if (unit == DistanceUnit.KM || n == null) value else unit.speedFromKmh(n).roundToInt()) to " ${unit.speedShort}"
+            RuleSignal.RANGE ->
+                (if (unit == DistanceUnit.KM || n == null) value else unit.fromKm(n).roundToInt()) to " ${unit.short}"
+            else -> null
+        }
     }
 
     /** Une valeur oui / non colore la bulle comme une bascule (choix du 2026-11-10) ; sinon rien. */

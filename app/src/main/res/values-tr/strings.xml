@@ -327,6 +327,8 @@
     <string name="settings_nav_side_detected_left">soldan direksiyon</string>
     <string name="settings_nav_side_detected_right">sağdan direksiyon</string>
     <string name="settings_nav_side_detected_unknown">araçtan okunamadı, menü solda</string>
+    <string name="settings_distance_unit">Mesafe birimi</string>
+    <string name="settings_distance_unit_desc">İstatistikler, sürücü ekranı ve bilgi baloncukları. Otomatik, araçta ayarlı birimi izler. CSV dışa aktarımı km olarak kalır.</string>
     <string name="settings_text_size">Yazı boyutu</string>
     <string name="settings_popup_delay">Açılır pencerelerin kapanma süresi</string>
     <string name="settings_popup_delay_desc">Profil seçici, otomasyon onayı ve HVAC açılır penceresi. Her işlem süreyi yeniden başlatır.</string>
@@ -813,7 +815,7 @@
     <string name="stats_tile_regen">Geri kazanılan enerji</string>
     <string name="stats_tile_charged">Şarj edilen enerji</string>
     <string name="stats_tile_cost">Tahmini maliyet</string>
-    <string name="stats_tile_cost_per100">100 km maliyeti</string>
+    <string name="stats_tile_cost_per100">100 %1$s maliyeti</string>
     <string name="stats_tile_trips">Yolculuklar</string>
     <string name="stats_filter_profile">Profil</string>
     <string name="stats_filter_all">Tümü</string>
@@ -851,7 +853,7 @@
     <string name="stats_battery_banner_ok">Doğru</string>
     <string name="stats_battery_banner_change">Değiştir</string>
     <string name="stats_skip_short_label">Kısa yolculukları yok say</string>
-    <string name="stats_min_trip_label">En az mesafe (km)</string>
+    <string name="stats_min_trip_label">En az mesafe (%1$s)</string>
     <string name="stats_skip_short_note">Daha kısa bir yolculuk kaydedilmez: kilometresi ve enerjisi toplamlara dahil edilmez. Daha önce kaydedilen yolculuklar korunur.</string>
     <string name="stats_retention_30d">30 gün</string>
     <string name="stats_retention_3m">3 ay</string>
@@ -922,7 +924,6 @@
     <string name="settings_cluster_row_pill">Etiket</string>
     <string name="settings_cluster_row_gauge">Gösterge</string>
     <string name="settings_cluster_row_average">Ortalama</string>
-    <string name="settings_cluster_row_distance">Mesafe</string>
     <string name="cluster_distance_km">km</string>
     <string name="cluster_distance_miles">mil</string>
     <string name="cluster_distance_auto">Otomatik</string>

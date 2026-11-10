@@ -32,6 +32,9 @@ import com.mg4.control.model.ChargeEnergySource
 import com.mg4.control.model.ChargeSession
 import com.mg4.control.model.ChargeTimes
 import com.mg4.control.model.ChargeType
+import com.mg4.control.model.DistanceUnit
+import com.mg4.control.hardware.VehicleDistanceUnit
+import com.mg4.control.util.DistanceSetting
 import com.mg4.control.model.MoneyFormat
 import com.mg4.control.model.StatsCsv
 import com.mg4.control.model.StatsHistory
@@ -84,6 +87,14 @@ class StatsFragment : Fragment() {
      * faire défiler jusqu'à une vue qui n'est plus dans l'arbre.
      */
     private val priceFields = mutableListOf<Pair<EditText, () -> String>>()
+
+    /**
+     * Unité de distance générale (2026-11-10), relue à chaque rendu : distances, vitesses,
+     * consommations et coût aux 100 s'y affichent. L'historique et l'export CSV restent en km.
+     */
+    private var unite = DistanceUnit.KM
+    /** Unité des lignes de réglage déjà posées (leur libellé la nomme) ; `null` : pas encore posées. */
+    private var uniteReglages: DistanceUnit? = null
     /** Sous-onglet ouvert, retenu le temps de la session : revenir sur Statistiques rouvre le même (2026-11-07). */
     private var page: Int
         get() = pageRetenue
@@ -169,6 +180,12 @@ class StatsFragment : Fragment() {
         super.onResume()
         // Un trajet a pu se terminer pendant qu'on regardait un autre écran.
         if (view != null) render()
+        // En Auto, l'unité de la voiture se relit hors du fil principal (binder) ; changée, on redessine.
+        if (DistanceSetting.choice(context) == null) Thread {
+            val avant = VehicleDistanceUnit.connue()
+            val lue = VehicleDistanceUnit.actualiser()
+            if (lue != avant) view?.post { if (isAdded && view != null) render() }
+        }.start()
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -178,6 +195,7 @@ class StatsFragment : Fragment() {
     private fun render() {
         val v = view ?: return
         val ctx = v.context
+        unite = DistanceSetting.unit(ctx)
         val settings = store.settings()
         val history = store.history()
 
@@ -328,7 +346,7 @@ class StatsFragment : Fragment() {
             getString(R.string.stats_tile_consumption) to
                 (conso(sum.consumptionPer100, sum.consumptionApproximate) ?: "—"),
             getString(R.string.stats_tile_speed) to
-                (sum.averageSpeedKmh?.let { "${it.toInt()} km/h" } ?: "—"),
+                (sum.averageSpeedKmh?.let { vitesse(it) } ?: "—"),
             // Aucun trajet mesuré sur la période : un tiret, pas un zéro (issue #117).
             getString(R.string.stats_tile_energy) to
                 (if (sum.energyUnknown) "—" else kwh(sum.energyKwh)),
@@ -336,11 +354,19 @@ class StatsFragment : Fragment() {
                 (if (sum.energyUnknown) "—" else kwh(sum.regenKwh)),
             getString(R.string.stats_tile_charged) to kwh(sum.chargedKwh),
             getString(R.string.stats_tile_cost) to money(sum.drivingCost, s),
-            getString(R.string.stats_tile_cost_per100) to money(sum.costPer100, s),
+            getString(R.string.stats_tile_cost_per100, unite.short) to
+                money(sum.costPer100?.let { unite.per100FromKm(it) }, s),
         ))
 
         val prices = v.findViewById<LinearLayout>(R.id.stats_price_rows)
+        val lignesMinimum = v.findViewById<LinearLayout>(R.id.stats_min_trip_row)
+        // L'unité a changé : la distance minimale se repose avec son nouveau libellé.
+        if (prices.childCount > 0 && uniteReglages != unite) {
+            prices.removeAllViews()
+            lignesMinimum.removeAllViews()
+        }
         if (prices.childCount == 0) {
+            uniteReglages = unite
             // Vue recréée : les anciens champs ne doivent pas rester dans la liste.
             priceFields.clear()
             prices.addView(textRow(ctx, getString(R.string.stats_currency), { store.settings().currency }) { saisi ->
@@ -354,9 +380,11 @@ class StatsFragment : Fragment() {
                 { fmt3(store.settings().priceDc) }) { value ->
                 store.saveSettings(store.settings().copy(priceDc = StatsSettings.clampPrice(value)))
             })
-            v.findViewById<LinearLayout>(R.id.stats_min_trip_row).addView(numberRow(ctx,
-                getString(R.string.stats_min_trip_label), { fmt(store.settings().minTripKm) }) { value ->
-                store.saveSettings(store.settings().copy(minTripKm = StatsSettings.clampMinTrip(value)))
+            // Enregistrée en km ; saisie et montrée dans l'unité choisie.
+            val u = unite
+            lignesMinimum.addView(numberRow(ctx,
+                getString(R.string.stats_min_trip_label, u.short), { fmt(u.fromKm(store.settings().minTripKm)) }) { value ->
+                store.saveSettings(store.settings().copy(minTripKm = StatsSettings.clampMinTrip(value * u.factor)))
             })
         } else {
             // Un champ en cours de saisie garde ce que l'utilisateur est en train d'écrire.
@@ -437,7 +465,7 @@ class StatsFragment : Fragment() {
                 ).joinToString(" · "),
                 value1 = conso(trip.consumptionPer100, trip.consumptionApproximate) ?: "—",
                 value2 = listOfNotNull(
-                    trip.averageSpeedKmh?.let { "${it.toInt()} km/h" },
+                    trip.averageSpeedKmh?.let { vitesse(it) },
                     kwh(trip.netEnergyKwh).takeIf { trip.energyKnown },
                 ).joinToString(" · "),
                 badge = pastille(ctx, entier),
@@ -812,6 +840,7 @@ class StatsFragment : Fragment() {
         }
         val vue = TripCurveView(ctx).apply {
             curve = barres
+            distance = unite
             showSpeed = store.curveSpeedShown()
             showAltitude = store.curveAltitudeShown()
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
@@ -824,7 +853,8 @@ class StatsFragment : Fragment() {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
             addView(label(ctx, getString(R.string.stats_curve_title), 13f, R.color.text_secondary))
             addView(label(ctx, getString(R.string.stats_curve_summary,
-                trip.consumptionPer100?.let { fmt(it) } ?: "—", Math.round(maxi).toString()), 12f, R.color.dash_text_lo))
+                trip.consumptionPer100?.let { fmt(unite.per100FromKm(it)) } ?: "—",
+                Math.round(unite.per100FromKm(maxi)).toString()), 12f, R.color.dash_text_lo))
         })
         // Dénivelé : sous le graphique, seulement avec la bande d'altitude.
         val denivele = label(ctx, "", 12f, R.color.text_secondary).apply { setPadding(0, dp(ctx, 4), 0, 0) }
@@ -863,10 +893,13 @@ class StatsFragment : Fragment() {
 
     /** Légende des couleurs : un carré coloré par entrée, le texte reste dans la couleur du texte. */
     private fun legendeCourbe(ctx: Context, vitesse: Boolean, altitude: Boolean): CharSequence {
+        val sobre = unite.per100FromKm(TripCurveView.SOBRE).roundToInt()
+        val normal = unite.per100FromKm(TripCurveView.NORMAL).roundToInt()
         val entrees = mutableListOf(
-            "< ${TripCurveView.SOBRE.toInt()}" to ctx.getColor(R.color.dash_eco),
-            "${TripCurveView.SOBRE.toInt()}–${TripCurveView.NORMAL.toInt()}" to ctx.getColor(R.color.dash_accent),
-            "> ${TripCurveView.NORMAL.toInt()} kWh/100" to ctx.getColor(R.color.dash_warn),
+            // Seuils des couleurs, dans l'unité affichée : 14 et 22 kWh/100 km, 23 et 35 kWh/100 mi.
+            "< $sobre" to ctx.getColor(R.color.dash_eco),
+            "$sobre–$normal" to ctx.getColor(R.color.dash_accent),
+            "> $normal kWh/100" to ctx.getColor(R.color.dash_warn),
             getString(R.string.stats_curve_legend_regen) to assombrir(ctx.getColor(R.color.dash_eco)),
         )
         if (vitesse) entrees += getString(R.string.stats_curve_legend_speed) to ctx.getColor(R.color.text_secondary)
@@ -1124,12 +1157,21 @@ class StatsFragment : Fragment() {
      */
     private fun conso(value: Float?, approche: Boolean): String? {
         value ?: return null
-        val unite = getString(R.string.stats_unit_per100)
-        return if (approche) "≈ ${value.roundToInt()} $unite" else "${fmt(value)} $unite"
+        // [value] en kWh/100 km, montrée dans l'unité choisie (2026-11-10).
+        val v = unite.per100FromKm(value)
+        val libelle = "kWh/100 ${unite.short}"
+        return if (approche) "≈ ${v.roundToInt()} $libelle" else "${fmt(v)} $libelle"
     }
 
-    private fun km(value: Float): String =
-        if (value < 100f && value % 1f != 0f) "${fmt(value)} km" else "${value.roundToInt()} km"
+    /** [value] en km, montrée dans l'unité choisie ; en miles, le dixième n'a plus de sens « mesuré ». */
+    private fun km(value: Float): String {
+        val d = unite.fromKm(value)
+        val decimale = if (unite == DistanceUnit.KM) value % 1f != 0f else true
+        return if (d < 100f && decimale) "${fmt(d)} ${unite.short}" else "${d.roundToInt()} ${unite.short}"
+    }
+
+    /** [kmh] en km/h, montrée dans l'unité choisie : « 52 km/h », « 32 mph ». */
+    private fun vitesse(kmh: Float): String = "${unite.speedFromKmh(kmh).toInt()} ${unite.speedShort}"
 
     private fun kwh(value: Float): String = "${fmt(value)} kWh"
 

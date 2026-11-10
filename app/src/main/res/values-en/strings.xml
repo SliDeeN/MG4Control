@@ -327,6 +327,8 @@
     <string name="settings_nav_side_detected_left">left-hand drive</string>
     <string name="settings_nav_side_detected_right">right-hand drive</string>
     <string name="settings_nav_side_detected_unknown">not read from the car, menu on the left</string>
+    <string name="settings_distance_unit">Distance unit</string>
+    <string name="settings_distance_unit_desc">Statistics, driver screen and information bubbles. Auto follows the unit set in the car. The CSV export stays in km.</string>
     <string name="settings_text_size">Text size</string>
     <string name="settings_popup_delay">Pop-up auto-close delay</string>
     <string name="settings_popup_delay_desc">Profile picker, automation confirmation and HVAC pop-up. Each action restarts the delay.</string>
@@ -813,7 +815,7 @@
     <string name="stats_tile_regen">Energy recovered</string>
     <string name="stats_tile_charged">Energy charged</string>
     <string name="stats_tile_cost">Estimated cost</string>
-    <string name="stats_tile_cost_per100">Cost per 100 km</string>
+    <string name="stats_tile_cost_per100">Cost per 100 %1$s</string>
     <string name="stats_tile_trips">Trips</string>
     <string name="stats_filter_profile">Profile</string>
     <string name="stats_filter_all">All</string>
@@ -851,7 +853,7 @@
     <string name="stats_battery_banner_ok">It’s correct</string>
     <string name="stats_battery_banner_change">Change</string>
     <string name="stats_skip_short_label">Ignore short trips</string>
-    <string name="stats_min_trip_label">Minimum distance (km)</string>
+    <string name="stats_min_trip_label">Minimum distance (%1$s)</string>
     <string name="stats_skip_short_note">A shorter trip is not recorded: its distance and energy no longer count in the totals. Trips already recorded are kept.</string>
     <string name="stats_retention_30d">30 days</string>
     <string name="stats_retention_3m">3 months</string>
@@ -922,7 +924,6 @@
     <string name="settings_cluster_row_pill">Badge</string>
     <string name="settings_cluster_row_gauge">Gauge</string>
     <string name="settings_cluster_row_average">Average</string>
-    <string name="settings_cluster_row_distance">Distance</string>
     <string name="cluster_distance_km">km</string>
     <string name="cluster_distance_miles">miles</string>
     <string name="cluster_distance_auto">Auto</string>

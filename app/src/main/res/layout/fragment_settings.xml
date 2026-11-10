@@ -937,6 +937,125 @@
 
             </LinearLayout>
 
+            <!-- Refonte 2.7.0 : deux réglages par rangée, à hauteur égale. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:baselineAligned="false">
+
+                <!-- ── Section UNITÉ DE DISTANCE (2026-11-10) ──────────────────────────
+                     Réglage général : Statistiques, écran conducteur, bulles d'information. Auto :
+                     l'unité réglée dans la voiture (0x2140f439) ; illisible, km. Remplace la ligne
+                     « Distance » de l'écran conducteur. -->
+                <LinearLayout
+                    android:layout_weight="1"
+                    android:layout_marginEnd="12dp"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:background="@drawable/bg_card_rounded"
+                    android:layout_marginBottom="12dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/settings_distance_unit"
+                        android:textColor="@color/dash_text_lo"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.12"
+                        android:textAllCaps="true"
+                        android:paddingStart="16dp"
+                        android:paddingEnd="16dp"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="7dp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/dash_border" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:baselineAligned="false">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_distance_auto"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="@string/cluster_distance_auto"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_distance_km"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp"
+                            android:text="@string/cluster_distance_km"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_distance_mi"
+                            android:layout_width="0dp"
+                            android:layout_height="64dp"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="@string/cluster_distance_miles"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="19sp"
+                            android:maxLines="1"
+                            app:backgroundTint="@color/dash_btn"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_border"
+                            app:cornerRadius="14dp" />
+
+                        </LinearLayout>
+
+                        <TextView
+                            android:text="@string/settings_distance_unit_desc"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="18sp" />
+
+                    </LinearLayout>
+
+                </LinearLayout>
+
+                <!-- Moitié droite libre : la carte garde la largeur des autres. -->
+                <View
+                    android:layout_weight="1"
+                    android:layout_width="0dp"
+                    android:layout_height="0dp" />
+
+            </LinearLayout>
+
             <!-- ── Section ECRAN CONDUCTEUR : module sur le combine ──────────────
                  Desactive par defaut ; activer deplie le choix du module. La ligne d'etat dit
                  d'avance si l'ecran du combine a ete trouve. Masquee hors SWI133, SWI68 et
@@ -1647,82 +1766,6 @@
                             android:textStyle="bold"
                             android:letterSpacing="0.12"
                             android:textAllCaps="true" />
-
-                        <!-- Distance : Auto (comme la voiture), km ou miles pour tout le module
-                             (2026-10-23, variante B ; Auto le même jour). -->
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:id="@+id/tv_cluster_label_distance"
-                                android:layout_width="150dp"
-                                android:layout_height="wrap_content"
-                                android:text="@string/settings_cluster_row_distance"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="19sp" />
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="horizontal">
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_dist_auto"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginEnd="4dp"
-                                    android:text="@string/cluster_distance_auto"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_dist_km"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginStart="4dp"
-                                    android:layout_marginEnd="4dp"
-                                    android:text="@string/cluster_distance_km"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_dist_mi"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginStart="4dp"
-                                    android:text="@string/cluster_distance_miles"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                            </LinearLayout>
-
-                        </LinearLayout>
 
                         <LinearLayout
                             android:layout_width="match_parent"

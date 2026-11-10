@@ -327,6 +327,8 @@
     <string name="settings_nav_side_detected_left">Linkslenker</string>
     <string name="settings_nav_side_detected_right">Rechtslenker</string>
     <string name="settings_nav_side_detected_unknown">nicht aus dem Auto gelesen, Menü links</string>
+    <string name="settings_distance_unit">Entfernungseinheit</string>
+    <string name="settings_distance_unit_desc">Statistik, Fahrerdisplay und Infoblasen. Auto folgt der im Fahrzeug eingestellten Einheit. Der CSV-Export bleibt in km.</string>
     <string name="settings_text_size">Textgröße</string>
     <string name="settings_popup_delay">Zeit bis zum Schließen der Pop-ups</string>
     <string name="settings_popup_delay_desc">Profilauswahl, Automatisierungsabfrage und HVAC-Pop-up. Jede Aktion startet die Zeit neu.</string>
@@ -813,7 +815,7 @@
     <string name="stats_tile_regen">Rückgewonnene Energie</string>
     <string name="stats_tile_charged">Geladene Energie</string>
     <string name="stats_tile_cost">Geschätzte Kosten</string>
-    <string name="stats_tile_cost_per100">Kosten je 100 km</string>
+    <string name="stats_tile_cost_per100">Kosten je 100 %1$s</string>
     <string name="stats_tile_trips">Fahrten</string>
     <string name="stats_filter_profile">Profil</string>
     <string name="stats_filter_all">Alle</string>
@@ -851,7 +853,7 @@
     <string name="stats_battery_banner_ok">Stimmt</string>
     <string name="stats_battery_banner_change">Ändern</string>
     <string name="stats_skip_short_label">Kurze Fahrten ignorieren</string>
-    <string name="stats_min_trip_label">Mindeststrecke (km)</string>
+    <string name="stats_min_trip_label">Mindeststrecke (%1$s)</string>
     <string name="stats_skip_short_note">Eine kürzere Fahrt wird nicht aufgezeichnet: Ihre Kilometer und ihre Energie zählen nicht mehr in den Summen. Bereits aufgezeichnete Fahrten bleiben erhalten.</string>
     <string name="stats_retention_30d">30 Tage</string>
     <string name="stats_retention_3m">3 Monate</string>
@@ -922,7 +924,6 @@
     <string name="settings_cluster_row_pill">Plakette</string>
     <string name="settings_cluster_row_gauge">Anzeige</string>
     <string name="settings_cluster_row_average">Durchschnitt</string>
-    <string name="settings_cluster_row_distance">Entfernung</string>
     <string name="cluster_distance_km">km</string>
     <string name="cluster_distance_miles">Meilen</string>
     <string name="cluster_distance_auto">Auto</string>

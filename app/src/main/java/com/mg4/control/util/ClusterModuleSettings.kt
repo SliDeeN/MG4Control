@@ -122,15 +122,11 @@ object ClusterModuleSettings {
 
     fun style(ctx: Context?): ClusterGaugeStyle = style(ClusterProfiles.effective(ctx))
 
-    /** Choix enregistré : km ou miles, `null` = Auto (« auto » enregistré, ou aucun choix). */
-    fun distanceChoice(ctx: Context?): DistanceUnit? = distanceChoice(ClusterProfiles.effective(ctx))
-
     /**
-     * Le choix, sinon [vehicle] — l'unité de la voiture, que l'appelant tient de
-     * `VehicleDistanceUnit.connue()` — et km si elle n'est pas connue.
+     * Unité de distance : le réglage général de l'appli depuis le 2026-11-10 ([DistanceSetting]),
+     * qui a repris le choix fait ici. En Auto, relit la voiture (binder, au plus une fois par minute).
      */
-    fun distanceUnit(ctx: Context?, vehicle: DistanceUnit?): DistanceUnit =
-        distanceUnit(ClusterProfiles.effective(ctx), vehicle)
+    fun distanceUnit(ctx: Context?): DistanceUnit = DistanceSetting.unitReading(ctx)
 
     /** Sans choix, l'unité de la jauge. */
     fun averageUnit(ctx: Context?): AverageUnit = averageUnit(ClusterProfiles.effective(ctx))
@@ -225,11 +221,6 @@ object ClusterModuleSettings {
     fun refreshMs(c: ClusterConfig): Int = sanitizeRefresh(c.refreshMs)
 
     fun style(c: ClusterConfig): ClusterGaugeStyle = ClusterGaugeStyle.fromKey(c.style)
-
-    fun distanceChoice(c: ClusterConfig): DistanceUnit? =
-        c.distance?.let { k -> DistanceUnit.entries.firstOrNull { it.key == k } }
-
-    fun distanceUnit(c: ClusterConfig, vehicle: DistanceUnit?): DistanceUnit = DistanceUnit.resolve(c.distance, vehicle)
 
     fun averageUnit(c: ClusterConfig): AverageUnit = AverageUnit.resolve(c.average, consumptionUnit(c))
 

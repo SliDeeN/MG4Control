@@ -327,6 +327,8 @@
     <string name="settings_nav_side_detected_left">kierownica po lewej</string>
     <string name="settings_nav_side_detected_right">kierownica po prawej</string>
     <string name="settings_nav_side_detected_unknown">nie odczytano z samochodu, menu po lewej</string>
+    <string name="settings_distance_unit">Jednostka odległości</string>
+    <string name="settings_distance_unit_desc">Statystyki, ekran kierowcy i dymki informacyjne. Auto wybiera jednostkę ustawioną w samochodzie. Eksport CSV pozostaje w km.</string>
     <string name="settings_text_size">Rozmiar tekstu</string>
     <string name="settings_popup_delay">Czas automatycznego zamknięcia okien</string>
     <string name="settings_popup_delay_desc">Wybór profilu, potwierdzenie automatyzacji i okno HVAC. Każda czynność odlicza czas od nowa.</string>
@@ -813,7 +815,7 @@
     <string name="stats_tile_regen">Odzyskana energia</string>
     <string name="stats_tile_charged">Naładowana energia</string>
     <string name="stats_tile_cost">Szacowany koszt</string>
-    <string name="stats_tile_cost_per100">Koszt na 100 km</string>
+    <string name="stats_tile_cost_per100">Koszt na 100 %1$s</string>
     <string name="stats_tile_trips">Podróże</string>
     <string name="stats_filter_profile">Profil</string>
     <string name="stats_filter_all">Wszystkie</string>
@@ -851,7 +853,7 @@
     <string name="stats_battery_banner_ok">Jest poprawna</string>
     <string name="stats_battery_banner_change">Zmień</string>
     <string name="stats_skip_short_label">Pomijaj krótkie podróże</string>
-    <string name="stats_min_trip_label">Minimalny dystans (km)</string>
+    <string name="stats_min_trip_label">Minimalny dystans (%1$s)</string>
     <string name="stats_skip_short_note">Krótsza podróż nie jest zapisywana: jej dystans i energia nie liczą się już do sum. Już zapisane podróże zostają.</string>
     <string name="stats_retention_30d">30 dni</string>
     <string name="stats_retention_3m">3 miesiące</string>
@@ -922,7 +924,6 @@
     <string name="settings_cluster_row_pill">Plakietka</string>
     <string name="settings_cluster_row_gauge">Wskaźnik</string>
     <string name="settings_cluster_row_average">Średnia</string>
-    <string name="settings_cluster_row_distance">Dystans</string>
     <string name="cluster_distance_km">km</string>
     <string name="cluster_distance_miles">mile</string>
     <string name="cluster_distance_auto">Auto</string>

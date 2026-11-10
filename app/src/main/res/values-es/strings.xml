@@ -327,6 +327,8 @@
     <string name="settings_nav_side_detected_left">volante a la izquierda</string>
     <string name="settings_nav_side_detected_right">volante a la derecha</string>
     <string name="settings_nav_side_detected_unknown">no leído del coche, menú a la izquierda</string>
+    <string name="settings_distance_unit">Unidad de distancia</string>
+    <string name="settings_distance_unit_desc">Estadísticas, pantalla del conductor y burbujas de información. Auto sigue la unidad configurada en el coche. La exportación CSV sigue en km.</string>
     <string name="settings_text_size">Tamaño del texto</string>
     <string name="settings_popup_delay">Tiempo antes de cerrar los pop-ups</string>
     <string name="settings_popup_delay_desc">Selector de perfil, confirmación de automatización y pop-up HVAC. Cada acción reinicia el tiempo.</string>
@@ -813,7 +815,7 @@
     <string name="stats_tile_regen">Energía recuperada</string>
     <string name="stats_tile_charged">Energía cargada</string>
     <string name="stats_tile_cost">Coste estimado</string>
-    <string name="stats_tile_cost_per100">Coste cada 100 km</string>
+    <string name="stats_tile_cost_per100">Coste cada 100 %1$s</string>
     <string name="stats_tile_trips">Trayectos</string>
     <string name="stats_filter_profile">Perfil</string>
     <string name="stats_filter_all">Todos</string>
@@ -851,7 +853,7 @@
     <string name="stats_battery_banner_ok">Es correcta</string>
     <string name="stats_battery_banner_change">Cambiar</string>
     <string name="stats_skip_short_label">Ignorar trayectos cortos</string>
-    <string name="stats_min_trip_label">Distancia mínima (km)</string>
+    <string name="stats_min_trip_label">Distancia mínima (%1$s)</string>
     <string name="stats_skip_short_note">Un trayecto más corto no se registra: sus kilómetros y su energía dejan de contar en los totales. Los trayectos ya registrados se conservan.</string>
     <string name="stats_retention_30d">30 días</string>
     <string name="stats_retention_3m">3 meses</string>
@@ -922,7 +924,6 @@
     <string name="settings_cluster_row_pill">Etiqueta</string>
     <string name="settings_cluster_row_gauge">Indicador</string>
     <string name="settings_cluster_row_average">Media</string>
-    <string name="settings_cluster_row_distance">Distancia</string>
     <string name="cluster_distance_km">km</string>
     <string name="cluster_distance_miles">millas</string>
     <string name="cluster_distance_auto">Auto</string>
