@@ -42,7 +42,8 @@ The app communicates with the vehicle through the proprietary SAIC SDK, accessin
 
 > **Important:** This application requires system privileges (`sharedUserId="android.uid.system"`) and must be signed with the ROM's platform key. It cannot run on a standard unlocked device.
 
-> [!WARNING]
+> ⚠️ **Warning**
+>
 > **MG4Control is an independent community project. It is in no way affiliated with, endorsed by, or supported by MG Motor, SAIC Motor, or any of their subsidiaries.**
 > Use this application entirely at your own risk. Incorrect settings may affect vehicle behaviour. Proceed with caution.
 
@@ -70,7 +71,8 @@ Present in two places, with a different reveal rule:
 On the Dashboard, a row whose state the vehicle does not report disappears: the command exists on
 every firmware, but nothing guarantees the trim carries the hardware.
 
-> [!WARNING]
+> ⚠️ **Warning**
+>
 > The three settings do not share one scale, and the pedal is a trap: **Normal is 0 there**, not
 > the middle value. Power is 1/2/3 on SWI133/68/165 but 2/3/4 on A9, where the car reuses the
 > drive-mode scale. The app therefore never handles those numbers — it passes a 0/1/2 index and
@@ -87,7 +89,8 @@ automatic switch-off), as a shortcut, and offers to switch it off automatically 
 One vehicle property, `DRVNG_PTC_HEAT`, on all six firmwares: through the `VehiclePropertyManager`
 on SWI133, like SystemUI, directly elsewhere.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > The state reads the same way on all six firmwares: 0 = on, 1 = off (1 is written to switch it
 > on, 2 to switch it off). On A9, the property is read and written in area 0, as the stock app
 > does: before 2.6.10, MG4Control read the state upside down there and the command had no effect
@@ -100,7 +103,8 @@ on SWI133, like SystemUI, directly elsewhere.
 - **Lane keeping assist (ELK)**: Alert / Assist / Emergency keeping, sensitivity, plus the audible
   warning and vibration on SWI132
 
-> [!WARNING]
+> ⚠️ **Warning**
+>
 > Turning the ESC off also turns the forward collision system off — the vehicle enforces that.
 > Both return to ON at every start-up. Inside a profile, ESC and drowsiness are written **only if
 > that profile configures them**: a profile created before these settings existed leaves them alone.
@@ -158,7 +162,8 @@ the action always happens at the same moment, while the key is still held. A dou
 cost worth knowing — on a key carrying one, the short press can no longer fire on release, it waits
 another 300 ms to make sure no second press follows. Keys without a double press pay nothing.
 
-> [!WARNING]
+> ⚠️ **Warning**
+>
 > A key registered as an advanced shortcut is claimed **as a whole**. Intercepting a long press
 > means consuming the press as it starts, when it is still unknown whether it will be short, long
 > or double. Press types left unassigned therefore do *not* fall back to the launcher: they simply
@@ -204,7 +209,8 @@ claimed key — it does not fall back to the launcher.
 The **active profile** is the last one applied, whatever the source: startup, ignition, Bluetooth,
 temperature automation or a manual choice. It is stored, so it survives a service restart.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > It is the last profile **applied**, not the actual state of the vehicle: a setting changed by
 > hand from the Dashboard does not invalidate it. The alternative — comparing the vehicle state
 > against every profile — would cost a dozen vehicle reads on every key press, for an ambiguous
@@ -366,7 +372,8 @@ off. The floating buttons disappear from the countdown until the end of the prog
 left and the setpoint, or the surveillance in progress. The settings (lock delay 10–60 s, battery
 threshold 10–40 %, screen, cluster card, reminder before leaving) are on the *Car keeper* page of the Shortcuts tab.
 
-> [!WARNING]
+> ⚠️ **Warning**
+>
 > Never leave a child alone in the car. Dog mode does not replace supervision: a battery that is too
 > low, locking with the key or a fault would stop the climate.
 
@@ -483,7 +490,8 @@ with the chevron (the card opens unfolded when the option is on).
 Travel time and calibration stay adjustable with the option off: the "open / close all windows"
 shortcuts use them too.
 
-> [!WARNING]
+> ⚠️ **Warning**
+>
 > Travels commanded by the app have no anti-pinch protection, except on the driver's window.
 > Keep clear of the windows during a closing sequence, especially an automatic one, which starts
 > once you are already outside.
@@ -492,7 +500,8 @@ shortcuts use them too.
 Your own **When / And if / Then** rules (#201), in a full-screen, single-column editor in the style
 of Home Assistant. The automations above stay separate, as they are.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > Experimental: not every trigger, condition and action has been tried in the car yet. Your
 > feedback is welcome.
 
@@ -848,7 +857,8 @@ and automations.
 The persistent notification reads "Garage mode — asleep" while it is on: without that marker, a
 forgotten mode would show up as "nothing works any more" with no explanation whatsoever.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > Garage mode **replaces** the old "the default profile is applied automatically at launch"
 > switch, of which it is the complete version. Anyone who had unchecked it is carried over into
 > Garage mode on first launch: stopping the app from acting was the intent.
@@ -931,7 +941,8 @@ The sliders are bounded for input (15–33 °C, 1–11), but the **real** limits
 vehicle when applying and the setpoint is clamped to them: they differ between A9 and the other
 firmwares.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > **The profile wins over the A/C automation.** If the profile applied since the app started
 > carries a climate block, the temperature automation does nothing and logs it. Without this rule
 > both would write over each other at ignition, in an order nothing guarantees. At start-up, when a
@@ -1674,7 +1685,8 @@ L'application communique avec le véhicule via le SDK propriétaire SAIC, en acc
 
 > **Important :** Cette application nécessite des privilèges système (`sharedUserId="android.uid.system"`) et doit être signée avec la clé de la ROM. Elle ne peut pas fonctionner sur un appareil standard débloqué.
 
-> [!WARNING]
+> ⚠️ **Attention**
+>
 > **MG4Control est un projet communautaire indépendant. Il n'est en aucun cas affilié, approuvé ou soutenu par MG Motor, SAIC Motor ou l'une de leurs filiales.**
 > L'utilisation de cette application se fait entièrement à vos risques. Des réglages incorrects peuvent affecter le comportement du véhicule. Procédez avec précaution.
 
@@ -1702,7 +1714,8 @@ Présents à deux endroits, avec une règle d'apparition différente :
 Sur le Dashboard, une ligne dont le véhicule ne rend pas l'état disparaît : la commande existe sur
 tous les firmwares, mais rien ne garantit que la finition porte l'équipement.
 
-> [!WARNING]
+> ⚠️ **Attention**
+>
 > Les trois réglages n'ont pas la même échelle côté véhicule, et la pédale est un piège :
 > **Normal y vaut 0**, pas la valeur du milieu. La puissance vaut 1/2/3 en SWI133/68/165 mais
 > 2/3/4 sur A9, où la voiture réutilise l'échelle des modes de conduite. L'application ne
@@ -1720,7 +1733,8 @@ Conduite, avec le temps restant avant la coupure automatique), en raccourci, et 
 couper automatiquement (voir Automatisation). Une seule propriété véhicule, `DRVNG_PTC_HEAT`, sur
 les six firmwares : par le `VehiclePropertyManager` en SWI133, comme SystemUI, directement ailleurs.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > L'état se lit de la même façon sur les six firmwares : 0 = activé, 1 = désactivé (on écrit
 > 1 pour activer, 2 pour désactiver). Sur A9, la propriété se lit et s'écrit en zone 0, comme
 > le fait l'application d'origine : avant la 2.6.10, MG4Control y lisait l'état à l'envers et la
@@ -1733,7 +1747,8 @@ les six firmwares : par le `VehiclePropertyManager` en SWI133, comme SystemUI, d
 - **Assistant de sortie de voie (ELK)** : Alerte / Aider / Maintien d'urgence, sensibilité, et sur
   SWI132 l'alerte sonore et la vibration
 
-> [!WARNING]
+> ⚠️ **Attention**
+>
 > Couper l'ESC coupe aussi l'anti-collision avant — c'est le véhicule qui l'impose. Les deux
 > reviennent sur ON à chaque démarrage. Dans un profil, ESC et somnolence ne sont écrits **que si
 > le profil les configure** : un profil créé avant ces réglages n'y touche pas.
@@ -1795,7 +1810,8 @@ connaître — sur une touche qui en porte un, l'appui court ne peut plus partir
 attend 300 ms de plus pour s'assurer qu'aucun second appui n'arrive. Les touches sans double appui
 ne paient rien.
 
-> [!WARNING]
+> ⚠️ **Attention**
+>
 > Une touche enregistrée en raccourci avancé est réclamée **en bloc**. Pour intercepter un appui
 > long il faut consommer l'appui dès son début, or à cet instant on ignore encore s'il sera court,
 > long ou double. Les types d'appui laissés libres ne retombent donc pas sur le launcher : ils ne
@@ -1842,7 +1858,8 @@ Le **profil actif** est le dernier appliqué, quelle qu'en soit la source : dém
 Bluetooth, automatisation température ou choix manuel. Il est enregistré, donc il survit à un
 redémarrage du service.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > C'est le dernier profil **appliqué**, pas l'état réel du véhicule : un réglage changé à la main
 > depuis le Dashboard ne l'invalide pas. L'alternative — comparer l'état du véhicule à chaque
 > profil — coûterait une dizaine de lectures véhicule à chaque appui, pour un résultat ambigu dès
@@ -2009,7 +2026,8 @@ le temps restant et la consigne, ou la surveillance en cours. Les réglages (dé
 10–60 s, seuil de batterie 10–40 %, écran, fiche du combiné, rappel avant le départ) sont sur la page *Garde-voiture* de
 l'onglet Raccourcis.
 
-> [!WARNING]
+> ⚠️ **Attention**
+>
 > Ne laissez jamais un enfant seul dans la voiture. Le mode chien ne remplace pas une
 > surveillance : une batterie trop faible, un verrouillage à la clé ou un incident couperaient la
 > clim.
@@ -2132,7 +2150,8 @@ description, réglages dépliés au chevron (carte ouverte d'office quand l'opti
 Durée de course et calibrage restent réglables option coupée : ils servent aussi aux raccourcis
 « ouvrir / fermer toutes les vitres ».
 
-> [!WARNING]
+> ⚠️ **Attention**
+>
 > Les courses commandées par l'application n'ont pas l'anti-pincement du véhicule, sauf sur la
 > vitre conducteur. Personne près des vitres pendant une fermeture, et en particulier pendant une
 > fermeture automatique, qui part alors que vous êtes déjà dehors.
@@ -2141,7 +2160,8 @@ Durée de course et calibrage restent réglables option coupée : ils servent au
 Vos propres règles **Quand / Et si / Alors** (#201), dans un éditeur plein écran sur une seule
 colonne, façon Home Assistant. Les automatisations ci-dessus restent à part, telles quelles.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > Expérimental : chaque déclencheur, condition et action n'a pas encore été essayé en voiture.
 > Vos retours sont les bienvenus.
 
@@ -2518,7 +2538,8 @@ raccourcis et automatisations compris.
 La notification persistante affiche « Mode Garage — en veille » tant qu'il est actif : sans ce
 repère, un mode oublié se manifesterait par « plus rien ne marche » sans la moindre explication.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > Le Mode Garage **remplace** l'ancien interrupteur « le profil par défaut s'applique
 > automatiquement au lancement », dont il est la version complète. Qui l'avait décoché est repris
 > en Mode Garage activé à la première ouverture : couper l'application était bien l'intention.
@@ -2604,7 +2625,8 @@ Les curseurs sont bornés à la saisie (15–33 °C, 1–11), mais les **vraies*
 véhicule au moment d'appliquer et la consigne y est clampée : elles diffèrent entre A9 et les
 autres firmwares.
 
-> [!NOTE]
+> ℹ️ **Note**
+>
 > **Le profil est prioritaire sur l'automatisation A/C.** Si le profil appliqué depuis le démarrage
 > de l'application porte un bloc climatisation, l'automatisation par température ne fait rien et le
 > journalise. Sans cette règle les deux s'écriraient dessus au contact, dans un ordre que rien ne
@@ -3341,24 +3363,23 @@ Données météo de la luminosité automatique : [Open-Meteo.com](https://open-m
 
 Made with ❤ by **SliDeeN** and **Claude IA**
 
-Basé sur l'application **DriveHub Dort** développée par **Merth4n** & **hotboy_ist**
+Based on the **DriveHub Dort** app developed by **Merth4n** & **hotboy_ist**
 
-Merci à **confor1max**, **FrAsErTaG**, **sixty4h**, **hojnikb** et **depippi.p** pour les tests avant chaque release 🙏
+Thanks to **confor1max**, **FrAsErTaG**, **sixty4h**, **hojnikb** and **depippi.p** for testing before every release 🙏
 
-Le pilotage des vitres doit beaucoup à **[winclose](https://github.com/Skittle6938/winclose)** de
-**Skittle6938** : identifiants et valeurs de commande des vitres, et principe de la fermeture
-automatique en quittant la voiture, repris puis étendus aux six firmwares. Merci 🙏
+Window control owes a lot to **[winclose](https://github.com/Skittle6938/winclose)** by
+**Skittle6938**: the window identifiers and command values, and the idea of closing them
+automatically when leaving the car, taken over and then extended to all six firmwares. Thank you 🙏
 
-Merci aussi à **sensoyg** pour son fork et ses essais sur le firmware turc DBI68, à **Skittle6938**
-([MG4Dash](https://github.com/Skittle6938/MG4Dash)) pour le verrouillage depuis l'écran du
-Garde-voiture et l'analyse du chauffage de la batterie sur SWI69, et à **Geekice1** pour le
-prototype des sons d'automatisation 🙏
+Thanks also to **sensoyg** for their fork and their tests on the Turkish DBI68 firmware, to **Skittle6938**
+([MG4Dash](https://github.com/Skittle6938/MG4Dash)) for locking from the Car keeper screen and the
+analysis of battery heating on SWI69, and to **Geekice1** for the automation sounds prototype 🙏
 
 [![GitHub](https://img.shields.io/badge/GitHub-SliDeeN%2FMG4Control-181717?logo=github)](https://github.com/SliDeeN/MG4Control)
 
 <a href="https://star-history.com/#SliDeeN/MG4Control&Date">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=slideen/mg4control&type=Date&theme=dark" />
-    <img alt="Star history · Historique des étoiles" src="https://api.star-history.com/svg?repos=slideen/mg4control&type=Date" width="600" />
+    <img alt="Star history" src="https://api.star-history.com/svg?repos=slideen/mg4control&type=Date" width="600" />
   </picture>
 </a>
