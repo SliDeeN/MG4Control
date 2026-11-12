@@ -47,6 +47,9 @@ object InfoIcons {
         RuleSignal.BRIGHTNESS -> com.mg4.control.hardware.MG4Hardware.hasBrightnessControl()
         RuleSignal.BATTERY_HEAT -> com.mg4.control.hardware.MG4Hardware.hasBatteryHeating()
         RuleSignal.FRONT_DOOR -> com.mg4.control.hardware.MG4Hardware.hasDoorDetection()
+        // Sièges et volant chauffants : seulement les finitions qui en ont (SWI133, SWI68, SWI165).
+        RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT ->
+            com.mg4.control.util.FirmwareInfo.hasHeatFeatures()
         else -> true
     }
 }

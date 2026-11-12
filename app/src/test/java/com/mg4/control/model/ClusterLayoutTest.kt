@@ -119,6 +119,14 @@ class ClusterLayoutTest {
         assertFalse(ClusterInfo.hasDistance(RuleSignal.SOC.name))
         assertEquals(ClusterInfo.CLUSTER, ClusterInfo.choices().take(ClusterInfo.CLUSTER.size))
         assertTrue(BubbleInfo.TIME in ClusterInfo.choices())
+        // Retirées de l'écran conducteur (2026-11-12), gardées par les bulles.
+        for (s in listOf(RuleSignal.PROJECTION, RuleSignal.MEDIA_PLAYING, RuleSignal.IN_CALL)) {
+            assertFalse(s.name in ClusterInfo.choices())
+            assertTrue(s.name in BubbleInfo.choices())
+        }
+        // Le volant chauffant reste proposé là où la voiture le lit.
+        assertTrue(RuleSignal.STEERING_HEAT.name in ClusterInfo.choices())
+        assertFalse(RuleSignal.STEERING_HEAT.name in ClusterInfo.choices { it != RuleSignal.STEERING_HEAT })
     }
 
     @Test

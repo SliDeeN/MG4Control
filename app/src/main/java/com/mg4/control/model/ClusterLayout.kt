@@ -234,8 +234,15 @@ object ClusterInfo {
     /** 1 kW = 1,36 ch (cheval-vapeur métrique), comme le demande l'issue. */
     const val HP_PER_KW = 1.36f
 
+    /**
+     * Retirées de l'écran conducteur à sa demande (2026-11-12) : projection, média en lecture,
+     * appel en cours. Les bulles d'information les gardent.
+     */
+    private val HORS_COMBINE = setOf(RuleSignal.PROJECTION.name, RuleSignal.MEDIA_PLAYING.name, RuleSignal.IN_CALL.name)
+
     /** Les choix : le combiné d'abord, puis les bulles ([available] écarte ce que la voiture ne lit pas). */
-    fun choices(available: (RuleSignal) -> Boolean = { true }): List<String> = CLUSTER + BubbleInfo.choices(available)
+    fun choices(available: (RuleSignal) -> Boolean = { true }): List<String> =
+        CLUSTER + BubbleInfo.choices(available).filter { it !in HORS_COMBINE }
 
     fun known(key: String?): Boolean = key in CLUSTER || key == BubbleInfo.TIME || BubbleInfo.signal(key) != null
 
