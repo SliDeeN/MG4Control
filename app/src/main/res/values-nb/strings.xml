@@ -947,6 +947,7 @@
     <string name="cluster_layout_color_consumption">Farge for forbruk</string>
     <string name="cluster_layout_color_regen">Farge for regenerering</string>
     <string name="cluster_layout_average_cursor">Merke for turens snitt</string>
+    <string name="cluster_layout_power_unit">Effektenhet</string>
     <string name="cluster_layout_consumption_kw">Forbruk: kW under verdien</string>
     <string name="cluster_layout_power_consumption">Effekt: forbruk under kW</string>
     <string name="cluster_layout_info">Informasjon</string>

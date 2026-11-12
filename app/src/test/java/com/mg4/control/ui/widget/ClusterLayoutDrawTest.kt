@@ -87,6 +87,13 @@ class ClusterLayoutDrawTest {
             listOf(null, null, blocs[2].copy(taille = "L"), null)))
         dessiner("vide", contenu(ClusterModule.CONSUMPTION, ClusterGaugeStyle.DYNAMIC, ClusterLayout(), emptyList()))
         dessiner("tailles_S", contenu(ClusterModule.CONSUMPTION, ClusterGaugeStyle.DYNAMIC, disposition, blocs.map { it.copy(taille = "S") }))
+        // Chevaux (2026-11-12) : chiffre, graduations et unité changent, sur l'arc comme sur la barre.
+        val ch = disposition.copy(powerUnit = ClusterInfo.UNIT_HP)
+        for (style in ClusterGaugeStyle.entries) {
+            val enCh = dessiner("puissance_ch_${style.key}", contenu(ClusterModule.POWER, style, ch))
+            assertFalse(style.key, enCh.sameAs(dessiner("puissance_kw_${style.key}", contenu(ClusterModule.POWER, style, disposition))))
+        }
+        dessiner("conso_ch_kw_dessous", contenu(ClusterModule.CONSUMPTION, ClusterGaugeStyle.DYNAMIC, ch.copy(consumptionKw = true)))
     }
 
     @Test

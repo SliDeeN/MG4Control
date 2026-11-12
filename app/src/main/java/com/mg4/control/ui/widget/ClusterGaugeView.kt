@@ -434,16 +434,16 @@ class ClusterGaugeView(context: Context) : View(context) {
             // kW récupérés affichés — elle glisse avec eux ; sous 5 km/h, les kW comme avant.
             GaugeUnit.KW_REGEN -> ClusterGauge.regenWhPerKm(-v, c.kmh)
                 ?.let { ClusterGauge.formatConsumption(it * c.distance.factor, c.unite, locale) to c.unite.labelFor(c.distance) }
-                ?: ("↓" + ClusterGauge.formatKw(v, locale) to context.getString(R.string.cluster_regen_kw))
-            GaugeUnit.KW_STOPPED -> ClusterGauge.formatKw(v, locale) to context.getString(R.string.cluster_stopped_kw)
-            GaugeUnit.KW -> ClusterGauge.formatKw(v, locale) to "kW"
+                ?: ("↓" + puissanceTexte(c, v) to avecMot(c, context.getString(R.string.cluster_regen_kw)))
+            GaugeUnit.KW_STOPPED -> puissanceTexte(c, v) to avecMot(c, context.getString(R.string.cluster_stopped_kw))
+            GaugeUnit.KW -> puissanceTexte(c, v) to motPuissance(c)
         }
         val recup = e?.unit == GaugeUnit.KW_REGEN
         grandChiffre(canvas, chiffre, cx, cy + 16f, if (recup) cRecup else cTexte)
         petit(canvas, unite, cx, cy + 40f, 13f, if (recup) cRecup else cTexte2)
         // Les kW sous l'unité (issue #229), en roulant : à l'arrêt, le chiffre est déjà en kW.
         if (kwSousConso && (e?.unit == GaugeUnit.WH_PER_KM || e?.unit == GaugeUnit.KW_REGEN)) c.kw?.let { kw ->
-            petit(canvas, ClusterGauge.formatKw(kotlin.math.abs(kw), locale) + " kW", cx, cy + 58f, 13f, if (recup) cRecup else cTexte2)
+            petit(canvas, puissanceTexte(c, kotlin.math.abs(kw)) + " " + motPuissance(c), cx, cy + 58f, 13f, if (recup) cRecup else cTexte2)
         }
 
         if (avecPied) pied(canvas,
@@ -451,17 +451,30 @@ class ClusterGaugeView(context: Context) : View(context) {
             context.getString(R.string.cluster_regen), c.recupWh?.let { "+${it.roundToInt()}" to "Wh" } ?: ("–" to null), cRecup)
     }
 
+    // ── Unité de puissance (2026-11-12) : kW, ou chevaux choisis dans la personnalisation avancée ──
+
+    private fun enCh(c: Contenu): Boolean = ClusterLayouts.horsepower(c.disposition)
+
+    /** « kW », ou le mot des chevaux dans la langue de l'appli (ch, PS, hp…). */
+    private fun motPuissance(c: Contenu): String = if (enCh(c)) context.getString(R.string.cluster_unit_hp) else "kW"
+
+    /** Une puissance en kW écrite dans l'unité de la jauge, comme [ClusterGauge.formatKw]. */
+    private fun puissanceTexte(c: Contenu, kw: Float): String = ClusterGauge.formatKw(ClusterGauge.inPowerUnit(kw, enCh(c)), locale)
+
+    /** Un libellé qui contient « kW » (« RÉCUP. kW »…), passé dans l'unité de la jauge. */
+    private fun avecMot(c: Contenu, libelle: String): String = if (enCh(c)) libelle.replace("kW", motPuissance(c)) else libelle
+
     // ── B : arc de puissance ─────────────────────────────────────────────────
 
     private fun puissance(canvas: Canvas, c: Contenu) {
         val cx = COTE / 2f
         val cy = 122f
         // Graduations sur l'échelle resserrée : la puissance à droite, la récupération à gauche.
-        ClusterGauge.powerTicks(c.pleineEchelleKw).forEach { kw ->
-            graduation(canvas, cx, cy, RAYON_B, 270f + 120f * ClusterGauge.powerFraction(kw, c.pleineEchelleKw), "${kw.roundToInt()}")
+        ClusterGauge.powerTickLabels(c.pleineEchelleKw, enCh(c)).forEach { (kw, chiffre) ->
+            graduation(canvas, cx, cy, RAYON_B, 270f + 120f * ClusterGauge.powerFraction(kw, c.pleineEchelleKw), "$chiffre")
         }
-        ClusterGauge.REGEN_TICKS_KW.forEach { kw ->
-            graduation(canvas, cx, cy, RAYON_B, 270f - 120f * ClusterGauge.regenFraction(kw), "${kw.roundToInt()}")
+        ClusterGauge.regenTickLabels(enCh(c)).forEach { (kw, chiffre) ->
+            graduation(canvas, cx, cy, RAYON_B, 270f - 120f * ClusterGauge.regenFraction(kw), "$chiffre")
         }
         arc(canvas, cx, cy, RAYON_B, 150f, 240f, cPiste)
         val e = etat
@@ -482,7 +495,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         val v = valeurAffichee ?: e?.value
         val recup = e != null && v != null && v < 0f
         // Entier en roulant, une décimale à l'arrêt (issue #152).
-        val chiffre = if (e == null || v == null) "–" else (if (recup) "−" else "") + ClusterGauge.formatPowerKw(v, c.kmh, locale)
+        val chiffre = if (e == null || v == null) "–" else (if (recup) "−" else "") +
+            ClusterGauge.formatPowerKw(ClusterGauge.inPowerUnit(v, enCh(c)), c.kmh, locale)
         grandChiffre(canvas, chiffre, cx, cy + 12f, if (recup) cRecup else cTexte)
         // L'unité sous le chiffre (2026-10-15) : seul au centre, le chiffre ne disait pas ce qu'il
         // comptait. Remontée de 4 px pour laisser la place à la consommation (issue #152).
@@ -491,7 +505,7 @@ class ClusterGaugeView(context: Context) : View(context) {
             texte.textSize = 13f
             texte.letterSpacing = 0.04f
             texte.color = if (recup) cRecup else cTexte2
-            canvas.drawText("kW", cx, cy + 28f, texte)
+            canvas.drawText(motPuissance(c), cx, cy + 28f, texte)
         }
         // Consommation instantanée en grand (28, en blanc) et son unité en petit et en gris
         // (issue #152) ; en récupération, négative et en bleu (issue #158) ; sous 5 km/h, le mot
@@ -561,10 +575,8 @@ class ClusterGaugeView(context: Context) : View(context) {
             if (v < -0.5f) barreDiscrete(canvas, xv, zero, cRecup)
             else if (v > 0.5f) barreDiscrete(canvas, zero, xv, cConsoDiscrete)
         }
-        val chiffres = ClusterGauge.discreetPowerLabels(c.pleineEchelleKw)
-        ClusterGauge.discreetPowerTicks(c.pleineEchelleKw).forEach { k ->
-            cranDiscret(canvas, xBarre(ClusterGauge.discreetPowerFraction(k, c.pleineEchelleKw)),
-                k.roundToInt().toString().takeIf { k in chiffres }, k == 0f)
+        ClusterGauge.discreetPowerTickLabels(c.pleineEchelleKw, enCh(c)).forEach { (k, chiffre) ->
+            cranDiscret(canvas, xBarre(ClusterGauge.discreetPowerFraction(k, c.pleineEchelleKw)), chiffre?.toString(), k == 0f)
         }
         // Le zéro, repère de toute la barre.
         trait.strokeCap = Paint.Cap.BUTT
@@ -578,7 +590,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         texte.letterSpacing = 0f
         texte.color = C_DISCRET
         texte.textAlign = Paint.Align.RIGHT
-        canvas.drawText("kW", BARRE_D, Y_BARRE - 14f, texte)
+        canvas.drawText(motPuissance(c), BARRE_D, Y_BARRE - 14f, texte)
         texte.textAlign = Paint.Align.CENTER
         if (avecPied) piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne, c.distance), cTexte)
     }

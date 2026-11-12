@@ -46,6 +46,8 @@ data class ClusterLayout(
     val consumptionKw: Boolean? = null,
     /** Jauge de puissance : la consommation sous les kW ; `null` = affichée, comme avant. */
     val powerConsumption: Boolean? = null,
+    /** Unité de puissance de la jauge (2026-11-12) : [ClusterInfo.UNIT_HP] = chevaux ; `null` = kW. */
+    val powerUnit: String? = null,
 )
 
 object ClusterLayouts {
@@ -201,6 +203,9 @@ object ClusterLayouts {
         l.averageCursor ?: (style == ClusterGaugeStyle.DISCREET)
 
     fun powerConsumption(l: ClusterLayout): Boolean = l.powerConsumption != false
+
+    /** La jauge compte-t-elle en chevaux ? */
+    fun horsepower(l: ClusterLayout?): Boolean = l?.powerUnit == ClusterInfo.UNIT_HP
 }
 
 /**

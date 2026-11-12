@@ -947,6 +947,7 @@
     <string name="cluster_layout_color_consumption">Consumption colour</string>
     <string name="cluster_layout_color_regen">Regen colour</string>
     <string name="cluster_layout_average_cursor">Trip average marker</string>
+    <string name="cluster_layout_power_unit">Power unit</string>
     <string name="cluster_layout_consumption_kw">Consumption: kW under the value</string>
     <string name="cluster_layout_power_consumption">Power: consumption under the kW</string>
     <string name="cluster_layout_info">Information</string>

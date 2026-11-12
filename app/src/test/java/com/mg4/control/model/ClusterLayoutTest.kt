@@ -130,6 +130,28 @@ class ClusterLayoutTest {
     }
 
     @Test
+    fun `the gauge can count in horsepower, with round marks`() {
+        assertFalse(ClusterLayouts.horsepower(ClusterLayout()))
+        assertTrue(ClusterLayouts.horsepower(ClusterLayout(powerUnit = ClusterInfo.UNIT_HP)))
+        // En kW, rien ne change.
+        assertEquals(ClusterGauge.powerTicks(320f).map { Math.round(it) }, ClusterGauge.powerTickLabels(320f).map { it.second })
+        // En chevaux : des chiffres ronds, placés à leur puissance en kW, puis la fin de l'échelle.
+        val ch = ClusterGauge.powerTickLabels(320f, hp = true)
+        assertEquals(listOf(25, 50, 100, 200, 300, 435), ch.map { it.second })
+        assertEquals(100f / 1.36f, ch[2].first, 0.01f)
+        assertEquals(320f, ch.last().first, 0f)
+        assertEquals(listOf(15, 40, 80), ClusterGauge.regenTickLabels(hp = true).map { it.second })
+        assertEquals(68f, ClusterGauge.inPowerUnit(50f, true), 0.01f)
+        val barre = ClusterGauge.discreetPowerTickLabels(320f, hp = true)
+        assertEquals(listOf(-80, -25, 0), barre.take(3).map { it.second })
+        assertEquals(435, barre.last().second)
+        assertEquals("50 ch trop près de 25 : trait seul", listOf(-80, -25, 0, 25, 100, 200, 435), barre.mapNotNull { it.second })
+        // En kW, les mêmes chiffres qu'avant.
+        assertEquals(ClusterGauge.discreetPowerLabels(320f).map { Math.round(it) }.sorted(),
+            ClusterGauge.discreetPowerTickLabels(320f).mapNotNull { it.second }.sorted())
+    }
+
+    @Test
     fun `trip values are written in each block's own unit`() {
         val fr = Locale.FRANCE
         val t = ClusterInfo.Trip(averageWhPerKm = 164f, distanceKm = 42.3f, consumedKwh = 6.94f, regenWh = 1210f, powerKw = 50f)

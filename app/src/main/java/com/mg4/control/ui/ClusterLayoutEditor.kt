@@ -224,6 +224,8 @@ class ClusterLayoutEditor(
             ClusterLayouts.averageCursor(disposition, ClusterGaugeStyle.fromKey(style))) {
             disposition = disposition.copy(averageCursor = it)
         }
+        rangee(R.string.cluster_layout_power_unit, listOf(null to "kW", ClusterInfo.UNIT_HP to ctx.getString(R.string.cluster_unit_hp))
+            .map { (u, t) -> Option(t, disposition.powerUnit == u) { disposition = disposition.copy(powerUnit = u); maj() } })
         interrupteur(R.string.cluster_layout_consumption_kw, disposition.consumptionKw == true) {
             disposition = disposition.copy(consumptionKw = it.takeIf { v -> v })
         }

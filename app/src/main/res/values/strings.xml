@@ -965,6 +965,7 @@
     <string name="cluster_layout_color_consumption">Couleur de la consommation</string>
     <string name="cluster_layout_color_regen">Couleur de la récupération</string>
     <string name="cluster_layout_average_cursor">Repère de la moyenne du trajet</string>
+    <string name="cluster_layout_power_unit">Unité de puissance</string>
     <string name="cluster_layout_consumption_kw">Consommation : kW sous la valeur</string>
     <string name="cluster_layout_power_consumption">Puissance : consommation sous les kW</string>
     <string name="cluster_layout_info">Information</string>

@@ -947,6 +947,7 @@
     <string name="cluster_layout_color_consumption">Farbe des Verbrauchs</string>
     <string name="cluster_layout_color_regen">Farbe der Rekuperation</string>
     <string name="cluster_layout_average_cursor">Markierung des Fahrtdurchschnitts</string>
+    <string name="cluster_layout_power_unit">Leistungseinheit</string>
     <string name="cluster_layout_consumption_kw">Verbrauch: kW unter dem Wert</string>
     <string name="cluster_layout_power_consumption">Leistung: Verbrauch unter den kW</string>
     <string name="cluster_layout_info">Information</string>
