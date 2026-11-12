@@ -628,7 +628,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         when (m) {
             Mode.VERS_VRAI -> avecDuree(base(RuleOp.IS_TRUE))
             Mode.VERS_FAUX -> avecDuree(base(RuleOp.IS_FALSE))
-            Mode.BASCULE, Mode.CHANGE -> ok(RuleTrigger(RuleTrigger.Type.CHANGES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = sig)))
+            Mode.BASCULE, Mode.CHANGE -> dureeChange(RuleTrigger(), sig, ok)
             Mode.AU_DESSUS -> valeurPour(sig, RuleOp.ABOVE, null, avecDuree)
             Mode.EN_DESSOUS -> valeurPour(sig, RuleOp.BELOW, null, avecDuree)
             Mode.DEVIENT -> valeurPour(sig, RuleOp.EQUALS, null, avecDuree)
@@ -638,10 +638,32 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
     /** « Pendant combien de temps ? » puis le déclencheur « devient vrai » sur [c]. */
     private fun dureeDeclencheur(t: RuleTrigger, c: RuleCondition, ok: (RuleTrigger) -> Unit) =
-        RuleValueDialogs.nombre(ctx, s(R.string.rule_for_title), s(R.string.rule_for_hint), t.forSeconds, 0, RuleRun.MAX_WAIT_S,
-            texte = { if (it == 0) s(R.string.rule_for_now) else duree(it) }, pas = ::pasDuree) { sec ->
-            ok(t.copy(type = RuleTrigger.Type.BECOMES, condition = c, forSeconds = sec))
+        pendant(t.forSeconds) { sec -> ok(t.copy(type = RuleTrigger.Type.BECOMES, condition = c, forSeconds = sec)) }
+
+    /** « Change » (ou la bascule dans les deux sens) sur [sig], puis « Pendant combien de temps ? ». */
+    private fun dureeChange(t: RuleTrigger, sig: RuleSignal, ok: (RuleTrigger) -> Unit) =
+        pendant(t.forSeconds) { sec ->
+            ok(t.copy(type = RuleTrigger.Type.CHANGES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = sig), forSeconds = sec))
         }
+
+    /**
+     * « Pendant combien de temps ? » (2026-11-12) : demandé pour CHAQUE déclencheur qui suit un état,
+     * à la création comme à la modification ; « Tout de suite » = 0. Seuls les moments (heure,
+     * période, soleil, démarrage de l'écran, bouton) s'en passent.
+     */
+    private fun pendant(deja: Int, ok: (Int) -> Unit) =
+        RuleValueDialogs.nombre(ctx, s(R.string.rule_for_title), s(R.string.rule_for_hint), deja, 0, RuleRun.MAX_WAIT_S,
+            texte = { if (it == 0) s(R.string.rule_for_now) else duree(it) }, pas = ::pasDuree, onOk = ok)
+
+    /**
+     * Porte avant ouverte / refermées : tout de suite = l'événement de la porte, comme avant ; avec
+     * une durée = la porte restée ouverte (ou fermée) ce temps-là.
+     */
+    private fun porte(e: RuleEvent, deja: Int, ok: (RuleTrigger) -> Unit) = pendant(deja) { sec ->
+        if (sec == 0) ok(RuleTrigger(RuleTrigger.Type.EVENT, event = e))
+        else ok(RuleTrigger(RuleTrigger.Type.BECOMES, forSeconds = sec, condition = RuleCondition(RuleCondition.Type.COMPARE,
+            signal = RuleSignal.FRONT_DOOR, op = if (e == RuleEvent.FRONT_DOOR_OPEN) RuleOp.IS_TRUE else RuleOp.IS_FALSE)))
+    }
 
     /** Modifie une condition simple ; un nœud inconnu repart d'une valeur. */
     private fun condition(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) = when (actuelle?.type) {
@@ -940,17 +962,20 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
     // ── Déclencheurs ─────────────────────────────────────────────────────────
 
-    private fun quand(sig: RuleSignal, op: RuleOp, texte: String? = null) =
-        RuleTrigger(RuleTrigger.Type.BECOMES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = sig, op = op, text = texte))
+    private fun pendantQue(sig: RuleSignal, op: RuleOp, texte: String? = null, ok: (RuleTrigger) -> Unit) =
+        dureeDeclencheur(RuleTrigger(), RuleCondition(RuleCondition.Type.COMPARE, signal = sig, op = op, text = texte), ok)
 
     private fun declencheur(actuel: RuleTrigger?, ok: (RuleTrigger) -> Unit) {
         fun evenement(t: RuleTrigger) = valeurs(s(R.string.rule_choose_event),
             RuleEvent.entries.filter { (it != RuleEvent.FRONT_DOOR_OPEN && it != RuleEvent.FRONT_DOOR_CLOSE) || MG4Hardware.hasDoorDetection() }
-                .map { mots.event(it) to it }, t.event) { e -> ok(t.copy(type = RuleTrigger.Type.EVENT, event = e)) }
+                .map { mots.event(it) to it }, t.event) { e ->
+                if (e == RuleEvent.FRONT_DOOR_OPEN || e == RuleEvent.FRONT_DOOR_CLOSE) porte(e, 0, ok)
+                else ok(t.copy(type = RuleTrigger.Type.EVENT, event = e))
+            }
         fun devient(t: RuleTrigger) = condition(t.condition) { c -> dureeDeclencheur(t, c, ok) }
         fun change(t: RuleTrigger) = valeurs(s(R.string.rule_choose_signal), signaux().filter { it.kind != RuleSignal.Kind.NUMBER || it in CHANGE_NOMBRES }
             .map { mots.signal(it) to it }, t.condition?.signal, rangement = ::catSignal, recents = "sig") { sig ->
-            ok(t.copy(type = RuleTrigger.Type.CHANGES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = sig)))
+            dureeChange(t, sig, ok)
         }
         fun horaire(t: RuleTrigger) = RuleValueDialogs.heure(ctx, s(R.string.rule_time_title), t.at ?: 7 * 60) { m ->
             ok(t.copy(type = RuleTrigger.Type.TIME, at = m))
@@ -976,34 +1001,32 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             null -> buildList<Pair<Int, () -> Unit>> {
                 add(R.string.rule_event_app_start to { ok(RuleTrigger(RuleTrigger.Type.EVENT, event = RuleEvent.APP_START)) })
                 if (MG4Hardware.hasDoorDetection())
-                    add(R.string.rule_event_door to { ok(RuleTrigger(RuleTrigger.Type.EVENT, event = RuleEvent.FRONT_DOOR_OPEN)) })
+                    add(R.string.rule_event_door to { porte(RuleEvent.FRONT_DOOR_OPEN, 0, ok) })
                 if (MG4Hardware.hasDoorDetection())
-                    add(R.string.rule_event_door_close to { ok(RuleTrigger(RuleTrigger.Type.EVENT, event = RuleEvent.FRONT_DOOR_CLOSE)) })
+                    add(R.string.rule_event_door_close to { porte(RuleEvent.FRONT_DOOR_CLOSE, 0, ok) })
                 addAll(listOf(
-                R.string.rule_trg_ready_on to { ok(quand(RuleSignal.READY, RuleOp.IS_TRUE)) },
-                R.string.rule_trg_ready_off to { ok(quand(RuleSignal.READY, RuleOp.IS_FALSE)) },
-                R.string.rule_trg_gear_p to { ok(quand(RuleSignal.GEAR, RuleOp.EQUALS, RuleSignal.GEAR_PARK)) },
-                R.string.rule_trg_gear_d to { ok(quand(RuleSignal.GEAR, RuleOp.EQUALS, RuleSignal.GEAR_DRIVE)) },
-                R.string.rule_trg_profile_changes to {
-                    ok(RuleTrigger(RuleTrigger.Type.CHANGES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = RuleSignal.PROFILE)))
-                },
+                R.string.rule_trg_ready_on to { pendantQue(RuleSignal.READY, RuleOp.IS_TRUE, ok = ok) },
+                R.string.rule_trg_ready_off to { pendantQue(RuleSignal.READY, RuleOp.IS_FALSE, ok = ok) },
+                R.string.rule_trg_gear_p to { pendantQue(RuleSignal.GEAR, RuleOp.EQUALS, RuleSignal.GEAR_PARK, ok) },
+                R.string.rule_trg_gear_d to { pendantQue(RuleSignal.GEAR, RuleOp.EQUALS, RuleSignal.GEAR_DRIVE, ok) },
+                R.string.rule_trg_profile_changes to { dureeChange(RuleTrigger(), RuleSignal.PROFILE, ok) },
                 R.string.rule_trg_time to { horaire(RuleTrigger()) },
                 R.string.rule_trg_every to { periodique(RuleTrigger()) },
                 R.string.rule_trg_sun to { soleil(RuleTrigger()) },
                 R.string.rule_trg_manual to { ok(RuleTrigger(RuleTrigger.Type.MANUAL)) },
-                R.string.rule_trg_charge_start to { ok(quand(RuleSignal.CHARGING, RuleOp.IS_TRUE)) },
-                R.string.rule_trg_charge_end to { ok(quand(RuleSignal.CHARGING, RuleOp.IS_FALSE)) },
-                R.string.rule_trg_plugged to { ok(quand(RuleSignal.PLUGGED, RuleOp.IS_TRUE)) },
-                R.string.rule_trg_unplugged to { ok(quand(RuleSignal.PLUGGED, RuleOp.IS_FALSE)) },
-                R.string.rule_trg_locked to { ok(quand(RuleSignal.LOCKED, RuleOp.IS_TRUE)) },
-                R.string.rule_trg_unlocked to { ok(quand(RuleSignal.LOCKED, RuleOp.IS_FALSE)) },
-                R.string.rule_trg_phone to { comparerSignal(RuleSignal.BT_DEVICE, null) { c -> ok(RuleTrigger(RuleTrigger.Type.BECOMES, condition = c)) } },
+                R.string.rule_trg_charge_start to { pendantQue(RuleSignal.CHARGING, RuleOp.IS_TRUE, ok = ok) },
+                R.string.rule_trg_charge_end to { pendantQue(RuleSignal.CHARGING, RuleOp.IS_FALSE, ok = ok) },
+                R.string.rule_trg_plugged to { pendantQue(RuleSignal.PLUGGED, RuleOp.IS_TRUE, ok = ok) },
+                R.string.rule_trg_unplugged to { pendantQue(RuleSignal.PLUGGED, RuleOp.IS_FALSE, ok = ok) },
+                R.string.rule_trg_locked to { pendantQue(RuleSignal.LOCKED, RuleOp.IS_TRUE, ok = ok) },
+                R.string.rule_trg_unlocked to { pendantQue(RuleSignal.LOCKED, RuleOp.IS_FALSE, ok = ok) },
+                R.string.rule_trg_phone to { comparerSignal(RuleSignal.BT_DEVICE, null) { c -> dureeDeclencheur(RuleTrigger(), c, ok) } },
                 R.string.rule_trg_phone_off to {
                     val tel = choixTexte(RuleSignal.BT_DEVICE).orEmpty()
                     if (tel.isEmpty()) Toast.makeText(ctx, s(R.string.rule_no_phones), Toast.LENGTH_LONG).show()
-                    else valeurs(s(R.string.rule_trg_phone_off), tel, null) { mac -> ok(quand(RuleSignal.BT_DEVICE, RuleOp.NOT_EQUALS, mac)) }
+                    else valeurs(s(R.string.rule_trg_phone_off), tel, null) { mac -> pendantQue(RuleSignal.BT_DEVICE, RuleOp.NOT_EQUALS, mac, ok) }
                 },
-                R.string.rule_trg_place to { lieu(null) { c -> ok(RuleTrigger(RuleTrigger.Type.BECOMES, condition = c)) } },
+                R.string.rule_trg_place to { lieu(null) { c -> dureeDeclencheur(RuleTrigger(), c, ok) } },
                 ))
             }.let { raccourcis ->
                 // Comme les actions (2026-11-12) : une tuile par capteur, le mode se choisit au toucher.

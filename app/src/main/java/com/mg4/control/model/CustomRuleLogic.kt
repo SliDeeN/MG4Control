@@ -322,19 +322,36 @@ class TimeWatch {
 }
 
 /**
- * Un déclencheur « change » : part quand le signal passe d'une valeur LUE à une autre. La première
- * lecture sert de point de départ ; une lecture inconnue ne compte pas.
+ * Un déclencheur « change » : part quand le signal passe d'une valeur LUE à une autre, et que la
+ * nouvelle valeur a tenu [forMs] (2026-11-12, « pendant » comme les autres). La première lecture
+ * sert de point de départ ; une lecture inconnue ne compte pas ; revenir à l'ancienne valeur avant
+ * la fin de l'attente annule le changement.
  */
 class ChangeWatch {
     private var derniere: Any? = null
     private var vue = false
+    private var nouvelle: Any? = null
+    private var depuis: Long = 0L
 
-    fun onValue(v: Any?): Boolean {
+    fun onValue(v: Any?, now: Long = 0L, forMs: Long = 0L): Boolean {
         if (v == null) return false
-        val change = vue && v != derniere
+        if (!vue) {
+            derniere = v
+            vue = true
+            return false
+        }
+        if (v == derniere) {
+            nouvelle = null
+            return false
+        }
+        if (nouvelle == null || v != nouvelle) {
+            nouvelle = v
+            depuis = now
+        }
+        if (now - depuis < forMs) return false
         derniere = v
-        vue = true
-        return change
+        nouvelle = null
+        return true
     }
 }
 

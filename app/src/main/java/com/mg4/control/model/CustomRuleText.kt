@@ -109,7 +109,8 @@ class RuleText(private val w: RuleWords) {
         }
         RuleTrigger.Type.TIME -> t.at?.let { w.at(time(it)) } ?: w.unknown
         RuleTrigger.Type.PERIODIC -> t.every?.let { w.every(it) } ?: w.unknown
-        RuleTrigger.Type.CHANGES -> t.condition?.signal?.let { w.changes(w.signal(it)) } ?: w.unknown
+        RuleTrigger.Type.CHANGES -> t.condition?.signal?.let { w.changes(w.signal(it)) }
+            ?.let { if (t.forSeconds > 0) w.forSeconds(it, t.forSeconds) else it } ?: w.unknown
         RuleTrigger.Type.MANUAL -> w.manual
         RuleTrigger.Type.SUN -> t.sun?.let { w.sun(it, t.offset) } ?: w.unknown
         null -> w.unknown

@@ -321,7 +321,7 @@ object CustomRules {
                     t.type == RuleTrigger.Type.TIME && w is TimeWatch -> t.at?.let { w.onMinute(etat.minuteOfDay, it) } ?: false
                     t.type == RuleTrigger.Type.SUN && w is TimeWatch -> soleil(ctx, t)?.let { w.onMinute(etat.minuteOfDay, it) } ?: false
                     t.type == RuleTrigger.Type.PERIODIC && w is PeriodicWatch -> w.onTick(maintenant, (t.every ?: 0) * 60_000L)
-                    t.type == RuleTrigger.Type.CHANGES && w is ChangeWatch -> t.condition?.signal?.let { w.onValue(etat.values[it]) } ?: false
+                    t.type == RuleTrigger.Type.CHANGES && w is ChangeWatch -> t.condition?.signal?.let { w.onValue(etat.values[it], maintenant, t.forSeconds * 1_000L) } ?: false
                     else -> false
                 }
                 if (part) declencher(r, "déclencheur ${i + 1}", par(ctx, t))

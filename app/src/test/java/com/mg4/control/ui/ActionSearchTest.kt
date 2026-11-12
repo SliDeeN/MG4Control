@@ -122,6 +122,18 @@ class ActionSearchTest {
         assertFalse(chercher(r, "ready").contains("La voiture passe en READY"))
         toucher(r, "READY\n3 modes")
         assertEquals(listOf("La voiture passe en READY", "Sortie de READY", "Bascule (les deux sens)"), libelles(racine()))
+        // « Pendant » demandé pour chaque mode qui suit un état, ancien raccourci compris.
+        for (mode in listOf("La voiture passe en READY", "Bascule (les deux sens)", "Sortie de READY")) {
+            declencheur.invoke(f, null, { _: com.mg4.control.model.RuleTrigger -> })
+            idle()
+            chercher(racine(), "ready")
+            toucher(racine(), "READY\n3 modes")
+            toucher(racine(), mode)
+            assertEquals(mode, "Pendant combien de temps ?",
+                ShadowDialog.getLatestDialog().findViewById<TextView>(R.id.rule_value_title).text.toString())
+            ShadowDialog.getLatestDialog().dismiss()
+            idle()
+        }
 
         val condition = CustomRuleEditFragment::class.java.getDeclaredMethod("nouvelleCondition",
             Int::class.javaPrimitiveType, kotlin.jvm.functions.Function1::class.java)
