@@ -347,6 +347,7 @@
     <string name="settings_language_it">Italiano</string>
     <string name="settings_language_tr">Türkçe</string>
     <string name="settings_language_pl">Polski</string>
+    <string name="settings_language_nb">Norsk</string>
     <string name="settings_language_pick_title">Wybierz język</string>
     <string name="settings_firmware_version">Wersja oprogramowania</string>
     <string name="settings_firmware_loading">Odczyt…</string>

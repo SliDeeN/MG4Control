@@ -8,14 +8,21 @@ package com.mg4.control.model
 object AppLanguage {
 
     /** Les langues traduites, dans l'ordre de la fenêtre de choix. */
-    val SUPPORTED = listOf("fr", "en", "de", "es", "pt", "it", "tr", "pl")
+    val SUPPORTED = listOf("fr", "en", "de", "es", "pt", "it", "tr", "pl", "nb")
+
+    /**
+     * Codes de la voiture qui désignent une langue traduite sous un autre nom : le norvégien
+     * (issue #239, en bokmål) arrive en « no » sur les anciens Android, et le nynorsk est plus
+     * proche du bokmål que de l'anglais.
+     */
+    private val ALIASES = mapOf("no" to "nb", "nn" to "nb")
 
     /** Ni choix ni langue de voiture connue : l'anglais, compris du plus grand nombre. */
     const val FALLBACK = "en"
 
     /** Langue de la voiture ([carLanguage], code ISO « de », « nl »…) si l'appli la parle, sinon `null`. */
     fun fromCar(carLanguage: String?): String? =
-        carLanguage?.lowercase()?.takeIf { it in SUPPORTED }
+        carLanguage?.lowercase()?.let { ALIASES[it] ?: it }?.takeIf { it in SUPPORTED }
 
     /** Langue appliquée : le choix enregistré, sinon celle de la voiture, sinon [FALLBACK]. */
     fun effective(saved: String?, carLanguage: String?): String =

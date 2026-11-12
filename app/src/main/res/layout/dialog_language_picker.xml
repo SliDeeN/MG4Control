@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Choix de la langue, au premier lancement : sept grandes tuiles sur deux lignes — proposition
+<!-- Choix de la langue, au premier lancement : neuf grandes tuiles sur trois lignes (sept à l'origine) — proposition
      « A » choisie sur maquette le 2026-10-13. Chaque langue s'écrit dans SA langue, c'est ce qui
      la fait reconnaître ; son code est dessous. On n'en sort qu'en choisissant.
 
@@ -51,6 +51,7 @@
         android:textSize="15sp"
         tools:ignore="HardcodedText" />
 
+    <!-- Neuf langues (norvégien ajouté le 2026-11-12, issue #239) : trois rangées de trois tuiles. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -147,12 +148,20 @@
 
         </LinearLayout>
 
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
         <LinearLayout
             android:id="@+id/btn_pick_es"
             android:layout_width="0dp"
             android:layout_height="84dp"
             android:layout_weight="1"
-            android:layout_marginStart="12dp"
             android:background="@drawable/bg_dialog_tile"
             android:orientation="vertical"
             android:gravity="center">
@@ -177,23 +186,12 @@
 
         </LinearLayout>
 
-    </LinearLayout>
-
-    <!-- Trois tuiles, de la même largeur que celles du dessus : la ligne est centrée par ses marges. -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:paddingStart="98dp"
-        android:paddingEnd="98dp"
-        android:orientation="horizontal"
-        android:baselineAligned="false">
-
         <LinearLayout
             android:id="@+id/btn_pick_pt"
             android:layout_width="0dp"
             android:layout_height="84dp"
             android:layout_weight="1"
+            android:layout_marginStart="12dp"
             android:background="@drawable/bg_dialog_tile"
             android:orientation="vertical"
             android:gravity="center">
@@ -248,12 +246,20 @@
 
         </LinearLayout>
 
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal"
+        android:baselineAligned="false">
+
         <LinearLayout
             android:id="@+id/btn_pick_tr"
             android:layout_width="0dp"
             android:layout_height="84dp"
             android:layout_weight="1"
-            android:layout_marginStart="12dp"
             android:background="@drawable/bg_dialog_tile"
             android:orientation="vertical"
             android:gravity="center">
@@ -301,6 +307,36 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="PL"
+                android:textColor="@color/dash_accent"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:ignore="HardcodedText" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/btn_pick_nb"
+            android:layout_width="0dp"
+            android:layout_height="84dp"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:background="@drawable/bg_dialog_tile"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/settings_language_nb"
+                android:textColor="@color/text_primary"
+                android:textSize="21sp"
+                android:textStyle="bold"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="NB"
                 android:textColor="@color/dash_accent"
                 android:textSize="13sp"
                 android:textStyle="bold"
