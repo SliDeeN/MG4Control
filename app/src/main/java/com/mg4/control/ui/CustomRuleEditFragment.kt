@@ -793,7 +793,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     }
 
     private fun catAction(res: Int): Cat = when (res) {
-        R.string.rule_act_sound, R.string.rule_act_speak -> Cat.MEDIA
+        R.string.rule_act_sound -> Cat.MEDIA
         R.string.rule_act_notify, R.string.rule_act_app, R.string.rule_act_navigate -> Cat.SCREEN_APPS
         R.string.rule_act_custom -> Cat.SHORTCUTS
         R.string.abrp_rule_action -> Cat.CONNECTIONS
@@ -1255,7 +1255,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 // Une tuile par sujet, rangée dans sa catégorie ; le mode se choisit au toucher.
                 val autres = buildList<Pair<Int, () -> Unit>> {
                     add(R.string.rule_act_sound to { son(RuleAction()) })
-                    add(R.string.rule_act_speak to { parler(RuleAction()) })
+                    // « Lire un texte à voix haute » n'est plus proposé (2026-11-12) : la voiture n'a pas de moteur
+                    // vocal Android ; une action existante reste lisible, modifiable et exécutée (voix SAIC).
                     add(R.string.rule_act_notify to { message(RuleAction()) })
                     add(R.string.rule_act_app to { appli(RuleAction()) })
                     add(R.string.rule_act_navigate to { naviguer(RuleAction()) })

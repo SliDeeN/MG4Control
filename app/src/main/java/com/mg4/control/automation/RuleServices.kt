@@ -190,9 +190,21 @@ object AndroidControls {
     @Volatile private var tts: TextToSpeech? = null
     @Volatile private var ttsPret = false
 
-    /** Lit [texte] ; faux si aucun moteur de synthèse n'est installé (ou pas encore prêt). */
+    /**
+     * Lit [texte] avec la voix de la voiture (moteur SAIC, 2026-11-12 : la voiture n'a aucun moteur
+     * Android standard, `TextToSpeech` y restait muet en se disant réussi) ; à défaut, un moteur
+     * Android installé à part. Faux s'il n'y a ni l'un ni l'autre.
+     */
     fun speak(ctx: Context, texte: String): Boolean {
         if (texte.isBlank()) return false
+        if (com.mg4.control.hardware.SaicVoice.available(ctx)) return com.mg4.control.hardware.SaicVoice.speak(ctx, texte)
+        val moteurs = runCatching {
+            ctx.packageManager.queryIntentServices(android.content.Intent(TextToSpeech.Engine.INTENT_ACTION_TTS_SERVICE), 0)
+        }.getOrDefault(emptyList())
+        if (moteurs.isEmpty()) {
+            AppLogger.w(TAG, "synthèse vocale : ni voix de la voiture ni moteur Android installé")
+            return false
+        }
         val existant = tts
         if (existant != null && ttsPret) return dire(existant, texte)
         principal.post {
