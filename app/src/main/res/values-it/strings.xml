@@ -1590,6 +1590,12 @@
     <string name="rule_level_low">Basso</string>
     <string name="rule_level_medium">Medio</string>
     <string name="rule_manual">Tasto, bolla o automazione</string>
+    <string name="rule_manual_by_fmt">Avviata da: %1$s</string>
+    <string name="rule_manual_none">Ancora niente la avvia. Scegli «Esegui un\'automazione» per un pulsante del volante (Scorciatoie) o una bolla flottante, oppure l\'azione «Un\'altra automazione › Eseguila» in un\'altra automazione.</string>
+    <string name="rule_manual_wheel_fmt">%1$s (pressione %2$s)</string>
+    <string name="rule_manual_profile_fmt">%1$s, profilo %2$s</string>
+    <string name="rule_manual_bubble_fmt">bolla «%1$s»</string>
+    <string name="rule_manual_rule_fmt">automazione «%1$s»</string>
     <string name="rule_navigate_fmt">Naviga verso «%1$s»</string>
     <string name="rule_no_sounds">Nessun suono importato (Automazione › Suoni).</string>
     <string name="rule_none_to_pick">Nessuna automazione salvata.</string>

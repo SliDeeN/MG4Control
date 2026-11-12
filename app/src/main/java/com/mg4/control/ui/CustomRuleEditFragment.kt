@@ -214,6 +214,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             regle.triggers.forEachIndexed { i, t ->
                 val editer = { declencheur(t) { n -> put(regle.triggers.remplace(i, n)) } }
                 ligne(s, texte.trigger(t), editer) { menu(texte.trigger(t), regle.triggers, i, put, editer) }
+                // « Bouton, bulle ou automatisation » : rien ne se règle ici, on dit qui la lance (2026-11-12).
+                if (t.type == RuleTrigger.Type.MANUAL) lanceursDe(s)
             }
             val bTrig = rangeeBoutons(s)
             ajouter(bTrig, R.string.rule_add_trigger) { declencheur(null) { n -> put(regle.triggers + n) } }
@@ -275,6 +277,17 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             isAllCaps = true
             letterSpacing = 0.08f
             layoutParams = lp(haut = 12f)
+        })
+    }
+
+    /** Sous le déclencheur « Bouton, bulle ou automatisation » : ce qui lance celle-ci, ou comment la lancer. */
+    private fun lanceursDe(box: LinearLayout) {
+        val lanceurs = runCatching { RuleLaunchers.of(ctx, regle.id, CustomRuleStore.all(ctx)) }.getOrDefault(emptyList())
+        val texte = if (lanceurs.isEmpty()) s(R.string.rule_manual_none)
+            else s(R.string.rule_manual_by_fmt, lanceurs.joinToString(" · "))
+        box.addView(texteVue(texte, 17f, if (lanceurs.isEmpty()) R.color.dash_text_lo else R.color.text_secondary).apply {
+            layoutParams = lp(haut = 6f)
+            setPadding(dp(18f), 0, dp(18f), 0)
         })
     }
 

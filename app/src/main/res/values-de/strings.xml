@@ -1587,6 +1587,12 @@
     <string name="rule_level_low">Niedrig</string>
     <string name="rule_level_medium">Mittel</string>
     <string name="rule_manual">Taste, Blase oder Automation</string>
+    <string name="rule_manual_by_fmt">Gestartet von: %1$s</string>
+    <string name="rule_manual_none">Noch startet sie nichts. Wähle „Automatisierung ausführen“ für eine Lenkradtaste (Kurzbefehle) oder eine schwebende Blase, oder die Aktion „Andere Automatisierung › Ausführen“ in einer anderen Automatisierung.</string>
+    <string name="rule_manual_wheel_fmt">%1$s (%2$s drücken)</string>
+    <string name="rule_manual_profile_fmt">%1$s, Profil %2$s</string>
+    <string name="rule_manual_bubble_fmt">Blase „%1$s“</string>
+    <string name="rule_manual_rule_fmt">Automatisierung „%1$s“</string>
     <string name="rule_navigate_fmt">Navigieren nach „%1$s“</string>
     <string name="rule_no_sounds">Kein importierter Ton (Automatisierung › Töne).</string>
     <string name="rule_none_to_pick">Keine gespeicherte Automation.</string>

@@ -1590,6 +1590,12 @@
     <string name="rule_level_low">Bajo</string>
     <string name="rule_level_medium">Medio</string>
     <string name="rule_manual">Botón, burbuja o automatización</string>
+    <string name="rule_manual_by_fmt">La inicia: %1$s</string>
+    <string name="rule_manual_none">Todavía nada la inicia. Elige «Ejecutar una automatización» para un botón del volante (Atajos) o una burbuja flotante, o la acción «Otra automatización › Ejecutarla» en otra automatización.</string>
+    <string name="rule_manual_wheel_fmt">%1$s (pulsación %2$s)</string>
+    <string name="rule_manual_profile_fmt">%1$s, perfil %2$s</string>
+    <string name="rule_manual_bubble_fmt">burbuja «%1$s»</string>
+    <string name="rule_manual_rule_fmt">automatización «%1$s»</string>
     <string name="rule_navigate_fmt">Navegar a «%1$s»</string>
     <string name="rule_no_sounds">Ningún sonido importado (Automatización › Sonidos).</string>
     <string name="rule_none_to_pick">Ninguna automatización guardada.</string>

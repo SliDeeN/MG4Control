@@ -1587,6 +1587,12 @@
     <string name="rule_level_low">Low</string>
     <string name="rule_level_medium">Medium</string>
     <string name="rule_manual">Button, bubble or automation</string>
+    <string name="rule_manual_by_fmt">Started by: %1$s</string>
+    <string name="rule_manual_none">Nothing starts it yet. Choose “Run an automation” for a steering-wheel button (Shortcuts) or a floating bubble, or the “Another automation › Run it” action in another automation.</string>
+    <string name="rule_manual_wheel_fmt">%1$s (%2$s press)</string>
+    <string name="rule_manual_profile_fmt">%1$s, profile %2$s</string>
+    <string name="rule_manual_bubble_fmt">bubble “%1$s”</string>
+    <string name="rule_manual_rule_fmt">automation “%1$s”</string>
     <string name="rule_navigate_fmt">Navigate to “%1$s”</string>
     <string name="rule_no_sounds">No imported sound (Automation › Sounds).</string>
     <string name="rule_none_to_pick">No saved automation.</string>

@@ -1587,6 +1587,12 @@
     <string name="rule_level_low">Lav</string>
     <string name="rule_level_medium">Middels</string>
     <string name="rule_manual">Knapp, boble eller automatisering</string>
+    <string name="rule_manual_by_fmt">Startes av: %1$s</string>
+    <string name="rule_manual_none">Ingenting starter den ennå. Velg «Kjør en automatisering» for en rattknapp (Snarveier) eller en flytende boble, eller handlingen «En annen automatisering › Kjør den» i en annen automatisering.</string>
+    <string name="rule_manual_wheel_fmt">%1$s (%2$s trykk)</string>
+    <string name="rule_manual_profile_fmt">%1$s, profil %2$s</string>
+    <string name="rule_manual_bubble_fmt">boble «%1$s»</string>
+    <string name="rule_manual_rule_fmt">automatisering «%1$s»</string>
     <string name="rule_navigate_fmt">Naviger til “%1$s”</string>
     <string name="rule_no_sounds">Ingen importert lyd (Automatisering › Lyder).</string>
     <string name="rule_none_to_pick">Ingen lagret automatisering.</string>

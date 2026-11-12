@@ -1590,6 +1590,12 @@
     <string name="rule_level_low">Baixo</string>
     <string name="rule_level_medium">Médio</string>
     <string name="rule_manual">Botão, bolha ou automatização</string>
+    <string name="rule_manual_by_fmt">Iniciada por: %1$s</string>
+    <string name="rule_manual_none">Ainda nada a inicia. Escolha «Executar uma automatização» para um botão do volante (Atalhos) ou uma bolha flutuante, ou a ação «Outra automatização › Executá-la» noutra automatização.</string>
+    <string name="rule_manual_wheel_fmt">%1$s (toque %2$s)</string>
+    <string name="rule_manual_profile_fmt">%1$s, perfil %2$s</string>
+    <string name="rule_manual_bubble_fmt">bolha «%1$s»</string>
+    <string name="rule_manual_rule_fmt">automatização «%1$s»</string>
     <string name="rule_navigate_fmt">Navegar para «%1$s»</string>
     <string name="rule_no_sounds">Nenhum som importado (Automação › Sons).</string>
     <string name="rule_none_to_pick">Nenhuma automatização guardada.</string>

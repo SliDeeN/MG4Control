@@ -1587,6 +1587,12 @@
     <string name="rule_level_low">Düşük</string>
     <string name="rule_level_medium">Orta</string>
     <string name="rule_manual">Tuş, balon veya otomasyon</string>
+    <string name="rule_manual_by_fmt">Başlatan: %1$s</string>
+    <string name="rule_manual_none">Henüz hiçbir şey başlatmıyor. Bir direksiyon düğmesi (Kısayollar) veya yüzen baloncuk için «Bir otomasyonu çalıştır»ı, ya da başka bir otomasyonda «Başka bir otomasyon › Çalıştır» eylemini seçin.</string>
+    <string name="rule_manual_wheel_fmt">%1$s (%2$s basış)</string>
+    <string name="rule_manual_profile_fmt">%1$s, profil %2$s</string>
+    <string name="rule_manual_bubble_fmt">baloncuk «%1$s»</string>
+    <string name="rule_manual_rule_fmt">otomasyon «%1$s»</string>
     <string name="rule_navigate_fmt">“%1$s” konumuna git</string>
     <string name="rule_no_sounds">İçe aktarılmış ses yok (Otomasyon › Sesler).</string>
     <string name="rule_none_to_pick">Kayıtlı otomasyon yok.</string>

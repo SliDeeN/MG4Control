@@ -224,16 +224,7 @@ class WheelButtonsPage(private val host: Host) {
 
     fun nomTouche(code: Int): String = nomPerso(code) ?: nomOrigine(code)
 
-    private fun nomOrigine(code: Int): String = when (code) {
-        STAR_LEFT -> s(R.string.wheel_key_star_left)
-        STAR_RIGHT, 18 -> s(R.string.wheel_key_star_right)
-        297 -> s(R.string.wheel_key_joy_up)
-        298 -> s(R.string.wheel_key_joy_down)
-        299 -> s(R.string.wheel_key_joy_left)
-        300 -> s(R.string.wheel_key_joy_right)
-        301 -> s(R.string.wheel_key_joy_center)
-        else -> s(R.string.adv_sc_key_unknown, code)
-    }
+    private fun nomOrigine(code: Int): String = WheelKeys.origine(ctx, code)
 
     private fun carte(code: Int): View {
         val c = LinearLayout(ctx).apply {
@@ -395,7 +386,7 @@ class WheelButtonsPage(private val host: Host) {
             if (action == ShortcutAction.NONE || AdvancedShortcuts.actionFor(ctx, code, press, null) != null) continue
             AdvancedShortcuts.set(ctx, code, press, action, null)
             val vers = AdvancedShortcuts.slotKey(code, press, null)
-            for (champ in listOf("custom_app", "profile_id", "custom_id")) {
+            for (champ in listOf("custom_app", "profile_id", "custom_id", "rule_id")) {
                 p.getString("shortcut_${slot}_$champ", null)?.let { e.putString("shortcut_${vers}_$champ", it) }
             }
         }

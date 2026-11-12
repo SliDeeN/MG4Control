@@ -1593,6 +1593,12 @@
     <string name="rule_level_low">Niski</string>
     <string name="rule_level_medium">Średni</string>
     <string name="rule_manual">Przycisk, bańka lub automatyzacja</string>
+    <string name="rule_manual_by_fmt">Uruchamia: %1$s</string>
+    <string name="rule_manual_none">Nic jej jeszcze nie uruchamia. Wybierz „Uruchom automatyzację” dla przycisku na kierownicy (Skróty) lub pływającego dymku albo akcję „Inna automatyzacja › Uruchom ją” w innej automatyzacji.</string>
+    <string name="rule_manual_wheel_fmt">%1$s (naciśnięcie: %2$s)</string>
+    <string name="rule_manual_profile_fmt">%1$s, profil %2$s</string>
+    <string name="rule_manual_bubble_fmt">dymek „%1$s”</string>
+    <string name="rule_manual_rule_fmt">automatyzacja „%1$s”</string>
     <string name="rule_navigate_fmt">Nawiguj do „%1$s”</string>
     <string name="rule_no_sounds">Brak zaimportowanych dźwięków (Automatyzacja › Dźwięki).</string>
     <string name="rule_none_to_pick">Brak zapisanych automatyzacji.</string>

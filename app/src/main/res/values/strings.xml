@@ -1612,6 +1612,13 @@
     <string name="rule_level_low">Faible</string>
     <string name="rule_level_medium">Moyen</string>
     <string name="rule_manual">Bouton, bulle ou automatisation</string>
+    <!-- Ce qui lance une automatisation « à la demande » (2026-11-12). -->
+    <string name="rule_manual_by_fmt">Lancée par : %1$s</string>
+    <string name="rule_manual_none">Rien ne la lance encore. Choisissez « Lancer une automatisation » pour un bouton du volant (Raccourcis) ou une bulle flottante, ou l\'action « Une autre automatisation › La lancer » dans une autre automatisation.</string>
+    <string name="rule_manual_wheel_fmt">%1$s (appui %2$s)</string>
+    <string name="rule_manual_profile_fmt">%1$s, profil %2$s</string>
+    <string name="rule_manual_bubble_fmt">bulle « %1$s »</string>
+    <string name="rule_manual_rule_fmt">automatisation « %1$s »</string>
     <string name="rule_navigate_fmt">Naviguer vers « %1$s »</string>
     <string name="rule_no_sounds">Aucun son importé (onglet Automatisation › Sons).</string>
     <string name="rule_none_to_pick">Aucune automatisation enregistrée.</string>
