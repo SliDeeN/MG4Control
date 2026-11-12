@@ -133,26 +133,37 @@ internal object OverlayKit {
     fun tenirDansLaFenetre(racine: View, marge: Int, nom: String,
                            carte: View? = (racine as? ViewGroup)?.getChildAt(0)) {
         if (carte == null) return
-        val libre = View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
-        carte.measure(libre, libre)
+        // Une taille fixée dans la mise en page EST la taille voulue (2026-11-12) : mesurée « libre »,
+        // le cadre 1280 × 480 dp du Garde-voiture valait 686 × 320 dp (son contenu), et la réduction
+        // lui imposait cette largeur — l'écran « format téléphone », colonne de texte étroite et coupée.
+        fun spec(taille: Int) = if (taille > 0) View.MeasureSpec.makeMeasureSpec(taille, View.MeasureSpec.EXACTLY)
+            else View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)
+        carte.measure(spec(carte.layoutParams?.width ?: 0), spec(carte.layoutParams?.height ?: 0))
         val largeur = carte.measuredWidth
         val hauteur = carte.measuredHeight
-        var vue = false
+        // Recalculé à CHAQUE taille de fenêtre (2026-11-12) : une fenêtre d'abord étroite (écran du
+        // Garde-voiture ouvert pendant un changement d'affichage) laissait la carte réduite pour de bon.
+        var derniere = ""
+        var figee = false
         racine.addOnLayoutChangeListener { _, gauche, haut, droite, bas, _, _, _, _ ->
-            if (vue || droite <= gauche || bas <= haut) return@addOnLayoutChangeListener
-            vue = true
+            if (droite <= gauche || bas <= haut) return@addOnLayoutChangeListener
+            val taille = "${droite - gauche}×${bas - haut}"
+            if (taille == derniere) return@addOnLayoutChangeListener
+            derniere = taille
             val reduction = HvacPopup.reduction(droite - gauche, bas - haut, largeur, hauteur, marge)
-            AppLogger.i(TAG, "$nom — fenêtre ${droite - gauche}×${bas - haut} px, carte $largeur×$hauteur px" +
+            AppLogger.i(TAG, "$nom — fenêtre $taille px, carte $largeur×$hauteur px" +
                 if (reduction < 1f) " → réduite ×${String.format(Locale.US, "%.2f", reduction)}" else "")
-            if (reduction < 1f) {
-                // Après la passe de mise en page en cours : en redemander une de l'intérieur est
-                // refusé par Android. Taille figée à celle voulue, sinon la fenêtre rogne la carte
-                // avant qu'on la réduise.
-                racine.post {
+            if (reduction >= 1f && carte.scaleX == 1f) return@addOnLayoutChangeListener
+            // Après la passe de mise en page en cours : en redemander une de l'intérieur est
+            // refusé par Android. Taille figée à celle voulue, sinon la fenêtre rogne la carte
+            // avant qu'on la réduise.
+            racine.post {
+                if (!figee) {
+                    figee = true
                     carte.layoutParams = carte.layoutParams.apply { width = largeur; height = hauteur }
-                    carte.scaleX = reduction
-                    carte.scaleY = reduction
                 }
+                carte.scaleX = reduction
+                carte.scaleY = reduction
             }
         }
     }
