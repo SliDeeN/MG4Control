@@ -1649,7 +1649,6 @@
     <string name="rule_tool_import">Importieren</string>
     <string name="rule_tool_places">Orte</string>
     <string name="rule_tool_variables">Variablen</string>
-    <string name="rule_trg_changes">Ein Wert ändert sich</string>
     <string name="rule_trg_charge_end">Laden endet</string>
     <string name="rule_trg_charge_start">Laden beginnt</string>
     <string name="rule_trg_every">Alle X Minuten</string>
@@ -1662,6 +1661,19 @@
     <string name="rule_trg_sun">Sonnenauf- / -untergang</string>
     <string name="rule_trg_unlocked">Entriegeln</string>
     <string name="rule_trg_unplugged">Ausgesteckt</string>
+    <string name="rule_mode_to_true">Wechselt zu WAHR</string>
+    <string name="rule_mode_to_false">Wechselt zu FALSCH</string>
+    <string name="rule_mode_both">Wechselt (in beide Richtungen)</string>
+    <string name="rule_mode_above">Steigt über…</string>
+    <string name="rule_mode_below">Fällt unter…</string>
+    <string name="rule_mode_becomes">Wird zu…</string>
+    <string name="rule_mode_stops">Ist nicht mehr…</string>
+    <string name="rule_mode_change">Ändert sich</string>
+    <string name="rule_mode_how_fmt">%1$s: wie auslösen?</string>
+    <string name="rule_toggle_title_fmt">%1$s: wechselt zu…</string>
+    <string name="rule_toggle_true">WAHR</string>
+    <string name="rule_toggle_false">FALSCH</string>
+    <string name="rule_toggle_both">Beide Richtungen</string>
     <string name="rule_var_false">Falsch</string>
     <string name="rule_var_name">Name der Variable</string>
     <string name="rule_var_new">+ Neue Variable</string>
@@ -1729,7 +1741,6 @@
     <string name="rule_choose_shortcut">Welcher Kurzbefehl?</string>
     <string name="rule_choose_signal">Welcher Wert?</string>
     <string name="rule_choose_trigger">Auslöser hinzufügen</string>
-    <string name="rule_cond_compare">Ein Wert</string>
     <string name="rule_cond_days">Wochentage</string>
     <string name="rule_cond_group_all">Gruppe: alle</string>
     <string name="rule_cond_group_any">Gruppe: mindestens eine</string>
@@ -1804,10 +1815,8 @@
     <string name="rule_sec_when_hint">Ein Auslöser genügt.</string>
     <string name="rule_time_title">Um welche Uhrzeit?</string>
     <string name="rule_tpl_blank">Leere Automation</string>
-    <string name="rule_trg_becomes">Ein Wert wird wahr</string>
     <string name="rule_cat_recent">Zuletzt</string>
     <string name="rule_cat_car">Fahrzeug</string>
-    <string name="rule_cat_charge">Laden</string>
     <string name="rule_cat_time">Uhrzeit und Sonne</string>
     <string name="rule_cat_places">Orte und Telefone</string>
     <string name="rule_cat_driving">Fahren</string>

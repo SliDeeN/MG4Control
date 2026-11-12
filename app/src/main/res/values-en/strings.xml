@@ -1649,7 +1649,6 @@
     <string name="rule_tool_import">Import</string>
     <string name="rule_tool_places">Places</string>
     <string name="rule_tool_variables">Variables</string>
-    <string name="rule_trg_changes">A value changes</string>
     <string name="rule_trg_charge_end">Charging ends</string>
     <string name="rule_trg_charge_start">Charging starts</string>
     <string name="rule_trg_every">Every X minutes</string>
@@ -1662,6 +1661,19 @@
     <string name="rule_trg_sun">Sunrise / sunset</string>
     <string name="rule_trg_unlocked">Unlocking</string>
     <string name="rule_trg_unplugged">Unplugged</string>
+    <string name="rule_mode_to_true">Switches to TRUE</string>
+    <string name="rule_mode_to_false">Switches to FALSE</string>
+    <string name="rule_mode_both">Switches (both ways)</string>
+    <string name="rule_mode_above">Goes above…</string>
+    <string name="rule_mode_below">Goes below…</string>
+    <string name="rule_mode_becomes">Becomes…</string>
+    <string name="rule_mode_stops">Is no longer…</string>
+    <string name="rule_mode_change">Changes</string>
+    <string name="rule_mode_how_fmt">%1$s: how should it trigger?</string>
+    <string name="rule_toggle_title_fmt">%1$s: switches to…</string>
+    <string name="rule_toggle_true">TRUE</string>
+    <string name="rule_toggle_false">FALSE</string>
+    <string name="rule_toggle_both">Both ways</string>
     <string name="rule_var_false">False</string>
     <string name="rule_var_name">Variable name</string>
     <string name="rule_var_new">+ New variable</string>
@@ -1729,7 +1741,6 @@
     <string name="rule_choose_shortcut">Which shortcut?</string>
     <string name="rule_choose_signal">Which value?</string>
     <string name="rule_choose_trigger">Add a trigger</string>
-    <string name="rule_cond_compare">A value</string>
     <string name="rule_cond_days">Days of the week</string>
     <string name="rule_cond_group_all">Group: all</string>
     <string name="rule_cond_group_any">Group: any</string>
@@ -1804,10 +1815,8 @@
     <string name="rule_sec_when_hint">Any one trigger is enough.</string>
     <string name="rule_time_title">At what time?</string>
     <string name="rule_tpl_blank">Blank automation</string>
-    <string name="rule_trg_becomes">A value becomes true</string>
     <string name="rule_cat_recent">Recent</string>
     <string name="rule_cat_car">Car</string>
-    <string name="rule_cat_charge">Charging</string>
     <string name="rule_cat_time">Time and sun</string>
     <string name="rule_cat_places">Places and phones</string>
     <string name="rule_cat_driving">Driving</string>

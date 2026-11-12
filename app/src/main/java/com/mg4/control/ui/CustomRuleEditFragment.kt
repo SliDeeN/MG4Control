@@ -484,9 +484,13 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         }
     }
 
+    /**
+     * Nouvelle condition (2026-11-12, maquette validée) : les capteurs sont rangés directement dans
+     * leurs catégories, plus d'étape « Une valeur ». En recherche, chacun se décline en ses
+     * comparaisons (« Batterie · Au-dessus »), qu'on touche pour aller droit à la valeur.
+     */
     private fun nouvelleCondition(profondeur: Int, ok: (RuleCondition) -> Unit) {
-        val choix = buildList {
-            add(R.string.rule_cond_compare to { condition(null, ok) })
+        val autres = buildList<Pair<Int, () -> Unit>> {
             add(R.string.rule_cond_time to { plage(null, ok) })
             add(R.string.rule_cond_days to { jours(null, ok) })
             add(R.string.rule_cond_season to { saison(null, ok) })
@@ -499,8 +503,130 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 add(R.string.rule_cond_group_not to { ok(RuleCondition(RuleCondition.Type.NOT, children = emptyList())) })
             }
         }
-        liste(R.string.rule_choose_condition, choix)
+        val capteurs = signaux().flatMap { sig ->
+            val nom = mots.signal(sig)
+            listOf(Entree(nom, catSignal(sig), "cond:${sig.name}", { comparerSignal(sig, null, ok) }, horsRecherche = true)) +
+                operations(sig).map { (libelle, op) ->
+                    Entree(nom, catSignal(sig), "cond:${sig.name}:${op.name}", { valeurPour(sig, op, null, ok) },
+                        sous = libelle, rechercheSeule = true)
+                }
+        }
+        entrees(R.string.rule_choose_condition, autres.map { (res, action) ->
+            Entree(s(res), catCondition(res), resources.getResourceEntryName(res), action)
+        } + capteurs, recents = "cond")
     }
+
+    private fun catCondition(res: Int): Cat = when (res) {
+        R.string.rule_cond_time, R.string.rule_cond_days, R.string.rule_cond_season -> Cat.TIME
+        R.string.rule_cond_place -> Cat.PLACES
+        else -> Cat.FLOW
+    }
+
+    /** Les comparaisons d'une condition sur [sig], dans l'ordre du choix. */
+    private fun operations(sig: RuleSignal): List<Pair<String, RuleOp>> = when (sig.kind) {
+        RuleSignal.Kind.BOOL -> listOf(s(R.string.segment_yes) to RuleOp.IS_TRUE, s(R.string.segment_no) to RuleOp.IS_FALSE)
+        RuleSignal.Kind.NUMBER -> listOf(s(R.string.rule_op_above) to RuleOp.ABOVE, s(R.string.rule_op_below) to RuleOp.BELOW)
+        RuleSignal.Kind.TEXT, RuleSignal.Kind.TEXT_SET -> listOf(s(R.string.rule_op_is) to RuleOp.EQUALS, s(R.string.rule_op_is_not) to RuleOp.NOT_EQUALS)
+    }
+
+    // ── Capteurs d'abord (2026-11-12) ─────────────────────────────────────────
+
+    /**
+     * Une entrée de la grande fenêtre : ce qu'elle montre, où elle se range, sa clé pour les
+     * « Récents », ce qu'elle fait. [rechercheSeule] / [horsRecherche] : voir [AppDialog.Choix].
+     */
+    private class Entree(
+        val libelle: String, val cat: Cat, val cle: String, val action: () -> Unit,
+        val sous: String? = null, val rechercheSeule: Boolean = false, val horsRecherche: Boolean = false,
+    )
+
+    private fun entrees(titre: Int, e: List<Entree>, recents: String) {
+        AppDialog.choisir(ctx, titre = s(titre),
+            choix = e.map { AppDialog.Choix(it.libelle, sousLibelle = it.sous, rechercheSeule = it.rechercheSeule, horsRecherche = it.horsRecherche) },
+            annuler = s(R.string.profile_cancel),
+            categories = categories(e.map { it.cat }), recents = recents, cles = e.map { it.cle }) { rang -> e[rang].action() }
+    }
+
+    /** Façons de déclencher sur un capteur, selon son genre. */
+    private enum class Mode(val libelle: Int) {
+        VERS_VRAI(R.string.rule_mode_to_true),
+        VERS_FAUX(R.string.rule_mode_to_false),
+        BASCULE(R.string.rule_mode_both),
+        AU_DESSUS(R.string.rule_mode_above),
+        EN_DESSOUS(R.string.rule_mode_below),
+        DEVIENT(R.string.rule_mode_becomes),
+        N_EST_PLUS(R.string.rule_mode_stops),
+        CHANGE(R.string.rule_mode_change),
+    }
+
+    private fun modes(sig: RuleSignal): List<Mode> = when (sig.kind) {
+        RuleSignal.Kind.BOOL -> listOf(Mode.VERS_VRAI, Mode.VERS_FAUX, Mode.BASCULE)
+        RuleSignal.Kind.NUMBER -> listOfNotNull(Mode.AU_DESSUS, Mode.EN_DESSOUS, Mode.CHANGE.takeIf { sig in CHANGE_NOMBRES })
+        RuleSignal.Kind.TEXT, RuleSignal.Kind.TEXT_SET -> listOf(Mode.DEVIENT, Mode.N_EST_PLUS, Mode.CHANGE)
+    }
+
+    /** Raccourcis de la liste des déclencheurs qui valent un mode de capteur : la recherche ne montre que le raccourci. */
+    private val EQUIVALENTS: Map<Int, Pair<RuleSignal, Mode>> = mapOf(
+        R.string.rule_trg_ready_on to (RuleSignal.READY to Mode.VERS_VRAI),
+        R.string.rule_trg_ready_off to (RuleSignal.READY to Mode.VERS_FAUX),
+        R.string.rule_trg_profile_changes to (RuleSignal.PROFILE to Mode.CHANGE),
+        R.string.rule_trg_charge_start to (RuleSignal.CHARGING to Mode.VERS_VRAI),
+        R.string.rule_trg_charge_end to (RuleSignal.CHARGING to Mode.VERS_FAUX),
+        R.string.rule_trg_plugged to (RuleSignal.PLUGGED to Mode.VERS_VRAI),
+        R.string.rule_trg_unplugged to (RuleSignal.PLUGGED to Mode.VERS_FAUX),
+        R.string.rule_trg_locked to (RuleSignal.LOCKED to Mode.VERS_VRAI),
+        R.string.rule_trg_unlocked to (RuleSignal.LOCKED to Mode.VERS_FAUX),
+        R.string.rule_trg_phone to (RuleSignal.BT_DEVICE to Mode.DEVIENT),
+        R.string.rule_trg_phone_off to (RuleSignal.BT_DEVICE to Mode.N_EST_PLUS),
+    )
+
+    /** Les capteurs de la liste des déclencheurs, et leurs modes en recherche (sauf ceux d'un raccourci). */
+    private fun capteursDeclencheur(raccourcis: Collection<Int>, ok: (RuleTrigger) -> Unit): List<Entree> {
+        val couverts = raccourcis.mapNotNull { EQUIVALENTS[it] }.toSet()
+        return signaux().flatMap { sig ->
+            val nom = mots.signal(sig)
+            listOf(Entree(nom, catSignal(sig), "trg:${sig.name}", { choisirMode(sig, ok) }, horsRecherche = true)) +
+                modes(sig).filter { (sig to it) !in couverts }.map { m ->
+                    Entree(nom, catSignal(sig), "trg:${sig.name}:${m.name}", { declencherSur(sig, m, ok) },
+                        sous = s(m.libelle), rechercheSeule = true)
+                }
+        }
+    }
+
+    /** Un capteur touché dans la liste : comment déclencher ; oui / non, la bascule et son sens. */
+    private fun choisirMode(sig: RuleSignal, ok: (RuleTrigger) -> Unit) {
+        val nom = mots.signal(sig)
+        if (sig.kind == RuleSignal.Kind.BOOL) {
+            valeurs(s(R.string.rule_toggle_title_fmt, nom), listOf(
+                s(R.string.rule_toggle_true) to Mode.VERS_VRAI,
+                s(R.string.rule_toggle_false) to Mode.VERS_FAUX,
+                s(R.string.rule_toggle_both) to Mode.BASCULE,
+            ), null) { m -> declencherSur(sig, m, ok) }
+        } else {
+            valeurs(s(R.string.rule_mode_how_fmt, nom), modes(sig).map { s(it.libelle) to it }, null) { m -> declencherSur(sig, m, ok) }
+        }
+    }
+
+    private fun declencherSur(sig: RuleSignal, m: Mode, ok: (RuleTrigger) -> Unit) {
+        val avecDuree: (RuleCondition) -> Unit = { c -> dureeDeclencheur(RuleTrigger(), c, ok) }
+        fun base(op: RuleOp) = RuleCondition(RuleCondition.Type.COMPARE, signal = sig, op = op)
+        when (m) {
+            Mode.VERS_VRAI -> avecDuree(base(RuleOp.IS_TRUE))
+            Mode.VERS_FAUX -> avecDuree(base(RuleOp.IS_FALSE))
+            Mode.BASCULE, Mode.CHANGE -> ok(RuleTrigger(RuleTrigger.Type.CHANGES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = sig)))
+            Mode.AU_DESSUS -> valeurPour(sig, RuleOp.ABOVE, null, avecDuree)
+            Mode.EN_DESSOUS -> valeurPour(sig, RuleOp.BELOW, null, avecDuree)
+            Mode.DEVIENT -> valeurPour(sig, RuleOp.EQUALS, null, avecDuree)
+            Mode.N_EST_PLUS -> valeurPour(sig, RuleOp.NOT_EQUALS, null, avecDuree)
+        }
+    }
+
+    /** « Pendant combien de temps ? » puis le déclencheur « devient vrai » sur [c]. */
+    private fun dureeDeclencheur(t: RuleTrigger, c: RuleCondition, ok: (RuleTrigger) -> Unit) =
+        RuleValueDialogs.nombre(ctx, s(R.string.rule_for_title), s(R.string.rule_for_hint), t.forSeconds, 0, RuleRun.MAX_WAIT_S,
+            texte = { if (it == 0) s(R.string.rule_for_now) else duree(it) }, pas = ::pasDuree) { sec ->
+            ok(t.copy(type = RuleTrigger.Type.BECOMES, condition = c, forSeconds = sec))
+        }
 
     /** Modifie une condition simple ; un nœud inconnu repart d'une valeur. */
     private fun condition(actuelle: RuleCondition?, ok: (RuleCondition) -> Unit) = when (actuelle?.type) {
@@ -626,7 +752,6 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
      */
     private enum class Cat(val libelle: Int, val icone: Int) {
         CAR(R.string.rule_cat_car, R.drawable.ic_cat_car),
-        CHARGE(R.string.rule_cat_charge, R.drawable.ic_cat_plug),
         TIME(R.string.rule_cat_time, R.drawable.ic_cat_clock),
         PLACES(R.string.rule_cat_places, R.drawable.ic_cat_pin),
         DRIVING(R.string.rule_cat_driving, R.drawable.ic_cat_steering),
@@ -653,7 +778,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     private fun catDeclencheur(res: Int): Cat = when (res) {
         R.string.rule_event_app_start, R.string.rule_event_door, R.string.rule_event_door_close,
         R.string.rule_trg_locked, R.string.rule_trg_unlocked -> Cat.CAR
-        R.string.rule_trg_charge_start, R.string.rule_trg_charge_end, R.string.rule_trg_plugged, R.string.rule_trg_unplugged -> Cat.CHARGE
+        R.string.rule_trg_charge_start, R.string.rule_trg_charge_end, R.string.rule_trg_plugged, R.string.rule_trg_unplugged -> Cat.BATTERY
         R.string.rule_trg_time, R.string.rule_trg_every, R.string.rule_trg_sun -> Cat.TIME
         R.string.rule_trg_place, R.string.rule_trg_phone, R.string.rule_trg_phone_off -> Cat.PLACES
         R.string.rule_trg_ready_on, R.string.rule_trg_ready_off, R.string.rule_trg_gear_p, R.string.rule_trg_gear_d,
@@ -770,19 +895,28 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     }
 
     private fun comparerSignal(sig: RuleSignal, meme: RuleCondition?, ok: (RuleCondition) -> Unit) {
-        fun base(op: RuleOp) = RuleCondition(RuleCondition.Type.COMPARE, signal = sig, op = op)
-        when (sig.kind) {
-            RuleSignal.Kind.BOOL -> valeurs(mots.signal(sig),
-                listOf(s(R.string.segment_yes) to RuleOp.IS_TRUE, s(R.string.segment_no) to RuleOp.IS_FALSE), meme?.op) { op ->
-                ok(base(op))
+        // Rien à proposer (aucun profil, aucun téléphone) : on le dit avant de demander la comparaison.
+        if (sig.kind == RuleSignal.Kind.TEXT || sig.kind == RuleSignal.Kind.TEXT_SET) {
+            val choix = choixTexte(sig)
+            if (choix != null && choix.isEmpty()) {
+                Toast.makeText(ctx, s(if (sig == RuleSignal.BT_DEVICE) R.string.rule_no_phones else R.string.rule_no_profiles), Toast.LENGTH_LONG).show()
+                return
             }
-            RuleSignal.Kind.NUMBER -> valeurs(mots.signal(sig),
-                listOf(s(R.string.rule_op_above) to RuleOp.ABOVE, s(R.string.rule_op_below) to RuleOp.BELOW), meme?.op) { op ->
+        }
+        valeurs(mots.signal(sig), operations(sig), meme?.op) { op -> valeurPour(sig, op, meme, ok) }
+    }
+
+    /** La valeur à comparer, la comparaison [op] choisie : rien pour oui / non, un nombre, ou un texte. */
+    private fun valeurPour(sig: RuleSignal, op: RuleOp, meme: RuleCondition?, ok: (RuleCondition) -> Unit) {
+        fun base() = RuleCondition(RuleCondition.Type.COMPARE, signal = sig, op = op)
+        when (sig.kind) {
+            RuleSignal.Kind.BOOL -> ok(base())
+            RuleSignal.Kind.NUMBER -> {
                 val b = borne(sig)
                 RuleValueDialogs.nombre(ctx, mots.signal(sig) + " " + s(if (op == RuleOp.ABOVE) R.string.rule_op_above else R.string.rule_op_below).lowercase(),
                     null, meme?.number?.toInt() ?: b.defaut, b.min, b.max,
                     texte = { "$it" + mots.unit(sig) }, pas = { v, sens -> v + sens * b.pas }) { n ->
-                    ok(base(op).copy(number = n.toDouble()))
+                    ok(base().copy(number = n.toDouble()))
                 }
             }
             RuleSignal.Kind.TEXT, RuleSignal.Kind.TEXT_SET -> {
@@ -791,13 +925,10 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                     Toast.makeText(ctx, s(if (sig == RuleSignal.BT_DEVICE) R.string.rule_no_phones else R.string.rule_no_profiles), Toast.LENGTH_LONG).show()
                     return
                 }
-                valeurs(mots.signal(sig),
-                    listOf(s(R.string.rule_op_is) to RuleOp.EQUALS, s(R.string.rule_op_is_not) to RuleOp.NOT_EQUALS), meme?.op) { op ->
-                    if (choix == null) RuleValueDialogs.texte(ctx, mots.signal(sig), meme?.text ?: AndroidControls.wifiSsid(ctx).orEmpty()) { v ->
-                        ok(base(op).copy(text = v))
-                    }
-                    else valeurs(mots.signal(sig), choix, meme?.text) { v -> ok(base(op).copy(text = v)) }
+                if (choix == null) RuleValueDialogs.texte(ctx, mots.signal(sig), meme?.text ?: AndroidControls.wifiSsid(ctx).orEmpty()) { v ->
+                    ok(base().copy(text = v))
                 }
+                else valeurs(mots.signal(sig), choix, meme?.text) { v -> ok(base().copy(text = v)) }
             }
         }
     }
@@ -811,12 +942,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         fun evenement(t: RuleTrigger) = valeurs(s(R.string.rule_choose_event),
             RuleEvent.entries.filter { (it != RuleEvent.FRONT_DOOR_OPEN && it != RuleEvent.FRONT_DOOR_CLOSE) || MG4Hardware.hasDoorDetection() }
                 .map { mots.event(it) to it }, t.event) { e -> ok(t.copy(type = RuleTrigger.Type.EVENT, event = e)) }
-        fun devient(t: RuleTrigger) = condition(t.condition) { c ->
-            RuleValueDialogs.nombre(ctx, s(R.string.rule_for_title), s(R.string.rule_for_hint), t.forSeconds, 0, RuleRun.MAX_WAIT_S,
-                texte = { if (it == 0) s(R.string.rule_for_now) else duree(it) }, pas = ::pasDuree) { sec ->
-                ok(t.copy(type = RuleTrigger.Type.BECOMES, condition = c, forSeconds = sec))
-            }
-        }
+        fun devient(t: RuleTrigger) = condition(t.condition) { c -> dureeDeclencheur(t, c, ok) }
         fun change(t: RuleTrigger) = valeurs(s(R.string.rule_choose_signal), signaux().filter { it.kind != RuleSignal.Kind.NUMBER || it in CHANGE_NOMBRES }
             .map { mots.signal(it) to it }, t.condition?.signal, rangement = ::catSignal, recents = "sig") { sig ->
             ok(t.copy(type = RuleTrigger.Type.CHANGES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = sig)))
@@ -842,7 +968,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleTrigger.Type.CHANGES -> change(actuel)
             RuleTrigger.Type.SUN -> soleil(actuel)
             RuleTrigger.Type.MANUAL -> {}
-            null -> liste(R.string.rule_choose_trigger, buildList {
+            null -> buildList<Pair<Int, () -> Unit>> {
                 add(R.string.rule_event_app_start to { ok(RuleTrigger(RuleTrigger.Type.EVENT, event = RuleEvent.APP_START)) })
                 if (MG4Hardware.hasDoorDetection())
                     add(R.string.rule_event_door to { ok(RuleTrigger(RuleTrigger.Type.EVENT, event = RuleEvent.FRONT_DOOR_OPEN)) })
@@ -856,8 +982,6 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 R.string.rule_trg_profile_changes to {
                     ok(RuleTrigger(RuleTrigger.Type.CHANGES, condition = RuleCondition(RuleCondition.Type.COMPARE, signal = RuleSignal.PROFILE)))
                 },
-                R.string.rule_trg_becomes to { devient(RuleTrigger()) },
-                R.string.rule_trg_changes to { change(RuleTrigger()) },
                 R.string.rule_trg_time to { horaire(RuleTrigger()) },
                 R.string.rule_trg_every to { periodique(RuleTrigger()) },
                 R.string.rule_trg_sun to { soleil(RuleTrigger()) },
@@ -876,7 +1000,13 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 },
                 R.string.rule_trg_place to { lieu(null) { c -> ok(RuleTrigger(RuleTrigger.Type.BECOMES, condition = c)) } },
                 ))
-            }, rangement = ::catDeclencheur, recents = "trg")
+            }.let { raccourcis ->
+                // Capteurs d'abord (2026-11-12) : plus de « Une valeur devient vraie / change » ; les
+                // capteurs sont dans leurs catégories, déclinés en leurs modes dans la recherche.
+                entrees(R.string.rule_choose_trigger, raccourcis.map { (res, action) ->
+                    Entree(s(res), catDeclencheur(res), resources.getResourceEntryName(res), action)
+                } + capteursDeclencheur(raccourcis.map { it.first }, ok), recents = "trg")
+            }
         }
     }
 

@@ -1652,7 +1652,6 @@
     <string name="rule_tool_import">Importar</string>
     <string name="rule_tool_places">Locais</string>
     <string name="rule_tool_variables">Variáveis</string>
-    <string name="rule_trg_changes">Um valor muda</string>
     <string name="rule_trg_charge_end">Fim de carga</string>
     <string name="rule_trg_charge_start">Início de carga</string>
     <string name="rule_trg_every">A cada X minutos</string>
@@ -1665,6 +1664,19 @@
     <string name="rule_trg_sun">Nascer / pôr do sol</string>
     <string name="rule_trg_unlocked">Destrancamento</string>
     <string name="rule_trg_unplugged">Desligado da tomada</string>
+    <string name="rule_mode_to_true">Passa a VERDADEIRO</string>
+    <string name="rule_mode_to_false">Passa a FALSO</string>
+    <string name="rule_mode_both">Muda (nos dois sentidos)</string>
+    <string name="rule_mode_above">Passa acima de…</string>
+    <string name="rule_mode_below">Passa abaixo de…</string>
+    <string name="rule_mode_becomes">Passa a ser…</string>
+    <string name="rule_mode_stops">Deixa de ser…</string>
+    <string name="rule_mode_change">Muda</string>
+    <string name="rule_mode_how_fmt">%1$s: como ativar?</string>
+    <string name="rule_toggle_title_fmt">%1$s: passa a…</string>
+    <string name="rule_toggle_true">VERDADEIRO</string>
+    <string name="rule_toggle_false">FALSO</string>
+    <string name="rule_toggle_both">Nos dois sentidos</string>
     <string name="rule_var_false">Falso</string>
     <string name="rule_var_name">Nome da variável</string>
     <string name="rule_var_new">+ Nova variável</string>
@@ -1732,7 +1744,6 @@
     <string name="rule_choose_shortcut">Que atalho?</string>
     <string name="rule_choose_signal">Que valor?</string>
     <string name="rule_choose_trigger">Adicionar um gatilho</string>
-    <string name="rule_cond_compare">Um valor</string>
     <string name="rule_cond_days">Dias da semana</string>
     <string name="rule_cond_group_all">Grupo: todas</string>
     <string name="rule_cond_group_any">Grupo: pelo menos uma</string>
@@ -1807,10 +1818,8 @@
     <string name="rule_sec_when_hint">Basta um gatilho.</string>
     <string name="rule_time_title">A que horas?</string>
     <string name="rule_tpl_blank">Automatização vazia</string>
-    <string name="rule_trg_becomes">Um valor torna-se verdadeiro</string>
     <string name="rule_cat_recent">Recentes</string>
     <string name="rule_cat_car">Carro</string>
-    <string name="rule_cat_charge">Carregamento</string>
     <string name="rule_cat_time">Hora e sol</string>
     <string name="rule_cat_places">Locais e telefones</string>
     <string name="rule_cat_driving">Condução</string>

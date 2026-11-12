@@ -1652,7 +1652,6 @@
     <string name="rule_tool_import">Importa</string>
     <string name="rule_tool_places">Luoghi</string>
     <string name="rule_tool_variables">Variabili</string>
-    <string name="rule_trg_changes">Un valore cambia</string>
     <string name="rule_trg_charge_end">Fine ricarica</string>
     <string name="rule_trg_charge_start">Inizio ricarica</string>
     <string name="rule_trg_every">Ogni X minuti</string>
@@ -1665,6 +1664,19 @@
     <string name="rule_trg_sun">Alba / tramonto</string>
     <string name="rule_trg_unlocked">Sblocco</string>
     <string name="rule_trg_unplugged">Scollegata</string>
+    <string name="rule_mode_to_true">Passa a VERO</string>
+    <string name="rule_mode_to_false">Passa a FALSO</string>
+    <string name="rule_mode_both">Cambia (in entrambi i sensi)</string>
+    <string name="rule_mode_above">Sale sopra…</string>
+    <string name="rule_mode_below">Scende sotto…</string>
+    <string name="rule_mode_becomes">Diventa…</string>
+    <string name="rule_mode_stops">Non è più…</string>
+    <string name="rule_mode_change">Cambia</string>
+    <string name="rule_mode_how_fmt">%1$s: come attivare?</string>
+    <string name="rule_toggle_title_fmt">%1$s: passa a…</string>
+    <string name="rule_toggle_true">VERO</string>
+    <string name="rule_toggle_false">FALSO</string>
+    <string name="rule_toggle_both">Entrambi i sensi</string>
     <string name="rule_var_false">Falso</string>
     <string name="rule_var_name">Nome della variabile</string>
     <string name="rule_var_new">+ Nuova variabile</string>
@@ -1732,7 +1744,6 @@
     <string name="rule_choose_shortcut">Quale scorciatoia?</string>
     <string name="rule_choose_signal">Quale valore?</string>
     <string name="rule_choose_trigger">Aggiungi un attivatore</string>
-    <string name="rule_cond_compare">Un valore</string>
     <string name="rule_cond_days">Giorni della settimana</string>
     <string name="rule_cond_group_all">Gruppo: tutte</string>
     <string name="rule_cond_group_any">Gruppo: almeno una</string>
@@ -1807,10 +1818,8 @@
     <string name="rule_sec_when_hint">Basta un attivatore.</string>
     <string name="rule_time_title">A che ora?</string>
     <string name="rule_tpl_blank">Automazione vuota</string>
-    <string name="rule_trg_becomes">Un valore diventa vero</string>
     <string name="rule_cat_recent">Recenti</string>
     <string name="rule_cat_car">Auto</string>
-    <string name="rule_cat_charge">Ricarica</string>
     <string name="rule_cat_time">Ora e sole</string>
     <string name="rule_cat_places">Luoghi e telefoni</string>
     <string name="rule_cat_driving">Guida</string>

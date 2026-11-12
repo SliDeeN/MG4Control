@@ -1649,7 +1649,6 @@
     <string name="rule_tool_import">Importer</string>
     <string name="rule_tool_places">Steder</string>
     <string name="rule_tool_variables">Variabler</string>
-    <string name="rule_trg_changes">En verdi endres</string>
     <string name="rule_trg_charge_end">Ladingen avsluttes</string>
     <string name="rule_trg_charge_start">Ladingen starter</string>
     <string name="rule_trg_every">Hvert X. minutt</string>
@@ -1662,6 +1661,19 @@
     <string name="rule_trg_sun">Soloppgang / solnedgang</string>
     <string name="rule_trg_unlocked">Opplåsing</string>
     <string name="rule_trg_unplugged">Lader frakoblet</string>
+    <string name="rule_mode_to_true">Bytter til SANN</string>
+    <string name="rule_mode_to_false">Bytter til USANN</string>
+    <string name="rule_mode_both">Bytter (begge veier)</string>
+    <string name="rule_mode_above">Går over…</string>
+    <string name="rule_mode_below">Går under…</string>
+    <string name="rule_mode_becomes">Blir…</string>
+    <string name="rule_mode_stops">Er ikke lenger…</string>
+    <string name="rule_mode_change">Endres</string>
+    <string name="rule_mode_how_fmt">%1$s: hvordan utløse?</string>
+    <string name="rule_toggle_title_fmt">%1$s: bytter til…</string>
+    <string name="rule_toggle_true">SANN</string>
+    <string name="rule_toggle_false">USANN</string>
+    <string name="rule_toggle_both">Begge veier</string>
     <string name="rule_var_false">Usann</string>
     <string name="rule_var_name">Variabelens navn</string>
     <string name="rule_var_new">+ Ny variabel</string>
@@ -1729,7 +1741,6 @@
     <string name="rule_choose_shortcut">Hvilken snarvei?</string>
     <string name="rule_choose_signal">Hvilken verdi?</string>
     <string name="rule_choose_trigger">Legg til en utløser</string>
-    <string name="rule_cond_compare">En verdi</string>
     <string name="rule_cond_days">Ukedager</string>
     <string name="rule_cond_group_all">Gruppe: alle</string>
     <string name="rule_cond_group_any">Gruppe: minst én</string>
@@ -1804,10 +1815,8 @@
     <string name="rule_sec_when_hint">Én utløser er nok.</string>
     <string name="rule_time_title">Hvilket klokkeslett?</string>
     <string name="rule_tpl_blank">Tom automatisering</string>
-    <string name="rule_trg_becomes">En verdi blir sann</string>
     <string name="rule_cat_recent">Nylige</string>
     <string name="rule_cat_car">Bil</string>
-    <string name="rule_cat_charge">Lading</string>
     <string name="rule_cat_time">Tid og sol</string>
     <string name="rule_cat_places">Steder og telefoner</string>
     <string name="rule_cat_driving">Kjøring</string>

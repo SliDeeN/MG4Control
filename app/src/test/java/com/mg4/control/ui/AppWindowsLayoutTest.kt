@@ -42,7 +42,7 @@ class AppWindowsLayoutTest {
         assertNotNull(vue.findViewById<TextView>(R.id.tv_language_subtitle))
         listOf(
             R.id.btn_pick_fr, R.id.btn_pick_en, R.id.btn_pick_de, R.id.btn_pick_es,
-            R.id.btn_pick_pt, R.id.btn_pick_it, R.id.btn_pick_tr,
+            R.id.btn_pick_pt, R.id.btn_pick_it, R.id.btn_pick_tr, R.id.btn_pick_pl, R.id.btn_pick_nb,
         ).forEach { assertNotNull(vue.findViewById<View>(it)) }
     }
 

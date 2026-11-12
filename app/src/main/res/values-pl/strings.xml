@@ -1655,7 +1655,6 @@
     <string name="rule_tool_import">Importuj</string>
     <string name="rule_tool_places">Miejsca</string>
     <string name="rule_tool_variables">Zmienne</string>
-    <string name="rule_trg_changes">Wartość się zmienia</string>
     <string name="rule_trg_charge_end">Koniec ładowania</string>
     <string name="rule_trg_charge_start">Początek ładowania</string>
     <string name="rule_trg_every">Co X minut</string>
@@ -1668,6 +1667,19 @@
     <string name="rule_trg_sun">Wschód / zachód słońca</string>
     <string name="rule_trg_unlocked">Odblokowanie</string>
     <string name="rule_trg_unplugged">Odłączenie</string>
+    <string name="rule_mode_to_true">Przełącza na PRAWDA</string>
+    <string name="rule_mode_to_false">Przełącza na FAŁSZ</string>
+    <string name="rule_mode_both">Przełącza (w obie strony)</string>
+    <string name="rule_mode_above">Przekracza w górę…</string>
+    <string name="rule_mode_below">Spada poniżej…</string>
+    <string name="rule_mode_becomes">Staje się…</string>
+    <string name="rule_mode_stops">Przestaje być…</string>
+    <string name="rule_mode_change">Zmienia się</string>
+    <string name="rule_mode_how_fmt">%1$s: jak wyzwalać?</string>
+    <string name="rule_toggle_title_fmt">%1$s: przełącza na…</string>
+    <string name="rule_toggle_true">PRAWDA</string>
+    <string name="rule_toggle_false">FAŁSZ</string>
+    <string name="rule_toggle_both">W obie strony</string>
     <string name="rule_var_false">Fałsz</string>
     <string name="rule_var_name">Nazwa zmiennej</string>
     <string name="rule_var_new">+ Nowa zmienna</string>
@@ -1735,7 +1747,6 @@
     <string name="rule_choose_shortcut">Który skrót?</string>
     <string name="rule_choose_signal">Która wartość?</string>
     <string name="rule_choose_trigger">Dodaj wyzwalacz</string>
-    <string name="rule_cond_compare">Wartość</string>
     <string name="rule_cond_days">Dni tygodnia</string>
     <string name="rule_cond_group_all">Grupa: wszystkie</string>
     <string name="rule_cond_group_any">Grupa: co najmniej jeden</string>
@@ -1810,10 +1821,8 @@
     <string name="rule_sec_when_hint">Wystarczy jeden wyzwalacz.</string>
     <string name="rule_time_title">O której godzinie?</string>
     <string name="rule_tpl_blank">Pusta automatyzacja</string>
-    <string name="rule_trg_becomes">Wartość staje się prawdą</string>
     <string name="rule_cat_recent">Ostatnie</string>
     <string name="rule_cat_car">Samochód</string>
-    <string name="rule_cat_charge">Ładowanie</string>
     <string name="rule_cat_time">Czas i słońce</string>
     <string name="rule_cat_places">Miejsca i telefony</string>
     <string name="rule_cat_driving">Jazda</string>

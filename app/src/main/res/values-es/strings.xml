@@ -1652,7 +1652,6 @@
     <string name="rule_tool_import">Importar</string>
     <string name="rule_tool_places">Lugares</string>
     <string name="rule_tool_variables">Variables</string>
-    <string name="rule_trg_changes">Un valor cambia</string>
     <string name="rule_trg_charge_end">Fin de carga</string>
     <string name="rule_trg_charge_start">Inicio de carga</string>
     <string name="rule_trg_every">Cada X minutos</string>
@@ -1665,6 +1664,19 @@
     <string name="rule_trg_sun">Amanecer / atardecer</string>
     <string name="rule_trg_unlocked">Desbloqueo</string>
     <string name="rule_trg_unplugged">Desenchufado</string>
+    <string name="rule_mode_to_true">Cambia a VERDADERO</string>
+    <string name="rule_mode_to_false">Cambia a FALSO</string>
+    <string name="rule_mode_both">Cambia (en ambos sentidos)</string>
+    <string name="rule_mode_above">Sube por encima de…</string>
+    <string name="rule_mode_below">Baja por debajo de…</string>
+    <string name="rule_mode_becomes">Pasa a ser…</string>
+    <string name="rule_mode_stops">Deja de ser…</string>
+    <string name="rule_mode_change">Cambia</string>
+    <string name="rule_mode_how_fmt">%1$s: ¿cómo activar?</string>
+    <string name="rule_toggle_title_fmt">%1$s: cambia a…</string>
+    <string name="rule_toggle_true">VERDADERO</string>
+    <string name="rule_toggle_false">FALSO</string>
+    <string name="rule_toggle_both">Ambos sentidos</string>
     <string name="rule_var_false">Falso</string>
     <string name="rule_var_name">Nombre de la variable</string>
     <string name="rule_var_new">+ Nueva variable</string>
@@ -1732,7 +1744,6 @@
     <string name="rule_choose_shortcut">¿Qué atajo?</string>
     <string name="rule_choose_signal">¿Qué valor?</string>
     <string name="rule_choose_trigger">Añadir un disparador</string>
-    <string name="rule_cond_compare">Un valor</string>
     <string name="rule_cond_days">Días de la semana</string>
     <string name="rule_cond_group_all">Grupo: todas</string>
     <string name="rule_cond_group_any">Grupo: al menos una</string>
@@ -1807,10 +1818,8 @@
     <string name="rule_sec_when_hint">Basta con un disparador.</string>
     <string name="rule_time_title">¿A qué hora?</string>
     <string name="rule_tpl_blank">Automatización vacía</string>
-    <string name="rule_trg_becomes">Un valor se vuelve cierto</string>
     <string name="rule_cat_recent">Recientes</string>
     <string name="rule_cat_car">Coche</string>
-    <string name="rule_cat_charge">Carga</string>
     <string name="rule_cat_time">Hora y sol</string>
     <string name="rule_cat_places">Lugares y teléfonos</string>
     <string name="rule_cat_driving">Conducción</string>

@@ -1674,7 +1674,6 @@
     <string name="rule_tool_import">Importer</string>
     <string name="rule_tool_places">Lieux</string>
     <string name="rule_tool_variables">Variables</string>
-    <string name="rule_trg_changes">Une valeur change</string>
     <string name="rule_trg_charge_end">Fin de charge</string>
     <string name="rule_trg_charge_start">Début de charge</string>
     <string name="rule_trg_every">Toutes les X minutes</string>
@@ -1687,6 +1686,20 @@
     <string name="rule_trg_sun">Lever / coucher du soleil</string>
     <string name="rule_trg_unlocked">Déverrouillage</string>
     <string name="rule_trg_unplugged">Prise débranchée</string>
+    <!-- Capteurs d'abord dans l'éditeur d'automatisation (2026-11-12). -->
+    <string name="rule_mode_to_true">Bascule vers VRAI</string>
+    <string name="rule_mode_to_false">Bascule vers FAUX</string>
+    <string name="rule_mode_both">Bascule (les deux sens)</string>
+    <string name="rule_mode_above">Passe au-dessus de…</string>
+    <string name="rule_mode_below">Passe en dessous de…</string>
+    <string name="rule_mode_becomes">Devient…</string>
+    <string name="rule_mode_stops">N\'est plus…</string>
+    <string name="rule_mode_change">Change</string>
+    <string name="rule_mode_how_fmt">%1$s : comment déclencher ?</string>
+    <string name="rule_toggle_title_fmt">%1$s : bascule vers…</string>
+    <string name="rule_toggle_true">VRAI</string>
+    <string name="rule_toggle_false">FAUX</string>
+    <string name="rule_toggle_both">Les deux sens</string>
     <string name="rule_var_false">Faux</string>
     <string name="rule_var_name">Nom de la variable</string>
     <string name="rule_var_new">+ Nouvelle variable</string>
@@ -1754,7 +1767,6 @@
     <string name="rule_choose_shortcut">Quel raccourci ?</string>
     <string name="rule_choose_signal">Quelle valeur ?</string>
     <string name="rule_choose_trigger">Ajouter un déclencheur</string>
-    <string name="rule_cond_compare">Une valeur</string>
     <string name="rule_cond_days">Des jours de la semaine</string>
     <string name="rule_cond_group_all">Groupe : toutes</string>
     <string name="rule_cond_group_any">Groupe : au moins une</string>
@@ -1829,10 +1841,8 @@
     <string name="rule_sec_when_hint">Un seul déclencheur suffit.</string>
     <string name="rule_time_title">À quelle heure ?</string>
     <string name="rule_tpl_blank">Automatisation vide</string>
-    <string name="rule_trg_becomes">Une valeur devient vraie</string>
     <string name="rule_cat_recent">Récents</string>
     <string name="rule_cat_car">Voiture</string>
-    <string name="rule_cat_charge">Charge</string>
     <string name="rule_cat_time">Heure et soleil</string>
     <string name="rule_cat_places">Lieux et téléphones</string>
     <string name="rule_cat_driving">Conduite</string>

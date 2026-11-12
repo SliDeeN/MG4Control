@@ -284,7 +284,23 @@ internal object AppDialog {
         val pastille: CharSequence? = null,
         val fondPastille: Int = 0,
         val textePastille: Int = 0,
+        /** Seconde ligne, plus petite et grise (« Devient… » sous « Profil actif ») ; cherchée aussi. */
+        val sousLibelle: CharSequence? = null,
+        /** Visible seulement dans les résultats d'une recherche (2026-11-12, capteurs déclinés). */
+        val rechercheSeule: Boolean = false,
+        /** Caché pendant une recherche : ses déclinaisons ([rechercheSeule]) le remplacent. */
+        val horsRecherche: Boolean = false,
     )
+
+    /**
+     * [c] trouvé par la recherche [cle] (minuscules sans accents) : chaque mot tapé se trouve dans
+     * son nom ou sa seconde ligne — « profil change » trouve « Profil actif · Change ».
+     */
+    private fun trouve(c: Choix, cle: String): Boolean {
+        if (c.horsRecherche) return false
+        val texte = sansAccents(listOfNotNull(c.libelle, c.sousLibelle).joinToString(" "))
+        return cle.split(' ').filter { it.isNotEmpty() }.all { texte.contains(it) }
+    }
 
     /**
      * Choix dans une liste, présentée en grille de tuiles qui défile (style choisi sur maquette
@@ -386,7 +402,7 @@ internal object AppDialog {
         // la liste complète.
         fun remplir(filtre: String) {
             val cle = sansAccents(filtre.trim())
-            val visibles = choix.indices.filter { cle.isEmpty() || sansAccents(choix[it].libelle.toString()).contains(cle) }
+            val visibles = choix.indices.filter { if (cle.isEmpty()) !choix[it].rechercheSeule else trouve(choix[it], cle) }
             tuileChoisie = grille(context, lignes, visibles, choix, choisi, COLONNES, surChoix)
         }
         remplir("")
@@ -548,18 +564,20 @@ internal object AppDialog {
         lateinit var champ: EditText
         fun dessiner() {
             val cle = sansAccents(filtre.trim())
-            fun trouve(r: Int) = cle.isEmpty() || sansAccents(choix[r].libelle.toString()).contains(cle)
+            fun trouve(r: Int) = cle.isEmpty() || trouve(choix[r], cle)
+            // Hors recherche, les déclinaisons cachées ne se montrent que dans « Récents ».
+            fun montres(c: Categorie) = if (c.icone == R.drawable.ic_cat_star) c.rangs else c.rangs.filter { !choix[it].rechercheSeule }
             val rangs = when {
                 cle.isNotEmpty() -> choix.indices.filter { trouve(it) }
-                categories == null -> choix.indices.toList()
-                else -> categories.getOrNull(courante)?.rangs.orEmpty()
+                categories == null -> choix.indices.filter { !choix[it].rechercheSeule }
+                else -> categories.getOrNull(courante)?.let { montres(it) }.orEmpty()
             }
             val tuile = grille(context, lignes, rangs, choix, choisi, COLONNES, surChoix)
             if (cle.isEmpty() && tuile != null) defilGrille.post { defilGrille.scrollTo(0, ((tuile.parent as View).top - px(ECART_DP)).coerceAtLeast(0)) }
             else defilGrille.scrollTo(0, 0)
             colonneCats.removeAllViews()
             categories?.forEachIndexed { i, c ->
-                val n = if (cle.isEmpty()) c.rangs.size else c.rangs.count { trouve(it) }
+                val n = if (cle.isEmpty()) montres(c).size else c.rangs.count { trouve(it) }
                 val on = cle.isEmpty() && i == courante
                 val couleur = if (on) accent else context.getColor(R.color.text_primary)
                 colonneCats.addView(LinearLayout(context).apply {
@@ -716,7 +734,19 @@ internal object AppDialog {
                 cellule, context.getColor(R.color.dash_accent_dim), context.getColor(R.color.dash_accent),
                 dp(context, 2f), dp(context, 12f).toFloat())
         }
-        cellule.findViewById<TextView>(R.id.choice_item_label).text = c.libelle
+        cellule.findViewById<TextView>(R.id.choice_item_label).apply {
+            val sous = c.sousLibelle
+            if (sous.isNullOrEmpty()) text = c.libelle
+            else {
+                val debut = c.libelle.length + 1
+                text = android.text.SpannableStringBuilder(c.libelle).append("\n").append(sous).apply {
+                    setSpan(android.text.style.RelativeSizeSpan(0.85f), debut, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                    setSpan(android.text.style.ForegroundColorSpan(context.getColor(R.color.text_secondary)), debut, length,
+                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+                maxLines = 3
+            }
+        }
         cellule.findViewById<ImageView>(R.id.choice_item_icon).apply {
             setImageDrawable(c.icone)
             visibility = if (c.icone == null) View.GONE else View.VISIBLE

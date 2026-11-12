@@ -1649,7 +1649,6 @@
     <string name="rule_tool_import">İçe aktar</string>
     <string name="rule_tool_places">Yerler</string>
     <string name="rule_tool_variables">Değişkenler</string>
-    <string name="rule_trg_changes">Bir değer değişir</string>
     <string name="rule_trg_charge_end">Şarj biter</string>
     <string name="rule_trg_charge_start">Şarj başlar</string>
     <string name="rule_trg_every">Her X dakikada</string>
@@ -1662,6 +1661,19 @@
     <string name="rule_trg_sun">Gün doğumu / batımı</string>
     <string name="rule_trg_unlocked">Kilit açma</string>
     <string name="rule_trg_unplugged">Fiş çıkarıldı</string>
+    <string name="rule_mode_to_true">DOĞRU olur</string>
+    <string name="rule_mode_to_false">YANLIŞ olur</string>
+    <string name="rule_mode_both">Değişir (iki yönde)</string>
+    <string name="rule_mode_above">Şunun üstüne çıkar…</string>
+    <string name="rule_mode_below">Şunun altına iner…</string>
+    <string name="rule_mode_becomes">Şu olur…</string>
+    <string name="rule_mode_stops">Artık şu değil…</string>
+    <string name="rule_mode_change">Değişir</string>
+    <string name="rule_mode_how_fmt">%1$s: nasıl tetiklensin?</string>
+    <string name="rule_toggle_title_fmt">%1$s: şuna geçer…</string>
+    <string name="rule_toggle_true">DOĞRU</string>
+    <string name="rule_toggle_false">YANLIŞ</string>
+    <string name="rule_toggle_both">İki yönde</string>
     <string name="rule_var_false">Yanlış</string>
     <string name="rule_var_name">Değişken adı</string>
     <string name="rule_var_new">+ Yeni değişken</string>
@@ -1729,7 +1741,6 @@
     <string name="rule_choose_shortcut">Hangi kısayol?</string>
     <string name="rule_choose_signal">Hangi değer?</string>
     <string name="rule_choose_trigger">Tetikleyici ekle</string>
-    <string name="rule_cond_compare">Bir değer</string>
     <string name="rule_cond_days">Haftanın günleri</string>
     <string name="rule_cond_group_all">Grup: tümü</string>
     <string name="rule_cond_group_any">Grup: en az biri</string>
@@ -1804,10 +1815,8 @@
     <string name="rule_sec_when_hint">Tek bir tetikleyici yeterli.</string>
     <string name="rule_time_title">Saat kaçta?</string>
     <string name="rule_tpl_blank">Boş otomasyon</string>
-    <string name="rule_trg_becomes">Bir değer doğru olur</string>
     <string name="rule_cat_recent">Son kullanılanlar</string>
     <string name="rule_cat_car">Araç</string>
-    <string name="rule_cat_charge">Şarj</string>
     <string name="rule_cat_time">Saat ve güneş</string>
     <string name="rule_cat_places">Konumlar ve telefonlar</string>
     <string name="rule_cat_driving">Sürüş</string>
