@@ -4140,11 +4140,8 @@ object MG4Hardware {
             sb.appendLine()
         }
 
-        sb.appendLine("── AppLogger (${AppLogger.entries.size} entrées) ──")
-        AppLogger.entries.forEach { e ->
-            sb.appendLine("[${e.time}] ${e.tag}: ${e.msg}")
-        }
-
+        // Le journal n'est plus recopié ici (2026-11-12) : le diagnostic l'ajoutait une seconde
+        // fois à la suite, et 2000 lignes dans la fenêtre ralentiraient son affichage.
         return sb.toString()
     }
 

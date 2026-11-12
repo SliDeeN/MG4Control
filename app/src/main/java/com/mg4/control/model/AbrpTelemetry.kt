@@ -228,7 +228,7 @@ object AbrpConfigFile {
 
 /** Ce qu'on peut montrer d'un jeton : ses 4 derniers caractères. */
 /**
- * Quels envois écrire dans le journal : une ligne toutes les 30 s noierait le journal (400 entrées)
+ * Quels envois écrire dans le journal : une ligne toutes les 30 s noierait le journal (2000 entrées)
  * sur un long trajet. On écrit le premier envoi, chaque passage réussite ↔ échec, chaque changement
  * d'état (garé, en charge), chaque nouvelle erreur, puis un bilan toutes les [SUMMARY_MS].
  * Les durées sont en temps écoulé depuis le démarrage (horloge murale non fiable au réveil).

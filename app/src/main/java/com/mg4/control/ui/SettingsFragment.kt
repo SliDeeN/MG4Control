@@ -1157,16 +1157,17 @@ class SettingsFragment : Fragment() {
 
         val dialog = AppDialog.afficher(ctx, vue, 1320f)
 
-        // Rapport court (30 dernières lignes) pour le presse-papier ; rapport complet pour le fichier.
+        // Le journal n'apparaît qu'une fois : tout pour le fichier, les 400 dernières lignes pour le
+        // presse-papier (ce qu'il contenait avant 2026-11-12 — le presse-papier passe par un
+        // échange entre processus limité à ~1 Mo).
         fun buildReport(fullLog: Boolean) = buildString {
             if (crashLog != null) { appendLine(crashLog); appendLine() }
             appendLine(tvReport.text)
             appendLine()
-            if (fullLog) {
-                val toutes = AppLogger.entries
-                appendLine("─── AppLogger (${toutes.size} entrées) ───")
-                toutes.forEach { e -> appendLine("${e.time} [${e.level.name[0]}] ${e.tag}: ${e.msg}") }
-            } else appendLine(tvLogs.text)
+            val toutes = AppLogger.entries
+            val gardees = if (fullLog) toutes else toutes.takeLast(400)
+            appendLine("─── AppLogger (${gardees.size} / ${toutes.size} entrées) ───")
+            gardees.forEach { e -> appendLine("${e.time} [${e.level.name[0]}] ${e.tag}: ${e.msg}") }
         }
 
         // « Copier » — copie tout sans fermer la fenêtre
