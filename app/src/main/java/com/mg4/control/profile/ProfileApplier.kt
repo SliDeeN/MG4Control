@@ -139,6 +139,10 @@ object ProfileApplier {
                     val rlOk = MG4Hardware.setRegenLevel(profile.regenLevel)
                     AppLogger.i(TAG, "  RegenLevel=${profile.regenLevel.label} → $rlOk")
                     ok = ok && rlOk
+                    // Discussion #219 : la voiture peut remettre One Pedal à zéro au passage en
+                    // READY (vu après un pré-chauffage iSmart) — relu et réécrit si besoin.
+                    if (profile.regenLevel == com.mg4.control.model.RegenLevel.ONE_PEDAL) OnePedalGuard.arm(profile.name)
+                    else OnePedalGuard.disarm("profil '${profile.name}' sans One Pedal")
                 } else {
                     AppLogger.i(TAG, "  RegenLevel non pris en compte par ce profil — inchangée")
                 }
