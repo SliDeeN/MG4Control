@@ -6,7 +6,7 @@ param([string]$Res, [string]$Out, [string]$ResBeta = '')
 # ASCII only on purpose: Windows PowerShell 5.1 reads scripts without BOM as ANSI.
 
 $ARROW_ESC = [string][char]92 + "u2192"
-$langs = [ordered]@{ fr = 'values'; en = 'values-en'; de = 'values-de'; es = 'values-es'; it = 'values-it'; pt = 'values-pt'; tr = 'values-tr'; pl = 'values-pl' }
+$langs = [ordered]@{ fr = 'values'; en = 'values-en'; de = 'values-de'; es = 'values-es'; it = 'values-it'; pt = 'values-pt'; tr = 'values-tr'; pl = 'values-pl'; nb = 'values-nb' }
 
 function Read-Strings([string]$dir) {
   $map = [ordered]@{}
@@ -22,6 +22,13 @@ function Read-Strings([string]$dir) {
     if ($v.Length -ge 2 -and $v.StartsWith($q) -and $v.EndsWith($q) -and -not $v.EndsWith([string][char]92 + $q)) { $v = $v.Substring(1, $v.Length - 2) }
     $v = $v.Replace('\''', '''').Replace('\"', '"').Replace('\n', "`n").Replace('\t', ' ').Replace($ARROW_ESC, [string][char]0x2192)
     $map[$n.GetAttribute('name')] = $v
+  }
+  # Plurals: one key per quantity, written name#one, name#few, name#many, name#other.
+  foreach ($p in $xml.SelectNodes('/resources/plurals')) {
+    foreach ($it in $p.SelectNodes('item')) {
+      $v = $it.InnerText.Replace('''', '''').Replace('\"', '"')
+      $map[$p.GetAttribute('name') + '#' + $it.GetAttribute('quantity')] = $v
+    }
   }
   return $map
 }

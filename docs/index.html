@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/site.css?v=d2d95626">
-  <link rel="stylesheet" href="assets/css/sim.css?v=233cfdd4">
+  <link rel="stylesheet" href="assets/css/sim.css?v=347609d7">
   <link rel="stylesheet" href="assets/css/explorer.css?v=f9d0452c">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -130,7 +130,7 @@
       <a class="btn btn-ghost" href="#installation"><span data-l="fr">Installation</span></a>
     </div>
     <div class="hero-meta">
-      <span><span data-l="fr">8 langues</span></span>
+      <span><span data-l="fr">9 langues</span></span>
       <span><span data-l="fr">7 firmwares : SWI133 · SWI132 · SWI68 · SWI69 · SWI131 · SWI165 · SWI173</span></span>
       <span><span data-l="fr">Licence GPL v3</span></span>
     </div>
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span>
-        <b><span data-l="fr">22 nouveautés dans cette version</span></b>
+        <b><span data-l="fr">27 nouveautés dans cette version</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span></button>
       </div>
       <div class="wn-list">
@@ -146,12 +146,17 @@
         <a href="#f-navside" data-feature="f-navside"><span data-l="fr">↔️ Menu côté conducteur</span></a>
         <a href="#f-rules" data-feature="f-rules"><span data-l="fr">🤖 Mes automatisations (expérimental)</span></a>
         <a href="#f-rule-skip" data-feature="f-rule-skip"><span data-l="fr">🚫 Déclenchements ignorés visibles</span></a>
+        <a href="#f-rule-editor" data-feature="f-rule-editor"><span data-l="fr">🧭 Éditeur : une tuile par option, puis son mode</span></a>
         <a href="#f-rule-tpl" data-feature="f-rule-tpl"><span data-l="fr">📋 Modèles prêts à l'emploi</span></a>
         <a href="#f-wheel" data-feature="f-wheel"><span data-l="fr">🎮 Boutons physiques : une carte par touche</span></a>
         <a href="#f-quick" data-feature="f-quick"><span data-l="fr">🎛️ Pop-up Réglages rapides</span></a>
         <a href="#f-drivecycle" data-feature="f-drivecycle"><span data-l="fr">🔁 Cycle des modes de conduite</span></a>
         <a href="#f-runrule" data-feature="f-runrule"><span data-l="fr">▶️ Lancer une automatisation d'un bouton</span></a>
         <a href="#f-bubblecolor" data-feature="f-bubblecolor"><span data-l="fr">🔵 Couleur des bulles</span></a>
+        <a href="#f-infobubbles" data-feature="f-infobubbles"><span data-l="fr">ℹ️ Bulles d'information</span></a>
+        <a href="#f-bubblelook" data-feature="f-bubblelook"><span data-l="fr">🫧 Apparence de chaque bulle</span></a>
+        <a href="#f-cluster-layout" data-feature="f-cluster-layout"><span data-l="fr">🧩 Écran conducteur : jauge et 4 infos à placer</span></a>
+        <a href="#f-cluster-miles" data-feature="f-cluster-miles"><span data-l="fr">📏 Kilomètres ou miles partout</span></a>
         <a href="#f-survcam" data-feature="f-survcam"><span data-l="fr">📹 Surveillance : la dashcam filme</span></a>
         <a href="#f-abrp" data-feature="f-abrp"><span data-l="fr">🗺️ Données en direct vers ABRP</span></a>
         <a href="#f-onepedal" data-feature="f-onepedal"><span data-l="fr">🦶 1 Pédale : retour au niveau d'avant</span></a>
@@ -162,7 +167,7 @@
         <a href="#f-stats-profile" data-feature="f-stats-profile"><span data-l="fr">👥 Statistiques par profil</span></a>
         <a href="#f-tripgraph" data-feature="f-tripgraph"><span data-l="fr">📈 Graphique de chaque trajet</span></a>
         <a href="#f-csv" data-feature="f-csv"><span data-l="fr">📤 Export CSV</span></a>
-        <a href="#f-autolang" data-feature="f-autolang"><span data-l="fr">🇵🇱 Nouvelle langue : polonais</span></a>
+        <a href="#f-autolang" data-feature="f-autolang"><span data-l="fr">🇳🇴 Nouvelles langues : polonais et norvégien</span></a>
         <a href="#f-silentupd" data-feature="f-silentupd"><span data-l="fr">⬇️ Mises à jour qui s'installent seules</span></a>
       </div>
     </div>
@@ -672,6 +677,9 @@
     <div class="pt is-new" id="f-runrule" data-hl-key="sc-btn1" data-demo="runRule">
       <h3><span data-l="fr">Lancer une automatisation</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
       <p data-l="fr">Une touche ou une bulle lance l'une de « Mes automatisations ».</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Dans l'éditeur, sous le déclencheur « Bouton, bulle ou automatisation », une ligne dit ce qui la lance (« Lancée par : Bouton ★ gauche (appui long), bulle « Clim » ») ou comment la lancer.</p>
+      </details>
     </div>
     <div class="pt" id="f-projection" data-hl-key="proj" data-demo="projection">
       <h3><span data-l="fr">Android Auto / CarPlay</span></h3>
@@ -693,7 +701,21 @@
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <p data-l="fr">Neuf pastilles ou un sélecteur de teinte ; le texte reste lisible quelle que soit la couleur. L'interrupteur de la page appartient au profil choisi.</p>
       </details>
+    </div>    <div class="pt is-new" id="f-infobubbles" data-hl-key="fl-edit" data-demo="infoBubble">
+      <h3><span data-l="fr">Bulles d'information</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
+      <p data-l="fr">Une bulle peut afficher une information au lieu d'un titre : batterie, autonomie, température extérieure, vitesse, consigne de clim, mode de conduite, régénération, profil, volume, heure… (#236).</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Dans l'édition d'une bulle, « Contenu » : Titre ou Information. Affichage : valeur, libellé + valeur (le titre tapé, sinon le nom de la valeur) ou icône + valeur. Au toucher : lancer l'action, ou rien (affichage seul ; l'appui long déplace toujours la bulle). Une valeur oui / non colore la bulle comme une bascule ; l'heure et la vitesse se relisent chaque seconde, le reste toutes les 5 s ; « — » quand la valeur est illisible. Les bulles existantes ne changent pas.</p>
+      </details>
     </div>
+    <div class="pt is-new" id="f-bubblelook" data-hl-key="fl-edit" data-demo="bubbleLook">
+      <h3><span data-l="fr">L'apparence de chaque bulle</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
+      <p data-l="fr">Opacité du fond, fond sombre, teinté ou clair, bordure ou non, et atténuation au repos : chaque bulle a son apparence (#230).</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Atténuée, une bulle passe à 40 % après 5 s sans toucher ; un toucher lance l'action et la rend nette. « Copier l'apparence de… » reprend celle d'une autre bulle, de ce profil ou d'un autre, et « Appliquer à toutes les bulles » l'étend au profil. Une bascule active reste opaque à 60 % au moins, et sous 35 % le texte prend un contour pour rester lisible. Une bulle jamais réglée garde son allure d'avant.</p>
+      </details>
+    </div>
+
     <div class="pt" id="f-customsc" data-hl-key="sc-custom" data-demo="customSc">
       <h3><span data-l="fr">Raccourcis perso</span></h3>
       <p data-l="fr">Créez vos propres actions : ouvrir une application ou l'une de ses fonctions, envoyer une diffusion, ouvrir un lien ou appeler un webhook.</p>
@@ -913,21 +935,22 @@
       <h3><span data-l="fr">Quand, Et si, Alors</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
       <p data-l="fr">De nombreux déclencheurs, conditions et actions, à combiner librement ; les automatisations existantes restent à part.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr"><b>Quand</b> : une valeur du véhicule qui devient vraie ou qui change, une heure, toutes les X minutes, lever ou coucher du soleil, démarrage de l'écran, passage en READY ou sortie de READY, passage en P ou en D, porte avant ouverte ou portes refermées, charge, prise, verrouillage, téléphone connecté ou déconnecté, changement de profil actif, lancement manuel… <b>Et si</b> : heure, jours, saison, hasard, variables, lieux (GPS) et une soixantaine de valeurs, en groupes Toutes / Au moins une / Aucune. <b>Alors</b> : réglages du véhicule et de la clim (aussi à la valeur d'une variable), luminosité, volume, média (lecture, pause), vitres, son (bip ou vos sons importés d'une clé USB), ouvrir une appli, raccourci perso, lancer ou arrêter une autre automatisation, retenir une valeur dans une variable, ajouter ou retirer, attendre, attendre que, Si / Sinon, Répéter, question Oui / Non, message vocal, navigation, données en direct vers ABRP. Une règle ne part que sur un « vrai » franc : une valeur illisible ne déclenche rien. Le Mode Garage les suspend toutes. Dans la maquette, les règles tournent vraiment (véhicule virtuel, heure de votre appareil).</p>
+        <p data-l="fr"><b>Quand</b> : un capteur du véhicule qui bascule vers vrai, vers faux ou dans les deux sens, qui passe au-dessus ou en dessous d'un seuil, qui devient, n'est plus ou change — chacun pendant la durée de votre choix —, une heure, toutes les X minutes, lever ou coucher du soleil, démarrage de l'écran, passage en READY ou sortie de READY, passage en P ou en D, porte avant ouverte ou portes refermées, charge, prise, verrouillage, téléphone connecté ou déconnecté, changement de profil actif, lancement manuel… <b>Et si</b> : heure, jours, saison, hasard, variables, lieux (GPS) et une soixantaine de valeurs, en groupes Toutes / Au moins une / Aucune. <b>Alors</b> : réglages du véhicule et de la clim (aussi à la valeur d'une variable), luminosité, volume, média (lecture, pause), vitres, son (bip ou vos sons importés d'une clé USB), ouvrir une appli, raccourci perso, lancer ou arrêter une autre automatisation, retenir une valeur dans une variable, ajouter ou retirer, attendre, attendre que, Si / Sinon, Répéter, question Oui / Non, navigation, actions Android (accueil, retour, fermer une appli, ouvrir une page des paramètres), données en direct vers ABRP. Une règle ne part que sur un « vrai » franc : une valeur illisible ne déclenche rien. Le Mode Garage les suspend toutes. Dans la maquette, les règles tournent vraiment (véhicule virtuel, heure de votre appareil).</p>
       </details>
     </div>
     <div class="pt is-new" id="f-rule-editor" data-hl-key="rule-act" data-demo="ruleEdit">
       <h3><span data-l="fr">Un éditeur sans clavier</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
-      <p data-l="fr">Chaque choix dans une fenêtre à étapes avec Retour ; les longues listes s'ouvrent en grand, avec catégories, recherche et « Récents ».</p>
+      <p data-l="fr">Déclencheurs, conditions et actions se choisissent de la même façon : une tuile par option, rangée dans sa catégorie, puis son mode au toucher.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Les valeurs se règlent aux boutons − et +, sans clavier. Rien n'est enregistré avant « Enregistrer » ; « Tester » lance la version affichée. Options : que faire si la règle est redéclenchée avant d'avoir fini, anti-rebond, seulement en READY. La page garde 30 règles au plus, un interrupteur général, l'historique des 20 dernières exécutions avec leur journal, les variables (à renommer partout d'un coup, modifier ou supprimer) et les lieux (à renommer, agrandir, déplacer à la position actuelle ou supprimer) ; export et import en JSON (Téléchargements, clé USB ou autre dossier). <b>Copier</b>, <b>Couper</b> et <b>Coller</b> dans chaque menu ⋮ : « Coller » n'apparaît que là où l'élément a sa place. La carte d'une règle résume ce que fait un bloc Si / Sinon (« si X → A ; sinon → B »).</p>
+        <p data-l="fr">Les longues listes s'ouvrent en grand, avec catégories, recherche et « Récents ». « Clim » est une seule tuile : on la touche, puis on choisit « Régler sur… » (une valeur précise) ou « Bascule » ; de même « Cycle (valeur suivante) » et « Pas à pas + / − ». Un capteur propose ses modes (vers VRAI, vers FAUX, les deux sens, au-dessus, en dessous…) et les raccourcis qui en relèvent sous leur nom (« La voiture passe en READY », « Début de charge »…). La recherche ne montre que les tuiles, mais les trouve aussi par les mots de leurs modes : « début de charge » trouve « En charge ». Chaque déclencheur qui suit un état demande « Pendant combien de temps ? » (« Tout de suite » par défaut). Sous un déclencheur « Bouton, bulle ou automatisation », l'éditeur dit ce qui la lance. Les valeurs se règlent aux boutons − et +. Rien n'est enregistré avant « Enregistrer » ; « Tester » lance la version affichée. Options : que faire si la règle est redéclenchée avant d'avoir fini, anti-rebond, seulement en READY. La page garde 30 règles au plus, un interrupteur général, l'historique des 20 dernières exécutions avec leur journal, les variables et les lieux ; export et import en JSON (Téléchargements, clé USB ou autre dossier). <b>Copier</b>, <b>Couper</b> et <b>Coller</b> dans chaque menu ⋮.</p>
       </details>
     </div>
+
     <div class="pt is-new" id="f-rule-skip" data-hl-key="rules-tools" data-demo="rules">
       <h3><span data-l="fr">Déclenchements ignorés</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
-      <p data-l="fr">Quand une automatisation se déclenche mais ne s'exécute pas, sa carte le dit en orange, avec la raison.</p>
+      <p data-l="fr">Quand une automatisation se déclenche mais ne s'exécute pas, sa carte le dit en orange, avec la raison ; deux pastilles comptent ses lancements et ses refus.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Raisons : condition fausse (avec la valeur lue), condition illisible, voiture pas en READY, règle encore en cours, anti-rebond ou Mode Garage. L'historique les garde aussi, avec le déclencheur qui les a lancées, et se filtre en Toutes / Exécutées / Ignorées ; les refus identiques qui se suivent sont regroupés (×N). La ligne orange disparaît à la prochaine exécution.</p>
+        <p data-l="fr">Raisons : condition fausse (avec la valeur lue), condition illisible, voiture pas en READY, règle encore en cours, anti-rebond ou Mode Garage. L'historique les garde aussi, avec le déclencheur qui les a lancées, et se filtre en Toutes / Exécutées / Ignorées ; les refus identiques qui se suivent sont regroupés (×N). La ligne orange disparaît à la prochaine exécution. Les pastilles « N lancées » et « N ignorées » (en orange) partent de la création de la règle, survivent à ses modifications et ne comptent pas « Tester » ; la dernière exécution se lit « 2 actions réussies, 0 en échec ».</p>
       </details>
     </div>
     <div class="pt is-new" id="f-rule-tpl" data-hl-key="rule-tpl" data-demo="ruleTpl">
@@ -938,7 +961,7 @@
       <h3><span data-l="fr">Données en direct vers ABRP</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
       <p data-l="fr">Une action « ABRP : données en direct » envoie niveau de batterie, puissance, vitesse et charge à A Better Route Planner, pour des itinéraires qui suivent la voiture (#188).</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Version en ligne seulement. Comptes ABRP saisis à l'écran ou importés d'un fichier sur clé USB (un fichier modèle est fourni, clé API comprise) ; cadence réglable en roulant, en charge et à l'arrêt ; position envoyée seulement si vous l'acceptez. La clé partagée de MG4Control est limitée par ABRP à 2 envois par seconde pour tous les utilisateurs réunis : un avertissement le rappelle et renvoie vers une clé personnelle gratuite. Modèle « ABRP selon le profil » pour suivre le profil actif.</p>
+        <p data-l="fr">Version en ligne seulement. Comptes ABRP saisis à l'écran ou importés d'un fichier sur clé USB (un fichier modèle est fourni, clé API comprise) ; cadence réglable en roulant, en charge et à l'arrêt ; position envoyée seulement si vous l'acceptez. La clé partagée de MG4Control est limitée par ABRP à 2 envois par seconde pour tous les utilisateurs réunis : un avertissement le rappelle et renvoie vers une clé personnelle gratuite. Modèle « ABRP selon le profil » pour suivre le profil actif. À l'arrêt, l'envoi peut descendre à une fois par minute (#232) ; après l'ajout d'un compte, MG4Control propose de créer l'automatisation qui lance l'envoi.</p>
       </details>
     </div>
   </div>
@@ -1022,7 +1045,7 @@
       <h3><span data-l="fr">Ou mettre en pause</span></h3>
       <p data-l="fr">Au lieu de baisser le volume, la carte peut mettre le média en pause, puis reprendre la lecture.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">La carte s'appelle désormais « Média en quittant la voiture ». En pause, le média n'est arrêté que s'il jouait, et la lecture ne reprend (à la fermeture de la porte, ou au retour en READY sans porte lisible) que si c'est MG4Control qui l'avait mise en pause.</p>
+        <p data-l="fr">La carte s'appelle désormais « Média en quittant la voiture ». En pause, le média n'est arrêté que s'il jouait, et la lecture ne reprend (à la fermeture de la porte, ou au retour en READY sans porte lisible) que si c'est MG4Control qui l'avait mise en pause. Pause et reprise sont vérifiées, avec d'autres voies si la première ne suffit pas, Android Auto et CarPlay compris (#235).</p>
       </details>
     </div>
   </div>
@@ -1060,7 +1083,7 @@
       <h3><span data-l="fr">Graphique de chaque trajet</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
       <p data-l="fr">Des barres de consommation le long du trajet, la récupération sous zéro ; Vitesse et Dénivelé ajoutent une bande dessous.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Couleur selon la consommation (sous 14, de 14 à 22, au-delà de 22 kWh/100 km). La largeur des barres est choisie à l'affichage : 120 barres au plus, jamais moins de 200 m. L'énergie vient de la puissance intégrée à la seconde, avec l'altitude GPS ; la distance est aussi mesurée à la seconde. Les trajets d'avant la 2.7.0 n'ont pas de graphique.</p>
+        <p data-l="fr">Couleur selon la consommation (sous 14, de 14 à 22, au-delà de 22 kWh/100 km). La largeur des barres est choisie à l'affichage : 120 barres au plus, jamais moins de 200 m. L'énergie vient de la puissance intégrée à la seconde, avec l'altitude GPS ; la distance est aussi mesurée à la seconde. Les bandes Vitesse et Dénivelé sont à l'échelle du trajet, leur maximum en pointillés. Les trajets d'avant la 2.7.0 n'ont pas de graphique.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-csv" data-hl-key="st-export" data-demo="statsExport">
@@ -1152,28 +1175,35 @@
       <h3><span data-l="fr">Un module sur le combiné</span></h3>
       <p data-l="fr">Le carré central du combiné, celui de la navigation et de la musique, affiche un module MG4Control à la place de sa page d'origine.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Activez « Module sur le combiné » dans Réglages, onglet Interface. Le module s'affiche dès le démarrage de l'application, sans attendre le READY, et prend le fond du combiné pour s'y fondre. Le combiné est un calculateur à part : seul ce carré de 260 × 260 px vient de l'écran central, où une application SAIC le dessine, et elle n'existe que sur SWI133, SWI68 et SWI165. Sur les firmwares A9 (SWI69, SWI131, SWI132), le combiné dessine tout lui-même : rien ne peut s'y afficher, et la carte n'apparaît pas dans les réglages. Essayez l'aperçu sous les cartes.</p>
+        <p data-l="fr">Activez « Module sur le combiné » dans Réglages, onglet Interface. Le module s'affiche dès le démarrage de l'application, sans attendre le READY, et prend le fond du combiné pour s'y fondre. Le combiné est un calculateur à part : seul ce carré de 260 × 260 px vient de l'écran central, où une application SAIC le dessine : la carte apparaît partout où elle est installée (SWI133, SWI68, SWI165, et tout autre firmware qui l'a, #231). Sur les firmwares A9 (SWI69, SWI131, SWI132), le combiné dessine tout lui-même : rien ne peut s'y afficher, et la carte n'apparaît pas dans les réglages. Essayez l'aperçu sous les cartes.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-modules" data-hl-key="s-cluster-tabs" data-demo="cluster">
       <h3><span data-l="fr">Consommation ou puissance</span></h3>
       <p data-l="fr">Deux modules gradués : l'anneau de la consommation en direct, ou l'arc de la puissance, la récupération à gauche, la puissance à droite et la consommation instantanée dessous.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Consommation : en Wh/km ou en kWh/100 km, en roulant, sur une échelle logarithmique jusqu'à 3 000 Wh/km (300 kWh/100 km) pour que les pointes d'accélération restent lisibles ; les graduations suivent l'unité ; à l'arrêt, les kW consommés (clim, accessoires) ; en récupération, dès 5 km/h, une consommation négative, en bleu (25 kW récupérés à 60 km/h : −41,7 kWh/100 km), l'anneau montrant les kW récupérés. Puissance : de 60 kW récupérés à 320 kW (la XPower), sur une échelle resserrée qui fait bouger l'arc en roulant — 20 kW en remplissent déjà un quart —, en orange quand la batterie se vide, en bleu quand elle se recharge ; le remplissage s'arrête net au zéro ; des kW entiers en roulant, et dessous, en grand, la consommation instantanée, négative et bleue en récupération. Au pied, la moyenne du trajet depuis le READY (récupération déduite), plus l'énergie récupérée sur le module Consommation ; la batterie, déjà sur le combiné, n'y est plus. En haut, une pastille : le profil appliqué dans la couleur de son mode de conduite, ou le mode. Le chiffre ne saute pas d'une valeur à l'autre : il compte (100, 101… 300), et la jauge glisse avec lui.</p>
+        <p data-l="fr">Consommation : en Wh/km ou en kWh/100 km, en roulant, sur une échelle logarithmique jusqu'à 3 000 Wh/km (300 kWh/100 km) pour que les pointes d'accélération restent lisibles ; les graduations suivent l'unité ; à l'arrêt, les kW consommés (clim, accessoires) ; en récupération, dès 5 km/h, une consommation négative, en bleu (25 kW récupérés à 60 km/h : −41,7 kWh/100 km), l'anneau montrant les kW récupérés. Puissance : de 60 kW récupérés à 320 kW (la XPower), sur une échelle resserrée qui fait bouger l'arc en roulant — 20 kW en remplissent déjà un quart —, en orange quand la batterie se vide, en bleu quand elle se recharge ; le remplissage s'arrête net au zéro ; des kW entiers en roulant, et dessous, en grand, la consommation instantanée, négative et bleue en récupération. Autour de la jauge, par défaut, le profil appliqué en pastille (dans la couleur de son mode de conduite) en haut, la moyenne du trajet depuis le READY (récupération déduite) et l'énergie récupérée en bas : des cases à régler dans la personnalisation avancée. Le chiffre ne saute pas d'une valeur à l'autre : il compte (100, 101… 300), et la jauge glisse avec lui.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-cluster-layout" data-hl-key="s-cluster-layout" data-demo="clusterLayout">
+      <h3><span data-l="fr">La jauge et 4 infos à placer</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
+      <p data-l="fr">La jauge en haut, au milieu ou en bas, et jusqu'à 4 informations autour : profil, mode, moyenne, récupération, distance, énergie, puissance, batterie, autonomie, température, heure… (#229).</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Réglages › Interface › Écran conducteur › « Personnalisation avancée » : un aperçu animé à gauche ; touchez une case ou la jauge pour la régler, pressez-la longuement pour la déplacer (dans la maquette, touchez pour régler). Chaque case : valeur, libellé + valeur, icône + valeur ou pastille, trois tailles, et son unité (la moyenne en Wh/km, kWh/100 km ou km/kWh, la puissance en kW ou en chevaux). La jauge : position, épaisseur, couleurs de la consommation et de la récupération, repère de la moyenne du trajet, kW sous la consommation ou consommation sous les kW — les options suivent la jauge choisie dans l'aperçu, qui se rouvre sur la dernière choisie. La jauge de puissance peut compter en chevaux, avec des graduations rondes (25, 50, 100, 200 ch…). Une rangée sans information disparaît sur le combiné et la jauge s'agrandit. Rien n'est enregistré avant « Enregistrer », pour tous les profils sélectionnés.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-tabs" data-hl-key="s-cluster-refresh" data-demo="cluster">
       <h3><span data-l="fr">Un module par onglet, et un aperçu</span></h3>
       <p data-l="fr">Un module pour l'onglet Navigation, un autre (ou aucun) pour l'onglet Musique ; à côté des réglages, un aperçu sur un trajet simulé suit chaque changement.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Les onglets du combiné se choisissent au volant, et le module suit l'onglet affiché. Ordinateur de bord, pression des pneus et réglages sont dessinés par le combiné lui-même : aucun module ne peut s'y afficher. Les réglages sont rangés en trois groupes : Modules ; Apparence, avec le style (dynamique ou discret) et la pastille (profil, mode de conduite ou aucune) ; Unités, avec celle de la jauge (Wh/km ou kWh/100 km) et, à part, celle de la moyenne du trajet, qui peut aussi s'écrire en km/kWh. « Avancé » déplie l'actualisation, de 0,1 à 1 s (1 s par défaut : plus court, plus réactif, mais le chiffre bouge davantage), et la durée de l'animation, de 0,2 à 2 s (0,8 s par défaut), le temps que met la jauge pour glisser d'une valeur à la suivante. Le mode de conduite et le profil sont relus toutes les 10 secondes.</p>
+        <p data-l="fr">Les onglets du combiné se choisissent au volant, et le module suit l'onglet affiché. Ordinateur de bord, pression des pneus et réglages sont dessinés par le combiné lui-même : aucun module ne peut s'y afficher. Les réglages sont rangés en trois groupes : Modules ; Apparence, avec le style (dynamique ou discret) et la personnalisation avancée ; Unités, avec celle de la jauge (Wh/km ou kWh/100 km) — la moyenne du trajet a la sienne dans sa case, km/kWh compris. « Avancé » déplie l'actualisation, de 0,1 à 1 s (1 s par défaut : plus court, plus réactif, mais le chiffre bouge davantage), et la durée de l'animation, de 0,2 à 2 s (0,8 s par défaut), le temps que met la jauge pour glisser d'une valeur à la suivante. Le mode de conduite et le profil sont relus toutes les 10 secondes.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-discreet" data-hl-key="s-cluster-style" data-demo="clusterDiscreet">
       <h3><span data-l="fr">Style discret</span></h3>
       <p data-l="fr">Pour qui trouve distrayants les chiffres qui défilent : une barre fine graduée, des chiffres fixes sous les crans, et la moyenne du trajet en bas.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Puissance : le zéro marqué, la récupération à gauche en bleu, la puissance à droite en gris clair. Consommation : une courte zone de récupération à gauche, puis l'échelle ; un triangle « moy. » marque la moyenne du trajet, et la barre est verte en dessous, orange au-dessus. Mêmes échelles que le style dynamique (60 kW de récupération, 320 kW, 3 000 Wh/km), même pastille, même moyenne en bas. La barre suit en deux secondes, sans trembler, quelle que soit l'actualisation. Réglages › Interface › Apparence › Style.</p>
+        <p data-l="fr">Puissance : le zéro marqué, la récupération à gauche en bleu, la puissance à droite en gris clair. Consommation : une courte zone de récupération à gauche, puis l'échelle ; un triangle « moy. » marque la moyenne du trajet, et la barre est verte en dessous, orange au-dessus. Mêmes échelles que le style dynamique (60 kW de récupération, 320 kW, 3 000 Wh/km), mêmes cases d'information. La barre suit en deux secondes, sans trembler, quelle que soit l'actualisation. Réglages › Interface › Apparence › Style.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-charge" data-hl-key="s-cluster-preview" data-demo="chargeCluster">
@@ -1190,13 +1220,14 @@
         <p data-l="fr">En haut de la carte, « Réglage de : » montre tous les profils en puces, à sélection multiple. Toute la carte suit le profil actif, et un nouveau profil démarre avec le module coupé.</p>
       </details>
     </div>
-    <div class="pt" id="f-cluster-miles" data-hl-key="s-cluster-dist" data-demo="clusterMiles">
-      <h3><span data-l="fr">Kilomètres ou miles</span></h3>
-      <p data-l="fr">Une ligne Distance : Auto, km ou miles. Auto suit l'unité réglée sur la voiture.</p>
+    <div class="pt is-new" id="f-cluster-miles" data-hl-key="s-distance" data-demo="distance">
+      <h3><span data-l="fr">Kilomètres ou miles</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
+      <p data-l="fr">Un réglage général, Réglages › Interface › Unité de distance : Auto, km ou miles, pour les statistiques, l'écran conducteur et les bulles d'information.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">En miles, tout le module bascule : jauge en Wh/mi ou kWh/100 mi, moyenne en Wh/mi, kWh/100 mi ou mi/kWh, sans jamais mélanger les unités. Auto est le choix par défaut ; un choix déjà fait est gardé.</p>
+        <p data-l="fr">Auto suit l'unité réglée sur la voiture. En miles, tout bascule sans jamais mélanger les unités : jauge en Wh/mi ou kWh/100 mi, moyenne en Wh/mi, kWh/100 mi ou mi/kWh, distances et vitesses des statistiques. Le choix fait autrefois sur l'écran conducteur est repris. L'export CSV reste en km.</p>
       </details>
     </div>
+
     <div class="pt" id="f-cluster-power" data-hl-key="s-cluster-power" data-demo="clusterPower">
       <h3><span data-l="fr">Échelle de puissance adaptée</span></h3>
       <p data-l="fr">La jauge de puissance s'adapte à votre MG4 au lieu d'aller toujours jusqu'à 320 kW.</p>
@@ -1207,7 +1238,7 @@
   </div>
   <div class="widget" id="apercu-module">
     <h3><span data-l="fr">Aperçu du module</span></h3>
-    <p class="sub" data-l="fr">Le module tel qu'il s'affiche dans le carré central du combiné, avec le style, les unités, la pastille et l'animation réglés dans la maquette. La conduite est simulée : choisissez le module et le style, accélérez, freinez, ou branchez une borne.</p>
+    <p class="sub" data-l="fr">Le module tel qu'il s'affiche dans le carré central du combiné, avec le style, les unités, les cases d'information et l'animation réglés dans la maquette. La conduite est simulée : choisissez le module et le style, accélérez, freinez, ou branchez une borne.</p>
     <div class="cl" data-cluster></div>
   </div>
 </section>
@@ -1336,7 +1367,7 @@
       <h3><span data-l="fr">Langue de la voiture</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
       <p data-l="fr">Au premier lancement, MG4Control prend la langue de la voiture si elle est traduite ; sinon il vous la demande.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Huit langues : français, anglais, allemand, espagnol, italien, portugais, turc et, nouveau, polonais. Les pop-ups affichés avant la première ouverture de l'application suivent aussi cette langue. Un choix déjà fait n'est pas modifié.</p>
+        <p data-l="fr">Neuf langues : français, anglais, allemand, espagnol, italien, portugais, turc et, nouveaux, polonais et norvégien (bokmål, #239). Les pop-ups affichés avant la première ouverture de l'application suivent aussi cette langue. Un choix déjà fait n'est pas modifié.</p>
       </details>
     </div>
   </div>
@@ -1660,8 +1691,8 @@
 <div class="dock" aria-label="Véhicule virtuel"></div>
 <button type="button" class="to-top" aria-label="Revenir en haut de la page" title="Revenir en haut de la page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="assets/js/strings.js?v=be0bb142"></script>
-<script src="assets/js/sim.js?v=473a5fe8"></script>
+<script src="assets/js/strings.js?v=7bbcc5b3"></script>
+<script src="assets/js/sim.js?v=8ae1b5f0"></script>
 <script src="assets/js/site.js?v=eae0ab3a"></script>
 <script src="assets/js/explorer.js?v=72fb983a"></script>
 </body>

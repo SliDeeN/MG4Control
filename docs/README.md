@@ -26,7 +26,7 @@ sitemap.xml             Plan du site pour les moteurs de recherche (généré)
 assets/css/site.css     Mise en page commune (thème clair/sombre, cartes, widgets)
 assets/css/explorer.css Explorateur : maquette collée, barre de thèmes, liste des fonctionnalités
 assets/css/sim.css      Maquette de l'app : palette et dimensions de res/values*/colors.xml
-assets/js/strings.js    Libellés de l'app en 7 langues, générés depuis res/values*/strings.xml
+assets/js/strings.js    Libellés de l'app en 9 langues (pluriels compris : clé « nom#one »…), générés depuis res/values*/strings.xml
 assets/js/sim.js        Simulateur : écrans, règles par firmware, raccourcis, automatisations, API
 assets/js/site.js       Lien de langue, thème, liens fonctionnalités → maquette, widgets
 assets/js/explorer.js   Maquette épinglée, barre de thèmes, filtre des nouveautés, retour aux explications
@@ -122,9 +122,11 @@ langue mène à un dossier et non à sa page.
 
 ## Version documentée
 
-Le site et le simulateur décrivent la **2.7.0** (code de la branche `beta` au 06/11/2026 : nouveau look
+Le site et le simulateur décrivent la **2.7.0** (code de la branche `beta` au 12/11/2026 : nouveau look
 — menu principal en colonne, sous-onglets en pastilles, palette DiAuto —, Boutons physiques, Réglages rapides, cycle
-des modes, Mes automatisations, statistiques par profil, graphique par trajet, export CSV). Ils sont prévus pour être publiés en
+des modes, Mes automatisations — une tuile par option, puis son mode —, statistiques par profil, graphique par trajet, export CSV,
+écran conducteur V2 avec ses cases d'information, bulles d'information et apparence par bulle, unité de distance générale,
+norvégien). Ils sont prévus pour être publiés en
 même temps que la release 2.7.0 : le bouton « Télécharger la dernière version » pointe vers
 `releases/latest`, et publier plus tôt annoncerait des fonctions que la version stable n'a pas.
 
@@ -154,7 +156,8 @@ Régénérer ensuite les pages.
 
 ## Mettre à jour les libellés de l'app
 
-`assets/js/strings.js` est une copie des `strings.xml` de l'application (7 langues). Après une
+`assets/js/strings.js` est une copie des `strings.xml` de l'application (9 langues, avec les `<plurals>` lus
+en clés « nom#one », « nom#few »…, que `P()` de `sim.js` choisit comme Android). Après une
 modification des traductions, le régénérer depuis la racine du dépôt, puis régénérer les pages :
 
 ```powershell

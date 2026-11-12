@@ -36,6 +36,13 @@
     const t = (STR[appLang()] || {})[key] ?? (STR.fr || {})[key] ?? key;
     return args.length ? fmt(t, args) : t.replace(/%%/g, '%');
   }
+  /** Pluriel de l'app (<plurals>, clés « nom#one », « nom#few »…), choisi comme Android le fait. */
+  function P(key, n) {
+    const l = appLang(), d = STR[l] || {}, f = STR.fr || {}, m10 = n % 10, m100 = n % 100;
+    const q = n === 1 || (l === 'fr' && n === 0) ? 'one' : l === 'pl' ? (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'few' : 'many') : 'other';
+    const t = d[key + '#' + q] ?? d[key + '#other'] ?? f[key + '#' + q] ?? f[key + '#other'] ?? key;
+    return fmt(t, [n]);
+  }
 
   // ── Modèle ────────────────────────────────────────────────────────────────
   const DRIVE = ['ECO', 'NORMAL', 'SPORT', 'SNOW', 'CUSTOM'];
@@ -54,7 +61,7 @@
   /** Plafond de ProfileManager.MAX_PROFILES : dix depuis la 2.6.9. */
   const MAX_PROFILES = 10;
   /** Réglages de l'écran conducteur gardés par profil (lus dès l'état initial). */
-  const CL_KEYS = ['cluster', 'clusterNav', 'clusterMedia', 'clusterStyle', 'clusterPill', 'clusterUnit', 'clusterAvg', 'clusterDist', 'clusterPowerMax'];
+  const CL_KEYS = ['cluster', 'clusterNav', 'clusterMedia', 'clusterStyle', 'clusterPill', 'clusterUnit', 'clusterAvg', 'clusterDist', 'clusterPowerMax', 'clusterLayout'];
   function mkProfile(o) {
     return Object.assign({
       id: uid(), name: '', driveMode: 'NORMAL', regen: 'MEDIUM', energy: false, tsr: true,
@@ -164,6 +171,9 @@
                   // « Ce que règle AUTO », distance et fin d'échelle de puissance du combiné.
                   fullscreen: false, hvacZone: false, rescue: true, scopeAir: true, scopeLoop: true,
                   clusterDist: 'auto', clusterPowerMax: 'auto',
+                  // Écran conducteur V2 (issue #229) : null = la disposition d'avant ; unité de distance
+                  // générale (2026-11-10) ; jauge montrée dans la personnalisation avancée.
+                  clusterLayout: null, distUnit: 'auto', clLayMod: null,
                   // Côté du menu (NavSide) et « Garder l'A/C coupé » (#208, désactivé par défaut).
                   navSide: 'auto', keepAcOff: false },
       sc: {
@@ -221,7 +231,7 @@
       quick: { tiles: null },
       rules: { engine: true, hist: [], list: [
         { id: 'r1', name: L('Message au démarrage', 'Startup message'), on: true, trg: [{ k: 'app_start' }], cond: [], act: [{ k: 'notify', msg: L('MG4Control est prêt', 'MG4Control is ready') }], opt: { ready: false, restart: false }, last: null },
-        { id: 'r2', name: L('Volant chauffant : arrêt après 15 min', 'Heated steering wheel: off after 15 min'), on: false, trg: [{ k: 'steering_for', min: 15 }], cond: [],
+        { id: 'r2', name: L('Volant chauffant : arrêt après 15 min', 'Heated steering wheel: off after 15 min'), on: false, trg: [{ k: 'steering_on', for: 900 }], cond: [],
           act: [{ k: 'set', key: 'steering', v: false }, { k: 'notify', msg: L('Volant chauffant coupé après 15 min', 'Heated steering wheel switched off after 15 min') }], opt: { ready: false, restart: false }, last: null },
         { id: 'r3', name: L('Luminosité jour / nuit selon le soleil', 'Day / night brightness from the sun'), on: false, trg: [{ k: 'sunrise' }, { k: 'sunset' }, { k: 'ready' }], cond: [],
           act: [{ k: 'if', c: { k: 'sun_up', is: true }, then: [{ k: 'brightness', v: 80 }], else: [{ k: 'brightness', v: 25 }] }], opt: { ready: false, restart: false }, last: null }
@@ -283,7 +293,8 @@
   function clSet(key, v) { state.settings[key] = v; const p = activeProfile(); if (p) clCfg(p.id)[key] = v; }
   const MI_KM = 1.609344;
   /** Miles ? « Auto » suit l'unité réglée sur la voiture (0x2140f439). */
-  const clMiles = (cfg) => { const d = (cfg || state.settings).clusterDist || 'auto'; return (d === 'auto' ? state.car.distUnit : d) === 'mi'; };
+  // Unité de distance : un réglage général depuis le 2026-11-10 (Réglages › Interface), plus du combiné.
+  const clMiles = () => { const d = state.settings.distUnit || 'auto'; return (d === 'auto' ? state.car.distUnit : d) === 'mi'; };
   /** Fin d'échelle de la jauge de puissance : choisie, ou apprise en roulant (Auto). */
   const clPowerFull = (cfg) => { const v = (cfg || state.settings).clusterPowerMax; return v && v !== 'auto' ? +v : state.clLearned; };
   const POWER_STEPS = [100, 125, 150, 180, 200, 250, 320];
@@ -1510,10 +1521,10 @@
   const R_TRG = {
     ready: { cat: 'car', name: () => S('rule_yes_fmt', S('rule_sig_ready')), txt: () => S('rule_yes_fmt', S('rule_sig_ready')) },
     app_start: { cat: 'car', name: () => S('rule_event_app_start'), txt: () => S('rule_event_app_start') },
-    door: { cat: 'car', ok: (k) => k.doorSensor, name: () => S('rule_event_door'), txt: () => S('rule_event_door') },
+    door: { cat: 'car', ok: (k) => k.doorSensor, name: () => S('rule_event_door'), txt: () => S('rule_event_door'), st: () => !!(car().doors.L || car().doors.R) },
     soc_below: { cat: 'charge', def: { v: 20 }, name: () => S('rule_sig_soc') + ' · ' + lc(S('rule_op_below')), txt: (t) => S('rule_sig_soc') + ' ' + lc(S('rule_op_below')) + ' ' + t.v + ' %', val: (t) => car().soc < t.v },
-    charge_start: { cat: 'charge', name: () => S('rule_trg_charge_start'), txt: () => S('rule_trg_charge_start') },
-    charge_end: { cat: 'charge', name: () => S('rule_trg_charge_end'), txt: () => S('rule_trg_charge_end') },
+    charge_start: { cat: 'charge', name: () => S('rule_trg_charge_start'), txt: () => S('rule_trg_charge_start'), st: () => !!car().charge },
+    charge_end: { cat: 'charge', name: () => S('rule_trg_charge_end'), txt: () => S('rule_trg_charge_end'), st: () => !car().charge },
     temp_below: { cat: 'car', def: { v: 5 }, name: () => S('rule_sig_outside_temp') + ' · ' + lc(S('rule_op_below')), txt: (t) => S('rule_sig_outside_temp') + ' ' + lc(S('rule_op_below')) + ' ' + t.v + ' °C', val: (t) => car().outside < t.v },
     temp_above: { cat: 'car', def: { v: 28 }, name: () => S('rule_sig_outside_temp') + ' · ' + lc(S('rule_op_above')), txt: (t) => S('rule_sig_outside_temp') + ' ' + lc(S('rule_op_above')) + ' ' + t.v + ' °C', val: (t) => car().outside > t.v },
     steering_for: { cat: 'car', ok: (k) => k.heat, def: { min: 15 }, name: () => S('rule_yes_fmt', S('rule_key_steering')) + ' · ' + S('rule_for_title').replace(/ ?\?$/, ''),
@@ -1525,10 +1536,20 @@
     sunrise: { cat: 'time', name: () => S('rule_sunrise'), txt: () => S('rule_sunrise') },
     sunset: { cat: 'time', name: () => S('rule_sunset'), txt: () => S('rule_sunset') },
     manual: { cat: 'time', name: () => S('rule_trg_manual'), txt: () => S('rule_trg_manual') },
-    ready_on: { cat: 'car', name: () => S('rule_trg_ready_on'), txt: () => S('rule_trg_ready_on') },
-    ready_off: { cat: 'car', name: () => S('rule_trg_ready_off'), txt: () => S('rule_trg_ready_off') },
-    door_close: { cat: 'car', ok: (k) => k.doorSensor, name: () => S('rule_event_door_close'), txt: () => S('rule_event_door_close') },
-    profile_change: { cat: 'car', name: () => S('rule_trg_profile_changes'), txt: () => S('rule_trg_profile_changes') }
+    ready_on: { cat: 'car', name: () => S('rule_trg_ready_on'), txt: () => S('rule_trg_ready_on'), st: () => !!car().ready },
+    ready_off: { cat: 'car', name: () => S('rule_trg_ready_off'), txt: () => S('rule_trg_ready_off'), st: () => !car().ready },
+    door_close: { cat: 'car', ok: (k) => k.doorSensor, name: () => S('rule_event_door_close'), txt: () => S('rule_event_door_close'), st: () => !car().doors.L && !car().doors.R },
+    profile_change: { cat: 'car', name: () => S('rule_trg_profile_changes'), txt: () => S('rule_trg_profile_changes') },
+    // Modes d'un capteur (2026-11-12) : « Bascule (les deux sens) » = la valeur change ; vrai / faux / seuil.
+    ready_change: { name: () => S('rule_sig_ready'), txt: () => S('rule_changes_fmt', S('rule_sig_ready')), chg: () => !!car().ready },
+    door_change: { ok: (k) => k.doorSensor, name: () => S('rule_sig_front_door'), txt: () => S('rule_changes_fmt', S('rule_sig_front_door')), chg: () => !!(car().doors.L || car().doors.R) },
+    soc_above: { def: { v: 80 }, name: () => S('rule_sig_soc'), txt: (t) => S('rule_sig_soc') + ' ' + lc(S('rule_op_above')) + ' ' + t.v + ' %', val: (t) => car().soc > t.v },
+    charging_change: { name: () => S('rule_sig_charging'), txt: () => S('rule_changes_fmt', S('rule_sig_charging')), chg: () => !!car().charge },
+    steering_on: { ok: (k) => k.heat, name: () => S('rule_key_steering'), txt: () => S('rule_yes_fmt', S('rule_key_steering')), val: () => !!car().steering },
+    steering_off: { ok: (k) => k.heat, name: () => S('rule_key_steering'), txt: () => S('rule_no_fmt', S('rule_key_steering')), val: () => !car().steering },
+    steering_change: { ok: (k) => k.heat, name: () => S('rule_key_steering'), txt: () => S('rule_changes_fmt', S('rule_key_steering')), chg: () => !!car().steering },
+    seat_above: { ok: (k) => k.heat, def: { v: 0 }, name: () => S('rule_key_seat_left'), txt: (t) => S('rule_key_seat_left') + ' ' + lc(S('rule_op_above')) + ' ' + t.v, val: (t) => car().seatL > t.v },
+    seat_below: { ok: (k) => k.heat, def: { v: 1 }, name: () => S('rule_key_seat_left'), txt: (t) => S('rule_key_seat_left') + ' ' + lc(S('rule_op_below')) + ' ' + t.v, val: (t) => car().seatL < t.v }
   };
   const R_COND = {
     time_range: { cat: 'time', def: { a: [22, 0], b: [6, 0] }, name: () => S('rule_cond_time'), txt: (c) => S('rule_range_fmt', hm(c.a[0], c.a[1]), hm(c.b[0], c.b[1])),
@@ -1539,16 +1560,17 @@
     temp_below: { cat: 'car', def: { v: 5 }, name: () => R_TRG.temp_below.name(), txt: (c) => R_TRG.temp_below.txt(c), ok: (c) => car().outside < c.v },
     temp_above: { cat: 'car', def: { v: 28 }, name: () => R_TRG.temp_above.name(), txt: (c) => R_TRG.temp_above.txt(c), ok: (c) => car().outside > c.v },
     soc_below: { cat: 'charge', def: { v: 20 }, name: () => R_TRG.soc_below.name(), txt: (c) => R_TRG.soc_below.txt(c), ok: (c) => car().soc < c.v },
+    soc_above: { def: { v: 80 }, name: () => S('rule_sig_soc'), txt: (c) => R_TRG.soc_above.txt(c), ok: (c) => car().soc > c.v },
     ready: { cat: 'car', def: { is: true }, name: () => S('rule_sig_ready'), txt: (c) => S(c.is ? 'rule_yes_fmt' : 'rule_no_fmt', S('rule_sig_ready')), ok: (c) => !!car().ready === c.is },
     drive_mode: { cat: 'car', def: { m: 'ECO' }, name: () => S('rule_sig_drive_mode'), txt: (c) => S('rule_set_fmt', S('rule_sig_drive_mode'), driveName(c.m)), ok: (c) => car().driveMode === c.m }
   };
   const R_ACT = {
-    set: { cat: 'climate', def: { key: 'hvac', v: true }, name: () => S('rule_act_set'), txt: (a) => S('rule_set_fmt', S('rule_key_' + a.key), valTxt(a.key, a.v)) },
-    profile: { cat: 'driving', name: () => S('rule_act_profile'), txt: (a) => S('rule_act_profile_fmt', profName(a.id)) },
+    set: { cat: 'climate', def: { key: 'hvac', v: true }, name: () => S('rule_choose_setting'), txt: (a) => S('rule_set_fmt', S('rule_key_' + a.key), valTxt(a.key, a.v)) },
+    profile: { cat: 'driving', name: () => S('rule_subject_profile'), txt: (a) => S('rule_act_profile_fmt', profName(a.id)) },
     brightness: { cat: 'screen', ok: (k) => k.bri, def: { v: 60 }, name: () => S('rule_sig_brightness'), txt: (a) => S('rule_set_fmt', S('rule_sig_brightness'), a.v + ' %') },
     volume: { cat: 'screen', def: { v: 10 }, name: () => S('rule_sig_volume'), txt: (a) => S('rule_set_fmt', S('rule_sig_volume'), a.v) },
     windows: { cat: 'comfort', def: { close: true }, name: () => S('rule_act_windows'), txt: (a) => S(a.close ? 'shortcuts_action_windows_close' : 'shortcuts_action_windows_open') },
-    shortcut: { cat: 'shortcuts', def: { a: 'HVAC_POPUP' }, name: () => S('rule_act_shortcut'), txt: (a) => S(ACTION_KEY[a.a] || 'rule_unknown') },
+    shortcut: { cat: 'shortcuts', def: { a: 'HVAC_POPUP' }, name: () => S('rule_choose_shortcut'), txt: (a) => S(ACTION_KEY[a.a] || 'rule_unknown') },
     run_rule: { cat: 'shortcuts', name: () => S('rule_act_rule'), txt: (a) => S('rule_run_fmt', ruleName(a.id)) },
     notify: { cat: 'screen', def: { msg: '' }, name: () => S('rule_act_notify'), txt: (a) => S('rule_act_notify_fmt', a.msg) },
     speak: { cat: 'screen', def: { msg: '' }, name: () => S('rule_act_speak'), txt: (a) => S('rule_speak_fmt', a.msg) },
@@ -1556,17 +1578,98 @@
     wait: { cat: 'flow', def: { s: 10 }, name: () => S('rule_act_wait'), txt: (a) => S('rule_act_wait_fmt', a.s) },
     if: { cat: 'flow', name: () => S('rule_act_if'), txt: (a) => S('rule_act_if_fmt', R_COND[a.c.k].txt(a.c)) },
     stop: { cat: 'flow', name: () => S('rule_act_stop'), txt: () => S('rule_act_stop') },
-    media: { cat: 'screen', def: { play: false }, name: () => S('rule_act_media'), txt: (a) => S('rule_set_fmt', S('rule_act_media'), S(a.play ? 'rule_act_media_play' : 'rule_act_media_pause')) },
+    media: { cat: 'screen', def: { play: false }, name: () => S('rule_subject_playback'), txt: (a) => S(a.play ? 'rule_act_media_play' : 'rule_act_media_pause') },
+    android: { def: { w: 'home' }, name: () => S('rule_act_android'), txt: (a) => S(R_ANDROID[a.w] || 'rule_unknown') },
     sound: { cat: 'screen', name: () => S('rule_act_sound'), txt: () => S('rule_set_fmt', S('rule_act_sound'), S('rule_sound_beep')) },
     stop_rule: { cat: 'shortcuts', name: () => S('rule_rule_stop'), txt: (a) => S('rule_stop_rule_fmt', ruleName(a.id)) },
     abrp: { cat: 'driving', def: { on: true }, name: () => S('abrp_rule_action'), txt: (a) => (a.on ? S('abrp_rule_start_fmt', L('Ma MG4', 'My MG4')) : S('abrp_rule_stop')) }
   };
-  const R_CAT = { trg: { car: 'rule_cat_car', charge: 'rule_cat_charge', time: 'rule_cat_time' },
-    cond: { car: 'rule_cat_car', charge: 'rule_cat_battery', time: 'rule_cat_time' },
-    act: { climate: 'rule_cat_climate', comfort: 'rule_cat_comfort', driving: 'rule_cat_driving', screen: 'rule_cat_screen_sound', shortcuts: 'rule_cat_shortcuts', flow: 'rule_cat_flow' } };
+  const R_ANDROID = { home: 'rule_android_home', back: 'rule_android_back', close: 'rule_android_close_app', settings: 'rule_android_settings' };
+  /** Les moments : un déclencheur qui n'est pas un état n'a pas de « Pendant ». */
+  const R_MOMENTS = ['app_start', 'time', 'every', 'sunrise', 'sunset', 'manual'];
+  /** Ordre des catégories de la grande fenêtre (Cat de l'éditeur). */
+  const R_CATS = ['car', 'time', 'places', 'driving', 'battery', 'climate', 'comfort', 'adas', 'media', 'screen_sound', 'screen_apps', 'connections', 'shortcuts', 'flow', 'system', 'advanced'];
+  /**
+   * Les tuiles d'une fenêtre de choix (2026-11-12) : une par option (capteur, réglage, action…),
+   * avec ses modes — un mode s'applique au toucher, plusieurs se choisissent ensuite. Pour les
+   * actions, un réglage et les raccourcis qui agissent sur la même chose ne font qu'une tuile.
+   */
+  function rSubjects(kind) {
+    const k = caps(), out = [];
+    const subj = (id, cat, name, modes) => { const m = modes.filter(Boolean); if (m.length) out.push({ id, cat, name, modes: m }); };
+    const md = (label, key, pre) => ({ label, k: key, pre: pre || {} });
+    if (kind === 'trg') {
+      subj('app_start', 'car', S('rule_event_app_start'), [md(S('rule_event_app_start'), 'app_start')]);
+      if (k.doorSensor) subj('door', 'car', S('rule_sig_front_door'), [md(S('rule_event_door'), 'door'), md(S('rule_event_door_close'), 'door_close'), md(S('rule_mode_both'), 'door_change')]);
+      subj('time', 'time', S('rule_trg_time'), [md(S('rule_trg_time'), 'time')]);
+      subj('every', 'time', S('rule_trg_every'), [md(S('rule_trg_every'), 'every')]);
+      subj('sun', 'time', S('rule_trg_sun'), [md(S('rule_sunrise'), 'sunrise'), md(S('rule_sunset'), 'sunset')]);
+      subj('ready', 'driving', S('rule_sig_ready'), [md(S('rule_trg_ready_on'), 'ready_on'), md(S('rule_trg_ready_off'), 'ready_off'), md(S('rule_mode_both'), 'ready_change')]);
+      subj('profile', 'driving', S('rule_sig_profile'), [md(S('rule_trg_profile_changes'), 'profile_change')]);
+      subj('soc', 'battery', S('rule_sig_soc'), [md(S('rule_mode_above'), 'soc_above'), md(S('rule_mode_below'), 'soc_below')]);
+      subj('charging', 'battery', S('rule_sig_charging'), [md(S('rule_trg_charge_start'), 'charge_start'), md(S('rule_trg_charge_end'), 'charge_end'), md(S('rule_mode_both'), 'charging_change')]);
+      subj('outside', 'climate', S('rule_sig_outside_temp'), [md(S('rule_mode_above'), 'temp_above'), md(S('rule_mode_below'), 'temp_below')]);
+      if (k.heat) {
+        subj('steering', 'comfort', S('rule_key_steering'), [md(S('rule_mode_to_true'), 'steering_on'), md(S('rule_mode_to_false'), 'steering_off'), md(S('rule_mode_both'), 'steering_change')]);
+        subj('seat', 'comfort', S('rule_key_seat_left'), [md(S('rule_mode_above'), 'seat_above'), md(S('rule_mode_below'), 'seat_below')]);
+      }
+      subj('manual', 'advanced', S('rule_trg_manual'), [md(S('rule_trg_manual'), 'manual')]);
+    } else if (kind === 'cond') {
+      subj('time_range', 'time', S('rule_cond_time'), [md(S('rule_cond_time'), 'time_range')]);
+      subj('days', 'time', S('rule_cond_days'), [md(S('rule_cond_days'), 'days')]);
+      subj('ready', 'driving', S('rule_sig_ready'), [md(S('segment_yes'), 'ready', { is: true }), md(S('segment_no'), 'ready', { is: false })]);
+      subj('drive_mode', 'driving', S('rule_sig_drive_mode'), [md(S('rule_op_is'), 'drive_mode')]);
+      subj('soc', 'battery', S('rule_sig_soc'), [md(S('rule_op_above'), 'soc_above'), md(S('rule_op_below'), 'soc_below')]);
+      subj('outside', 'climate', S('rule_sig_outside_temp'), [md(S('rule_op_above'), 'temp_above'), md(S('rule_op_below'), 'temp_below')]);
+      subj('sun_up', 'screen_sound', S('rule_sig_sun_up'), [md(S('segment_yes'), 'sun_up', { is: true }), md(S('segment_no'), 'sun_up', { is: false })]);
+      subj('random', 'flow', S('rule_cond_random'), [md(S('rule_cond_random'), 'random')]);
+    } else {
+      const av = availableActions(), used = new Set(['NONE', 'APPLY_PROFILE', 'OPEN_APP', 'OPEN_CUSTOM_APP', 'CUSTOM', 'RUN_RULE', 'ANDROID_SETTINGS']);
+      const sc = (a, label) => { if (!av.includes(a)) return null; used.add(a); return Object.assign(md(label || S(ACTION_KEY[a]), 'shortcut', { a }), { w: S(ACTION_KEY[a]) }); };
+      const one = (a, cat) => { const m = sc(a); if (m) subj('sc:' + a, cat, m.label, [m]); };
+      const tog = S('rule_act_mode_toggle'), cyc = S('rule_act_mode_cycle'), up = S('rule_act_mode_up'), dn = S('rule_act_mode_down'), setL = S('rule_act_mode_set');
+      const SET_CAT = { seat_left: 'comfort', seat_right: 'comfort', steering: 'comfort', battery_heat: 'battery', auto_high_beam: 'adas' };
+      const reg = (key, ...more) => subj('set:' + key, SET_CAT[key] || 'climate', S('rule_key_' + key), [SET_KEYS[key].ok(k) ? md(setL, 'set', { key }) : null].concat(more));
+      used.add('WINDOWS_OPEN_ALL'); used.add('WINDOWS_CLOSE_ALL');
+      subj('windows', 'car', S('rule_act_windows'), [md(S('shortcuts_action_windows_open'), 'windows', { close: false }), md(S('shortcuts_action_windows_close'), 'windows', { close: true })]);
+      subj('profile', 'car', S('rule_subject_profile'), state.profiles.map((p) => md(S('rule_act_profile_fmt', p.name), 'profile', { id: p.id })).concat([sc('PROFILE_CYCLE'), sc('PROFILE_PICKER')]));
+      one('VEHICLE_POWER_OFF', 'car');
+      ['DRIVE_MODE_CYCLE', 'REGEN_CYCLE', 'ONE_PEDAL', 'ENERGY_SAVING_TOGGLE'].forEach((a) => one(a, 'driving'));
+      reg('battery_heat', sc('BATTERY_HEAT_TOGGLE', tog));
+      one('CHARGE_POPUP', 'battery');
+      reg('hvac', sc('HVAC_TOGGLE', tog)); reg('ac', sc('HVAC_AC_TOGGLE', tog)); reg('hvac_auto');
+      reg('hvac_temp', sc('HVAC_TEMP_UP', up), sc('HVAC_TEMP_DOWN', dn));
+      subj('fan', 'climate', S('rule_key_hvac_fan'), [sc('HVAC_FAN_UP', up), sc('HVAC_FAN_DOWN', dn)]);
+      reg('recirc', sc('HVAC_RECIRC_CYCLE', cyc)); reg('defrost_front', sc('DEFROST_FRONT_TOGGLE', tog)); reg('defrost_rear', sc('DEFROST_REAR_TOGGLE', tog));
+      ['HVAC_AUTO_VOLUME_CYCLE', 'HVAC_POPUP', 'PRE_CLIMATE'].forEach((a) => one(a, 'climate'));
+      reg('seat_left', sc('SEAT_HEAT_LEFT_CYCLE', cyc)); reg('seat_right', sc('SEAT_HEAT_RIGHT_CYCLE', cyc)); reg('steering', sc('STEERING_HEAT_TOGGLE', tog));
+      reg('auto_high_beam', sc('AUTO_HIGH_BEAM_TOGGLE', tog));
+      ['AEB_CYCLE', 'TSR_TOGGLE', 'ESC_TOGGLE', 'DROWSINESS_TOGGLE', 'DROWSINESS_SEN_CYCLE', 'OVERSPEED_ALARM', 'SPEED_LIMIT_TONE', 'SOUND_WARNING', 'ADAS_CYCLE'].forEach((a) => one(a, 'adas'));
+      subj('playback', 'media', S('rule_subject_playback'), [md(S('rule_act_media_play'), 'media', { play: true }), md(S('rule_act_media_pause'), 'media', { play: false }), sc('MEDIA_PLAY_PAUSE', tog)]);
+      ['MEDIA_NEXT', 'MEDIA_PREVIOUS', 'AUDIO_SOURCE_CYCLE'].forEach((a) => one(a, 'media'));
+      subj('sound', 'media', S('rule_act_sound'), [md(S('rule_act_sound'), 'sound')]);
+      if (k.bri) subj('brightness', 'screen_sound', S('rule_sig_brightness'), [md(setL, 'brightness'), sc('BRIGHTNESS_UP', up), sc('BRIGHTNESS_DOWN', dn)]);
+      subj('volume', 'screen_sound', S('rule_sig_volume'), [md(setL, 'volume'), sc('VOLUME_UP', up), sc('VOLUME_DOWN', dn)]);
+      one('QUICK_SETTINGS', 'screen_apps');
+      subj('notify', 'screen_apps', S('rule_act_notify'), [md(S('rule_act_notify'), 'notify')]);
+      Object.keys(R_ANDROID).forEach((w) => subj('android:' + w, 'screen_apps', S(R_ANDROID[w]), [md(S(R_ANDROID[w]), 'android', { w })]));
+      one('PROJECTION', 'connections');
+      subj('abrp', 'connections', S('abrp_rule_action'), [md(S('abrp_rule_start_fmt', L('Ma MG4', 'My MG4')), 'abrp', { on: true }), md(S('abrp_rule_stop'), 'abrp', { on: false })]);
+      subj('rule', 'shortcuts', S('rule_act_rule'), [md(S('rule_rule_run'), 'run_rule'), md(S('rule_rule_stop'), 'stop_rule')]);
+      av.filter((a) => !used.has(a)).forEach((a) => one(a, 'shortcuts'));
+      ['confirm', 'wait', 'if', 'stop'].forEach((x) => subj(x, 'flow', R_ACT[x].name(), [md(R_ACT[x].name(), x)]));
+    }
+    return out;
+  }
+  /** Durée lisible (« 45 s », « 2 min », « 2 min 30 s »), comme l'éditeur. */
+  const rDur = (sec) => (sec < 60 ? S('rule_seconds_fmt', sec) : sec % 60 ? S('rule_minutes_fmt', Math.floor(sec / 60)) + ' ' + S('rule_seconds_fmt', sec % 60) : S('rule_minutes_fmt', sec / 60));
   const R_DEF = { trg: R_TRG, cond: R_COND, act: R_ACT };
   const rItem = (kind, it) => R_DEF[kind][it.k];
-  const rTxt = (kind, it) => { const d = rItem(kind, it); return d ? d.txt(it) : S('rule_unknown'); };
+  const rTxt = (kind, it) => {
+    const d = rItem(kind, it); if (!d) return S('rule_unknown');
+    const t = d.txt(it);
+    return kind === 'trg' && it.for > 0 ? S('rule_for_fmt', t, it.for) : t;
+  };
   const rClone = (o) => JSON.parse(JSON.stringify(o));
   /** Liste d'un chemin « trg », « cond », « act » ou « act.2.then » / « act.2.else » (blocs Si / Sinon). */
   function rList(rule, path) {
@@ -1595,11 +1698,11 @@
       { id: 'morning', name: S('rule_tpl_morning'), trg: [{ k: 'time', h: 7, m: 30 }], cond: [{ k: 'days', d: [1, 2, 3, 4, 5] }, { k: 'temp_below', v: 5 }],
         act: [{ k: 'set', key: 'hvac', v: true }, { k: 'set', key: 'hvac_temp', v: 22 }].concat(caps().heat ? [{ k: 'set', key: 'seat_left', v: 2 }] : []).concat([{ k: 'notify', msg: S('rule_tpl_morning_msg') }]) },
       { id: 'hot', name: S('rule_tpl_hot'), trg: [{ k: 'temp_above', v: 28 }], cond: [{ k: 'ready', is: true }], act: [{ k: 'set', key: 'ac', v: true }, { k: 'notify', msg: S('rule_tpl_hot_msg') }] },
-      { id: 'steering', name: S('rule_tpl_steering_timer'), trg: [{ k: 'steering_for', min: 15 }], cond: [], act: [{ k: 'set', key: 'steering', v: false }, { k: 'notify', msg: S('rule_tpl_steering_timer_msg') }], heat: true },
-      { id: 'seat', name: S('rule_tpl_seat_timer'), trg: [{ k: 'seat_for', min: 20 }], cond: [], act: [{ k: 'set', key: 'seat_left', v: 0 }, { k: 'notify', msg: S('rule_tpl_seat_timer_msg') }], heat: true },
+      { id: 'steering', name: S('rule_tpl_steering_timer'), trg: [{ k: 'steering_on', for: 900 }], cond: [], act: [{ k: 'set', key: 'steering', v: false }, { k: 'notify', msg: S('rule_tpl_steering_timer_msg') }], heat: true },
+      { id: 'seat', name: S('rule_tpl_seat_timer'), trg: [{ k: 'seat_above', v: 0, for: 1200 }], cond: [], act: [{ k: 'set', key: 'seat_left', v: 0 }, { k: 'notify', msg: S('rule_tpl_seat_timer_msg') }], heat: true },
       { id: 'sun', name: S('rule_tpl_brightness_sun'), trg: [{ k: 'sunrise' }, { k: 'sunset' }, { k: 'ready' }], cond: [],
         act: [{ k: 'if', c: { k: 'sun_up', is: true }, then: [{ k: 'brightness', v: 80 }], else: [{ k: 'brightness', v: 25 }] }] },
-      p0 ? { id: 'profile', name: S('rule_act_profile') + ' · ' + p0.name, trg: [{ k: 'manual' }], cond: [], act: [{ k: 'profile', id: p0.id }] } : null
+      p0 ? { id: 'profile', name: S('rule_subject_profile') + ' · ' + p0.name, trg: [{ k: 'manual' }], cond: [], act: [{ k: 'profile', id: p0.id }] } : null
     ].filter((t) => t && !(t.heat && !caps().heat));
   }
   function rNew(tpl) {
@@ -1614,7 +1717,8 @@
   function rulesOn() { return state.rules.engine && !garage(); }
   function ruleEvent(ev) {
     if (!rulesOn()) return;
-    state.rules.list.forEach((r) => { if (r.on && r.trg.some((t) => t.k === ev)) runRule(r, R_TRG[ev].txt({})); });
+    // Avec une durée, l'évènement devient un état suivi chaque seconde (ruleTick).
+    state.rules.list.forEach((r) => { if (r.on && r.trg.some((t) => t.k === ev && !(t.for > 0))) runRule(r, R_TRG[ev].txt({})); });
   }
   function ruleTick() {
     if (!rulesOn()) return;
@@ -1625,12 +1729,22 @@
       r.trg.forEach((t, i) => {
         const d = R_TRG[t.k]; if (!d) return;
         const key = r.id + ':' + i;
-        if (d.val) {
-          const v = !!d.val(t), s = rSeen[key] || (rSeen[key] = { v: null, since: 0, fired: false });
+        if (d.chg) {
+          // « Change » : la nouvelle valeur doit tenir la durée ; revenir avant l'annule.
+          const v = d.chg(t), s = rSeen[key];
+          if (!s) { rSeen[key] = { v, pend: undefined, since: 0 }; return; }
+          if (v === s.v) { s.pend = undefined; return; }
+          if (s.pend !== v) { s.pend = v; s.since = Date.now(); }
+          if (Date.now() - s.since >= (t.for || 0) * 1000) { s.v = v; s.pend = undefined; runRule(r, rTxt('trg', t)); }
+        } else if (d.val || (t.for > 0 && d.st)) {
+          // « Devient vrai » : il faut avoir vu faux, puis vrai pendant la durée choisie.
+          const v = !!(d.val ? d.val(t) : d.st(t)), s = rSeen[key] || (rSeen[key] = { v: null, since: 0, fired: false, armed: !!d.hold });
           if (v !== s.v) { s.since = Date.now(); s.fired = false; }
-          const was = s.v; s.v = v;
-          if (!v || s.fired || was === null && !d.hold) return;
-          if (d.hold ? Date.now() - s.since >= d.hold(t) * 1000 : was === false) { s.fired = true; runRule(r, d.txt(t)); }
+          s.v = v;
+          if (!v) { s.armed = true; return; }
+          if (s.fired || !s.armed) return;
+          const hold = t.for > 0 ? t.for : d.hold ? d.hold(t) : 0;
+          if (Date.now() - s.since >= hold * 1000) { s.fired = true; runRule(r, rTxt('trg', t)); }
         } else if (newMin && rMinute !== null) {
           if (t.k === 'time' && mk === t.h * 60 + t.m) runRule(r, d.txt(t));
           if (t.k === 'every' && mk % t.min === 0) runRule(r, d.txt(t));
@@ -1670,11 +1784,13 @@
       return true;
     };
     await steps(r.act);
-    return rDone(r, j, ok, ko, false, t0);
+    return rDone(r, j, ok, ko, false, t0, test);
   }
-  function rDone(r, j, ok, ko, skipped) {
+  function rDone(r, j, ok, ko, skipped, t0, test) {
     // Un refus reste sur la carte jusqu'à la prochaine exécution (RuleHistory.skipIsNewer).
     if (!skipped) { r.last = { at: nowHM(), ok, ko }; r.skip = null; } else r.skip = { at: nowHM(), why: skipped.short };
+    // Compteurs de la carte (2026-11-08) : « Tester » ne compte pas ; chaque refus compte.
+    if (skipped) r.skips = (r.skips || 0) + 1; else if (!test) r.runs = (r.runs || 0) + 1;
     state.rules.hist.unshift({ id: r.id, name: r.name, at: nowHM(), ok, ko, skipped: skipped || false, journal: j });
     state.rules.hist.length = Math.min(state.rules.hist.length, 20);
     commit();
@@ -1695,6 +1811,7 @@
       case 'run_rule': { const r = state.rules.list.find((x) => x.id === a.id); if (!r) return false; runRule(r, S('rule_trg_manual')); return true; }
       case 'notify': toastActive(a.msg || '…', 3000); return true;
       case 'media': c.media.playing = !!a.play; hud((a.play ? '▶ ' : '⏸ ') + S(a.play ? 'rule_act_media_play' : 'rule_act_media_pause')); return true;
+      case 'android': hud(rTxt('act', a)); return true;
       case 'sound': hud('🔔 ' + S('rule_sound_beep')); return true;
       case 'stop_rule': return !!state.rules.list.find((x) => x.id === a.id);
       case 'abrp': hud(a.on ? S('abrp_running_fmt', L('Ma MG4', 'My MG4')) : S('abrp_rule_stop')); return true;
@@ -1893,17 +2010,23 @@
       const set = flSet(id);
       if (!set.on || !set.list.length) return '';
       return '<div class="a-floats" style="--fl:' + (state.floating.color || '#A6C8FF') + '">' + set.list.map((b) => {
-        const on = flKind(b.action) === 'toggle' ? flState(b.action) : null;
+        const info = b.content === 'info' && b.info;
+        const on = info ? flInfoBool(b.info) : flKind(b.action) === 'toggle' ? flState(b.action) : null;
         const flash = this._flFlash && this._flFlash.id === b.id ? this._flFlash.text : null;
         const h = b.bar ? 30 : Math.round(44 + 52 * b.size / 100);
         const pos = 'left:' + (b.x * 100).toFixed(2) + '%;' + (b.bar ? 'top:3px' : 'top:' + (b.y * 100).toFixed(2) + '%');
+        // Bulle d'information : la valeur, avec son libellé (le titre tapé, sinon le nom) ou son icône.
+        let text = flash || flTitle(b);
+        if (info && !flash) { const v = flInfoValue(b.info); text = b.infoStyle === 'label' ? (b.title || flInfoName(b.info)) + ' ' + v : b.infoStyle === 'icon' ? FL_ICON[b.info] + ' ' + v : v; }
         return '<button class="a-fl' + (b.bar ? ' bar' : '') + (on === true ? ' lit' : on === false ? ' off' : '') + (flash ? ' flash' : '') + (b.bold ? ' bold' : '') + (this._flHalo === b.id ? ' halo' : '') +
-          '" data-fl="' + b.id + '" style="' + pos + ';height:' + h + 'px;font-size:' + (b.bar ? Math.min(b.text, 22) : b.text) + 'px">' + esc(flash || flTitle(b)) + '</button>';
+          (b.dim && this._flHalo !== b.id ? ' dimmed' : '') + '" data-fl="' + b.id + '" style="' + pos + ';height:' + h + 'px;font-size:' + (b.bar ? Math.min(b.text, 22) : b.text) + 'px;' + flLookStyle(b, on === true) + '">' + esc(text) + '</button>';
       }).join('') + '</div>';
     }
     /** Appui court : le raccourci ; halo au relâchement, et la valeur un instant pour un réglage pas à pas. */
     floatPress(id) {
       const b = flFind(id); if (!b) return;
+      // Bulle d'information en « affichage seul » : un toucher ne lance rien.
+      if (b.content === 'info' && b.tap === 'none') return;
       const msg = runAction(b.action, b.customId ? { customId: b.customId } : null);
       this._flHalo = id; clearTimeout(this._flHaloT);
       this._flHaloT = setTimeout(() => { this._flHalo = null; this.render(); }, 600);
@@ -2384,7 +2507,7 @@
     setLang() {
       const cur = appLang();
       const b = (code) => '<button class="b nc' + (cur === code ? ' on' : '') + '" data-a="lang" data-v="' + code + '">' + esc(S('settings_language_' + code)) + '</button>';
-      return '<div class="a-sec" data-hl="s-lang"><div class="a-h">' + esc(S('settings_language')) + '</div><div class="a-grid g3">' + b('fr') + b('en') + b('de') + b('es') + b('pt') + b('it') + b('tr') + b('pl') + '</div></div>';
+      return '<div class="a-sec" data-hl="s-lang"><div class="a-h">' + esc(S('settings_language')) + '</div><div class="a-grid g3">' + b('fr') + b('en') + b('de') + b('es') + b('pt') + b('it') + b('tr') + b('pl') + b('nb') + '</div></div>';
     }
     setUi() {
       const s = state.settings, k = caps();
@@ -2409,6 +2532,10 @@
         '<div class="a-sec" data-hl="s-navside"><div class="a-h">' + esc(S('settings_nav_side')) + '</div><div class="a-grid g3">' +
           ['auto', 'left', 'right'].map((v) => '<button class="b' + ((s.navSide || 'auto') === v ? ' on' : '') + '" data-a="navSide" data-v="' + v + '">' + esc(S('settings_nav_side_' + v)) + '</button>').join('') + '</div>' +
           '<div class="a-desc">' + esc(S('settings_nav_side_desc', S(car().rhd ? 'settings_nav_side_detected_right' : 'settings_nav_side_detected_left'))) + '</div></div>' +
+        // Unité de distance (DistanceSetting) : statistiques, écran conducteur, bulles ; Auto suit la voiture.
+        '<div class="a-sec" data-hl="s-distance"><div class="a-h">' + esc(S('settings_distance_unit')) + '</div><div class="a-grid g3">' +
+          [['auto', S('cluster_distance_auto_value', S(car().distUnit === 'mi' ? 'cluster_distance_miles' : 'cluster_distance_km'))], ['km', S('cluster_distance_km')], ['mi', S('cluster_distance_miles')]]
+            .map(([v, lab]) => '<button class="b' + ((s.distUnit || 'auto') === v ? ' on' : '') + '" data-a="distUnit" data-v="' + v + '">' + esc(lab) + '</button>').join('') + '</div>' + desc('settings_distance_unit_desc') + '</div>' +
         '</div>' + (k.cluster ? this.setCluster() : '');
     }
     /**
@@ -2426,7 +2553,7 @@
       if (!u.clSel.length && ps.length) u.clSel = [state.profiles.some((p) => p.id === state.activeProfileId) ? state.activeProfileId : ps[0].id];
       const cfg = this.clEditCfg();
       clPrevCfg = cfg;
-      const mi = clMiles(cfg), power = cfg.clusterPowerMax || 'auto';
+      const mi = clMiles(), power = cfg.clusterPowerMax || 'auto';
       const seg = (a, cur, opts, x) => '<div class="a-grid g' + opts.length + '">' + opts.map(([v, key, raw]) => '<button class="b nc' + (String(cur) === String(v) ? ' on' : '') + '" data-a="' + a + '" data-v="' + v + '"' +
         (x ? ' data-x="' + x + '"' : '') + '>' + esc(raw != null ? raw : S(key)) + '</button>').join('') + '</div>';
       const line = (label, inner, hl) => '<div class="cls-row"' + (hl ? ' data-hl="' + hl + '"' : '') + '><span class="cls-lbl">' + esc(label) + '</span>' + inner + '</div>';
@@ -2450,18 +2577,15 @@
         '<div class="a-desc">' + esc(S('settings_cluster_tabs_note')) + '</div>' +
         '<div class="a-sub">' + esc(S('settings_cluster_sec_appearance')) + '</div>' +
         line(S('settings_cluster_row_style'), seg('clusterStyle', cfg.clusterStyle, [['dynamic', 'settings_cluster_style_dynamic'], ['discreet', 'settings_cluster_style_discreet']]), 's-cluster-style') +
-        line(S('settings_cluster_row_pill'), seg('clusterPill', cfg.clusterPill, [['mode', 'settings_cluster_pill_mode'], ['profile', 'settings_cluster_pill_profile'], ['none', 'settings_cluster_pill_none']]), 's-cluster-pill') +
-        '<div class="a-desc">' + esc(S('settings_cluster_pill_desc')) + '</div>' +
+        // Personnalisation avancée (issue #229) : jauge, couleurs, épaisseur, 4 informations.
+        '<button class="b cls-layout" data-a="clLayOpen" data-hl="s-cluster-layout">' + esc(S('cluster_layout_open')) + '</button>' +
+        '<div class="a-desc">' + esc(S('cluster_layout_open_desc')) + '</div>' +
         // Puissance maxi (issue #165) : Auto apprend les pointes ; sinon une fin d'échelle fixe.
         line(S('settings_cluster_row_power'), seg('clusterPowerMax', power, [['auto', 'settings_cluster_power_auto'], ['125', null, '125'], ['150', null, '150'], ['180', null, '180'], ['320', null, '320']]), 's-cluster-power') +
         (power === 'auto' ? '<div class="a-desc">' + esc(S('settings_cluster_power_desc', state.clLearned)) + '</div>' : '') +
         '<div class="a-sub">' + esc(S('settings_cluster_sec_units')) + '</div>' +
-        // Distance : Auto suit l'unité de la voiture ; en miles, tout le module passe en miles.
-        line(S('settings_cluster_row_distance'), seg('clusterDist', cfg.clusterDist || 'auto', [['auto', null, S('cluster_distance_auto_value', S(car().distUnit === 'mi' ? 'cluster_distance_miles' : 'cluster_distance_km'))],
-          ['km', 'cluster_distance_km'], ['mi', 'cluster_distance_miles']]), 's-cluster-dist') +
-        // Unité de la jauge, puis celle de la moyenne du trajet : la même tant qu'on n'en choisit pas d'autre.
+        // Unité de la jauge ; la moyenne a la sienne dans sa case (personnalisation avancée).
         line(S('settings_cluster_row_gauge'), seg('clusterUnit', cfg.clusterUnit, [['wh', null, mi ? 'Wh/mi' : S('cluster_unit_wh_km')], ['kwh', null, mi ? 'kWh/100 mi' : S('cluster_unit_kwh_100km')]]), 's-cluster-unit') +
-        line(S('settings_cluster_row_average'), seg('clusterAvg', cfg.clusterAvg || cfg.clusterUnit, [['wh', null, mi ? 'Wh/mi' : S('cluster_unit_wh_km')], ['kwh', null, mi ? 'kWh/100 mi' : S('cluster_unit_kwh_100km')], ['km', null, mi ? 'mi/kWh' : S('cluster_unit_km_kwh')]]), 's-cluster-avg') +
         '<button class="cls-adv" data-a="clAdv" data-hl="s-cluster-refresh"><span>' + esc(S('settings_cluster_advanced', fmtS(s.clusterRefresh) + ' s', fmtS(s.clusterAnim) + ' s')) + '</span><i>' + (u.clAdv ? '▴' : '▾') + '</i></button>' +
         (u.clAdv ? '<div class="cls-advbox">' +
           '<div class="a-sub">' + esc(S('settings_cluster_refresh')) + '</div>' +
@@ -2690,7 +2814,21 @@
       const loc = (bar, key) => '<button class="b sm' + (!!b.bar === bar ? ' on' : '') + '" data-a="flLoc" data-v="' + (bar ? 1 : 0) + '">' + esc(S(key)) + '</button>';
       const tick = (v, key) => '<button class="b sm' + (b.size === v ? ' on' : '') + '" data-a="flSizeSet" data-v="' + v + '">' + esc(S(key)) + '</button>';
       const tmax = b.bar ? 22 : 40;
-      return '<div class="fl-edit" data-hl="fl-edit"><div class="a-sub" style="margin:0 0 6px">' + esc(S('floating_edit_heading', i + 1)) + '</div>' +
+      const seg = (a, cur, list) => '<div class="a-grid g' + list.length + '" style="flex:1">' + list.map(([v, key]) => '<button class="b sm' + (cur === v ? ' on' : '') + '" data-a="' + a + '" data-v="' + v + '">' + esc(S(key)) + '</button>').join('') + '</div>';
+      const row = (key, inner) => '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S(key)) + '</span>' + inner + '</div>';
+      const info = b.content === 'info';
+      // Contenu (#236) : un titre, comme avant, ou une information lue sur la voiture.
+      const content = row('floating_field_content', seg('flContent', info ? 'info' : 'title', [['title', 'floating_content_title'], ['info', 'floating_content_info']])) +
+        (info ? row('floating_field_info', '<select class="a-select" style="flex:1" data-c="flInfo">' + FL_INFOS.map((x) => '<option value="' + x + '"' + (b.info === x ? ' selected' : '') + '>' + esc(flInfoName(x)) + '</option>').join('') + '</select>') +
+          row('floating_field_info_style', seg('flInfoStyle', b.infoStyle || 'value', [['value', 'floating_info_style_value'], ['label', 'floating_info_style_label'], ['icon', 'floating_info_style_icon']])) +
+          row('floating_field_tap', seg('flTap', b.tap || 'action', [['action', 'floating_tap_action'], ['none', 'floating_tap_none']])) : '');
+      // Apparence (#230) : opacité du fond, fond sombre / teinté / clair, bordure, atténuation au repos.
+      const look = '<div class="a-sub" style="margin:10px 0 4px">' + esc(S('floating_look_title')) + '</div>' +
+        row('floating_field_opacity', '<div style="flex:1">' + range('flOpacity', 0, 100, b.opacity == null ? 72 : b.opacity) + '</div><span class="a-val" data-out="flOpacity">' + esc(S('floating_opacity_value', b.opacity == null ? 72 : b.opacity)) + '</span>') +
+        row('floating_field_fill', seg('flFill', b.fill || 'dark', [['dark', 'floating_fill_dark'], ['tint', 'floating_fill_tint'], ['light', 'floating_fill_light']])) +
+        row('floating_field_border', seg('flBorder', b.noBorder ? 'none' : 'color', [['color', 'floating_border_color'], ['none', 'floating_border_none']])) +
+        '<div class="a-row"><span class="lbl">' + esc(S('floating_field_dim')) + '<small>' + esc(S('floating_dim_hint')) + '</small></span>' + sw(!!b.dim, 'flDim') + '</div>';
+      return '<div class="fl-edit" data-hl="fl-edit"><div class="a-sub" style="margin:0 0 6px">' + esc(S('floating_edit_heading_name', flTitle(b))) + '</div>' + content +
         '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_title')) + '</span><input class="a-input" style="flex:1" type="text" maxlength="24" data-c="flTitle" data-fid="flTitle" value="' + esc(flTitle(b)) + '">' +
           '<button class="b sm" style="padding:0 14px" data-a="flTitleReset" title="' + esc(S('floating_title_reset')) + '">↺</button></div>' +
         '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_action')) + '</span><select class="a-select" style="flex:1" data-c="flAction">' +
@@ -2700,7 +2838,7 @@
           : '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_size')) + '</span><div style="flex:1">' + range('flSize', 0, 100, b.size) + '</div><span class="a-val" data-out="flSize">' + esc(S('floating_size_value', b.size)) + '</span></div>' +
             '<div class="a-grid g3" style="margin-left:168px">' + tick(0, 'floating_size_small') + tick(50, 'floating_size_medium') + tick(100, 'floating_size_large') + '</div>') +
         '<div class="a-row"><span class="lbl" style="flex:0 0 160px">' + esc(S('floating_field_text')) + '</span><div style="flex:1">' + range('flText', 10, tmax, Math.min(b.text, tmax)) + '</div><span class="a-val" data-out="flText">' + esc(S('floating_text_value', Math.min(b.text, tmax))) + '</span></div>' +
-        '<div class="a-row"><span class="lbl">' + esc(S('floating_field_bold')) + '</span>' + sw(b.bold, 'flBold') + '</div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('floating_field_bold')) + '</span>' + sw(b.bold, 'flBold') + '</div>' + look +
         '<button class="b full" data-a="flEditB" data-v="' + b.id + '">' + esc(S('floating_close')) + '</button></div>';
     }
     /** Page « Raccourcis perso » : la liste, Tester / Modifier / Supprimer, et la création. */
@@ -3851,8 +3989,10 @@
         tool('rule_tool_export', 'rExport') + tool('rule_tool_import', 'rImport') + '</div></div>';
       const list = R.list.length ? R.list.map((r) => {
         const off = !r.on || !R.engine;
-        return '<div class="a-card rl-card' + (off ? ' off' : '') + '" data-hl="rule-card"><div class="a-row"><span class="a-title rl-name" data-a="rEdit" data-v="' + r.id + '">' + esc(r.name) + '</span>' + sw(r.on, 'rOn', false, r.id) + '</div>' +
-          '<div class="rl-sum">' + esc(rSummary(r)) + '</div><div class="rl-foot"><span class="a-desc">' + esc(r.last ? S('rule_last_run_fmt', r.last.at, r.last.ok, r.last.ko) : S('rule_never_run')) +
+        // Compteurs en pastilles (lancées, ignorées en orange), cachés à zéro.
+        const pills = (r.runs ? '<span class="rl-pill">' + esc(P('rule_runs_count', r.runs)) + '</span>' : '') + (r.skips ? '<span class="rl-pill warn">' + esc(P('rule_skips_count', r.skips)) + '</span>' : '');
+        return '<div class="a-card rl-card' + (off ? ' off' : '') + '" data-hl="rule-card"><div class="a-row"><span class="a-title rl-name" data-a="rEdit" data-v="' + r.id + '">' + esc(r.name) + '</span>' + pills + sw(r.on, 'rOn', false, r.id) + '</div>' +
+          '<div class="rl-sum">' + esc(rSummary(r)) + '</div><div class="rl-foot"><span class="a-desc">' + esc(r.last ? S('rule_last_run_actions_fmt', r.last.at, P('rule_actions_ok', r.last.ok), r.last.ko) : S('rule_never_run')) +
           (r.skip ? '<span class="rl-skip">' + esc(S('rule_last_skip_fmt', r.skip.at, r.skip.why)) + '</span>' : '') + '</span>' +
           '<button class="b sm primary" data-a="rEdit" data-v="' + r.id + '">' + esc(S('rule_menu_edit')) + '</button><button class="b sm" data-a="rTest" data-v="' + r.id + '">' + esc(S('rule_test')) + '</button>' +
           '<button class="b sm danger" data-a="rDel" data-v="' + r.id + '">' + esc(S('rule_delete')) + '</button></div></div>';
@@ -3864,12 +4004,15 @@
       const e = this.ui.rEdit; if (!e) return '';
       const r = e.rule;
       const line = (kind, path, i, it, depth) => {
-        const last = rList(r, path).length - 1;
         const pv = kind + '|' + path + '|' + i;
-        const tools = '<span class="rl-tools"><button data-a="rUp" data-v="' + path + '|' + i + '"' + (i ? '' : ' disabled') + '>↑</button><button data-a="rDown" data-v="' + path + '|' + i + '"' + (i < last ? '' : ' disabled') + '>↓</button>' +
-          '<button data-a="rCopy" data-v="' + pv + '" title="' + esc(S('rule_menu_copy')) + '">⧉</button><button data-a="rCut" data-v="' + pv + '" title="' + esc(S('rule_menu_cut')) + '">✂</button>' +
-          '<button class="x" data-a="rDelLine" data-v="' + path + '|' + i + '">✕</button></span>';
+        // Un seul ⋮ par ligne, comme l'éditeur : Modifier, Monter, Descendre, Dupliquer, Copier, Couper, Supprimer.
+        const tools = '<button class="rl-more" data-a="rLineMenu" data-v="' + pv + '" aria-label="⋮">⋮</button>';
         let h = '<div class="rl-line" style="margin-left:' + depth * 26 + 'px"><button class="rl-txt" data-a="rEditLine" data-v="' + kind + '|' + path + '|' + i + '">' + esc(rTxt(kind, it)) + '</button>' + tools + '</div>';
+        // « Bouton, bulle ou automatisation » : ce qui la lance (RuleLaunchers), ou comment la lancer.
+        if (kind === 'trg' && it.k === 'manual') {
+          const by = this.ruleLaunchers(r.id);
+          h += '<div class="a-desc rl-by" style="margin-left:' + (depth * 26 + 12) + 'px">' + esc(by.length ? S('rule_manual_by_fmt', by.join(', ')) : S('rule_manual_none')) + '</div>';
+        }
         if (kind === 'act' && it.k === 'if') {
           ['then', 'else'].forEach((b) => {
             const p = path + '.' + i + '.' + b;
@@ -3900,6 +4043,22 @@
       return '<div class="a-page">' + head + '<div class="a-scroll"><div class="a-stack">' + sec('trg', 'rule_sec_when', 'rule_sec_when_hint', 'rule_none_triggers', 'rule_add_trigger') +
         sec('cond', 'rule_sec_if', 'rule_sec_if_hint', 'rule_none_conditions', 'rule_add_condition') + sec('act', 'rule_sec_then', 'rule_sec_then_hint', 'rule_none_actions', 'rule_add_action') + opts + '</div></div>' + foot + '</div>';
     }
+    /** Ce qui lance l'automatisation [id] : touches du volant, bulles, autres automatisations. */
+    ruleLaunchers(id) {
+      const sc = state.sc, out = [], press = (p) => S(p === 'long' ? 'shortcuts_press_long' : p === 'double' ? 'wheel_press_double' : 'shortcuts_press_single').toLowerCase();
+      Object.keys(sc.map || {}).forEach((slot) => {
+        if (sc.map[slot] !== 'RUN_RULE' || ((sc.extra || {})[slot] || {}).ruleId !== id) return;
+        const [btn, p] = slot.split('_');
+        out.push(S('rule_manual_wheel_fmt', this.wheelName(btn === 'btn1' ? 17 : 286), press(p)));
+      });
+      (sc.adv || []).forEach((m) => { if (m.action === 'RUN_RULE' && m.ruleId === id) out.push(S('rule_manual_wheel_fmt', this.wheelName(m.key), press(m.press))); });
+      Object.keys(state.floating.sets).forEach((pid) => state.floating.sets[pid].list.forEach((b) => {
+        if (b.action === 'RUN_RULE' && (b.ruleId || (b.extra || {}).ruleId) === id) out.push(S('rule_manual_bubble_fmt', b.title || S(ACTION_KEY.RUN_RULE)));
+      }));
+      const lance = (l) => l.some((a) => (a.k === 'run_rule' && a.id === id) || (a.k === 'if' && (lance(a.then) || lance(a.else))));
+      state.rules.list.forEach((x) => { if (x.id !== id && lance(x.act)) out.push(S('rule_manual_rule_fmt', x.name)); });
+      return Array.from(new Set(out));
+    }
     /** Question Oui / Non d'une automatisation (bandeau en bas de l'écran) : sans réponse, Non. */
     ruleAsk(msg) {
       return new Promise((ok) => {
@@ -3920,18 +4079,67 @@
             '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + '</div>', '', 'rule-tpl');
         case 'rPick': {
           // Grande fenêtre (Assistant.afficherGrand) : catégories à gauche, recherche, grille à droite.
-          const defs = R_DEF[d.kind], cats = R_CAT[d.kind], k = caps(), q = (d.q || '').toLowerCase();
-          const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-          // Conditions : leur « ok » est le test de la condition, pas une compatibilité du firmware.
-          const all = Object.keys(defs).filter((x) => d.kind === 'cond' || !defs[x].ok || defs[x].ok(k)).filter((x) => !(d.kind === 'act' && x === 'if' && d.path !== 'act'));
-          const hit = all.filter((x) => !q || norm(defs[x].name()).indexOf(norm(q)) >= 0);
-          const cat = d.cat && hit.some((x) => defs[x].cat === d.cat) ? d.cat : null;
-          const shown = hit.filter((x) => !cat || defs[x].cat === cat);
+          // Une tuile par option ; la recherche la trouve aussi par les mots de ses modes (2026-11-12).
+          const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          const subs = rSubjects(d.kind).filter((x) => !(d.kind === 'act' && x.id === 'if' && d.path !== 'act')), q = norm((d.q || '').trim());
+          const words = (x) => norm(x.name + ' ' + x.modes.map((m) => m.label + ' ' + (m.w || '')).join(' '));
+          const hit = subs.filter((x) => !q || q.split(/\s+/).every((w) => words(x).includes(w)));
+          const cats = R_CATS.filter((c) => subs.some((x) => x.cat === c));
+          const cat = d.cat && hit.some((x) => x.cat === d.cat) ? d.cat : null;
+          const shown = hit.filter((x) => !cat || x.cat === cat);
           const title = S({ trg: 'rule_choose_trigger', cond: 'rule_choose_condition', act: 'rule_choose_action' }[d.kind]);
           return win(1180, '<div class="rp-top"><span class="mw-t">' + esc(title) + '</span><input class="a-input rp-q" data-c="rQ" data-fid="rQ" placeholder="🔍" value="' + esc(d.q || '') + '">' + B(S('profile_cancel'), 'dlgClose') + '</div>' +
             '<div class="rp-body"><div class="rp-cats"><button class="rp-cat' + (cat ? '' : ' on') + '" data-a="rCat" data-v="">' + esc(L('Tout', 'All')) + ' <small>' + hit.length + '</small></button>' +
-            Object.keys(cats).map((c) => { const n = hit.filter((x) => defs[x].cat === c).length; return '<button class="rp-cat' + (cat === c ? ' on' : '') + (n ? '' : ' dis') + '" data-a="rCat" data-v="' + c + '">' + esc(S(cats[c])) + ' <small>' + n + '</small></button>'; }).join('') + '</div>' +
-            '<div class="rp-grid" data-sk="rp">' + shown.map((x) => '<button class="mw-choice" data-a="rPickOk" data-v="' + x + '"><b>' + esc(defs[x].name()) + '</b></button>').join('') + '</div></div>', 'rp', 'rule-pick');
+            cats.map((c) => { const n = hit.filter((x) => x.cat === c).length; return '<button class="rp-cat' + (cat === c ? ' on' : '') + (n ? '' : ' dis') + '" data-a="rCat" data-v="' + c + '">' + esc(S('rule_cat_' + c)) + ' <small>' + n + '</small></button>'; }).join('') + '</div>' +
+            '<div class="rp-grid" data-sk="rp">' + shown.map((x) => '<button class="mw-choice" data-a="rPickOk" data-v="' + esc(x.id) + '"><b>' + esc(x.name) + '</b>' +
+              (x.modes.length > 1 ? '<small>' + esc(S('rule_act_modes_fmt', x.modes.length)) + '</small>' : '') + '</button>').join('') + '</div></div>', 'rp', 'rule-pick');
+        }
+        case 'clLayout': {
+          // Aperçu animé à gauche (toucher une case ou la jauge pour la régler), réglages à droite.
+          const c = this.ui.clLay; if (!c) return null;
+          clLayDraft = c; const L = c.L;
+          const opt = (a, cur, list) => '<div class="ov-seg mw-seg">' + list.map(([v, lab]) => '<button' + (String(cur) === String(v) ? ' class="on"' : '') + ' data-a="' + a + '" data-v="' + v + '">' + esc(lab) + '</button>').join('') + '</div>';
+          const cap = (key) => '<div class="mw-cap">' + esc(S(key)) + '</div>';
+          const swRow = (key, on, a) => '<div class="a-row"><span class="lbl">' + esc(S(key)) + '</span>' + sw(on, a) + '</div>';
+          const hpOpt = (a, cur) => opt(a, cur === 'hp' ? 'hp' : 'kw', [['kw', 'kW'], ['hp', S('cluster_unit_hp')]]);
+          let panel;
+          if (c.sel === 'g') {
+            // Les options propres à une jauge suivent la jauge choisie (2026-11-12) ; l'unité de
+            // puissance ne s'affiche que là où elle se voit.
+            panel = '<div class="mw-t">' + esc(S('cluster_layout_gauge')) + '</div>' + cap('cluster_layout_gauge_preview') +
+              opt('clLayMod', c.mod, [['consumption', S('settings_cluster_consumption')], ['power', S('settings_cluster_power')]]) +
+              '<div class="mw-hint">' + esc(S('cluster_layout_gauge_preview_note')) + '</div>' + cap('settings_cluster_row_style') +
+              opt('clLayStyle', c.style, [['dynamic', S('settings_cluster_style_dynamic')], ['discreet', S('settings_cluster_style_discreet')]]) + cap('cluster_layout_position') +
+              opt('clLayPos', L.gauge || 'middle', [['top', S('cluster_layout_position_top')], ['middle', S('cluster_layout_position_middle')], ['bottom', S('cluster_layout_position_bottom')]]) +
+              (c.mod === 'consumption' ? swRow('cluster_layout_consumption_kw', !!L.consKw, 'clLayConsKw') + (L.consKw ? cap('cluster_layout_power_unit') + hpOpt('clLayHp', L.powerUnit) : '')
+                : cap('cluster_layout_power_unit') + hpOpt('clLayHp', L.powerUnit) + swRow('cluster_layout_power_consumption', L.powerCons !== false, 'clLayPowerCons'));
+          } else {
+            const b = L.slots[c.sel];
+            panel = '<div class="mw-t">' + esc(S('cluster_layout_slot_fmt', c.sel + 1)) + '</div>' + cap('cluster_layout_info') +
+              '<div class="mw-grid three" data-sk="clinfo">' + [null].concat(CL_INFOS).map((i) => '<button class="mw-choice' + ((b ? b.info : null) === i ? ' on' : '') + '" data-a="clLayInfo" data-v="' + (i || '') + '"><b>' +
+                esc(i ? clInfoName(i) : S('cluster_layout_info_none')) + '</b></button>').join('') + '</div>' +
+              (b ? cap('cluster_layout_display') + opt('clLayBStyle', clStyleOf(b), clInfoStyles(b.info).map((x) => [x, S(x === 'pill' ? 'cluster_layout_style_pill' : x === 'value' ? 'floating_info_style_value' : x === 'icon' ? 'floating_info_style_icon' : 'floating_info_style_label')])) +
+                (b.info === 'POWER' ? cap('cluster_layout_unit') + hpOpt('clLayBUnit', b.unit) : '') : '<div class="mw-hint">' + esc(S('cluster_layout_empty_note')) + '</div>');
+          }
+          return win(1320, head(MW.list, S('cluster_layout_title'), null) + '<div class="cll-body"><div class="cll-left"><svg class="cll-sq" viewBox="0 0 260 260" data-clprev="' + c.mod + '" data-cllay role="img"></svg>' +
+            '<div class="mw-hint">' + esc(S('cluster_layout_hint').split('·')[0].trim()) + '</div></div><div class="cll-panel" data-sk="clpanel">' + panel + '</div></div>' +
+            '<div class="mw-acts">' + B(S('cluster_layout_reset'), 'clLayReset') + B(S('profile_cancel'), 'dlgClose') + B(S('rule_save'), 'clLaySave', 'p') + '</div>', '', 'cl-layout');
+        }
+        case 'rLineMenu': {
+          // Menu ⋮ d'une ligne (CustomRuleEditFragment.menu) : seuls les gestes possibles à cette place.
+          const e = this.ui.rEdit; if (!e) return null;
+          const l = rList(e.rule, d.path), it = l[d.i]; if (!it) return null;
+          const g = [['edit', 'rule_menu_edit']].concat(d.i > 0 ? [['up', 'rule_menu_up']] : [], d.i < l.length - 1 ? [['down', 'rule_menu_down']] : [],
+            [['dup', 'rule_menu_duplicate'], ['copy', 'rule_menu_copy'], ['cut', 'rule_menu_cut'], ['del', 'rule_delete']]);
+          return win(760, head(MW.edit, rTxt(d.kind, it), null) + '<div class="mw-grid" data-sk="rlmenu">' +
+            g.map(([v, key]) => '<button class="mw-choice' + (v === 'del' ? ' danger' : '') + '" data-a="rLineDo" data-v="' + v + '"><b>' + esc(S(key)) + '</b></button>').join('') + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + '</div>', '', 'rule-menu');
+        }
+        case 'rMode': {
+          // Le mode, après le toucher : « Régler sur… », « Bascule », un sens, un seuil…
+          const x = rSubjects(d.kind).find((y) => y.id === d.sid); if (!x) return null;
+          return win(900, head(MW.list, x.name, null) + '<div class="mw-grid" data-sk="rmode">' + x.modes.map((m, i) => '<button class="mw-choice" data-a="rModeOk" data-v="' + i + '"><b>' + esc(m.label) + '</b></button>').join('') + '</div>' +
+            '<div class="mw-acts">' + B('←', 'rvBack') + B(S('profile_cancel'), 'dlgClose') + '</div>', '', 'rule-mode');
         }
         case 'rVal': return this.ruleValueDialog(d, h);
         case 'rHist': {
@@ -3993,7 +4201,8 @@
       const seg = (field, opts) => '<div class="ov-seg rv-seg">' + opts.map(([v, lab]) => '<button class="' + (JSON.stringify(it[field]) === JSON.stringify(v) ? 'on' : '') + '" data-a="rvSet" data-v="' + esc(field + '=' + JSON.stringify(v)) + '">' + esc(lab) + '</button>').join('') + '</div>';
       let body = '';
       switch (it.k) {
-        case 'soc_below': body = stepper('v', S('rule_sig_soc'), ' %', 5, 95); break;
+        case 'soc_below': case 'soc_above': body = stepper('v', S('rule_sig_soc'), ' %', 5, 95); break;
+        case 'seat_above': case 'seat_below': body = stepper('v', S('rule_key_seat_left'), '', 0, 3); break;
         case 'temp_below': case 'temp_above': body = stepper('v', S('rule_sig_outside_temp'), ' °C', -20, 45); break;
         case 'steering_for': case 'seat_for': body = stepper('min', S('rule_for_title'), ' min', 1, 60); break;
         case 'every': body = stepper('min', S('rule_every_title'), ' min', 1, 120) + '<div class="mw-hint">' + esc(S('rule_every_hint')) + '</div>'; break;
@@ -4006,7 +4215,7 @@
         case 'drive_mode': body = seg('m', DRIVE.map((m) => [m, driveName(m)])); break;
         case 'set': {
           const keys = Object.keys(SET_KEYS).filter((x) => SET_KEYS[x].ok(k)), sk = SET_KEYS[it.key];
-          body = '<div class="mw-cap">' + esc(S('rule_choose_setting')) + '</div><div class="ov-seg rv-seg wrap">' + keys.map((x) => '<button class="' + (it.key === x ? 'on' : '') + '" data-a="rvKey" data-v="' + x + '">' + esc(S('rule_key_' + x)) + '</button>').join('') + '</div>' +
+          body = (d.lockKey ? '' : '<div class="mw-cap">' + esc(S('rule_choose_setting')) + '</div><div class="ov-seg rv-seg wrap">' + keys.map((x) => '<button class="' + (it.key === x ? 'on' : '') + '" data-a="rvKey" data-v="' + x + '">' + esc(S('rule_key_' + x)) + '</button>').join('') + '</div>') +
             (sk.bool ? seg('v', [[true, S('rule_on')], [false, S('rule_off')]]) : sk.opts ? seg('v', sk.opts.map((n) => [n, valTxt(it.key, n)])) : stepper('v', S('rule_key_' + it.key), ' °C', sk.min, sk.max));
           break;
         }
@@ -4027,20 +4236,30 @@
           '<button class="' + (it.c.k === x ? 'on' : '') + '" data-a="rvIf" data-v="' + x + '">' + esc(R_COND[x].name()) + '</button>').join('') + '</div><div class="mw-hint">' + esc(R_COND[it.c.k].txt(it.c)) + '</div>'; break;
         default: body = '<div class="mw-cm">' + esc(rTxt(d.kind, it)) + '</div>';
       }
-      return win(900, head(MW.list, rItem(d.kind, it).name(), rTxt(d.kind, it)) + '<div class="rv-body">' + body + '</div>' +
+      // « Pendant combien de temps ? » pour chaque déclencheur qui suit un état (2026-11-12).
+      if (d.kind === 'trg' && !R_MOMENTS.includes(it.k)) {
+        const f = it.for || 0;
+        body += '<div class="rv-row"><span class="mw-cap">' + esc(S('rule_for_title')) + '</span><button class="mw-b" data-rep data-a="rvStep" data-v="for:-1:0:3600">−</button>' +
+          '<b class="rv-v">' + esc(f ? rDur(f) : S('rule_for_now')) + '</b><button class="mw-b" data-rep data-a="rvStep" data-v="for:1:0:3600">+</button></div><div class="mw-hint">' + esc(S('rule_for_hint')) + '</div>';
+      }
+      return win(900, head(MW.list, d.title || rItem(d.kind, it).name(), rTxt(d.kind, it)) + '<div class="rv-body">' + body + '</div>' +
         '<div class="mw-acts">' + (d.back ? B(S('rule_keep_editing').replace(/.*/, '←'), 'rvBack') : '') + B(S('profile_cancel'), 'dlgClose') + B('OK', 'rvOk', 'p') + '</div>', '', 'rule-val');
     }
     /** Une ligne neuve à régler avant d'entrer dans la règle ; sans réglage à faire, elle entre tout de suite. */
-    rulePicked(kind, path, k) {
-      const d = R_DEF[kind][k], it = Object.assign({ k }, rClone(d.def || {}));
-      if (kind === 'act' && k === 'profile') it.id = (state.profiles[0] || {}).id;
+    rulePicked(kind, path, k, pre, title) {
+      const d = R_DEF[kind][k], it = Object.assign({ k }, rClone(d.def || {}), rClone(pre || {}));
+      if (kind === 'act' && k === 'profile' && !it.id) it.id = (state.profiles[0] || {}).id;
       if (kind === 'act' && (k === 'run_rule' || k === 'stop_rule')) { const o = state.rules.list.find((r) => !this.ui.rEdit || r.id !== this.ui.rEdit.rule.id); it.id = o ? o.id : null; }
       if (kind === 'act' && k === 'if') Object.assign(it, { c: { k: 'sun_up', is: true }, then: [], else: [] });
       if ((kind === 'act' && (k === 'notify' || k === 'speak' || k === 'confirm'))) it.msg = '';
+      if (kind === 'act' && k === 'set') { const sk = SET_KEYS[it.key]; it.v = sk.bool ? true : sk.opts ? sk.opts[sk.opts.length - 1] : 21; }
       if (kind === 'cond' && k === 'time_range') { it.a0 = 22; it.a1 = 0; it.b0 = 6; it.b1 = 0; }
-      const simple = !d.def && !['profile', 'run_rule', 'stop_rule', 'if'].includes(k);
+      if (kind === 'trg' && !R_MOMENTS.includes(k)) it.for = 0;
+      // Rien à régler : la ligne entre tout de suite. Un état demande toujours « Pendant ».
+      const simple = kind === 'trg' ? R_MOMENTS.includes(k) && !d.def
+        : d.def ? Object.keys(d.def).every((f) => pre && f in pre) : !['run_rule', 'stop_rule', 'if'].includes(k);
       if (simple) { rList(this.ui.rEdit.rule, path).push(it); this.ui.dialog = null; return this.render(); }
-      this.ui.dialog = { type: 'rVal', kind, path, idx: null, item: it, back: { kind, path } };
+      this.ui.dialog = { type: 'rVal', kind, path, idx: null, item: it, back: { kind, path }, lockKey: kind === 'act' && k === 'set', title };
       this.render();
     }
     /** Ce qu'une ligne range vraiment (time_range garde ses heures en a/b). */
@@ -4134,13 +4353,36 @@
         }
         case 'rAdd': { const [kind, path] = v.split('|'); u.dialog = { type: 'rPick', kind, path, q: '', cat: null }; this.render(); return true; }
         case 'rCat': if (u.dialog) { u.dialog.cat = v || null; this.render(); } return true;
-        case 'rPickOk': { const d = u.dialog; this.rulePicked(d.kind, d.path, v); return true; }
+        case 'rPickOk': {
+          const d = u.dialog, x = rSubjects(d.kind).find((y) => y.id === v); if (!x) return true;
+          if (x.modes.length === 1) { this.rulePicked(d.kind, d.path, x.modes[0].k, x.modes[0].pre, x.name); return true; }
+          u.dialog = { type: 'rMode', kind: d.kind, path: d.path, sid: v, back: { kind: d.kind, path: d.path } }; this.render(); return true;
+        }
+        case 'rModeOk': {
+          const d = u.dialog, x = rSubjects(d.kind).find((y) => y.id === d.sid), m = x && x.modes[+v];
+          if (m) this.rulePicked(d.kind, d.path, m.k, m.pre, x.name); return true;
+        }
         case 'rEditLine': {
           const [kind, path, i] = v.split('|'), it = rList(e.rule, path)[+i];
           const copy = rClone(it); if (copy.k === 'time_range') { copy.a0 = copy.a[0]; copy.a1 = copy.a[1]; copy.b0 = copy.b[0]; copy.b1 = copy.b[1]; }
           u.dialog = { type: 'rVal', kind, path, idx: +i, item: copy }; this.render(); return true;
         }
         case 'rDelLine': { const [p, i] = pathIdx(); rList(e.rule, p).splice(i, 1); this.render(); return true; }
+        case 'rLineMenu': { const [kind, path, i] = v.split('|'); u.dialog = { type: 'rLineMenu', kind, path, i: +i }; this.render(); return true; }
+        case 'rLineDo': {
+          const d = u.dialog; if (!d || !e) return true;
+          const pv = d.kind + '|' + d.path + '|' + d.i, pi = d.path + '|' + d.i;
+          u.dialog = null;
+          switch (v) {
+            case 'edit': return this.extAct('rEditLine', pv);
+            case 'up': return this.extAct('rUp', pi);
+            case 'down': return this.extAct('rDown', pi);
+            case 'dup': { const l = rList(e.rule, d.path); l.splice(d.i + 1, 0, rClone(l[d.i])); this.render(); return true; }
+            case 'copy': return this.extAct('rCopy', pv);
+            case 'cut': return this.extAct('rCut', pv);
+            default: return this.extAct('rDelLine', pi);
+          }
+        }
         case 'rCopy': case 'rCut': {
           const [kind, p, i] = v.split('|'), l = rList(e.rule, p), it = l[+i];
           u.rClip = { kind, item: rClone(it) };
@@ -4157,6 +4399,11 @@
         // Fenêtre de valeur
         case 'rvStep': {
           const [f, dir, min, max] = v.split(':'), it = u.dialog.item;
+          if (f === 'for') {
+            // Comme l'éditeur : par 5 s jusqu'à une minute, par 15 s jusqu'à 10 min, puis par minute.
+            const cur = +it.for || 0, sens = +dir, pas = sens > 0 ? (cur < 60 ? 5 : cur < 600 ? 15 : 60) : (cur <= 60 ? 5 : cur <= 600 ? 15 : 60);
+            it.for = clamp(cur + sens * pas, 0, 3600); this.render(); return true;
+          }
           const step = f === 'v' && it.k === 'brightness' ? 5 : f === 'min' && it.k === 'every' ? 5 : 1;
           it[f] = clamp((+it[f] || 0) + (+dir) * step, +min, +max); this.render(); return true;
         }
@@ -4227,7 +4474,7 @@
           const tile = (code) => '<button class="mw-lang" data-a="pickLang" data-v="' + code + '"><b>' + esc(S('settings_language_' + code)) + '</b><span>' + code.toUpperCase() + '</span></button>';
           const title = S('settings_language_pick_title'), en = 'Choose your language';
           return win(820, '<span class="mw-badge mid">' + MW.language + '</span><div class="mw-ct">' + esc(title) + '</div>' + (title !== en ? '<div class="mw-s center">' + en + '</div>' : '') +
-            '<div class="mw-langs">' + ['fr', 'en', 'de', 'es'].map(tile).join('') + '</div><div class="mw-langs">' + ['pt', 'it', 'tr', 'pl'].map(tile).join('') + '</div>', 'c');
+            [['fr', 'en', 'de'], ['es', 'pt', 'it'], ['tr', 'pl', 'nb']].map((r) => '<div class="mw-langs">' + r.map(tile).join('') + '</div>').join(''), 'c');
         }
         case 'update': {
           // Trois états sous le même en-tête (UpdateDialogManager) : les nouveautés et les actions,
@@ -4258,8 +4505,6 @@
             html: '<b class="red">' + esc(S('external_api_confirm_warn')) + '</b>\n\n' + esc(S('external_api_confirm_msg')) + '\n\n<span class="red">' + esc(S('external_api_confirm_risk')) + '</span>' });
         case 'advWarn':
           return confirm({ tone: 'warn', title: S('adv_sc_enable_warn_title'), msg: S('adv_sc_enable_warn_msg'), yes: S('adv_sc_enable_warn_ok'), no: S('profile_cancel'), yesAct: 'advWarnOk' });
-        case 'launcherWarn':
-          return confirm({ tone: 'warn', title: S('shortcuts_warning_title'), msg: S('shortcuts_warning_message'), yes: S('shortcuts_warning_ok') });
         case 'noProfiles':
           return confirm({ tone: 'warn', title: S('shortcuts_no_profiles'), yes: S('nav_close') });
         case 'pcUnlock': {
@@ -4402,7 +4647,7 @@
         }
         case 'diag':
           // Le journal plein cadre (dialog_diagnostic.xml) : les actions restent en haut, le reste défile.
-          return win(1320, head(MW.bug, S('diag_title'), null, '<div class="mw-tools">' + B(S(d.copied ? 'diag_copied' : 'diag_copy'), 'diagCopy', 'sm') + B(S('diag_download'), 'diagDl', 'sm') +
+          return win(1320, head(MW.bug, S('diag_title'), null, '<div class="mw-tools">' + B(S(d.copied ? 'diag_copied' : 'diag_copy'), 'diagCopy', 'sm') + B(S('diag_save'), 'diagDl', 'sm') +
             '<button class="mw-round" data-a="dlgClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>') +
             '<div class="mw-pan mw-log" data-sk="diag"><pre>' + esc(diagSample()) + '</pre></div>');
         default: return '';
@@ -4684,10 +4929,10 @@
         case 'about': u.dialog = { type: 'about' }; return this.render();
         case 'diag': u.dialog = { type: 'diag' }; return this.render();
         case 'diagCopy': if (u.dialog) u.dialog.copied = true; return this.render();   // le bouton dit « Copié ! », la fenêtre reste
-        case 'diagDl': return this.toast(S('diag_downloaded', 'Download/MG4Control_diag.txt'));
+        case 'diagDl': return this.toast(S('diag_saved'));
         case 'force': state.forced = v; state.fwDismissed = true; return r();
         // Raccourcis
-        case 'scOn': sc.enabled = !sc.enabled; if (sc.enabled) u.dialog = { type: 'launcherWarn' }; return r();
+        case 'scOn': sc.enabled = !sc.enabled; return r();
         case 'scFallback': sc.fallback = v; return r();
         case 'scAdasA': sc.adasA = n; return r();
         case 'scAdasB': sc.adasB = n; return r();
@@ -4884,6 +5129,30 @@
           u.clSel = sel; return this.render();
         }
         case 'clSelAll': u.clSel = state.profiles.map((p) => p.id); return this.render();
+        case 'distUnit': s.distUnit = v; return r();
+        // Personnalisation avancée (ClusterLayoutEditor) : rien d'écrit avant « Enregistrer ».
+        case 'clLayOpen': {
+          const cfg = this.clEditCfg();
+          u.clLay = { L: rClone(clLayoutOf(cfg)), sel: 'g', style: cfg.clusterStyle,
+            mod: s.clLayMod || (cfg.clusterNav === 'power' ? 'power' : 'consumption') };
+          u.dialog = { type: 'clLayout' }; return this.render();
+        }
+        case 'clLaySel': if (u.clLay) u.clLay.sel = v === 'g' ? 'g' : +v; return this.render();
+        // La jauge choisie est retenue : la fenêtre s'y rouvre (2026-11-12).
+        case 'clLayMod': u.clLay.mod = v; s.clLayMod = v; return this.render();
+        case 'clLayStyle': u.clLay.style = v; return this.render();
+        case 'clLayPos': u.clLay.L.gauge = v; return this.render();
+        case 'clLayConsKw': u.clLay.L.consKw = !u.clLay.L.consKw || null; return this.render();
+        case 'clLayPowerCons': u.clLay.L.powerCons = u.clLay.L.powerCons === false ? null : false; return this.render();
+        case 'clLayHp': u.clLay.L.powerUnit = v === 'hp' ? 'hp' : null; return this.render();
+        case 'clLayInfo': u.clLay.L.slots[u.clLay.sel] = v ? { info: v, style: clPillOk(v) ? 'pill' : 'label' } : null; return this.render();
+        case 'clLayBStyle': u.clLay.L.slots[u.clLay.sel].style = v; return this.render();
+        case 'clLayBUnit': u.clLay.L.slots[u.clLay.sel].unit = v === 'hp' ? 'hp' : null; return this.render();
+        case 'clLayReset': u.clLay.L = clLayoutOf({ clusterPill: 'profile' }); u.clLay.sel = 'g'; return this.render();
+        case 'clLaySave': {
+          const c = u.clLay; u.dialog = null; u.clLay = null;
+          this.clEditSet('clusterStyle', c.style); return this.clEditSet('clusterLayout', rClone(c.L));
+        }
         case 'fullscreen':
           s.fullscreen = !s.fullscreen; r();
           if (s.fullscreen) this.toast(L('Simulation : sur la voiture, la barre d\'état et la barre de navigation disparaissent.', 'Simulation: in the car, the status and navigation bars disappear.'), 3200);
@@ -4910,6 +5179,12 @@
         case 'flLoc': { const b = flFind(u.flEditing); if (b) { b.bar = v === '1'; if (b.bar) b.text = Math.min(b.text, 22); } return r(); }
         case 'flSizeSet': { const b = flFind(u.flEditing); if (b) b.size = n; return r(); }
         case 'flBold': { const b = flFind(u.flEditing); if (b) b.bold = !b.bold; return r(); }
+        case 'flContent': { const b = flFind(u.flEditing); if (b) { b.content = v === 'info' ? 'info' : null; if (b.content && !b.info) b.info = 'SOC'; } return r(); }
+        case 'flInfoStyle': { const b = flFind(u.flEditing); if (b) b.infoStyle = v; return r(); }
+        case 'flTap': { const b = flFind(u.flEditing); if (b) b.tap = v === 'none' ? 'none' : null; return r(); }
+        case 'flFill': { const b = flFind(u.flEditing); if (b) b.fill = v === 'dark' ? null : v; return r(); }
+        case 'flBorder': { const b = flFind(u.flEditing); if (b) b.noBorder = v === 'none' || null; return r(); }
+        case 'flDim': { const b = flFind(u.flEditing); if (b) b.dim = !b.dim || null; return r(); }
         case 'flReverse': state.floating.hideReverse = !state.floating.hideReverse; return r();
         case 'flReset': flSet(u.flEdit).list.forEach((b, i) => { b.x = 0.86; b.y = clamp(0.25 + i * 0.13, 0.2, 0.9); }); r(); return this.toast(S('floating_reset_done'));
         case 'flCopy': u.flCopy = u.flCopy ? null : []; return this.render();
@@ -5099,6 +5374,8 @@
         case 'flColorCode': if (/^#[0-9a-f]{6}$/i.test(t.value.trim())) state.floating.color = t.value.trim().toUpperCase(); return commit();
         case 'flTitle': if (fb) { const v = t.value.trim().slice(0, 24); fb.title = !v || v === flActionName(fb) ? null : v; } return commit();
         case 'flAction': if (fb) { const [act, cid] = t.value.split(':'); fb.action = act; fb.customId = cid || null; } return commit();
+        case 'flInfo': if (fb) fb.info = t.value; return commit();
+        case 'flOpacity': if (fb) fb.opacity = clamp(Math.round(+t.value / 5) * 5, 0, 100); return commit();
         // Taille de la bulle : aimantée à ±3 % autour de Petit, Moyen et Grand.
         case 'flSize': if (fb) { let v = +t.value; [0, 50, 100].forEach((m) => { if (Math.abs(v - m) <= 3) v = m; }); fb.size = v; } return commit();
         case 'flText': if (fb) fb.text = +t.value; return commit();
@@ -5247,6 +5524,14 @@
           return true;
         }
         case 'bubbleColor': u.screen = 'shortcuts'; u.tabs.sc = 'floating'; commit(); this.highlight('fl-color'); return true;
+        // Bulle d'information (#236) et apparence (#230) : une bulle d'exemple, ouverte en édition.
+        case 'infoBubble': case 'bubbleLook': {
+          this.demo('floating');
+          const set = flSet(flFollowed() || ''), b = set.list[0]; if (!b) return true;
+          if (name === 'infoBubble') { b.content = 'info'; b.info = 'SOC'; b.infoStyle = 'icon'; b.tap = 'none'; }
+          else { b.fill = 'tint'; b.opacity = 55; b.dim = true; }
+          u.flEditing = b.id; commit(); this.highlight('fl-edit'); return true;
+        }
         case 'keepAc': u.screen = 'settings'; u.tabs.set = 2; commit(); this.highlight('s-keepac'); return true;
         case 'bri0': car().brightness = briMin(); commit(); this.openPicker(); return true;
         case 'statsProfile': {
@@ -5271,7 +5556,7 @@
           return this.openHvacPopup();
         case 'confirm': { const p = state.profiles.find((x) => x.id === state.auto.p.profileId) || state.profiles[0]; if (p) this.showConfirm(p, () => {}); return; }
         case 'fwUnknown': state.fwDismissed = false; if (state.fw !== 'UNKNOWN') { u.dialog = { type: 'fwUnknown' }; return this.render(); } return commit();
-        case 'lang': case 'restore': case 'about': case 'launcherWarn': case 'advWarn': case 'apiConfirm':
+        case 'lang': case 'restore': case 'about': case 'advWarn': case 'apiConfirm':
           u.dialog = { type: name }; return this.render();
         case 'update': u.dialog = { type: 'update', step: 'info' }; return this.render();
         case 'diag': state.diagUnlocked = true; u.dialog = { type: 'diag' }; return commit();
@@ -5398,13 +5683,16 @@
           return;
         case 'autoScope': case 'rescue': u.screen = 'settings'; u.tabs.set = 2; return this.render();
         case 'doorPause': state.door.open = true; state.door.mode = 'pause'; u.screen = 'automation'; return commit();
-        case 'clusterProfile': case 'clusterMiles': case 'clusterPower':
+        case 'distance': u.screen = 'settings'; u.tabs.set = 1; state.settings.distUnit = 'mi'; return commit();
+        case 'clusterProfile': case 'clusterMiles': case 'clusterPower': case 'clusterLayout':
           u.screen = 'settings'; u.tabs.set = 1; u.clSel = null;
           if (!caps().cluster) { this.toast(L('Écran conducteur : SWI133, SWI68 et SWI165 seulement. Changez de firmware au-dessus de la maquette.', 'Driver display: SWI133, SWI68 and SWI165 only. Switch firmware above the mockup.'), 3600); return commit(); }
           clSet('cluster', true);
-          if (name === 'clusterMiles') clSet('clusterDist', 'mi');
+          if (name === 'clusterMiles') state.settings.distUnit = 'mi';
           if (name === 'clusterPower') { clSet('clusterNav', 'power'); clSet('clusterPowerMax', 'auto'); }
-          return commit();
+          commit();
+          if (name === 'clusterLayout') return this.act('clLayOpen');
+          return;
         case 'fullscreen': u.screen = 'settings'; u.tabs.set = 1; return this.render();
         case 'androidSettings': u.screen = 'settings'; u.tabs.set = 3; return this.render();
         default: return;
@@ -5430,6 +5718,41 @@
   /** Nom du raccourci de la bulle (titre par défaut : il suit l'action tant qu'il n'a pas été modifié). */
   const flActionName = (b) => (b.action === 'CUSTOM' ? customName(b.customId) : S(ACTION_KEY[b.action] || 'floating_unknown_action'));
   const flTitle = (b) => b.title || flActionName(b);
+  /** Bulles d'information (#236) : des valeurs lues par les automatisations, et l'heure. */
+  const FL_INFOS = ['SOC', 'RANGE', 'OUTSIDE_TEMP', 'SPEED', 'HVAC_TEMP', 'DRIVE_MODE', 'REGEN', 'PROFILE', 'VOLUME', 'AC_ON', 'TIME'];
+  const flInfoName = (i) => S({ SOC: 'rule_sig_soc', RANGE: 'rule_sig_range', OUTSIDE_TEMP: 'rule_sig_outside_temp', SPEED: 'rule_sig_speed', HVAC_TEMP: 'rule_key_hvac_temp',
+    DRIVE_MODE: 'rule_sig_drive_mode', REGEN: 'rule_key_regen', PROFILE: 'rule_sig_profile', VOLUME: 'rule_sig_volume', AC_ON: 'rule_key_ac', TIME: 'floating_info_time' }[i]);
+  const FL_ICON = { SOC: '🔋', RANGE: '🛣', OUTSIDE_TEMP: '🌡', SPEED: '⏱', HVAC_TEMP: '🌡', DRIVE_MODE: '⚙', REGEN: '♻', PROFILE: '☆', VOLUME: '🔊', AC_ON: '❄', TIME: '🕒' };
+  function flInfoValue(i) {
+    const c = car(), mi = clMiles();
+    switch (i) {
+      case 'SOC': return Math.round(c.soc) + ' %';
+      case 'RANGE': return Math.round(rangeKm(c.soc) / (mi ? MI_KM : 1)) + (mi ? ' mi' : ' km');
+      case 'OUTSIDE_TEMP': return Math.round(c.outside) + ' °C';
+      case 'SPEED': return Math.round(c.speed / (mi ? MI_KM : 1)) + (mi ? ' mph' : ' km/h');
+      case 'HVAC_TEMP': return c.clim.temp + ' °C';
+      case 'DRIVE_MODE': return driveName(c.driveMode);
+      case 'REGEN': return regenName(c.regen);
+      case 'PROFILE': { const p = activeProfile(); return p ? p.name : '—'; }
+      case 'VOLUME': return String(c.volume);
+      case 'AC_ON': return c.clim.ac ? 'ON' : 'OFF';
+      case 'TIME': return nowHM();
+      default: return '—';
+    }
+  }
+  /** Une valeur oui / non colore la bulle comme une bascule. */
+  const flInfoBool = (i) => (i === 'AC_ON' ? !!car().clim.ac : null);
+  /** Apparence d'une bulle (#230) : fond (opacité, sombre / teinté / clair), bordure ; rien de réglé = l'allure d'avant. */
+  function flLookStyle(b, lit) {
+    if (b.opacity == null && !b.fill && !b.noBorder) return '';
+    const a = (b.opacity == null ? 72 : lit ? Math.max(60, b.opacity) : b.opacity) / 100, fill = b.fill || 'dark';
+    let st = '';
+    if (!lit) st += 'background:' + (fill === 'light' ? 'rgba(238,242,248,' + a + ');color:#0B1220' : fill === 'tint' ? 'color-mix(in srgb, var(--fl, #A6C8FF) ' + Math.round(40 * a) + '%, rgba(28,28,32,' + a + '))' : 'rgba(28,28,32,' + a + ')') + ';';
+    if (b.noBorder) st += 'border-color:transparent;';
+    // Sous 35 %, le texte prend un contour pour rester lisible.
+    if (a < 0.35 && fill !== 'light') st += 'text-shadow:0 0 3px #000,0 0 2px #000;';
+    return st;
+  }
   /** Ligne Air des règles de climatisation : mêmes boutons que la page Clim et les profils. */
   const AIR_ROW = [[AIR.FACE, 'clim_air_face'], [AIR.FEET, 'clim_air_feet'], [AIR.WS, 'clim_air_windshield_front'], [AIR.REAR, 'clim_air_windshield_rear']];
   /**
@@ -5516,6 +5839,7 @@
       case 'pcLock': return S('preclim_value_seconds', +v);
       case 'pcSoc': return S('preclim_value_percent', +v);
       case 'flSize': return S('floating_size_value', +v);
+      case 'flOpacity': return S('floating_opacity_value', Math.round(+v / 5) * 5);
       case 'flText': return S('floating_text_value', +v);
       case 'climTemp': return v + '°';
       case 'pkBri': return v + '%';
@@ -5920,6 +6244,17 @@
   /** Style discret : les crans, et un chiffre seulement assez loin de la fin (discreetPowerLabels). */
   const dPowerTicks = (full) => [-60, -20, 0, 20, 50, 100, 200].filter((t) => t < full).concat([full]);
   const dPowerLabel = (k, full) => k <= 0 || k === full || 1 - powerFraction(k, full) >= 0.2;
+  /** Chevaux par kW, comme les blocs d'information et la jauge de l'app (2026-11-12). */
+  const CH_KW = 1.36;
+  /** Graduations [position en kW, chiffre] en chevaux : des valeurs rondes, la fin de l'échelle convertie. */
+  const powerTicksHp = (full) => [25, 50, 100, 200, 300].map((h) => h / CH_KW).filter((k) => k < full && 1 - powerFraction(k, full) >= 0.1)
+    .map((k) => [k, Math.round(k * CH_KW)]).concat([[full, Math.round(full * CH_KW)]]);
+  /** Barre discrète en chevaux : un chiffre trop près du précédent garde son trait seul (50 ch à côté de 25). */
+  function dPowerTicksHp(full) {
+    let last = -Infinity;
+    return [[-80 / CH_KW, -80], [-25 / CH_KW, -25], [0, 0]].concat(powerTicksHp(full).map(([k, c]) => [k, k === full || 1 - powerFraction(k, full) >= 0.2 ? c : null]))
+      .map(([k, c]) => { const x = discreetPowerFraction(k, full); if (c == null || (x - last < 0.11 && k !== full)) return [k, null]; last = x; return [k, c]; });
+  }
   const regenFraction = (kw) => part01(Math.log(1 + Math.max(0, kw) / CG.REGEN_CURVE_KW) / Math.log(1 + CG.REGEN_FULL_KW / CG.REGEN_CURVE_KW));
   /** Module B : puissance signée, de −60 kW (récupération, à gauche) à 320 kW (à droite). */
   function gaugePower(kw, full) {
@@ -6000,8 +6335,8 @@
   function clPower(g) {
     const cx = 130, cy = 122, R = 88, st = g.st;
     let h = '';
-    powerTicks(g.full).forEach((k) => { h += clGrad(cx, cy, R, 270 + 120 * powerFraction(k, g.full), String(k)); });
-    CG_TICKS.regen.forEach((k) => { h += clGrad(cx, cy, R, 270 - 120 * regenFraction(k), String(k)); });
+    (g.hp ? powerTicksHp(g.full) : powerTicks(g.full).map((k) => [k, k])).forEach(([k, c]) => { h += clGrad(cx, cy, R, 270 + 120 * powerFraction(k, g.full), String(c)); });
+    (g.hp ? [15, 40, 80].map((x) => [x / CH_KW, x]) : CG_TICKS.regen.map((k) => [k, k])).forEach(([k, c]) => { h += clGrad(cx, cy, R, 270 - 120 * regenFraction(k), String(c)); });
     h += clArc(cx, cy, R, 150, 240, CL.track);
     // Le remplissage s'arrête net au zéro : son bout arrondi ne passe pas de l'autre côté.
     if (st) h += '<defs><clipPath id="' + g.id + 'P"><rect x="130" y="0" width="130" height="260"/></clipPath><clipPath id="' + g.id + 'R"><rect x="0" y="0" width="130" height="260"/></clipPath></defs>' +
@@ -6010,18 +6345,21 @@
     const v = g.value != null ? g.value : st && st.value;
     const recup = !!st && v != null && v < 0;
     // Des kW entiers en roulant, une décimale à l'arrêt (issue #152).
-    const big = !st || v == null ? '–' : (recup ? '−' : '') + (g.kmh != null && g.kmh >= CG.STOP_KMH ? String(Math.round(Math.abs(v))) : clKw(v));
+    const vu = v == null ? v : g.hp ? v * CH_KW : v;
+    const big = !st || v == null ? '–' : (recup ? '−' : '') + (g.kmh != null && g.kmh >= CG.STOP_KMH ? String(Math.round(Math.abs(vu))) : clKw(vu));
     h += clTxt(big, cx, cy + 12, big.length > 3 ? 46 : 54, recup ? CL.accent : CL.text, 500);
-    if (st) h += clTxt('kW', cx, cy + 28, 13, recup ? CL.accent : CL.text2, 500);
+    if (st) h += clTxt(g.hp ? S('cluster_unit_hp') : 'kW', cx, cy + 28, 13, recup ? CL.accent : CL.text2, 500);
     // La consommation instantanée en grand sous les kW (issue #152), négative et bleue en
     // récupération (issue #158) ; sous 5 km/h, le mot qui en tient lieu.
     const wh = !st || recup || g.kw == null ? null : whPerKm(g.kw, g.kmh);
     const whR = !st || !recup || g.kw == null ? null : regenWhPerKm(g.kw, g.kmh);
-    if (wh != null) h += clValue(cx, cy + 64, clCons(wh, g.unit, g.mi), CL.text, 28, 12);
+    if (g.powerCons === false) { /* consommation masquée sous les kW (issue #229) */ }
+    else if (wh != null) h += clValue(cx, cy + 64, clCons(wh, g.unit, g.mi), CL.text, 28, 12);
     else if (whR != null) h += clValue(cx, cy + 64, clCons(whR, g.unit, g.mi), CL.accent, 28, 12);
     else if (recup) h += clTxt(S('cluster_regen_word'), cx, cy + 58, 13, CL.accent);
     else if (st) h += clTxt(S('cluster_stopped_word'), cx, cy + 58, 13, CL.text2);
     // La batterie est déjà sur le combiné : seule reste la moyenne du trajet, centrée.
+    if (g.noFoot) return h;
     return h + clFootCentre(S('cluster_trip_avg'), clAvg(g.avgWh, g.avgUnit, g.mi));
   }
   /** Module A : l'anneau de consommation. */
@@ -6036,11 +6374,15 @@
     let big = ['–', ''];
     if (st && st.unit === 'WH_PER_KM') big = clCons(v, g.unit, g.mi);
     // En roulant, la récupération s'écrit en consommation négative (issue #158) ; sous 5 km/h, les kW.
-    else if (st && st.unit === 'KW_REGEN') { const w = regenWhPerKm(-v, g.kmh); big = w != null ? clCons(w, g.unit, g.mi) : ['↓' + clKw(v), S('cluster_regen_kw')]; }
-    else if (st) big = [clKw(v), S('cluster_stopped_kw')];
+    else if (st && st.unit === 'KW_REGEN') { const w = regenWhPerKm(-v, g.kmh); big = w != null ? clCons(w, g.unit, g.mi) : ['↓' + clKw(g.hp ? v * CH_KW : v), hpWord(g, S('cluster_regen_kw'))]; }
+    else if (st) big = [clKw(g.hp ? v * CH_KW : v), hpWord(g, S('cluster_stopped_kw'))];
     const recup = !!st && st.unit === 'KW_REGEN';
     h += clTxt(big[0], cx, cy + 16, big[0].length > 3 ? 46 : 54, recup ? CL.accent : CL.text, 500);
     h += clTxt(big[1], cx, cy + 40, 13, recup ? CL.accent : CL.text2);
+    // Les kW sous l'unité, en roulant (issue #229), en chevaux si choisi.
+    if (g.consKw && g.kw != null && st && (st.unit === 'WH_PER_KM' || st.unit === 'KW_REGEN'))
+      h += clTxt(clKw(g.hp ? Math.abs(g.kw) * CH_KW : Math.abs(g.kw)) + ' ' + (g.hp ? S('cluster_unit_hp') : 'kW'), cx, cy + 58, 13, recup ? CL.accent : CL.text2);
+    if (g.noFoot) return h;
     return h + clFoot(S('cluster_trip_avg'), clAvg(g.avgWh, g.avgUnit, g.mi), CL.text, S('cluster_regen'), g.regenWh != null ? ['+' + Math.round(g.regenWh), 'Wh'] : ['–', null], CL.accent);
   }
   // Style discret (issue #153, variante A) : une barre fine graduée, des chiffres fixes sous les crans.
@@ -6057,9 +6399,10 @@
       if (v < -0.5) h += clBar(xv, zero, CL.accent);
       else if (v > 0.5) h += clBar(zero, xv, CL.clair);
     }
-    dPowerTicks(g.full).forEach((k) => { h += clNotch(X(discreetPowerFraction(k, g.full)), dPowerLabel(k, g.full) ? String(k) : null, k === 0); });
+    (g.hp ? dPowerTicksHp(g.full) : dPowerTicks(g.full).map((k) => [k, dPowerLabel(k, g.full) ? k : null])).forEach(([k, c]) => { h += clNotch(X(discreetPowerFraction(k, g.full)), c == null ? null : String(c), k === 0); });
     // Le zéro, repère de toute la barre.
-    h += '<line x1="' + zero + '" y1="113" x2="' + zero + '" y2="135" stroke="' + CL.text + '" stroke-width="2"/>' + clTxt('kW', 230, 110, 11, CL.discret, null, 'end', 0);
+    h += '<line x1="' + zero + '" y1="113" x2="' + zero + '" y2="135" stroke="' + CL.text + '" stroke-width="2"/>' + clTxt(g.hp ? S('cluster_unit_hp') : 'kW', 230, 110, 11, CL.discret, null, 'end', 0);
+    if (g.noFoot) return h;
     return h + clFootCentre(S('cluster_trip_avg'), clAvg(g.avgWh, g.avgUnit, g.mi));
   }
   function clDiscreetCons(g) {
@@ -6078,6 +6421,7 @@
       const xm = X(avg * f);
       h += '<path d="M' + (xm - 5).toFixed(1) + ' 108L' + (xm + 5).toFixed(1) + ' 108L' + xm.toFixed(1) + ' 116Z" fill="' + CL.text + '"/>' + clTxt(S('cluster_avg_short'), xm, 103, 11, CL.text2, null, 'middle', 0);
     }
+    if (g.noFoot) return h;
     return h + clFootCentre(S('cluster_trip_avg'), clAvg(avg, g.avgUnit, g.mi));
   }
   // Pictogrammes du module de charge (ic_cluster_*) : Material Icons bolt, battery_charging_full et
@@ -6160,10 +6504,130 @@
     const h = '<rect width="260" height="260" fill="' + CL.bg + '"/>';
     if (g.preclim) return h + clPreclimSvg(g.preclim);
     if (g.charge) return h + clChargeSvg(g.charge);
+    if (g.layout) return h + clLayoutSvg(g);
     const pill = g.pill ? clPillSvg(g.pill) : '';
     if (g.style === 'discreet') return h + pill + (g.mod === 'power' ? clDiscreetPower(g) : clDiscreetCons(g));
     return h + pill + (g.mod === 'power' ? clPower(g) : clConsumption(g));
   }
+
+  /** Un libellé qui contient « kW » (« RÉCUP. kW »…), passé en chevaux si la jauge compte ainsi. */
+  const hpWord = (g, t) => (g.hp ? t.replace('kW', S('cluster_unit_hp')) : t);
+
+  // ── Écran conducteur V2 (issue #229) : la jauge et jusqu'à 4 cases d'information ──
+  const CL_INFOS = ['PROFILE', 'DRIVE_MODE', 'TRIP_AVERAGE', 'TRIP_REGEN', 'TRIP_DISTANCE', 'TRIP_ENERGY', 'POWER', 'SOC', 'RANGE', 'OUTSIDE_TEMP', 'TIME'];
+  const clInfoName = (i) => S({ PROFILE: 'rule_sig_profile', DRIVE_MODE: 'rule_sig_drive_mode', TRIP_AVERAGE: 'cluster_info_trip_average', TRIP_REGEN: 'cluster_info_trip_regen',
+    TRIP_DISTANCE: 'cluster_info_trip_distance', TRIP_ENERGY: 'cluster_info_trip_energy', POWER: 'cluster_info_power', SOC: 'rule_sig_soc', RANGE: 'rule_sig_range',
+    OUTSIDE_TEMP: 'rule_sig_outside_temp', TIME: 'floating_info_time' }[i]);
+  /** Affichages proposés (ClusterInfo.styles) : pastille, valeur, icône pour le profil et le mode ; valeur, libellé, icône sinon. */
+  const clPillOk = (i) => i === 'PROFILE' || i === 'DRIVE_MODE';
+  const clInfoStyles = (i) => (clPillOk(i) ? ['pill', 'value', 'icon'] : ['value', 'label', 'icon']);
+  /** Style d'une case : le sien s'il est permis, sinon la pastille ou « libellé + valeur » (ClusterInfo.style). */
+  const clStyleOf = (b) => (b.style && clInfoStyles(b.info).includes(b.style) ? b.style : clPillOk(b.info) ? 'pill' : 'label');
+  /** Pictogrammes des cases (InfoIcons.of), tracés recopiés des drawables ic_cat_* / ic_info_* (24 × 24, trait de 2). */
+  const CL_INFO_ICON = {
+    PROFILE: 'M12,17.75l-6.172,3.245l1.179,-6.873l-5,-4.867l6.9,-1l3.086,-6.253l3.086,6.253l6.9,1l-5,4.867l1.179,6.873z',
+    DRIVE_MODE: 'M5,17a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M15,17a2,2 0,1 0,4 0a2,2 0,1 0,-4 0 M5,17h-2v-6l2,-5h9l4,5h1a2,2 0,0 1,2 2v4h-2m-4,0h-6m-6,-6h15m-6,0v-5',
+    TRIP_AVERAGE: 'M4,19l16,0 M4,15l4,-6l4,2l4,-5l4,4',
+    TRIP_REGEN: 'M9,14l-4,-4l4,-4 M5,10h11a4,4 0,1 1,0 8h-1',
+    TRIP_DISTANCE: 'M3,19a2,2 0,1 0,4 0a2,2 0,0 0,-4 0 M19,7a2,2 0,1 0,0 -4a2,2 0,0 0,0 4z M11,19h5.5a3.5,3.5 0,0 0,0 -7h-8a3.5,3.5 0,0 1,0 -7h4.5',
+    TRIP_ENERGY: 'M13,3l0,7l6,0l-8,11l0,-7l-6,0l8,-11',
+    POWER: 'M13,3l0,7l6,0l-8,11l0,-7l-6,0l8,-11',
+    SOC: 'M16,7h1a2,2 0,0 1,2 2v0.5a0.5,0.5 0,0 0,0.5 0.5a0.5,0.5 0,0 1,0.5 0.5v3a0.5,0.5 0,0 1,-0.5 0.5a0.5,0.5 0,0 0,-0.5 0.5v0.5a2,2 0,0 1,-2 2h-2 M8,7h-2a2,2 0,0 0,-2 2v6a2,2 0,0 0,2 2h1 M12,8l-2,4h3l-2,4',
+    OUTSIDE_TEMP: 'M10,13.5a4,4 0,1 0,4 0v-8.5a2,2 0,0 0,-4 0v8.5 M10,9h4',
+    TIME: 'M3,12a9,9 0,1 0,18 0a9,9 0,0 0,-18 0 M12,7v5l3,3'
+  };
+  CL_INFO_ICON.RANGE = CL_INFO_ICON.SOC;
+  /** La disposition d'un profil, ou celle d'avant : pastille en Info 1, moyenne et récupération en bas. */
+  function clLayoutOf(cfg) {
+    const c = cfg || state.settings;
+    if (c.clusterLayout) return c.clusterLayout;
+    const pill = c.clusterPill || 'profile';
+    return { gauge: 'middle', slots: [pill === 'none' ? null : { info: pill === 'mode' ? 'DRIVE_MODE' : 'PROFILE', style: 'pill' }, null,
+      { info: 'TRIP_AVERAGE', style: 'label', unit: c.clusterAvg || null }, { info: 'TRIP_REGEN', style: 'label' }] };
+  }
+  /** Places (ClusterLayouts.geometry) : rangées de 40 px ; une rangée vide disparaît, sauf en édition. */
+  function clGeo(L, edit) {
+    const sl = L.slots || [], A = edit || sl[0] || sl[1], B = edit || sl[2] || sl[3];
+    const order = L.gauge === 'top' ? 'GAB' : L.gauge === 'bottom' ? 'ABG' : 'AGB';
+    const rows = order.split('').filter((x) => x === 'G' || (x === 'A' ? A : B)), gh = 260 - (rows.length - 1) * 40, out = { cells: [], gauge: null };
+    let y = 0;
+    rows.forEach((x) => {
+      if (x === 'G') { out.gauge = { y, h: gh }; y += gh; return; }
+      const base = x === 'A' ? 0 : 2;
+      out.cells.push({ slot: base, x: 4, y, w: 124, h: 40 }, { slot: base + 1, x: 132, y, w: 124, h: 40 });
+      y += 40;
+    });
+    return out;
+  }
+  /** Ce que chaque case affiche, prêt à dessiner. */
+  function clBlocks(L, d) {
+    const c = car(), hpU = S('cluster_unit_hp'), dist = (km) => [cl1(km / (d.mi ? MI_KM : 1)), d.mi ? 'mi' : 'km'];
+    return (L.slots || []).map((b) => {
+      if (!b) return null;
+      const st = clStyleOf(b);
+      const label = st === 'label' ? ({ TRIP_AVERAGE: S('cluster_trip_avg'), TRIP_REGEN: S('cluster_regen') }[b.info] || clInfoName(b.info)) : null;
+      let value = ['–', null], col = null, pill = null;
+      switch (b.info) {
+        case 'PROFILE': { const p = activeProfile(), n = p ? p.name.trim() : '–'; value = [n, null];
+          if (st === 'pill') pill = { text: n.toLocaleUpperCase(appLang()), mode: p && catOn(p, 'drive') ? p.driveMode : c.driveMode }; break; }
+        case 'DRIVE_MODE': value = [DRIVE_LABEL[c.driveMode] || c.driveMode, null]; if (st === 'pill') pill = { text: value[0].toUpperCase(), mode: c.driveMode }; break;
+        case 'TRIP_AVERAGE': value = clAvg(d.avgWh, b.unit || d.avgUnit, d.mi); break;
+        case 'TRIP_REGEN': value = d.regenWh != null ? ['+' + Math.round(d.regenWh), 'Wh'] : ['–', null]; col = CL.accent; break;
+        case 'TRIP_DISTANCE': value = d.km != null ? dist(d.km) : ['–', null]; break;
+        case 'TRIP_ENERGY': value = d.kwh != null ? [d.kwh.toLocaleString(clLoc(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }), 'kWh'] : ['–', null]; break;
+        case 'POWER': value = d.kw == null ? ['–', null] : b.unit === 'hp' ? [String(Math.round(Math.abs(d.kw) * CH_KW)), hpU] : [clKw(d.kw), 'kW']; break;
+        case 'SOC': value = [String(Math.round(c.soc)), '%']; break;
+        case 'RANGE': value = [String(Math.round(rangeKm(c.soc) / (d.mi ? MI_KM : 1))), d.mi ? 'mi' : 'km']; break;
+        case 'OUTSIDE_TEMP': value = [String(Math.round(c.outside)), '°C']; break;
+        case 'TIME': value = [nowHM(), null]; break;
+      }
+      return { style: st, info: b.info, label, value, col, pill };
+    });
+  }
+  function clBlockSvg(b, c) {
+    const left = c.slot % 2 === 0, cx = c.x + c.w / 2, mid = c.y + c.h / 2;
+    if (b.pill) {
+      // La pastille : à gauche dans une case de gauche, à droite dans une case de droite.
+      const col = MODE_COL[b.pill.mode] || CL.text2, name = b.pill.text.length > 8 ? b.pill.text.slice(0, 7) + '…' : b.pill.text, w = name.length * 7.7 + 30, x0 = left ? c.x + 6 : c.x + c.w - 6 - w;
+      return '<rect x="' + x0.toFixed(1) + '" y="' + (mid - 11) + '" width="' + w.toFixed(1) + '" height="22" rx="11" fill="' + col + '" fill-opacity=".25"/><circle cx="' + (x0 + 12).toFixed(1) + '" cy="' + mid + '" r="3.5" fill="' + col + '"/>' +
+        '<text x="' + (x0 + 21).toFixed(1) + '" y="' + (mid + 4.5) + '" font-size="11" font-weight="500" letter-spacing="1" fill="' + col + '">' + esc(name) + '</text>';
+    }
+    // Taille M (ClusterGaugeView.tailles) : valeur 16, unité 11, libellé 11 ; tout est centré dans la case.
+    const val = (x, y, anchor) => '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="' + anchor + '" font-size="16" font-weight="500" fill="' + (b.col || CL.text) + '">' + esc(b.value[0]) +
+      (b.value[1] ? '<tspan font-size="11" font-weight="400" fill="' + CL.text2 + '"> ' + esc(b.value[1]) + '</tspan>' : '') + '</text>';
+    if (b.style === 'label') return clTxt(b.label.toLocaleUpperCase(appLang()), cx, c.y + 15, 11, CL.text2, null, 'middle', 0.5) + val(cx, c.y + c.h - 5, 'middle');
+    if (b.style === 'icon') {
+      // L'icône (côté = valeur + 3) à gauche de la valeur, l'ensemble centré.
+      const side = 19, l = b.value[0].length * 9 + (b.value[1] ? (b.value[1].length + 1) * 6 : 0), total = side + 6 + l, x0 = cx - total / 2;
+      const path = CL_INFO_ICON[b.info] || CL_INFO_ICON.TIME;
+      return '<g transform="translate(' + x0.toFixed(1) + ' ' + (mid - side / 2).toFixed(1) + ') scale(' + (side / 24).toFixed(3) + ')"><path d="' + path + '" fill="none" stroke="' + CL.text2 + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>' +
+        val(x0 + side + 6, mid + 5.8, 'start');
+    }
+    return val(cx, mid + 5.8, 'middle');
+  }
+  /** La jauge, réduite dans sa zone (sans son pied), puis les cases ; en édition, les cases libres et la sélection. */
+  function clLayoutSvg(g) {
+    const L = g.layout, ed = g.edit, geo = clGeo(L, !!ed), z = geo.gauge;
+    const [top, bot] = g.style === 'discreet' ? [54, 174] : g.mod === 'power' ? [6, 194] : [4, 200];
+    const inner = Object.assign({}, g, { noFoot: true });
+    const gauge = g.style === 'discreet' ? (g.mod === 'power' ? clDiscreetPower(inner) : clDiscreetCons(inner)) : (g.mod === 'power' ? clPower(inner) : clConsumption(inner));
+    const e = Math.min(z.h / (bot - top), 1), tx = (260 - 260 * e) / 2, ty = z.y + (z.h - (bot - top) * e) / 2 - top * e;
+    let h = '<defs><clipPath id="' + g.id + 'Z"><rect x="0" y="' + z.y + '" width="260" height="' + z.h + '"/></clipPath></defs><g clip-path="url(#' + g.id + 'Z)"><g transform="translate(' +
+      tx.toFixed(1) + ' ' + ty.toFixed(1) + ') scale(' + e.toFixed(3) + ')">' + gauge + '</g></g>';
+    geo.cells.forEach((c) => {
+      const b = (g.blocks || [])[c.slot];
+      if (b) h += clBlockSvg(b, c);
+      else if (ed) h += '<rect x="' + (c.x + 1) + '" y="' + (c.y + 3) + '" width="' + (c.w - 2) + '" height="' + (c.h - 6) + '" rx="8" fill="none" stroke="' + CL.cran + '" stroke-dasharray="4 3"/>' +
+        clTxt('+ ' + S('cluster_layout_slot_fmt', c.slot + 1), c.x + c.w / 2, c.y + 24, 11, CL.discret);
+      if (ed) h += '<rect class="cll-hit" x="' + c.x + '" y="' + c.y + '" width="' + c.w + '" height="' + c.h + '" rx="8" fill="transparent" stroke="' + (ed.sel === c.slot ? CL.accent : 'none') + '" stroke-width="2" data-a="clLaySel" data-v="' + c.slot + '"/>';
+    });
+    if (ed) h += '<rect class="cll-hit" x="2" y="' + (z.y + 2) + '" width="256" height="' + (z.h - 4) + '" rx="10" fill="transparent" stroke="' + (ed.sel === 'g' ? CL.accent : 'none') + '" stroke-width="2" data-a="clLaySel" data-v="g"/>';
+    return h;
+  }
+  /** La disposition en cours d'édition (fenêtre « Personnalisation avancée »), pour son aperçu. */
+  let clLayDraft = null;
+  /** Ce que la jauge reçoit d'une disposition : cases, chevaux, options. */
+  const clLayoutArgs = (L, d) => ({ layout: L, blocks: clBlocks(L, d), hp: L.powerUnit === 'hp', consKw: !!L.consKw, powerCons: L.powerCons !== false });
 
   // Aperçu de la carte de réglages (ClusterSettingsPreview) : un trajet simulé de 24 s, en boucle,
   // redessiné à chaque pas avec tous les réglages du moment. [s, km/h, kW]
@@ -6178,11 +6642,14 @@
     while (i < PREV_TRIP.length - 2 && PREV_TRIP[i + 1][0] <= t) i++;
     const a = PREV_TRIP[i], b = PREV_TRIP[i + 1], f = (t - a[0]) / (b[0] - a[0]);
     const kmh = Math.round(a[1] + (b[1] - a[1]) * f), kw = a[2] + (b[2] - a[2]) * f;
-    const mi = clMiles(s), full = clPowerFull(s);
+    const mi = clMiles(), full = clPowerFull(s);
     const st = mod === 'power' ? gaugePower(kw, full) : gaugeConsumption(kw, kmh, mi);
     if (!svg.id) svg.id = 'clp' + (++prevN);
-    svg.innerHTML = clusterSvg({ id: svg.id + 'c', mod, style: s.clusterStyle, unit: s.clusterUnit, avgUnit: s.clusterAvg || s.clusterUnit, pill: clusterPill(),
-      st, part: st.fraction, value: st.value, kw, kmh, avgWh: 168, regenWh: 180, mi, full, preclim: pcClusterInfo() });
+    // Dans la personnalisation avancée : la disposition en cours d'édition, ses cases libres et la sélection.
+    const draft = svg.hasAttribute('data-cllay') && clLayDraft, L = draft ? draft.L : clLayoutOf(s), avgUnit = s.clusterAvg || s.clusterUnit;
+    svg.innerHTML = clusterSvg(Object.assign({ id: svg.id + 'c', mod, style: draft ? draft.style : s.clusterStyle, unit: s.clusterUnit, avgUnit,
+      st, part: st.fraction, value: st.value, kw, kmh, avgWh: 168, regenWh: 180, mi, full, preclim: draft ? null : pcClusterInfo(), edit: draft ? { sel: draft.sel } : null },
+      clLayoutArgs(L, { avgWh: 168, regenWh: 180, km: 12.4, kwh: 2.1, kw, mi, avgUnit })));
     if (!prevTimer) prevTimer = setInterval(() => instances.forEach((x) => x.app.querySelectorAll('svg[data-clprev]').forEach(clPreviewSvg)), 250);
   }
 
@@ -6216,10 +6683,12 @@
 
     function draw() {
       const s = state.settings;
-      svg.innerHTML = clusterSvg({ id: 'clw', mod, style: s.clusterStyle, unit: s.clusterUnit, avgUnit: s.clusterAvg || s.clusterUnit, pill: clusterPill(),
+      const avgWh = trip.km < 0.2 ? null : trip.kwh * 1000 / trip.km, avgUnit = s.clusterAvg || s.clusterUnit, mi = clMiles();
+      svg.innerHTML = clusterSvg(Object.assign({ id: 'clw', mod, style: s.clusterStyle, unit: s.clusterUnit, avgUnit,
         st: target, part: shown.part, value: shown.value, kw: smoothed, kmh: speed,
-        avgWh: trip.km < 0.2 ? null : trip.kwh * 1000 / trip.km, regenWh: trip.regenKwh * 1000, charge: clChargeInfo('clw'),
-        mi: clMiles(), full: clPowerFull(), preclim: pcClusterInfo() });
+        avgWh, regenWh: trip.regenKwh * 1000, charge: clChargeInfo('clw'),
+        mi, full: clPowerFull(), preclim: pcClusterInfo() },
+        clLayoutArgs(clLayoutOf(s), { avgWh, regenWh: trip.regenKwh * 1000, km: trip.km, kwh: trip.kwh, kw: smoothed, mi, avgUnit })));
     }
 
     /** Nouveau relevé : la jauge et le chiffre partent de ce qui est à l'écran (ClusterGaugeView.montrer). */
@@ -6325,7 +6794,7 @@
         : L('Relevé toutes les ' + fmtS(s.clusterRefresh) + ' s, glissement en ' + fmtS(s.clusterAnim) + ' s : la jauge et le chiffre vont d’une valeur à la suivante.', 'Reading every ' + fmtS(s.clusterRefresh) + ' s, gliding over ' + fmtS(s.clusterAnim) + ' s: the gauge and the number move from one value to the next.');
       schedule();
       // Un autre réglage de la maquette ne relance pas la jauge ; ceux qui changent son dessin, si.
-      const key = [s.clusterUnit, s.clusterStyle, s.clusterAvg, s.clusterPill, s.clusterDist, s.clusterPowerMax, state.clLearned, appLang(), state.activeProfileId, car().driveMode, !!ch].join('|');
+      const key = [s.clusterUnit, s.clusterStyle, s.clusterAvg, s.clusterPill, s.distUnit, s.clusterPowerMax, JSON.stringify(s.clusterLayout), state.clLearned, appLang(), state.activeProfileId, car().driveMode, !!ch].join('|');
       if (key !== lastKey) { lastKey = key; if (!ch) show(); else draw(); }
     }
     listeners.add(paint);

@@ -461,6 +461,11 @@
 .rl-tool { height: 46px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--dash-border); background: var(--dash-btn); color: var(--text-primary); font: inherit; font-size: calc(15px * var(--ts, 1)); cursor: pointer; }
 .rl-tool:hover { border-color: var(--dash-accent); }
 .rl-skip { display: block; color: var(--dash-warn); }
+/* Compteurs de la carte (2026-11-08) : lancées, ignorées en orange, cachés à zéro. */
+.rl-pill { flex: 0 0 auto; margin: 0 6px; padding: 3px 12px; border-radius: 12px; background: var(--dash-accent-dim); color: var(--dash-accent); font-size: calc(13px * var(--ts, 1)); font-weight: 700; white-space: nowrap; }
+.rl-pill.warn { background: var(--dash-warn-dim); color: var(--dash-warn); }
+/* « Lancée par » sous un déclencheur à la demande (2026-11-12). */
+.rl-by { margin: 0 0 6px; }
 /* Pages de réglage des raccourcis : choix en vert plein, libellés en capitales (highlightConfig). */
 .sc-cfg .a-sec .a-grid .b { text-transform: uppercase; letter-spacing: .08em; font-weight: 500; }
 .sc-cfg .a-sec .a-grid .b.on { background: #2E7D32; border-color: #2E7D32; color: #fff; font-weight: 700; }
@@ -1177,6 +1182,13 @@
 .cls-wrap { display: flex; gap: 16px; margin-top: 10px; }
 .cls-prev { flex: none; width: 214px; display: flex; flex-direction: column; gap: 8px; }
 .cls-prev .a-sub { margin: 0; }
+/* Personnalisation avancée de l'écran conducteur (issue #229) : aperçu à gauche, réglages à droite. */
+.cll-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 24px; margin-top: 8px; align-items: start; }
+.cll-sq { display: block; width: 300px; height: 300px; border-radius: 14px; background: #0C0C0C; font-family: Roboto, "Segoe UI", system-ui, sans-serif; }
+.cll-panel { max-height: 330px; overflow-y: auto; padding-right: 8px; }
+.cll-panel .mw-cap { margin-top: 12px; }
+.cll-hit { cursor: pointer; }
+.cls-layout { width: 100%; margin-top: 10px; }
 .cls-sq { display: block; width: 214px; height: 214px; border-radius: 10px; background: #0C0C0C; font-family: Roboto, "Segoe UI", system-ui, sans-serif; }
 .cls-none {
   height: 214px; padding: 16px; border-radius: 10px; display: flex; align-items: center; justify-content: center; text-align: center;
@@ -1220,6 +1232,9 @@
 .a-fl.bar.moving { transform: translateX(-50%) scale(1.1); }
 /* Halo (variante D) : un anneau bleu qui sort de la bulle et s'efface. */
 .a-fl.halo { animation: flhalo .55s ease-out; }
+/* Atténuée au repos (#230) : 40 % ; le pointeur (le toucher sur la voiture) la rend nette. */
+.a-fl.dimmed { opacity: .4; }
+.a-fl.dimmed:hover { opacity: 1; }
 @keyframes flhalo {
   from { box-shadow: 0 0 0 0 rgba(56,189,248,.85), 0 6px 16px rgba(0,0,0,.35); }
   to { box-shadow: 0 0 0 18px rgba(56,189,248,0), 0 6px 16px rgba(0,0,0,.35); }
@@ -1444,6 +1459,10 @@
 .rl-line { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
 .rl-txt { flex: 1; min-height: 44px; text-align: left; padding: 6px 14px; border-radius: 12px; border: 1px solid var(--dash-border); background: var(--dash-section); color: var(--text-primary); font: inherit; font-size: calc(15px * var(--ts, 1)); cursor: pointer; }
 .rl-tools { display: flex; gap: 4px; }
+/* Le ⋮ d'une ligne de l'éditeur (boutonMenu) : ouvre Modifier, Monter, Descendre, Dupliquer, Copier, Couper, Supprimer. */
+.rl-more { flex: 0 0 auto; width: 44px; height: 44px; padding: 0; border-radius: 12px; border: 1px solid var(--dash-border); background: var(--dash-btn); color: var(--text-primary); font: 700 22px/1 Roboto, system-ui, sans-serif; cursor: pointer; }
+.rl-more:hover { border-color: var(--dash-accent); }
+.mw-choice.danger b { color: var(--dash-danger); }
 .rl-tools button { width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; font: 600 16px/1 Roboto, system-ui, sans-serif; border-radius: 10px; border: 1px solid var(--dash-border); background: var(--dash-card); color: var(--text-secondary); cursor: pointer; }
 .rl-tools button[disabled] { opacity: .3; cursor: default; }
 .rl-tools .x { color: var(--dash-danger); }

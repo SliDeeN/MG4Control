@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/site.css?v=d2d95626">
-  <link rel="stylesheet" href="../assets/css/sim.css?v=233cfdd4">
+  <link rel="stylesheet" href="../assets/css/sim.css?v=347609d7">
   <link rel="stylesheet" href="../assets/css/explorer.css?v=f9d0452c">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -130,7 +130,7 @@
       <a class="btn btn-ghost" href="#installation"><span data-l="en">Installation</span></a>
     </div>
     <div class="hero-meta">
-      <span><span data-l="en">8 languages</span></span>
+      <span><span data-l="en">9 languages</span></span>
       <span><span data-l="en">7 firmwares: SWI133 · SWI132 · SWI68 · SWI69 · SWI131 · SWI165 · SWI173</span></span>
       <span><span data-l="en">GPL v3 licence</span></span>
     </div>
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="en">New</span> · 2.7.0</span>
-        <b><span data-l="en">22 new things in this release</span></b>
+        <b><span data-l="en">27 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -146,12 +146,17 @@
         <a href="#f-navside" data-feature="f-navside"><span data-l="en">↔️ Menu on the driver's side</span></a>
         <a href="#f-rules" data-feature="f-rules"><span data-l="en">🤖 My automations (experimental)</span></a>
         <a href="#f-rule-skip" data-feature="f-rule-skip"><span data-l="en">🚫 Ignored triggers shown</span></a>
+        <a href="#f-rule-editor" data-feature="f-rule-editor"><span data-l="en">🧭 Editor: one tile per option, then its mode</span></a>
         <a href="#f-rule-tpl" data-feature="f-rule-tpl"><span data-l="en">📋 Ready-made templates</span></a>
         <a href="#f-wheel" data-feature="f-wheel"><span data-l="en">🎮 Hardware buttons: one card per key</span></a>
         <a href="#f-quick" data-feature="f-quick"><span data-l="en">🎛️ Quick settings pop-up</span></a>
         <a href="#f-drivecycle" data-feature="f-drivecycle"><span data-l="en">🔁 Drive mode cycle</span></a>
         <a href="#f-runrule" data-feature="f-runrule"><span data-l="en">▶️ Run an automation from a button</span></a>
         <a href="#f-bubblecolor" data-feature="f-bubblecolor"><span data-l="en">🔵 Bubble colours</span></a>
+        <a href="#f-infobubbles" data-feature="f-infobubbles"><span data-l="en">ℹ️ Information bubbles</span></a>
+        <a href="#f-bubblelook" data-feature="f-bubblelook"><span data-l="en">🫧 Look of each bubble</span></a>
+        <a href="#f-cluster-layout" data-feature="f-cluster-layout"><span data-l="en">🧩 Driver display: gauge and 4 infos to place</span></a>
+        <a href="#f-cluster-miles" data-feature="f-cluster-miles"><span data-l="en">📏 Kilometres or miles everywhere</span></a>
         <a href="#f-survcam" data-feature="f-survcam"><span data-l="en">📹 Surveillance: the dashcam records</span></a>
         <a href="#f-abrp" data-feature="f-abrp"><span data-l="en">🗺️ Live data to ABRP</span></a>
         <a href="#f-onepedal" data-feature="f-onepedal"><span data-l="en">🦶 One Pedal: back to the previous level</span></a>
@@ -162,7 +167,7 @@
         <a href="#f-stats-profile" data-feature="f-stats-profile"><span data-l="en">👥 Statistics per profile</span></a>
         <a href="#f-tripgraph" data-feature="f-tripgraph"><span data-l="en">📈 Graph of every trip</span></a>
         <a href="#f-csv" data-feature="f-csv"><span data-l="en">📤 CSV export</span></a>
-        <a href="#f-autolang" data-feature="f-autolang"><span data-l="en">🇵🇱 New language: Polish</span></a>
+        <a href="#f-autolang" data-feature="f-autolang"><span data-l="en">🇳🇴 New languages: Polish and Norwegian</span></a>
         <a href="#f-silentupd" data-feature="f-silentupd"><span data-l="en">⬇️ Updates that install themselves</span></a>
       </div>
     </div>
@@ -672,6 +677,9 @@
     <div class="pt is-new" id="f-runrule" data-hl-key="sc-btn1" data-demo="runRule">
       <h3><span data-l="en">Run an automation</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
       <p data-l="en">A key or a bubble runs one of “My automations”.</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">In the editor, under the “Button, bubble or automation” trigger, a line says what starts it (“Started by: Left ★ button (long press), bubble “Climate””) or how to start it.</p>
+      </details>
     </div>
     <div class="pt" id="f-projection" data-hl-key="proj" data-demo="projection">
       <h3><span data-l="en">Android Auto / CarPlay</span></h3>
@@ -693,7 +701,21 @@
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
         <p data-l="en">Nine swatches or a hue picker; the text stays readable whatever the colour. The page's switch belongs to the chosen profile.</p>
       </details>
+    </div>    <div class="pt is-new" id="f-infobubbles" data-hl-key="fl-edit" data-demo="infoBubble">
+      <h3><span data-l="en">Information bubbles</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="en">A bubble can show a piece of information instead of a title: battery, range, outside temperature, speed, climate setpoint, drive mode, regeneration, profile, volume, time… (#236).</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">In a bubble's editor, “Content”: Title or Information. Display: value, label + value (the typed title, otherwise the value's name) or icon + value. On tap: run the action, or nothing (display only; a long press still moves the bubble). A yes / no value colours the bubble like a toggle; the time and the speed are read every second, the rest every 5 s; “—” when the value is unreadable. Existing bubbles don't change.</p>
+      </details>
     </div>
+    <div class="pt is-new" id="f-bubblelook" data-hl-key="fl-edit" data-demo="bubbleLook">
+      <h3><span data-l="en">Each bubble's look</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="en">Background opacity, dark, tinted or light background, border or none, and dimming when idle: each bubble has its own look (#230).</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">When dimmed, a bubble drops to 40 % after 5 s without a touch; a touch runs the action and makes it sharp again. “Copy the look of…” takes another bubble's, from this profile or another one, and “Apply to all bubbles” spreads it over the profile. An active toggle stays at least 60 % opaque, and under 35 % the text gets an outline to stay readable. A bubble never set keeps its previous look.</p>
+      </details>
+    </div>
+
     <div class="pt" id="f-customsc" data-hl-key="sc-custom" data-demo="customSc">
       <h3><span data-l="en">Custom shortcuts</span></h3>
       <p data-l="en">Create your own actions: open an app or one of its functions, send a broadcast, open a link or call a webhook.</p>
@@ -913,21 +935,22 @@
       <h3><span data-l="en">When, And if, Then</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
       <p data-l="en">Many triggers, conditions and actions to combine freely; the existing automations stay separate.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en"><b>When</b>: a vehicle value becoming true or changing, a time, every X minutes, sunrise or sunset, screen start-up, going READY or leaving READY, shifting to P or D, front door opened or front doors closed, charging, plug, lock, phone connected or disconnected, active profile changing, manual run… <b>And if</b>: time, days, season, random, variables, places (GPS) and some sixty values, in All / At least one / None groups. <b>Then</b>: vehicle and climate settings (also to a variable's value), brightness, volume, media (play, pause), windows, sound (beep or your own sounds imported from a USB drive), open an app, custom shortcut, run or stop another automation, remember a value in a variable, add or subtract, wait, wait until, If / Else, Repeat, Yes / No question, voice message, navigation, live data to ABRP. A rule only fires on a clear “true”: an unreadable value triggers nothing. Garage mode suspends them all. In the mockup, the rules really run (virtual vehicle, your device's time).</p>
+        <p data-l="en"><b>When</b>: a vehicle sensor switching to true, to false or both ways, going above or below a threshold, becoming, no longer being or changing — each for the time you choose —, a time, every X minutes, sunrise or sunset, screen start-up, going READY or leaving READY, shifting to P or D, front door opened or front doors closed, charging, plug, lock, phone connected or disconnected, active profile changing, manual run… <b>And if</b>: time, days, season, random, variables, places (GPS) and some sixty values, in All / At least one / None groups. <b>Then</b>: vehicle and climate settings (also to a variable's value), brightness, volume, media (play, pause), windows, sound (beep or your own sounds imported from a USB drive), open an app, custom shortcut, run or stop another automation, remember a value in a variable, add or subtract, wait, wait until, If / Else, Repeat, Yes / No question, navigation, Android actions (home, back, close an app, open a settings page), live data to ABRP. A rule only fires on a clear “true”: an unreadable value triggers nothing. Garage mode suspends them all. In the mockup, the rules really run (virtual vehicle, your device's time).</p>
       </details>
     </div>
     <div class="pt is-new" id="f-rule-editor" data-hl-key="rule-act" data-demo="ruleEdit">
-      <h3><span data-l="en">An editor without a keyboard</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
-      <p data-l="en">Every choice in a step window with Back; long lists open large, with categories, search and “Recent”.</p>
+      <h3><span data-l="en">An editor with no keyboard</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="en">Triggers, conditions and actions are picked the same way: one tile per option, filed in its category, then its mode on tap.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Values are set with − and + buttons, without a keyboard. Nothing is stored until “Save”; “Test” runs the version on screen. Options: what to do when the rule is triggered again before it has finished, debounce, only in READY. The page keeps 30 rules at most, a master switch, the history of the last 20 runs with their log, variables (renamed everywhere at once, changed or deleted) and places (renamed, resized, moved to the current position or deleted); JSON export and import (Downloads, USB drive or another folder). <b>Copy</b>, <b>Cut</b> and <b>Paste</b> in every ⋮ menu: “Paste” only shows where the item fits. A rule's card sums up what an If / Else block does (“if X → A; else → B”).</p>
+        <p data-l="en">Long lists open full size, with categories, search and “Recent”. “Climate” is a single tile: tap it, then choose “Set to…” (a precise value) or “Toggle”; likewise “Cycle (next value)” and “Step + / −”. A sensor offers its modes (to TRUE, to FALSE, both ways, above, below…) and the shortcuts that belong to it under their own names (“The car goes READY”, “Charge starts”…). Search shows only the tiles, but also finds them by the words of their modes: “charge starts” finds “Charging”. Every trigger that follows a state asks “For how long?” (“Right away” by default). Under a “Button, bubble or automation” trigger, the editor says what starts it. Values are set with the − and + buttons. Nothing is saved before “Save”; “Test” runs the version on screen. Options: what to do if the rule is triggered again before it finishes, debounce, READY only. The page keeps up to 30 rules, a master switch, the history of the last 20 runs with their log, variables and places; JSON export and import (Downloads, USB drive or another folder). <b>Copy</b>, <b>Cut</b> and <b>Paste</b> in every ⋮ menu.</p>
       </details>
     </div>
+
     <div class="pt is-new" id="f-rule-skip" data-hl-key="rules-tools" data-demo="rules">
       <h3><span data-l="en">Ignored triggers</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
-      <p data-l="en">When an automation is triggered but doesn't run, its card says so in orange, with the reason.</p>
+      <p data-l="en">When an automation is triggered but doesn't run, its card says so in orange, with the reason; two pills count its runs and its refusals.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Reasons: a false condition (with the value read), an unreadable condition, car not in READY, rule still running, debounce or Garage mode. The history keeps them too, with the trigger that started them, and filters into All / Run / Ignored; identical refusals in a row are grouped (×N). The orange line goes away at the next run.</p>
+        <p data-l="en">Reasons: a false condition (with the value read), an unreadable condition, car not in READY, rule still running, debounce or Garage mode. The history keeps them too, with the trigger that started them, and filters into All / Run / Ignored; identical refusals in a row are grouped (×N). The orange line goes away at the next run. The “N runs” and “N ignored” (orange) pills count from the rule's creation, survive its edits and leave “Test” out; the last run reads “2 actions succeeded, 0 failed”.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-rule-tpl" data-hl-key="rule-tpl" data-demo="ruleTpl">
@@ -938,7 +961,7 @@
       <h3><span data-l="en">Live data to ABRP</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
       <p data-l="en">An “ABRP: live data” action sends battery level, power, speed and charging to A Better Route Planner, for routes that follow the car (#188).</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Online version only. ABRP accounts typed in or imported from a file on a USB drive (a template file is provided, API key included); adjustable cadence while driving, charging and parked; position sent only if you allow it. MG4Control's shared key is limited by ABRP to 2 sends per second for all users together: a warning says so and points to a free personal key. “ABRP by profile” template to follow the active profile.</p>
+        <p data-l="en">Online version only. ABRP accounts typed in or imported from a file on a USB drive (a template file is provided, API key included); adjustable cadence while driving, charging and parked; position sent only if you allow it. MG4Control's shared key is limited by ABRP to 2 sends per second for all users together: a warning says so and points to a free personal key. “ABRP by profile” template to follow the active profile. When parked, sending can go down to once a minute (#232); after adding an account, MG4Control offers to create the automation that starts sending.</p>
       </details>
     </div>
   </div>
@@ -1022,7 +1045,7 @@
       <h3><span data-l="en">Or pause</span></h3>
       <p data-l="en">Instead of lowering the volume, the card can pause the media, then resume playback.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">The card is now called “Media when leaving the car”. In pause mode, the media is only stopped if it was playing, and playback only resumes (when the door closes, or back in READY without readable doors) if MG4Control was the one that paused it.</p>
+        <p data-l="en">The card is now called “Media when leaving the car”. In pause mode, the media is only stopped if it was playing, and playback only resumes (when the door closes, or back in READY without readable doors) if MG4Control was the one that paused it. Pause and resume are checked, with other routes if the first one isn't enough, Android Auto and CarPlay included (#235).</p>
       </details>
     </div>
   </div>
@@ -1060,7 +1083,7 @@
       <h3><span data-l="en">Graph of every trip</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
       <p data-l="en">Consumption bars along the trip, regeneration below zero; Speed and Elevation add a band underneath.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Coloured by consumption (below 14, 14 to 22, above 22 kWh/100 km). Bar width is chosen when drawing: 120 bars at most, never under 200 m. Energy comes from the power integrated every second, with the GPS altitude; distance is also measured every second. Trips recorded before 2.7.0 have no graph.</p>
+        <p data-l="en">Coloured by consumption (below 14, 14 to 22, above 22 kWh/100 km). Bar width is chosen when drawing: 120 bars at most, never under 200 m. Energy comes from the power integrated every second, with the GPS altitude; distance is also measured every second. The Speed and Elevation bands are scaled to the trip, their maximum dashed. Trips recorded before 2.7.0 have no graph.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-csv" data-hl-key="st-export" data-demo="statsExport">
@@ -1152,28 +1175,35 @@
       <h3><span data-l="en">A module on the cluster</span></h3>
       <p data-l="en">The cluster's central square, the one used by navigation and music, shows an MG4Control module instead of its original page.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Turn on “Module on the instrument cluster” in Settings, Interface tab. The module shows as soon as the app starts, without waiting for READY, and takes the cluster's background to blend in. The cluster is a separate computer: only this 260 × 260 px square comes from the head unit, where a SAIC app draws it, and that app only exists on SWI133, SWI68 and SWI165. On the A9 firmwares (SWI69, SWI131, SWI132), the cluster draws everything itself: nothing can show there, and the card does not appear in the settings. Try the preview below the cards.</p>
+        <p data-l="en">Turn on “Module on the instrument cluster” in Settings, Interface tab. The module shows as soon as the app starts, without waiting for READY, and takes the cluster's background to blend in. The cluster is a separate computer: only this 260 × 260 px square comes from the head unit, where a SAIC app draws it: the card shows wherever that app is installed (SWI133, SWI68, SWI165, and any other firmware that has it, #231). On the A9 firmwares (SWI69, SWI131, SWI132), the cluster draws everything itself: nothing can show there, and the card does not appear in the settings. Try the preview below the cards.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-modules" data-hl-key="s-cluster-tabs" data-demo="cluster">
       <h3><span data-l="en">Consumption or power</span></h3>
       <p data-l="en">Two graduated modules: the ring of live consumption, or the power arc, regeneration on the left, power on the right and instant consumption below.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Consumption: in Wh/km or kWh/100 km, while driving, on a logarithmic scale up to 3,000 Wh/km (300 kWh/100 km) so acceleration peaks stay readable; the graduations follow the unit; when stationary, the kW drawn (climate, accessories); when regenerating, from 5 km/h, a negative consumption, in blue (25 kW recovered at 60 km/h: −41.7 kWh/100 km), the ring showing the kW recovered. Power: from 60 kW recovered to 320 kW (the XPower), on a tightened scale that makes the arc move while driving — 20 kW already fill a quarter of it —, orange while the battery drains, blue while it recharges; the fill stops cleanly at zero; whole kW while driving, and below, in large type, the instant consumption, negative and blue when regenerating. At the bottom, the trip average since READY (regeneration deducted), plus the energy recovered on the Consumption module; the battery, already on the cluster, is no longer there. At the top, a badge: the applied profile in the colour of its drive mode, or the drive mode. The figure doesn't jump from one value to the next: it counts (100, 101… 300), and the gauge glides along.</p>
+        <p data-l="en">Consumption: in Wh/km or kWh/100 km, while driving, on a logarithmic scale up to 3,000 Wh/km (300 kWh/100 km) so acceleration peaks stay readable; the graduations follow the unit; when stationary, the kW drawn (climate, accessories); when regenerating, from 5 km/h, a negative consumption, in blue (25 kW recovered at 60 km/h: −41.7 kWh/100 km), the ring showing the kW recovered. Power: from 60 kW recovered to 320 kW (the XPower), on a tightened scale that makes the arc move while driving — 20 kW already fill a quarter of it —, orange while the battery drains, blue while it recharges; the fill stops cleanly at zero; whole kW while driving, and below, in large type, the instant consumption, negative and blue when regenerating. Around the gauge, by default, the applied profile as a badge (in the colour of its drive mode) at the top, the trip average since READY (regeneration deducted) and the energy recovered at the bottom: slots you set in the advanced customisation. The figure doesn't jump from one value to the next: it counts (100, 101… 300), and the gauge glides along.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-cluster-layout" data-hl-key="s-cluster-layout" data-demo="clusterLayout">
+      <h3><span data-l="en">The gauge and 4 infos to place</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="en">The gauge at the top, middle or bottom, and up to 4 pieces of information around it: profile, mode, average, regeneration, distance, energy, power, battery, range, temperature, time… (#229).</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">Settings › Interface › Driver display › “Advanced customisation”: an animated preview on the left; tap a slot or the gauge to set it, long-press it to move it (in the mockup, tap to set). Each slot: value, label + value, icon + value or badge, three sizes, and its own unit (the average in Wh/km, kWh/100 km or km/kWh, the power in kW or horsepower). The gauge: position, thickness, consumption and regeneration colours, trip-average marker, kW under the consumption or consumption under the kW — the options follow the gauge chosen in the preview, which reopens on the last one chosen. The power gauge can count in horsepower, with round marks (25, 50, 100, 200 hp…). A row with no information disappears on the cluster and the gauge grows. Nothing is saved before “Save”, for all the selected profiles.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-tabs" data-hl-key="s-cluster-refresh" data-demo="cluster">
       <h3><span data-l="en">One module per tab, and a preview</span></h3>
       <p data-l="en">One module for the Navigation tab, another (or none) for the Music tab; next to the settings, a preview on a simulated trip follows every change.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">The cluster's tabs are picked from the steering wheel, and the module follows the tab shown. Trip computer, tyre pressure and settings are drawn by the cluster itself: no module can show there. The settings come in three groups: Modules; Appearance, with the style (dynamic or discreet) and the badge (profile, drive mode or none); Units, with the gauge unit (Wh/km or kWh/100 km) and, separately, the trip-average unit, which can also be km/kWh. “Advanced” unfolds the refresh rate, from 0.1 to 1 s (1 s by default: shorter is more responsive, but the figure moves more), and the animation length, from 0.2 to 2 s (0.8 s by default), the time the gauge takes to glide from one value to the next. The drive mode and the profile are read every 10 seconds.</p>
+        <p data-l="en">The cluster's tabs are picked from the steering wheel, and the module follows the tab shown. Trip computer, tyre pressure and settings are drawn by the cluster itself: no module can show there. The settings come in three groups: Modules; Appearance, with the style (dynamic or discreet) and the advanced customisation; Units, with the gauge unit (Wh/km or kWh/100 km) — the trip average has its own in its slot, km/kWh included. “Advanced” unfolds the refresh rate, from 0.1 to 1 s (1 s by default: shorter is more responsive, but the figure moves more), and the animation length, from 0.2 to 2 s (0.8 s by default), the time the gauge takes to glide from one value to the next. The drive mode and the profile are read every 10 seconds.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-discreet" data-hl-key="s-cluster-style" data-demo="clusterDiscreet">
       <h3><span data-l="en">Discreet style</span></h3>
       <p data-l="en">For those who find scrolling figures distracting: a thin graduated bar, fixed figures under the ticks, and the trip average at the bottom.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Power: zero marked, regeneration on the left in blue, power on the right in light grey. Consumption: a short regeneration zone on the left, then the scale; an “avg” triangle marks the trip average, and the bar is green below it, orange above. Same scales as the dynamic style (60 kW of regeneration, 320 kW, 3,000 Wh/km), same badge, same average at the bottom. The bar follows over two seconds, without jitter, whatever the refresh rate. Settings › Interface › Appearance › Style.</p>
+        <p data-l="en">Power: zero marked, regeneration on the left in blue, power on the right in light grey. Consumption: a short regeneration zone on the left, then the scale; an “avg” triangle marks the trip average, and the bar is green below it, orange above. Same scales as the dynamic style (60 kW of regeneration, 320 kW, 3,000 Wh/km), same information slots. The bar follows over two seconds, without jitter, whatever the refresh rate. Settings › Interface › Appearance › Style.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-charge" data-hl-key="s-cluster-preview" data-demo="chargeCluster">
@@ -1190,13 +1220,14 @@
         <p data-l="en">At the top of the card, “Settings for:” shows every profile as chips, with multiple selection. The whole card follows the active profile, and a new profile starts with the module off.</p>
       </details>
     </div>
-    <div class="pt" id="f-cluster-miles" data-hl-key="s-cluster-dist" data-demo="clusterMiles">
-      <h3><span data-l="en">Kilometres or miles</span></h3>
-      <p data-l="en">A Distance row: Auto, km or miles. Auto follows the unit set in the car.</p>
+    <div class="pt is-new" id="f-cluster-miles" data-hl-key="s-distance" data-demo="distance">
+      <h3><span data-l="en">Kilometres or miles</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="en">One general setting, Settings › Interface › Distance unit: Auto, km or miles, for the statistics, the driver display and the information bubbles.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">In miles, the whole module switches: gauge in Wh/mi or kWh/100 mi, average in Wh/mi, kWh/100 mi or mi/kWh, never mixing units. Auto is the default; a choice already made is kept.</p>
+        <p data-l="en">Auto follows the unit set in the car. In miles, everything switches without ever mixing units: gauge in Wh/mi or kWh/100 mi, average in Wh/mi, kWh/100 mi or mi/kWh, statistics distances and speeds. The choice once made on the driver display is carried over. The CSV export stays in km.</p>
       </details>
     </div>
+
     <div class="pt" id="f-cluster-power" data-hl-key="s-cluster-power" data-demo="clusterPower">
       <h3><span data-l="en">Power scale that fits</span></h3>
       <p data-l="en">The power gauge fits your MG4 instead of always going up to 320 kW.</p>
@@ -1207,7 +1238,7 @@
   </div>
   <div class="widget" id="apercu-module">
     <h3><span data-l="en">Module preview</span></h3>
-    <p class="sub" data-l="en">The module as it shows in the cluster's central square, with the style, units, badge and animation set in the mockup. Driving is simulated: pick the module and the style, accelerate, brake, or plug in a charger.</p>
+    <p class="sub" data-l="en">The module as it shows in the cluster's central square, with the style, units, information slots and animation set in the mockup. Driving is simulated: pick the module and the style, accelerate, brake, or plug in a charger.</p>
     <div class="cl" data-cluster></div>
   </div>
 </section>
@@ -1336,7 +1367,7 @@
       <h3><span data-l="en">Car language</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
       <p data-l="en">On first launch, MG4Control takes the car's language if it is translated; otherwise it asks you.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Eight languages: French, English, German, Spanish, Italian, Portuguese, Turkish and, new, Polish. Pop-ups shown before the app is first opened follow that language too. A choice already made is left unchanged.</p>
+        <p data-l="en">Nine languages: French, English, German, Spanish, Italian, Portuguese, Turkish and, new, Polish and Norwegian (Bokmål, #239). Pop-ups shown before the app is first opened follow that language too. A choice already made is left unchanged.</p>
       </details>
     </div>
   </div>
@@ -1660,8 +1691,8 @@
 <div class="dock" aria-label="Virtual vehicle"></div>
 <button type="button" class="to-top" aria-label="Back to the top of the page" title="Back to the top of the page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="../assets/js/strings.js?v=be0bb142"></script>
-<script src="../assets/js/sim.js?v=473a5fe8"></script>
+<script src="../assets/js/strings.js?v=7bbcc5b3"></script>
+<script src="../assets/js/sim.js?v=8ae1b5f0"></script>
 <script src="../assets/js/site.js?v=eae0ab3a"></script>
 <script src="../assets/js/explorer.js?v=72fb983a"></script>
 </body>
