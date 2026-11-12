@@ -230,12 +230,19 @@ class ClusterLayoutEditor(
             interrupteur(R.string.cluster_layout_consumption_kw, disposition.consumptionKw == true) {
                 disposition = disposition.copy(consumptionKw = it.takeIf { v -> v })
             }
+            // Sur la consommation, la puissance ne se voit que sous la valeur : l'unité n'est
+            // proposée qu'avec elle (photos du 2026-11-12, kW → ch sans effet visible).
+            if (disposition.consumptionKw == true) unitePuissance()
         } else {
+            unitePuissance()
             interrupteur(R.string.cluster_layout_power_consumption, ClusterLayouts.powerConsumption(disposition)) {
                 disposition = disposition.copy(powerConsumption = it.takeIf { v -> !v })
             }
         }
-        // L'unité de puissance vaut pour les deux : arc de puissance, et kW récupérés ou à l'arrêt.
+    }
+
+    /** kW ou chevaux : un seul réglage pour les deux jauges (arc de puissance, kW sous la consommation). */
+    private fun unitePuissance() {
         rangee(R.string.cluster_layout_power_unit, listOf(null to "kW", ClusterInfo.UNIT_HP to ctx.getString(R.string.cluster_unit_hp))
             .map { (u, t) -> Option(t, disposition.powerUnit == u) { disposition = disposition.copy(powerUnit = u); maj() } })
     }

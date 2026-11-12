@@ -962,7 +962,7 @@
                     android:layout_weight="1"
                     android:layout_marginEnd="12dp"
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
+                    android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:background="@drawable/bg_card_rounded"
                     android:layout_marginBottom="12dp">

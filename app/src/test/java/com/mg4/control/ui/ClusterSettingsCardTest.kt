@@ -108,9 +108,13 @@ class ClusterSettingsCardTest {
         val kwDessous = activite.getString(R.string.cluster_layout_consumption_kw)
         val consoDessous = activite.getString(R.string.cluster_layout_power_consumption)
         val unite = activite.getString(R.string.cluster_layout_power_unit)
-        // Consommation : ses options, pas celles de la puissance ; l'unité vaut pour les deux.
-        assertTrue(moyenne in textes() && kwDessous in textes() && unite in textes())
-        assertTrue(consoDessous !in textes())
+        // Consommation : ses options, pas celles de la puissance ; l'unité seulement avec les kW dessous.
+        assertTrue(moyenne in textes() && kwDessous in textes())
+        assertTrue(consoDessous !in textes() && unite !in textes())
+        tous(fenetre.findViewById(R.id.panel_cluster_layout)).filterIsInstance<android.widget.Switch>()
+            .first { it.text.toString() == kwDessous }.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(unite in textes())
         tous(fenetre.findViewById(R.id.panel_cluster_layout)).filterIsInstance<TextView>()
             .first { it.text.toString() == activite.getString(R.string.settings_cluster_power) }.performClick()
         shadowOf(Looper.getMainLooper()).idle()
