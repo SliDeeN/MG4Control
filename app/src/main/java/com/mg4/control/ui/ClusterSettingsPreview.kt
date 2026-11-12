@@ -5,6 +5,11 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.View
 import android.widget.FrameLayout
+import com.mg4.control.model.ClusterInfo
+import com.mg4.control.model.ClusterLayout
+import com.mg4.control.model.ClusterModule
+import com.mg4.control.model.RuleSignal
+import com.mg4.control.ui.widget.ClusterBlocks
 import android.widget.TextView
 import com.mg4.control.util.DistanceSetting
 import com.mg4.control.model.ClusterConfig
@@ -53,12 +58,27 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
     var onglet: ClusterTab = ClusterTab.NAVIGATION
         set(v) { field = v; rafraichir() }
 
+    /**
+     * Personnalisation avancée (issue #229) : la disposition en cours d'édition, montrée à la place
+     * de celle des réglages ; [moduleForce] : la jauge à montrer, quel que soit l'onglet.
+     */
+    var disposition: ClusterLayout? = null
+        set(v) { field = v; rafraichir() }
+    var moduleForce: ClusterModule? = null
+        set(v) { field = v; rafraichir() }
+
+    /** La jauge dessinée : le popup de personnalisation y pose sa sélection ([ClusterGaugeView.edition]). */
+    val jauge: ClusterGaugeView get() = vue
+
     // Trajet simulé.
     private var t = 0.0
     private var kmh = 0f
     private var kwLisse: Float? = null
     private var moyenne = 168f
     private var recupWh = 120f
+    private var km = 12.4f
+    private var kwh = 2.1f
+    private var mots: AndroidRuleWords? = null
     private var dernierMs = 0L
     private var profil: DrivingProfile? = null
 
@@ -109,10 +129,12 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
             moyenne += ((kw * 1000f / kmh).coerceAtMost(400f) - moyenne) * (dt / 90.0).toFloat()
         }
         if (kw < 0f) recupWh += (-kw * dt / 3.6).toFloat()
+        km += (kmh * dt / 3600.0).toFloat()
+        if (kw > 0f) kwh += (kw * dt / 3600.0).toFloat()
     }
 
     private fun montrer(dtMs: Long) {
-        val module = ClusterModuleSettings.moduleFor(reglages, onglet)
+        val module = moduleForce ?: ClusterModuleSettings.moduleFor(reglages, onglet)
         if (module == null) {
             vue.visibility = View.INVISIBLE
             vide.visibility = View.VISIBLE
@@ -122,13 +144,13 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
         vide.visibility = View.GONE
         val p = profilMontre ?: profil
         val unite = ClusterModuleSettings.consumptionUnit(reglages)
+        val d = disposition ?: ClusterModuleSettings.layout(reglages)
         vue.montrer(ClusterGaugeView.Contenu(
             module = module,
             kw = kwLisse,
             kmh = kmh,
-            // Le mode de la voiture n'est pas lu ici : Normal, comme sur la maquette.
-            pastille = ClusterGauge.pill(ClusterModuleSettings.pill(reglages), DriveMode.NORMAL, p?.name,
-                p?.takeIf { it.appliesDrive }?.driveMode, Locale.forLanguageTag(LocaleHelper.getLanguage(ctx))),
+            // La pastille est une case comme les autres (issue #229).
+            pastille = null,
             moyenneWhKm = moyenne,
             recupWh = recupWh,
             unite = unite,
@@ -136,11 +158,38 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
             distance = DistanceSetting.unit(ctx),
             style = ClusterModuleSettings.style(reglages),
             pleineEchelleKw = ClusterModuleSettings.fullScaleKw(reglages, ClusterModuleSettings.learnedPowerKw(ctx)),
+            disposition = d,
+            blocs = blocs(d, p),
         ), if (dtMs == 0L) 0L else ClusterModuleSettings.animationMs(reglages).toLong())
+    }
+
+    /** Les cases (issue #229), sur le trajet simulé et des valeurs plausibles : rien n'est lu sur la voiture. */
+    private fun blocs(d: ClusterLayout, p: DrivingProfile?): List<ClusterGaugeView.Bloc?> {
+        val m = mots ?: AndroidRuleWords(ctx).also { mots = it }
+        val lecture = ClusterBlocks.Lecture(
+            trajet = ClusterInfo.Trip(moyenne, km, kwh, recupWh, kwLisse),
+            vitesseKmh = kmh,
+            profilNom = p?.name,
+            profilMode = p?.takeIf { it.appliesDrive }?.driveMode,
+            mode = DriveMode.NORMAL,
+            signaux = SIMULES,
+        )
+        return runCatching {
+            ClusterBlocks.build(ctx, d, lecture, DistanceSetting.unit(ctx), m, Locale.forLanguageTag(LocaleHelper.getLanguage(ctx)))
+        }.getOrDefault(emptyList())
     }
 
     private companion object {
         const val CYCLE_S = 24.0
+
+        /** Valeurs d'exemple des signaux montrables dans une case. */
+        val SIMULES: Map<String, Any?> = mapOf(
+            RuleSignal.SOC.name to 64.0, RuleSignal.RANGE.name to 285.0, RuleSignal.OUTSIDE_TEMP.name to 8.0,
+            RuleSignal.HVAC_TEMP.name to 21.0, RuleSignal.VOLUME.name to 12.0, RuleSignal.CHARGE_LIMIT.name to 90.0,
+            RuleSignal.BRIGHTNESS.name to 60.0, RuleSignal.REGEN.name to "MEDIUM", RuleSignal.GEAR.name to "D",
+            RuleSignal.HVAC_ON.name to true, RuleSignal.AC_ON.name to true, RuleSignal.READY.name to true,
+            RuleSignal.CHARGING.name to false, RuleSignal.PLUGGED.name to false,
+        )
 
         /** Puissance visée (kW) et vitesse (km/h) à l'instant [t] du cycle. */
         fun consigne(t: Double): Pair<Float, Float> = when {

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bulle / case « distance du trajet » (issue #229, 2026-11-12). Tabler Icons (MIT). Blanc : la vue colore le pictogramme. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:strokeColor="@android:color/white"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M3,19a2,2 0,1 0,4 0a2,2 0,0 0,-4 0 M19,7a2,2 0,1 0,0 -4a2,2 0,0 0,0 4z M11,19h5.5a3.5,3.5 0,0 0,0 -7h-8a3.5,3.5 0,0 1,0 -7h4.5" />
+</vector>

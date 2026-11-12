@@ -70,9 +70,7 @@ import com.mg4.control.model.ClusterConfigs
 import com.mg4.control.model.DrivingProfile
 import com.mg4.control.profile.ProfileManager
 import com.mg4.control.model.ClusterModule
-import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
-import com.mg4.control.model.AverageUnit
 import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ConsumptionUnit
 import com.mg4.control.model.DistanceUnit
@@ -450,18 +448,8 @@ class SettingsFragment : Fragment() {
             ClusterGaugeStyle.DYNAMIC to view.findViewById(R.id.btn_cluster_style_dynamic),
             ClusterGaugeStyle.DISCREET to view.findViewById(R.id.btn_cluster_style_discreet),
         )
-        // Unité de la moyenne du trajet, à part de celle de la jauge (2026-10-17).
-        val avgBtns: List<Pair<AverageUnit, MaterialButton>> = listOf(
-            AverageUnit.WH_PER_KM to view.findViewById(R.id.btn_cluster_avg_wh),
-            AverageUnit.KWH_PER_100KM to view.findViewById(R.id.btn_cluster_avg_kwh),
-            AverageUnit.KM_PER_KWH to view.findViewById(R.id.btn_cluster_avg_km),
-        )
-        // Pastille en haut à gauche : mode de conduite, profil actif ou rien (issue #152).
-        val pillBtns: List<Pair<ClusterPill, MaterialButton>> = listOf(
-            ClusterPill.DRIVE_MODE to view.findViewById(R.id.btn_cluster_pill_mode),
-            ClusterPill.PROFILE to view.findViewById(R.id.btn_cluster_pill_profile),
-            ClusterPill.NONE to view.findViewById(R.id.btn_cluster_pill_none),
-        )
+        // La pastille et l'unité de la moyenne du trajet se règlent sur leur case, dans la
+        // personnalisation avancée (issue #229) : leurs lignes ont quitté la carte.
         // Puissance maxi de la jauge (issue #165) : Auto (`null`, apprise) ou une puissance choisie.
         val powerBtns: List<Pair<Int?, MaterialButton>> = listOf(
             null to view.findViewById(R.id.btn_cluster_power_auto),
@@ -476,10 +464,8 @@ class SettingsFragment : Fragment() {
         val etiqNav = etiquette(R.id.tv_cluster_label_nav, R.string.settings_cluster_row_nav)
         val etiqMedia = etiquette(R.id.tv_cluster_label_media, R.string.settings_cluster_row_media)
         val etiqStyle = etiquette(R.id.tv_cluster_label_style, R.string.settings_cluster_row_style)
-        val etiqPill = etiquette(R.id.tv_cluster_label_pill, R.string.settings_cluster_row_pill)
         val etiqPower = etiquette(R.id.tv_cluster_label_power, R.string.settings_cluster_row_power)
         val etiqGauge = etiquette(R.id.tv_cluster_label_gauge, R.string.settings_cluster_row_gauge)
-        val etiqAverage = etiquette(R.id.tv_cluster_label_average, R.string.settings_cluster_row_average)
 
         selectionCombine = emptySet()
         var profils: List<DrivingProfile> = emptyList()
@@ -561,13 +547,10 @@ class SettingsFragment : Fragment() {
             val distance = DistanceSetting.unit(requireContext())
             // Les unités se lisent dans la distance choisie : « Wh/mi », « mi/kWh »…
             unitBtns.forEach { (u, btn) -> btn.text = u.labelFor(distance) }
-            avgBtns.forEach { (u, btn) -> btn.text = u.labelFor(distance) }
             ligne(etiqGauge, choisis.map { ClusterModuleSettings.consumptionUnit(it) }, unitBtns)
-            ligne(etiqPill, choisis.map { ClusterModuleSettings.pill(it) }, pillBtns)
             ligne(etiqPower, choisis.map { ClusterModuleSettings.powerMaxChoice(it) }, powerBtns)
             tvPowerDesc.text = getString(R.string.settings_cluster_power_desc, ClusterModuleSettings.learnedPowerKw(ctx))
             ligne(etiqStyle, choisis.map { ClusterModuleSettings.style(it) }, styleBtns)
-            ligne(etiqAverage, choisis.map { ClusterModuleSettings.averageUnit(it) }, avgBtns)
             ongletsApercu.forEach { (o, btn) -> peindre(btn, o == apercu.onglet) }
         }
         /** Rangées de cinq puces, refaites à chaque retour sur l'écran : un profil a pu changer. */
@@ -642,17 +625,14 @@ class SettingsFragment : Fragment() {
                 updateClusterCard()
             }
         }
-        avgBtns.forEach { (u, btn) ->
-            btn.setOnClickListener {
-                modifier("Unité de la moyenne du trajet → ${u.label}") { it.copy(average = u.key) }
-                updateClusterCard()
-            }
-        }
-        pillBtns.forEach { (p, btn) ->
-            btn.setOnClickListener {
-                modifier("Pastille du combiné → ${p.key}") { it.copy(pill = p.key) }
-                updateClusterCard()
-            }
+        // Personnalisation avancée (issue #229) : un popup, sur les réglages du premier profil
+        // sélectionné ; « Enregistrer » les écrit pour tous les profils sélectionnés.
+        view.findViewById<View>(R.id.btn_cluster_layout).setOnClickListener {
+            val depart = reglagesChoisis().first()
+            ClusterLayoutEditor(requireContext(), depart, apercu.profilMontre, tvProfilsInfo.text, apercu.onglet) { disposition, style ->
+                modifier("Écran conducteur, personnalisation avancée") { it.copy(layout = disposition, style = style) }
+                if (isAdded) updateClusterCard()
+            }.ouvrir()
         }
         powerBtns.forEach { (kw, btn) ->
             btn.setOnClickListener {

@@ -521,6 +521,9 @@ class ClusterTrip {
 
     fun regenWh(): Float = energie.result().regenKwh * 1000f
 
+    /** Énergie sortie de la batterie depuis READY, récupération non déduite (issue #229). */
+    fun consumedKwh(): Float = energie.result().consumedKwh
+
     fun reset() {
         energie.reset()
         km = 0.0

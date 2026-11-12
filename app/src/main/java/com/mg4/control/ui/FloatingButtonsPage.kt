@@ -499,16 +499,7 @@ class FloatingButtonsPage {
     }
 
     /** Ce que la voiture sait lire : mêmes filtres que la liste des valeurs des automatisations. */
-    private fun infoLisible(s: com.mg4.control.model.RuleSignal): Boolean = when (s) {
-        com.mg4.control.model.RuleSignal.HVAC_ON, com.mg4.control.model.RuleSignal.AC_ON, com.mg4.control.model.RuleSignal.HVAC_AUTO,
-        com.mg4.control.model.RuleSignal.HVAC_ECO, com.mg4.control.model.RuleSignal.HVAC_TEMP, com.mg4.control.model.RuleSignal.FAN,
-        com.mg4.control.model.RuleSignal.RECIRC, com.mg4.control.model.RuleSignal.DEFROST_FRONT,
-        com.mg4.control.model.RuleSignal.DEFROST_REAR -> com.mg4.control.hardware.MG4Hardware.hasClimateControl()
-        com.mg4.control.model.RuleSignal.ESC, com.mg4.control.model.RuleSignal.DROWSINESS -> com.mg4.control.hardware.MG4Hardware.hasDrowsinessAndEsc()
-        com.mg4.control.model.RuleSignal.BRIGHTNESS -> com.mg4.control.hardware.MG4Hardware.hasBrightnessControl()
-        com.mg4.control.model.RuleSignal.BATTERY_HEAT -> com.mg4.control.hardware.MG4Hardware.hasBatteryHeating()
-        else -> true
-    }
+    private fun infoLisible(s: com.mg4.control.model.RuleSignal): Boolean = InfoIcons.readable(s)
 
     private fun choisirInfo(b: FloatingButton) {
         val ctx = fragment?.context ?: return

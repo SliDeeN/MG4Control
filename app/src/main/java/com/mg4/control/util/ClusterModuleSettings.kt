@@ -4,6 +4,8 @@ import android.content.Context
 import com.mg4.control.model.AverageUnit
 import com.mg4.control.model.ClusterConfig
 import com.mg4.control.model.ClusterGaugeStyle
+import com.mg4.control.model.ClusterLayout
+import com.mg4.control.model.ClusterLayouts
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
@@ -96,6 +98,9 @@ object ClusterModuleSettings {
     /** Pastille en haut à gauche (issue #152) : profil actif par défaut. */
     const val KEY_PILL = "cluster_pill"
 
+    /** Disposition du module (issue #229), en JSON ; absente = celle d'avant. Sans aucun profil seulement. */
+    const val KEY_LAYOUT = "cluster_layout"
+
     /**
      * Durée du glissement de la jauge d'une valeur à la suivante (issue #152), en ms : 0,2 à 2 s
      * par pas de 0,1 s, à part de l'actualisation. Avant, elle valait 80 % de celle-ci (50 à
@@ -132,6 +137,8 @@ object ClusterModuleSettings {
     fun averageUnit(ctx: Context?): AverageUnit = averageUnit(ClusterProfiles.effective(ctx))
 
     fun pill(ctx: Context?): ClusterPill = pill(ClusterProfiles.effective(ctx))
+
+    fun layout(ctx: Context?): ClusterLayout = layout(ClusterProfiles.effective(ctx))
 
     fun animationMs(ctx: Context?): Int = animationMs(ClusterProfiles.effective(ctx))
 
@@ -184,7 +191,9 @@ object ClusterModuleSettings {
             pill = p.getString(KEY_PILL, null),
             refreshMs = if (p.contains(KEY_REFRESH)) p.getInt(KEY_REFRESH, DEFAULT_REFRESH_MS) else null,
             animationMs = if (p.contains(KEY_ANIMATION)) p.getInt(KEY_ANIMATION, DEFAULT_ANIMATION_MS) else null,
-        )
+        ).copy(layout = p.getString(KEY_LAYOUT, null)?.let { j ->
+            runCatching { com.google.gson.Gson().fromJson(j, ClusterLayout::class.java) }.getOrNull()
+        })
     }
 
     /** Sans aucun profil, la carte règle les réglages communs : ils sont réécrits en entier. */
@@ -200,6 +209,7 @@ object ClusterModuleSettings {
             putString(KEY_PILL, c.pill)
             c.refreshMs?.let { putInt(KEY_REFRESH, it) } ?: remove(KEY_REFRESH)
             c.animationMs?.let { putInt(KEY_ANIMATION, it) } ?: remove(KEY_ANIMATION)
+            c.layout?.let { putString(KEY_LAYOUT, com.google.gson.Gson().toJson(it)) } ?: remove(KEY_LAYOUT)
         }.apply()
     }
 
@@ -225,6 +235,9 @@ object ClusterModuleSettings {
     fun averageUnit(c: ClusterConfig): AverageUnit = AverageUnit.resolve(c.average, consumptionUnit(c))
 
     fun pill(c: ClusterConfig): ClusterPill = ClusterPill.fromKey(c.pill)
+
+    /** Disposition du module (issue #229) : celle enregistrée, sinon celle d'avant. */
+    fun layout(c: ClusterConfig): ClusterLayout = ClusterLayouts.of(c)
 
     fun animationMs(c: ClusterConfig): Int = sanitizeAnimation(c.animationMs)
 

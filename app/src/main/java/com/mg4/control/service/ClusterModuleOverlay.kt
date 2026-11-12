@@ -39,7 +39,6 @@ import com.mg4.control.model.ChargeEnCours
 import com.mg4.control.model.ClusterGauge
 import com.mg4.control.model.ClusterGaugeStyle
 import com.mg4.control.model.ClusterModule
-import com.mg4.control.model.ClusterPill
 import com.mg4.control.model.ClusterTab
 import com.mg4.control.model.ClusterTrip
 import com.mg4.control.model.DriveMode
@@ -51,6 +50,7 @@ import com.mg4.control.model.PreClimateTrend
 import com.mg4.control.model.StatsTracker
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.profile.ProfileManager
+import com.mg4.control.ui.widget.ClusterBlocks
 import com.mg4.control.ui.widget.ClusterGaugeView
 import com.mg4.control.util.ClusterModuleSettings
 import com.mg4.control.util.LocaleHelper
@@ -110,6 +110,8 @@ internal object ClusterModuleOverlay {
      * non en relevés manqués : à 0,1 s, trois relevés ne feraient que 0,3 s.
      */
     private const val MANQUE_TOLERE_MS = 3_000L
+    /** Signaux des cases d'information (issue #229) : relus toutes les 5 s, comme les bulles. */
+    private const val SIGNAUX_MS = 5_000L
 
     private val main = Handler(Looper.getMainLooper())
     private val lecteur: Handler by lazy { Handler(HandlerThread("mg4-cluster").also { it.start() }.looper) }
@@ -135,6 +137,11 @@ internal object ClusterModuleOverlay {
     private var dernierModule: ClusterModule? = null
     private var dernierPreClim = false
     private var mode: DriveMode? = null
+    /** Cases d'information (issue #229) : signaux relus toutes les [SIGNAUX_MS], mots de la langue choisie. */
+    private val signaux = mutableMapOf<String, Any?>()
+    private var dernierSignauxMs = 0L
+    private var mots: com.mg4.control.ui.AndroidRuleWords? = null
+    private var motsLangue: String? = null
     /**
      * Profil de la pastille (issue #152) : relu quand le profil actif change, et avec les valeurs
      * lentes — un nom ou un mode modifié dans l'éditeur apparaît au plus dix secondes après.
@@ -428,8 +435,9 @@ internal object ClusterModuleOverlay {
                 dernierLentMs = 0L   // temps restant, cible et type tout de suite
                 AppLogger.i(TAG, "charge détectée : le module de charge remplace les jauges")
             }
-            val choixPastille = ClusterModuleSettings.pill(ctx)
-            val idActif = if (choixPastille == ClusterPill.PROFILE) ActiveProfile.id(ctx) else null
+            // Disposition (issue #229) : le profil n'est lu que si une case le montre.
+            val disposition = ClusterModuleSettings.layout(ctx)
+            val idActif = if (ClusterBlocks.usesProfile(disposition)) ActiveProfile.id(ctx) else null
             val lent = dernierLentMs == 0L || maintenant - dernierLentMs >= LENT_MS
             if (idActif != profilId || (lent && idActif != null)) {
                 profilId = idActif
@@ -488,6 +496,7 @@ internal object ClusterModuleOverlay {
                 AppLogger.i(TAG, if (preClim != null) "pré-climatisation : sa fiche remplace le module"
                     else "pré-climatisation : la fiche se retire")
             }
+            val blocs = if (preClim == null && module != null) blocs(ctx, disposition, kmh, maintenant, lent) else emptyList()
             val contenu = if (preClim != null) ClusterGaugeView.Contenu(
                 // Ni jauge ni pastille tant que la fiche est là.
                 module = module ?: ClusterModule.CONSUMPTION, kw = null, kmh = null, pastille = null,
@@ -497,9 +506,8 @@ internal object ClusterModuleOverlay {
                     module = it,
                     kw = kwLisse,
                     kmh = kmh,
-                    pastille = ClusterGauge.pill(choixPastille, mode, profil?.name,
-                        // Couleur du mode du profil s'il règle la conduite, sinon celle de la voiture.
-                        profil?.takeIf { p -> p.appliesDrive }?.driveMode, langue(ctx)),
+                    // La pastille est une case comme les autres (issue #229).
+                    pastille = null,
                     moyenneWhKm = trajet.averageWhPerKm(),
                     recupWh = trajet.regenWh(),
                     unite = ClusterModuleSettings.consumptionUnit(ctx),
@@ -510,6 +518,8 @@ internal object ClusterModuleOverlay {
                     pleineEchelleKw = ClusterModuleSettings.fullScaleKw(ctx),
                     // À la place de la jauge réglée pour l'onglet, jamais sur un onglet sans module.
                     charge = if (session.active) vueCharge(maintenant) else null,
+                    disposition = disposition,
+                    blocs = blocs,
                 )
             }
             main.post {
@@ -541,6 +551,48 @@ internal object ClusterModuleOverlay {
         ClusterModuleSettings.saveLearnedPower(ctx, apres, pointes)
         AppLogger.i(TAG, "fin du trajet : pointe ${pointe.toInt()} kW, plafond appris $avant → $apres kW " +
             "(pointes : ${pointes.joinToString { it.toInt().toString() }})")
+    }
+
+    /**
+     * Les cases d'information à cet instant (issue #229, fil du lecteur). Les signaux des
+     * automatisations se relisent toutes les [SIGNAUX_MS] (binder) ; le trajet, la puissance et la
+     * vitesse, à chaque relevé.
+     */
+    private fun blocs(ctx: Context, d: com.mg4.control.model.ClusterLayout, kmh: Float?, maintenant: Long, lent: Boolean):
+        List<ClusterGaugeView.Bloc?> {
+        val lus = ClusterBlocks.signauxLus(d)
+        if (lus.any { it.name !in signaux } || maintenant - dernierSignauxMs >= SIGNAUX_MS) {
+            dernierSignauxMs = maintenant
+            lus.forEach { s -> signaux[s.name] = com.mg4.control.automation.CustomRules.readSignal(ctx, s) }
+        }
+        val code = LocaleHelper.getLanguage(ctx)
+        val lieu = LocaleHelper.applyLocale(ctx)
+        // Les mots se refont avec les valeurs lentes : un profil renommé apparaît dans les dix secondes.
+        val m = mots?.takeIf { motsLangue == code && !lent } ?: com.mg4.control.ui.AndroidRuleWords(lieu).also {
+            mots = it
+            motsLangue = code
+        }
+        val lecture = ClusterBlocks.Lecture(
+            trajet = com.mg4.control.model.ClusterInfo.Trip(
+                averageWhPerKm = trajet.averageWhPerKm(),
+                distanceKm = trajet.distanceKm,
+                consumedKwh = trajet.consumedKwh(),
+                regenWh = trajet.regenWh(),
+                powerKw = kwLisse,
+            ),
+            vitesseKmh = kmh,
+            profilNom = profil?.name,
+            // Couleur du mode du profil s'il règle la conduite, sinon celle de la voiture.
+            profilMode = profil?.takeIf { p -> p.appliesDrive }?.driveMode,
+            mode = mode,
+            signaux = signaux.toMap(),
+        )
+        return runCatching {
+            ClusterBlocks.build(lieu, d, lecture, ClusterModuleSettings.distanceUnit(ctx), m, langue(ctx))
+        }.getOrElse { e ->
+            AppLogger.w(TAG, "cases d'information illisibles : ${e.message}")
+            emptyList()
+        }
     }
 
     /** Langue choisie dans l'application (comme la vue) : le nom du profil s'écrit en capitales dans celle-ci. */

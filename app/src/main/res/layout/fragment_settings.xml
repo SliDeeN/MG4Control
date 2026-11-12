@@ -1564,85 +1564,31 @@
 
                         </LinearLayout>
 
-                        <LinearLayout
+                        <!-- Personnalisation avancée (issue #229) : jauge, couleurs et jusqu'à quatre informations,
+                             dans un popup avec aperçu. Remplace la ligne « Pastille », devenue une information. -->
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_cluster_layout"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:id="@+id/tv_cluster_label_pill"
-                                android:layout_width="150dp"
-                                android:layout_height="wrap_content"
-                                android:text="@string/settings_cluster_row_pill"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="19sp" />
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="horizontal">
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_pill_mode"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginEnd="4dp"
-                                    android:text="@string/settings_cluster_pill_mode"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_pill_profile"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginHorizontal="4dp"
-                                    android:text="@string/settings_cluster_pill_profile"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_pill_none"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginStart="4dp"
-                                    android:text="@string/settings_cluster_pill_none"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                            </LinearLayout>
-
-                        </LinearLayout>
+                            android:minHeight="56dp"
+                            android:layout_marginTop="10dp"
+                            android:text="@string/cluster_layout_open"
+                            android:textAllCaps="false"
+                            android:textColor="@color/dash_accent"
+                            android:textSize="19sp"
+                            app:icon="@drawable/ic_cat_adjust"
+                            app:iconTint="@color/dash_accent"
+                            app:iconGravity="textStart"
+                            app:backgroundTint="@color/dash_accent_dim"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/dash_accent"
+                            app:cornerRadius="14dp" />
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="4dp"
-                            android:layout_marginStart="150dp"
-                            android:text="@string/settings_cluster_pill_desc"
+                            android:text="@string/cluster_layout_open_desc"
                             android:textColor="@color/dash_text_lo"
                             android:textSize="18sp" />
 
@@ -1822,79 +1768,6 @@
                                     android:layout_weight="1"
                                     android:layout_marginStart="4dp"
                                     android:text="@string/cluster_unit_kwh_100km"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                            </LinearLayout>
-
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="6dp"
-                            android:orientation="horizontal"
-                            android:gravity="center_vertical">
-
-                            <TextView
-                                android:id="@+id/tv_cluster_label_average"
-                                android:layout_width="150dp"
-                                android:layout_height="wrap_content"
-                                android:text="@string/settings_cluster_row_average"
-                                android:textColor="@color/text_secondary"
-                                android:textSize="19sp" />
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="horizontal">
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_avg_wh"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginEnd="4dp"
-                                    android:text="@string/cluster_unit_wh_km"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_avg_kwh"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginHorizontal="4dp"
-                                    android:text="@string/cluster_unit_kwh_100km"
-                                    android:textAllCaps="false"
-                                    android:textColor="@color/text_secondary"
-                                    android:textSize="19sp"
-                                    app:backgroundTint="@color/dash_btn"
-                                    app:strokeWidth="1dp"
-                                    app:strokeColor="@color/dash_border"
-                                    app:cornerRadius="14dp" />
-
-                                <com.google.android.material.button.MaterialButton
-                                    android:id="@+id/btn_cluster_avg_km"
-                                    android:layout_width="0dp"
-                                    android:layout_height="wrap_content"
-                                    android:minHeight="52dp"
-                                    android:layout_weight="1"
-                                    android:layout_marginStart="4dp"
-                                    android:text="@string/cluster_unit_km_kwh"
                                     android:textAllCaps="false"
                                     android:textColor="@color/text_secondary"
                                     android:textSize="19sp"

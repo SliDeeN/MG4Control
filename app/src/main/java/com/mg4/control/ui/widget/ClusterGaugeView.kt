@@ -21,6 +21,7 @@ import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Typeface
@@ -37,6 +38,9 @@ import com.mg4.control.model.AverageUnit
 import com.mg4.control.model.ChargeType
 import com.mg4.control.model.ClusterGauge
 import com.mg4.control.model.ClusterGaugeStyle
+import com.mg4.control.model.ClusterInfo
+import com.mg4.control.model.ClusterLayout
+import com.mg4.control.model.ClusterLayouts
 import com.mg4.control.model.ClusterModule
 import com.mg4.control.model.ConsumptionUnit
 import com.mg4.control.model.DistanceUnit
@@ -154,7 +158,51 @@ class ClusterGaugeView(context: Context) : View(context) {
         val preClim: PreClim? = null,
         /** Fin de l'échelle de puissance (issue #165) : choisie, ou apprise en roulant. */
         val pleineEchelleKw: Float = ClusterGauge.POWER_FULL_KW,
+        /**
+         * Disposition (issue #229) : jauge et cases d'information. `null` : l'affichage d'avant,
+         * pastille et pied dessinés par la jauge elle-même.
+         */
+        val disposition: ClusterLayout? = null,
+        /** Ce qu'affichent les quatre cases, prêt à dessiner (Info 1 à 4, `null` = case libre). */
+        val blocs: List<Bloc?> = emptyList(),
     )
+
+    /**
+     * Une case d'information prête à dessiner (issue #229). [valeur] et [unite] : le chiffre et son
+     * unité en petit ; [libelle] : le nom de l'information (style « libellé ») ; [icone] : son
+     * pictogramme (style « icône ») ; [pastille] : la pastille du profil ou du mode (style
+     * « pastille ») ; [couleur] : celle de la valeur, `null` = blanc.
+     */
+    data class Bloc(
+        val valeur: String,
+        val unite: String?,
+        val libelle: String,
+        val icone: Int?,
+        val pastille: PillContent?,
+        val style: String,
+        val taille: String,
+        val couleur: Int? = null,
+    )
+
+    /**
+     * Personnalisation en cours (popup de l'issue #229) : cases libres visibles, élément choisi
+     * entouré, et ce qu'on fait glisser sous le doigt. Coordonnées dans le carré de 260.
+     *
+     * @param selection case choisie (0 à 3), [JAUGE] pour la jauge, `null` = rien
+     * @param glisse    case ou [JAUGE] qu'on déplace, `null` = aucun glisser
+     */
+    data class Edition(
+        val selection: Int? = null,
+        val glisse: Int? = null,
+        val doigtX: Float = 0f,
+        val doigtY: Float = 0f,
+        val cible: Int? = null,
+        val cibleJauge: String? = null,
+    )
+
+    /** Ce qu'on personnalise ([Edition]) ; `null` sur le combiné. */
+    var edition: Edition? = null
+        set(v) { field = v; invalidate() }
 
     private var contenu: Contenu? = null
     private var etat: GaugeState? = null
@@ -182,11 +230,30 @@ class ClusterGaugeView(context: Context) : View(context) {
 
     private val locale: Locale = context.resources.configuration.locales[0]
 
+    /** Épaisseur des jauges et couleurs de la consommation et de la récupération (issue #229). */
+    private var epaisseur = EPAISSEUR
+    private var epaisseurBarre = BARRE_EPAISSEUR
+    private var cConso = sombre.getColor(R.color.dash_warn)
+    private var cRecup = cAccent
+    /** Consommée sur la barre discrète de puissance : gris clair, sauf couleur choisie. */
+    private var cConsoDiscrete = C_CLAIR
+    private var curseurMoyenne = false
+    private var kwSousConso = false
+    private var consoSousKw = true
+    /** Faux quand la disposition dessine ses cases : la jauge n'a plus ni pastille ni pied. */
+    private var avecPied = true
+
     private val trait = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
         strokeWidth = EPAISSEUR
     }
+    private val pointilles = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 1.5f
+        pathEffect = DashPathEffect(floatArrayOf(5f, 4f), 0f)
+    }
+    private val iconesBlocs = mutableMapOf<Int, android.graphics.drawable.Drawable?>()
     private val plein = Paint(Paint.ANTI_ALIAS_FLAG)
     private val texte = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER }
     private val textePastille = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -254,6 +321,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         val echelle = minOf(width, height) / ClusterGauge.SIDE_PX.toFloat()
         canvas.save()
         canvas.scale(echelle, echelle)
+        // Fiches de charge et de pré-climatisation : l'épaisseur d'origine, quelle que soit la jauge réglée.
+        trait.strokeWidth = EPAISSEUR
 
         c.preClim?.let { p ->
             // Rien ne bouge : redessinée à chaque relevé.
@@ -271,15 +340,66 @@ class ClusterGaugeView(context: Context) : View(context) {
             return
         }
 
-        c.pastille?.let { pastille(canvas, it) }
-
-        when {
-            c.style == ClusterGaugeStyle.DISCREET && c.module == ClusterModule.POWER -> discretPuissance(canvas, c)
-            c.style == ClusterGaugeStyle.DISCREET -> discretConsommation(canvas, c)
-            c.module == ClusterModule.POWER -> puissance(canvas, c)
-            else -> consommation(canvas, c)
+        regler(c)
+        val d = c.disposition
+        if (d == null) {
+            c.pastille?.let { pastille(canvas, it) }
+            jauge(canvas, c)
+            canvas.restore()
+            return
         }
+        // Disposition (issue #229) : la jauge dans sa zone, à l'échelle, puis les cases.
+        val ed = edition
+        val geo = ClusterLayouts.geometry(d, showEmpty = ed != null)
+        val zone = geo.gauge
+        val (haut, bas) = coeur(c)
+        val e = minOf(zone.h / (bas - haut), zone.w / COTE, 1f)
+        if (e > 0.2f) {
+            canvas.save()
+            canvas.clipRect(zone.x, zone.y, zone.x + zone.w, zone.y + zone.h)
+            canvas.translate(zone.x + (zone.w - COTE * e) / 2f, zone.y + (zone.h - (bas - haut) * e) / 2f - haut * e)
+            canvas.scale(e, e)
+            jauge(canvas, c)
+            canvas.restore()
+        }
+        geo.cells.forEach { cell ->
+            val b = c.blocs.getOrNull(cell.slot)
+            if (ed?.glisse == cell.slot) caseVide(canvas, cell.box, null)
+            else if (b != null) bloc(canvas, b, cell.box, gauche = cell.slot % 2 == 0)
+            else if (ed != null) caseVide(canvas, cell.box, cell.slot)
+        }
+        if (ed != null) edition(canvas, ed, d, geo, c)
         canvas.restore()
+    }
+
+    private fun jauge(canvas: Canvas, c: Contenu) = when {
+        c.style == ClusterGaugeStyle.DISCREET && c.module == ClusterModule.POWER -> discretPuissance(canvas, c)
+        c.style == ClusterGaugeStyle.DISCREET -> discretConsommation(canvas, c)
+        c.module == ClusterModule.POWER -> puissance(canvas, c)
+        else -> consommation(canvas, c)
+    }
+
+    /** Hauteurs occupées par la jauge seule dans le carré de 260 : ce qu'on met à l'échelle de sa zone. */
+    private fun coeur(c: Contenu): Pair<Float, Float> = when {
+        c.style == ClusterGaugeStyle.DISCREET -> 54f to 174f
+        c.module == ClusterModule.POWER -> 6f to 194f
+        else -> 4f to 200f
+    }
+
+    /** L'allure réglée (issue #229), ou celle d'avant sans disposition. */
+    private fun regler(c: Contenu) {
+        val d = c.disposition
+        avecPied = d == null
+        val f = d?.let { ClusterLayouts.thicknessFactor(it) } ?: 1f
+        epaisseur = EPAISSEUR * f
+        epaisseurBarre = BARRE_EPAISSEUR * f
+        trait.strokeWidth = epaisseur
+        cConso = d?.consumptionColor ?: sombre.getColor(R.color.dash_warn)
+        cRecup = d?.regenColor ?: cAccent
+        cConsoDiscrete = d?.consumptionColor ?: C_CLAIR
+        curseurMoyenne = d?.let { ClusterLayouts.averageCursor(it, c.style) } ?: (c.style == ClusterGaugeStyle.DISCREET)
+        kwSousConso = d?.consumptionKw == true
+        consoSousKw = d?.let { ClusterLayouts.powerConsumption(it) } ?: true
     }
 
     // ── A : anneau de consommation ───────────────────────────────────────────
@@ -298,6 +418,13 @@ class ClusterGaugeView(context: Context) : View(context) {
         arc(canvas, cx, cy, RAYON_A, 135f, 270f, cPiste)
         val e = etat
         if (e != null) arc(canvas, cx, cy, RAYON_A, 135f, 270f * partAffichee, couleur(e.level))
+        // Moyenne du trajet (issue #229) : un point clair à l'intérieur de l'anneau, à sa place.
+        if (curseurMoyenne) c.moyenneWhKm?.takeIf { it > 0f }?.let { moy ->
+            val a = Math.toRadians((135f + 270f * ClusterGauge.consumptionFraction(moy * c.distance.factor)).toDouble())
+            val r = RAYON_A - epaisseur / 2f - 7f
+            plein.color = cTexte
+            canvas.drawCircle(cx + r * cos(a).toFloat(), cy + r * sin(a).toFloat(), 3.5f, plein)
+        }
 
         val v = valeurAffichee ?: e?.value ?: 0f
         val (chiffre, unite) = when (e?.unit) {
@@ -312,12 +439,16 @@ class ClusterGaugeView(context: Context) : View(context) {
             GaugeUnit.KW -> ClusterGauge.formatKw(v, locale) to "kW"
         }
         val recup = e?.unit == GaugeUnit.KW_REGEN
-        grandChiffre(canvas, chiffre, cx, cy + 16f, if (recup) cAccent else cTexte)
-        petit(canvas, unite, cx, cy + 40f, 13f, if (recup) cAccent else cTexte2)
+        grandChiffre(canvas, chiffre, cx, cy + 16f, if (recup) cRecup else cTexte)
+        petit(canvas, unite, cx, cy + 40f, 13f, if (recup) cRecup else cTexte2)
+        // Les kW sous l'unité (issue #229), en roulant : à l'arrêt, le chiffre est déjà en kW.
+        if (kwSousConso && (e?.unit == GaugeUnit.WH_PER_KM || e?.unit == GaugeUnit.KW_REGEN)) c.kw?.let { kw ->
+            petit(canvas, ClusterGauge.formatKw(kotlin.math.abs(kw), locale) + " kW", cx, cy + 58f, 13f, if (recup) cRecup else cTexte2)
+        }
 
-        pied(canvas,
+        if (avecPied) pied(canvas,
             context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne, c.distance), cTexte,
-            context.getString(R.string.cluster_regen), c.recupWh?.let { "+${it.roundToInt()}" to "Wh" } ?: ("–" to null), cAccent)
+            context.getString(R.string.cluster_regen), c.recupWh?.let { "+${it.roundToInt()}" to "Wh" } ?: ("–" to null), cRecup)
     }
 
     // ── B : arc de puissance ─────────────────────────────────────────────────
@@ -345,21 +476,21 @@ class ClusterGaugeView(context: Context) : View(context) {
         trait.color = cTexte2
         trait.strokeWidth = 2f
         canvas.drawLine(cx, cy - RAYON_B - 8f, cx, cy - RAYON_B + 8f, trait)
-        trait.strokeWidth = EPAISSEUR
+        trait.strokeWidth = epaisseur
         petit(canvas, "0", cx, cy - RAYON_B - 12f, 11f, cTexte2)
 
         val v = valeurAffichee ?: e?.value
         val recup = e != null && v != null && v < 0f
         // Entier en roulant, une décimale à l'arrêt (issue #152).
         val chiffre = if (e == null || v == null) "–" else (if (recup) "−" else "") + ClusterGauge.formatPowerKw(v, c.kmh, locale)
-        grandChiffre(canvas, chiffre, cx, cy + 12f, if (recup) cAccent else cTexte)
+        grandChiffre(canvas, chiffre, cx, cy + 12f, if (recup) cRecup else cTexte)
         // L'unité sous le chiffre (2026-10-15) : seul au centre, le chiffre ne disait pas ce qu'il
         // comptait. Remontée de 4 px pour laisser la place à la consommation (issue #152).
         if (e != null) {
             texte.typeface = moyen
             texte.textSize = 13f
             texte.letterSpacing = 0.04f
-            texte.color = if (recup) cAccent else cTexte2
+            texte.color = if (recup) cRecup else cTexte2
             canvas.drawText("kW", cx, cy + 28f, texte)
         }
         // Consommation instantanée en grand (28, en blanc) et son unité en petit et en gris
@@ -368,18 +499,19 @@ class ClusterGaugeView(context: Context) : View(context) {
         val wh = if (e == null || recup) null else c.kw?.let { ClusterGauge.whPerKm(it, c.kmh) }?.times(c.distance.factor)
         val whRecup = if (e == null || !recup) null else c.kw?.let { ClusterGauge.regenWhPerKm(it, c.kmh) }?.times(c.distance.factor)
         when {
-            e == null -> Unit
+            // La consommation sous les kW peut se masquer (issue #229).
+            e == null || !consoSousKw -> Unit
             wh != null -> valeurEtUnite(canvas, ClusterGauge.formatConsumption(wh, c.unite, locale), c.unite.labelFor(c.distance),
                 cx, cy + 64f, cTexte, tailleValeur = 28f, tailleUnite = 12f)
             whRecup != null -> valeurEtUnite(canvas, ClusterGauge.formatConsumption(whRecup, c.unite, locale), c.unite.labelFor(c.distance),
-                cx, cy + 64f, cAccent, tailleValeur = 28f, tailleUnite = 12f)
-            recup -> petit(canvas, context.getString(R.string.cluster_regen_word), cx, cy + 58f, 13f, cAccent)
+                cx, cy + 64f, cRecup, tailleValeur = 28f, tailleUnite = 12f)
+            recup -> petit(canvas, context.getString(R.string.cluster_regen_word), cx, cy + 58f, 13f, cRecup)
             else -> petit(canvas, context.getString(R.string.cluster_stopped_word), cx, cy + 58f, 13f, cTexte2)
         }
 
         // Le pourcentage de batterie est déjà sur le combiné : seule reste la moyenne du trajet,
         // centrée, sans filet (issue #152).
-        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne, c.distance), cTexte)
+        if (avecPied) piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne, c.distance), cTexte)
     }
 
     // ── Style discret : barre fine graduée (issue #153, variante A) ───────────
@@ -396,9 +528,9 @@ class ClusterGaugeView(context: Context) : View(context) {
     private fun barreDiscrete(canvas: Canvas, x0: Float, x1: Float, couleur: Int) {
         if (x1 - x0 < 0.5f) return
         trait.color = couleur
-        trait.strokeWidth = BARRE_EPAISSEUR
+        trait.strokeWidth = epaisseurBarre
         canvas.drawLine(x0, Y_BARRE, x1, Y_BARRE, trait)
-        trait.strokeWidth = EPAISSEUR
+        trait.strokeWidth = epaisseur
     }
 
     /** Un cran : un petit trait sous la barre et son chiffre, fixe ([libelle] `null` : le trait seul). */
@@ -408,7 +540,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         trait.strokeWidth = if (principal) 2f else 1f
         canvas.drawLine(x, Y_BARRE + 7f, x, Y_BARRE + 12f, trait)
         trait.strokeCap = Paint.Cap.ROUND
-        trait.strokeWidth = EPAISSEUR
+        trait.strokeWidth = epaisseur
         libelle ?: return
         texte.typeface = if (principal) moyen else Typeface.DEFAULT
         texte.textSize = 13f
@@ -426,8 +558,8 @@ class ClusterGaugeView(context: Context) : View(context) {
         val v = valeurAffichee ?: etat?.value
         if (etat != null && v != null) {
             val xv = xBarre(ClusterGauge.discreetPowerFraction(v, c.pleineEchelleKw))
-            if (v < -0.5f) barreDiscrete(canvas, xv, zero, cAccent)
-            else if (v > 0.5f) barreDiscrete(canvas, zero, xv, C_CLAIR)
+            if (v < -0.5f) barreDiscrete(canvas, xv, zero, cRecup)
+            else if (v > 0.5f) barreDiscrete(canvas, zero, xv, cConsoDiscrete)
         }
         val chiffres = ClusterGauge.discreetPowerLabels(c.pleineEchelleKw)
         ClusterGauge.discreetPowerTicks(c.pleineEchelleKw).forEach { k ->
@@ -440,7 +572,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         trait.strokeWidth = 2f
         canvas.drawLine(zero, Y_BARRE - 11f, zero, Y_BARRE + 11f, trait)
         trait.strokeCap = Paint.Cap.ROUND
-        trait.strokeWidth = EPAISSEUR
+        trait.strokeWidth = epaisseur
         texte.typeface = Typeface.DEFAULT
         texte.textSize = 11f
         texte.letterSpacing = 0f
@@ -448,7 +580,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         texte.textAlign = Paint.Align.RIGHT
         canvas.drawText("kW", BARRE_D, Y_BARRE - 14f, texte)
         texte.textAlign = Paint.Align.CENTER
-        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne, c.distance), cTexte)
+        if (avecPied) piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne, c.distance), cTexte)
     }
 
     private fun discretConsommation(canvas: Canvas, c: Contenu) {
@@ -463,7 +595,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         val moy = c.moyenneWhKm?.times(c.distance.factor)
         if (e != null && v != null) when (e.unit) {
             GaugeUnit.KW_REGEN -> barreDiscrete(canvas,
-                RECUP_D - (RECUP_D - BARRE_G) * ClusterGauge.discreetRegenFraction(v), RECUP_D, cAccent)
+                RECUP_D - (RECUP_D - BARRE_G) * ClusterGauge.discreetRegenFraction(v), RECUP_D, cRecup)
             GaugeUnit.WH_PER_KM -> barreDiscrete(canvas, CONSO_G, xConso(v),
                 if (moy != null && v > moy) couleur(GaugeLevel.CONSUMPTION) else cVert)
             else -> Unit
@@ -475,14 +607,14 @@ class ClusterGaugeView(context: Context) : View(context) {
         texte.typeface = Typeface.DEFAULT
         texte.letterSpacing = 0f
         texte.textSize = 11f
-        texte.color = cAccent
+        texte.color = cRecup
         canvas.drawText(context.getString(R.string.cluster_regen), (BARRE_G + RECUP_D) / 2f, Y_BARRE + 28f, texte)
         texte.color = C_DISCRET
         texte.textAlign = Paint.Align.RIGHT
         canvas.drawText(c.unite.labelFor(c.distance), BARRE_D, Y_BARRE + 44f, texte)
         texte.textAlign = Paint.Align.CENTER
-        // La moyenne du trajet : un triangle au-dessus de la barre, et son mot.
-        moy?.let {
+        // La moyenne du trajet : un triangle au-dessus de la barre, et son mot (masquable, issue #229).
+        moy?.takeIf { curseurMoyenne }?.let {
             val xm = xConso(it)
             plein.color = cTexte
             val pointe = android.graphics.Path().apply {
@@ -492,7 +624,7 @@ class ClusterGaugeView(context: Context) : View(context) {
             texte.color = cTexte2
             canvas.drawText(context.getString(R.string.cluster_avg_short), xm, Y_BARRE - 21f, texte)
         }
-        piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne, c.distance), cTexte)
+        if (avecPied) piedCentre(canvas, context.getString(R.string.cluster_trip_avg), moyenne(c.moyenneWhKm, c.uniteMoyenne, c.distance), cTexte)
     }
 
     // ── Pré-climatisation (maquette C, « fiche ») ────────────────────────────
@@ -809,7 +941,7 @@ class ClusterGaugeView(context: Context) : View(context) {
         trait.strokeCap = Paint.Cap.BUTT
         canvas.drawLine(cx + (rayon + 8f) * dx, cy + (rayon + 8f) * dy, cx + (rayon + 13f) * dx, cy + (rayon + 13f) * dy, trait)
         trait.strokeCap = Paint.Cap.ROUND
-        trait.strokeWidth = EPAISSEUR
+        trait.strokeWidth = epaisseur
         petit(canvas, libelle, cx + (rayon + 22f) * dx, cy + (rayon + 22f) * dy + 4f, 11f, cTexte2)
     }
 
@@ -888,57 +1020,189 @@ class ClusterGaugeView(context: Context) : View(context) {
      * plus long : les jauges ont été placées pour elle (photo du 2026-10-14), un nom de profil (30
      * caractères au plus) est coupé d'une ellipse.
      */
-    private fun pastille(canvas: Canvas, p: PillContent) {
+    private fun pastille(canvas: Canvas, p: PillContent) = pastille(canvas, p, 14f, 25f, largeurPastilleMax, false)
+
+    /**
+     * Pastille de [p] dont le bord gauche (ou droit, [aDroite]) est en [x] et le milieu en [yMilieu] ;
+     * le texte coupé d'une ellipse au-delà de [largeurMax].
+     */
+    private fun pastille(canvas: Canvas, p: PillContent, x: Float, yMilieu: Float, largeurMax: Float, aDroite: Boolean) {
         val teinte = p.mode?.let { OverlayKit.pastilleMode(sombre, it).first } ?: cTexte2
-        val nom = TextUtils.ellipsize(p.text, textePastille, largeurPastilleMax, TextUtils.TruncateAt.END).toString()
+        val nom = TextUtils.ellipsize(p.text, textePastille, largeurMax, TextUtils.TruncateAt.END).toString()
         val largeur = textePastille.measureText(nom) + 30f
+        val x0 = if (aDroite) x - largeur else x
         plein.color = Color.argb(64, Color.red(teinte), Color.green(teinte), Color.blue(teinte))
-        cadre.set(14f, 14f, 14f + largeur, 36f)
+        cadre.set(x0, yMilieu - 11f, x0 + largeur, yMilieu + 11f)
         canvas.drawRoundRect(cadre, 11f, 11f, plein)
         plein.color = teinte
-        canvas.drawCircle(26f, 25f, 3.5f, plein)
+        canvas.drawCircle(x0 + 12f, yMilieu, 3.5f, plein)
         textePastille.color = teinte
-        canvas.drawText(nom, 35f, 29.5f, textePastille)
+        canvas.drawText(nom, x0 + 21f, yMilieu + 4.5f, textePastille)
+    }
+
+    // ── Cases d'information (issue #229) ─────────────────────────────────────
+
+    /** Tailles S, M, L : valeur, unité, libellé. */
+    private fun tailles(t: String): Triple<Float, Float, Float> = when (t) {
+        ClusterInfo.SIZE_S -> Triple(13f, 10f, 10f)
+        ClusterInfo.SIZE_L -> Triple(21f, 12f, 11f)
+        else -> Triple(16f, 11f, 11f)
+    }
+
+    private fun bloc(canvas: Canvas, b: Bloc, box: ClusterLayouts.Box, gauche: Boolean) {
+        val milieu = box.y + box.h / 2f
+        if (b.style == ClusterInfo.STYLE_PILL && b.pastille != null) {
+            val large = box.w > COTE / 2f
+            // À gauche dans une case de gauche ou toute la largeur, à droite dans une case de droite.
+            val aDroite = !gauche && !large
+            pastille(canvas, b.pastille, if (aDroite) box.x + box.w - 10f else box.x + 10f, milieu,
+                minOf(largeurPastilleMax * 1.6f, box.w - 50f), aDroite)
+            return
+        }
+        val (tv, tu, tl) = tailles(b.taille)
+        val couleur = b.couleur ?: cTexte
+        val dispo = box.w - 10f
+        when (b.style) {
+            ClusterInfo.STYLE_LABEL -> {
+                texte.typeface = Typeface.DEFAULT
+                texte.textSize = tl
+                texte.letterSpacing = 0.04f
+                texte.color = cTexte2
+                val lib = TextUtils.ellipsize(b.libelle, TextPaint(texte), dispo, TextUtils.TruncateAt.END).toString()
+                canvas.drawText(lib, box.x + box.w / 2f, box.y + 4f + tl, texte)
+                ajuste(canvas, b.valeur, b.unite, box.x + box.w / 2f, box.y + box.h - 5f, couleur, tv, tu, dispo)
+            }
+            ClusterInfo.STYLE_ICON -> {
+                val cote = tv + 3f
+                val l = largeurValeur(b.valeur, b.unite, tv, tu)
+                val total = minOf(cote + 6f + l, dispo)
+                val x0 = box.x + (box.w - total) / 2f
+                b.icone?.let { id ->
+                    iconesBlocs.getOrPut(id) { ContextCompat.getDrawable(context, id)?.mutate() }?.let { dr ->
+                        dr.setTint(cTexte2)
+                        dr.setBounds(x0.toInt(), (milieu - cote / 2f).toInt(), (x0 + cote).toInt(), (milieu + cote / 2f).toInt())
+                        dr.draw(canvas)
+                    }
+                }
+                val xv = x0 + cote + 6f
+                ajuste(canvas, b.valeur, b.unite, xv + (total - cote - 6f) / 2f, milieu + tv * 0.36f, couleur, tv, tu, total - cote - 6f)
+            }
+            else -> ajuste(canvas, b.valeur, b.unite, box.x + box.w / 2f, milieu + tv * 0.36f, couleur, tv, tu, dispo)
+        }
+    }
+
+    private fun largeurValeur(valeur: String, unite: String?, tv: Float, tu: Float): Float {
+        texte.letterSpacing = 0f
+        texte.typeface = moyen
+        texte.textSize = tv
+        var l = texte.measureText(valeur)
+        unite?.let {
+            texte.typeface = Typeface.DEFAULT
+            texte.textSize = tu
+            l += texte.measureText(" $it")
+        }
+        return l
+    }
+
+    /** Valeur et unité centrées en [x], rapetissées (jusqu'aux 2/3) pour tenir dans [dispo]. */
+    private fun ajuste(canvas: Canvas, valeur: String, unite: String?, x: Float, y: Float, couleur: Int, tv: Float, tu: Float, dispo: Float) {
+        val l = largeurValeur(valeur, unite, tv, tu)
+        val f = if (l > dispo) (dispo / l).coerceAtLeast(0.66f) else 1f
+        valeurEtUnite(canvas, valeur, unite, x, y, couleur, tailleValeur = tv * f, tailleUnite = tu * f)
+    }
+
+    /** Case libre pendant la personnalisation : un cadre en pointillés, et « + Info N ». */
+    private fun caseVide(canvas: Canvas, box: ClusterLayouts.Box, slot: Int?) {
+        pointilles.color = C_CRAN
+        cadre.set(box.x + 1f, box.y + 2f, box.x + box.w - 1f, box.y + box.h - 2f)
+        canvas.drawRoundRect(cadre, 8f, 8f, pointilles)
+        slot ?: return
+        petit(canvas, "+ " + context.getString(R.string.cluster_layout_slot_fmt, slot + 1),
+            box.x + box.w / 2f, box.y + box.h / 2f + 4f, 11f, C_DISCRET)
+    }
+
+    /** Sélection, cible et élément sous le doigt (popup de personnalisation). */
+    private fun edition(canvas: Canvas, ed: Edition, d: ClusterLayout, geo: ClusterLayouts.Geometry, c: Contenu) {
+        trait.strokeCap = Paint.Cap.BUTT
+        trait.strokeWidth = 2f
+        trait.color = cAccent
+        fun entourer(box: ClusterLayouts.Box) {
+            cadre.set(box.x + 1f, box.y + 1f, box.x + box.w - 1f, box.y + box.h - 1f)
+            canvas.drawRoundRect(cadre, 8f, 8f, trait)
+        }
+        when (val s = ed.selection) {
+            null -> Unit
+            JAUGE -> if (ed.glisse == null) entourer(geo.gauge)
+            else -> geo.cells.firstOrNull { it.slot == s }?.let { if (ed.glisse == null) entourer(it.box) }
+        }
+        plein.color = Color.argb(70, Color.red(cAccent), Color.green(cAccent), Color.blue(cAccent))
+        if (ed.glisse == JAUGE) {
+            ed.cibleJauge?.let { pos ->
+                val g = ClusterLayouts.geometry(d.copy(gauge = pos), showEmpty = true).gauge
+                canvas.drawRect(g.x, g.y, g.x + g.w, g.y + g.h, plein)
+                entourer(g)
+            }
+        } else if (ed.glisse != null) {
+            geo.cells.firstOrNull { it.slot == ed.cible }?.let { cible ->
+                canvas.drawRect(cible.box.x, cible.box.y, cible.box.x + cible.box.w, cible.box.y + cible.box.h, plein)
+            }
+            // Le bloc suit le doigt, entouré d'orange.
+            val source = geo.cells.firstOrNull { it.slot == ed.glisse }?.box
+            val b = c.blocs.getOrNull(ed.glisse)
+            if (source != null && b != null) {
+                val box = ClusterLayouts.Box(ed.doigtX - source.w / 2f, ed.doigtY - source.h / 2f, source.w, source.h)
+                plein.color = Color.argb(230, 0x1C, 0x1C, 0x20)
+                canvas.drawRoundRect(box.x, box.y, box.x + box.w, box.y + box.h, 8f, 8f, plein)
+                bloc(canvas, b, box, gauche = ed.glisse % 2 == 0)
+                trait.color = cConso
+                entourer(box)
+            }
+        }
+        trait.strokeCap = Paint.Cap.ROUND
+        trait.strokeWidth = epaisseur
     }
 
     /** Moyenne du trajet dans son unité (réglée à part), ou un tiret tant qu'elle n'a pas de sens. */
     private fun moyenne(wh: Float?, unite: AverageUnit, distance: DistanceUnit): Pair<String, String?> =
         wh?.let { ClusterGauge.formatAverage(it, unite, locale, distance) }?.let { it to unite.labelFor(distance) } ?: ("–" to null)
 
-    private fun couleur(niveau: GaugeLevel): Int = sombre.getColor(when (niveau) {
-        GaugeLevel.CONSUMPTION -> R.color.dash_warn
-        GaugeLevel.REGEN -> R.color.cluster_accent
-    })
+    private fun couleur(niveau: GaugeLevel): Int = when (niveau) {
+        GaugeLevel.CONSUMPTION -> cConso
+        GaugeLevel.REGEN -> cRecup
+    }
 
-    private companion object {
+    companion object {
+        /** [Edition.selection] et [Edition.glisse] : la jauge plutôt qu'une case. */
+        const val JAUGE = -1
+
         /**
          * Fond de l'appli SAIC du combiné (`screen_background_dark`). Celui de nos cartes, plus
          * clair, ressortait en rectangle sur le combiné (photo du 2026-10-14).
          */
-        val FOND = Color.rgb(0x0C, 0x0C, 0x0C)
-        val COTE = ClusterGauge.SIDE_PX.toFloat()
+        private val FOND = Color.rgb(0x0C, 0x0C, 0x0C)
+        private val COTE = ClusterGauge.SIDE_PX.toFloat()
         /** Anneau du module A (consommation) et arc du module B (puissance). */
-        const val RAYON_A = 80f
-        const val RAYON_B = 88f
-        const val EPAISSEUR = 13f
+        private const val RAYON_A = 80f
+        private const val RAYON_B = 88f
+        private const val EPAISSEUR = 13f
         /** Style discret : la barre, ses bornes, et la zone de récupération de la consommation. */
-        const val Y_BARRE = 124f
-        const val BARRE_G = 30f
-        const val BARRE_D = 230f
-        const val RECUP_D = 66f
-        const val CONSO_G = 72f
-        const val BARRE_EPAISSEUR = 6f
+        private const val Y_BARRE = 124f
+        private const val BARRE_G = 30f
+        private const val BARRE_D = 230f
+        private const val RECUP_D = 66f
+        private const val CONSO_G = 72f
+        private const val BARRE_EPAISSEUR = 6f
         /** Textes discrets et crans secondaires, plus sourds que le gris des valeurs. */
-        val C_DISCRET = Color.rgb(0x8A, 0x8A, 0x90)
-        val C_CRAN = Color.rgb(0x4A, 0x4A, 0x52)
+        private val C_DISCRET = Color.rgb(0x8A, 0x8A, 0x90)
+        private val C_CRAN = Color.rgb(0x4A, 0x4A, 0x52)
         /** La puissance consommée : un gris clair, pour ne pas attirer l'œil comme l'orange. */
-        val C_CLAIR = Color.rgb(0xD4, 0xD4, 0xD8)
+        private val C_CLAIR = Color.rgb(0xD4, 0xD4, 0xD8)
         /** Module « charge » : une image toutes les 50 ms ; éclair et reflet sur ces périodes. */
-        const val IMAGE_CHARGE_MS = 50L
-        const val PULSATION_MS = 1_400L
-        const val REFLET_MS = 1_800L
-        const val REFLET_PX = 18f
+        private const val IMAGE_CHARGE_MS = 50L
+        private const val PULSATION_MS = 1_400L
+        private const val REFLET_MS = 1_800L
+        private const val REFLET_PX = 18f
         /** Fiche de la pré-climatisation : marges gauche et droite. */
-        const val MARGE_FICHE = 22f
+        private const val MARGE_FICHE = 22f
     }
 }
