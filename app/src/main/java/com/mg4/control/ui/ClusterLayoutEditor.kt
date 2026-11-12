@@ -220,18 +220,24 @@ class ClusterLayoutEditor(
         couleur(disposition.consumptionColor, { ctx.getColor(R.color.dash_warn) }) { disposition = disposition.copy(consumptionColor = it) }
         etiquette(R.string.cluster_layout_color_regen)
         couleur(disposition.regenColor, { ctx.getColor(R.color.cluster_accent) }) { disposition = disposition.copy(regenColor = it) }
-        interrupteur(R.string.cluster_layout_average_cursor,
-            ClusterLayouts.averageCursor(disposition, ClusterGaugeStyle.fromKey(style))) {
-            disposition = disposition.copy(averageCursor = it)
+        // Les options propres à une jauge suivent la jauge choisie en haut (2026-11-12) : réglée sur
+        // l'autre jauge, une option ne changeait rien de visible dans l'aperçu.
+        if (module == ClusterModule.CONSUMPTION) {
+            interrupteur(R.string.cluster_layout_average_cursor,
+                ClusterLayouts.averageCursor(disposition, ClusterGaugeStyle.fromKey(style))) {
+                disposition = disposition.copy(averageCursor = it)
+            }
+            interrupteur(R.string.cluster_layout_consumption_kw, disposition.consumptionKw == true) {
+                disposition = disposition.copy(consumptionKw = it.takeIf { v -> v })
+            }
+        } else {
+            interrupteur(R.string.cluster_layout_power_consumption, ClusterLayouts.powerConsumption(disposition)) {
+                disposition = disposition.copy(powerConsumption = it.takeIf { v -> !v })
+            }
         }
+        // L'unité de puissance vaut pour les deux : arc de puissance, et kW récupérés ou à l'arrêt.
         rangee(R.string.cluster_layout_power_unit, listOf(null to "kW", ClusterInfo.UNIT_HP to ctx.getString(R.string.cluster_unit_hp))
             .map { (u, t) -> Option(t, disposition.powerUnit == u) { disposition = disposition.copy(powerUnit = u); maj() } })
-        interrupteur(R.string.cluster_layout_consumption_kw, disposition.consumptionKw == true) {
-            disposition = disposition.copy(consumptionKw = it.takeIf { v -> v })
-        }
-        interrupteur(R.string.cluster_layout_power_consumption, ClusterLayouts.powerConsumption(disposition)) {
-            disposition = disposition.copy(powerConsumption = it.takeIf { v -> !v })
-        }
     }
 
     private fun panneauBloc(slot: Int) {

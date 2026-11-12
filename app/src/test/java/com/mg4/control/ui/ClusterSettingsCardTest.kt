@@ -91,4 +91,30 @@ class ClusterSettingsCardTest {
         assertEquals(com.mg4.control.model.RuleSignal.DRIVE_MODE.name,
             com.mg4.control.model.ClusterLayouts.slots(recu!!)[0]?.info)
     }
+
+    @Test
+    fun `gauge options follow the gauge chosen for the preview`() {
+        val activite = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
+        activite.setTheme(R.style.Theme_MG4Control)
+        ClusterLayoutEditor(activite, com.mg4.control.model.ClusterConfig(enabled = true, navigation = "consumption"), null,
+            "Profil", ClusterTab.NAVIGATION) { _, _ -> }.ouvrir()
+        shadowOf(Looper.getMainLooper()).idle()
+        val fenetre = org.robolectric.shadows.ShadowDialog.getLatestDialog()
+        fun tous(v: View, out: MutableList<View> = mutableListOf()): List<View> {
+            out += v; if (v is android.view.ViewGroup) for (i in 0 until v.childCount) tous(v.getChildAt(i), out); return out
+        }
+        fun textes() = tous(fenetre.findViewById(R.id.panel_cluster_layout)).filterIsInstance<TextView>().map { it.text.toString() }
+        val moyenne = activite.getString(R.string.cluster_layout_average_cursor)
+        val kwDessous = activite.getString(R.string.cluster_layout_consumption_kw)
+        val consoDessous = activite.getString(R.string.cluster_layout_power_consumption)
+        val unite = activite.getString(R.string.cluster_layout_power_unit)
+        // Consommation : ses options, pas celles de la puissance ; l'unité vaut pour les deux.
+        assertTrue(moyenne in textes() && kwDessous in textes() && unite in textes())
+        assertTrue(consoDessous !in textes())
+        tous(fenetre.findViewById(R.id.panel_cluster_layout)).filterIsInstance<TextView>()
+            .first { it.text.toString() == activite.getString(R.string.settings_cluster_power) }.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertTrue(consoDessous in textes() && unite in textes())
+        assertTrue(moyenne !in textes() && kwDessous !in textes())
+    }
 }
