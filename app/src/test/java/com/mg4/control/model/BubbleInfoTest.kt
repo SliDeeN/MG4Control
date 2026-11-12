@@ -51,6 +51,8 @@ class BubbleInfoTest {
         assertEquals(BubbleInfo.FIRST, tout.take(BubbleInfo.FIRST.size))
         assertTrue(BubbleInfo.TIME in tout)
         assertFalse(RuleSignal.FIRMWARE.name in tout)
+        // Retirée des automatisations, la clé éloignée ne se propose nulle part (2026-11-12).
+        assertFalse(RuleSignal.KEY_AWAY.name in tout)
         assertEquals(tout.size, tout.distinct().size)
         val sansClim = BubbleInfo.choices { it != RuleSignal.HVAC_TEMP }
         assertFalse(RuleSignal.HVAC_TEMP.name in sansClim)

@@ -182,8 +182,6 @@ object AndroidControls {
     // ── Audio ──
     private fun audio(ctx: Context) = ctx.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
 
-    fun mediaPlaying(ctx: Context): Boolean? = runCatching { audio(ctx)?.isMusicActive }.getOrNull()
-
     fun inCall(ctx: Context): Boolean? = runCatching {
         audio(ctx)?.mode?.let { it == AudioManager.MODE_IN_CALL || it == AudioManager.MODE_IN_COMMUNICATION || it == AudioManager.MODE_RINGTONE }
     }.getOrNull()

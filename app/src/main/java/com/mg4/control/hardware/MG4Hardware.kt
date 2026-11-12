@@ -4882,7 +4882,7 @@ object MG4Hardware {
             reply.readInt()                            // fréquence
             val type = reply.readInt()
             val etat = reply.readInt()
-            AppLogger.i(MEDIA_TAG, "radio : type=$type état=$etat (1 = en lecture)")
+            journalMedia("radio : type=$type état=$etat (1 = en lecture)")
             InfoRadio(type, etat == 1)
         } catch (e: Exception) {
             AppLogger.w(MEDIA_TAG, "état radio illisible : ${(e.cause ?: e).message}")
@@ -4901,7 +4901,7 @@ object MG4Hardware {
         val v = mediaLireInt(ACT_STATUS, DESC_STATUS, 0x9) ?: return -1   // getCurrentMediaSource
         if (v != sSourceCouranteLoguee) {
             sSourceCouranteLoguee = v
-            AppLogger.i(MEDIA_TAG, "source courante = $v (${nomSource(v)})")
+            journalMedia("source courante = $v (${nomSource(v)})")
         }
         return v
     }
@@ -4925,7 +4925,7 @@ object MG4Hardware {
             else -> null
         }
         if (reel != null) {
-            AppLogger.i(MEDIA_TAG, "état de lecture (source ${nomSource(source)}) = $reel")
+            journalMedia("état de lecture (source ${nomSource(source)}) = $reel")
             return reel
         }
         // Les sessions AVANT isMusicActive : elles disent un état réel, lui reste vrai
@@ -4934,16 +4934,43 @@ object MG4Hardware {
         // gardait le drapeau trompeur, et une pause suivie d une reprise renvoyait une pause.
         val parSession = sessionJoue()
         if (parSession != null) {
-            AppLogger.i(MEDIA_TAG, "état non exposé par ${nomSource(source)} — sessions = $parSession")
+            journalMedia("état non exposé par ${nomSource(source)} — sessions = $parSession")
             return parSession
         }
         val repli = musiqueEnCours()
-        AppLogger.i(MEDIA_TAG, "état non exposé par ${nomSource(source)} et sessions muettes — " +
+        journalMedia("état non exposé par ${nomSource(source)} et sessions muettes — " +
             "repli isMusicActive = $repli")
         return repli
     }
 
     /** Vrai si quelque chose joue — sert à choisir entre `play` et `pause`. */
+    /**
+     * Un média joue-t-il ? Pour la valeur « Média en cours » des automatisations, des bulles et de
+     * l'écran conducteur (2026-11-12) : `isMusicActive` restait faux avec le lecteur de la voiture,
+     * la valeur affichait toujours OFF. Même lecture que la pause en quittant (issue #235), sans
+     * journal — elle est relue toutes les 5 s. Sur le fil principal, la liaison au service média
+     * pourrait attendre : la dernière valeur lue, à défaut les sessions.
+     */
+    fun isMediaPlaying(): Boolean? {
+        if (Looper.myLooper() == Looper.getMainLooper()) return sDernierMediaJoue ?: sessionJoue() ?: musiqueEnCours()
+        sMediaSilencieux.set(true)
+        return try {
+            mediaJoue().also { sDernierMediaJoue = it }
+        } catch (e: Exception) {
+            null
+        } finally {
+            sMediaSilencieux.set(false)
+        }
+    }
+
+    @Volatile private var sDernierMediaJoue: Boolean? = null
+    /** Vrai pendant [isMediaPlaying] : l'état de lecture se relit sans remplir le journal. */
+    private val sMediaSilencieux = ThreadLocal<Boolean>()
+
+    private fun journalMedia(message: String) {
+        if (sMediaSilencieux.get() != true) AppLogger.i(MEDIA_TAG, message)
+    }
+
     private fun musiqueEnCours(): Boolean =
         (sAppContext?.getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.isMusicActive == true
 

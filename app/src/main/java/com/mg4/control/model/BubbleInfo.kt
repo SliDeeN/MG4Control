@@ -34,7 +34,9 @@ object BubbleInfo {
         RuleSignal.SPEED.name, RuleSignal.HVAC_TEMP.name, RuleSignal.DRIVE_MODE.name, RuleSignal.REGEN.name,
         RuleSignal.PROFILE.name, RuleSignal.VOLUME.name, RuleSignal.CHARGE_LIMIT.name)
     private val EXCLUS = setOf(RuleSignal.FIRMWARE, RuleSignal.WIFI_SSID, RuleSignal.BT_DEVICE, RuleSignal.DATA_TODAY_MB,
-        RuleSignal.DATA_MONTH_MB, RuleSignal.SUN_UP)
+        RuleSignal.DATA_MONTH_MB, RuleSignal.SUN_UP,
+        // Retirée des automatisations (lecture non fiable) : nulle part ailleurs non plus (2026-11-12).
+        RuleSignal.KEY_AWAY)
 
     /** Les choix, dans l'ordre ; [available] écarte ce que la voiture ne sait pas lire. */
     fun choices(available: (RuleSignal) -> Boolean = { true }): List<String> {

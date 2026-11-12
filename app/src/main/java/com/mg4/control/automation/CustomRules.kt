@@ -668,7 +668,8 @@ object CustomRules {
         RuleSignal.WIFI_SSID -> AndroidControls.wifiSsid(ctx)
         RuleSignal.BT_ON -> AndroidControls.bluetoothOn()
         RuleSignal.HOTSPOT_ON -> AndroidControls.hotspotOn(ctx)
-        RuleSignal.MEDIA_PLAYING -> AndroidControls.mediaPlaying(ctx)
+        // La source déclarée par la voiture, comme la pause en quittant : isMusicActive restait faux.
+        RuleSignal.MEDIA_PLAYING -> MG4Hardware.isMediaPlaying()
         RuleSignal.IN_CALL -> AndroidControls.inCall(ctx)
         RuleSignal.SUN_UP -> {
             val maintenant = System.currentTimeMillis()

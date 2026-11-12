@@ -46,6 +46,7 @@ object InfoIcons {
         RuleSignal.ESC, RuleSignal.DROWSINESS -> com.mg4.control.hardware.MG4Hardware.hasDrowsinessAndEsc()
         RuleSignal.BRIGHTNESS -> com.mg4.control.hardware.MG4Hardware.hasBrightnessControl()
         RuleSignal.BATTERY_HEAT -> com.mg4.control.hardware.MG4Hardware.hasBatteryHeating()
+        RuleSignal.FRONT_DOOR -> com.mg4.control.hardware.MG4Hardware.hasDoorDetection()
         else -> true
     }
 }
