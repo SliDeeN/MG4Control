@@ -1531,9 +1531,7 @@
     <string name="rule_settings_page_storage">Speicher</string>
     <string name="rule_act_confirm">Bestätigung abfragen</string>
     <string name="rule_act_custom">Eigener Kurzbefehl</string>
-    <string name="rule_act_media">Medien</string>
     <string name="rule_act_navigate">Zu einem Ort navigieren</string>
-    <string name="rule_act_open">Fenster öffnen</string>
     <string name="rule_act_rule">Andere Automation</string>
     <string name="rule_act_sound">Ton abspielen</string>
     <string name="rule_act_speak">Text vorlesen</string>
@@ -1675,11 +1673,6 @@
     <string name="rule_mode_becomes">Wird zu…</string>
     <string name="rule_mode_stops">Ist nicht mehr…</string>
     <string name="rule_mode_change">Ändert sich</string>
-    <string name="rule_mode_how_fmt">%1$s: wie auslösen?</string>
-    <string name="rule_toggle_title_fmt">%1$s: wechselt zu…</string>
-    <string name="rule_toggle_true">WAHR</string>
-    <string name="rule_toggle_false">FALSCH</string>
-    <string name="rule_toggle_both">Beide Richtungen</string>
     <string name="rule_var_false">Falsch</string>
     <string name="rule_var_name">Name der Variable</string>
     <string name="rule_var_new">+ Neue Variable</string>
@@ -1715,6 +1708,14 @@
     <string name="rule_sig_front_door">Vordertür offen</string>
     <string name="rule_act_media_play">Wiedergabe (fortsetzen)</string>
     <string name="rule_act_media_pause">Pause</string>
+    <string name="rule_act_mode_set">Einstellen auf…</string>
+    <string name="rule_act_mode_toggle">Umschalten</string>
+    <string name="rule_act_mode_cycle">Zyklus (nächster Wert)</string>
+    <string name="rule_act_mode_up">Schrittweise +</string>
+    <string name="rule_act_mode_down">Schrittweise −</string>
+    <string name="rule_act_modes_fmt">%1$d Modi</string>
+    <string name="rule_subject_profile">Profil</string>
+    <string name="rule_subject_playback">Wiedergabe</string>
     <string name="rule_var_add">Addieren oder abziehen</string>
     <string name="rule_var_add_title">%1$s: addieren (+) oder abziehen (−)</string>
     <string name="rule_var_add_fmt">%1$s %2$s</string>
@@ -1731,10 +1732,7 @@
     <string name="shortcuts_action_run_rule">Automation ausführen</string>
     <string name="rule_act_if">Wenn / Sonst</string>
     <string name="rule_act_notify">Nachricht anzeigen</string>
-    <string name="rule_act_profile">Profil anwenden</string>
     <string name="rule_act_repeat">Wiederholen</string>
-    <string name="rule_act_set">Auto einstellen</string>
-    <string name="rule_act_shortcut">Kurzbefehl ausführen</string>
     <string name="rule_act_wait">Warten</string>
     <string name="rule_add_action">Aktion</string>
     <string name="rule_add_condition">Bedingung</string>

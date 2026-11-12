@@ -1537,9 +1537,7 @@
     <string name="rule_settings_page_storage">Pamięć</string>
     <string name="rule_act_confirm">Poproś o potwierdzenie</string>
     <string name="rule_act_custom">Skrót własny</string>
-    <string name="rule_act_media">Multimedia</string>
     <string name="rule_act_navigate">Nawiguj do miejsca</string>
-    <string name="rule_act_open">Otwórz okno</string>
     <string name="rule_act_rule">Inna automatyzacja</string>
     <string name="rule_act_sound">Odtwórz dźwięk</string>
     <string name="rule_act_speak">Przeczytaj tekst na głos</string>
@@ -1681,11 +1679,6 @@
     <string name="rule_mode_becomes">Staje się…</string>
     <string name="rule_mode_stops">Przestaje być…</string>
     <string name="rule_mode_change">Zmienia się</string>
-    <string name="rule_mode_how_fmt">%1$s: jak wyzwalać?</string>
-    <string name="rule_toggle_title_fmt">%1$s: przełącza na…</string>
-    <string name="rule_toggle_true">PRAWDA</string>
-    <string name="rule_toggle_false">FAŁSZ</string>
-    <string name="rule_toggle_both">W obie strony</string>
     <string name="rule_var_false">Fałsz</string>
     <string name="rule_var_name">Nazwa zmiennej</string>
     <string name="rule_var_new">+ Nowa zmienna</string>
@@ -1721,6 +1714,14 @@
     <string name="rule_sig_front_door">Przednie drzwi otwarte</string>
     <string name="rule_act_media_play">Odtwarzaj (wznów)</string>
     <string name="rule_act_media_pause">Pauza</string>
+    <string name="rule_act_mode_set">Ustaw na…</string>
+    <string name="rule_act_mode_toggle">Przełącz</string>
+    <string name="rule_act_mode_cycle">Cykl (następna wartość)</string>
+    <string name="rule_act_mode_up">Krok +</string>
+    <string name="rule_act_mode_down">Krok −</string>
+    <string name="rule_act_modes_fmt">Trybów: %1$d</string>
+    <string name="rule_subject_profile">Profil</string>
+    <string name="rule_subject_playback">Odtwarzanie</string>
     <string name="rule_var_add">Dodaj lub odejmij</string>
     <string name="rule_var_add_title">%1$s: dodaj (+) lub odejmij (−)</string>
     <string name="rule_var_add_fmt">%1$s %2$s</string>
@@ -1737,10 +1738,7 @@
     <string name="shortcuts_action_run_rule">Uruchom automatyzację</string>
     <string name="rule_act_if">Jeśli / W przeciwnym razie</string>
     <string name="rule_act_notify">Pokaż komunikat</string>
-    <string name="rule_act_profile">Zastosuj profil</string>
     <string name="rule_act_repeat">Powtórz</string>
-    <string name="rule_act_set">Ustaw samochód</string>
-    <string name="rule_act_shortcut">Uruchom skrót</string>
     <string name="rule_act_wait">Czekaj</string>
     <string name="rule_add_action">Akcja</string>
     <string name="rule_add_condition">Warunek</string>

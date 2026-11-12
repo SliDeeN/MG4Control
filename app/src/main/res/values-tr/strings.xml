@@ -1531,9 +1531,7 @@
     <string name="rule_settings_page_storage">Depolama</string>
     <string name="rule_act_confirm">Onay iste</string>
     <string name="rule_act_custom">Özel kısayol</string>
-    <string name="rule_act_media">Medya</string>
     <string name="rule_act_navigate">Bir yere git</string>
-    <string name="rule_act_open">Pencere aç</string>
     <string name="rule_act_rule">Başka bir otomasyon</string>
     <string name="rule_act_sound">Ses çal</string>
     <string name="rule_act_speak">Metni sesli oku</string>
@@ -1675,11 +1673,6 @@
     <string name="rule_mode_becomes">Şu olur…</string>
     <string name="rule_mode_stops">Artık şu değil…</string>
     <string name="rule_mode_change">Değişir</string>
-    <string name="rule_mode_how_fmt">%1$s: nasıl tetiklensin?</string>
-    <string name="rule_toggle_title_fmt">%1$s: şuna geçer…</string>
-    <string name="rule_toggle_true">DOĞRU</string>
-    <string name="rule_toggle_false">YANLIŞ</string>
-    <string name="rule_toggle_both">İki yönde</string>
     <string name="rule_var_false">Yanlış</string>
     <string name="rule_var_name">Değişken adı</string>
     <string name="rule_var_new">+ Yeni değişken</string>
@@ -1715,6 +1708,14 @@
     <string name="rule_sig_front_door">Ön kapı açık</string>
     <string name="rule_act_media_play">Oynat (devam et)</string>
     <string name="rule_act_media_pause">Duraklat</string>
+    <string name="rule_act_mode_set">Şuna ayarla…</string>
+    <string name="rule_act_mode_toggle">Aç / kapat</string>
+    <string name="rule_act_mode_cycle">Döngü (sonraki değer)</string>
+    <string name="rule_act_mode_up">Adım adım +</string>
+    <string name="rule_act_mode_down">Adım adım −</string>
+    <string name="rule_act_modes_fmt">%1$d mod</string>
+    <string name="rule_subject_profile">Profil</string>
+    <string name="rule_subject_playback">Oynatma</string>
     <string name="rule_var_add">Ekle veya çıkar</string>
     <string name="rule_var_add_title">%1$s: ekle (+) veya çıkar (−)</string>
     <string name="rule_var_add_fmt">%1$s %2$s</string>
@@ -1731,10 +1732,7 @@
     <string name="shortcuts_action_run_rule">Bir otomasyonu çalıştır</string>
     <string name="rule_act_if">Eğer / Değilse</string>
     <string name="rule_act_notify">Mesaj göster</string>
-    <string name="rule_act_profile">Profil uygula</string>
     <string name="rule_act_repeat">Tekrarla</string>
-    <string name="rule_act_set">Aracı ayarla</string>
-    <string name="rule_act_shortcut">Kısayol çalıştır</string>
     <string name="rule_act_wait">Bekle</string>
     <string name="rule_add_action">Eylem</string>
     <string name="rule_add_condition">Koşul</string>

@@ -1531,9 +1531,7 @@
     <string name="rule_settings_page_storage">Lagring</string>
     <string name="rule_act_confirm">Be om bekreftelse</string>
     <string name="rule_act_custom">Egendefinert snarvei</string>
-    <string name="rule_act_media">Medier</string>
     <string name="rule_act_navigate">Naviger til et sted</string>
-    <string name="rule_act_open">Åpne et vindu</string>
     <string name="rule_act_rule">En annen automatisering</string>
     <string name="rule_act_sound">Spill av en lyd</string>
     <string name="rule_act_speak">Les opp en tekst</string>
@@ -1675,11 +1673,6 @@
     <string name="rule_mode_becomes">Blir…</string>
     <string name="rule_mode_stops">Er ikke lenger…</string>
     <string name="rule_mode_change">Endres</string>
-    <string name="rule_mode_how_fmt">%1$s: hvordan utløse?</string>
-    <string name="rule_toggle_title_fmt">%1$s: bytter til…</string>
-    <string name="rule_toggle_true">SANN</string>
-    <string name="rule_toggle_false">USANN</string>
-    <string name="rule_toggle_both">Begge veier</string>
     <string name="rule_var_false">Usann</string>
     <string name="rule_var_name">Variabelens navn</string>
     <string name="rule_var_new">+ Ny variabel</string>
@@ -1715,6 +1708,14 @@
     <string name="rule_sig_front_door">Fordør åpen</string>
     <string name="rule_act_media_play">Spill av (fortsett)</string>
     <string name="rule_act_media_pause">Pause</string>
+    <string name="rule_act_mode_set">Sett til…</string>
+    <string name="rule_act_mode_toggle">Veksle</string>
+    <string name="rule_act_mode_cycle">Syklus (neste verdi)</string>
+    <string name="rule_act_mode_up">Trinnvis +</string>
+    <string name="rule_act_mode_down">Trinnvis −</string>
+    <string name="rule_act_modes_fmt">%1$d moduser</string>
+    <string name="rule_subject_profile">Profil</string>
+    <string name="rule_subject_playback">Avspilling</string>
     <string name="rule_var_add">Legg til eller trekk fra</string>
     <string name="rule_var_add_title">%1$s: legg til (+) eller trekk fra (−)</string>
     <string name="rule_var_add_fmt">%1$s %2$s</string>
@@ -1731,10 +1732,7 @@
     <string name="shortcuts_action_run_rule">Kjør en automatisering</string>
     <string name="rule_act_if">Hvis / ellers</string>
     <string name="rule_act_notify">Vis en melding</string>
-    <string name="rule_act_profile">Bruk en profil</string>
     <string name="rule_act_repeat">Gjenta</string>
-    <string name="rule_act_set">Juster bilen</string>
-    <string name="rule_act_shortcut">Kjør en snarvei</string>
     <string name="rule_act_wait">Vent</string>
     <string name="rule_add_action">Handling</string>
     <string name="rule_add_condition">Betingelse</string>

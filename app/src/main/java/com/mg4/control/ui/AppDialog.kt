@@ -286,10 +286,8 @@ internal object AppDialog {
         val textePastille: Int = 0,
         /** Seconde ligne, plus petite et grise (« Devient… » sous « Profil actif ») ; cherchée aussi. */
         val sousLibelle: CharSequence? = null,
-        /** Visible seulement dans les résultats d'une recherche (2026-11-12, capteurs déclinés). */
-        val rechercheSeule: Boolean = false,
-        /** Caché pendant une recherche : ses déclinaisons ([rechercheSeule]) le remplacent. */
-        val horsRecherche: Boolean = false,
+        /** Mots cherchés en plus, jamais affichés (les modes d'un sujet : « température » trouve « Consigne clim »). */
+        val motsCles: CharSequence? = null,
     )
 
     /**
@@ -297,8 +295,7 @@ internal object AppDialog {
      * son nom ou sa seconde ligne — « profil change » trouve « Profil actif · Change ».
      */
     private fun trouve(c: Choix, cle: String): Boolean {
-        if (c.horsRecherche) return false
-        val texte = sansAccents(listOfNotNull(c.libelle, c.sousLibelle).joinToString(" "))
+        val texte = sansAccents(listOfNotNull(c.libelle, c.sousLibelle, c.motsCles).joinToString(" "))
         return cle.split(' ').filter { it.isNotEmpty() }.all { texte.contains(it) }
     }
 
@@ -402,7 +399,7 @@ internal object AppDialog {
         // la liste complète.
         fun remplir(filtre: String) {
             val cle = sansAccents(filtre.trim())
-            val visibles = choix.indices.filter { if (cle.isEmpty()) !choix[it].rechercheSeule else trouve(choix[it], cle) }
+            val visibles = choix.indices.filter { cle.isEmpty() || trouve(choix[it], cle) }
             tuileChoisie = grille(context, lignes, visibles, choix, choisi, COLONNES, surChoix)
         }
         remplir("")
@@ -565,19 +562,17 @@ internal object AppDialog {
         fun dessiner() {
             val cle = sansAccents(filtre.trim())
             fun trouve(r: Int) = cle.isEmpty() || trouve(choix[r], cle)
-            // Hors recherche, les déclinaisons cachées ne se montrent que dans « Récents ».
-            fun montres(c: Categorie) = if (c.icone == R.drawable.ic_cat_star) c.rangs else c.rangs.filter { !choix[it].rechercheSeule }
             val rangs = when {
                 cle.isNotEmpty() -> choix.indices.filter { trouve(it) }
-                categories == null -> choix.indices.filter { !choix[it].rechercheSeule }
-                else -> categories.getOrNull(courante)?.let { montres(it) }.orEmpty()
+                categories == null -> choix.indices.toList()
+                else -> categories.getOrNull(courante)?.rangs.orEmpty()
             }
             val tuile = grille(context, lignes, rangs, choix, choisi, COLONNES, surChoix)
             if (cle.isEmpty() && tuile != null) defilGrille.post { defilGrille.scrollTo(0, ((tuile.parent as View).top - px(ECART_DP)).coerceAtLeast(0)) }
             else defilGrille.scrollTo(0, 0)
             colonneCats.removeAllViews()
             categories?.forEachIndexed { i, c ->
-                val n = if (cle.isEmpty()) montres(c).size else c.rangs.count { trouve(it) }
+                val n = if (cle.isEmpty()) c.rangs.size else c.rangs.count { trouve(it) }
                 val on = cle.isEmpty() && i == courante
                 val couleur = if (on) accent else context.getColor(R.color.text_primary)
                 colonneCats.addView(LinearLayout(context).apply {

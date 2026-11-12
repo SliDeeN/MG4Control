@@ -1534,9 +1534,7 @@
     <string name="rule_settings_page_storage">Armazenamento</string>
     <string name="rule_act_confirm">Pedir confirmação</string>
     <string name="rule_act_custom">Atalho personalizado</string>
-    <string name="rule_act_media">Multimédia</string>
     <string name="rule_act_navigate">Navegar para um local</string>
-    <string name="rule_act_open">Abrir uma janela</string>
     <string name="rule_act_rule">Outra automatização</string>
     <string name="rule_act_sound">Reproduzir um som</string>
     <string name="rule_act_speak">Ler um texto em voz alta</string>
@@ -1678,11 +1676,6 @@
     <string name="rule_mode_becomes">Passa a ser…</string>
     <string name="rule_mode_stops">Deixa de ser…</string>
     <string name="rule_mode_change">Muda</string>
-    <string name="rule_mode_how_fmt">%1$s: como ativar?</string>
-    <string name="rule_toggle_title_fmt">%1$s: passa a…</string>
-    <string name="rule_toggle_true">VERDADEIRO</string>
-    <string name="rule_toggle_false">FALSO</string>
-    <string name="rule_toggle_both">Nos dois sentidos</string>
     <string name="rule_var_false">Falso</string>
     <string name="rule_var_name">Nome da variável</string>
     <string name="rule_var_new">+ Nova variável</string>
@@ -1718,6 +1711,14 @@
     <string name="rule_sig_front_door">Porta dianteira aberta</string>
     <string name="rule_act_media_play">Reproduzir (retomar)</string>
     <string name="rule_act_media_pause">Pausa</string>
+    <string name="rule_act_mode_set">Definir para…</string>
+    <string name="rule_act_mode_toggle">Alternar</string>
+    <string name="rule_act_mode_cycle">Ciclo (valor seguinte)</string>
+    <string name="rule_act_mode_up">Passo a passo +</string>
+    <string name="rule_act_mode_down">Passo a passo −</string>
+    <string name="rule_act_modes_fmt">%1$d modos</string>
+    <string name="rule_subject_profile">Perfil</string>
+    <string name="rule_subject_playback">Reprodução</string>
     <string name="rule_var_add">Adicionar ou subtrair</string>
     <string name="rule_var_add_title">%1$s: adicionar (+) ou subtrair (−)</string>
     <string name="rule_var_add_fmt">%1$s %2$s</string>
@@ -1734,10 +1735,7 @@
     <string name="shortcuts_action_run_rule">Executar uma automatização</string>
     <string name="rule_act_if">Se / Senão</string>
     <string name="rule_act_notify">Mostrar uma mensagem</string>
-    <string name="rule_act_profile">Aplicar um perfil</string>
     <string name="rule_act_repeat">Repetir</string>
-    <string name="rule_act_set">Ajustar o carro</string>
-    <string name="rule_act_shortcut">Executar um atalho</string>
     <string name="rule_act_wait">Aguardar</string>
     <string name="rule_add_action">Ação</string>
     <string name="rule_add_condition">Condição</string>

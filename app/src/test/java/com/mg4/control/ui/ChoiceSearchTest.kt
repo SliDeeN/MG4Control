@@ -19,9 +19,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.shadows.ShadowDialog
 
 /**
- * Recherche dans une fenêtre de choix (2026-11-12, éditeur d'automatisation « capteurs d'abord ») :
- * les déclinaisons d'un capteur n'apparaissent qu'en recherche, le capteur seul disparaît alors,
- * et la seconde ligne se cherche aussi.
+ * Recherche dans une fenêtre de choix (2026-11-12) : une seule tuile par option, retrouvée aussi par
+ * sa seconde ligne et par ses mots cachés (les noms de ses modes).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
@@ -40,29 +39,29 @@ class ChoiceSearchTest {
     }
 
     @Test
-    fun `search shows the sensor modes, not the bare sensor, and finds the second line`() {
+    fun `search finds one tile per option, by its second line and its hidden mode words`() {
         val activite = Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
         activite.setTheme(R.style.Theme_MG4Control)
         val choix = (1..12).map { AppDialog.Choix("Raccourci $it") } + listOf(
-            AppDialog.Choix("Profil actif", horsRecherche = true),
-            AppDialog.Choix("Profil actif", sousLibelle = "Devient…", rechercheSeule = true),
-            AppDialog.Choix("Profil actif", sousLibelle = "Change", rechercheSeule = true),
+            AppDialog.Choix("Profil actif", sousLibelle = "3 modes", motsCles = "Devient… N'est plus… Le profil actif change"),
         )
         AppDialog.choisir(activite, "Ajouter un déclencheur", choix, "Annuler") { }
         shadowOf(Looper.getMainLooper()).idle()
         val racine = ShadowDialog.getLatestDialog().findViewById<View>(R.id.choice_rows).rootView
-        val avant = libelles(racine)
-        assertTrue("Profil actif" in avant)
-        assertFalse(avant.any { it.contains("Devient") })
-
-        racine.findViewById<EditText>(findEditText(racine)).setText("profil")
-        shadowOf(Looper.getMainLooper()).idle()
-        val apres = libelles(racine)
-        assertEquals(listOf("Profil actif\nDevient…", "Profil actif\nChange"), apres)
+        val tuile = "Profil actif\n3 modes"
+        assertTrue(tuile in libelles(racine))
 
         racine.findViewById<EditText>(findEditText(racine)).setText("profil change")
         shadowOf(Looper.getMainLooper()).idle()
-        assertEquals(listOf("Profil actif\nChange"), libelles(racine))
+        assertEquals(listOf(tuile), libelles(racine))
+
+        racine.findViewById<EditText>(findEditText(racine)).setText("devient")
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(listOf(tuile), libelles(racine))
+
+        racine.findViewById<EditText>(findEditText(racine)).setText("raccourci 1")
+        shadowOf(Looper.getMainLooper()).idle()
+        assertFalse(tuile in libelles(racine))
     }
 
     private fun findEditText(v: View): Int {

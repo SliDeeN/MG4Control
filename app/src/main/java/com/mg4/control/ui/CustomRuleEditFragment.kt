@@ -498,9 +498,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     }
 
     /**
-     * Nouvelle condition (2026-11-12, maquette validée) : les capteurs sont rangés directement dans
-     * leurs catégories, plus d'étape « Une valeur ». En recherche, chacun se décline en ses
-     * comparaisons (« Batterie · Au-dessus »), qu'on touche pour aller droit à la valeur.
+     * Nouvelle condition (2026-11-12) : comme les actions, une tuile par capteur dans sa catégorie ;
+     * au toucher, la comparaison (son mode), puis la valeur. La recherche trouve aussi les modes.
      */
     private fun nouvelleCondition(profondeur: Int, ok: (RuleCondition) -> Unit) {
         val autres = buildList<Pair<Int, () -> Unit>> {
@@ -516,13 +515,9 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 add(R.string.rule_cond_group_not to { ok(RuleCondition(RuleCondition.Type.NOT, children = emptyList())) })
             }
         }
-        val capteurs = signaux().flatMap { sig ->
-            val nom = mots.signal(sig)
-            listOf(Entree(nom, catSignal(sig), "cond:${sig.name}", { comparerSignal(sig, null, ok) }, horsRecherche = true)) +
-                operations(sig).map { (libelle, op) ->
-                    Entree(nom, catSignal(sig), "cond:${sig.name}:${op.name}", { valeurPour(sig, op, null, ok) },
-                        sous = libelle, rechercheSeule = true)
-                }
+        val capteurs = signaux().map { sig ->
+            tuile(mots.signal(sig), catSignal(sig), "cond:${sig.name}",
+                operations(sig).map { (libelle, op) -> libelle to { valeurPour(sig, op, null, ok) } })
         }
         entrees(R.string.rule_choose_condition, autres.map { (res, action) ->
             Entree(s(res), catCondition(res), resources.getResourceEntryName(res), action)
@@ -546,19 +541,30 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
     /**
      * Une entrée de la grande fenêtre : ce qu'elle montre, où elle se range, sa clé pour les
-     * « Récents », ce qu'elle fait. [rechercheSeule] / [horsRecherche] : voir [AppDialog.Choix].
+     * « Récents », ce qu'elle fait ; [motsCles] : mots cherchés en plus (ses modes).
      */
     private class Entree(
         val libelle: String, val cat: Cat, val cle: String, val action: () -> Unit,
-        val sous: String? = null, val rechercheSeule: Boolean = false, val horsRecherche: Boolean = false,
+        val sous: String? = null, val motsCles: String? = null,
     )
 
     private fun entrees(titre: Int, e: List<Entree>, recents: String) {
         AppDialog.choisir(ctx, titre = s(titre),
-            choix = e.map { AppDialog.Choix(it.libelle, sousLibelle = it.sous, rechercheSeule = it.rechercheSeule, horsRecherche = it.horsRecherche) },
+            choix = e.map { AppDialog.Choix(it.libelle, sousLibelle = it.sous, motsCles = it.motsCles) },
             annuler = s(R.string.profile_cancel),
             categories = categories(e.map { it.cat }), recents = recents, cles = e.map { it.cle }) { rang -> e[rang].action() }
     }
+
+    /**
+     * Une tuile à modes, comme dans le choix des actions : un seul mode s'applique au toucher,
+     * plusieurs se choisissent ensuite (« N modes » en seconde ligne) ; la recherche les trouve aussi.
+     */
+    private fun tuile(nom: String, cat: Cat, cle: String, modes: List<Pair<String, () -> Unit>>): Entree =
+        Entree(nom, cat, cle, {
+            if (modes.size == 1) modes[0].second()
+            else valeurs(nom, modes.indices.map { modes[it].first to it }, null) { i -> modes[i].second() }
+        }, sous = if (modes.size > 1) s(R.string.rule_act_modes_fmt, modes.size) else null,
+            motsCles = modes.joinToString(" ") { it.first })
 
     /** Façons de déclencher sur un capteur, selon son genre. */
     private enum class Mode(val libelle: Int) {
@@ -578,10 +584,15 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         RuleSignal.Kind.TEXT, RuleSignal.Kind.TEXT_SET -> listOf(Mode.DEVIENT, Mode.N_EST_PLUS, Mode.CHANGE)
     }
 
-    /** Raccourcis de la liste des déclencheurs qui valent un mode de capteur : la recherche ne montre que le raccourci. */
-    private val EQUIVALENTS: Map<Int, Pair<RuleSignal, Mode>> = mapOf(
+    /**
+     * Les raccourcis de déclencheur qui portent sur un capteur (2026-11-12) : ils deviennent des
+     * modes de sa tuile, sous leur nom, à la place du mode de capteur qu'ils valent (s'il y en a un).
+     */
+    private val RACCOURCIS_CAPTEUR: Map<Int, Pair<RuleSignal, Mode?>> = mapOf(
         R.string.rule_trg_ready_on to (RuleSignal.READY to Mode.VERS_VRAI),
         R.string.rule_trg_ready_off to (RuleSignal.READY to Mode.VERS_FAUX),
+        R.string.rule_trg_gear_p to (RuleSignal.GEAR to null),
+        R.string.rule_trg_gear_d to (RuleSignal.GEAR to null),
         R.string.rule_trg_profile_changes to (RuleSignal.PROFILE to Mode.CHANGE),
         R.string.rule_trg_charge_start to (RuleSignal.CHARGING to Mode.VERS_VRAI),
         R.string.rule_trg_charge_end to (RuleSignal.CHARGING to Mode.VERS_FAUX),
@@ -589,35 +600,26 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         R.string.rule_trg_unplugged to (RuleSignal.PLUGGED to Mode.VERS_FAUX),
         R.string.rule_trg_locked to (RuleSignal.LOCKED to Mode.VERS_VRAI),
         R.string.rule_trg_unlocked to (RuleSignal.LOCKED to Mode.VERS_FAUX),
+        R.string.rule_event_door to (RuleSignal.FRONT_DOOR to Mode.VERS_VRAI),
+        R.string.rule_event_door_close to (RuleSignal.FRONT_DOOR to Mode.VERS_FAUX),
         R.string.rule_trg_phone to (RuleSignal.BT_DEVICE to Mode.DEVIENT),
         R.string.rule_trg_phone_off to (RuleSignal.BT_DEVICE to Mode.N_EST_PLUS),
     )
 
-    /** Les capteurs de la liste des déclencheurs, et leurs modes en recherche (sauf ceux d'un raccourci). */
-    private fun capteursDeclencheur(raccourcis: Collection<Int>, ok: (RuleTrigger) -> Unit): List<Entree> {
-        val couverts = raccourcis.mapNotNull { EQUIVALENTS[it] }.toSet()
-        return signaux().flatMap { sig ->
-            val nom = mots.signal(sig)
-            listOf(Entree(nom, catSignal(sig), "trg:${sig.name}", { choisirMode(sig, ok) }, horsRecherche = true)) +
-                modes(sig).filter { (sig to it) !in couverts }.map { m ->
-                    Entree(nom, catSignal(sig), "trg:${sig.name}:${m.name}", { declencherSur(sig, m, ok) },
-                        sous = s(m.libelle), rechercheSeule = true)
-                }
+    /** Les tuiles des déclencheurs : une par capteur (ses raccourcis puis ses modes), puis les autres raccourcis. */
+    private fun tuilesDeclencheur(raccourcis: List<Pair<Int, () -> Unit>>, ok: (RuleTrigger) -> Unit): List<Entree> {
+        val parCapteur = raccourcis.filter { it.first in RACCOURCIS_CAPTEUR }.groupBy { RACCOURCIS_CAPTEUR.getValue(it.first).first }
+        val capteurs = signaux().map { sig ->
+            val siens = parCapteur[sig].orEmpty()
+            val remplaces = siens.mapNotNull { RACCOURCIS_CAPTEUR.getValue(it.first).second }.toSet()
+            tuile(mots.signal(sig), catSignal(sig), "trg:${sig.name}",
+                siens.map { (res, action) -> s(res) to action } +
+                    modes(sig).filter { it !in remplaces }.map { m -> s(m.libelle) to { declencherSur(sig, m, ok) } })
         }
-    }
-
-    /** Un capteur touché dans la liste : comment déclencher ; oui / non, la bascule et son sens. */
-    private fun choisirMode(sig: RuleSignal, ok: (RuleTrigger) -> Unit) {
-        val nom = mots.signal(sig)
-        if (sig.kind == RuleSignal.Kind.BOOL) {
-            valeurs(s(R.string.rule_toggle_title_fmt, nom), listOf(
-                s(R.string.rule_toggle_true) to Mode.VERS_VRAI,
-                s(R.string.rule_toggle_false) to Mode.VERS_FAUX,
-                s(R.string.rule_toggle_both) to Mode.BASCULE,
-            ), null) { m -> declencherSur(sig, m, ok) }
-        } else {
-            valeurs(s(R.string.rule_mode_how_fmt, nom), modes(sig).map { s(it.libelle) to it }, null) { m -> declencherSur(sig, m, ok) }
+        val autres = raccourcis.filter { it.first !in RACCOURCIS_CAPTEUR }.map { (res, action) ->
+            Entree(s(res), catDeclencheur(res), resources.getResourceEntryName(res), action)
         }
+        return autres + capteurs
     }
 
     private fun declencherSur(sig: RuleSignal, m: Mode, ok: (RuleTrigger) -> Unit) {
@@ -738,18 +740,9 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     }
 
     /**
-     * Une grille de choix dont chaque tuile lance son action. [rangement] range chaque choix (par son
-     * libellé) dans une catégorie de la grande fenêtre ; [recents] nomme la liste pour ses « Récents ».
+     * Une grille de valeurs libellées. [rangement] range chaque choix dans une catégorie de la grande
+     * fenêtre ; [recents] nomme la liste pour ses « Récents ».
      */
-    private fun liste(titre: Int, choix: List<Pair<Int, () -> Unit>>, choisi: Int = -1,
-                      rangement: ((Int) -> Cat)? = null, recents: String? = null) {
-        AppDialog.choisir(ctx, titre = s(titre), choix = choix.map { AppDialog.Choix(s(it.first)) },
-            annuler = s(R.string.profile_cancel), choisi = choisi,
-            categories = rangement?.let { r -> categories(choix.map { r(it.first) }) },
-            recents = recents, cles = choix.map { resources.getResourceEntryName(it.first) }) { rang -> choix[rang].second() }
-    }
-
-    /** Une grille de valeurs libellées ; [rangement] et [recents] comme pour [liste]. */
     private fun <T> valeurs(titre: CharSequence, choix: List<Pair<String, T>>, choisi: T?,
                             rangement: ((T) -> Cat)? = null, recents: String? = null, ok: (T) -> Unit) {
         if (choix.isEmpty()) return
@@ -800,27 +793,26 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     }
 
     private fun catAction(res: Int): Cat = when (res) {
-        R.string.rule_act_set, R.string.rule_act_profile, R.string.rule_act_windows -> Cat.CAR
-        R.string.rule_act_media, R.string.rule_act_sound, R.string.rule_act_speak -> Cat.MEDIA
-        R.string.rule_act_notify, R.string.rule_act_open, R.string.rule_act_app, R.string.rule_act_navigate,
-        R.string.rule_act_android -> Cat.SCREEN_APPS
-        R.string.rule_act_shortcut, R.string.rule_act_custom, R.string.rule_act_rule -> Cat.SHORTCUTS
+        R.string.rule_act_sound, R.string.rule_act_speak -> Cat.MEDIA
+        R.string.rule_act_notify, R.string.rule_act_app, R.string.rule_act_navigate -> Cat.SCREEN_APPS
+        R.string.rule_act_custom -> Cat.SHORTCUTS
         R.string.abrp_rule_action -> Cat.CONNECTIONS
         else -> Cat.FLOW
     }
 
     private fun catSignal(sig: RuleSignal): Cat = when (sig) {
+        RuleSignal.LOCKED, RuleSignal.FRONT_DOOR -> Cat.CAR
+        RuleSignal.BT_DEVICE -> Cat.PLACES
         RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
-        RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES -> Cat.DRIVING
+        RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES, RuleSignal.PROFILE -> Cat.DRIVING
         RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.PLUGGED, RuleSignal.CHARGE_DC, RuleSignal.CHARGE_LIMIT,
         RuleSignal.BATTERY_HEAT -> Cat.BATTERY
         RuleSignal.OUTSIDE_TEMP, RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO, RuleSignal.HVAC_TEMP,
         RuleSignal.FAN, RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR -> Cat.CLIMATE
-        RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT, RuleSignal.LOCKED, RuleSignal.KEY_AWAY,
-        RuleSignal.FRONT_DOOR -> Cat.COMFORT
+        RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT, RuleSignal.KEY_AWAY -> Cat.COMFORT
         RuleSignal.AEB, RuleSignal.TSR, RuleSignal.ESC, RuleSignal.DROWSINESS, RuleSignal.OVERSPEED_ALARM -> Cat.ADAS
         RuleSignal.BRIGHTNESS, RuleSignal.VOLUME, RuleSignal.MEDIA_PLAYING, RuleSignal.NIGHT, RuleSignal.SUN_UP -> Cat.SCREEN_SOUND
-        RuleSignal.BT_DEVICE, RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON, RuleSignal.PROJECTION,
+        RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.WIFI_SSID, RuleSignal.HOTSPOT_ON, RuleSignal.PROJECTION,
         RuleSignal.IN_CALL, RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> Cat.CONNECTIONS
         else -> Cat.SYSTEM
     }
@@ -1014,11 +1006,8 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                 R.string.rule_trg_place to { lieu(null) { c -> ok(RuleTrigger(RuleTrigger.Type.BECOMES, condition = c)) } },
                 ))
             }.let { raccourcis ->
-                // Capteurs d'abord (2026-11-12) : plus de « Une valeur devient vraie / change » ; les
-                // capteurs sont dans leurs catégories, déclinés en leurs modes dans la recherche.
-                entrees(R.string.rule_choose_trigger, raccourcis.map { (res, action) ->
-                    Entree(s(res), catDeclencheur(res), resources.getResourceEntryName(res), action)
-                } + capteursDeclencheur(raccourcis.map { it.first }, ok), recents = "trg")
+                // Comme les actions (2026-11-12) : une tuile par capteur, le mode se choisit au toucher.
+                entrees(R.string.rule_choose_trigger, tuilesDeclencheur(raccourcis, ok), recents = "trg")
             }
         }
     }
@@ -1093,11 +1082,16 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
     /** Valeur « arrêter » du choix ABRP, à côté des identifiants de comptes. */
     private val STOP_ABRP = "#abrp-stop"
 
-    /** Raccourcis regroupés sous une entrée à eux dans le choix des actions. */
-    private val MEDIA = listOf(ShortcutAction.MEDIA_PLAY_PAUSE, ShortcutAction.MEDIA_NEXT, ShortcutAction.MEDIA_PREVIOUS, ShortcutAction.AUDIO_SOURCE_CYCLE)
-    private val VITRES = listOf(ShortcutAction.WINDOWS_CLOSE_ALL, ShortcutAction.WINDOWS_OPEN_ALL)
-    private val OUVRIR = listOf(ShortcutAction.HVAC_POPUP, ShortcutAction.CHARGE_POPUP, ShortcutAction.QUICK_SETTINGS, ShortcutAction.PROFILE_PICKER,
-        ShortcutAction.PRE_CLIMATE, ShortcutAction.PROJECTION, ShortcutAction.ANDROID_SETTINGS)
+    /**
+     * Une façon d'agir sur un sujet (« Régler sur… », « Bascule »…) : son libellé, le libellé du
+     * raccourci d'origine (cherché aussi), si une action existante l'utilise, et ce qu'elle fait.
+     */
+    private class ModeAct(val libelle: String, val mot: String, val choisi: (RuleAction) -> Boolean, val lancer: (RuleAction) -> Unit)
+
+    /** Une tuile du choix des actions (2026-11-12, maquette validée) : un sujet et ses modes. */
+    private class Sujet(val nom: String, val cat: Cat, val cle: String, val modes: List<ModeAct>, val mots: String) {
+        val recherche: String get() = (listOf(mots) + modes.map { it.libelle + " " + it.mot }).joinToString(" ")
+    }
 
     /** Ajoute ([actuelle] nulle) ou modifie une action. */
     private fun action(actuelle: RuleAction?, profondeur: Int, ok: (RuleAction) -> Unit) {
@@ -1105,16 +1099,6 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         fun raccourcis(a: RuleAction, parmi: List<ShortcutAction>?, titre: Int) = valeurs(s(titre),
             catalogue.filter { parmi == null || it.action in parmi }.map { it.label to it.action.name }, a.shortcut) { n ->
             ok(a.copy(type = RuleAction.Type.SHORTCUT, shortcut = n))
-        }
-        // Lecture / Pause explicites (2026-11-06), en plus des raccourcis média (dont la bascule).
-        fun media(a: RuleAction) {
-            val choix = listOf(s(R.string.rule_act_media_play) to "#" + RuleLogic.MEDIA_PLAY, s(R.string.rule_act_media_pause) to "#" + RuleLogic.MEDIA_PAUSE) +
-                catalogue.filter { it.action in MEDIA }.map { it.label to it.action.name }
-            val deja = if (a.type == RuleAction.Type.MEDIA) "#" + a.value else a.shortcut
-            valeurs(s(R.string.rule_act_media), choix, deja) { v ->
-                ok(if (v.startsWith("#")) RuleAction(RuleAction.Type.MEDIA, value = v.removePrefix("#"))
-                   else RuleAction(RuleAction.Type.SHORTCUT, shortcut = v))
-            }
         }
         fun profil(a: RuleAction) {
             val p = ProfileManager(ctx).getAll()
@@ -1148,10 +1132,9 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             valeurs(s(R.string.shortcuts_pick_app_title), apps, a.text) { p -> ok(a.copy(type = RuleAction.Type.OPEN_APP, text = p)) }
         }
         fun perso(a: RuleAction) = CustomShortcutDialog.choisir(ctx, a.text) { c -> ok(a.copy(type = RuleAction.Type.CUSTOM_SHORTCUT, text = c.id)) }
-        fun automatisation(a: RuleAction) = valeurs(s(R.string.rule_act_rule), listOf(
-            s(R.string.rule_rule_run) to "run", s(R.string.rule_rule_stop) to "stop",
-            s(R.string.rule_rule_enable) to "1", s(R.string.rule_rule_disable) to "0"),
-            when (a.type) { RuleAction.Type.RUN_RULE -> "run"; RuleAction.Type.RULE_STOP -> "stop"; RuleAction.Type.RULE_ENABLE -> a.value; else -> null }) { quoi ->
+        val quoiRegle = listOf(s(R.string.rule_rule_run) to "run", s(R.string.rule_rule_stop) to "stop",
+            s(R.string.rule_rule_enable) to "1", s(R.string.rule_rule_disable) to "0")
+        fun automatisationQuoi(a: RuleAction, quoi: String) =
             RuleChooser.choisir(ctx, a.text, sauf = if (quoi == "run" || quoi == "stop") regle.id else null) { r ->
                 ok(when (quoi) {
                     "run" -> RuleAction(RuleAction.Type.RUN_RULE, text = r.id)
@@ -1159,6 +1142,9 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
                     else -> RuleAction(RuleAction.Type.RULE_ENABLE, text = r.id, value = quoi)
                 })
             }
+        fun automatisation(a: RuleAction) = valeurs(s(R.string.rule_act_rule), quoiRegle,
+            when (a.type) { RuleAction.Type.RUN_RULE -> "run"; RuleAction.Type.RULE_STOP -> "stop"; RuleAction.Type.RULE_ENABLE -> a.value; else -> null }) { quoi ->
+            automatisationQuoi(a, quoi)
         }
         fun definir(a: RuleAction) = choisirVariable(a.key) { nom ->
             val ADD = "#add"
@@ -1194,42 +1180,59 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             }
         }
         // Actions Android (2026-11-09) : accueil, retour, fermer une appli, page des paramètres.
+        val ACCUEIL = "#home"; val RETOUR = "#back"; val FERMER = "#close"; val PAGE = "#settings"
+        val quoiAndroid = listOf(s(R.string.rule_android_home) to ACCUEIL, s(R.string.rule_android_back) to RETOUR,
+            s(R.string.rule_android_close_app) to FERMER, s(R.string.rule_android_settings) to PAGE)
+        fun androidQuoi(a: RuleAction, v: String) {
+            when (v) {
+                ACCUEIL -> ok(RuleAction(RuleAction.Type.ANDROID_KEY, value = AndroidActions.KEY_HOME))
+                RETOUR -> ok(RuleAction(RuleAction.Type.ANDROID_KEY, value = AndroidActions.KEY_BACK))
+                FERMER -> {
+                    // Les applis de la voiture, d'Android et MG4Control ne sont pas proposées.
+                    val apps = com.mg4.control.automation.AndroidControls.closableApps(ctx)
+                    if (apps.isEmpty()) Toast.makeText(ctx, s(R.string.rule_close_app_none), Toast.LENGTH_LONG).show()
+                    else valeurs(s(R.string.rule_close_app_title), apps, a.text.takeIf { a.type == RuleAction.Type.CLOSE_APP }) { p ->
+                        ok(RuleAction(RuleAction.Type.CLOSE_APP, text = p))
+                    }
+                }
+                else -> valeurs(s(R.string.rule_settings_page_title),
+                    AndroidActions.SETTINGS_PAGES.keys.map { mots.settingsPage(it) to it },
+                    a.value.takeIf { a.type == RuleAction.Type.OPEN_SETTINGS }) { p ->
+                    ok(RuleAction(RuleAction.Type.OPEN_SETTINGS, value = p))
+                }
+            }
+        }
         fun android(a: RuleAction) {
-            val ACCUEIL = "#home"; val RETOUR = "#back"; val FERMER = "#close"; val PAGE = "#settings"
             val deja = when (a.type) {
                 RuleAction.Type.ANDROID_KEY -> if (a.value == AndroidActions.KEY_BACK) RETOUR else ACCUEIL
                 RuleAction.Type.CLOSE_APP -> FERMER
                 RuleAction.Type.OPEN_SETTINGS -> PAGE
                 else -> null
             }
-            valeurs(s(R.string.rule_act_android), listOf(s(R.string.rule_android_home) to ACCUEIL, s(R.string.rule_android_back) to RETOUR,
-                s(R.string.rule_android_close_app) to FERMER, s(R.string.rule_android_settings) to PAGE), deja) { v ->
-                when (v) {
-                    ACCUEIL -> ok(RuleAction(RuleAction.Type.ANDROID_KEY, value = AndroidActions.KEY_HOME))
-                    RETOUR -> ok(RuleAction(RuleAction.Type.ANDROID_KEY, value = AndroidActions.KEY_BACK))
-                    FERMER -> {
-                        // Les applis de la voiture, d'Android et MG4Control ne sont pas proposées.
-                        val apps = com.mg4.control.automation.AndroidControls.closableApps(ctx)
-                        if (apps.isEmpty()) Toast.makeText(ctx, s(R.string.rule_close_app_none), Toast.LENGTH_LONG).show()
-                        else valeurs(s(R.string.rule_close_app_title), apps, a.text.takeIf { a.type == RuleAction.Type.CLOSE_APP }) { p ->
-                            ok(RuleAction(RuleAction.Type.CLOSE_APP, text = p))
-                        }
-                    }
-                    else -> valeurs(s(R.string.rule_settings_page_title),
-                        AndroidActions.SETTINGS_PAGES.keys.map { mots.settingsPage(it) to it },
-                        a.value.takeIf { a.type == RuleAction.Type.OPEN_SETTINGS }) { p ->
-                        ok(RuleAction(RuleAction.Type.OPEN_SETTINGS, value = p))
-                    }
-                }
-            }
+            valeurs(s(R.string.rule_act_android), quoiAndroid, deja) { v -> androidQuoi(a, v) }
         }
         fun repeter(a: RuleAction) = RuleValueDialogs.nombre(ctx, s(R.string.rule_repeat_title), null, a.count ?: 2, 2, RuleRun.MAX_REPEAT,
             texte = { "×$it" }) { n -> ok(a.copy(type = RuleAction.Type.REPEAT, count = n)) }
 
+        val sujets = sujets(catalogue, ok, quoiRegle, ::automatisationQuoi)
+        fun ouvrir(su: Sujet, a: RuleAction) {
+            if (su.modes.size == 1) return su.modes[0].lancer(a)
+            valeurs(su.nom, su.modes.indices.map { su.modes[it].libelle to it },
+                su.modes.indexOfFirst { it.choisi(a) }.takeIf { it >= 0 }) { i -> su.modes[i].lancer(a) }
+        }
+        // Modifier : l'étape du mode de son sujet, le mode actuel marqué ; sinon le choix d'avant.
+        val sujetActuel = actuelle?.let { a -> sujets.firstOrNull { su -> su.modes.any { it.choisi(a) } } }
+
         when (actuelle?.type) {
-            RuleAction.Type.SET -> choisirReglage(actuelle, ok)
-            RuleAction.Type.SHORTCUT -> raccourcis(actuelle, null, R.string.rule_choose_shortcut)
-            RuleAction.Type.PROFILE -> profil(actuelle)
+            RuleAction.Type.SET, RuleAction.Type.SHORTCUT, RuleAction.Type.MEDIA, RuleAction.Type.PROFILE,
+            RuleAction.Type.RULE_ENABLE, RuleAction.Type.RUN_RULE, RuleAction.Type.RULE_STOP -> when {
+                sujetActuel != null -> ouvrir(sujetActuel, actuelle)
+                actuelle.type == RuleAction.Type.SET -> choisirReglage(actuelle, ok)
+                actuelle.type == RuleAction.Type.PROFILE -> profil(actuelle)
+                actuelle.type == RuleAction.Type.SHORTCUT || actuelle.type == RuleAction.Type.MEDIA ->
+                    raccourcis(actuelle, null, R.string.rule_choose_shortcut)
+                else -> automatisation(actuelle)
+            }
             RuleAction.Type.WAIT -> attente(actuelle)
             RuleAction.Type.WAIT_UNTIL -> attenteQue(actuelle)
             RuleAction.Type.NOTIFY -> message(actuelle)
@@ -1237,49 +1240,163 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleAction.Type.PLAY_SOUND -> son(actuelle)
             RuleAction.Type.OPEN_APP -> appli(actuelle)
             RuleAction.Type.CUSTOM_SHORTCUT -> perso(actuelle)
-            RuleAction.Type.RULE_ENABLE, RuleAction.Type.RUN_RULE -> automatisation(actuelle)
             RuleAction.Type.SET_VARIABLE -> definir(actuelle)
             RuleAction.Type.SAVE_VALUE -> memoriser(actuelle)
             RuleAction.Type.VARIABLE_ADD -> definir(actuelle)
-            RuleAction.Type.MEDIA -> media(actuelle)
-            RuleAction.Type.RULE_STOP -> automatisation(actuelle)
             RuleAction.Type.SPEAK -> parler(actuelle)
             RuleAction.Type.NAVIGATE -> naviguer(actuelle)
             RuleAction.Type.ABRP_START, RuleAction.Type.ABRP_STOP -> abrp(actuelle)
             RuleAction.Type.REPEAT -> repeter(actuelle)
-            RuleAction.Type.ANDROID_KEY, RuleAction.Type.CLOSE_APP, RuleAction.Type.OPEN_SETTINGS -> android(actuelle)
+            RuleAction.Type.ANDROID_KEY -> android(actuelle)
+            RuleAction.Type.CLOSE_APP -> androidQuoi(actuelle, FERMER)
+            RuleAction.Type.OPEN_SETTINGS -> androidQuoi(actuelle, PAGE)
             RuleAction.Type.IF, RuleAction.Type.STOP -> {}
-            null -> liste(R.string.rule_choose_action, buildList {
-                add(R.string.rule_act_set to { choisirReglage(RuleAction(), ok) })
-                add(R.string.rule_act_media to { media(RuleAction()) })
-                add(R.string.rule_act_windows to { raccourcis(RuleAction(), VITRES, R.string.rule_act_windows) })
-                add(R.string.rule_act_open to { raccourcis(RuleAction(), OUVRIR, R.string.rule_act_open) })
-                add(R.string.rule_act_shortcut to { raccourcis(RuleAction(), null, R.string.rule_choose_shortcut) })
-                add(R.string.rule_act_profile to { profil(RuleAction()) })
-                add(R.string.rule_act_sound to { son(RuleAction()) })
-                add(R.string.rule_act_app to { appli(RuleAction()) })
-                add(R.string.rule_act_android to { android(RuleAction()) })
-                add(R.string.rule_act_custom to { perso(RuleAction()) })
-                add(R.string.rule_act_rule to { automatisation(RuleAction()) })
-                add(R.string.rule_act_variable to { definir(RuleAction()) })
-                add(R.string.rule_act_save_value to { memoriser(RuleAction()) })
-                add(R.string.rule_act_wait to { attente(RuleAction()) })
-                add(R.string.rule_act_wait_until to { attenteQue(RuleAction()) })
-                add(R.string.rule_act_confirm to { question(RuleAction()) })
-                add(R.string.rule_act_notify to { message(RuleAction()) })
-                add(R.string.rule_act_speak to { parler(RuleAction()) })
-                add(R.string.rule_act_navigate to { naviguer(RuleAction()) })
-                if (com.mg4.control.automation.AbrpStore.available) add(R.string.abrp_rule_action to { abrp(RuleAction()) })
-                if (profondeur < PROFONDEUR_MAX - 1) {
-                    add(R.string.rule_act_if to {
-                        ok(RuleAction(RuleAction.Type.IF, condition = RuleCondition(RuleCondition.Type.ALL, children = emptyList()),
-                            then = emptyList(), otherwise = emptyList()))
-                    })
-                    add(R.string.rule_act_repeat to { repeter(RuleAction(then = emptyList())) })
+            null -> {
+                // Une tuile par sujet, rangée dans sa catégorie ; le mode se choisit au toucher.
+                val autres = buildList<Pair<Int, () -> Unit>> {
+                    add(R.string.rule_act_sound to { son(RuleAction()) })
+                    add(R.string.rule_act_speak to { parler(RuleAction()) })
+                    add(R.string.rule_act_notify to { message(RuleAction()) })
+                    add(R.string.rule_act_app to { appli(RuleAction()) })
+                    add(R.string.rule_act_navigate to { naviguer(RuleAction()) })
+                    add(R.string.rule_act_custom to { perso(RuleAction()) })
+                    if (com.mg4.control.automation.AbrpStore.available) add(R.string.abrp_rule_action to { abrp(RuleAction()) })
+                    add(R.string.rule_act_variable to { definir(RuleAction()) })
+                    add(R.string.rule_act_save_value to { memoriser(RuleAction()) })
+                    add(R.string.rule_act_wait to { attente(RuleAction()) })
+                    add(R.string.rule_act_wait_until to { attenteQue(RuleAction()) })
+                    add(R.string.rule_act_confirm to { question(RuleAction()) })
+                    if (profondeur < PROFONDEUR_MAX - 1) {
+                        add(R.string.rule_act_if to {
+                            ok(RuleAction(RuleAction.Type.IF, condition = RuleCondition(RuleCondition.Type.ALL, children = emptyList()),
+                                then = emptyList(), otherwise = emptyList()))
+                        })
+                        add(R.string.rule_act_repeat to { repeter(RuleAction(then = emptyList())) })
+                    }
+                    add(R.string.rule_act_stop to { ok(RuleAction(RuleAction.Type.STOP)) })
                 }
-                add(R.string.rule_act_stop to { ok(RuleAction(RuleAction.Type.STOP)) })
-            }, rangement = ::catAction, recents = "act")
+                val tuiles = sujets.map { su ->
+                    Entree(su.nom, su.cat, su.cle, { ouvrir(su, RuleAction()) },
+                        sous = if (su.modes.size > 1) s(R.string.rule_act_modes_fmt, su.modes.size) else null, motsCles = su.recherche)
+                } + quoiAndroid.map { (libelle, v) ->
+                    Entree(libelle, Cat.SCREEN_APPS, "android:$v", { androidQuoi(RuleAction(), v) })
+                } + autres.map { (res, action) ->
+                    Entree(s(res), catAction(res), resources.getResourceEntryName(res), action)
+                }
+                entrees(R.string.rule_choose_action, tuiles, recents = "act")
+            }
         }
+    }
+
+    /**
+     * Les sujets du choix des actions (2026-11-12) : un réglage de la voiture (« Régler sur… ») et
+     * les raccourcis qui agissent sur la même chose (bascule, cycle, pas à pas) ne font qu'une tuile.
+     * Seuls les modes que ce firmware sait faire sont proposés ; un sujet sans mode n'apparaît pas.
+     */
+    private fun sujets(
+        catalogue: List<ShortcutCatalog.Item>, ok: (RuleAction) -> Unit,
+        quoiRegle: List<Pair<String, String>>, automatisationQuoi: (RuleAction, String) -> Unit,
+    ): List<Sujet> {
+        val reglables = clesReglage().toSet()
+        val dispo = catalogue.associateBy { it.action }
+        // Le raccourci « Paramètres Android » : la page précise des paramètres le couvre.
+        val pris = mutableSetOf(ShortcutAction.ANDROID_SETTINGS)
+        val bascule = s(R.string.rule_act_mode_toggle)
+        val cycle = s(R.string.rule_act_mode_cycle)
+        val plus = s(R.string.rule_act_mode_up)
+        val moins = s(R.string.rule_act_mode_down)
+        val out = mutableListOf<Sujet>()
+
+        fun regler(k: String, libelle: String = s(R.string.rule_act_mode_set)) = if (k !in reglables) null
+            else ModeAct(libelle, "", { it.type == RuleAction.Type.SET && it.key == k }) { a -> reglerCle(a, k, ok) }
+        fun lancer(sc: ShortcutAction, libelle: String? = null): ModeAct? = dispo[sc]?.let { item ->
+            pris += sc
+            ModeAct(libelle ?: item.label, item.label, { it.type == RuleAction.Type.SHORTCUT && it.shortcut == sc.name }) {
+                ok(RuleAction(RuleAction.Type.SHORTCUT, shortcut = sc.name))
+            }
+        }
+        fun sujet(nom: String, cat: Cat, cle: String, vararg modes: ModeAct?, mots: String = "") {
+            val m = modes.filterNotNull()
+            if (m.isNotEmpty()) out += Sujet(nom, cat, cle, m, mots)
+        }
+        fun reglage(k: String, cat: Cat, vararg raccourcis: ModeAct?) = sujet(nomReglage(k), cat, "set:$k", regler(k), *raccourcis)
+        fun seul(sc: ShortcutAction, cat: Cat) { dispo[sc]?.let { sujet(it.label, cat, "sc:${sc.name}", lancer(sc)) } }
+        fun media(v: String, libelle: Int) = ModeAct(s(libelle), "", { it.type == RuleAction.Type.MEDIA && it.value == v }) {
+            ok(RuleAction(RuleAction.Type.MEDIA, value = v))
+        }
+
+        // Voiture
+        sujet(s(R.string.rule_act_windows), Cat.CAR, "sub:windows",
+            lancer(ShortcutAction.WINDOWS_OPEN_ALL), lancer(ShortcutAction.WINDOWS_CLOSE_ALL))
+        val profils = ProfileManager(ctx).getAll()
+        sujet(s(R.string.rule_subject_profile), Cat.CAR, "sub:profile", *(profils.map { p ->
+            ModeAct(s(R.string.rule_act_profile_fmt, p.name), p.name, { it.type == RuleAction.Type.PROFILE && it.profileId == p.id }) {
+                ok(RuleAction(RuleAction.Type.PROFILE, profileId = p.id))
+            }
+        } + lancer(ShortcutAction.PROFILE_CYCLE) + lancer(ShortcutAction.PROFILE_PICKER)).toTypedArray())
+        seul(ShortcutAction.VEHICLE_POWER_OFF, Cat.CAR)
+        // Conduite
+        reglage(ExternalApi.SET_DRIVE_MODE, Cat.DRIVING, lancer(ShortcutAction.DRIVE_MODE_CYCLE, cycle))
+        reglage(ExternalApi.SET_REGEN, Cat.DRIVING, lancer(ShortcutAction.REGEN_CYCLE, cycle))
+        reglage(RuleKeys.ONE_PEDAL, Cat.DRIVING, lancer(ShortcutAction.ONE_PEDAL, bascule))
+        reglage(RuleKeys.ENERGY_SAVING, Cat.DRIVING, lancer(ShortcutAction.ENERGY_SAVING_TOGGLE, bascule))
+        // Batterie et charge
+        reglage(RuleKeys.BATTERY_HEAT, Cat.BATTERY, lancer(ShortcutAction.BATTERY_HEAT_TOGGLE, bascule))
+        reglage(RuleKeys.CHARGE_LIMIT, Cat.BATTERY)
+        seul(ShortcutAction.CHARGE_POPUP, Cat.BATTERY)
+        // Climatisation
+        reglage(ExternalApi.SET_HVAC_POWER, Cat.CLIMATE, lancer(ShortcutAction.HVAC_TOGGLE, bascule))
+        reglage(ExternalApi.SET_HVAC_AC, Cat.CLIMATE, lancer(ShortcutAction.HVAC_AC_TOGGLE, bascule))
+        reglage(ExternalApi.SET_HVAC_AUTO, Cat.CLIMATE)
+        reglage(RuleKeys.HVAC_ECO, Cat.CLIMATE)
+        reglage(ExternalApi.SET_HVAC_TEMP, Cat.CLIMATE, lancer(ShortcutAction.HVAC_TEMP_UP, plus), lancer(ShortcutAction.HVAC_TEMP_DOWN, moins))
+        reglage(ExternalApi.SET_HVAC_FAN, Cat.CLIMATE, lancer(ShortcutAction.HVAC_FAN_UP, plus), lancer(ShortcutAction.HVAC_FAN_DOWN, moins))
+        reglage(RuleKeys.AIR_FLOW, Cat.CLIMATE)
+        reglage(RuleKeys.AUTO_VOLUME, Cat.CLIMATE, lancer(ShortcutAction.HVAC_AUTO_VOLUME_CYCLE, cycle))
+        reglage(ExternalApi.SET_HVAC_RECIRC, Cat.CLIMATE, lancer(ShortcutAction.HVAC_RECIRC_CYCLE, cycle))
+        reglage(ExternalApi.SET_DEFROST_FRONT, Cat.CLIMATE, lancer(ShortcutAction.DEFROST_FRONT_TOGGLE, bascule))
+        reglage(ExternalApi.SET_DEFROST_REAR, Cat.CLIMATE, lancer(ShortcutAction.DEFROST_REAR_TOGGLE, bascule))
+        seul(ShortcutAction.HVAC_POPUP, Cat.CLIMATE)
+        seul(ShortcutAction.PRE_CLIMATE, Cat.CLIMATE)
+        // Confort
+        reglage(ExternalApi.SET_SEAT_HEAT_LEFT, Cat.COMFORT, lancer(ShortcutAction.SEAT_HEAT_LEFT_CYCLE, cycle))
+        reglage(ExternalApi.SET_SEAT_HEAT_RIGHT, Cat.COMFORT, lancer(ShortcutAction.SEAT_HEAT_RIGHT_CYCLE, cycle))
+        reglage(ExternalApi.SET_STEERING_HEAT, Cat.COMFORT, lancer(ShortcutAction.STEERING_HEAT_TOGGLE, bascule))
+        // Aides à la conduite
+        reglage(RuleKeys.AEB, Cat.ADAS, lancer(ShortcutAction.AEB_CYCLE, cycle))
+        reglage(RuleKeys.TSR, Cat.ADAS, lancer(ShortcutAction.TSR_TOGGLE, bascule))
+        reglage(RuleKeys.ESC, Cat.ADAS, lancer(ShortcutAction.ESC_TOGGLE, bascule))
+        reglage(RuleKeys.DROWSINESS, Cat.ADAS, lancer(ShortcutAction.DROWSINESS_TOGGLE, bascule))
+        seul(ShortcutAction.DROWSINESS_SEN_CYCLE, Cat.ADAS)
+        reglage(RuleKeys.OVERSPEED_ALARM, Cat.ADAS, lancer(ShortcutAction.OVERSPEED_ALARM, bascule))
+        reglage(RuleKeys.SPEED_LIMIT_TONE, Cat.ADAS, lancer(ShortcutAction.SPEED_LIMIT_TONE, bascule))
+        seul(ShortcutAction.SOUND_WARNING, Cat.ADAS)
+        reglage(RuleKeys.AUTO_HIGH_BEAM, Cat.ADAS, lancer(ShortcutAction.AUTO_HIGH_BEAM_TOGGLE, bascule))
+        seul(ShortcutAction.ADAS_CYCLE, Cat.ADAS)
+        // Média et son
+        sujet(s(R.string.rule_subject_playback), Cat.MEDIA, "sub:playback", media(RuleLogic.MEDIA_PLAY, R.string.rule_act_media_play),
+            media(RuleLogic.MEDIA_PAUSE, R.string.rule_act_media_pause), lancer(ShortcutAction.MEDIA_PLAY_PAUSE, bascule))
+        seul(ShortcutAction.MEDIA_NEXT, Cat.MEDIA)
+        seul(ShortcutAction.MEDIA_PREVIOUS, Cat.MEDIA)
+        seul(ShortcutAction.AUDIO_SOURCE_CYCLE, Cat.MEDIA)
+        // Écran et son
+        reglage(RuleKeys.BRIGHTNESS, Cat.SCREEN_SOUND, lancer(ShortcutAction.BRIGHTNESS_UP, plus), lancer(ShortcutAction.BRIGHTNESS_DOWN, moins))
+        reglage(RuleKeys.VOLUME, Cat.SCREEN_SOUND, regler(RuleKeys.VOLUME_STEP, nomReglage(RuleKeys.VOLUME_STEP)),
+            lancer(ShortcutAction.VOLUME_UP, plus), lancer(ShortcutAction.VOLUME_DOWN, moins))
+        // Écran et applis
+        seul(ShortcutAction.QUICK_SETTINGS, Cat.SCREEN_APPS)
+        // Connexions
+        reglage(RuleKeys.WIFI, Cat.CONNECTIONS)
+        reglage(RuleKeys.BLUETOOTH, Cat.CONNECTIONS)
+        reglage(RuleKeys.HOTSPOT, Cat.CONNECTIONS)
+        seul(ShortcutAction.PROJECTION, Cat.CONNECTIONS)
+        // Raccourcis : une autre automatisation, puis tout raccourci pas encore rangé (un nouveau, un jour).
+        sujet(s(R.string.rule_act_rule), Cat.SHORTCUTS, "rule_act_rule", *quoiRegle.map { (libelle, quoi) ->
+            val type = when (quoi) { "run" -> RuleAction.Type.RUN_RULE; "stop" -> RuleAction.Type.RULE_STOP; else -> RuleAction.Type.RULE_ENABLE }
+            ModeAct(libelle, "", { it.type == type && (type != RuleAction.Type.RULE_ENABLE || it.value == quoi) }) { a -> automatisationQuoi(a, quoi) }
+        }.toTypedArray())
+        catalogue.filter { it.action !in pris }.forEach { seul(it.action, Cat.SHORTCUTS) }
+        return out
     }
 
     // ── Sons (2026-11-06) ────────────────────────────────────────────────────
@@ -1381,8 +1498,16 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
     /** Les réglages de la voiture (et d'Android) qu'une action peut écrire, et la façon de choisir leur valeur. */
     private fun choisirReglage(a: RuleAction, ok: (RuleAction) -> Unit) {
+        valeurs(s(R.string.rule_choose_setting), clesReglage().map { k -> nomReglage(k) to k }, a.key,
+            rangement = ::catReglage, recents = "set") { k -> reglerCle(a, k, ok) }
+    }
+
+    private fun nomReglage(k: String): String = AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k
+
+    /** Les réglages qu'une action peut écrire sur cette voiture. */
+    private fun clesReglage(): List<String> {
         val clim = MG4Hardware.hasClimateControl()
-        val cles = buildList {
+        return buildList {
             add(ExternalApi.SET_DRIVE_MODE)
             add(ExternalApi.SET_REGEN)
             add(RuleKeys.ONE_PEDAL)
@@ -1418,22 +1543,17 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             add(RuleKeys.BLUETOOTH)
             add(RuleKeys.HOTSPOT)
         }
-        valeurs(s(R.string.rule_choose_setting), cles.map { k -> (AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k) to k }, a.key,
-            rangement = ::catReglage, recents = "set") { k ->
-            val nom = AndroidRuleWords.keyRes(k)?.let { s(it) } ?: k
-            val variables = RuleVariables.all(ctx)
-            // 2026-11-06 : une valeur fixe, ou celle d'une variable (dès qu'il en existe une).
-            if (variables.isNotEmpty()) {
-                val deVariable = a.key == k && RuleLogic.variableRef(a.value) != null
-                valeurs(nom, listOf(s(R.string.rule_value_fixed) to "fixe", s(R.string.rule_value_from_var) to "var"),
-                    if (deVariable) "var" else "fixe") { quoi ->
-                    if (quoi == "var") choisirVariable(RuleLogic.variableRef(a.value)) { v ->
-                        ok(RuleAction(RuleAction.Type.SET, key = k, value = "$" + v))
-                    } else choisirReglageValeur(a, k, ok)
-                }
-                return@valeurs
-            }
-            choisirReglageValeur(a, k, ok)
+    }
+
+    /** Le réglage [k] choisi : sa valeur, fixe ou celle d'une variable (dès qu'il en existe une, 2026-11-06). */
+    private fun reglerCle(a: RuleAction, k: String, ok: (RuleAction) -> Unit) {
+        if (RuleVariables.all(ctx).isEmpty()) return choisirReglageValeur(a, k, ok)
+        val deVariable = a.key == k && RuleLogic.variableRef(a.value) != null
+        valeurs(nomReglage(k), listOf(s(R.string.rule_value_fixed) to "fixe", s(R.string.rule_value_from_var) to "var"),
+            if (deVariable) "var" else "fixe") { quoi ->
+            if (quoi == "var") choisirVariable(RuleLogic.variableRef(a.value)) { v ->
+                ok(RuleAction(RuleAction.Type.SET, key = k, value = "$" + v))
+            } else choisirReglageValeur(a, k, ok)
         }
     }
 

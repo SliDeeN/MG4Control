@@ -1531,9 +1531,7 @@
     <string name="rule_settings_page_storage">Storage</string>
     <string name="rule_act_confirm">Ask for confirmation</string>
     <string name="rule_act_custom">Custom shortcut</string>
-    <string name="rule_act_media">Media</string>
     <string name="rule_act_navigate">Navigate to a place</string>
-    <string name="rule_act_open">Open a window</string>
     <string name="rule_act_rule">Another automation</string>
     <string name="rule_act_sound">Play a sound</string>
     <string name="rule_act_speak">Read a text aloud</string>
@@ -1675,11 +1673,6 @@
     <string name="rule_mode_becomes">Becomes…</string>
     <string name="rule_mode_stops">Is no longer…</string>
     <string name="rule_mode_change">Changes</string>
-    <string name="rule_mode_how_fmt">%1$s: how should it trigger?</string>
-    <string name="rule_toggle_title_fmt">%1$s: switches to…</string>
-    <string name="rule_toggle_true">TRUE</string>
-    <string name="rule_toggle_false">FALSE</string>
-    <string name="rule_toggle_both">Both ways</string>
     <string name="rule_var_false">False</string>
     <string name="rule_var_name">Variable name</string>
     <string name="rule_var_new">+ New variable</string>
@@ -1715,6 +1708,14 @@
     <string name="rule_sig_front_door">Front door open</string>
     <string name="rule_act_media_play">Play (resume)</string>
     <string name="rule_act_media_pause">Pause</string>
+    <string name="rule_act_mode_set">Set to…</string>
+    <string name="rule_act_mode_toggle">Toggle</string>
+    <string name="rule_act_mode_cycle">Cycle (next value)</string>
+    <string name="rule_act_mode_up">Step +</string>
+    <string name="rule_act_mode_down">Step −</string>
+    <string name="rule_act_modes_fmt">%1$d modes</string>
+    <string name="rule_subject_profile">Profile</string>
+    <string name="rule_subject_playback">Playback</string>
     <string name="rule_var_add">Add or subtract</string>
     <string name="rule_var_add_title">%1$s: add (+) or subtract (−)</string>
     <string name="rule_var_add_fmt">%1$s %2$s</string>
@@ -1731,10 +1732,7 @@
     <string name="shortcuts_action_run_rule">Run an automation</string>
     <string name="rule_act_if">If / Else</string>
     <string name="rule_act_notify">Show a message</string>
-    <string name="rule_act_profile">Apply a profile</string>
     <string name="rule_act_repeat">Repeat</string>
-    <string name="rule_act_set">Adjust the car</string>
-    <string name="rule_act_shortcut">Run a shortcut</string>
     <string name="rule_act_wait">Wait</string>
     <string name="rule_add_action">Action</string>
     <string name="rule_add_condition">Condition</string>
