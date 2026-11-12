@@ -67,8 +67,13 @@ class ClusterLayoutEditor(
 
     private var disposition: ClusterLayout = ClusterModuleSettings.layout(depart)
     private var style: String? = depart.style
-    private var module: ClusterModule =
-        ClusterModuleSettings.moduleFor(depart, onglet) ?: ClusterModuleSettings.moduleFor(depart, ClusterTab.NAVIGATION)
+    /**
+     * Jauge de l'aperçu : la dernière choisie dans cette fenêtre (2026-11-12 : elle revenait toujours
+     * sur celle de l'onglet, Consommation le plus souvent), à défaut celle de l'onglet montré.
+     */
+    private var module: ClusterModule = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(CLE_JAUGE, null)
+        ?.let { k -> ClusterModule.entries.firstOrNull { it.key == k } }
+        ?: ClusterModuleSettings.moduleFor(depart, onglet) ?: ClusterModuleSettings.moduleFor(depart, ClusterTab.NAVIGATION)
             ?: ClusterModule.CONSUMPTION
     /** Élément réglé à droite : une case (0 à 3) ou [ClusterGaugeView.JAUGE]. */
     private var selection: Int = ClusterGaugeView.JAUGE
@@ -196,7 +201,12 @@ class ClusterLayoutEditor(
         rangee(R.string.cluster_layout_gauge_preview, listOf(
             ClusterModule.CONSUMPTION to R.string.settings_cluster_consumption,
             ClusterModule.POWER to R.string.settings_cluster_power,
-        ).map { (m, t) -> Option(ctx.getString(t), module == m) { module = m; apercu.moduleForce = m; maj() } })
+        ).map { (m, t) -> Option(ctx.getString(t), module == m) {
+            module = m
+            apercu.moduleForce = m
+            ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(CLE_JAUGE, m.key).apply()
+            maj()
+        } })
         note(R.string.cluster_layout_gauge_preview_note)
         rangee(R.string.settings_cluster_row_style, listOf(
             ClusterGaugeStyle.DYNAMIC to R.string.settings_cluster_style_dynamic,
@@ -415,6 +425,8 @@ class ClusterLayoutEditor(
     }
 
     private companion object {
+        const val PREFS = "mg4_settings"
+        const val CLE_JAUGE = "cluster_editor_gauge"
         const val LARGEUR_DP = 1440f
         const val APPUI_LONG_MS = 400L
     }

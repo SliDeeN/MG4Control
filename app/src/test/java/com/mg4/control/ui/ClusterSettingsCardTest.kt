@@ -121,4 +121,30 @@ class ClusterSettingsCardTest {
         assertTrue(consoDessous in textes() && unite in textes())
         assertTrue(moyenne !in textes() && kwDessous !in textes())
     }
+
+    @Test
+    fun `the window reopens on the gauge chosen last time`() {
+        val activite = org.robolectric.Robolectric.buildActivity(android.app.Activity::class.java).setup().get()
+        activite.setTheme(R.style.Theme_MG4Control)
+        fun tous(v: View, out: MutableList<View> = mutableListOf()): List<View> {
+            out += v; if (v is android.view.ViewGroup) for (i in 0 until v.childCount) tous(v.getChildAt(i), out); return out
+        }
+        val champ = ClusterGaugeView::class.java.getDeclaredField("contenu").also { it.isAccessible = true }
+        fun ouvrir(): android.app.Dialog {
+            ClusterLayoutEditor(activite, com.mg4.control.model.ClusterConfig(enabled = true, navigation = "consumption"), null,
+                "Profil", ClusterTab.NAVIGATION) { _, _ -> }.ouvrir()
+            shadowOf(Looper.getMainLooper()).idle()
+            return org.robolectric.shadows.ShadowDialog.getLatestDialog()
+        }
+        fun module(f: android.app.Dialog) = (champ.get(tous(f.findViewById(R.id.frame_cluster_layout_preview))
+            .first { it is ClusterGaugeView }) as ClusterGaugeView.Contenu?)?.module
+        val premiere = ouvrir()
+        assertEquals(com.mg4.control.model.ClusterModule.CONSUMPTION, module(premiere))
+        tous(premiere.findViewById(R.id.panel_cluster_layout)).filterIsInstance<TextView>()
+            .first { it.text.toString() == activite.getString(R.string.settings_cluster_power) }.performClick()
+        shadowOf(Looper.getMainLooper()).idle()
+        premiere.dismiss()
+        shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(com.mg4.control.model.ClusterModule.POWER, module(ouvrir()))
+    }
 }
