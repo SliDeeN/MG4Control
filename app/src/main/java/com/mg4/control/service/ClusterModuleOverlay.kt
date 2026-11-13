@@ -206,11 +206,22 @@ internal object ClusterModuleOverlay {
      * Fenêtre absente, détachée ou sur un autre écran : retirée puis reposée. Sans effet quand le
      * module n'a pas à être là (réglage coupé, firmware sans combiné).
      */
+    /**
+     * Le module a-t-il à être sur le combiné ? Firmware pris en charge, pas en mode Garage, et
+     * réglage activé ou pré-climatisation en cours. Une seule règle pour [refresh],
+     * [verifierEtRecoller] et [afficher] (issue #246, 2026-11-13 : au contact suivant, le recollage
+     * remettait la jauge en mode Garage). Partie sans Android.
+     */
+    fun doitEtreLa(supporte: Boolean, garage: Boolean, active: Boolean, preClim: Boolean): Boolean =
+        supporte && !garage && (active || preClim)
+
+    private fun doitEtreLa(app: Context): Boolean = doitEtreLa(ClusterModuleSettings.isSupported(),
+        com.mg4.control.util.GarageMode.isOn(app), ClusterModuleSettings.isEnabled(app), PreClimate.surLeCombine(app))
+
     fun verifierEtRecoller(origine: String) {
         val app = appContext ?: return
         main.post {
-            if (!ClusterModuleSettings.isSupported() ||
-                !(ClusterModuleSettings.isEnabled(app) || PreClimate.surLeCombine(app))) return@post
+            if (!doitEtreLa(app)) return@post
             val ecran = ecranDuCombine(app)
             if (ecran == null) {
                 ESSAIS_MS.forEach { delai -> main.postDelayed({ if (vue == null) afficher("$origine (+$delai ms)", signalerAbsence = false) }, delai) }
@@ -240,8 +251,7 @@ internal object ClusterModuleOverlay {
             // Module désactivé : posé quand même le temps d'une pré-climatisation.
             // Mode Garage : rien sur le combiné, pré-climatisation comprise (signalé le 2026-11-03).
             val garage = com.mg4.control.util.GarageMode.isOn(app)
-            if (ClusterModuleSettings.isSupported() && !garage &&
-                (ClusterModuleSettings.isEnabled(app) || PreClimate.surLeCombine(app))) {
+            if (doitEtreLa(app)) {
                 if (!abonne) {
                     abonne = true
                     ReadyWatcher.add(readyListener)
@@ -313,6 +323,12 @@ internal object ClusterModuleOverlay {
     private fun afficher(origine: String, signalerAbsence: Boolean = true) {
         val ctx = appContext ?: return
         if (vue != null) return
+        // Dernier filet : un essai différé (+1 à +10 s) ou un autre appelant ne pose rien en mode
+        // Garage ni module coupé (issue #246).
+        if (!doitEtreLa(ctx)) {
+            AppLogger.i(TAG, "$origine : module non posé (${if (com.mg4.control.util.GarageMode.isOn(ctx)) "mode Garage" else "module désactivé"})")
+            return
+        }
         val ecran = ecranDuCombine(ctx)
         if (ecran == null) {
             if (signalerAbsence) AppLogger.w(TAG, "$origine : aucun écran de combiné parmi ceux d'Android — " +
