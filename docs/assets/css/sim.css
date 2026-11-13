@@ -1564,3 +1564,7 @@
 .qs-bub.below { bottom: auto; top: calc(100% + 6px); }
 .qs-bub button { flex: 1 0 auto; min-height: 44px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--dash-border); background: var(--dash-section); color: var(--text-primary); font: inherit; cursor: pointer; }
 .qs-bub button.on { background: var(--dash-accent); border-color: var(--dash-accent); color: var(--dash-on-accent, #0C111B); }
+
+.a-logo span.lg { width: 100%; max-width: 145px; height: 24px; padding: 0; background: url("../img/wordmark-blue.png") center / contain no-repeat; }
+
+.app[data-app-theme="dark"] .a-logo span.lg { background-image: url("../img/wordmark-blue-night.png"); }

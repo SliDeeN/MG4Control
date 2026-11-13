@@ -1,4 +1,4 @@
-![image info](mg4control_github_banner.svg)
+![image info](branding/mg4control-banner-blue.png)
 
 [![Security](https://github.com/SliDeeN/MG4Control/actions/workflows/security.yml/badge.svg)](https://github.com/SliDeeN/MG4Control/actions/workflows/security.yml)
 [![Release](https://github.com/SliDeeN/MG4Control/actions/workflows/release.yml/badge.svg)](https://github.com/SliDeeN/MG4Control/actions/workflows/release.yml)

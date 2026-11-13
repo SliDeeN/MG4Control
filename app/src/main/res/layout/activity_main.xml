@@ -29,9 +29,7 @@
         android:background="@color/dash_bg">
 
         <!--
-            Logo : retour au Tableau de bord. Les lettres "MG" sont blanches : en thème clair la
-            plaque sombre les fait ressortir, en thème sombre elle est transparente. Le cadre
-            prend un fond quand le Tableau de bord est affiché (MainActivity).
+            Logo transparent, avec une variante de couleur pour chaque thème. Le cadre prend un fond quand le Tableau de bord est affiché (MainActivity).
         -->
         <FrameLayout
             android:id="@+id/nav_home"
@@ -51,8 +49,8 @@
                 android:maxHeight="48dp"
                 android:paddingTop="4dp"
                 android:paddingBottom="4dp"
-                android:src="@drawable/logo_topbar"
-                android:background="@drawable/bg_logo_plate"
+                android:src="@drawable/brand_wordmark_blue"
+                android:background="@android:color/transparent"
                 android:scaleType="fitCenter"
                 android:adjustViewBounds="true"
                 android:importantForAccessibility="no" />

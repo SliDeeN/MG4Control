@@ -102,7 +102,7 @@ p { margin: 0 0 .9em; }
 .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font-weight: 700; flex: 0 0 auto; }
 .brand-mark { width: 34px; height: 34px; border-radius: 9px; flex: 0 0 auto; }
 .brand-name { font-size: 1.125rem; letter-spacing: -.02em; }
-.brand-name .four { color: var(--red); }
+.brand-name .four { color: #2563EB; }
 .brand-name .ctl { color: var(--ink-3); font-weight: 500; }
 .nav { display: none; gap: 2px; margin-left: 8px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .nav::-webkit-scrollbar { display: none; }
@@ -179,7 +179,7 @@ p { margin: 0 0 .9em; }
 .hero::before {
   content: ""; position: absolute; inset: -40% -10% auto; height: 520px; z-index: -1;
   background: radial-gradient(600px 260px at 20% 30%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%),
-              radial-gradient(520px 240px at 85% 10%, color-mix(in srgb, var(--red) 12%, transparent), transparent 70%);
+              radial-gradient(520px 240px at 85% 10%, color-mix(in srgb, #2563EB 14%, transparent), transparent 70%);
 }
 .eyebrow {
   display: inline-flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 600; letter-spacing: .02em;
@@ -187,7 +187,7 @@ p { margin: 0 0 .9em; }
 }
 .eyebrow .pill { background: var(--accent-soft); color: var(--accent-ink); border-radius: 999px; padding: 1px 8px; font-weight: 700; }
 .hero h1 { font-size: clamp(2.125rem, 6vw, 3.75rem); margin: 18px 0 14px; font-weight: 800; letter-spacing: -.035em; }
-.hero h1 .four { color: var(--red); }
+.hero h1 .four { color: #2563EB; }
 /* Le titre dit aussi ce qu'est l'application : un moteur de recherche lit d'abord le h1. */
 .hero h1 .h1-sub { display: block; margin-top: 8px; font-size: clamp(1.25rem, 3vw, 1.75rem); font-weight: 700; letter-spacing: -.02em; line-height: 1.25; }
 .lead { font-size: clamp(1.0625rem, 2.1vw, 1.25rem); color: var(--ink-2); max-width: 62ch; }

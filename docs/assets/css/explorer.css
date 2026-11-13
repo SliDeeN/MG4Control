@@ -101,7 +101,7 @@ html[data-sim-full] .x-stage {
 html[data-sim-full] .x-stage > .wrap { max-width: none; width: 100%; }
 html[data-sim-full] .x-chips, html[data-sim-full] .x-pin, html[data-sim-full] .x-jump, html[data-sim-full] .x-hint { display: none !important; }
 html[data-sim-full] .x-fulltitle { display: block; flex: 1; min-width: 0; font-weight: 700; font-size: 0.9375rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-html[data-sim-full] .x-fulltitle .four { color: var(--red); }
+html[data-sim-full] .x-fulltitle .four { color: #2563EB; }
 html[data-sim-full] .x-fw { display: flex; }
 html[data-sim-full] .x-fullhint { display: inline; }
 /* Ratio 1280 × 480 : la largeur est bornée par la hauteur disponible (barre + marges retirées). */

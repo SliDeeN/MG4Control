@@ -2107,7 +2107,7 @@
       const s = this.ui.screen === 'profileEdit' ? 'profiles' : this.ui.screen === 'ruleEdit' ? 'automation' : this.ui.screen;
       const nav = (id, key) =>
         '<button class="a-nav' + (s === id ? ' on' : '') + '" data-a="nav" data-v="' + id + '" data-hl="nav nav-' + id + '">' + ico('nav_' + id) + '<span>' + esc(S(key)) + '</span></button>';
-      return '<div class="a-top" data-hl="topbar"><div class="a-logo' + (s === 'dashboard' ? ' on' : '') + '" data-a="logo" data-hl="logo"><span class="lg"><span class="mg">MG</span><span class="four">4</span><span class="ctl">Control</span></span></div>' +
+      return '<div class="a-top" data-hl="topbar"><div class="a-logo' + (s === 'dashboard' ? ' on' : '') + '" data-a="logo" data-hl="logo"><span class="lg" role="img" aria-label="MG4Control"></span></div>' +
         nav('profiles', 'nav_profiles') + nav('shortcuts', 'nav_shortcuts') + nav('automation', 'nav_automation') +
         nav('stats', 'nav_stats') + nav('settings', 'nav_settings') + '</div>';
     }
