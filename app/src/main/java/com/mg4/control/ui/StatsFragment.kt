@@ -69,6 +69,8 @@ class StatsFragment : Fragment() {
         /** Période courte du résumé, en jours. L'autre choix est « tout l'historique ». */
         const val SHORT_PERIOD_DAYS = 30
         const val TAG = "MG4_STATS"
+        /** Durée d'affichage au-delà de laquelle le journal la note. */
+        const val RENDU_LENT_MS = 50L
         /** Attente après le dernier pas de l'état de santé avant de recalculer les recharges. */
         const val RECALCUL_SOH_MS = 800L
     }
@@ -100,6 +102,11 @@ class StatsFragment : Fragment() {
         get() = pageRetenue
         set(v) { pageRetenue = v }
     private var shortPeriod = true
+    /**
+     * Rendu fait par [onViewCreated] et pas encore suivi d'un [onResume] (2026-11-13) : ce premier
+     * onResume, qui suit aussitôt, ne refait pas le même rendu.
+     */
+    private var renduALaCreation = false
     /** Ligne dépliée d'une liste, repérée par l'horodatage de son enregistrement. */
     private var expanded: Long? = null
     /** Filtre « Profil » de l'onglet Trajets (2026-11-05) ; null = tous. */
@@ -164,6 +171,7 @@ class StatsFragment : Fragment() {
             .setOnClickListener { showBatterySetting() }
 
         render()
+        renduALaCreation = true
     }
 
     override fun onPause() {
@@ -178,8 +186,10 @@ class StatsFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        // Un trajet a pu se terminer pendant qu'on regardait un autre écran.
-        if (view != null) render()
+        // Un trajet a pu se terminer pendant qu'on regardait un autre écran. Juste après la
+        // création, le rendu vient d'être fait : inutile de le refaire.
+        if (renduALaCreation) renduALaCreation = false
+        else if (view != null) render()
         // En Auto, l'unité de la voiture se relit hors du fil principal (binder) ; changée, on redessine.
         if (DistanceSetting.choice(context) == null) Thread {
             val avant = VehicleDistanceUnit.connue()
@@ -195,6 +205,7 @@ class StatsFragment : Fragment() {
     private fun render() {
         val v = view ?: return
         val ctx = v.context
+        val debut = android.os.SystemClock.elapsedRealtime()
         unite = DistanceSetting.unit(ctx)
         val settings = store.settings()
         val history = store.history()
@@ -232,9 +243,17 @@ class StatsFragment : Fragment() {
             ?: trips.map { it to it }
         val sommeTrajets = if (profilFiltre == null) summary else StatsSummary.of(affiches.map { it.first }, charges, settings)
 
-        renderGeneral(v, settings, summary, history)
-        renderTrips(v, settings, sommeTrajets, affiches, profils)
-        renderCharges(v, settings, summary, charges)
+        // Seulement l'onglet affiché (2026-11-13) : changer d'onglet refait un rendu, les deux autres
+        // sont dessinés à ce moment-là.
+        when (page) {
+            PAGE_GENERAL -> renderGeneral(v, settings, summary, history)
+            PAGE_TRIPS -> renderTrips(v, settings, sommeTrajets, affiches, profils)
+            else -> renderCharges(v, settings, summary, charges)
+        }
+        // Pour mesurer sur la voiture : seuls les rendus lents sont notés.
+        val duree = android.os.SystemClock.elapsedRealtime() - debut
+        if (duree >= RENDU_LENT_MS) AppLogger.i(TAG, "affichage de l'onglet $page : $duree ms " +
+            "(${history.trips.size} trajets, ${history.charges.size} charges)")
     }
 
     /** Menu des trois batteries. En choisir une recalcule aussitôt les recharges enregistrées. */

@@ -134,8 +134,21 @@ class DashboardFragment : Fragment() {
      */
     private val safetyPoll = object : Runnable {
         override fun run() {
+            // Onglet Sécurité affiché et écran au premier plan seulement (2026-11-13) : sinon on
+            // s'arrête — un rappel tardif ne relance plus le sondage écran caché.
+            if (!isResumed || currentTab != TAB_SAFETY) return
             if (!safetyWriteInFlight) refreshSafetyDmsEsc()
             view?.postDelayed(this, SAFETY_POLL_MS)
+        }
+    }
+
+    /** Démarre ou arrête la relecture d'ESC et somnolence selon l'onglet et l'écran. */
+    private fun syncSafetyPoll() {
+        val v = view ?: return
+        v.removeCallbacks(safetyPoll)
+        if (!MG4Hardware.hasDrowsinessAndEsc() || !isResumed || currentTab != TAB_SAFETY) return
+        MG4Hardware.whenKatman4Ready {
+            if (isResumed && currentTab == TAB_SAFETY) view?.run { removeCallbacks(safetyPoll); postDelayed(safetyPoll, SAFETY_POLL_MS) }
         }
     }
     @Volatile private var safetyWriteInFlight = false
@@ -204,9 +217,7 @@ class DashboardFragment : Fragment() {
         }
         refreshElk()  // SWI133 — sVsm133 indépendant de Katman4
         MG4Hardware.whenKatman4Ready { if (isAdded) refreshSafetyDmsEsc() }
-        if (MG4Hardware.hasDrowsinessAndEsc()) MG4Hardware.whenKatman4Ready {
-            if (isAdded) view?.run { removeCallbacks(safetyPoll); postDelayed(safetyPoll, SAFETY_POLL_MS) }
-        }
+        syncSafetyPoll()
         MG4Hardware.whenKatman4Ready { if (isAdded) refreshHighBeam() }
         if (MG4Hardware.hasBatteryHeating()) {
             view?.removeCallbacks(batteryHeatPoll)
@@ -237,7 +248,7 @@ class DashboardFragment : Fragment() {
         const val CLIM_UI_TAG = "MG4_AIR"
         /** Relecture du chauffage de la batterie et de son décompte, écran visible. */
         const val BATTERY_HEAT_POLL_MS = 15_000L
-        /** ESC et somnolence relus toutes les 2 s, écran visible. */
+        /** ESC et somnolence relus toutes les 2 s, onglet Sécurité affiché. */
         const val SAFETY_POLL_MS = 2_000L
         /** Relectures (une par seconde) au plus après une consigne : au-delà de la fenêtre de 15 s. */
         const val BATTERY_HEAT_CONFIRM_TRIES = 16
@@ -298,7 +309,13 @@ class DashboardFragment : Fragment() {
             }
             scroll?.scrollTo(0, 0)
             // Rafraichissements qui etaient declenches par onPageSelected du pager.
-            if (index == TAB_SAFETY) refreshElk()
+            if (index == TAB_SAFETY) {
+                refreshElk()
+                // Arrivée sur l'onglet : une lecture tout de suite, puis toutes les 2 s (écran visible).
+                // Rappel tardif (service véhicule prêt après coup) : rien si on a quitté l'onglet entre-temps.
+                if (isResumed) MG4Hardware.whenKatman4Ready { if (isResumed && currentTab == TAB_SAFETY) refreshSafetyDmsEsc() }
+            }
+            syncSafetyPoll()
             if (index == TAB_COMFORT && MG4Hardware.hasClimateControl()) {
                 refreshClimatePage(force = true)
                 startClimatePolling()

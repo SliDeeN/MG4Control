@@ -58,6 +58,15 @@ class StatsStore(private val context: Context) {
 
         /** Verrou de processus : le service écrit pendant que l'écran lit. */
         private val LOCK = Any()
+
+        /**
+         * Dernier historique lu ou écrit (2026-11-13) : l'écran des Statistiques le relisait et le
+         * désérialisait en entier à chaque affichage, sur le fil principal. Toutes les écritures
+         * passent par [write] et [clear], qui le tiennent à jour. Référence « souple » : sous
+         * pression mémoire Android peut la libérer, et l'historique est alors simplement relu.
+         * Sous [LOCK].
+         */
+        private var memo: java.lang.ref.SoftReference<StatsHistory>? = null
         private val gson = Gson()
 
         /**
@@ -261,6 +270,7 @@ class StatsStore(private val context: Context) {
 
     fun clear() = synchronized(LOCK) {
         runCatching { file.delete() }
+        memo = null
         // Le journal de comparaison date et mesure des trajets, lui aussi : il part avec le reste.
         prefs.edit().remove(KEY_ENERGY_CHECKS).apply()
         AppLogger.i(TAG, "historique supprimé")
@@ -286,7 +296,21 @@ class StatsStore(private val context: Context) {
 
     // ── Fichier ─────────────────────────────────────────────────────────────
 
-    private fun read(): StatsHistory = runCatching {
+    private fun read(): StatsHistory {
+        memo?.get()?.let { return it }
+        val debut = android.os.SystemClock.elapsedRealtime()
+        val lu = lireFichier() ?: return StatsHistory()
+        memo = java.lang.ref.SoftReference(lu)
+        // Lecture à froid (premier affichage, ou mémoire libérée) : de quoi la mesurer en voiture.
+        val duree = android.os.SystemClock.elapsedRealtime() - debut
+        if (duree >= 20L) AppLogger.i(TAG, "historique relu du fichier : $duree ms " +
+            "(${sizeBytes() / 1024} ko, ${lu.trips.size} trajets, ${lu.charges.size} charges, " +
+            "${if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) "fil principal" else "arrière-plan"})")
+        return lu
+    }
+
+    /** Le fichier tel quel ; `null` s'il est illisible (rien n'est alors gardé en mémoire). */
+    private fun lireFichier(): StatsHistory? = runCatching {
         if (!file.exists()) return StatsHistory()
         val racine = JsonParser.parseString(file.readText()).asJsonObject
         StatsHistory(
@@ -296,18 +320,25 @@ class StatsStore(private val context: Context) {
     }.getOrElse {
         // Fichier illisible : on repart d'un historique vide plutôt que de planter l'écran.
         AppLogger.w(TAG, "historique illisible (${it.javaClass.simpleName}) — repart à vide")
-        StatsHistory()
+        null
     }
 
     private fun write(h: StatsHistory) {
+        val ecrit = purged(h)
         runCatching {
             val temp = File(context.filesDir, "$FILE_NAME.tmp")
-            temp.writeText(gson.toJson(purged(h)))
+            temp.writeText(gson.toJson(ecrit))
             if (!temp.renameTo(file)) {
                 file.writeText(temp.readText())
                 temp.delete()
             }
-        }.onFailure { AppLogger.w(TAG, "écriture de l'historique impossible : ${it.message}") }
+            // Ce qui est maintenant dans le fichier : la prochaine lecture n'a rien à relire.
+            memo = java.lang.ref.SoftReference(ecrit)
+        }.onFailure {
+            // Fichier dans un état incertain : la prochaine lecture le relira.
+            memo = null
+            AppLogger.w(TAG, "écriture de l'historique impossible : ${it.message}")
+        }
     }
 
     private fun purged(h: StatsHistory): StatsHistory {
