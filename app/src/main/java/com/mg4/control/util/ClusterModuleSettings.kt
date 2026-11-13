@@ -283,6 +283,19 @@ object ClusterModuleSettings {
      * `null` pour laisser la page d'origine — ou le combiné dessiner la sienne. Onglet illisible :
      * celui de la navigation, à défaut celui de la musique, plutôt qu'un module qui disparaît.
      */
+    /**
+     * Onglet à suivre quand la lecture vient d'échouer (issue #245, 2026-11-13) : le dernier onglet
+     * lu, s'il date de moins de [ONGLET_GARDE_MS]. Sans lui, le secours de [moduleToShow] posait le
+     * module de la navigation sur la page affichée, Musique comprise. Au-delà (onglet jamais lu, ou
+     * illisible depuis longtemps), `null` : le secours reprend, pour qu'un module ne disparaisse pas
+     * sur un combiné dont l'onglet ne se lit pas.
+     */
+    fun tabToFollow(read: Int?, lastRead: Int?, lastReadAgeMs: Long): Int? =
+        read ?: lastRead?.takeIf { lastReadAgeMs in 0..ONGLET_GARDE_MS }
+
+    /** Durée pendant laquelle le dernier onglet lu tient lieu d'onglet illisible. */
+    const val ONGLET_GARDE_MS = 30_000L
+
     fun moduleToShow(tabValue: Int?, navigation: ClusterModule?, media: ClusterModule?): ClusterModule? =
         when (tabValue) {
             null -> navigation ?: media

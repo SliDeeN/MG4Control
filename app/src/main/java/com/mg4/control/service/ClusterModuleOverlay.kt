@@ -134,6 +134,10 @@ internal object ClusterModuleOverlay {
     private var dernierSocMs = 0L
     /** Dernier onglet et dernier module annoncés au journal : un mot par changement, pas par relevé. */
     private var dernierOnglet: Int? = -1
+    /** Dernier onglet RÉELLEMENT lu et son heure (issue #245) : repris quand une lecture échoue. */
+    private var ongletLu: Int? = null
+    private var ongletLuMs = 0L
+    private var lectureEchouee = false
     private var dernierModule: ClusterModule? = null
     private var dernierPreClim = false
     private var mode: DriveMode? = null
@@ -492,12 +496,24 @@ internal object ClusterModuleOverlay {
             }
             // Le module suit l'onglet choisi au volant. Les relevés, eux, continuent quel que
             // soit l'onglet : la moyenne du trajet ne doit pas avoir de trou.
-            val onglet = runCatching { ClusterTabReader.onglet() }.getOrNull()
+            val lu = runCatching { ClusterTabReader.onglet() }.getOrNull()
+            if (lu != null) { ongletLu = lu; ongletLuMs = maintenant }
+            // Lecture manquée : le dernier onglet lu plutôt que le module de la navigation partout (#245).
+            val onglet = ClusterModuleSettings.tabToFollow(lu, ongletLu, maintenant - ongletLuMs)
+            // Une ligne par série d'échecs, pour le diagnostic de l'issue #245.
+            if (lu == null && !lectureEchouee) {
+                lectureEchouee = true
+                AppLogger.w(TAG, "onglet illisible — " + (onglet?.let { "dernier lu ($it) gardé" } ?: "secours : module de la navigation"))
+            } else if (lu != null && lectureEchouee) {
+                lectureEchouee = false
+                AppLogger.i(TAG, "onglet relu : $lu")
+            }
             val navigation = ClusterModuleSettings.moduleFor(ctx, ClusterTab.NAVIGATION)
             val musique = ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA)
             val module = ClusterModuleSettings.moduleToShow(onglet, navigation, musique)
             if (onglet != dernierOnglet || module != dernierModule) {
-                AppLogger.i(TAG, "onglet ${onglet ?: "illisible"} (${ClusterTab.fromValue(onglet)?.name ?: "?"}) → " +
+                AppLogger.i(TAG, "onglet ${onglet ?: "illisible"} (${ClusterTab.fromValue(onglet)?.name ?: "?"})" +
+                    (if (lu == null && onglet != null) " [illisible, dernier lu gardé]" else "") + " → " +
                     (module?.let { "module ${it.key}" } ?: "aucun module, page d'origine"))
                 dernierOnglet = onglet
                 dernierModule = module
