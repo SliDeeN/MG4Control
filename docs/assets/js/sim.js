@@ -219,7 +219,7 @@
       // Boutons flottants : un jeu par profil (FloatingSets), masquage en marche arrière commun.
       floating: { hideReverse: true, sets: {}, color: '#A6C8FF' },
       // Garde-voiture : derniers choix de la fenêtre et réglages de sa page (PreClimateSettings).
-      preclim: { cam: 'ok', camAuto: true, usb: null, mode: 'now', dur: 60, temp: 21, fan: 4, dog: false, surv: false, at: { h: 7, m: 30, run: 15, runs: 2, pause: 10 },
+      preclim: { cam: 'ok', camAuto: true, usb: null, survScreen: false, nocam: false, mode: 'now', dur: 60, temp: 21, fan: 4, dog: false, surv: false, at: { h: 7, m: 30, run: 15, runs: 2, pause: 10 },
                  lock: 20, soc: 20, screen: 'dim', cluster: true, unlock: true },
       pc: null,                    // programme en cours (pcStart)
       // Sons d'automatisation : un son par moment au plus (SoundAutomationSettings).
@@ -2073,7 +2073,9 @@
         // Pastille REC (variante A) : temps filmé, d'après l'état renvoyé par l'appli caméra.
         const rs = Math.round(pc.min * 60), two = (x) => String(x).padStart(2, '0');
         const recTag = pc.rec ? '<div class="pcs-rec" data-hl="preclim-rec"><i></i>' + esc(S('preclim_surv_rec', two(Math.floor(rs / 3600)) + ':' + two(Math.floor(rs / 60) % 60) + ':' + two(rs % 60))) + '</div>' : '';
-        return '<div class="a-pcs surv" data-hl="preclim-screen">' + recTag + '<div class="pcs-surv">' + MW.cam + '<div class="pcs-st">' + esc(S('preclim_surv_screen_title')) + '</div><div class="pcs-p">' + esc(S('preclim_surv_screen_text')) + '</div>' +
+        // Écran selon « Écran pendant l'attente » seulement si « Appliquer aussi à la surveillance » (2026-11-13).
+        const sdim = r.survScreen && r.screen !== 'normal' && Date.now() - pc.wake > 10000 ? (r.screen === 'off' ? ' black' : ' dim') : '';
+        return '<div class="a-pcs surv' + sdim + '"' + (r.survScreen ? ' data-a="pcWake"' : '') + ' data-hl="preclim-screen">' + recTag + '<div class="pcs-surv">' + MW.cam + '<div class="pcs-st">' + esc(S('preclim_surv_screen_title')) + '</div><div class="pcs-p">' + esc(S('preclim_surv_screen_text')) + '</div>' +
           '<div class="pcs-status">' + esc(S('preclim_surv_status', pc.startHM, c.soc + ' % · ' + pcPowerW(), off)) + '</div></div>' + btns + '</div>';
       }
       // Particules bleues si la clim refroidit, orange si elle chauffe ; seulement clim en marche.
@@ -2744,6 +2746,8 @@
       return '<div class="a-sec" data-hl="sc-preclim"><div class="a-h">' + esc(S('shortcuts_cat_preclim')) + '</div><div class="a-desc">' + esc(S('preclim_cfg_hint')) + '</div>' +
         sl('pcLock', S('preclim_cfg_lock'), 10, 60, p.lock, 5) + sl('pcSoc', S('preclim_cfg_soc'), 10, 40, p.soc, 5) +
         '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_screen')) + '</span><div class="a-grid g3" style="flex:0 0 470px">' + scr('normal', 'preclim_screen_normal') + scr('dim', 'preclim_screen_dim') + scr('off', 'preclim_screen_off') + '</div></div>' +
+        // La surveillance suit-elle ce réglage ? Non par défaut : l'écran rouge reste allumé (2026-11-13).
+        '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_surv_screen')) + '<small>' + esc(S('preclim_cfg_surv_screen_desc')) + '</small></span>' + sw(p.survScreen, 'pcSurvScreen') + '</div>' +
         (k.cluster ? '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_cluster')) + '<small>' + esc(S('preclim_cfg_cluster_desc')) + '</small></span>' + sw(p.cluster, 'pcCluster') + '</div>' : '') +
         '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_unlock')) + '<small>' + esc(S('preclim_cfg_unlock_desc')) + '</small></span>' + sw(p.unlock, 'pcUnlockSw') + '</div>' +
         '<div class="a-desc" style="margin-top:8px;color:var(--dash-warn)">⚠ ' + esc(S('preclim_cfg_warning')) + '</div></div>' + this.camCard();
@@ -2761,6 +2765,8 @@
       const usb = p.usb === 'testing' ? S('preclim_cam_usb_testing') : p.usb === 'ok' ? S('preclim_cam_usb_ok', appLang() === 'fr' ? '41,2 Go' : '41.2 GB', appLang() === 'fr' ? '64 Go' : '64 GB', '9 h 09') : S('preclim_cam_usb_untested');
       return '<div class="a-sec" data-hl="sc-preclim-cam"><div class="a-h">' + esc(S('preclim_cam_title')) + '</div>' +
         '<div class="cam-st ' + st[0] + '">' + MW.cam + '<div><b>' + esc(st[1]) + '</b><span>' + esc(st[2]) + '</span></div></div>' +
+        // Sans appli dashcam : surveillance permise après un avertissement « aucune vidéo » (2026-11-13).
+        (p.cam === 'none' ? '<div class="a-row" data-hl="sc-preclim-nocam"><span class="lbl">' + esc(S('preclim_cam_nocam')) + '<small>' + esc(S('preclim_cam_nocam_desc')) + '</small></span>' + sw(p.nocam, 'pcNoCam') + '</div>' : '') +
         '<div class="cam-opts' + (ok ? '' : ' dis') + '">' +
         '<div class="a-row"><span class="lbl">' + esc(S('preclim_cam_auto')) + '<small>' + esc(S('preclim_cam_auto_desc')) + '</small></span>' + sw(p.camAuto && ok, 'pcCamAuto') + '</div>' +
         '<div class="a-row"><span class="lbl">' + esc(S('preclim_cam_place')) + '<small>' + esc(S('preclim_cam_place_desc')) + '</small></span></div>' +
@@ -3640,19 +3646,21 @@
       const ban = !surv || filmera ? null : cam === 'ok' ? [S('preclim_surv_ban_off_title'), S('preclim_surv_ban_off_text', camName), false]
         : cam === 'old' ? [S('preclim_surv_ban_old_title', camName), S('preclim_surv_ban_old_text'), false]
         : cam === 'incompat' ? [S('preclim_surv_ban_incompat_title', 'MG4 Dashcam'), S('preclim_surv_ban_incompat_text'), false]
+        : p.nocam ? [S('preclim_cam_nocam_warn_title'), S('preclim_surv_ban_novideo_text'), false]
         : [S('preclim_surv_ban_none_title'), S('preclim_surv_ban_none_text'), true];
       const banner = ban ? '<div class="pcp-ban' + (ban[2] ? ' red' : '') + '" data-hl="preclim-cam-ban">' + (ban[2] ? MW.cam : MW.warning) + '<div><b>' + esc(ban[0]) + '</b><span>' + esc(ban[1]) + '</span></div></div>' : '';
-      const blocked = surv && cam === 'none';
+      const blocked = surv && cam === 'none' && !p.nocam;
       const right = surv
-        ? '<div class="ov-cap">' + esc(S('preclim_surv_off_title')) + '</div><div class="pcp-text">' + esc(S('preclim_surv_off_text')) + '</div>' + camLine + warn('preclim_surv_warning', true)
+        // L'avertissement caméra prend la place du texte « 0,2 kW » (proposition 1, 2026-11-08).
+        ? '<div class="ov-cap">' + esc(S('preclim_surv_off_title')) + '</div>' + (banner || '<div class="pcp-text">' + esc(S('preclim_surv_off_text')) + '</div>') + camLine + warn('preclim_surv_warning', true)
         : '<div class="ov-cap">' + esc(S('preclim_clim_caption')) + '</div>' + step(S('preclim_temp'), S('preclim_value_celsius', p.temp), 'pcTemp') + step(S('preclim_fan'), String(p.fan), 'pcFan') +
           '<div class="pcp-text">' + esc(S('preclim_current', S('preclim_summary', cl.temp + ' °C', cl.auto ? S('clim_auto') : cl.fan))) + '</div>' + (dog ? warn('preclim_dog_warning') : '');
       const plan = pcPlan(Object.assign({}, p, { dog, surv })), off = hmIn(plan[plan.length - 1][1] + p.lock / 60);
       const planTxt = surv ? S('preclim_plan_surv', off) : dog ? S('preclim_plan_dog', off) : now ? S('preclim_plan_now', off) : S('preclim_plan_at', hmIn(plan[0][0]), off);
       const icon = surv ? MW.cam : dog ? MW.paw : MW.fan;
-      return '<div class="a-scrim" data-a="pcBg"><div class="ov-card pcp' + (surv ? ' surv' : '') + (banner ? ' ban' : '') + '" data-hl="preclim-popup">' +
+      return '<div class="a-scrim" data-a="pcBg"><div class="ov-card pcp' + (surv ? ' surv' : '') + '" data-hl="preclim-popup">' +
         '<div class="ov-head">' + icon + '<div class="ov-title">' + esc(S(surv ? 'preclim_surv' : dog ? 'preclim_dog' : 'preclim_title')) + '</div><button class="ov-x" data-a="pcClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>' +
-        '<div class="pcp-body"><div class="ov-pan pcp-left">' + tabs + left + '</div><div class="ov-pan pcp-right">' + right + '</div></div>' + banner +
+        '<div class="pcp-body"><div class="ov-pan pcp-left">' + tabs + left + '</div><div class="ov-pan pcp-right">' + right + '</div></div>' +
         '<div class="pcp-foot"><span>' + esc(planTxt) + '</span><button class="mw-b sm" data-a="pcClose"><span>' + esc(S('preclim_cancel')) + '</span></button>' +
         '<button class="mw-b sm ' + (blocked ? 'off' : surv ? 'd' : 'p') + '" data-a="pcGo"' + (blocked ? ' disabled' : '') + '><span>' + esc(S('preclim_start')) + '</span></button></div></div></div>';
     }
@@ -4507,6 +4515,8 @@
           return confirm({ tone: 'warn', title: S('adv_sc_enable_warn_title'), msg: S('adv_sc_enable_warn_msg'), yes: S('adv_sc_enable_warn_ok'), no: S('profile_cancel'), yesAct: 'advWarnOk' });
         case 'noProfiles':
           return confirm({ tone: 'warn', title: S('shortcuts_no_profiles'), yes: S('nav_close') });
+        case 'pcNoCam':
+          return confirm({ tone: 'warn', title: S('preclim_cam_nocam_warn_title'), msg: S('preclim_cam_nocam_warn_text'), yes: S('preclim_cam_nocam_confirm'), no: S('preclim_cancel'), yesAct: 'pcNoCamOk' });
         case 'pcUnlock': {
           const row = (ico, t, dsc) => '<div class="mw-unl"><span class="mw-badge warn">' + ico + '</span><div><b>' + esc(S(t)) + '</b><span>' + esc(S(dsc)) + '</span></div></div>';
           return win(780, '<span class="mw-badge big warn">' + MW.key + '</span><div class="mw-ct">' + esc(S('preclim_unlock_title')) + '</div>' +
@@ -5024,8 +5034,8 @@
         case 'pcAtPause': state.preclim.at.pause = clamp(state.preclim.at.pause + n * 5, 5, 60); return r();
         case 'pcGo': {
           if (c.speed > 0) return this.toast(S('preclim_need_park'), 3000);
-          // Surveillance sans aucune appli dashcam : rien ne filmerait, le départ est refusé.
-          if (state.preclim.mode === 'now' && state.preclim.surv && state.preclim.cam === 'none') return this.toast(S('preclim_surv_need_app'), 3000);
+          // Surveillance sans aucune appli dashcam : refusée, sauf « Surveillance sans caméra » permis.
+          if (state.preclim.mode === 'now' && state.preclim.surv && state.preclim.cam === 'none' && !state.preclim.nocam) return this.toast(S('preclim_surv_need_app'), 3000);
           // Rappel avant le départ : la clé, et les trois façons de déverrouiller.
           if (state.preclim.unlock) { u.dialog = { type: 'pcUnlock' }; return r(); }
           return this.pcLaunch();
@@ -5042,6 +5052,9 @@
         case 'pcWake': if (state.pc) state.pc.wake = Date.now(); return r();
         case 'pcDone': state.pc = null; return r();
         case 'pcScreenMode': state.preclim.screen = v; return r();
+        case 'pcSurvScreen': state.preclim.survScreen = !state.preclim.survScreen; return r();
+        case 'pcNoCam': if (state.preclim.nocam) { state.preclim.nocam = false; return r(); } u.dialog = { type: 'pcNoCam' }; return r();
+        case 'pcNoCamOk': state.preclim.nocam = true; u.dialog = null; return r();
         case 'pcStep': {
           const [id, d, min, max] = v.split(':'), key = id === 'pcLock' ? 'lock' : 'soc';
           state.preclim[key] = clamp(state.preclim[key] + +d, +min, +max); return r();

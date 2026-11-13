@@ -1363,7 +1363,8 @@
 .pcs-info { max-width: 560px; }
 .pcs-info .pcs-p.dimtxt { margin-top: 14px; font-size: 13px; color: #71717A; }
 /* Atténué au bout de 10 s (voile), ou éteint ; un toucher le rallume. */
-.a-pcs.dim::after, .a-pcs.black::after { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; background: rgba(0,0,0,.82); }
+/* Le voile couvre aussi Masquer / Arrêter, comme dans l'appli : un premier toucher ne fait que rallumer. */
+.a-pcs.dim::after, .a-pcs.black::after { content: ""; position: absolute; inset: 0; z-index: 5; background: rgba(0,0,0,.82); }
 .a-pcs.black::after { background: #000; }
 .pcs-dog { text-align: center; position: relative; z-index: 1; max-width: 920px; }
 .pcs-dog > .mw-ico { width: 52px; height: 52px; color: var(--pc); }
@@ -1533,10 +1534,7 @@
 .b.mode .ico { width: 28px; height: 28px; }
 
 /* ── 2.7.0-beta.3 : caméra de surveillance, bandeau du Garde-voiture, REC, Réglages rapides ── */
-.pcp.ban .pcp-body { height: 252px; }
-.pcp.ban .pcp-foot { margin-top: 8px; }
-.pcp.ban .pcp-left, .pcp.ban .pcp-right { gap: 6px; }
-.pcp-ban { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 6px 14px; border-radius: 12px; border: 1px solid var(--dash-warn); background: var(--dash-warn-dim); }
+.pcp-ban { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--dash-warn); background: var(--dash-warn-dim); }
 .pcp-ban .mw-ico { flex: none; width: 24px; height: 24px; color: var(--dash-warn); }
 .pcp-ban b { display: block; font-size: calc(14px * var(--ts, 1)); }
 .pcp-ban span { display: block; font-size: calc(13px * var(--ts, 1)); color: var(--text-primary); }

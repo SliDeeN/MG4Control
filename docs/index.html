@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/site.css?v=cbeb2f14">
-  <link rel="stylesheet" href="assets/css/sim.css?v=2bf39659">
+  <link rel="stylesheet" href="assets/css/sim.css?v=499fb3dc">
   <link rel="stylesheet" href="assets/css/explorer.css?v=34b00b13">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -819,7 +819,7 @@
       <h3><span data-l="fr">Mode Surveillance</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
       <p data-l="fr">Avec une application caméra 360°, la voiture reste éveillée et verrouillée, clim coupée, et MG4Control lance lui-même l'enregistrement continu.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Durée au choix jusqu'à 2 h ; seuls l'écran et les caméras consomment, environ 0,2 kW. L'écran affiche, dans un cadre rouge fixe, « SURVEILLANCE CAMÉRA » et « Ce véhicule est filmé en continu, à 360°. », avec une pastille <b>REC</b> en haut à droite et la durée filmée (grise et figée quand la caméra d'origine de la voiture prend la main). Mêmes arrêts que la pré-climatisation : batterie faible, déverrouillage ou voiture qui roule ; l'enregistrement s'arrête avec la surveillance, et vos réglages de clim sont rétablis à la fin. Il faut une appli dashcam : sans elle, « Démarrer » est grisé. La fenêtre se règle au toucher, voiture en P ; le joystick garde ses fonctions habituelles.</p>
+        <p data-l="fr">Durée au choix jusqu'à 2 h ; seuls l'écran et les caméras consomment, environ 0,2 kW. L'écran affiche, dans un cadre rouge fixe, « SURVEILLANCE CAMÉRA » et « Ce véhicule est filmé en continu, à 360°. », avec une pastille <b>REC</b> en haut à droite et la durée filmée (grise et figée quand la caméra d'origine de la voiture prend la main). Mêmes arrêts que la pré-climatisation : batterie faible, déverrouillage ou voiture qui roule ; l'enregistrement s'arrête avec la surveillance, et vos réglages de clim sont rétablis à la fin. L'écran reste allumé pour dissuader, ou suit « Écran pendant l'attente » si vous activez « Appliquer aussi à la surveillance ». Sans appli dashcam, « Démarrer » est grisé, sauf si vous activez « Surveillance sans caméra » (Raccourcis › Garde-voiture) : après un avertissement, la surveillance démarre avec son écran et la clim coupée, mais aucune vidéo n'est enregistrée, et un rappel orange le redit dans la fenêtre. La fenêtre se règle au toucher, voiture en P ; le joystick garde ses fonctions habituelles.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-survcam" data-hl-key="sc-preclim-cam" data-go="shortcuts:preclim">
@@ -833,7 +833,7 @@
       <h3><span data-l="fr">Écran de suivi</span></h3>
       <p data-l="fr">En plein écran : temps restant, cycle en cours et verrouillage, avec des particules bleues ou orange selon que la clim refroidit ou chauffe.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Pendant l'attente, l'écran reste normal, s'atténue (par défaut) ou s'éteint ; un toucher le rallume 10 s, et Masquer / Arrêter restent à portée. Sur SWI133, SWI68 et SWI165, une fiche sur l'écran conducteur montre aussi le décompte, le temps restant et la consigne, ou la surveillance en cours (interrupteur dans la page Garde-voiture de l'onglet Raccourcis).</p>
+        <p data-l="fr">Pendant l'attente, l'écran reste normal, s'atténue (par défaut) ou s'éteint (noir complet) ; un toucher le rallume 10 s, la surveillance peut suivre ce réglage (non par défaut) et le mode chien reste toujours allumé, et Masquer / Arrêter restent à portée. Sur SWI133, SWI68 et SWI165, une fiche sur l'écran conducteur montre aussi le décompte, le temps restant et la consigne, ou la surveillance en cours (interrupteur dans la page Garde-voiture de l'onglet Raccourcis).</p>
       </details>
     </div>
     <div class="pt is-new" id="f-preclim-watts" data-hl-key="preclim-screen" data-demo="preclimRun">
@@ -1691,8 +1691,8 @@
 <div class="dock" aria-label="Véhicule virtuel"></div>
 <button type="button" class="to-top" aria-label="Revenir en haut de la page" title="Revenir en haut de la page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="assets/js/strings.js?v=7bbcc5b3"></script>
-<script src="assets/js/sim.js?v=0aff5795"></script>
+<script src="assets/js/strings.js?v=e56c524d"></script>
+<script src="assets/js/sim.js?v=2df5331f"></script>
 <script src="assets/js/site.js?v=eae0ab3a"></script>
 <script src="assets/js/explorer.js?v=72fb983a"></script>
 </body>
