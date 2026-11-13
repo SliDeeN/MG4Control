@@ -1200,6 +1200,8 @@
     <string name="preclim_cfg_lock">Bloquear las puertas tras</string>
     <string name="preclim_cfg_soc">Parar por debajo de este nivel de batería</string>
     <string name="preclim_cfg_screen">Pantalla durante la espera</string>
+    <string name="preclim_cfg_surv_screen">Aplicar también a la vigilancia</string>
+    <string name="preclim_cfg_surv_screen_desc">No: la pantalla roja de vigilancia sigue encendida para disuadir a los transeúntes. Sí: sigue el ajuste de arriba; un toque la vuelve a encender 10 s. El modo perro siempre sigue encendido.</string>
     <string name="preclim_screen_dim">Atenuada</string>
     <string name="preclim_screen_off">Apagada</string>
     <string name="preclim_cfg_warning">Llévate la llave y no bloquees con ella: el coche se apagaría. Antes de salir, pon tú mismo las luces y los limpiaparabrisas en OFF. No dejes nunca a un niño solo en el coche; en modo perro, no tardes mucho: el clima puede pararse en cualquier momento (batería, avería).</string>
@@ -1939,6 +1941,12 @@
     <string name="preclim_cam_old_desc">Actualiza la app para la grabación automática, o inicia tú mismo la grabación antes de iniciar la vigilancia.</string>
     <string name="preclim_cam_none">Ninguna app de cámara compatible</string>
     <string name="preclim_cam_none_desc">La vigilancia necesita una app de cámara para grabar. Instala MG4-360-Camera-App para usarla.</string>
+    <string name="preclim_cam_nocam">Vigilancia sin cámara</string>
+    <string name="preclim_cam_nocam_desc">Iniciar la vigilancia incluso sin app de dashcam: pantalla de aviso y climatización apagada, pero sin vídeo.</string>
+    <string name="preclim_cam_nocam_warn_title">No se grabará ningún vídeo</string>
+    <string name="preclim_cam_nocam_warn_text">Sin app de dashcam, la vigilancia muestra la pantalla de aviso y apaga la climatización, pero no se graba nada. En caso de robo, no tendrá ninguna imagen.</string>
+    <string name="preclim_cam_nocam_confirm">Entendido, activar</string>
+    <string name="preclim_surv_ban_novideo_text">Sin app de dashcam: solo pantalla de aviso y climatización apagada.</string>
     <string name="preclim_cam_auto">Iniciar la grabación automáticamente</string>
     <string name="preclim_cam_auto_desc">Al iniciar la vigilancia, MG4Control pide a la app que grabe de forma continua y la detiene al final.</string>
     <string name="preclim_cam_place">Ubicación</string>

@@ -49,8 +49,21 @@ enum class PreClimateScreenMode {
     NORMAL,
     /** Voile et luminosité au minimum ; un toucher rallume. */
     DIM,
-    /** Voile presque opaque. */
+    /** Voile noir complet (100 % depuis le 2026-11-13), luminosité au minimum. */
     OFF,
+    ;
+
+    companion object {
+        /**
+         * L'écran peut-il suivre ce réglage ? Jamais en mode chien (les passants doivent lire) ;
+         * en surveillance seulement si [survFollows] (« Appliquer aussi à la surveillance »).
+         */
+        fun mayDim(dog: Boolean, surveillance: Boolean, survFollows: Boolean): Boolean = when {
+            dog -> false
+            surveillance -> survFollows
+            else -> true
+        }
+    }
 }
 
 /**

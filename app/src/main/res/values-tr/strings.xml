@@ -1200,6 +1200,8 @@
     <string name="preclim_cfg_lock">Kapıları şu süre sonra kilitle</string>
     <string name="preclim_cfg_soc">Bu batarya düzeyinin altında durdur</string>
     <string name="preclim_cfg_screen">Bekleme sırasında ekran</string>
+    <string name="preclim_cfg_surv_screen">Gözetime de uygula</string>
+    <string name="preclim_cfg_surv_screen_desc">Hayır: kırmızı gözetim ekranı, yoldan geçenleri caydırmak için açık kalır. Evet: yukarıdaki ayarı izler; bir dokunuş onu 10 sn yeniden açar. Köpek modu her zaman açık kalır.</string>
     <string name="preclim_screen_dim">Kısık</string>
     <string name="preclim_screen_off">Kapalı</string>
     <string name="preclim_cfg_warning">Anahtarı yanınıza alın ve anahtarla kilitlemeyin: araç kapanır. İnmeden önce farları ve silecekleri kendiniz OFF konumuna getirin. Asla bir çocuğu araçta yalnız bırakmayın; köpek modunda uzun süre uzaklaşmayın: klima her an durabilir (batarya, arıza).</string>
@@ -1936,6 +1938,12 @@
     <string name="preclim_cam_old_desc">Otomatik kayıt için uygulamayı güncelleyin veya gözetimi başlatmadan önce kaydı kendiniz başlatın.</string>
     <string name="preclim_cam_none">Uyumlu kamera uygulaması yok</string>
     <string name="preclim_cam_none_desc">Gözetimin kayıt için bir kamera uygulamasına ihtiyacı var. Kullanmak için MG4-360-Camera-App’i yükleyin.</string>
+    <string name="preclim_cam_nocam">Kamerasız gözetim</string>
+    <string name="preclim_cam_nocam_desc">Dashcam uygulaması olmasa da gözetimi başlat: uyarı ekranı ve klima kapalı, ama video yok.</string>
+    <string name="preclim_cam_nocam_warn_title">Hiçbir video kaydedilmeyecek</string>
+    <string name="preclim_cam_nocam_warn_text">Dashcam uygulaması olmadan gözetim uyarı ekranını gösterir ve klimayı kapatır, ama hiçbir şey kaydedilmez. Bir hırsızlık olursa hiç görüntünüz olmaz.</string>
+    <string name="preclim_cam_nocam_confirm">Anladım, aç</string>
+    <string name="preclim_surv_ban_novideo_text">Dashcam uygulaması yok: yalnızca uyarı ekranı ve klima kapalı.</string>
     <string name="preclim_cam_auto">Kaydı otomatik başlat</string>
     <string name="preclim_cam_auto_desc">Gözetim başladığında MG4Control uygulamadan sürekli kayıt yapmasını ister, sonunda kaydı durdurur.</string>
     <string name="preclim_cam_place">Konum</string>

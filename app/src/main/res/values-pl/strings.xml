@@ -1200,6 +1200,8 @@
     <string name="preclim_cfg_lock">Zamknij drzwi po</string>
     <string name="preclim_cfg_soc">Zatrzymaj poniżej tego poziomu baterii</string>
     <string name="preclim_cfg_screen">Ekran podczas czekania</string>
+    <string name="preclim_cfg_surv_screen">Stosuj także do nadzoru</string>
+    <string name="preclim_cfg_surv_screen_desc">Nie: czerwony ekran nadzoru pozostaje włączony, aby odstraszać przechodniów. Tak: działa według ustawienia powyżej; dotknięcie włącza go ponownie na 10 s. Tryb psa zawsze pozostaje włączony.</string>
     <string name="preclim_screen_dim">Przyciemniony</string>
     <string name="preclim_screen_off">Wyłączony</string>
     <string name="preclim_cfg_warning">Zabierz kluczyk i nie zamykaj nim samochodu: samochód by się wyłączył. Przed wyjściem sam przełącz światła i wycieraczki na OFF. Nigdy nie zostawiaj dziecka samego w samochodzie; w trybie psa nie oddalaj się na długo: klimatyzacja może się w każdej chwili zatrzymać (bateria, usterka).</string>
@@ -1942,6 +1944,12 @@
     <string name="preclim_cam_old_desc">Zaktualizuj aplikację, aby nagrywanie uruchamiało się automatycznie, albo uruchom nagrywanie samodzielnie przed rozpoczęciem nadzoru.</string>
     <string name="preclim_cam_none">Brak zgodnej aplikacji kamery</string>
     <string name="preclim_cam_none_desc">Nadzór potrzebuje aplikacji kamery do nagrywania. Zainstaluj MG4-360-Camera-App, aby z niego korzystać.</string>
+    <string name="preclim_cam_nocam">Nadzór bez kamery</string>
+    <string name="preclim_cam_nocam_desc">Uruchamiaj nadzór nawet bez aplikacji kamery: ekran ostrzegawczy i wyłączona klimatyzacja, ale bez nagrania.</string>
+    <string name="preclim_cam_nocam_warn_title">Żadne nagranie nie zostanie zapisane</string>
+    <string name="preclim_cam_nocam_warn_text">Bez aplikacji kamery nadzór wyświetla ekran ostrzegawczy i wyłącza klimatyzację, ale nic nie jest nagrywane. W razie włamania nie będzie żadnego obrazu.</string>
+    <string name="preclim_cam_nocam_confirm">Rozumiem, włącz</string>
+    <string name="preclim_surv_ban_novideo_text">Brak aplikacji kamery: tylko ekran ostrzegawczy i wyłączona klimatyzacja.</string>
     <string name="preclim_cam_auto">Uruchamiaj nagrywanie automatycznie</string>
     <string name="preclim_cam_auto_desc">Po rozpoczęciu nadzoru MG4Control prosi aplikację o ciągłe nagrywanie, a na końcu je zatrzymuje.</string>
     <string name="preclim_cam_place">Lokalizacja</string>

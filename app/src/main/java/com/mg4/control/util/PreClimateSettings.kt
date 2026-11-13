@@ -22,6 +22,8 @@ object PreClimateSettings {
     /** Ancien réglage à deux choix (atténué / éteint), relu une fois pour la migration. */
     private const val KEY_SCREEN_OFF = "preclim_screen_off"
     private const val KEY_SCREEN_MODE = "preclim_screen_mode"
+    private const val KEY_SURV_SCREEN = "preclim_surv_follows_screen"
+    private const val KEY_SURV_NOCAM = "preclim_surv_without_camera"
     private const val KEY_MAX = "preclim_max_min"
     private const val KEY_FIRST = "preclim_first_minute"
     private const val KEY_RUN = "preclim_run_min"
@@ -56,6 +58,20 @@ object PreClimateSettings {
 
     fun setScreenMode(ctx: Context, mode: PreClimateScreenMode) =
         prefs(ctx).edit().putString(KEY_SCREEN_MODE, mode.name).apply()
+
+    /**
+     * La surveillance suit-elle [screenMode] ? Non par défaut (2026-11-13) : l'écran rouge reste
+     * allumé pour dissuader les passants. Le mode chien, lui, reste toujours allumé.
+     */
+    fun survFollowsScreen(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_SURV_SCREEN, false)
+    fun setSurvFollowsScreen(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_SURV_SCREEN, on).apply()
+
+    /**
+     * Surveillance permise sans appli dashcam (2026-11-13) : écran d'avertissement et clim coupée,
+     * aucune vidéo. Non par défaut ; activé seulement après l'avertissement de la page Garde-voiture.
+     */
+    fun survWithoutCamera(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_SURV_NOCAM, false)
+    fun setSurvWithoutCamera(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean(KEY_SURV_NOCAM, on).apply()
 
     /** Réglage seul : la fiche ne s'affiche en plus que sur les firmwares du module (`ClusterModuleSettings.isSupported`). */
     fun showOnCluster(ctx: Context): Boolean = prefs(ctx).getBoolean(KEY_CLUSTER, true)

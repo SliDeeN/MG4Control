@@ -1200,6 +1200,8 @@
     <string name="preclim_cfg_lock">Lås dørene etter</string>
     <string name="preclim_cfg_soc">Stopp under dette batterinivået</string>
     <string name="preclim_cfg_screen">Skjerm mens du venter</string>
+    <string name="preclim_cfg_surv_screen">Bruk også for overvåking</string>
+    <string name="preclim_cfg_surv_screen_desc">Nei: den røde overvåkingsskjermen forblir på for å skremme bort forbipasserende. Ja: den følger innstillingen over; en berøring slår den på igjen i 10 s. Hundemodus forblir alltid på.</string>
     <string name="preclim_screen_dim"> Nedtonet</string>
     <string name="preclim_screen_off">Av</string>
     <string name="preclim_cfg_warning">Ta nøkkelen og ikke lås med den: bilen ville slå seg av. Før du går ut, slå av lysene og vindusviskerne selv. La aldri et barn være alene i bilen; i hundemodus, ikke hold deg unna lenge: klimaet kan stoppe når som helst (batteri, feil).</string>
@@ -1936,6 +1938,12 @@
     <string name="preclim_cam_old_desc">Oppdater appen for automatisk opptak, eller start opptaket selv før du starter overvåkingen.</string>
     <string name="preclim_cam_none">Ingen kompatibel kamera-app</string>
     <string name="preclim_cam_none_desc">Overvåkingen trenger en kamera-app for å ta opp. Installer MG4-360-Camera-App for å bruke den.</string>
+    <string name="preclim_cam_nocam">Overvåking uten kamera</string>
+    <string name="preclim_cam_nocam_desc">Start overvåking selv uten dashcam-app: varselskjerm og klimaanlegg av, men ingen video.</string>
+    <string name="preclim_cam_nocam_warn_title">Ingen video blir tatt opp</string>
+    <string name="preclim_cam_nocam_warn_text">Uten dashcam-app viser overvåkingen varselskjermen og slår av klimaanlegget, men ingenting filmes. Ved innbrudd har du ingen opptak.</string>
+    <string name="preclim_cam_nocam_confirm">Jeg forstår, slå på</string>
+    <string name="preclim_surv_ban_novideo_text">Ingen dashcam-app: bare varselskjerm og klimaanlegg av.</string>
     <string name="preclim_cam_auto">Start opptaket automatisk</string>
     <string name="preclim_cam_auto_desc">Når overvåkingen starter, ber MG4Control appen ta opp kontinuerlig, og stopper den til slutt.</string>
     <string name="preclim_cam_place">Plassering</string>

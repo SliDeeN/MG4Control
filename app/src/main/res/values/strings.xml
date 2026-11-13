@@ -1220,6 +1220,8 @@
     <string name="preclim_cfg_lock">Verrouillage des portes après</string>
     <string name="preclim_cfg_soc">Arrêt sous ce niveau de batterie</string>
     <string name="preclim_cfg_screen">Écran pendant l’attente</string>
+    <string name="preclim_cfg_surv_screen">Appliquer aussi à la surveillance</string>
+    <string name="preclim_cfg_surv_screen_desc">Non : l’écran rouge de la surveillance reste allumé pour dissuader les passants. Oui : il suit le réglage ci-dessus ; un toucher le rallume 10 s. Le mode chien reste toujours allumé.</string>
     <string name="preclim_screen_dim">Atténué</string>
     <string name="preclim_screen_off">Éteint</string>
     <string name="preclim_cfg_warning">Prenez la clé et ne verrouillez pas avec elle : la voiture s’éteindrait. Avant de sortir, mettez vous-même les feux et les essuie-glaces sur OFF. Ne laissez jamais un enfant seul à bord ; en mode chien, ne partez pas longtemps : la clim peut s’arrêter à tout moment (batterie, panne).</string>
@@ -1965,6 +1967,12 @@
     <string name="preclim_cam_old_desc">Mettez l’appli à jour pour l’enregistrement automatique, ou lancez vous-même l’enregistrement avant de démarrer la surveillance.</string>
     <string name="preclim_cam_none">Aucune appli caméra compatible</string>
     <string name="preclim_cam_none_desc">La surveillance a besoin d’une appli caméra pour filmer. Installez MG4-360-Camera-App pour l’utiliser.</string>
+    <string name="preclim_cam_nocam">Surveillance sans caméra</string>
+    <string name="preclim_cam_nocam_desc">Lancer la surveillance même sans appli dashcam : écran d’avertissement et clim coupée, mais aucune vidéo.</string>
+    <string name="preclim_cam_nocam_warn_title">Aucune vidéo ne sera enregistrée</string>
+    <string name="preclim_cam_nocam_warn_text">Sans appli dashcam, la surveillance affiche l’écran d’avertissement et coupe la clim, mais rien n’est filmé. En cas d’effraction, vous n’aurez aucune image.</string>
+    <string name="preclim_cam_nocam_confirm">J’ai compris, activer</string>
+    <string name="preclim_surv_ban_novideo_text">Pas d’appli dashcam : écran d’avertissement et clim coupée seulement.</string>
     <string name="preclim_cam_auto">Lancer l’enregistrement automatiquement</string>
     <string name="preclim_cam_auto_desc">Au démarrage de la surveillance, MG4Control demande à l’appli de filmer en continu, puis l’arrête à la fin.</string>
     <string name="preclim_cam_place">Emplacement</string>

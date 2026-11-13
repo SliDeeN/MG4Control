@@ -149,16 +149,17 @@ object PreClimate {
                 principal.post { surRefus(R.string.preclim_clim_unreachable) }
                 return@post
             }
-            // Surveillance sans aucune appli dashcam : rien ne filmerait (sa décision, 2026-11-08).
+            // Surveillance sans aucune appli dashcam : rien ne filmerait (sa décision, 2026-11-08) —
+            // permise seulement si l'utilisateur l'a activée en connaissance de cause (2026-11-13).
             // Le pop-up grise déjà Démarrer ; ceci couvre un départ venu d'ailleurs.
-            if (req.surveillance && req.mode == PreClimateMode.NOW && !DashcamApp.detecter(app).presente) {
+            if (req.surveillance && req.mode == PreClimateMode.NOW && !DashcamApp.surveillancePossible(app)) {
                 AppLogger.w(TAG, "refusée : surveillance sans appli dashcam")
                 principal.post { surRefus(R.string.preclim_surv_need_app) }
                 return@post
             }
             PreClimateSettings.saveRequest(app, req)
             appContext = app
-            // Surveillance : il faut une appli dashcam (vérifié plus haut) ; pilotable, elle filme d'office.
+            // Surveillance : appli dashcam ou « sans caméra » permis (vérifié plus haut) ; pilotable, elle filme d'office.
             val surveillance = req.surveillance && req.mode == PreClimateMode.NOW
             val borne = req.copy(
                 tempC = req.tempC.coerceIn(clim.tempMin, clim.tempMax),

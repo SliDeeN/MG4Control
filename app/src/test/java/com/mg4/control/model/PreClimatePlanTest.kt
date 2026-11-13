@@ -179,4 +179,12 @@ class PreClimatePlanTest {
         val arretee = enMarche.copy(powerOn = false)
         assertEquals(listOf(ClimateStep.PowerOff), PreClimateClimate.restoreSteps(arretee, presetApplied = false, climOn = true))
     }
+
+    @Test
+    fun `surveillance follows the waiting screen only when asked, dog mode never`() {
+        assertTrue(PreClimateScreenMode.mayDim(dog = false, surveillance = false, survFollows = false))
+        assertFalse(PreClimateScreenMode.mayDim(dog = false, surveillance = true, survFollows = false))
+        assertTrue(PreClimateScreenMode.mayDim(dog = false, surveillance = true, survFollows = true))
+        assertFalse(PreClimateScreenMode.mayDim(dog = true, surveillance = false, survFollows = true))
+    }
 }

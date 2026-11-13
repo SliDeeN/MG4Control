@@ -283,8 +283,10 @@ class PreClimateActivity : Activity() {
             e.phase == PreClimate.Phase.ACTIVE -> peindreSuivi(e, maintenant)
             else -> peindreFin(e)
         }
-        // Le mode chien et la surveillance ne s'atténuent jamais : les passants doivent pouvoir lire.
-        attenuer(e.phase == PreClimate.Phase.ACTIVE && !chien && !surv && maintenant > eveilJusqua)
+        // Le mode chien ne s'atténue jamais : les passants doivent pouvoir lire. La surveillance non
+        // plus, sauf si le réglage « Appliquer aussi à la surveillance » le demande (2026-11-13).
+        attenuer(e.phase == PreClimate.Phase.ACTIVE && maintenant > eveilJusqua &&
+            PreClimateScreenMode.mayDim(chien, surv, PreClimateSettings.survFollowsScreen(v.loc)))
         peindreParticules(e)
     }
 
@@ -569,7 +571,8 @@ class PreClimateActivity : Activity() {
         /** Allumé ce temps à l'ouverture et après un toucher, puis atténué selon le réglage. */
         const val EVEIL_MS = 10_000L
         const val VOILE_ATTENUE = 0.6f
-        const val VOILE_ETEINT = 0.97f
+        /** « Éteint » : noir complet (2026-11-13, 97 % avant), luminosité au minimum ([LUMINOSITE_MIN]). */
+        const val VOILE_ETEINT = 1f
         const val LUMINOSITE_MIN = 0.01f
         /** Fin où le conducteur est là (retour, arrêt) : l'écran s'en va de lui-même. */
         const val FIN_PRESENT_MS = 30_000L

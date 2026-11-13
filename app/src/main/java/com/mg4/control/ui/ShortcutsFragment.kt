@@ -1027,6 +1027,13 @@ class ShortcutsFragment : Fragment() {
             PreClimateSettings.setMinSoc(ctx, PreClimateSettings.minSoc(ctx) + PreClimatePlan.SOC_STEP); peindre()
         }
         choix.forEach { (mode, bouton) -> bouton.setOnClickListener { PreClimateSettings.setScreenMode(ctx, mode); peindre() } }
+        view.findViewById<Switch>(R.id.switch_preclim_surv_screen).apply {
+            isChecked = PreClimateSettings.survFollowsScreen(ctx)
+            setOnCheckedChangeListener { _, coche ->
+                PreClimateSettings.setSurvFollowsScreen(ctx, coche)
+                AppLogger.i(PreClimate.TAG, "surveillance : écran ${if (coche) "selon le réglage d'attente" else "toujours allumé"}")
+            }
+        }
         // Fiche sur l'écran conducteur : réservée aux firmwares où le combiné montre l'écran central.
         view.findViewById<View>(R.id.row_preclim_cluster).visibility =
             if (ClusterModuleSettings.isSupported()) View.VISIBLE else View.GONE
@@ -1056,6 +1063,8 @@ class ShortcutsFragment : Fragment() {
      * Sans appli pilotable, les options restent visibles mais grisées, avec un message ; sans
      * aucune appli dashcam, le message dit que la surveillance ne démarre pas.
      */
+    private var surSansCamera: android.widget.CompoundButton.OnCheckedChangeListener? = null
+
     private fun setupCameraCard(view: View) {
         val ctx = requireContext()
         val icone = view.findViewById<ImageView>(R.id.iv_preclim_cam_status)
@@ -1064,6 +1073,8 @@ class ShortcutsFragment : Fragment() {
         val options = view.findViewById<View>(R.id.group_preclim_cam_options)
         val usb = view.findViewById<TextView>(R.id.tv_preclim_cam_usb)
         val tester = view.findViewById<MaterialButton>(R.id.btn_preclim_cam_usb_test)
+        val ligneSansCamera = view.findViewById<View>(R.id.row_preclim_cam_nocam)
+        val sansCamera = view.findViewById<Switch>(R.id.switch_preclim_cam_nocam)
         // Relue à l'ouverture de l'écran, à chaque affichage de l'onglet et au retour dans
         // l'appli : installer l'appli caméra ne doit pas obliger à redémarrer MG4Control.
         fun peindre() {
@@ -1082,6 +1093,34 @@ class ShortcutsFragment : Fragment() {
             description.text = textes.second
             setChildrenEnabled(options, d.pilotable)
             options.alpha = if (d.pilotable) 1f else 0.38f
+            // « Surveillance sans caméra » : proposée seulement quand aucune appli dashcam n'est là.
+            ligneSansCamera.visibility = if (d.presente) View.GONE else View.VISIBLE
+            sansCamera.setOnCheckedChangeListener(null)
+            sansCamera.isChecked = PreClimateSettings.survWithoutCamera(ctx)
+            sansCamera.setOnCheckedChangeListener(surSansCamera)
+        }
+        // Oui seulement après l'avertissement ; refusé ou fermé sans répondre, l'interrupteur revient à Non.
+        surSansCamera = android.widget.CompoundButton.OnCheckedChangeListener { bouton, coche ->
+            if (!coche) {
+                PreClimateSettings.setSurvWithoutCamera(ctx, false)
+                AppLogger.i(DashcamRemote.TAG, "surveillance sans caméra désactivée")
+                return@OnCheckedChangeListener
+            }
+            AppDialog.confirmer(ctx,
+                titre = getString(R.string.preclim_cam_nocam_warn_title),
+                message = getString(R.string.preclim_cam_nocam_warn_text),
+                ton = AppDialog.Ton.ALERTE,
+                oui = getString(R.string.preclim_cam_nocam_confirm),
+                non = getString(R.string.preclim_cancel),
+                onOui = {
+                    PreClimateSettings.setSurvWithoutCamera(ctx, true)
+                    AppLogger.i(DashcamRemote.TAG, "surveillance sans caméra activée (avertissement accepté)")
+                },
+                onNon = {
+                    bouton.setOnCheckedChangeListener(null)
+                    bouton.isChecked = false
+                    bouton.setOnCheckedChangeListener(surSansCamera)
+                })
         }
         peindre()
         rafraichirCamera = { if (isAdded) peindre() }

@@ -1200,6 +1200,8 @@
     <string name="preclim_cfg_lock">Blocca le porte dopo</string>
     <string name="preclim_cfg_soc">Stop sotto questo livello di batteria</string>
     <string name="preclim_cfg_screen">Schermo durante l’attesa</string>
+    <string name="preclim_cfg_surv_screen">Applica anche alla sorveglianza</string>
+    <string name="preclim_cfg_surv_screen_desc">No: lo schermo rosso della sorveglianza resta acceso per dissuadere i passanti. Sì: segue l’impostazione qui sopra; un tocco lo riaccende per 10 s. La modalità cane resta sempre accesa.</string>
     <string name="preclim_screen_dim">Attenuato</string>
     <string name="preclim_screen_off">Spento</string>
     <string name="preclim_cfg_warning">Prendi la chiave e non bloccare con essa: l’auto si spegnerebbe. Prima di scendere, metti tu stesso luci e tergicristalli su OFF. Non lasciare mai un bambino da solo in auto; in modalità cane, non stare via a lungo: il clima può fermarsi in qualsiasi momento (batteria, guasto).</string>
@@ -1939,6 +1941,12 @@
     <string name="preclim_cam_old_desc">Aggiorna l’app per la registrazione automatica, oppure avvia tu la registrazione prima di avviare la sorveglianza.</string>
     <string name="preclim_cam_none">Nessuna app fotocamera compatibile</string>
     <string name="preclim_cam_none_desc">La sorveglianza ha bisogno di un’app fotocamera per registrare. Installa MG4-360-Camera-App per usarla.</string>
+    <string name="preclim_cam_nocam">Sorveglianza senza telecamera</string>
+    <string name="preclim_cam_nocam_desc">Avvia la sorveglianza anche senza app dashcam: schermo di avviso e clima spento, ma nessun video.</string>
+    <string name="preclim_cam_nocam_warn_title">Non verrà registrato alcun video</string>
+    <string name="preclim_cam_nocam_warn_text">Senza app dashcam, la sorveglianza mostra lo schermo di avviso e spegne il clima, ma non viene filmato nulla. In caso di effrazione, non avrete alcuna immagine.</string>
+    <string name="preclim_cam_nocam_confirm">Ho capito, attiva</string>
+    <string name="preclim_surv_ban_novideo_text">Nessuna app dashcam: solo schermo di avviso e clima spento.</string>
     <string name="preclim_cam_auto">Avvia la registrazione automaticamente</string>
     <string name="preclim_cam_auto_desc">All’avvio della sorveglianza, MG4Control chiede all’app di registrare in continuo, poi la ferma alla fine.</string>
     <string name="preclim_cam_place">Posizione</string>

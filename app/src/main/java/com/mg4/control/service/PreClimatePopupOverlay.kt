@@ -71,6 +71,9 @@ object PreClimatePopupOverlay {
      * 2026-11-08 ; l'appli ne fait que dire, sous « Clim coupée », si quelque chose sera filmé.
      */
     private var camera: DashcamApp.Detection = DashcamApp.Detection.Absente
+    /** « Surveillance sans caméra » permis (lu à l'ouverture, comme [camera]). */
+    private var sansCamera = false
+    private val survPossible get() = DashcamApp.surveillancePossible(camera, sansCamera)
     /** Réponse au test de la clé USB lancé à l'ouverture ; `null` tant qu'elle n'est pas là. */
     private var cleUsb: DashcamRemote.Usb? = null
 
@@ -109,6 +112,7 @@ object PreClimatePopupOverlay {
             ac = lu?.acOn, on = lu?.powerOn)
         val dernier = PreClimateSettings.lastRequest(app, PreClimate.minuteDuJour(), clim.temp, clim.fan)
         camera = DashcamApp.detecter(app)
+        sansCamera = PreClimateSettings.survWithoutCamera(app)
         cleUsb = null
         req = dernier.copy(
             tempC = dernier.tempC.coerceIn(clim.tempMin, clim.tempMax),
@@ -147,7 +151,7 @@ object PreClimatePopupOverlay {
             "appli caméra : ${when (val c = camera) {
                 is DashcamApp.Detection.Pilotable -> "${c.nom}, pilotable"
                 is DashcamApp.Detection.Ancienne -> "${c.nom}, version non pilotable"
-                else -> "aucune"
+                else -> if (sansCamera) "aucune (surveillance sans vidéo permise)" else "aucune"
             }}")
         // La ligne caméra du mode Surveillance dit s'il reste de la place sur la clé (≤ 8 s).
         if (camera.pilotable && PreClimateSettings.dashcamAuto(app)) {
@@ -404,7 +408,7 @@ object PreClimatePopupOverlay {
         listOf(v.ligneTemp, v.ligneVentil, v.barre, v.actuels).forEach { it.visibility = if (surv) View.GONE else View.VISIBLE }
         v.panneauSurveillance.visibility = if (surv) View.VISIBLE else View.GONE
         peindreCamera(v, surv)
-        if (surv && !camera.presente) {
+        if (surv && !survPossible) {
             // Aucune appli dashcam : la surveillance ne peut pas démarrer (2026-11-08).
             OverlayKit.fond(v.demarrer, v.bouton, v.bordure, v.dp(1f), v.dp(12f).toFloat())
             v.demarrer.setTextColor(v.texte2)
@@ -416,7 +420,7 @@ object PreClimatePopupOverlay {
             v.demarrer.setBackgroundResource(R.drawable.bg_dialog_primary)
             v.demarrer.setTextColor(v.surAccent)
         }
-        if (!(surv && !camera.presente)) v.demarrer.alpha = 1f
+        if (!(surv && !survPossible)) v.demarrer.alpha = 1f
         v.plan.text = when {
             surv -> v.s(R.string.preclim_plan_surv, heure(v, (mur + max).roundToInt()))
             maintenant && r.dog -> v.s(R.string.preclim_plan_dog, heure(v, (mur + max).roundToInt()))
@@ -466,6 +470,8 @@ object PreClimatePopupOverlay {
                 v.s(R.string.preclim_surv_ban_old_text), false)
             c is DashcamApp.Detection.Ancienne -> Triple(v.s(R.string.preclim_surv_ban_incompat_title, c.nom),
                 v.s(R.string.preclim_surv_ban_incompat_text), false)
+            // Permise sans caméra (2026-11-13) : rappel orange à chaque lancement, Démarrer actif.
+            sansCamera -> Triple(v.s(R.string.preclim_cam_nocam_warn_title), v.s(R.string.preclim_surv_ban_novideo_text), false)
             else -> Triple(v.s(R.string.preclim_surv_ban_none_title), v.s(R.string.preclim_surv_ban_none_text), true)
         }
         val visible = bandeau != null
@@ -505,7 +511,7 @@ object PreClimatePopupOverlay {
     private fun demarrer(app: Context) {
         val r0 = req ?: return
         if (demarrage) return
-        if (r0.mode == PreClimateMode.NOW && r0.surveillance && !camera.presente) {
+        if (r0.mode == PreClimateMode.NOW && r0.surveillance && !survPossible) {
             AppLogger.i(TAG, "Pop-up — Démarrer ignoré : surveillance sans appli dashcam")
             return
         }

@@ -18,7 +18,8 @@ import com.mg4.control.model.DashcamContract
  *   [Detection.Ancienne.aMettreAJour] pour l'appli d'origine dans une version trop ancienne,
  *   sinon une appli qui ne sait pas être pilotée (le fork de Tommasov `com.tommasov.mg4dashcam`) :
  *   l'enregistrement se lance alors à la main.
- * - [Detection.Absente] : rien — la surveillance ne démarre pas (sa décision, 2026-11-08).
+ * - [Detection.Absente] : rien — la surveillance ne démarre pas (sa décision, 2026-11-08), sauf si
+ *   « Surveillance sans caméra » est activé (2026-11-13) : écran et clim coupée, aucune vidéo.
  */
 object DashcamApp {
 
@@ -37,9 +38,18 @@ object DashcamApp {
         object Absente : Detection()
 
         val pilotable: Boolean get() = this is Pilotable
-        /** Une appli caméra est là, pilotable ou non : la surveillance peut démarrer. */
+        /** Une appli caméra est là, pilotable ou non (sans elle, voir [surveillancePossible]). */
         val presente: Boolean get() = this !is Absente
     }
+
+    /**
+     * La surveillance peut-elle démarrer ? Avec une appli caméra (pilotable ou non), ou sans si
+     * l'utilisateur l'a permis (« Surveillance sans caméra », 2026-11-13). Partie sans Android.
+     */
+    fun surveillancePossible(d: Detection, sansCamera: Boolean): Boolean = d.presente || sansCamera
+
+    fun surveillancePossible(ctx: Context, d: Detection = detecter(ctx)): Boolean =
+        surveillancePossible(d, PreClimateSettings.survWithoutCamera(ctx))
 
     fun detecter(ctx: Context): Detection {
         val pm = ctx.packageManager

@@ -1200,6 +1200,8 @@
     <string name="preclim_cfg_lock">Lock the doors after</string>
     <string name="preclim_cfg_soc">Stop below this battery level</string>
     <string name="preclim_cfg_screen">Screen while waiting</string>
+    <string name="preclim_cfg_surv_screen">Also apply to surveillance</string>
+    <string name="preclim_cfg_surv_screen_desc">No: the red surveillance screen stays on to deter passers-by. Yes: it follows the setting above; a touch turns it back on for 10 s. Dog mode always stays on.</string>
     <string name="preclim_screen_dim">Dimmed</string>
     <string name="preclim_screen_off">Off</string>
     <string name="preclim_cfg_warning">Take the key and don’t lock with it: the car would switch off. Before getting out, switch the lights and wipers to OFF yourself. Never leave a child alone in the car; in dog mode, don’t stay away long: the climate can stop at any time (battery, fault).</string>
@@ -1936,6 +1938,12 @@
     <string name="preclim_cam_old_desc">Update the app for automatic recording, or start recording yourself before starting surveillance.</string>
     <string name="preclim_cam_none">No compatible camera app</string>
     <string name="preclim_cam_none_desc">Surveillance needs a camera app to record. Install MG4-360-Camera-App to use it.</string>
+    <string name="preclim_cam_nocam">Surveillance without a camera</string>
+    <string name="preclim_cam_nocam_desc">Start surveillance even without a dashcam app: warning screen and A/C off, but no video.</string>
+    <string name="preclim_cam_nocam_warn_title">No video will be recorded</string>
+    <string name="preclim_cam_nocam_warn_text">Without a dashcam app, surveillance shows the warning screen and turns the A/C off, but nothing is filmed. If someone breaks in, you will have no footage.</string>
+    <string name="preclim_cam_nocam_confirm">I understand, turn on</string>
+    <string name="preclim_surv_ban_novideo_text">No dashcam app: warning screen and A/C off only.</string>
     <string name="preclim_cam_auto">Start recording automatically</string>
     <string name="preclim_cam_auto_desc">When surveillance starts, MG4Control asks the app to record continuously, then stops it at the end.</string>
     <string name="preclim_cam_place">Location</string>
