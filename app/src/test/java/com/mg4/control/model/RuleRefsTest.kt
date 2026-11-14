@@ -92,4 +92,13 @@ class RuleRefsTest {
         assertEquals("acc9", plan.rules[0].actions[0].text)
         assertEquals(RuleRefs.Status.BY_NAME, plan.links.single().status)
     }
+
+    @Test
+    fun `a link to a left-out rule asks for a choice even when the original exists here`() {
+        // Même voiture : la B d'origine existe, mais la copie de B n'a pas pu entrer.
+        val plan = RuleRefs.planImport(listOf(a), newId = { "n$it" }, exists = { true }, byName = { _, _ -> "B" },
+            leftOut = setOf("B"))
+        val versB = plan.links.single { it.ref == RuleRef(RefKind.RULE, "B") }
+        assertEquals(RuleRefs.Status.MISSING, versB.status)
+    }
 }

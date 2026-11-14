@@ -1858,7 +1858,12 @@ object MG4Hardware {
             data.writeInt(value)
             data.writeFloatArray(FloatArray(0))
             data.writeByteArray(ByteArray(0))
-            binder.transact(txCode, data, reply, 0)
+            // Transaction refusée (code inconnu, processus mort…) : réponse vide, ce n'est PAS un
+            // statut 0 (2026-11-14 — le repli Binder compte désormais dans le journal des automatisations).
+            if (!binder.transact(txCode, data, reply, 0)) {
+                AppLogger.w(TAG, "  Binder TX=$txCode value=$value → transaction refusée")
+                return false
+            }
             val status = if (reply.dataAvail() > 0) reply.readInt() else 0
             if (logEnabled) AppLogger.i(TAG, "  Binder TX=$txCode value=$value → status=$status ${if (status == 0) "✓" else "✗ REJECTED"}")
             status == 0

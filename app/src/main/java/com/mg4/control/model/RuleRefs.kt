@@ -106,6 +106,11 @@ object RuleRefs {
         newId: (String) -> String,
         exists: (RuleRef) -> Boolean,
         byName: (RefKind, String) -> String?,
+        /**
+         * Automatisations du fichier écartées (liste pleine) : un lien vers l'une d'elles demande
+         * toujours un choix — jamais l'original de cette voiture en silence, ni un homonyme.
+         */
+        leftOut: Set<String> = emptySet(),
     ): Plan {
         val ids = rules.associate { it.id to newId(it.id) }
         val noms = rules.associate { it.id to it.name }
@@ -119,6 +124,10 @@ object RuleRefs {
                 when {
                     ref.kind == RefKind.RULE && ref.id in ids -> ids.getValue(ref.id).also {
                         liens[cle] = Link(nouvel, r.name, ref, nom ?: noms[ref.id], Status.FROM_FILE, it)
+                    }
+                    ref.kind == RefKind.RULE && ref.id in leftOut -> {
+                        liens[cle] = Link(nouvel, r.name, ref, nom, Status.MISSING, null)
+                        null
                     }
                     exists(ref) -> null
                     else -> {

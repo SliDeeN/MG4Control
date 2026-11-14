@@ -410,7 +410,8 @@ class CustomRulesPage {
                 val ecartees = lues.size - retenues.size
                 val objets = RuleRefLookup(ctx)
                 val plan = RuleRefs.planImport(retenues, newId = { UUID.randomUUID().toString() },
-                    exists = { objets.exists(it) }, byName = { k, nom -> objets.byName(k, nom) })
+                    exists = { objets.exists(it) }, byName = { k, nom -> objets.byName(k, nom) },
+                    leftOut = lues.drop(retenues.size).map { it.id }.toSet())
                 val ajoutees = plan.rules.filter { CustomRuleStore.add(ctx, it) }.map { it.id }.toSet()
                 CustomRules.refresh(ctx)
                 dessiner()

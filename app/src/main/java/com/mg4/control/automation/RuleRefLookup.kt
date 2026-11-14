@@ -28,9 +28,13 @@ class RuleRefLookup(ctx: Context) {
 
     fun exists(ref: RuleRef): Boolean = items(ref.kind).any { it.first == ref.id }
 
-    /** Le premier objet de cette sorte qui porte ce nom (casse et espaces ignorés). */
+    /**
+     * L'objet de cette sorte qui porte ce nom (casse et espaces ignorés), s'il est SEUL à le porter
+     * (2026-11-14) : deux comptes ABRP « Ma MG4 » → aucun, l'utilisateur choisit — la télémétrie ne
+     * part pas vers le mauvais compte.
+     */
     fun byName(kind: RefKind, name: String): String? {
         val n = name.trim()
-        return items(kind).firstOrNull { it.second.trim().equals(n, ignoreCase = true) }?.first
+        return items(kind).filter { it.second.trim().equals(n, ignoreCase = true) }.singleOrNull()?.first
     }
 }
