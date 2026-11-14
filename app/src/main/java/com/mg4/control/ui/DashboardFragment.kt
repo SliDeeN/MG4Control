@@ -198,7 +198,19 @@ class DashboardFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View = inflater.inflate(R.layout.fragment_dashboard, container, false)
 
+    /**
+     * Aucun interrupteur du tableau de bord ne garde son état dans la sauvegarde de la vue
+     * (2026-11-14) : en revenant sur l'écran, Android le remettait APRÈS la pose des écouteurs, qui
+     * écrivaient alors dans la voiture (TSR, AEB, ELK réécrits sans toucher à rien — et le TSR
+     * réécrit rallumait l'alerte de limitation). L'état vient toujours d'une lecture de la voiture.
+     */
+    private fun sansSauvegardeDesInterrupteurs(v: View) {
+        if (v is android.widget.CompoundButton) v.isSaveEnabled = false
+        if (v is ViewGroup) for (i in 0 until v.childCount) sansSauvegardeDesInterrupteurs(v.getChildAt(i))
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        sansSauvegardeDesInterrupteurs(view)
         super.onViewCreated(view, savedInstanceState)
         setupDashboard(view)
     }

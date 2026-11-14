@@ -3382,8 +3382,13 @@ object MG4Hardware {
                         ?.apply()
                     AppLogger.i(TAG, "  TSR OFF — sauvegarde overspeed=$overspeedOn speedTone=$speedToneOn")
                 }
+                // Déjà actif : le firmware ne remet rien à ON, il n'y a rien à restaurer (2026-11-14 —
+                // un TSR réécrit à ON alors qu'il l'était remettait l'ancienne valeur sauvegardée
+                // par-dessus celle du profil : alerte de limitation rallumée).
+                val dejaActif = enabled && isTsrOn()
                 val ok = setIntPropertyVpmRecovery(PROP_TSR_MODE, if (enabled) 1 else 0)
-                if (enabled && ok) {
+                if (enabled && ok && dejaActif) AppLogger.i(TAG, "  TSR déjà actif — alertes laissées telles quelles")
+                if (enabled && ok && !dejaActif) {
                     Thread.sleep(400)
                     val savedOverspeed = prefs?.getBoolean("tsr_saved_overspeed", true) ?: true
                     val savedSpeedTone = prefs?.getBoolean("tsr_saved_speed_tone", true) ?: true
@@ -3966,6 +3971,22 @@ object MG4Hardware {
                 comparaisons.forEach { sb.appendLine(it) }
                 sb.appendLine()
             }
+        }
+
+        // Alertes de vitesse SWI133 (2026-11-14) : l'appli Réglages d'origine écrit l'une OU l'autre
+        // paire selon 0x1010027 (0 → 0x503005b/5c, sinon 0x503004e/4f), avec setIntPropertyRecovery.
+        // MG4Control n'écrit que 4e/4f : ce relevé dit laquelle suit l'écran de la voiture.
+        if (gen == FirmwareInfo.Gen.SWI133) {
+            sb.appendLine("── SWI133 alertes de vitesse (VPM, lecture seule) ──")
+            listOf(
+                "config 0x1010027 (choisit la paire)" to 0x1010027,
+                "TSR 0x5030049" to PROP_TSR_MODE,
+                "survitesse 0x503004e" to PROP_OVERSPEED_ALARM,
+                "limite changée 0x503004f" to PROP_SPEED_LIMIT_TONE,
+                "survitesse (autre) 0x503005b" to 0x503005b,
+                "limite changée (autre) 0x503005c" to 0x503005c,
+            ).forEach { (nom, id) -> sb.appendLine("$nom = ${getIntPropertyVpm(id)}") }
+            sb.appendLine()
         }
 
         // Sonde lumière/position : relevés des derniers READY et des ouvertures du Diagnostic.
