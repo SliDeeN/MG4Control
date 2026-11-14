@@ -132,6 +132,8 @@ internal object ClusterModuleOverlay {
     private var dernierKwMs = 0L
     private var dernierLentMs = 0L
     private var dernierSocMs = 0L
+    /** Dernière lecture de la prise hors relevé lent (sortie de charge, « Charge terminée »). */
+    private var dernierePriseMs = 0L
     /** Dernier onglet et dernier module annoncés au journal : un mot par changement, pas par relevé. */
     private var dernierOnglet: Int? = -1
     /** Dernier onglet RÉELLEMENT lu et son heure (issue #245) : repris quand une lecture échoue. */
@@ -186,10 +188,10 @@ internal object ClusterModuleOverlay {
      */
     private val ecouteurEcrans = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) {
-            if (vue == null) afficher("écran $displayId ajouté", signalerAbsence = false, reprise = true)
+            if (vue == null) afficher("écran $displayId ajouté", signalerAbsence = false, reprise = repriseAutorisee)
         }
         override fun onDisplayRemoved(displayId: Int) {
-            if (displayId == ecranId) masquer("écran $displayId retiré")
+            if (displayId == ecranId) masquer("écran $displayId retiré", involontaire = true)
         }
         // Sortie de veille du combiné : la fenêtre a pu s'y détacher sans que l'écran ne soit retiré.
         override fun onDisplayChanged(displayId: Int) {
@@ -228,14 +230,14 @@ internal object ClusterModuleOverlay {
             if (!doitEtreLa(app)) return@post
             val ecran = ecranDuCombine(app)
             if (ecran == null) {
-                ESSAIS_MS.forEach { delai -> main.postDelayed({ if (vue == null) afficher("$origine (+$delai ms)", signalerAbsence = false, reprise = true) }, delai) }
+                ESSAIS_MS.forEach { delai -> main.postDelayed({ if (vue == null) afficher("$origine (+$delai ms)", signalerAbsence = false, reprise = repriseAutorisee) }, delai) }
                 return@post
             }
             val v = vue
             val detachee = v != null && !v.isAttachedToWindow && SystemClock.elapsedRealtime() - poseeMs > ATTACHE_DELAI_MS
             if (v == null || detachee || ecranId != ecran.displayId) {
                 AppLogger.i(TAG, "$origine : module ${if (v == null) "absent" else if (detachee) "détaché" else "sur un autre écran"} — recollé")
-                masquer(origine)
+                masquer(origine, involontaire = true)
                 afficher(origine, signalerAbsence = false, reprise = true)
             }
         }
@@ -262,7 +264,9 @@ internal object ClusterModuleOverlay {
                     (app.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager)
                         ?.registerDisplayListener(ecouteurEcrans, main)
                 }
-                afficher(origine)
+                // Reprise seulement si la fenêtre était partie sans être voulue (écran disparu) : un
+                // module coupé puis réactivé, ou un premier affichage, repart de zéro.
+                afficher(origine, reprise = repriseAutorisee)
             } else {
                 desabonner()
                 masquer(when {
@@ -367,13 +371,22 @@ internal object ClusterModuleOverlay {
                 "${ecran.displayId} « ${ecran.name} » ${taille.x}×${taille.y} px — carré de ${place.side} px " +
                 "en (${place.x}, ${place.y})")
             demarrerReleves(reprise)
+            repriseAutorisee = false
         } catch (e: Exception) {
             AppLogger.e(TAG, "$origine : affichage refusé sur l'écran ${ecran.displayId} — " +
                 "${e.javaClass.simpleName}: ${e.message}")
         }
     }
 
-    private fun masquer(origine: String) {
+    /**
+     * Fenêtre retirée sans que personne l'ait voulu (écran disparu, fenêtre détachée) : la prochaine
+     * pose reprend les compteurs. Retirée exprès (module coupé, mode Garage, arrêt) : elle repart de
+     * zéro (2026-11-14). Fil principal.
+     */
+    private var repriseAutorisee = false
+
+    private fun masquer(origine: String, involontaire: Boolean = false) {
+        repriseAutorisee = involontaire
         arreterReleves()
         val v = vue ?: return
         runCatching { fenetres?.removeViewImmediate(v) }
@@ -491,7 +504,12 @@ internal object ClusterModuleOverlay {
                 } else {
                     // Sortie de charge (2026-11-14) : la prise relue tout de suite, pas au relevé lent
                     // (10 s) — sinon un débranchement affichait « Charge terminée » jusqu'à lui.
-                    if (!chargeFinie) runCatching { EnergyReader.chargeRaw() }.getOrNull()?.let { chargeBrute = it }
+                    // Et tant que « Charge terminée » est affichée : la prise relue chaque seconde, pour que
+                    // le débranchement retire la fiche aussitôt (sans accélérer le relevé hors de ce cas).
+                    if (!chargeFinie || maintenant - dernierePriseMs >= BATTERIE_CHARGE_MS) {
+                        dernierePriseMs = maintenant
+                        runCatching { EnergyReader.chargeRaw() }.getOrNull()?.let { chargeBrute = it }
+                    }
                     val brut = chargeBrute
                     if (brut != null && ChargeDisplay.priseSignalee(brut.ac, brut.dc)) {
                         if (!chargeFinie) {
