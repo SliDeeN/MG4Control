@@ -24,6 +24,9 @@ class UsbPhoneTest {
         assertNull(UsbPhoneRule.kind(dev(0x18d1, 0x2d01)))
         assertTrue(UsbPhoneRule.anyAoap(listOf(dev(0x18d1, 0x2d00))))
         assertFalse(UsbPhoneRule.anyAoap(listOf(dev(0x18d1, 0x4ee1))))
+        val bascule = dev(0x18d1, 0x2d01)
+        assertEquals(bascule, UsbPhoneRule.firstAoap(listOf(dev(0x0781, 0x5581, classes = listOf(8)), bascule)))
+        assertNull(UsbPhoneRule.firstAoap(listOf(dev(0x18d1, 0x2d00, bus = "001"))))
     }
 
     @Test fun `port interne, hubs, cles et root hubs ecartes`() {

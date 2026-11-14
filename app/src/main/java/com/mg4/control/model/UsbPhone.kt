@@ -50,7 +50,10 @@ object UsbPhoneRule {
     fun pick(devices: List<UsbSeen>): UsbSeen? =
         devices.firstOrNull { kind(it) == UsbPhoneKind.ANDROID } ?: devices.firstOrNull { kind(it) == UsbPhoneKind.IPHONE }
 
-    fun anyAoap(devices: List<UsbSeen>): Boolean = devices.any { isAoap(it) && !isGrayPort(it.name) }
+    /** Téléphone resté basculé pour Android Auto (session d'avant, veille) : AllGo ne le revoit qu'au branchement. */
+    fun firstAoap(devices: List<UsbSeen>): UsbSeen? = devices.firstOrNull { isAoap(it) && !isGrayPort(it.name) }
+
+    fun anyAoap(devices: List<UsbSeen>): Boolean = firstAoap(devices) != null
 }
 
 /** Quand relancer (issue #251). */

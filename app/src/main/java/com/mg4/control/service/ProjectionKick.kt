@@ -154,28 +154,30 @@ object ProjectionKick {
             return Outcome.Session(it.kind)
         }
         val vus = UsbPhoneKick.devices(app)
-        if (UsbPhoneRule.anyAoap(vus.map { it.first })) {
-            AppLogger.i(TAG, "relance USB (${origin.label}) : téléphone déjà basculé pour Android Auto, attente de la session")
-            return attendre(app, "attente")
-        }
-        val choisi = choisir(vus) ?: run {
+        // Téléphone resté basculé pour Android Auto (session d'avant, veille) : AllGo ne le
+        // redécouvre qu'au branchement — on le lui annonce aussi (idée reprise de MG4Dash).
+        val dejaBascule = bascule(vus)
+        val choisi = dejaBascule ?: choisir(vus) ?: run {
             AppLogger.i(TAG, "relance USB (${origin.label}) : aucun téléphone sur l'USB (${vus.size} appareil(s)) — rien")
             return Outcome.NoPhone
         }
-        val type = UsbPhoneRule.kind(choisi.first)!!
+        val type = if (dejaBascule != null) UsbPhoneKind.ANDROID else UsbPhoneRule.kind(choisi.first)!!
         if (type == UsbPhoneKind.ANDROID && origin != Origin.SHORTCUT && installe(app, AA_KICK)) {
             AppLogger.i(TAG, "relance USB (${origin.label}) : téléphone Android laissé à AA Kick")
             return Outcome.LeftToAaKick
         }
-        AppLogger.i(TAG, "relance USB (${origin.label}) : ${type.label} branché sans session " +
-            "(${hex(choisi.first)}) — essai 1 : nouvel avis de branchement")
+        AppLogger.i(TAG, "relance USB (${origin.label}) : ${type.label}" +
+            (if (dejaBascule != null) " déjà basculé pour Android Auto" else "") +
+            " branché sans session (${hex(choisi.first)}) — essai 1 : nouvel avis de branchement")
         UsbPhoneKick.announceAttached(app, choisi.second)
         (attendre(app, "essai 1") as? Outcome.Session)?.let { return it }
 
         // Essai 2 : comme un câble débranché puis rebranché.
         val encore = UsbPhoneKick.devices(app)
-        if (UsbPhoneRule.anyAoap(encore.map { it.first })) return attendre(app, "bascule Android Auto")
-        val tel = choisir(encore) ?: run {
+        val basculeMaintenant = bascule(encore)
+        // Basculé par notre essai 1 : AllGo est en route, on ne casse pas sa bascule.
+        if (basculeMaintenant != null && dejaBascule == null) return attendre(app, "bascule Android Auto")
+        val tel = basculeMaintenant ?: choisir(encore) ?: run {
             AppLogger.i(TAG, "relance USB : le téléphone n'est plus sur l'USB")
             return Outcome.NoPhone
         }
@@ -183,16 +185,17 @@ object ProjectionKick {
         val reinit = UsbPhoneKick.reset(app, tel.second)
         SystemClock.sleep(APRES_RESET_MS)
         val apres = UsbPhoneKick.devices(app)
-        if (!UsbPhoneRule.anyAoap(apres.map { it.first })) {
-            val revu = choisir(apres)
-            if (revu != null) UsbPhoneKick.announceAttached(app, revu.second)
-            else AppLogger.i(TAG, "relance USB : téléphone pas encore revu après la réinitialisation ($reinit)")
-        }
+        val revu = bascule(apres) ?: choisir(apres)
+        if (revu != null) UsbPhoneKick.announceAttached(app, revu.second)
+        else AppLogger.i(TAG, "relance USB : téléphone pas encore revu après la réinitialisation ($reinit)")
         return attendre(app, "essai 2")
     }
 
     private fun choisir(vus: List<Pair<UsbSeen, android.hardware.usb.UsbDevice>>) =
         UsbPhoneRule.pick(vus.map { it.first })?.let { c -> vus.first { it.first == c } }
+
+    private fun bascule(vus: List<Pair<UsbSeen, android.hardware.usb.UsbDevice>>) =
+        UsbPhoneRule.firstAoap(vus.map { it.first })?.let { c -> vus.first { it.first == c } }
 
     /** Relit AllGo chaque seconde ; la session ouverte, ou « non reconnu » au bout de l'attente. */
     private fun attendre(app: Context, etape: String): Outcome {
