@@ -14,6 +14,14 @@ object BubbleLook {
     const val FILL_DARK = "dark"
     const val FILL_TINT = "tint"
     const val FILL_LIGHT = "light"
+    /** Vrai noir (issue #222, 2026-11-14) : se fond dans la barre noire du haut, à 100 %. */
+    const val FILL_BLACK = "black"
+
+    /** Largeur fixe (issue #222) : bornes et pas du curseur, en dp ; valeur proposée au passage en « Fixe ». */
+    const val WIDTH_MIN = 60
+    const val WIDTH_MAX = 240
+    const val WIDTH_STEP = 10
+    const val WIDTH_DEFAULT = 110
 
     /** 0xE6 / 255 ≈ 90 % : le fond d'avant la fonction. */
     const val OPACITY_DEFAULT = 90
@@ -31,11 +39,14 @@ object BubbleLook {
 
     private const val SOMBRE = 0xFF17171A.toInt()
     private const val CLAIR = 0xFFF4F5F7.toInt()
+    private const val NOIR = 0xFF000000.toInt()
     private const val TEXTE_CLAIR = 0xFFE5E5E5.toInt()
     private const val TEXTE_SOMBRE = 0xFF17171A.toInt()
 
     fun opacity(b: FloatingButton): Int = (b.opacity ?: OPACITY_DEFAULT).coerceIn(0, 100)
-    fun fill(b: FloatingButton): String = b.fill?.takeIf { it == FILL_TINT || it == FILL_LIGHT } ?: FILL_DARK
+    fun fill(b: FloatingButton): String = b.fill?.takeIf { it == FILL_TINT || it == FILL_LIGHT || it == FILL_BLACK } ?: FILL_DARK
+    /** Largeur fixe en dp, bornée ; `null` = automatique. */
+    fun width(b: FloatingButton): Int? = b.widthDp?.coerceIn(WIDTH_MIN, WIDTH_MAX)
     fun border(b: FloatingButton): Boolean = b.border != false
     fun dims(b: FloatingButton): Boolean = b.dimIdle == true
 
@@ -54,7 +65,7 @@ object BubbleLook {
             val a = (op + 10).coerceIn(TOGGLE_ON_MIN, 100)
             return Paint(withAlpha(color, a), BubbleColors.textOn(color), bordure, halo = false)
         }
-        val base = when (fill(b)) { FILL_TINT -> color; FILL_LIGHT -> CLAIR; else -> SOMBRE }
+        val base = when (fill(b)) { FILL_TINT -> color; FILL_LIGHT -> CLAIR; FILL_BLACK -> NOIR; else -> SOMBRE }
         val a = if (toggle == false) (op * TOGGLE_OFF_RATIO).roundToInt() else op
         val texte = when {
             fill(b) == FILL_LIGHT -> TEXTE_SOMBRE
@@ -72,12 +83,12 @@ object BubbleLook {
     /** Orange du déplacement : inchangé. */
     const val MOVING_BORDER = 0xFFF59E0B.toInt()
 
-    /** Les quatre réglages de [from] recopiés sur [to] — ni titre, ni action, ni couleur. */
+    /** Les réglages d'apparence de [from] (largeur comprise) recopiés sur [to] — ni titre, ni action, ni couleur. */
     fun copy(from: FloatingButton, to: FloatingButton): FloatingButton =
-        to.copy(opacity = from.opacity, fill = from.fill, border = from.border, dimIdle = from.dimIdle)
+        to.copy(opacity = from.opacity, fill = from.fill, border = from.border, dimIdle = from.dimIdle, widthDp = from.widthDp)
 
     /** Résumé de la liste : opacité · fond · options, dans la langue de l'appli. */
     fun summary(b: FloatingButton, fillName: (String) -> String, noBorder: String, dimmed: String): String =
-        listOfNotNull("${opacity(b)} %", fillName(fill(b)), noBorder.takeIf { !border(b) }, dimmed.takeIf { dims(b) })
+        listOfNotNull("${opacity(b)} %", fillName(fill(b)), width(b)?.let { "$it dp" }, noBorder.takeIf { !border(b) }, dimmed.takeIf { dims(b) })
             .joinToString(" · ")
 }

@@ -560,10 +560,21 @@ class FloatingButtonsPage {
             bouton(choisi)?.let { modifier(it.copy(opacity = valeur.toInt()), repeindreChamps = false) }
         }
         listOf(R.id.btn_floating_fill_dark to BubbleLook.FILL_DARK, R.id.btn_floating_fill_tint to BubbleLook.FILL_TINT,
-            R.id.btn_floating_fill_light to BubbleLook.FILL_LIGHT).forEach { (id, fond) ->
+            R.id.btn_floating_fill_light to BubbleLook.FILL_LIGHT, R.id.btn_floating_fill_black to BubbleLook.FILL_BLACK).forEach { (id, fond) ->
             racine.findViewById<View>(id).setOnClickListener {
                 bouton(choisi)?.let { modifier(it.copy(fill = fond.takeIf { f -> f != BubbleLook.FILL_DARK }), repeindreChamps = false) }
             }
+        }
+        // Largeur (issue #222) : automatique, ou fixe au curseur.
+        racine.findViewById<View>(R.id.btn_floating_width_auto).setOnClickListener {
+            bouton(choisi)?.let { modifier(it.copy(widthDp = null)) }
+        }
+        racine.findViewById<View>(R.id.btn_floating_width_fixed).setOnClickListener {
+            bouton(choisi)?.let { if (it.widthDp == null) modifier(it.copy(widthDp = BubbleLook.WIDTH_DEFAULT)) }
+        }
+        racine.findViewById<Slider>(R.id.slider_floating_width).addOnChangeListener { _, valeur, parUtilisateur ->
+            if (!parUtilisateur) return@addOnChangeListener
+            bouton(choisi)?.let { modifier(it.copy(widthDp = valeur.toInt()), repeindreChamps = false) }
         }
         racine.findViewById<View>(R.id.btn_floating_border_on).setOnClickListener {
             bouton(choisi)?.let { modifier(it.copy(border = null), repeindreChamps = false) }
@@ -627,17 +638,27 @@ class FloatingButtonsPage {
         ProfileChips.peindre(racine.findViewById(R.id.btn_floating_fill_dark), fond == BubbleLook.FILL_DARK)
         ProfileChips.peindre(racine.findViewById(R.id.btn_floating_fill_tint), fond == BubbleLook.FILL_TINT)
         ProfileChips.peindre(racine.findViewById(R.id.btn_floating_fill_light), fond == BubbleLook.FILL_LIGHT)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_fill_black), fond == BubbleLook.FILL_BLACK)
+        val largeur = BubbleLook.width(b)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_width_auto), largeur == null)
+        ProfileChips.peindre(racine.findViewById(R.id.btn_floating_width_fixed), largeur != null)
+        racine.findViewById<View>(R.id.row_floating_width_value).visibility = if (largeur != null) View.VISIBLE else View.GONE
+        if (largeur != null) {
+            if (repeindreChamps) racine.findViewById<Slider>(R.id.slider_floating_width).value = largeur.toFloat()
+            racine.findViewById<TextView>(R.id.tv_floating_width).text = ctx.getString(R.string.floating_width_value, largeur)
+        }
         ProfileChips.peindre(racine.findViewById(R.id.btn_floating_border_on), BubbleLook.border(b))
         ProfileChips.peindre(racine.findViewById(R.id.btn_floating_border_off), !BubbleLook.border(b))
     }
 
     /** « 35 % · teinté · sans bordure · atténuée », seulement si la bulle n'a plus l'allure d'avant. */
     private fun resumeApparence(ctx: Context, b: FloatingButton): String? {
-        if (b.opacity == null && b.fill == null && b.border == null && b.dimIdle == null) return null
+        if (b.opacity == null && b.fill == null && b.border == null && b.dimIdle == null && b.widthDp == null) return null
         return BubbleLook.summary(b, { f ->
             ctx.getString(when (f) {
                 BubbleLook.FILL_TINT -> R.string.floating_fill_tint
                 BubbleLook.FILL_LIGHT -> R.string.floating_fill_light
+                BubbleLook.FILL_BLACK -> R.string.floating_fill_black
                 else -> R.string.floating_fill_dark
             }).lowercase()
         }, ctx.getString(R.string.floating_look_no_border), ctx.getString(R.string.floating_look_dimmed))

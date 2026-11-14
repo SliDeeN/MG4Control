@@ -1139,6 +1139,11 @@
     <string name="floating_fill_dark">Escuro</string>
     <string name="floating_fill_tint">Tingido</string>
     <string name="floating_fill_light">Claro</string>
+    <string name="floating_fill_black">Preto</string>
+    <string name="floating_field_width">Largura</string>
+    <string name="floating_width_auto">Automática</string>
+    <string name="floating_width_fixed">Fixa</string>
+    <string name="floating_width_value">%1$d dp</string>
     <string name="floating_field_border">Contorno</string>
     <string name="floating_border_color">Cor</string>
     <string name="floating_border_none">Nenhum</string>

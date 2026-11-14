@@ -328,9 +328,10 @@ object FloatingButtonsOverlay {
      * rail affiché, [decalage]) et les autres boutons de la barre, [sauf] lui-même.
      */
     private fun bloquesHaut(ctx: Context, largeurEcran: Int, decalage: Int, sauf: String?): List<ClosedFloatingPointRange<Float>> {
-        val d = ctx.resources.displayMetrics.density
-        val liste = mutableListOf(FloatingButtons.topBarHvac(largeurEcran.toFloat(), FloatingButtons.TOP_HVAC_DP * d))
-        if (decalage > 0) liste += -1f..decalage.toFloat()
+        // Languette de la clim et début de la barre NE SONT PLUS réservés (issue #222, 2026-11-14, sa
+        // décision) : une bulle se pose où on la lâche, à l'utilisateur de laisser la clim accessible.
+        // Seules les autres bulles de la barre sont évitées, pour ne pas s'empiler.
+        val liste = mutableListOf<ClosedFloatingPointRange<Float>>()
         bulles.values.filter { it.bouton.id != sauf && dansLaBarre(it) }
             .mapTo(liste) { (it.params.x + it.decalage).toFloat()..(it.params.x + it.decalage + it.vue.measuredWidth).toFloat() }
         return liste
@@ -612,8 +613,15 @@ object FloatingButtonsOverlay {
         vue.includeFontPadding = false
         vue.minHeight = hauteur
         if (enHaut) vue.height = hauteur
-        vue.minWidth = if (enHaut) (hauteur * 1.6f).roundToInt() else (FloatingButtons.minWidthDp(b.size) * densite).roundToInt()
-        vue.maxWidth = (LARGEUR_MAX_DP * densite).roundToInt()
+        val fixe = BubbleLook.width(b)
+        if (fixe != null) {
+            // Largeur fixe (issue #222) : la même quelle que soit la valeur, texte coupé par « … ».
+            vue.minWidth = (fixe * densite).roundToInt()
+            vue.maxWidth = vue.minWidth
+        } else {
+            vue.minWidth = if (enHaut) (hauteur * 1.6f).roundToInt() else (FloatingButtons.minWidthDp(b.size) * densite).roundToInt()
+            vue.maxWidth = (LARGEUR_MAX_DP * densite).roundToInt()
+        }
         val marge = if (enHaut) (10 * densite).roundToInt() else (hauteur * 0.35f).roundToInt()
         val vertical = if (enHaut) 0 else (6 * densite).roundToInt()
         vue.setPadding(marge, vertical, marge, vertical)

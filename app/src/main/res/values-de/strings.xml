@@ -1139,6 +1139,11 @@
     <string name="floating_fill_dark">Dunkel</string>
     <string name="floating_fill_tint">Getönt</string>
     <string name="floating_fill_light">Hell</string>
+    <string name="floating_fill_black">Schwarz</string>
+    <string name="floating_field_width">Breite</string>
+    <string name="floating_width_auto">Automatisch</string>
+    <string name="floating_width_fixed">Fest</string>
+    <string name="floating_width_value">%1$d dp</string>
     <string name="floating_field_border">Rand</string>
     <string name="floating_border_color">Farbe</string>
     <string name="floating_border_none">Keiner</string>

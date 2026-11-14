@@ -1139,6 +1139,11 @@
     <string name="floating_fill_dark">Koyu</string>
     <string name="floating_fill_tint">Renkli</string>
     <string name="floating_fill_light">Açık</string>
+    <string name="floating_fill_black">Siyah</string>
+    <string name="floating_field_width">Genişlik</string>
+    <string name="floating_width_auto">Otomatik</string>
+    <string name="floating_width_fixed">Sabit</string>
+    <string name="floating_width_value">%1$d dp</string>
     <string name="floating_field_border">Kenarlık</string>
     <string name="floating_border_color">Renk</string>
     <string name="floating_border_none">Yok</string>

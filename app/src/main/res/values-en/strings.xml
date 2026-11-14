@@ -1139,6 +1139,11 @@
     <string name="floating_fill_dark">Dark</string>
     <string name="floating_fill_tint">Tinted</string>
     <string name="floating_fill_light">Light</string>
+    <string name="floating_fill_black">Black</string>
+    <string name="floating_field_width">Width</string>
+    <string name="floating_width_auto">Automatic</string>
+    <string name="floating_width_fixed">Fixed</string>
+    <string name="floating_width_value">%1$d dp</string>
     <string name="floating_field_border">Border</string>
     <string name="floating_border_color">Colour</string>
     <string name="floating_border_none">None</string>

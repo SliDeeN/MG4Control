@@ -1140,6 +1140,11 @@
     <string name="floating_fill_dark">Mørk</string>
     <string name="floating_fill_tint">Farget</string>
     <string name="floating_fill_light">Lys</string>
+    <string name="floating_fill_black">Svart</string>
+    <string name="floating_field_width">Bredde</string>
+    <string name="floating_width_auto">Automatisk</string>
+    <string name="floating_width_fixed">Fast</string>
+    <string name="floating_width_value">%1$d dp</string>
     <string name="floating_field_border">Kant</string>
     <string name="floating_border_color">Farge</string>
     <string name="floating_border_none">Ingen</string>

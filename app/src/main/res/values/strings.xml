@@ -1158,6 +1158,11 @@
     <string name="floating_fill_dark">Sombre</string>
     <string name="floating_fill_tint">Teinté</string>
     <string name="floating_fill_light">Clair</string>
+    <string name="floating_fill_black">Noir</string>
+    <string name="floating_field_width">Largeur</string>
+    <string name="floating_width_auto">Automatique</string>
+    <string name="floating_width_fixed">Fixe</string>
+    <string name="floating_width_value">%1$d dp</string>
     <string name="floating_field_border">Bordure</string>
     <string name="floating_border_color">Couleur</string>
     <string name="floating_border_none">Aucune</string>

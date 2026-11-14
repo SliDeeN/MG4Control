@@ -1139,6 +1139,11 @@
     <string name="floating_fill_dark">Ciemne</string>
     <string name="floating_fill_tint">Barwione</string>
     <string name="floating_fill_light">Jasne</string>
+    <string name="floating_fill_black">Czarny</string>
+    <string name="floating_field_width">Szerokość</string>
+    <string name="floating_width_auto">Automatyczna</string>
+    <string name="floating_width_fixed">Stała</string>
+    <string name="floating_width_value">%1$d dp</string>
     <string name="floating_field_border">Obramowanie</string>
     <string name="floating_border_color">Kolor</string>
     <string name="floating_border_none">Brak</string>

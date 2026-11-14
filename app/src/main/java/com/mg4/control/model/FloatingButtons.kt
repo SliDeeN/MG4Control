@@ -47,12 +47,17 @@ data class FloatingButton(
     // Apparence (issue #230, 2026-11-09), par bulle ; `null` = comme avant la fonction ([BubbleLook]).
     /** Opacité du fond, 0 à 100 ; `null` = [BubbleLook.OPACITY_DEFAULT]. */
     val opacity: Int? = null,
-    /** Fond : [BubbleLook.FILL_DARK], [BubbleLook.FILL_TINT] ou [BubbleLook.FILL_LIGHT] ; `null` = sombre. */
+    /** Fond : [BubbleLook.FILL_DARK], [BubbleLook.FILL_TINT], [BubbleLook.FILL_LIGHT] ou [BubbleLook.FILL_BLACK] ; `null` = sombre. */
     val fill: String? = null,
     /** Bordure de la couleur de la bulle ; `null` = oui. */
     val border: Boolean? = null,
     /** Atténuée au repos ([BubbleLook.DIM_ALPHA] après [BubbleLook.DIM_AFTER_MS]) ; `null` = non. */
     val dimIdle: Boolean? = null,
+    /**
+     * Largeur fixe, en dp (issue #222, 2026-11-14) : la bulle ne change plus de largeur avec sa
+     * valeur (« 6 °C » / « −3,5 °C ») ; `null` = automatique, la largeur de son texte.
+     */
+    val widthDp: Int? = null,
     // Bulle d'information (issue #236, 2026-11-10) ; `null` partout = bulle-titre d'avant ([BubbleInfo]).
     /** Information affichée : nom d'un [RuleSignal] ou [BubbleInfo.TIME] ; `null` = le titre. */
     val info: String? = null,
