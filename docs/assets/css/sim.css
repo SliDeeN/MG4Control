@@ -124,7 +124,7 @@
 }
 
 .app * { box-sizing: border-box; }
-.app button { font: inherit; color: inherit; }
+.app :where(button) { font: inherit; color: inherit; }
 
 /* ── Menu principal 2.7.0 : colonne à gauche (ou à droite, NavSide) ───────── */
 .a-frame { flex: 1; min-height: 0; display: flex; }
@@ -204,6 +204,7 @@
   padding: 10px 14px 12px;
   gap: 10px;
 }
+.a-page:has(> .a-body):not(.pe-page) { padding: 0; }
 /* Sous-onglets 2.7.0 : pastilles (Widget.MG4.CategoryTab), la rangée défile si elle déborde. */
 .a-pillrow { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; min-width: 0; }
 .a-rail {
@@ -238,7 +239,6 @@
 .a-rail .a-tab.off { opacity: .55; }
 .a-rail .a-tab small { font-size: .8em; opacity: .8; }
 .a-cat-off { padding: 0 4px 10px; }
-.a-vline { flex: 0 0 1px; background: var(--dash-border); }
 .a-scroll {
   flex: 1;
   min-width: 0;
@@ -351,29 +351,27 @@
 /* Interrupteur 2.7.0 (SegmentSwitch) : « Non | Oui » en segments. */
 .sw {
   flex: 0 0 auto;
-  display: inline-flex;
-  height: 40px;
-  padding: 3px;
-  gap: 3px;
-  border-radius: 12px;
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(96px, 1fr));
+  height: 64px;
+  padding: 0;
+  border-radius: 16px;
   border: 1px solid var(--dash-border);
-  background: var(--dash-section);
+  background: transparent;
+  overflow: hidden;
   cursor: pointer;
 }
 .sw span {
-  min-width: 52px;
-  padding: 0 10px;
+  padding: 0 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 9px;
-  font-size: calc(14px * var(--ts, 1));
-  font-weight: 500;
+  font-size: calc(21px * var(--ts, 1));
+  white-space: nowrap;
   color: var(--text-secondary);
-  transition: background-color .15s, color .15s;
 }
-.sw:not(.on) .n { background: var(--dash-card); color: var(--text-primary); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
-.sw.on .y { background: var(--dash-accent); color: var(--dash-on-accent); }
+.sw .y { border-left: 1px solid var(--dash-border); }
+.sw:not(.on) .n, .sw.on .y { background: var(--dash-accent); color: var(--dash-on-accent); font-weight: 700; }
 .sw[disabled] { opacity: .35; cursor: default; }
 .dim { opacity: .4; }
 
@@ -781,7 +779,7 @@
   box-shadow: 0 20px 50px rgba(0,0,0,.45);
   animation: simpop .18s ease-out;
 }
-.ov-card button, .a-banner button, .mw button { font: inherit; cursor: pointer; }
+.ov-card :where(button), .a-banner :where(button), .mw :where(button) { cursor: pointer; }
 .ov-head { height: 44px; margin-bottom: 10px; position: relative; display: flex; align-items: center; }
 .ov-head > .mw-ico { width: 26px; height: 26px; margin-left: 4px; color: var(--dash-accent); }
 .ov-title { flex: 1; margin-left: 10px; font-size: calc(20px * var(--ts, 1)); font-weight: 700; white-space: nowrap; }
@@ -1075,6 +1073,7 @@
 .mw-prog { height: 8px; margin-top: 14px; border-radius: 4px; background: var(--dash-border); overflow: hidden; }
 .mw-prog i { display: block; height: 100%; background: var(--dash-accent); }
 .mw-qr { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: calc(13px * var(--ts, 1)); font-weight: 700; color: var(--dash-accent); word-break: break-all; }
+.mw-qr img { display: block; border-radius: 8px; }
 /* Restaurer les profils */
 .mw-profs { display: flex; gap: 10px; margin-top: 16px; }
 .mw-prof { flex: 1; min-width: 0; padding: 12px; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); }
@@ -1185,10 +1184,15 @@
 .cls-prev { flex: none; width: 214px; display: flex; flex-direction: column; gap: 8px; }
 .cls-prev .a-sub { margin: 0; }
 /* Personnalisation avancée de l'écran conducteur (issue #229) : aperçu à gauche, réglages à droite. */
-.cll-body { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 24px; margin-top: 8px; align-items: start; min-height: 0; }
-.cll-sq { display: block; width: 100%; aspect-ratio: 1; border-radius: 14px; background: #0C0C0C; font-family: Roboto, "Segoe UI", system-ui, sans-serif; }
-.cll-panel { max-height: 410px; overflow-y: auto; padding-right: 8px; }
+.cll-modal { height: 570px; }
+.cll-modal > .mw-t, .cll-modal > .mw-s { flex: none; }
+.cll-body { display: grid; grid-template-columns: 380px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); flex: 1; gap: 24px; margin-top: 8px; min-height: 0; }
+.cll-left { display: flex; flex-direction: column; align-items: center; min-height: 0; }
+.cll-sq { display: block; width: 100%; min-height: 0; flex: 1; border-radius: 14px; background: #0C0C0C; font-family: Roboto, "Segoe UI", system-ui, sans-serif; touch-action: none; user-select: none; }
+.cll-left .mw-hint { flex: none; width: 100%; }
+.cll-panel { overflow-y: auto; padding-right: 8px; }
 .cll-panel .mw-cap { margin-top: 12px; }
+.cll-info { text-align: left; padding: 0 14px; }
 .cll-acts .mw-b { flex: none; min-width: 120px; }
 .cll-acts .mw-b:first-child { margin-right: auto; }
 .cll-hit { cursor: pointer; }
@@ -1323,7 +1327,11 @@
 .pcp-step { display: flex; align-items: center; gap: 10px; }
 .pcp-step span { flex: 1; font-size: calc(16px * var(--ts, 1)); }
 .pcp-step b { min-width: 100px; text-align: center; font-size: calc(20px * var(--ts, 1)); }
+.pcp-fan-bar { display: flex; gap: 3px; height: 6px; }
+.pcp-fan-bar i { flex: 1; border-radius: 3px; background: var(--dash-border); }
+.pcp-fan-bar i.on { background: var(--dash-accent); }
 .pcp-text { font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); white-space: pre-line; }
+.pcp-current { margin-top: auto; }
 .pcp-warn {
   display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 10px;
   background: var(--dash-warn-dim); border: 1px solid var(--dash-warn); color: var(--text-primary); font-size: calc(13px * var(--ts, 1));
@@ -1450,6 +1458,7 @@
 .qs-tile.on { border-color: var(--dash-accent); background: var(--dash-accent-dim); }
 .qs-tile.dis { opacity: .45; cursor: default; }
 .qs-tile small { font-size: calc(12px * var(--ts, 1)); color: var(--dash-warn); }
+.qs-grid .qs-add { align-items: center; background: transparent; border-width: 2px; color: var(--text-secondary); }
 .qs-pan { margin-top: 10px; }
 .qs-pan .ov-seg { flex-wrap: wrap; }
 /* Mes automatisations */
@@ -1518,8 +1527,10 @@
 .st-graph .b { padding: 0 14px; }
 /* Couleur des bulles */
 .fl-swatches { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
-.fl-sw.wheel { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); cursor: default; position: relative; }
-.fl-sw.wheel::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: #222; }
+.fl-sw.wheel { background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); position: relative; }
+.fl-sw.wheel::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: #222; pointer-events: none; }
+.fl-sw.wheel input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.fl-sw.wheel:focus-within { outline: 2px solid var(--dash-accent); outline-offset: 2px; }
 .fl-code { gap: 10px; }
 .fl-for { display: flex; align-items: baseline; gap: 10px; margin-top: 6px; }
 .fl-for .lbl { flex: none; }

@@ -45,6 +45,8 @@
   }
 
   // ── Modèle ────────────────────────────────────────────────────────────────
+  const APP_VERSION = document.querySelector('.eyebrow .pill')?.textContent.trim().replace(/^v/, '') || '2.7.0';
+  const SIM_ASSETS = new URL('../img/', document.currentScript?.src || document.baseURI);
   const DRIVE = ['ECO', 'NORMAL', 'SPORT', 'SNOW', 'CUSTOM'];
   const DRIVE_LABEL = { ECO: 'Eco', NORMAL: 'Normal', SPORT: 'Sport', SNOW: 'Snow', CUSTOM: 'Custom' };
   const REGEN_LABEL = { LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', ADAPTIVE: 'Adaptive', OFF: 'Off', ONE_PEDAL: 'One Pedal' };
@@ -64,6 +66,11 @@
   const CL_DEFAULTS = { cluster: false, clusterNav: 'consumption', clusterMedia: 'none', clusterStyle: 'dynamic',
     clusterPill: 'profile', clusterUnit: 'wh', clusterAvg: null, clusterDist: 'auto', clusterPowerMax: 'auto',
     clusterLayout: null, clusterRefresh: 1000, clusterAnim: 800 };
+  const COLOR_PALETTE = ['#A6C8FF', '#38BDF8', '#22C55E', '#FACC15', '#F97316', '#F43F5E', '#E879F9', '#A78BFA', '#F1F5FC'];
+  const parseColor = (value) => {
+    const hex = /^#?([0-9a-f]{6})$/i.exec(value.trim());
+    return hex ? '#' + hex[1].toUpperCase() : null;
+  };
   const ST_PAGE_SIZE = 50;
   function mkProfile(o) {
     return Object.assign({
@@ -1893,6 +1900,7 @@
     // ── Navigation ─────────────────────────────────────────────────────────
     go(screen, tab) {
       if (screen === 'audio') { screen = 'automation'; state.door.open = true; }
+      if (screen === 'shortcuts' && (tab != null || this.ui.screen !== screen)) this.resetShortcutDraft(tab ?? this.ui.tabs.sc);
       this.ui.screen = screen;
       if (tab != null) {
         const key = { dashboard: 'dash', settings: 'set', shortcuts: 'sc', profileEdit: 'edit', stats: 'st', automation: 'auto' }[screen];
@@ -1900,6 +1908,10 @@
       }
       if (screen === 'profileEdit' && !this.ui.edit) this.startEdit(state.profiles[0]);
       this.render();
+    }
+    resetShortcutDraft(tab) {
+      const key = { regen: 'regenDraft', drivemode: 'driveDraft', profiles: 'profileDraft', sources: 'audioDraft' }[tab];
+      if (key) this.ui[key] = null;
     }
     toast(text, ms) {
       clearTimeout(this._toastT);
@@ -1996,7 +2008,7 @@
         return '<div class="a-closed"><div>' + esc(L('MG4Control a été fermée.', 'MG4Control was closed.')) + '</div><button class="b" data-a="reopen">' + esc(L('Relancer l\'application', 'Relaunch the app')) + '</button></div>';
       }
       // Côté du menu (NavSide) : Auto suit le volant de la voiture simulée, Gauche / Droite le forcent.
-      let out = '<div class="a-frame' + (navRight() ? ' right' : '') + '">' + this.topbar() + '<div class="a-vline"></div><div class="a-main">' + this.screenHtml() + '</div></div>';
+      let out = '<div class="a-frame' + (navRight() ? ' right' : '') + '">' + this.topbar() + '<div class="a-main">' + this.screenHtml() + '</div></div>';
       if (!state.car.on) out += '<div class="a-off-badge">' + esc(L('Véhicule hors tension, écran actif', 'Vehicle powered off, screen on')) + '</div>';
       // Notification persistante du service en Mode Garage
       if (garage()) out += '<div class="a-garage-badge" data-hl="garage-notif">🔧 ' + esc(S('notif_garage_mode')) + '</div>';
@@ -2589,6 +2601,7 @@
       const active = selected.some((c) => c.cluster);
       const ref = Math.round(cfg.clusterRefresh / 100), anim = Math.round(cfg.clusterAnim / 100);
       clPrevCfg = cfg;
+      clPrevProfile = ps.find((p) => u.clSel.includes(p.id));
       const mi = clMiles(), power = cfg.clusterPowerMax || 'auto';
       const seg = (a, cur, opts, x) => '<div class="a-grid g' + opts.length + '">' + opts.map(([v, key, raw]) => '<button class="b nc' + (cur !== undefined && String(cur) === String(v) ? ' on' : '') + '" data-a="' + a + '" data-v="' + v + '"' +
         (x ? ' data-x="' + x + '"' : '') + '>' + esc(raw != null ? raw : S(key)) + '</button>').join('') + '</div>';
@@ -2841,13 +2854,13 @@
             others.map((p) => '<button class="cl-chip' + (u.flCopy.includes(p.id) ? ' on' : '') + '" data-a="flCopyTo" data-v="' + p.id + '">' + esc(p.name) + '</button>').join('') + '</div>' +
             '<div class="a-row"><span class="lbl" style="color:var(--text-secondary)">' + esc(S('floating_copy_note')) + '</span><button class="b sm primary" style="padding:0 16px" data-a="flCopyGo">' + esc(S('floating_copy_go')) + '</button></div>' : '') + '</div>';
       }
-      const SW = ['#A6C8FF', '#38BDF8', '#22C55E', '#FACC15', '#F97316', '#F43F5E', '#E879F9', '#A78BFA', '#EEF2F8'];
+      const SW = COLOR_PALETTE;
       const col = state.floating.color || SW[0];
       h += '<div class="a-sub fl-opt" data-hl="fl-options">' + esc(S('floating_options')) + '</div>' +
         '<div class="a-row"><span class="lbl">' + esc(S('floating_hide_reverse')) + '</span>' + sw(state.floating.hideReverse, 'flReverse') + '</div>' +
         '<div data-hl="fl-color"><div class="lbl" style="margin-top:6px">' + esc(S('floating_color')) + '</div><div class="a-desc">' + esc(S('floating_color_desc')) + '</div><div class="fl-swatches">' +
         SW.map((c) => '<button class="fl-sw' + (col.toUpperCase() === c ? ' on' : '') + '" style="background:' + c + '" data-a="flColor" data-v="' + c + '" aria-label="' + c + '"></button>').join('') +
-        '<span class="fl-sw wheel" aria-hidden="true"></span></div>' +
+        '<label class="fl-sw wheel"><input type="color" data-c="flColorCode" value="' + esc(col) + '" aria-label="' + esc(S('color_custom')) + '"></label></div>' +
         '<div class="a-row fl-code"><span class="lbl" style="flex:0 0 auto">' + esc(S('color_code')) + '</span><input class="a-input" style="width:130px" maxlength="7" data-c="flColorCode" data-fid="flColorCode" value="' + esc(col.toUpperCase()) + '">' +
         '<button class="b primary sm" style="padding:0 16px" data-a="flColorDef">' + esc(S('color_default')) + '</button><span style="flex:1"></span></div></div>' +
         '<div class="a-row"><span class="lbl">' + esc(S('floating_reset')) + '</span><button class="b" style="flex:0 0 auto;padding:0 26px" data-a="flReset">' + esc(S('floating_reset_btn')) + '</button></div></div>';
@@ -3721,20 +3734,23 @@
         : [S('preclim_surv_ban_none_title'), S('preclim_surv_ban_none_text'), true];
       const banner = ban ? '<div class="pcp-ban' + (ban[2] ? ' red' : '') + '" data-hl="preclim-cam-ban">' + (ban[2] ? MW.cam : MW.warning) + '<div><b>' + esc(ban[0]) + '</b><span>' + esc(ban[1]) + '</span></div></div>' : '';
       const blocked = surv && cam === 'none' && !p.nocam;
+      const fan = p.fan ?? cl.fan;
+      const fanBar = '<div class="pcp-fan-bar" aria-hidden="true">' +
+        Array.from({ length: cl.fMax - cl.fMin + 1 }, (_, i) => '<i' + (i + cl.fMin <= fan ? ' class="on"' : '') + '></i>').join('') + '</div>';
       const right = surv
         // L'avertissement caméra prend la place du texte « 0,2 kW » (proposition 1, 2026-11-08).
         ? '<div class="ov-cap">' + esc(S('preclim_surv_off_title')) + '</div>' + (banner || '<div class="pcp-text">' + esc(S('preclim_surv_off_text')) + '</div>') + camLine + warn('preclim_surv_warning', true)
-        : '<div class="ov-cap">' + esc(S('preclim_clim_caption')) + '</div>' + step(S('preclim_temp'), S('preclim_value_celsius', p.temp ?? cl.temp), 'pcTemp') + step(S('preclim_fan'), String(p.fan ?? cl.fan), 'pcFan') +
-          '<div class="pcp-text">' + esc(S('preclim_current', S('preclim_summary', cl.temp + ' °C', cl.auto ? S('clim_auto') : cl.fan))) + '</div>' + (dog ? warn('preclim_dog_warning') : '');
+        : '<div class="ov-cap">' + esc(S('preclim_clim_caption')) + '</div>' + step(S('preclim_temp'), S('preclim_value_celsius', p.temp ?? cl.temp), 'pcTemp') + step(S('preclim_fan'), String(fan), 'pcFan') + fanBar +
+          (dog ? warn('preclim_dog_warning') : '') + '<div class="pcp-text pcp-current">' + esc(S('preclim_current', S('preclim_summary', cl.temp + ' °C', cl.auto ? S('clim_auto') : cl.fan))) + '</div>';
       const plan = pcPlan({ ...p, dog, surv }, minute), off = pcClock(minute + plan[plan.length - 1][1]);
       const times = plan.map(([start]) => pcClock(minute + start)).join(' · ');
       const starts = pcFirst(p.at, minute) - minute < 1 ? S('preclim_tomorrow', times) : times;
       const planTxt = surv ? S('preclim_plan_surv', off) : dog ? S('preclim_plan_dog', off) : now ? S('preclim_plan_now', off) : S('preclim_plan_at', starts, off);
       const modes = now ? '<button class="ov-tile pcp-mode' + (dog ? ' on' : '') + '" data-a="pcDog" aria-pressed="' + dog + '">' + MW.paw + '<span>' + esc(S('preclim_dog')) + '</span></button>' +
         '<button class="ov-tile pcp-mode surv' + (surv ? ' on' : '') + '" data-a="pcSurv" data-hl="preclim-surv" aria-pressed="' + surv + '">' + MW.cam + '<span>' + esc(S('preclim_surv')) + '</span></button>' : '';
-      const icon = surv ? MW.cam : dog ? MW.paw : MW.fan;
+      const icon = surv ? MW.cam : MW.fan;
       return '<div class="a-scrim" data-a="pcBg"><div class="ov-card pcp' + (surv ? ' surv' : '') + '" data-hl="preclim-popup">' +
-        '<div class="ov-head">' + icon + '<div class="ov-title">' + esc(S(surv ? 'preclim_surv' : dog ? 'preclim_dog' : 'preclim_title')) + '</div><button class="ov-x" data-a="pcClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>' +
+        '<div class="ov-head">' + icon + '<div class="ov-title">' + esc(S(surv ? 'preclim_surv' : 'preclim_title')) + '</div><button class="ov-x" data-a="pcClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>' +
         '<div class="pcp-body"><div class="ov-pan pcp-left">' + tabs + left + '</div><div class="ov-pan pcp-right">' + right + '</div></div>' +
         '<div class="pcp-foot"><span>' + esc(planTxt) + '</span>' + modes + '<button class="mw-b sm" data-a="pcClose"><span>' + esc(S('preclim_cancel')) + '</span></button>' +
         '<button class="mw-b sm ' + (blocked ? 'off' : surv ? 'd' : 'p') + '" data-a="pcGo"' + (blocked ? ' disabled' : '') + '><span>' + esc(S('preclim_start')) + '</span></button></div></div></div>';
@@ -3872,7 +3888,7 @@
           '<button class="bn-b p' + kf(1) + '" style="width:170px" data-a="cfYes"><b>' + esc(S('automation_confirm_yes')) + '</b></button>');
       }
       if (o.type === 'update') {
-        return box('upd-overlay', MW.update + '<div class="bn-main"><small>' + esc(S('update_overlay_title')) + '</small><div class="bn-line"><span class="mw-pillv">2.6.8</span>' + MW.arrow + '<span class="mw-pillv acc">2.x.x</span>' +
+        return box('upd-overlay', MW.update + '<div class="bn-main"><small>' + esc(S('update_overlay_title')) + '</small><div class="bn-line"><span class="mw-pillv">' + esc(APP_VERSION) + '</span>' + MW.arrow + '<span class="mw-pillv acc">2.x.x</span>' +
           '<button class="bn-link" data-a="upDisable">' + esc(S('update_overlay_disable')) + '</button></div></div>' +
           '<button class="bn-b" style="width:150px" data-a="upLater"><b>' + esc(S('update_later_btn')) + '</b>' + cd + '</button>' +
           '<button class="bn-b" style="width:200px" data-a="upSkip"><b>' + esc(S('update_overlay_skip')) + '</b></button>' +
@@ -4035,18 +4051,17 @@
     quickHtml(o) {
       const tiles = qtTiles(), moving = car().speed > 3;
       const grid = tiles.map((t, i) => {
-        const off = moving && QT[t].stop, opts = QT[t].opts(), two = opts.length === 2, yn = two && opts[0][0] === true || two && opts[1][0] === true;
+        const off = moving && QT[t].stop, opts = QT[t].opts(), two = opts.length === 2, yn = two && opts.some(([v]) => v === true);
         const lit = yn && QT[t].get() === true;
         // Bulle des valeurs, accrochée à la tuile (au-dessus ; en dessous pour la première rangée).
         const cur = QT[t].get();
         const bub = o.sel === t ? '<div class="qs-bub' + (i < 4 ? ' below' : '') + '">' + opts.map(([v, lab]) => '<button class="' + (v === cur ? 'on' : '') + '" data-a="qsSet" data-v="' + esc(JSON.stringify(v)) + '">' + esc(lab) + '</button>').join('') + '</div>' : '';
         return '<div class="qs-cell"><button class="qs-tile' + (o.sel === t ? ' on' : '') + (two ? ' two' : '') + (lit ? ' lit' : '') + (off ? ' dis' : '') + '" data-a="qsTile" data-v="' + t + '"' + (off ? ' disabled' : '') + '><span>' + esc(S(QT[t].key)) + (two ? ' <i class="qs-tg">⇄</i>' : '') + '</span><b>' + esc(qtValue(t)) + '</b>' +
           (off ? '<small>' + esc(S('quick_stopped_only')) + '</small>' : '') + '</button>' + bub + '</div>';
-      }).join('');
-      const panel = '';
-      return '<div class="a-scrim" data-a="qsBg"><div class="ov-card qs-card" data-hl="quick-popup"><div class="ov-head">' + ico('cat_adjust') + '<div class="ov-title">' + esc(S('quick_title')) + '</div>' +
+      }).join('') + (tiles.length < QT_MAX ? '<div class="qs-cell"><button class="qs-tile qs-add" data-a="qsConfigure">+ ' + esc(S('quick_choose_tiles')) + '</button></div>' : '');
+      return '<div class="a-scrim" data-a="qsBg"><div class="ov-card qs-card" data-a="qsCard" data-hl="quick-popup"><div class="ov-head">' + ico('cat_adjust') + '<div class="ov-title">' + esc(S('quick_title')) + '</div>' +
         '<span class="ov-cd" data-cd>' + esc(S('quick_closes_in', o.left)) + '</span><button class="ov-x" data-a="qsClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>' +
-        '<div class="qs-grid">' + grid + '</div>' + panel + '</div></div>';
+        '<div class="qs-grid">' + grid + '</div></div></div>';
     }
 
     // ══ 2.7.0 : Automatisation (6 pastilles) et Mes automatisations ═══════════
@@ -4186,6 +4201,14 @@
           const cap = (key) => '<div class="mw-cap">' + esc(S(key)) + '</div>';
           const swRow = (key, on, a) => '<div class="a-row"><span class="lbl">' + esc(S(key)) + '</span>' + sw(on, a) + '</div>';
           const hpOpt = (a, cur) => opt(a, cur === 'hp' ? 'hp' : 'kw', [['kw', 'kW'], ['hp', S('cluster_unit_hp')]]);
+          const color = (key, field, fallback) => {
+            const cur = L[field] || fallback, label = esc(S(key));
+            return cap(key) + '<div class="fl-swatches">' +
+              COLOR_PALETTE.map((v) => '<button class="fl-sw' + (L[field] === v ? ' on' : '') + '" style="background:' + v + '" data-a="clLayColor" data-x="' + field + '" data-v="' + v + '" aria-label="' + label + ' ' + v + '"></button>').join('') +
+              '<label class="fl-sw wheel"><input type="color" data-c="clLayColor" data-x="' + field + '" value="' + esc(cur) + '" aria-label="' + label + '"></label></div>' +
+              '<div class="a-row fl-code"><span>' + esc(S('color_code')) + '</span><input class="a-input" size="8" maxlength="7" data-c="clLayColor" data-x="' + field + '" value="' + esc(cur) + '" aria-label="' + label + '"> ' +
+              '<button class="b sm' + (!L[field] ? ' on' : '') + '" data-a="clLayColor" data-x="' + field + '">' + esc(S('color_default')) + '</button></div>';
+          };
           let panel;
           if (c.sel === 'g') {
             // Les options propres à une jauge suivent la jauge choisie (2026-11-12) ; l'unité de
@@ -4196,16 +4219,22 @@
               opt('clLayStyle', c.style, [['dynamic', S('settings_cluster_style_dynamic')], ['discreet', S('settings_cluster_style_discreet')]]) + cap('cluster_layout_position') +
               opt('clLayPos', L.gauge || 'middle', [['top', S('cluster_layout_position_top')], ['middle', S('cluster_layout_position_middle')], ['bottom', S('cluster_layout_position_bottom')]]) +
               cap('cluster_layout_thickness') + opt('clLayThickness', L.thickness || 'normal', ['thin', 'normal', 'thick'].map((x) => [x, S('cluster_layout_thickness_' + x)])) +
+              color('cluster_layout_color_consumption', 'consumptionColor', CL.warn) + color('cluster_layout_color_regen', 'regenColor', CL.accent) +
               (c.mod === 'consumption' ? swRow('cluster_layout_average_cursor', L.averageCursor ?? (c.style === 'discreet'), 'clLayAverage') +
                 swRow('cluster_layout_consumption_kw', !!L.consKw, 'clLayConsKw') + (L.consKw ? cap('cluster_layout_power_unit') + hpOpt('clLayHp', L.powerUnit) : '')
                 : cap('cluster_layout_power_unit') + hpOpt('clLayHp', L.powerUnit) + swRow('cluster_layout_power_consumption', L.powerCons !== false, 'clLayPowerCons'));
           } else {
             const b = L.slots[c.sel];
+            const units = b ? clBlockUnits(b.info, clBlockMiles(b, clMiles())) : [];
+            const dist = b && CL_DIST_INFOS.includes(b.info);
             panel = '<div class="mw-t">' + esc(S('cluster_layout_slot_fmt', c.sel + 1)) + '</div>' + cap('cluster_layout_info') +
-              '<div class="mw-grid three" data-sk="clinfo">' + [null].concat(CL_INFOS).map((i) => '<button class="mw-choice' + ((b ? b.info : null) === i ? ' on' : '') + '" data-a="clLayInfo" data-v="' + (i || '') + '"><b>' +
-                esc(i ? clInfoName(i) : S('cluster_layout_info_none')) + '</b></button>').join('') + '</div>' +
+              '<button class="b full cll-info" data-a="clLayPick">' + esc(b ? clInfoName(b.info) : S('cluster_layout_info_none')) + '</button>' +
               (b ? cap('cluster_layout_display') + opt('clLayBStyle', clStyleOf(b), clInfoStyles(b.info).map((x) => [x, S(x === 'pill' ? 'cluster_layout_style_pill' : x === 'value' ? 'floating_info_style_value' : x === 'icon' ? 'floating_info_style_icon' : 'floating_info_style_label')])) +
-                (b.info === 'POWER' ? cap('cluster_layout_unit') + hpOpt('clLayBUnit', b.unit) : '') : '<div class="mw-hint">' + esc(S('cluster_layout_empty_note')) + '</div>');
+                cap('cluster_layout_size') + opt('clLayBSize', b.size || 'M', ['S', 'M', 'L'].map((v) => [v, v])) +
+                (units.length ? cap('cluster_layout_unit') + opt('clLayBUnit', b.unit || units[0][0], units) : '') +
+                (dist ? cap('settings_distance_unit') + opt('clLayBDist', b.distance || 'auto', [['auto', S('cluster_layout_distance_auto')], ['km', S('cluster_distance_km')], ['mi', S('cluster_distance_miles')]]) : '') +
+                (c.sel % 2 === 0 ? (L.slots[c.sel + 1] ? '<div class="mw-hint">' + esc(S('cluster_layout_wide_busy', c.sel + 2)) + '</div>' : swRow('cluster_layout_wide', !!b.wide, 'clLayBWide')) : '') +
+                B(S('cluster_layout_clear'), 'clLayInfo', 'sm') : '<div class="mw-hint">' + esc(S('cluster_layout_empty_note')) + '</div>');
           }
           const sel = this.ui.clSel || [];
           const subtitle = sel.length > 1 ? S('settings_cluster_profiles_many', sel.length) :
@@ -4213,8 +4242,15 @@
           return win(1440, '<div class="mw-t">' + esc(S('cluster_layout_title')) + '</div>' +
             (subtitle ? '<div class="mw-s">' + esc(subtitle) + '</div>' : '') +
             '<div class="cll-body"><div class="cll-left"><svg class="cll-sq" viewBox="0 0 260 260" data-clprev="' + c.mod + '" data-cllay role="img"></svg>' +
-            '<div class="mw-hint">' + esc(S('cluster_layout_hint').split('·')[0].trim()) + '</div></div><div class="cll-panel" data-sk="clpanel">' + panel + '</div></div>' +
-            '<div class="mw-acts cll-acts">' + B(S('cluster_layout_reset'), 'clLayReset') + B(S('profile_cancel'), 'dlgClose') + B(S('rule_save'), 'clLaySave', 'p') + '</div>', '', 'cl-layout');
+            '<div class="mw-hint">' + esc(S('cluster_layout_hint')) + '</div></div><div class="cll-panel" data-sk="clpanel">' + panel + '</div></div>' +
+            '<div class="mw-acts cll-acts">' + B(S('cluster_layout_reset'), 'clLayReset') + B(S('profile_cancel'), 'dlgClose') + B(S('rule_save'), 'clLaySave', 'p') + '</div>', 'cll-modal', 'cl-layout');
+        }
+        case 'clLayoutPick': {
+          const c = this.ui.clLay, cur = c.L.slots[c.sel]?.info ?? null;
+          const items = [null, ...clInfoChoices()].map((info) => '<button class="mw-choice' + (cur === info ? ' on' : '') + '" data-a="clLayInfo" data-v="' + (info || '') + '"><b>' +
+            esc(info ? clInfoName(info) : S('cluster_layout_info_none')) + '</b></button>').join('');
+          return win(920, head(MW.list, S('floating_info_pick_title')) + '<div class="mw-grid three long" data-sk="clinfo">' + items + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'clLayPickClose') + '</div>', '', 'cl-layout-pick');
         }
         case 'rLineMenu': {
           // Menu ⋮ d'une ligne (CustomRuleEditFragment.menu) : seuls les gestes possibles à cette place.
@@ -4396,7 +4432,10 @@
           const bands = state.stats.bands ??= {};
           bands[v] = !bands[v]; commit(); return true;
         }
-        case 'stExport': u.dialog = { type: 'export', what: 'stats', dest: 'dl', title: S('stats_export_title'), sub: S('stats_export_subtitle', state.stats.trips.length, state.stats.charges.length), go: S('stats_export') }; this.render(); return true;
+        case 'stExport':
+          if (!state.stats.trips.length && !state.stats.charges.length) { this.toast(S('stats_export_empty')); return true; }
+          u.dialog = { type: 'export', what: 'stats', dest: 'dl', title: S('stats_export_title'), sub: S('stats_export_subtitle', state.stats.trips.length, state.stats.charges.length), go: S('stats_export') };
+          this.render(); return true;
         // Boutons physiques
         case 'wkScope': u.wkScope = v; this.render(); return true;
         case 'wkAdd':
@@ -4421,6 +4460,11 @@
         case 'qsDefaults': state.quick.tiles = null; commit(); return true;
         case 'qsOpen': this.openQuick(); return true;
         case 'qsClose': case 'qsBg': this.closeOverlay(); return true;
+        case 'qsCard':
+          if (u.overlay?.type === 'quick') { u.overlay.left = popupDelay(); u.overlay.sel = null; this.render(); }
+          return true;
+        case 'qsConfigure':
+          this.closeOverlay(); u.qsPage = true; this.go('shortcuts', 'quick'); return true;
         case 'qsTile': {
           const o = u.overlay; if (!o) return true;
           o.left = popupDelay();
@@ -4628,12 +4672,12 @@
           // Trois états sous le même en-tête (UpdateDialogManager) : les nouveautés et les actions,
           // le téléchargement, l'installation à la main. Hors Wi-Fi, une confirmation passe devant.
           if (d.step === 'data') return confirm({ tone: 'warn', title: S('update_data_warn_title'), msg: S('update_data_warn_message'), yes: S('update_continue'), no: S('update_cancel'), yesAct: 'updDownload', noAct: 'updBack' });
-          const top = head(MW.download, S('update_available_title'), null, '<span class="mw-vers"><span class="mw-pillv">v2.6.8</span>' + MW.arrow + '<span class="mw-pillv acc">v2.x.x</span></span>');
+          const top = head(MW.download, S('update_available_title'), null, '<span class="mw-vers"><span class="mw-pillv">v' + esc(APP_VERSION) + '</span>' + MW.arrow + '<span class="mw-pillv acc">v2.x.x</span></span>');
           if (d.step === 'progress') return win(1100, top + '<div class="mw-pan mt16"><div class="mw-status">' + esc(S('update_downloading_pct', d.pct || 0)) + '</div><div class="mw-prog"><i style="width:' + (d.pct || 0) + '%"></i></div></div>' +
             '<div class="mw-acts">' + B(S('update_cancel'), 'dlgClose') + '</div>');
           if (d.step === 'manual' || d.step === 'done') return win(1100, top + '<div class="mw-cols mt16"><div class="mw-pan grow"><div class="mw-cap">' + esc(S('update_manual_title')) + '</div>' +
             '<div class="mw-text">' + esc(S(d.step === 'done' ? 'update_downloaded_instructions' : 'update_manual_instructions')) + '</div></div>' +
-            '<div class="mw-pan mw-qr" style="width:240px">' + qrBox(160) + '<span>' + esc(S('update_gh_releases_link')) + '</span></div></div><div class="mw-acts">' + B(S('update_close'), 'dlgClose') + '</div>');
+            '<div class="mw-pan" style="width:240px">' + qrBox('releases', S('update_gh_releases_link'), 'https://github.com/SliDeeN/MG4Control/releases/latest', 160) + '</div></div><div class="mw-acts">' + B(S('update_close'), 'dlgClose') + '</div>');
           const notes = L('(exemple : le texte des notes de version de GitHub s\'affiche ici)\n\n• Pop-up HVAC : nouvelle présentation\n• Sélecteur de profils en cartes\n• Bandeaux de confirmation en bas de l\'écran\n• Délai de fermeture des pop-ups réglable\n• Interrupteur par catégorie dans les profils\n• Automatisation selon le niveau de batterie\n• Luminosité automatique\n• Chauffage intelligent de la batterie\n• Feux de route automatiques\n• Cycle de profils au volant',
             '(example: the GitHub release notes are shown here)\n\n• HVAC pop-up: new look\n• Profile picker as cards\n• Confirmation banners at the bottom of the screen\n• Adjustable pop-up closing delay\n• Per-category switch in profiles\n• Automation based on battery level\n• Automatic brightness\n• Smart battery heating\n• Automatic high beams\n• Profile cycle on the steering wheel');
           return win(1100, top + '<div class="mw-cols mt16" style="height:320px"><div class="mw-col grow"><div class="mw-pan grow"><div class="mw-cap">' + esc(S('update_release_notes_label')) + '</div>' +
@@ -4789,11 +4833,11 @@
         case 'about': {
           // Deux colonnes (dialog_app_info.xml) : l'application et ses crédits, puis les QR codes des dépôts.
           const pill = (key, v) => '<span class="mw-pillv"><i>' + esc(S(key)) + '</i>' + esc(v) + '</span>';
-          const qr = (nm) => '<div class="mw-qr">' + qrBox(150) + '<span>' + nm + '</span></div>';
           return win(1000, '<div class="mw-cols"><div class="mw-col grow">' + head(MW.info, S('app_name'), S('info_based_on')) +
-            '<div class="mw-pills">' + pill('info_version_label', '2.6.8') + pill('info_firmware_label', state.fw === 'UNKNOWN' ? 'SWI???-00000' : state.fw + '-xxxxx') + '</div>' +
+            '<div class="mw-pills">' + pill('info_version_label', APP_VERSION) + pill('info_firmware_label', state.fw === 'UNKNOWN' ? 'SWI???-00000' : state.fw + '-xxxxx') + '</div>' +
             '<div class="mw-credit">' + esc(S('info_made_with_love')) + '</div><div class="mw-thanks">' + esc(S('info_special_thanks')) + '</div></div>' +
-            '<div class="mw-pan mw-qrs">' + qr('GitHub') + qr('GitLab') + '</div></div><div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
+            '<div class="mw-pan mw-qrs">' + qrBox('github', 'GitHub', 'https://github.com/SliDeeN/MG4Control', 150) +
+            qrBox('gitlab', 'GitLab', 'https://gitlab.com/SliDeeN/mg4control', 150) + '</div></div><div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
         }
         case 'diag':
           // Le journal plein cadre (dialog_diagnostic.xml) : les actions restent en haut, le reste défile.
@@ -4805,11 +4849,65 @@
     }
 
     // ── Événements ─────────────────────────────────────────────────────────
+    bindClusterDrag() {
+      this.app.addEventListener('pointerdown', (e) => {
+        const hit = e.target.closest('.cll-hit'), draft = this.ui.clLay;
+        if (!hit || !draft || e.button !== 0 || !e.isPrimary) return;
+        const svg = hit.ownerSVGElement, start = hit.dataset.v === 'g' ? 'g' : +hit.dataset.v;
+        const bounds = svg.getBoundingClientRect(), side = Math.min(bounds.width, bounds.height);
+        const left = bounds.left + (bounds.width - side) / 2, top = bounds.top + (bounds.height - side) / 2;
+        let dragging = false, moved = false;
+        svg.setPointerCapture(e.pointerId);
+        const update = (ev) => {
+          const x = (ev.clientX - left) / side * 260, y = (ev.clientY - top) / side * 260;
+          const cell = clGeo(draft.L, true).cells.find((c) => x >= c.x && x <= c.x + c.w && y >= c.y && y < c.y + c.h);
+          const inside = x >= 0 && x <= 260 && y >= 0 && y <= 260;
+          const pos = y < 260 / 3 ? 'top' : y > 520 / 3 ? 'bottom' : 'middle';
+          draft.drop = inside ? start === 'g' ? pos : cell?.slot : null;
+          clPreviewSvg(svg);
+        };
+        const hold = setTimeout(() => {
+          if (start !== 'g' && !draft.L.slots[start]) return;
+          dragging = true; this._drag = true;
+          update(e);
+        }, 400);
+        const move = (ev) => {
+          if (dragging) update(ev);
+          else if (Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) > 9) { moved = true; clearTimeout(hold); }
+        };
+        const finish = (ev) => {
+          clearTimeout(hold);
+          svg.removeEventListener('pointermove', move);
+          svg.removeEventListener('pointerup', finish);
+          svg.removeEventListener('pointercancel', finish);
+          this._drag = false;
+          if (ev.type === 'pointerup' && this.ui.clLay === draft && this.ui.dialog?.type === 'clLayout') {
+            if (dragging) {
+              update(ev);
+              if (start === 'g' && draft.drop) { draft.L.gauge = draft.drop; draft.sel = 'g'; }
+              else if (Number.isInteger(draft.drop) && draft.drop !== start) {
+                const slots = draft.L.slots, target = draft.drop;
+                [slots[start], slots[target]] = [slots[target], slots[start]];
+                clTidySlots(slots); draft.sel = target;
+              }
+            } else if (!moved) draft.sel = start;
+          }
+          draft.drop = null;
+          this.render();
+        };
+        svg.addEventListener('pointermove', move);
+        svg.addEventListener('pointerup', finish);
+        svg.addEventListener('pointercancel', finish);
+      });
+    }
     bind() {
+      this.bindClusterDrag();
       this.app.addEventListener('click', (e) => {
         const t = e.target.closest('[data-a]');
         if (!t || !this.app.contains(t)) return;
         if (t.disabled || t.classList.contains('dis')) return;
+        const segment = e.target.closest('[data-segment]');
+        if (segment && t.getAttribute('role') === 'switch' && t.getAttribute('aria-checked') === segment.dataset.segment) return;
         if (['pkBg', 'hpBg', 'cgBg', 'pcBg'].includes(t.getAttribute('data-a')) && e.target !== t) return; // clic dans la carte
         this.act(t.getAttribute('data-a'), t.getAttribute('data-v'), t);
       });
@@ -4932,9 +5030,16 @@
       if (this.extAct(a, v, el)) return;
       switch (a) {
         // Navigation
-        case 'nav': this.ui.screen = u.screen === v ? 'dashboard' : v; if (v === 'profileEdit') this.startEdit(null); this.ui.rEdit = null; return this.render();
+        case 'nav': this.ui.rEdit = null; return this.go(u.screen === v ? 'dashboard' : v);
         case 'close': this.ui.screen = 'dashboard'; return this.render();
-        case 'tab': { const [key, i] = v.split(':'); u.tabs[key] = key === 'sc' || isNaN(+i) ? i : +i; const sc2 = this.app.querySelector('.a-scroll'); if (sc2) sc2.scrollTop = 0; this._lastKey = null; return this.render(); }
+        case 'tab': {
+          const [key, i] = v.split(':');
+          if (key === 'sc') this.resetShortcutDraft(i);
+          u.tabs[key] = key === 'sc' || isNaN(+i) ? i : +i;
+          const sc2 = this.app.querySelector('.a-scroll');
+          if (sc2) sc2.scrollTop = 0;
+          this._lastKey = null; return this.render();
+        }
         case 'logo':
           // Comme MainActivity : le logo ramène au tableau de bord ; cinq appuis ouvrent le diagnostic.
           if (!state.diagUnlocked && ++u.logoTaps >= 5) { u.logoTaps = 0; state.diagUnlocked = true; commit(); this.toast(S('diagnostic_unlocked')); }
@@ -5313,6 +5418,7 @@
         case 'clLayStyle': u.clLay.style = v; return this.render();
         case 'clLayPos': u.clLay.L.gauge = v; return this.render();
         case 'clLayThickness': u.clLay.L.thickness = v === 'normal' ? null : v; return this.render();
+        case 'clLayColor': u.clLay.L[el.dataset.x] = v || null; return this.render();
         case 'clLayAverage': {
           const { L, style } = u.clLay;
           L.averageCursor = !(L.averageCursor ?? (style === 'discreet')); return this.render();
@@ -5320,9 +5426,24 @@
         case 'clLayConsKw': u.clLay.L.consKw = !u.clLay.L.consKw || null; return this.render();
         case 'clLayPowerCons': u.clLay.L.powerCons = u.clLay.L.powerCons === false ? null : false; return this.render();
         case 'clLayHp': u.clLay.L.powerUnit = v === 'hp' ? 'hp' : null; return this.render();
-        case 'clLayInfo': u.clLay.L.slots[u.clLay.sel] = v ? { info: v, style: clPillOk(v) ? 'pill' : 'label' } : null; return this.render();
+        case 'clLayPick': u.dialog = { type: 'clLayoutPick' }; return this.render();
+        case 'clLayPickClose': u.dialog = { type: 'clLayout' }; return this.render();
+        case 'clLayInfo': {
+          const { L, sel } = u.clLay, before = L.slots[sel];
+          if (before?.info !== v) {
+            L.slots[sel] = v ? { info: v, style: clPillOk(v) ? 'pill' : 'label', wide: before?.wide } : null;
+            clTidySlots(L.slots);
+          }
+          u.dialog = { type: 'clLayout' }; return this.render();
+        }
         case 'clLayBStyle': u.clLay.L.slots[u.clLay.sel].style = v; return this.render();
-        case 'clLayBUnit': u.clLay.L.slots[u.clLay.sel].unit = v === 'hp' ? 'hp' : null; return this.render();
+        case 'clLayBSize': u.clLay.L.slots[u.clLay.sel].size = v; return this.render();
+        case 'clLayBUnit': u.clLay.L.slots[u.clLay.sel].unit = v; return this.render();
+        case 'clLayBDist': u.clLay.L.slots[u.clLay.sel].distance = v === 'auto' ? null : v; return this.render();
+        case 'clLayBWide': {
+          const b = u.clLay.L.slots[u.clLay.sel];
+          b.wide = !b.wide; return this.render();
+        }
         case 'clLayReset': u.clLay.L = clLayoutOf({ ...this.clEditCfg(), clusterLayout: null }); u.clLay.sel = 'g'; return this.render();
         case 'clLaySave': {
           const c = u.clLay; u.dialog = null; u.clLay = null;
@@ -5555,7 +5676,12 @@
         case 'climFan': setClimAuto(false); c.clim.fan = +t.value; return commit();
         case 'pcLock': state.preclim.lock = +t.value; return commit();
         case 'pcSoc': state.preclim.soc = +t.value; return commit();
-        case 'flColorCode': if (/^#[0-9a-f]{6}$/i.test(t.value.trim())) state.floating.color = t.value.trim().toUpperCase(); return commit();
+        case 'flColorCode': state.floating.color = parseColor(t.value) ?? state.floating.color; return commit();
+        case 'clLayColor': {
+          const color = parseColor(t.value);
+          if (u.clLay && color) u.clLay.L[t.dataset.x] = color;
+          return this.render();
+        }
         case 'flTitle': if (fb) { const v = t.value.trim().slice(0, 24); fb.title = !v || v === flActionName(fb) ? null : v; } return commit();
         case 'flAction': if (fb) { const [act, cid] = t.value.split(':'); fb.action = act; fb.customId = cid || null; } return commit();
         case 'flInfo': if (fb) fb.info = t.value; return commit();
@@ -5735,6 +5861,7 @@
     demo(name) {
       const u = this.ui;
       if (this.extDemo(name) !== undefined) return;
+      const auto = (tab) => { u.screen = 'automation'; u.tabs.auto = tab; return commit(); };
       switch (name) {
         case 'picker': return this.openPicker();
         case 'hvacPopup':
@@ -5770,12 +5897,12 @@
           u.edit.customPower = u.edit.customPower == null ? 2 : u.edit.customPower; u.tabs.edit = 0; u.screen = 'profileEdit'; return this.render();
         }
         case 'customMode': if (W.drive('CUSTOM')) { u.screen = 'dashboard'; u.tabs.dash = 0; commit(); } return;
-        case 'windows': u.screen = 'automation'; u.winOpen = true; return this.render();
-        case 'doorVolume': state.door.open = true; u.screen = 'automation'; return commit();
-        case 'autoBattery': state.auto.b.open = true; u.screen = 'automation'; return commit();
-        case 'autoBri': state.auto.bri.open = true; u.screen = 'automation'; return commit();
-        case 'autoBatHeat': state.auto.bh.open = true; u.screen = 'automation'; return commit();
-        case 'acOnce': state.auto.c.open = true; u.screen = 'automation'; return commit();
+        case 'windows': u.winOpen = true; return auto(3);
+        case 'doorVolume': state.door.open = true; return auto(3);
+        case 'autoBattery': state.auto.b.open = true; return auto(0);
+        case 'autoBri': state.auto.bri.open = true; return auto(2);
+        case 'autoBatHeat': state.auto.bh.open = true; return auto(1);
+        case 'acOnce': state.auto.c.open = true; return auto(1);
         case 'statsBattery': state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 0; return commit();
         case 'cluster':
           // La carte est absente sur les firmwares sans module.
@@ -5824,7 +5951,7 @@
           u.profileDraft = null;
           u.screen = 'shortcuts'; u.tabs.sc = 'profiles'; return commit();
         // L'assistant vit dans l'option avancée « Calibrage par vitre » : on l'allume d'abord.
-        case 'calibrate': state.winCalAdv = true; u.screen = 'automation'; u.winOpen = true; u.dialog = { type: 'cal', w: 'FR', step: 1 }; return commit();
+        case 'calibrate': state.winCalAdv = true; u.winOpen = true; u.dialog = { type: 'cal', w: 'FR', step: 1 }; return auto(3);
         case 'statsOn': state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 0; return commit();
         case 'garageOn': state.settings.garage = true; u.screen = 'settings'; u.tabs.set = 2; return commit();
         // ── Nouveautés de la 2.6.10 ──
@@ -5858,8 +5985,8 @@
           state.settings.hvacZone = true;
           car().projection = null; projectionToggle(); return;
         }
-        case 'sounds': state.sound.open = true; u.screen = 'automation'; return commit();
-        case 'acAir': state.auto.c.open = true; u.screen = 'automation'; return commit();
+        case 'sounds': state.sound.open = true; return auto(4);
+        case 'acAir': state.auto.c.open = true; return auto(1);
         case 'hvacEco': u.screen = 'dashboard'; u.tabs.dash = 2; return this.render();
         case 'autoVolPopup':
           if (caps().clim && !this.assigned('HVAC_POPUP')) { state.sc.map.btn2_single = 'HVAC_POPUP'; delete state.sc.extra.btn2_single; }
@@ -5868,7 +5995,7 @@
             'Tap AUTO: AUTO on or off. Hold it 1 s: the airflow steps up one notch (the notches under AUTO show it).'), 4200);
           return;
         case 'autoScope': case 'rescue': u.screen = 'settings'; u.tabs.set = 2; return this.render();
-        case 'doorPause': state.door.open = true; state.door.mode = 'pause'; u.screen = 'automation'; return commit();
+        case 'doorPause': state.door.open = true; state.door.mode = 'pause'; return auto(3);
         case 'distance': u.screen = 'settings'; u.tabs.set = 1; state.settings.distUnit = 'mi'; return commit();
         case 'clusterProfile': case 'clusterMiles': case 'clusterPower': case 'clusterLayout':
           u.screen = 'settings'; u.tabs.set = 1; u.clSel = null;
@@ -5968,11 +6095,11 @@
   // ── Petits composants HTML ────────────────────────────────────────────────
   /**
    * Interrupteur 2.7.0 (SegmentSwitch) : « Non | Oui » en segments au lieu d'un Switch ; le
-   * segment allumé dit l'état, un toucher n'importe où bascule (même action qu'avant).
+   * segment allumé dit l'état et chaque moitié choisit sa valeur.
    */
   function sw(on, a, disabled, x) {
     return '<button type="button" class="sw' + (on ? ' on' : '') + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" data-a="' + a + '"' + (x ? ' data-x="' + x + '"' : '') + (disabled ? ' disabled' : '') + '>' +
-      '<span class="n">' + esc(S('segment_no')) + '</span><span class="y">' + esc(S('segment_yes')) + '</span></button>';
+      '<span class="n" data-segment="false">' + esc(S('segment_no')) + '</span><span class="y" data-segment="true">' + esc(S('segment_yes')) + '</span></button>';
   }
   /** Pictogrammes Tabler (MIT) du menu et des pastilles : ic_nav_* et ic_rail_* de l'application. */
   const ICONS = {
@@ -6155,14 +6282,15 @@
     if (k) return S(k);
     return S('adv_sc_key_unknown', code);
   }
-  function qrBox(size) {
-    return '<svg width="' + (size || 110) + '" height="' + (size || 110) + '" viewBox="0 0 110 110" aria-hidden="true" style="border-radius:8px;background:#fff"><rect x="8" y="8" width="28" height="28" fill="none" stroke="#111" stroke-width="6"/><rect x="74" y="8" width="28" height="28" fill="none" stroke="#111" stroke-width="6"/><rect x="8" y="74" width="28" height="28" fill="none" stroke="#111" stroke-width="6"/><text x="55" y="62" text-anchor="middle" font-size="13" font-family="Roboto,sans-serif" fill="#111">QR</text></svg>';
+  function qrBox(asset, label, url, size) {
+    const src = new URL('qr-' + asset + '.png', SIM_ASSETS);
+    return '<a class="mw-qr" href="' + esc(url) + '" target="_blank" rel="noopener"><img src="' + esc(src.href) + '" width="' + size + '" height="' + size + '" alt=""><span>' + esc(label) + '</span></a>';
   }
   function diagSample() {
     const g = gen();
     return [
       '── ' + L('Rapport de diagnostic (exemple)', 'Diagnostic report (example)') + ' ──',
-      'app=2.6.8  firmware=' + g + (state.forced ? ' (forcé)' : ''),
+      'app=' + APP_VERSION + '  firmware=' + g + (state.forced ? ' (forcé)' : ''),
       'MG4_GATE   sécurité=' + (state.settings.gate ? 'ON max=' + state.settings.gateMax + ' km/h' : 'OFF') + '  vitesse=' + state.car.speed + ' km/h',
       'MG4_API    API externe=' + (state.settings.api ? 'activée' : 'désactivée'),
       'MG4_VOL    volume média=' + state.car.volume + '/' + state.car.volMax,
@@ -6544,23 +6672,23 @@
     h += clArc(cx, cy, R, 150, 240, CL.track, thickness);
     // Le remplissage s'arrête net au zéro : son bout arrondi ne passe pas de l'autre côté.
     if (st) h += '<defs><clipPath id="' + g.id + 'P"><rect x="130" y="0" width="130" height="260"/></clipPath><clipPath id="' + g.id + 'R"><rect x="0" y="0" width="130" height="260"/></clipPath></defs>' +
-      '<g clip-path="url(#' + g.id + (g.part >= 0 ? 'P' : 'R') + ')">' + clArc(cx, cy, R, 270, 120 * g.part, st.regen ? CL.accent : CL.warn, thickness) + '</g>';
+      '<g clip-path="url(#' + g.id + (g.part >= 0 ? 'P' : 'R') + ')">' + clArc(cx, cy, R, 270, 120 * g.part, st.regen ? g.regen : g.conso, thickness) + '</g>';
     h += '<line x1="130" y1="' + (cy - R - 8) + '" x2="130" y2="' + (cy - R + 8) + '" stroke="' + CL.text2 + '" stroke-width="2"/>' + clTxt('0', 130, cy - R - 12, 11, CL.text2);
     const v = g.value != null ? g.value : st && st.value;
     const recup = !!st && v != null && v < 0;
     // Des kW entiers en roulant, une décimale à l'arrêt (issue #152).
     const vu = v == null ? v : g.hp ? v * CH_KW : v;
     const big = !st || v == null ? '–' : (recup ? '−' : '') + (g.kmh != null && g.kmh >= CG.STOP_KMH ? String(Math.round(Math.abs(vu))) : clKw(vu));
-    h += clTxt(big, cx, cy + 12, big.length > 3 ? 46 : 54, recup ? CL.accent : CL.text, 500);
-    if (st) h += clTxt(g.hp ? S('cluster_unit_hp') : 'kW', cx, cy + 28, 13, recup ? CL.accent : CL.text2, 500);
+    h += clTxt(big, cx, cy + 12, big.length > 3 ? 46 : 54, recup ? g.regen : CL.text, 500);
+    if (st) h += clTxt(g.hp ? S('cluster_unit_hp') : 'kW', cx, cy + 28, 13, recup ? g.regen : CL.text2, 500);
     // La consommation instantanée en grand sous les kW (issue #152), négative et bleue en
     // récupération (issue #158) ; sous 5 km/h, le mot qui en tient lieu.
     const wh = !st || recup || g.kw == null ? null : whPerKm(g.kw, g.kmh);
     const whR = !st || !recup || g.kw == null ? null : regenWhPerKm(g.kw, g.kmh);
     if (g.powerCons === false) { /* consommation masquée sous les kW (issue #229) */ }
     else if (wh != null) h += clValue(cx, cy + 64, clCons(wh, g.unit, g.mi), CL.text, 28, 12);
-    else if (whR != null) h += clValue(cx, cy + 64, clCons(whR, g.unit, g.mi), CL.accent, 28, 12);
-    else if (recup) h += clTxt(S('cluster_regen_word'), cx, cy + 58, 13, CL.accent);
+    else if (whR != null) h += clValue(cx, cy + 64, clCons(whR, g.unit, g.mi), g.regen, 28, 12);
+    else if (recup) h += clTxt(S('cluster_regen_word'), cx, cy + 58, 13, g.regen);
     else if (st) h += clTxt(S('cluster_stopped_word'), cx, cy + 58, 13, CL.text2);
     // La batterie est déjà sur le combiné : seule reste la moyenne du trajet, centrée.
     if (g.noFoot) return h;
@@ -6574,7 +6702,7 @@
     // Graduations en Wh/km, libellées dans l'unité choisie : l'anneau, lui, ne change pas.
     CG_TICKS.cons.forEach((w) => { h += clGrad(cx, cy, 80, 135 + 270 * consFraction(w), clTick(w, g.unit)); });
     h += clArc(cx, cy, 80, 135, 270, CL.track, thickness);
-    if (st) h += clArc(cx, cy, 80, 135, 270 * g.part, st.regen ? CL.accent : CL.warn, thickness);
+    if (st) h += clArc(cx, cy, 80, 135, 270 * g.part, st.regen ? g.regen : g.conso, thickness);
     if (g.averageCursor && g.avgWh > 0) {
       const angle = (135 + 270 * consFraction(g.avgWh * (g.mi ? MI_KM : 1))) * Math.PI / 180;
       const radius = 80 - thickness / 2 - 7;
@@ -6587,11 +6715,11 @@
     else if (st && st.unit === 'KW_REGEN') { const w = regenWhPerKm(-v, g.kmh); big = w != null ? clCons(w, g.unit, g.mi) : ['↓' + clKw(g.hp ? v * CH_KW : v), hpWord(g, S('cluster_regen_kw'))]; }
     else if (st) big = [clKw(g.hp ? v * CH_KW : v), hpWord(g, S('cluster_stopped_kw'))];
     const recup = !!st && st.unit === 'KW_REGEN';
-    h += clTxt(big[0], cx, cy + 16, big[0].length > 3 ? 46 : 54, recup ? CL.accent : CL.text, 500);
-    h += clTxt(big[1], cx, cy + 40, 13, recup ? CL.accent : CL.text2);
+    h += clTxt(big[0], cx, cy + 16, big[0].length > 3 ? 46 : 54, recup ? g.regen : CL.text, 500);
+    h += clTxt(big[1], cx, cy + 40, 13, recup ? g.regen : CL.text2);
     // Les kW sous l'unité, en roulant (issue #229), en chevaux si choisi.
     if (g.consKw && g.kw != null && st && (st.unit === 'WH_PER_KM' || st.unit === 'KW_REGEN'))
-      h += clTxt(clKw(g.hp ? Math.abs(g.kw) * CH_KW : Math.abs(g.kw)) + ' ' + (g.hp ? S('cluster_unit_hp') : 'kW'), cx, cy + 58, 13, recup ? CL.accent : CL.text2);
+      h += clTxt(clKw(g.hp ? Math.abs(g.kw) * CH_KW : Math.abs(g.kw)) + ' ' + (g.hp ? S('cluster_unit_hp') : 'kW'), cx, cy + 58, 13, recup ? g.regen : CL.text2);
     if (g.noFoot) return h;
     return h + clFoot(S('cluster_trip_avg'), clAvg(g.avgWh, g.avgUnit, g.mi), CL.text, S('cluster_regen'), g.regenWh != null ? ['+' + Math.round(g.regenWh), 'Wh'] : ['–', null], CL.accent);
   }
@@ -6607,8 +6735,8 @@
     const v = g.value != null ? g.value : st && st.value;
     if (st && v != null) {
       const xv = X(discreetPowerFraction(v, g.full));
-      if (v < -0.5) h += clBar(xv, zero, CL.accent, thickness);
-      else if (v > 0.5) h += clBar(zero, xv, CL.clair, thickness);
+      if (v < -0.5) h += clBar(xv, zero, g.regen, thickness);
+      else if (v > 0.5) h += clBar(zero, xv, g.discreteConso, thickness);
     }
     (g.hp ? dPowerTicksHp(g.full) : dPowerTicks(g.full).map((k) => [k, dPowerLabel(k, g.full) ? k : null])).forEach(([k, c]) => { h += clNotch(X(discreetPowerFraction(k, g.full)), c == null ? null : String(c), k === 0); });
     // Le zéro, repère de toute la barre.
@@ -6623,11 +6751,11 @@
     let h = clTitle(S('settings_cluster_consumption')) + clBar(30, 66, CL.track, thickness) + clBar(72, 230, CL.track, thickness);
     const v = g.value != null ? g.value : st && st.value;
     if (st && v != null) {
-      if (st.unit === 'KW_REGEN') h += clBar(66 - 36 * regenFraction(v), 66, CL.accent, thickness);
-      else if (st.unit === 'WH_PER_KM') h += clBar(72, X(v * f), avg != null && v > avg ? CL.clair : CL.eco, thickness);
+      if (st.unit === 'KW_REGEN') h += clBar(66 - 36 * regenFraction(v), 66, g.regen, thickness);
+      else if (st.unit === 'WH_PER_KM') h += clBar(72, X(v * f), avg != null && v > avg ? g.conso : CL.eco, thickness);
     }
     CG_TICKS.cons.forEach((w) => { h += clNotch(X(w), CG_TICKS.dConsLab.includes(w) ? clTick(w, g.unit) : null, false); });
-    h += clTxt(S('cluster_regen'), 48, 152, 11, CL.accent, null, 'middle', 0) + clTxt((g.unit === 'kwh' ? 'kWh/100 ' : 'Wh/') + (g.mi ? 'mi' : 'km'), 230, 168, 11, CL.discret, null, 'end', 0);
+    h += clTxt(S('cluster_regen'), 48, 152, 11, g.regen, null, 'middle', 0) + clTxt((g.unit === 'kwh' ? 'kWh/100 ' : 'Wh/') + (g.mi ? 'mi' : 'km'), 230, 168, 11, CL.discret, null, 'end', 0);
     // La moyenne du trajet : un triangle au-dessus de la barre, et son mot.
     if (avg != null && g.averageCursor) {
       const xm = X(avg * f);
@@ -6717,7 +6845,7 @@
     if (g.preclim) return h + clPreclimSvg(g.preclim);
     if (g.charge) return h + clChargeSvg(g.charge);
     if (g.layout) return h + clLayoutSvg(g);
-    g = { ...g, thicknessFactor: 1, averageCursor: g.style === 'discreet' };
+    g = { ...g, thicknessFactor: 1, averageCursor: g.style === 'discreet', conso: CL.warn, regen: CL.accent, discreteConso: CL.clair };
     const pill = g.pill ? clPillSvg(g.pill) : '';
     if (g.style === 'discreet') return h + pill + (g.mod === 'power' ? clDiscreetPower(g) : clDiscreetCons(g));
     return h + pill + (g.mod === 'power' ? clPower(g) : clConsumption(g));
@@ -6727,13 +6855,83 @@
   const hpWord = (g, t) => (g.hp ? t.replace('kW', S('cluster_unit_hp')) : t);
 
   // ── Écran conducteur V2 (issue #229) : la jauge et jusqu'à 4 cases d'information ──
-  const CL_INFOS = ['PROFILE', 'DRIVE_MODE', 'TRIP_AVERAGE', 'TRIP_REGEN', 'TRIP_DISTANCE', 'TRIP_ENERGY', 'POWER', 'SOC', 'RANGE', 'OUTSIDE_TEMP', 'TIME'];
+  /**
+   * Informations proposées pour une case, dans l'ordre de l'appli (ClusterInfo.choices) : les 5 du
+   * combiné, puis les plus utiles des bulles (BubbleInfo.FIRST), puis les autres signaux. Sans
+   * firmware, réseau Wi-Fi, téléphone, données, soleil, clé, projection, média ni appel.
+   */
+  const CL_INFOS = ['TRIP_AVERAGE', 'TRIP_DISTANCE', 'TRIP_ENERGY', 'TRIP_REGEN', 'POWER',
+    'SOC', 'RANGE', 'OUTSIDE_TEMP', 'TIME', 'SPEED', 'HVAC_TEMP', 'DRIVE_MODE', 'REGEN', 'PROFILE', 'VOLUME', 'CHARGE_LIMIT',
+    'READY', 'GEAR', 'CHARGING', 'HVAC_ON', 'ONE_PEDAL', 'ENERGY_SAVING', 'AEB', 'TSR', 'ESC', 'DROWSINESS', 'OVERSPEED_ALARM',
+    'AC_ON', 'HVAC_AUTO', 'HVAC_ECO', 'FAN', 'RECIRC', 'DEFROST_FRONT', 'DEFROST_REAR', 'SEAT_HEAT_LEFT', 'SEAT_HEAT_RIGHT',
+    'STEERING_HEAT', 'BATTERY_HEAT', 'FRONT_DOOR', 'LOCKED', 'BRIGHTNESS', 'NIGHT', 'DRIVE_MINUTES', 'PLUGGED', 'CHARGE_DC',
+    'WIFI_ON', 'BT_ON', 'HOTSPOT_ON'];
+  /** Ce que la voiture lit (InfoIcons.readable) : clim, ESC/somnolence, luminosité, chauffages, portes. */
+  function clInfoChoices() {
+    const k = caps(), CLIM = ['HVAC_ON', 'AC_ON', 'HVAC_AUTO', 'HVAC_ECO', 'HVAC_TEMP', 'FAN', 'RECIRC', 'DEFROST_FRONT', 'DEFROST_REAR'];
+    return CL_INFOS.filter((i) => !(CLIM.includes(i) && !k.clim) && !(['ESC', 'DROWSINESS'].includes(i) && !k.esc) && !(i === 'BRIGHTNESS' && !k.bri) &&
+      !(i === 'BATTERY_HEAT' && !k.batHeat) && !(i === 'FRONT_DOOR' && !k.doorSensor) && !(['SEAT_HEAT_LEFT', 'SEAT_HEAT_RIGHT', 'STEERING_HEAT'].includes(i) && !k.heat));
+  }
+  /** Nom (AndroidRuleWords.signalRes) et valeur (BubbleInfo.format) des signaux venus des automatisations. */
+  const clOnOff = (v) => [S(v ? 'rule_on' : 'rule_off'), null];
+  const CL_SIG = {
+    HVAC_TEMP: ['rule_key_hvac_temp', (c) => [c.clim.temp.toLocaleString(clLoc()), '°C']],
+    REGEN: ['rule_key_regen', (c) => [regenName(c.regen), null]],
+    VOLUME: ['rule_sig_volume', (c) => [String(c.volume), null]],
+    CHARGE_LIMIT: ['rule_sig_charge_limit', (c) => [String(c.chargeLimit), '%']],
+    READY: ['rule_sig_ready', (c) => clOnOff(c.ready)],
+    GEAR: ['rule_sig_gear', (c) => [c.inPark && !c.speed ? 'P' : 'D', null]],
+    CHARGING: ['rule_sig_charging', (c) => clOnOff(!!c.charge && !c.charge.done)],
+    HVAC_ON: ['rule_sig_hvac', (c) => clOnOff(c.clim.power)],
+    ONE_PEDAL: ['rule_sig_one_pedal', (c) => clOnOff(c.regen === 'ONE_PEDAL')],
+    ENERGY_SAVING: ['rule_sig_energy_saving', (c) => clOnOff(c.energy)],
+    AEB: ['rule_sig_aeb', (c) => clOnOff(c.aebOn)],
+    TSR: ['rule_sig_tsr', (c) => clOnOff(c.tsr)],
+    ESC: ['rule_sig_esc', (c) => clOnOff(c.esc)],
+    DROWSINESS: ['rule_sig_drowsiness', (c) => clOnOff(c.dms)],
+    OVERSPEED_ALARM: ['rule_sig_overspeed', (c) => clOnOff(c.overspeed)],
+    AC_ON: ['rule_key_ac', (c) => clOnOff(c.clim.ac)],
+    HVAC_AUTO: ['rule_key_hvac_auto', (c) => clOnOff(c.clim.auto)],
+    HVAC_ECO: ['rule_sig_hvac_eco', (c) => clOnOff(c.clim.eco)],
+    FAN: ['rule_key_hvac_fan', (c) => [String(c.clim.fan), null]],
+    RECIRC: ['rule_key_recirc', (c) => [S(['rule_recirc_inner', 'rule_recirc_outside', 'rule_recirc_auto'][c.clim.loop] || 'rule_recirc_auto'), null]],
+    DEFROST_FRONT: ['rule_key_defrost_front', (c) => clOnOff(c.clim.defF)],
+    DEFROST_REAR: ['rule_key_defrost_rear', (c) => clOnOff(c.clim.defR)],
+    SEAT_HEAT_LEFT: ['rule_key_seat_left', (c) => [String(c.seatL), null]],
+    SEAT_HEAT_RIGHT: ['rule_key_seat_right', (c) => [String(c.seatR), null]],
+    STEERING_HEAT: ['rule_key_steering', (c) => clOnOff(c.steering)],
+    BATTERY_HEAT: ['rule_key_battery_heat', (c) => clOnOff(c.batHeat)],
+    FRONT_DOOR: ['rule_sig_front_door', (c) => clOnOff(c.doors.L)],
+    LOCKED: ['rule_sig_locked', (c) => clOnOff(c.locked)],
+    BRIGHTNESS: ['rule_sig_brightness', (c) => [String(c.brightness), '%']],
+    NIGHT: ['rule_sig_night', (c) => clOnOff(c.lights)],
+    DRIVE_MINUTES: ['rule_sig_drive_minutes', (c) => [c.ready ? '12' : '0', 'min']],
+    PLUGGED: ['rule_sig_plugged', (c) => clOnOff(!!c.charge)],
+    CHARGE_DC: ['rule_sig_charge_dc', (c) => clOnOff(!!c.charge && c.charge.type === 'DC')],
+    WIFI_ON: ['rule_sig_wifi_on', () => clOnOff(true)],
+    BT_ON: ['rule_sig_bt_on', () => clOnOff(true)],
+    HOTSPOT_ON: ['rule_sig_hotspot', () => clOnOff(false)],
+  };
   const clInfoName = (i) => S({ PROFILE: 'rule_sig_profile', DRIVE_MODE: 'rule_sig_drive_mode', TRIP_AVERAGE: 'cluster_info_trip_average', TRIP_REGEN: 'cluster_info_trip_regen',
     TRIP_DISTANCE: 'cluster_info_trip_distance', TRIP_ENERGY: 'cluster_info_trip_energy', POWER: 'cluster_info_power', SOC: 'rule_sig_soc', RANGE: 'rule_sig_range',
-    OUTSIDE_TEMP: 'rule_sig_outside_temp', TIME: 'floating_info_time' }[i]);
+    OUTSIDE_TEMP: 'rule_sig_outside_temp', SPEED: 'rule_sig_speed', TIME: 'floating_info_time' }[i] || CL_SIG[i]?.[0]);
   /** Affichages proposés (ClusterInfo.styles) : pastille, valeur, icône pour le profil et le mode ; valeur, libellé, icône sinon. */
   const clPillOk = (i) => i === 'PROFILE' || i === 'DRIVE_MODE';
   const clInfoStyles = (i) => (clPillOk(i) ? ['pill', 'value', 'icon'] : ['value', 'label', 'icon']);
+  const CL_DIST_INFOS = ['TRIP_AVERAGE', 'TRIP_DISTANCE', 'SPEED', 'RANGE'];
+  const clBlockMiles = (b, general) => b.distance ? b.distance === 'mi' : general;
+  function clBlockUnits(info, miles) {
+    if (info === 'TRIP_AVERAGE') {
+      const unit = miles ? 'mi' : 'km';
+      return [['wh', 'Wh/' + unit], ['kwh', 'kWh/100 ' + unit], ['km', unit + '/kWh']];
+    }
+    if (info === 'TRIP_REGEN' || info === 'TRIP_ENERGY') return [['kwh', 'kWh'], ['wh', 'Wh']];
+    if (info === 'POWER') return [['kw', 'kW'], ['hp', S('cluster_unit_hp')]];
+    return [];
+  }
+  function clTidySlots(slots) {
+    slots.forEach((b, i) => { if (b?.wide && (i % 2 === 1 || slots[i + 1])) b.wide = false; });
+  }
   /** Style d'une case : le sien s'il est permis, sinon la pastille ou « libellé + valeur » (ClusterInfo.style). */
   const clStyleOf = (b) => (b.style && clInfoStyles(b.info).includes(b.style) ? b.style : clPillOk(b.info) ? 'pill' : 'label');
   /** Pictogrammes des cases (InfoIcons.of), tracés recopiés des drawables ic_cat_* / ic_info_* (24 × 24, trait de 2). */
@@ -6750,13 +6948,14 @@
     TIME: 'M3,12a9,9 0,1 0,18 0a9,9 0,0 0,-18 0 M12,7v5l3,3'
   };
   CL_INFO_ICON.RANGE = CL_INFO_ICON.SOC;
+  CL_INFO_ICON.SPEED = 'M4,17a8,8 0,1 1,16 0 M12,14l4,-4 M12,17m-1,0a1,1 0,1 0,2 0a1,1 0,1 0,-2 0';
   /** La disposition d'un profil, ou celle d'avant : pastille en Info 1, moyenne et récupération en bas. */
   function clLayoutOf(cfg) {
     const c = cfg || state.settings;
     if (c.clusterLayout) return c.clusterLayout;
     const pill = c.clusterPill || 'profile';
     return { gauge: 'middle', slots: [pill === 'none' ? null : { info: pill === 'mode' ? 'DRIVE_MODE' : 'PROFILE', style: 'pill' }, null,
-      { info: 'TRIP_AVERAGE', style: 'label', unit: c.clusterAvg || null }, { info: 'TRIP_REGEN', style: 'label' }] };
+      { info: 'TRIP_AVERAGE', style: 'label', unit: c.clusterAvg || c.clusterUnit || 'wh' }, { info: 'TRIP_REGEN', style: 'label', unit: 'wh' }] };
   }
   /** Places (ClusterLayouts.geometry) : rangées de 40 px ; une rangée vide disparaît, sauf en édition. */
   function clGeo(L, edit) {
@@ -6767,34 +6966,38 @@
     rows.forEach((x) => {
       if (x === 'G') { out.gauge = { y, h: gh }; y += gh; return; }
       const base = x === 'A' ? 0 : 2;
-      out.cells.push({ slot: base, x: 4, y, w: 124, h: 40 }, { slot: base + 1, x: 132, y, w: 124, h: 40 });
+      if (sl[base]?.wide && !sl[base + 1]) out.cells.push({ slot: base, x: 4, y, w: 252, h: 40 });
+      else out.cells.push({ slot: base, x: 4, y, w: 124, h: 40 }, { slot: base + 1, x: 132, y, w: 124, h: 40 });
       y += 40;
     });
     return out;
   }
   /** Ce que chaque case affiche, prêt à dessiner. */
   function clBlocks(L, d) {
-    const c = car(), hpU = S('cluster_unit_hp'), dist = (km) => [cl1(km / (d.mi ? MI_KM : 1)), d.mi ? 'mi' : 'km'];
+    const c = car(), hpU = S('cluster_unit_hp');
     return (L.slots || []).map((b) => {
       if (!b) return null;
-      const st = clStyleOf(b);
+      const st = clStyleOf(b), mi = clBlockMiles(b, d.mi), factor = mi ? MI_KM : 1, dist = mi ? 'mi' : 'km';
+      const energy = (kwh, sign) => kwh == null ? ['–', null] : b.unit === 'wh' ? [sign + Math.round(kwh * 1000), 'Wh'] : [sign + kwh.toLocaleString(clLoc(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }), 'kWh'];
       const label = st === 'label' ? ({ TRIP_AVERAGE: S('cluster_trip_avg'), TRIP_REGEN: S('cluster_regen') }[b.info] || clInfoName(b.info)) : null;
       let value = ['–', null], col = null, pill = null;
       switch (b.info) {
-        case 'PROFILE': { const p = activeProfile(), n = p ? p.name.trim() : '–'; value = [n, null];
+        case 'PROFILE': { const p = d.profile ?? activeProfile(), n = p ? p.name.trim() : '–'; value = [n, null];
           if (st === 'pill') pill = { text: n.toLocaleUpperCase(appLang()), mode: p && catOn(p, 'drive') ? p.driveMode : c.driveMode }; break; }
         case 'DRIVE_MODE': value = [DRIVE_LABEL[c.driveMode] || c.driveMode, null]; if (st === 'pill') pill = { text: value[0].toUpperCase(), mode: c.driveMode }; break;
-        case 'TRIP_AVERAGE': value = clAvg(d.avgWh, b.unit || d.avgUnit, d.mi); break;
-        case 'TRIP_REGEN': value = d.regenWh != null ? ['+' + Math.round(d.regenWh), 'Wh'] : ['–', null]; col = CL.accent; break;
-        case 'TRIP_DISTANCE': value = d.km != null ? dist(d.km) : ['–', null]; break;
-        case 'TRIP_ENERGY': value = d.kwh != null ? [d.kwh.toLocaleString(clLoc(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }), 'kWh'] : ['–', null]; break;
-        case 'POWER': value = d.kw == null ? ['–', null] : b.unit === 'hp' ? [String(Math.round(Math.abs(d.kw) * CH_KW)), hpU] : [clKw(d.kw), 'kW']; break;
+        case 'TRIP_AVERAGE': value = clAvg(d.avgWh, b.unit || 'wh', mi); break;
+        case 'TRIP_REGEN': value = energy(d.regenWh == null ? null : d.regenWh / 1000, '+'); col = L.regenColor || CL.accent; break;
+        case 'TRIP_DISTANCE': if (d.km != null) value = [cl1(d.km / factor), dist]; break;
+        case 'TRIP_ENERGY': value = energy(d.kwh, ''); break;
+        case 'POWER': value = d.kw == null ? ['–', null] : b.unit === 'hp' ? [String(Math.round(d.kw * CH_KW)), hpU] : [clKw(d.kw), 'kW']; break;
         case 'SOC': value = [String(Math.round(c.soc)), '%']; break;
-        case 'RANGE': value = [String(Math.round(rangeKm(c.soc) / (d.mi ? MI_KM : 1))), d.mi ? 'mi' : 'km']; break;
+        case 'RANGE': value = [String(Math.round(rangeKm(c.soc) / factor)), dist]; break;
+        case 'SPEED': value = [String(Math.round((d.kmh ?? c.speed) / factor)), mi ? 'mph' : 'km/h']; break;
         case 'OUTSIDE_TEMP': value = [String(Math.round(c.outside)), '°C']; break;
         case 'TIME': value = [nowHM(), null]; break;
+        default: if (CL_SIG[b.info]) value = CL_SIG[b.info][1](c);
       }
-      return { style: st, info: b.info, label, value, col, pill };
+      return { style: st, info: b.info, size: b.size, label, value, col, pill };
     });
   }
   function clBlockSvg(b, c) {
@@ -6805,25 +7008,26 @@
       return '<rect x="' + x0.toFixed(1) + '" y="' + (mid - 11) + '" width="' + w.toFixed(1) + '" height="22" rx="11" fill="' + col + '" fill-opacity=".25"/><circle cx="' + (x0 + 12).toFixed(1) + '" cy="' + mid + '" r="3.5" fill="' + col + '"/>' +
         '<text x="' + (x0 + 21).toFixed(1) + '" y="' + (mid + 4.5) + '" font-size="11" font-weight="500" letter-spacing="1" fill="' + col + '">' + esc(name) + '</text>';
     }
-    // Taille M (ClusterGaugeView.tailles) : valeur 16, unité 11, libellé 11 ; tout est centré dans la case.
-    const val = (x, y, anchor) => '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="' + anchor + '" font-size="16" font-weight="500" fill="' + (b.col || CL.text) + '">' + esc(b.value[0]) +
-      (b.value[1] ? '<tspan font-size="11" font-weight="400" fill="' + CL.text2 + '"> ' + esc(b.value[1]) + '</tspan>' : '') + '</text>';
-    if (b.style === 'label') return clTxt(b.label.toLocaleUpperCase(appLang()), cx, c.y + 15, 11, CL.text2, null, 'middle', 0.5) + val(cx, c.y + c.h - 5, 'middle');
+    const [valueSize, unitSize, labelSize] = b.size === 'S' ? [13, 10, 10] : b.size === 'L' ? [21, 12, 11] : [16, 11, 11];
+    const val = (x, y, anchor) => '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" text-anchor="' + anchor + '" font-size="' + valueSize + '" font-weight="500" fill="' + (b.col || CL.text) + '">' + esc(b.value[0]) +
+      (b.value[1] ? '<tspan font-size="' + unitSize + '" font-weight="400" fill="' + CL.text2 + '"> ' + esc(b.value[1]) + '</tspan>' : '') + '</text>';
+    if (b.style === 'label') return clTxt(b.label.toLocaleUpperCase(appLang()), cx, c.y + 15, labelSize, CL.text2, null, 'middle', 0.5) + val(cx, c.y + c.h - 5, 'middle');
     if (b.style === 'icon') {
       // L'icône (côté = valeur + 3) à gauche de la valeur, l'ensemble centré.
-      const side = 19, l = b.value[0].length * 9 + (b.value[1] ? (b.value[1].length + 1) * 6 : 0), total = side + 6 + l, x0 = cx - total / 2;
+      const side = valueSize + 3, l = b.value[0].length * valueSize * .55 + (b.value[1] ? (b.value[1].length + 1) * unitSize * .55 : 0), total = side + 6 + l, x0 = cx - total / 2;
       const path = CL_INFO_ICON[b.info] || CL_INFO_ICON.TIME;
       return '<g transform="translate(' + x0.toFixed(1) + ' ' + (mid - side / 2).toFixed(1) + ') scale(' + (side / 24).toFixed(3) + ')"><path d="' + path + '" fill="none" stroke="' + CL.text2 + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></g>' +
-        val(x0 + side + 6, mid + 5.8, 'start');
+        val(x0 + side + 6, mid + valueSize * .36, 'start');
     }
-    return val(cx, mid + 5.8, 'middle');
+    return val(cx, mid + valueSize * .36, 'middle');
   }
   /** La jauge, réduite dans sa zone (sans son pied), puis les cases ; en édition, les cases libres et la sélection. */
   function clLayoutSvg(g) {
     const L = g.layout, ed = g.edit, geo = clGeo(L, !!ed), z = geo.gauge;
     const [top, bot] = g.style === 'discreet' ? [54, 174] : g.mod === 'power' ? [6, 194] : [4, 200];
     const thicknessFactor = L.thickness === 'thin' ? 0.6 : L.thickness === 'thick' ? 1.45 : 1;
-    const inner = Object.assign({}, g, { noFoot: true, thicknessFactor, averageCursor: L.averageCursor ?? (g.style === 'discreet') });
+    const inner = { ...g, noFoot: true, thicknessFactor, averageCursor: L.averageCursor ?? (g.style === 'discreet'),
+      conso: L.consumptionColor || CL.warn, regen: L.regenColor || CL.accent, discreteConso: L.consumptionColor || CL.clair };
     const gauge = g.style === 'discreet' ? (g.mod === 'power' ? clDiscreetPower(inner) : clDiscreetCons(inner)) : (g.mod === 'power' ? clPower(inner) : clConsumption(inner));
     const e = Math.min(z.h / (bot - top), 1), tx = (260 - 260 * e) / 2, ty = z.y + (z.h - (bot - top) * e) / 2 - top * e;
     let h = '<defs><clipPath id="' + g.id + 'Z"><rect x="0" y="' + z.y + '" width="260" height="' + z.h + '"/></clipPath></defs><g clip-path="url(#' + g.id + 'Z)"><g transform="translate(' +
@@ -6833,9 +7037,13 @@
       if (b) h += clBlockSvg(b, c);
       else if (ed) h += '<rect x="' + (c.x + 1) + '" y="' + (c.y + 3) + '" width="' + (c.w - 2) + '" height="' + (c.h - 6) + '" rx="8" fill="none" stroke="' + CL.cran + '" stroke-dasharray="4 3"/>' +
         clTxt('+ ' + S('cluster_layout_slot_fmt', c.slot + 1), c.x + c.w / 2, c.y + 24, 11, CL.discret);
-      if (ed) h += '<rect class="cll-hit" x="' + c.x + '" y="' + c.y + '" width="' + c.w + '" height="' + c.h + '" rx="8" fill="transparent" stroke="' + (ed.sel === c.slot ? CL.accent : 'none') + '" stroke-width="2" data-a="clLaySel" data-v="' + c.slot + '"/>';
+      if (ed) h += '<rect class="cll-hit" x="' + c.x + '" y="' + c.y + '" width="' + c.w + '" height="' + c.h + '" rx="8" fill="transparent" stroke="' + (ed.drop === c.slot ? CL.warn : ed.sel === c.slot ? CL.accent : 'none') + '" stroke-width="2" data-a="clLaySel" data-v="' + c.slot + '"/>';
     });
     if (ed) h += '<rect class="cll-hit" x="2" y="' + (z.y + 2) + '" width="256" height="' + (z.h - 4) + '" rx="10" fill="transparent" stroke="' + (ed.sel === 'g' ? CL.accent : 'none') + '" stroke-width="2" data-a="clLaySel" data-v="g"/>';
+    if (ed && typeof ed.drop === 'string') {
+      const box = clGeo({ ...L, gauge: ed.drop }, true).gauge;
+      h += '<rect x="2" y="' + (box.y + 2) + '" width="256" height="' + (box.h - 4) + '" rx="10" fill="none" stroke="' + CL.warn + '" stroke-width="2" stroke-dasharray="5 4" pointer-events="none"/>';
+    }
     return h;
   }
   /** La disposition en cours d'édition (fenêtre « Personnalisation avancée »), pour son aperçu. */
@@ -6850,6 +7058,7 @@
   let prevN = 0, prevTimer = null;
   /** Réglages montrés dans la carte « Écran conducteur » (le profil réglé) : l'aperçu les suit. */
   let clPrevCfg = null;
+  let clPrevProfile = null;
   function clPreviewSvg(svg) {
     const s = clPrevCfg || state.settings, mod = svg.getAttribute('data-clprev'), t = ((performance.now() - prevT0) / 1000) % 24;
     let i = 0;
@@ -6862,8 +7071,8 @@
     // Dans la personnalisation avancée : la disposition en cours d'édition, ses cases libres et la sélection.
     const draft = svg.hasAttribute('data-cllay') && clLayDraft, L = draft ? draft.L : clLayoutOf(s), avgUnit = s.clusterAvg || s.clusterUnit;
     svg.innerHTML = clusterSvg(Object.assign({ id: svg.id + 'c', mod, style: draft ? draft.style : s.clusterStyle, unit: s.clusterUnit, avgUnit,
-      st, part: st.fraction, value: st.value, kw, kmh, avgWh: 168, regenWh: 180, mi, full, preclim: draft ? null : pcClusterInfo(), edit: draft ? { sel: draft.sel } : null },
-      clLayoutArgs(L, { avgWh: 168, regenWh: 180, km: 12.4, kwh: 2.1, kw, mi, avgUnit })));
+      st, part: st.fraction, value: st.value, kw, kmh, avgWh: 168, regenWh: 180, mi, full, preclim: draft ? null : pcClusterInfo(), edit: draft },
+      clLayoutArgs(L, { avgWh: 168, regenWh: 180, km: 12.4, kwh: 2.1, kw, kmh, mi, profile: clPrevProfile })));
     if (!prevTimer) prevTimer = setInterval(() => instances.forEach((x) => x.app.querySelectorAll('svg[data-clprev]').forEach(clPreviewSvg)), 250);
   }
 
@@ -6902,7 +7111,7 @@
         st: target, part: shown.part, value: shown.value, kw: smoothed, kmh: speed,
         avgWh, regenWh: trip.regenKwh * 1000, charge: clChargeInfo('clw'),
         mi, full: clPowerFull(), preclim: pcClusterInfo() },
-        clLayoutArgs(clLayoutOf(s), { avgWh, regenWh: trip.regenKwh * 1000, km: trip.km, kwh: trip.kwh, kw: smoothed, mi, avgUnit })));
+        clLayoutArgs(clLayoutOf(s), { avgWh, regenWh: trip.regenKwh * 1000, km: trip.km, kwh: trip.kwh, kw: smoothed, kmh: speed, mi })));
     }
 
     /** Nouveau relevé : la jauge et le chiffre partent de ce qui est à l'écran (ClusterGaugeView.montrer). */
