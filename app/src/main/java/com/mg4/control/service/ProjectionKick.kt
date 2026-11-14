@@ -15,7 +15,7 @@ import com.mg4.control.model.ProjectionKind
 import com.mg4.control.model.UsbPhoneKind
 import com.mg4.control.model.UsbPhoneRule
 import com.mg4.control.model.UsbSeen
-import java.util.concurrent.atomic.AtomicBoolean
+import com.mg4.control.util.GarageMode
 
 /**
  * Relancer la détection du téléphone branché (issue #251, Réglages › Avancé, désactivé par
@@ -27,6 +27,11 @@ import java.util.concurrent.atomic.AtomicBoolean
  * raccourci « Android Auto / CarPlay » sans session (toujours). Rien si une projection est ouverte.
  * Deux essais au plus : l'avis seul, puis réinitialisation USB + avis ; jamais de boucle.
  * Au démarrage et au réveil, le téléphone Android est laissé à AA Kick s'il est installé.
+ *
+ * Une relance à la fois : un appui pendant une relance automatique se raccroche à elle et en
+ * reçoit le résultat. Le Mode Garage arrête tout ; une relance automatique s'arrête aussi si
+ * l'option est coupée ou le service arrêté entre-temps (vérifié au départ et avant la
+ * réinitialisation, qui n'a lieu que si AllGo confirme qu'aucune session n'est ouverte).
  * Journal [TAG].
  */
 object ProjectionKick {
@@ -59,10 +64,19 @@ object ProjectionKick {
         object Unreachable : Outcome()
         /** Téléphone Android laissé à AA Kick. */
         object LeftToAaKick : Outcome()
+        /** Arrêtée en route : Mode Garage ([garage]), ou option coupée / service arrêté. */
+        data class Cancelled(val garage: Boolean) : Outcome()
     }
 
     private val fil: Handler by lazy { Handler(HandlerThread("mg4-projkick").also { it.start() }.looper) }
-    private val enCours = AtomicBoolean(false)
+    /** Marque des vérifications programmées (démarrage, réveil), retirées à l'arrêt du service. */
+    private val PROGRAMMEE = Any()
+    private val verrou = Any()
+    /** Relance en cours (sous [verrou]) et ceux qui attendent son résultat, avec leur origine. */
+    private var enCours: Origin? = null
+    private val suites = mutableListOf<Pair<Origin, (Outcome) -> Unit>>()
+    /** Le service tourne : sinon, une relance automatique n'a plus lieu d'être. */
+    @Volatile private var actif = false
     /** `elapsedRealtime − uptimeMillis` au dernier relevé : grandit pendant la veille. */
     @Volatile private var ecartVeille = 0L
     private var ecran: BroadcastReceiver? = null
@@ -78,6 +92,7 @@ object ProjectionKick {
     /** Démarrage du service. L'écoute de l'écran est posée même option coupée : l'option se lit à l'allumage. */
     fun start(ctx: Context) {
         val app = ctx.applicationContext
+        actif = true
         ecartVeille = ecart()
         if (ecran == null) {
             val r = object : BroadcastReceiver() {
@@ -94,12 +109,28 @@ object ProjectionKick {
             return
         }
         AppLogger.i(TAG, "relance USB : démarrage, vérification dans ${DELAI_DEMARRAGE_MS / 1000} s")
-        fil.postDelayed({ launch(app, Origin.BOOT, null) }, DELAI_DEMARRAGE_MS)
+        programmer(app, Origin.BOOT, DELAI_DEMARRAGE_MS)
     }
 
     fun stop(ctx: Context) {
+        actif = false
+        fil.removeCallbacksAndMessages(PROGRAMMEE)
         ecran?.let { r -> runCatching { ctx.applicationContext.unregisterReceiver(r) } }
         ecran = null
+    }
+
+    private fun programmer(app: Context, origin: Origin, delaiMs: Long) {
+        fil.postAtTime({ launch(app, origin, null) }, PROGRAMMEE, SystemClock.uptimeMillis() + delaiMs)
+    }
+
+    /**
+     * `null` si la relance peut (encore) avoir lieu, sinon pourquoi pas. Le Mode Garage arrête tout ;
+     * l'option et le service ne comptent que pour le démarrage et le réveil.
+     */
+    private fun empechement(app: Context, origin: Origin): Outcome.Cancelled? = when {
+        GarageMode.isOn(app) -> Outcome.Cancelled(garage = true)
+        origin != Origin.SHORTCUT && (!isOn(app) || !actif) -> Outcome.Cancelled(garage = false)
+        else -> null
     }
 
     private fun ecart() = SystemClock.elapsedRealtime() - SystemClock.uptimeMillis()
@@ -114,7 +145,7 @@ object ProjectionKick {
             return
         }
         AppLogger.i(TAG, "relance USB : réveil après ${(maintenant - avant) / 1000} s de veille, vérification dans ${DELAI_REVEIL_MS / 1000} s")
-        fil.postDelayed({ launch(app, Origin.WAKE, null) }, DELAI_REVEIL_MS)
+        programmer(app, Origin.WAKE, DELAI_REVEIL_MS)
     }
 
     /** Un téléphone (ou un Android déjà basculé) est-il sur l'USB ? Lecture seule, rapide. */
@@ -123,12 +154,21 @@ object ProjectionKick {
         return UsbPhoneRule.pick(vus) != null || UsbPhoneRule.anyAoap(vus)
     }
 
-    /** Lance une relance sur son fil ; `false` si une autre est en cours. [then] est appelé sur ce fil. */
+    /**
+     * Lance une relance sur son fil. Une autre en cours : on s'y raccroche et [then] reçoit son
+     * résultat (`false` renvoyé). [then] est appelé sur ce fil.
+     */
     fun launch(ctx: Context, origin: Origin, then: ((Outcome) -> Unit)?): Boolean {
         val app = ctx.applicationContext
-        if (!enCours.compareAndSet(false, true)) {
-            AppLogger.i(TAG, "relance USB (${origin.label}) : une relance est déjà en cours")
-            return false
+        synchronized(verrou) {
+            enCours?.let { courante ->
+                AppLogger.i(TAG, "relance USB (${origin.label}) : relance du ${courante.label} déjà en cours" +
+                    if (then != null) ", on attend son résultat" else "")
+                then?.let { suites += origin to it }
+                return false
+            }
+            enCours = origin
+            then?.let { suites += origin to it }
         }
         fil.post {
             val issue = try {
@@ -136,15 +176,32 @@ object ProjectionKick {
             } catch (e: Exception) {
                 AppLogger.w(TAG, "relance USB : ${e.javaClass.simpleName} ${e.message}")
                 Outcome.NotRecognised
-            } finally {
-                enCours.set(false)
             }
-            then?.invoke(issue)
+            val aPrevenir = synchronized(verrou) {
+                enCours = null
+                suites.toList().also { suites.clear() }
+            }
+            aPrevenir.forEach { (sonOrigine, suite) ->
+                // Un appui raccroché à une relance automatique qui l'a laissé à AA Kick ou s'est
+                // arrêtée (option coupée, service arrêté) : ces raisons ne valent pas pour lui.
+                val pasPourLui = sonOrigine == Origin.SHORTCUT && origin != Origin.SHORTCUT &&
+                    (issue == Outcome.LeftToAaKick || issue == Outcome.Cancelled(garage = false))
+                if (pasPourLui) launch(app, sonOrigine, suite)
+                else runCatching { suite(issue) }
+                    .onFailure { AppLogger.w(TAG, "relance USB : suite en échec ${it.javaClass.simpleName} ${it.message}") }
+            }
         }
         return true
     }
 
+    private fun arretee(app: Context, origin: Origin, etape: String): Outcome.Cancelled? =
+        empechement(app, origin)?.also {
+            AppLogger.i(TAG, "relance USB (${origin.label}) : arrêtée $etape — " +
+                if (it.garage) "Mode Garage" else "option coupée ou service arrêté")
+        }
+
     private fun relancer(app: Context, origin: Origin): Outcome {
+        arretee(app, origin, "avant de commencer")?.let { return it }
         val lecture = ProjectionReader.appareilActif(app) as? ProjectionReader.Lecture.Lue ?: run {
             AppLogger.w(TAG, "relance USB (${origin.label}) : AllGo injoignable — rien")
             return Outcome.Unreachable
@@ -180,6 +237,19 @@ object ProjectionKick {
         val tel = basculeMaintenant ?: choisir(encore) ?: run {
             AppLogger.i(TAG, "relance USB : le téléphone n'est plus sur l'USB")
             return Outcome.NoPhone
+        }
+        // Juste avant la réinitialisation : toujours voulue, et AllGo confirme qu'aucune session
+        // ne s'est ouverte depuis la dernière lecture. Muet : on ne réinitialise rien à l'aveugle.
+        arretee(app, origin, "avant la réinitialisation")?.let { return it }
+        when (val l = ProjectionReader.appareilActif(app)) {
+            ProjectionReader.Lecture.Injoignable -> {
+                AppLogger.w(TAG, "relance USB : AllGo injoignable avant la réinitialisation — arrêt")
+                return Outcome.Unreachable
+            }
+            is ProjectionReader.Lecture.Lue -> l.appareil?.let {
+                AppLogger.i(TAG, "relance USB : session ${it.kind?.label ?: "type ${it.type}"} ouverte juste avant la réinitialisation")
+                return Outcome.Session(it.kind)
+            }
         }
         AppLogger.i(TAG, "relance USB : essai 2 — réinitialisation USB puis nouvel avis")
         val reinit = UsbPhoneKick.reset(app, tel.second)
