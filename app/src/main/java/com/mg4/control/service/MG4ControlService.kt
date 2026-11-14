@@ -197,6 +197,8 @@ class MG4ControlService : Service() {
         // Issue #208 : relevé de l'A/C, seulement si l'option est active.
         com.mg4.control.automation.AcKeepOff.demarrer(this)
         AppLogger.i(TAG, "onCreate")
+        // Issue #251 : relance de la détection du téléphone branché (démarrage et réveil), si l'option est active.
+        ProjectionKick.start(this)
         // Relu ici aussi : démarré avant le déverrouillage, MG4App a pu trouver le réglage illisible.
         FirmwareInfo.initWithContext(applicationContext)
         // AVANT startForeground : la notification annonce le Mode Garage, elle doit donc être
@@ -344,6 +346,7 @@ class MG4ControlService : Service() {
         skinChangeReceiver = null
         externalApiReceiver?.let { unregisterReceiver(it) } // issue #79
         externalApiReceiver = null
+        ProjectionKick.stop(this)            // issue #251
         ClusterModuleOverlay.stop()
     }
 

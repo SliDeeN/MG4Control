@@ -290,6 +290,9 @@
     <string name="settings_keep_ac_title">Klima · A/C</string>
     <string name="settings_keep_ac">Hold A/C av når temperaturen endres</string>
     <string name="settings_keep_ac_desc">Bilen slår A/C på igjen hver gang innstilt temperatur endres. Hvis den var av, slår MG4Control den av igjen: fra MG4Control, og på prøve fra bilens skjerm. Aldri i AUTO eller med frontavdugging på.</string>
+    <string name="settings_projection_title">Android Auto · CarPlay</string>
+    <string name="settings_projection_kick">Oppdag telefon tilkoblet med kabel på nytt</string>
+    <string name="settings_projection_kick_desc">Ved oppstart og når skjermen våkner: hvis telefonen allerede var tilkoblet med kabel, melder MG4Control den til bilen på nytt slik at Android Auto eller CarPlay starter uten å koble til igjen. Ingenting skjer hvis projeksjonen allerede er åpen.</string>
     <string name="settings_ready_default">Gå tilbake til standardprofilen hver gang bilen går inn i READY</string>
     <string name="settings_ready_default_desc">Som standard forblir en profil valgt for hånd på plass til bilen slås av. Med dette alternativet glemmes det hver gang bilen går inn i READY, også etter et kort stopp, og standardprofilen brukes igjen. Hvis en profil knyttet til utetemperatur eller til en Bluetooth-telefon skulle gjelde, beholder den prioritet, som ved oppstart.</string>
     <string name="notif_service_active">Tjenesten kjører</string>
@@ -1105,6 +1108,8 @@
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
     <string name="projection_no_phone">Ingen telefon tilkoblet (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">Kunne ikke åpne %1$s</string>
+    <string name="projection_redetect">Telefon tilkoblet: prøver å oppdage den på nytt …</string>
+    <string name="projection_redetect_failed">Telefonen ble ikke gjenkjent: koble kabelen fra og til igjen</string>
     <string name="shortcuts_cat_preclim">Bilholder</string>
     <string name="shortcuts_cat_floating">Flytende knapper</string>
     <string name="floating_switch_title">Vis flytende knapper</string>

@@ -288,6 +288,9 @@
     <string name="settings_keep_ac_title">Klimatyzacja · A/C</string>
     <string name="settings_keep_ac">Nie włączaj A/C przy zmianie temperatury</string>
     <string name="settings_keep_ac_desc">Samochód włącza A/C ponownie przy każdej zmianie temperatury zadanej. Jeśli było wyłączone, MG4Control wyłącza je znowu: z MG4Control oraz, testowo, z ekranu samochodu. Nigdy w AUTO ani przy włączonym odmrażaniu przedniej szyby.</string>
+    <string name="settings_projection_title">Android Auto · CarPlay</string>
+    <string name="settings_projection_kick">Ponownie wykrywaj telefon podłączony kablem</string>
+    <string name="settings_projection_kick_desc">Przy uruchomieniu i wybudzeniu ekranu: jeśli telefon był już podłączony kablem, MG4Control ponownie zgłasza go samochodowi, aby Android Auto lub CarPlay uruchomiło się bez ponownego podłączania. Nic się nie dzieje, jeśli projekcja jest już otwarta.</string>
     <string name="settings_ready_default">Wracaj do profilu domyślnego za każdym razem, gdy samochód przechodzi w READY</string>
     <string name="settings_ready_default_desc">Domyślnie profil wybrany ręcznie pozostaje do wyłączenia samochodu. Z tą opcją jest zapominany przy każdym przejściu w READY, także po krótkim postoju, i ponownie stosowany jest profil domyślny. Jeśli ma zadziałać profil powiązany z temperaturą zewnętrzną lub telefonem Bluetooth, ma on pierwszeństwo, tak jak przy uruchomieniu.</string>
     <string name="notif_service_active">Usługa działa</string>
@@ -1104,6 +1107,8 @@
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
     <string name="projection_no_phone">Brak połączonego telefonu (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">Nie udało się otworzyć %1$s</string>
+    <string name="projection_redetect">Telefon podłączony: ponowna próba wykrycia…</string>
+    <string name="projection_redetect_failed">Telefon nie został rozpoznany: odłącz i podłącz ponownie kabel</string>
     <string name="shortcuts_cat_preclim">Opiekun auta</string>
     <string name="shortcuts_cat_floating">Przyciski pływające</string>
     <string name="floating_switch_title">Pokazuj przyciski pływające</string>

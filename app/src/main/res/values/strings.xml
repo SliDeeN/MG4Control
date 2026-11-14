@@ -290,6 +290,9 @@
     <string name="settings_keep_ac_title">Climatisation · A/C</string>
     <string name="settings_keep_ac">Garder l’A/C coupé quand la température change</string>
     <string name="settings_keep_ac_desc">La voiture rallume l’A/C dès qu’on change la consigne. S’il était coupé, MG4Control le recoupe : depuis MG4Control, et à l’essai depuis l’écran de la voiture. Jamais en AUTO ni avec le dégivrage avant.</string>
+    <string name="settings_projection_title">Android Auto · CarPlay</string>
+    <string name="settings_projection_kick">Relancer la détection du téléphone branché</string>
+    <string name="settings_projection_kick_desc">Au démarrage et au réveil de l’écran : si le téléphone était déjà branché par câble, MG4Control le signale de nouveau à la voiture pour qu’Android Auto ou CarPlay démarre sans rebrancher. Rien ne se passe si une projection est déjà ouverte.</string>
     <string name="settings_ready_default">Revenir au profil par défaut à chaque passage en READY</string>
     <string name="settings_ready_default_desc">Par défaut, un profil choisi à la main reste en place jusqu\'à l\'extinction de la voiture. Avec cette option, il est oublié à chaque passage en READY, y compris après un arrêt court, et le profil par défaut est réappliqué. Si un profil lié à la température extérieure ou à un téléphone Bluetooth doit s\'appliquer, il garde la priorité, comme au démarrage.</string>
     <string name="notif_service_active">Service actif</string>
@@ -1122,6 +1125,8 @@
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
     <string name="projection_no_phone">Aucun téléphone connecté (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">Impossible d’ouvrir %1$s</string>
+    <string name="projection_redetect">Téléphone branché : nouvelle tentative de détection…</string>
+    <string name="projection_redetect_failed">Téléphone non reconnu : débranchez puis rebranchez le câble</string>
     <string name="shortcuts_cat_preclim">Garde-voiture</string>
     <string name="shortcuts_cat_floating">Boutons flottants</string>
     <string name="floating_switch_title">Afficher les boutons flottants</string>

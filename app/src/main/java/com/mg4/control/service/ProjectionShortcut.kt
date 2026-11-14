@@ -23,6 +23,9 @@ import com.mg4.control.util.LocaleHelper
  * L'écran d'avant est la tâche la plus récente après la projection, dans la liste d'Android :
  * notre uid système voit toutes les tâches et peut les ramener devant. Aucune : l'accueil.
  *
+ * Aucune session mais un téléphone sur l'USB : sa détection est relancée ([ProjectionKick], issue
+ * #251), puis la projection s'ouvre si elle arrive.
+ *
  * Tout se passe sur un fil à lui : la première liaison à AllGo attend sa réponse. Journal [TAG].
  */
 object ProjectionShortcut {
@@ -56,8 +59,28 @@ object ProjectionShortcut {
         when (etape) {
             is ProjectionStep.Open -> ouvrir(app, etape.kind)
             ProjectionStep.Return -> revenir(app, taches)
-            ProjectionStep.NoPhone ->
-                annoncer(app, LocaleHelper.applyLocale(app).getString(R.string.projection_no_phone))
+            ProjectionStep.NoPhone -> relancerOuAnnoncer(app, lecture)
+        }
+    }
+
+    /**
+     * Aucune session (issue #251) : un téléphone encore branché a pu être raté au démarrage — on
+     * relance sa détection et on ouvre la projection si elle arrive. Rien sur l'USB : le message
+     * d'avant.
+     */
+    private fun relancerOuAnnoncer(app: Context, lecture: ProjectionReader.Lecture) {
+        val loc = LocaleHelper.applyLocale(app)
+        if (lecture is ProjectionReader.Lecture.Injoignable || !ProjectionKick.phonePlugged(app)) {
+            annoncer(app, loc.getString(R.string.projection_no_phone))
+            return
+        }
+        annoncer(app, loc.getString(R.string.projection_redetect))
+        ProjectionKick.launch(app, ProjectionKick.Origin.SHORTCUT) { issue ->
+            when (issue) {
+                is ProjectionKick.Outcome.Session -> issue.kind?.let { ouvrir(app, it) }
+                ProjectionKick.Outcome.NoPhone -> annoncer(app, loc.getString(R.string.projection_no_phone))
+                else -> annoncer(app, loc.getString(R.string.projection_redetect_failed))
+            }
         }
     }
 

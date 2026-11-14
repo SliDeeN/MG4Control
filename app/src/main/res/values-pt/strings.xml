@@ -288,6 +288,9 @@
     <string name="settings_keep_ac_title">Climatização · A/C</string>
     <string name="settings_keep_ac">Manter o A/C desligado ao mudar a temperatura</string>
     <string name="settings_keep_ac_desc">O carro volta a ligar o A/C quando se muda a temperatura. Se estava desligado, o MG4Control desliga-o de novo: a partir do MG4Control e, em teste, a partir do ecrã do carro. Nunca em AUTO nem com o desembaciamento dianteiro.</string>
+    <string name="settings_projection_title">Android Auto · CarPlay</string>
+    <string name="settings_projection_kick">Voltar a detetar o telemóvel ligado por cabo</string>
+    <string name="settings_projection_kick_desc">No arranque e ao acordar o ecrã: se o telemóvel já estava ligado por cabo, o MG4Control volta a anunciá-lo ao carro para que o Android Auto ou o CarPlay arranque sem voltar a ligá-lo. Nada acontece se a projeção já estiver aberta.</string>
     <string name="settings_ready_default">Voltar ao perfil padrão sempre que o carro passa a READY</string>
     <string name="settings_ready_default_desc">Por predefinição, um perfil escolhido à mão mantém-se até o carro ser desligado. Com esta opção, é esquecido sempre que o carro passa a READY, mesmo após uma paragem curta, e o perfil padrão volta a ser aplicado. Se um perfil ligado à temperatura exterior ou a um telemóvel Bluetooth tiver de ser aplicado, mantém a prioridade, como no arranque.</string>
     <string name="notif_service_active">Serviço ativo</string>
@@ -1104,6 +1107,8 @@
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
     <string name="projection_no_phone">Nenhum telemóvel ligado (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">Não foi possível abrir %1$s</string>
+    <string name="projection_redetect">Telemóvel ligado: nova tentativa de deteção…</string>
+    <string name="projection_redetect_failed">Telemóvel não reconhecido: desligue e volte a ligar o cabo</string>
     <string name="shortcuts_cat_preclim">Guardião do carro</string>
     <string name="shortcuts_cat_floating">Botões flutuantes</string>
     <string name="floating_switch_title">Mostrar os botões flutuantes</string>

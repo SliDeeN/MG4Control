@@ -718,6 +718,15 @@ class SettingsFragment : Fragment() {
             setOnCheckedChangeListener { _, checked -> com.mg4.control.automation.AcKeepOff.setOn(requireContext(), checked) }
         }
 
+        // ── Relancer la détection du téléphone branché (issue #251), désactivé par défaut ──
+        view.findViewById<View>(R.id.card_projection_kick).visibility =
+            if (runCatching { requireContext().packageManager.getPackageInfo("com.allgo.rui", 0) }.isSuccess)
+                View.VISIBLE else View.GONE
+        view.findViewById<Switch>(R.id.switch_projection_kick).apply {
+            isChecked = com.mg4.control.service.ProjectionKick.isOn(requireContext())
+            setOnCheckedChangeListener { _, checked -> com.mg4.control.service.ProjectionKick.setOn(requireContext(), checked) }
+        }
+
         // ── Ce que règle AUTO (issue #160) : coché = la voiture choisit (défaut) ──
         view.findViewById<View>(R.id.card_hvac_auto_scope).visibility =
             if (MG4Hardware.hasClimateControl()) View.VISIBLE else View.GONE

@@ -288,6 +288,9 @@
     <string name="settings_keep_ac_title">Climatización · A/C</string>
     <string name="settings_keep_ac">Mantener el A/C apagado al cambiar la temperatura</string>
     <string name="settings_keep_ac_desc">El coche vuelve a encender el A/C al cambiar la consigna. Si estaba apagado, MG4Control lo vuelve a apagar: desde MG4Control y, a prueba, desde la pantalla del coche. Nunca en AUTO ni con el desempañado delantero.</string>
+    <string name="settings_projection_title">Android Auto · CarPlay</string>
+    <string name="settings_projection_kick">Volver a detectar el teléfono conectado por cable</string>
+    <string name="settings_projection_kick_desc">Al arrancar y al despertar la pantalla: si el teléfono ya estaba conectado por cable, MG4Control se lo vuelve a anunciar al coche para que Android Auto o CarPlay arranque sin volver a enchufarlo. No hace nada si la proyección ya está abierta.</string>
     <string name="settings_ready_default">Volver al perfil predeterminado cada vez que el coche pasa a READY</string>
     <string name="settings_ready_default_desc">De forma predeterminada, un perfil elegido a mano se mantiene hasta que se apaga el coche. Con esta opción, se olvida cada vez que el coche pasa a READY, incluso tras una parada corta, y se vuelve a aplicar el perfil predeterminado. Si debe aplicarse un perfil vinculado a la temperatura exterior o a un teléfono Bluetooth, conserva la prioridad, como al arrancar.</string>
     <string name="notif_service_active">Servicio activo</string>
@@ -1104,6 +1107,8 @@
     <string name="shortcuts_action_projection">Android Auto / CarPlay</string>
     <string name="projection_no_phone">Ningún teléfono conectado (Android Auto / CarPlay)</string>
     <string name="projection_launch_failed">No se puede abrir %1$s</string>
+    <string name="projection_redetect">Teléfono conectado: nuevo intento de detección…</string>
+    <string name="projection_redetect_failed">Teléfono no reconocido: desconecta y vuelve a conectar el cable</string>
     <string name="shortcuts_cat_preclim">Guardián del coche</string>
     <string name="shortcuts_cat_floating">Botones flotantes</string>
     <string name="floating_switch_title">Mostrar los botones flotantes</string>
