@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Norsk bokmål (issue #239, 2026-11-12) : traduction de magneroald, complétée par MG4Control pour les textes ajoutés depuis. -->
+<!-- Norsk bokmål (issue #239, 2026-11-12) : traduction de magneroald, complétée par MG4Control pour les textes ajoutés depuis ;
+     corrections de magneroald reprises le 2026-11-14 (issue #250). -->
 <resources>
     <string name="app_name">MG4Control</string>
 
@@ -28,11 +29,11 @@
     <!-- Shortcut actions -->
     <string name="shortcuts_action_aeb">Antikollisjonssystem</string>
     <string name="shortcuts_action_sound">Lyd</string>
-    <string name="shortcuts_action_overspeed">Alarm for overhastighet</string>
+    <string name="shortcuts_action_overspeed">Alarm over fartsgrense</string>
     <string name="shortcuts_action_speed_limit">Fartsgrensevarsel</string>
     <string name="shortcuts_action_adas">ADAS</string>
     <string name="shortcuts_action_energy_saving">Energisparing</string>
-    <string name="shortcuts_action_tsr">Skiltgjenkjenning (TSR)</string>
+    <string name="shortcuts_action_tsr">Skiltgjenkjenning</string>
     <string name="shortcuts_action_apply_profile">Bruk en profil</string>
     <string name="shortcuts_action_profile_picker">Profilvelger (popup)</string>
     <string name="shortcuts_action_profile_cycle">Profilsyklus</string>
@@ -46,9 +47,9 @@
     <string name="overlay_joy_navigate">Naviger</string>
     <string name="overlay_joy_validate">Velg</string>
     <string name="overlay_profile_active">Aktiv</string>
-    <string name="overlay_profile_current">Nåværende profil</string>
+    <string name="overlay_profile_current">Aktiv profil</string>
     <string name="overlay_profile_apply">Bruk</string>
-    <string name="overlay_countdown">Lukker inn %1$ds</string>
+    <string name="overlay_countdown">Lukkes etter %1$ds</string>
     <string name="shortcuts_profile_prefix">Start profil</string>
     <string name="shortcuts_pick_profile_title">Velg en profil</string>
     <string name="shortcuts_no_profiles">Ingen profiler opprettet</string>
@@ -70,7 +71,7 @@
     <string name="drive_normal">NORMAL</string>
     <string name="drive_sport">SPORT</string>
     <string name="drive_snow">SNØ</string>
-    <string name="drive_custom">EGEN</string>
+    <string name="drive_custom">TILPASSET</string>
     <string name="drive_energy_saving">Energisparing</string>
 
     <!-- Drive tab section headers -->
@@ -162,7 +163,7 @@
     <string name="adas_acc">ACC</string>
     <string name="adas_ica">ICA</string>
     <!-- ADAS SWI68 -->
-    <string name="adas_tsr">Signgjenkjenning</string>
+    <string name="adas_tsr">Skiltgjenkjenning</string>
     <string name="adas_sound_warning">Lydvarsel</string>
     <string name="adas_desactiver">Deaktiver</string>
     <string name="adas_tja">TJA</string>
@@ -180,13 +181,13 @@
     <string name="elk_sound_warning">Hørbar advarsel</string>
     <string name="elk_vibration_reminder">Vibrasjonspåminnelse</string>
     <string name="elk_label_enable">Aktiver</string>
-    <string name="elk_profile_label">Kjørefeltavgang</string>
+    <string name="elk_profile_label">Filavvik</string>
     <!-- AEB — Forward collision assist (SWI133 + SWI68) -->
-    <string name="aeb_card_title">Foroverkollisjonsassistent</string>
+    <string name="aeb_card_title">Frontkollisjonsassistent</string>
     <string name="adas_section_aeb">Aktiv sikkerhet</string>
-    <string name="adas_aeb_switch">Foroverkollisjonsassistent</string>
+    <string name="adas_aeb_switch">Frontkollisjonsassistent</string>
     <string name="adas_aeb_alarm">Varsel</string>
-    <string name="adas_aeb_alarm_brake">Al. + Autobrems</string>
+    <string name="adas_aeb_alarm_brake">Varsel + bremse</string>
     <string name="aeb_section_sensitivity">Følsomhet</string>
     <string name="aeb_sensitivity_low">Lav</string>
     <string name="aeb_sensitivity_standard">Standard</string>
@@ -249,7 +250,7 @@
     <string name="update_error_download">Nedlasting mislyktes. Sjekk tilkoblingen.</string>
     <string name="update_error_signature">Oppdatering nektet: den nedlastede APK-en er ikke signert av den forventede nøkkelen. Fil slettet.</string>
     <string name="write_refused_moving">Kjøreinnstilling nektet: %1$s km/t (grense %2$d km/t). Sakte ned for å endre det.</string>
-    <string name="write_refused_unknown_speed">Innstillingen ble avvist: kjøretøyets hastighet kunne ikke leses.</string>
+    <string name="write_refused_unknown_speed">Innstillingen ble avvist: bilens hastighet kunne ikke leses.</string>
     <string name="settings_speed_gate_desc">Blokkér kjøreinnstillinger over en hastighet</string>
     <string name="settings_speed_gate_max_label">Maksimal hastighet (km/t)</string>
     <string name="settings_speed_gate_max_hint">0–250</string>
@@ -289,8 +290,8 @@
     <string name="settings_keep_ac_title">Klima · A/C</string>
     <string name="settings_keep_ac">Hold A/C av når temperaturen endres</string>
     <string name="settings_keep_ac_desc">Bilen slår A/C på igjen hver gang innstilt temperatur endres. Hvis den var av, slår MG4Control den av igjen: fra MG4Control, og på prøve fra bilens skjerm. Aldri i AUTO eller med frontavdugging på.</string>
-    <string name="settings_ready_default">Gå tilbake til standardprofilen hver gang bilen går inn i KLAR</string>
-    <string name="settings_ready_default_desc">Som standard forblir en profil valgt for hånd på plass til bilen slås av. Med dette alternativet glemmes det hver gang bilen går inn i KLAR, også etter et kort stopp, og standardprofilen brukes igjen. Hvis en profil knyttet til utetemperatur eller til en Bluetooth-telefon skulle gjelde, beholder den prioritet, som ved oppstart.</string>
+    <string name="settings_ready_default">Gå tilbake til standardprofilen hver gang bilen går inn i READY</string>
+    <string name="settings_ready_default_desc">Som standard forblir en profil valgt for hånd på plass til bilen slås av. Med dette alternativet glemmes det hver gang bilen går inn i READY, også etter et kort stopp, og standardprofilen brukes igjen. Hvis en profil knyttet til utetemperatur eller til en Bluetooth-telefon skulle gjelde, beholder den prioritet, som ved oppstart.</string>
     <string name="notif_service_active">Tjenesten kjører</string>
     <string name="notif_garage_mode">Garasjemodus — i hvilemodus</string>
     <string name="settings_auto_update_desc">Se etter oppdateringer automatisk ved lansering</string>
@@ -302,17 +303,17 @@
     <string name="update_overlay_skip">Hopp over denne versjonen</string>
     <string name="update_overlay_disable">Slutt å fortelle meg om oppdateringer</string>
     <string name="update_overlay_disabled_toast">Varsler slått av. Du kan slå dem på igjen i Innstillinger &gt; Oppdateringer.</string>
-    <string name="settings_update_overlay">Varsle på kjøretøyskjermen</string>
-    <string name="settings_update_overlay_desc">Viser en melding over infotainmenten når en oppdatering er tilgjengelig, kun når den er stoppet</string>
-    <string name="settings_vehicle_power_desc">Slå av kjøretøyet mens du holder skjermen på</string>
+    <string name="settings_update_overlay">Varsle på skjermen</string>
+    <string name="settings_update_overlay_desc">Viser en melding på skjermen når en oppdatering er tilgjengelig, kun når den er stoppet</string>
+    <string name="settings_vehicle_power_desc">Slå av bilen mens du holder skjermen på</string>
     <string name="settings_vehicle_power_btn">Slå av</string>
-    <string name="vehicle_power_dialog_title">Slå av kjøretøyet</string>
-    <string name="vehicle_power_dialog_msg">Kjøretøyet vil bli slått av; skjermen forblir på. Kun tilgjengelig når den er stoppet, med giret i P.</string>
+    <string name="vehicle_power_dialog_title">Slå av bilen</string>
+    <string name="vehicle_power_dialog_msg">Bilen vil bli slått av; skjermen forblir på. Kun tilgjengelig når den er stoppet, med giret i P.</string>
     <string name="vehicle_power_dialog_confirm">Slå av</string>
     <string name="vehicle_power_dialog_cancel">Avbryt</string>
     <string name="vehicle_power_need_park">Bilen må stoppes, med giret i P.</string>
-    <string name="vehicle_power_banner_title">Slå av kjøretøyet?</string>
-    <string name="vehicle_power_banner_msg">Kjøretøyet er slått av, skjermen forblir på.</string>
+    <string name="vehicle_power_banner_title">Slå av bilen?</string>
+    <string name="vehicle_power_banner_msg">Bilen er slått av, skjermen forblir på.</string>
     <string name="vehicle_power_banner_impossible">Kan ikke slå av</string>
     <string name="settings_theme">Utseende</string>
     <string name="settings_theme_auto">Auto</string>
@@ -354,52 +355,52 @@
     <!-- [BT-PROFILES] Bluetooth profiles -->
     <!-- Audio screen (A9 only) -->
     <string name="door_volume_title">Media når du forlater bilen</string>
-    <string name="door_volume_desc">Senker medievolumet når en frontdør åpnes</string>
+    <string name="door_volume_desc">Senker medievolumet når en fordør åpnes</string>
     <string name="door_volume_level_label">Målnivå</string>
     <string name="door_volume_restore_title">Gjenopprett ved lukking</string>
-    <string name="door_volume_desc_ready">Senker medievolumet når bilen går KLAR i P (sikkerhetsbeltet er løsnet og førerdøren åpnet, eller bilen er slått av)</string>
-    <string name="door_volume_restore_ready_title">Gjenopprett når tilbake til KLAR</string>
+    <string name="door_volume_desc_ready">Senker medievolumet når bilen går READY i P (sikkerhetsbeltet er løsnet og førerdøren åpnet, eller bilen er slått av)</string>
+    <string name="door_volume_restore_ready_title">Gjenopprett når tilbake til READY</string>
     <string name="door_media_mode_volume">Senk volumet</string>
     <string name="door_media_mode_pause">Pause</string>
-    <string name="door_media_pause_desc">Setter media på pause når en inngangsdør åpnes, hvis noe spilles av</string>
-    <string name="door_media_pause_desc_ready">Setter media på pause når bilen går ut av KLAR-modus i P (sikkerhetsbelte av og førerdør åpen, eller slås av)</string>
+    <string name="door_media_pause_desc">Setter media på pause når en dør åpnes, hvis noe spilles av</string>
+    <string name="door_media_pause_desc_ready">Setter media på pause når bilen går ut av READY-modus i P (sikkerhetsbelte av og førerdør åpen, eller slås av)</string>
     <string name="door_media_resume_title">Fortsett avspilling ved lukking</string>
     <string name="door_media_resume_ready_title">Fortsett avspilling når du går tilbake til READY</string>
-    <string name="door_volume_doors_label">Utløserdører</string>
+    <string name="door_volume_doors_label">Aktiveringsdører</string>
     <string name="door_left">Venstre</string>
     <string name="door_right">Høyre</string>
     <!-- Profile backup / restore -->
     <string name="profile_restore_title">Gjenopprette profiler?</string>
-    <string name="profile_restore_msg">%d lagrede profil(er) ble funnet på dette kjøretøyet. Gjenopprette dem?</string>
+    <string name="profile_restore_msg">%d lagrede profil(er) ble funnet på denne bilen. Gjenopprette dem?</string>
     <string name="profile_restore_confirm">Gjenopprett</string>
     <string name="profile_restore_cancel">Ignorer</string>
     <string name="profile_restore_done">%d-profil(er) gjenopprettet</string>
     <string name="nav_automation">Automasjon</string>
     <string name="automation_desc">Bruk en profil basert på utetemperaturen</string>
-    <string name="automation_threshold_label">Terskeltemperatur (°C)</string>
+    <string name="automation_threshold_label">Temperaturgrense (°C)</string>
     <string name="automation_threshold_hint">0–60</string>
-    <string name="automation_profile_label">Profil for å søke</string>
-    <string name="automation_auto_execute">Bruk automatisk</string>
+    <string name="automation_profile_label">Bruk profil</string>
+    <string name="automation_auto_execute">Utfør automatisk</string>
     <string name="automation_no_profile">Ingen profil</string>
     <string name="automation_confirm_msg">Utetemperaturen er under %1$d°C\n(%2$s°C gjeldende temperatur)\nBruk profilen &quot;%3$s&quot;?</string>
-    <string name="automation_confirm_yes">JA</string>
-    <string name="automation_confirm_no">NR</string>
-    <string name="automation_confirm_below">under %1$s-terskelen</string>
-    <string name="automation_confirm_above">over %1$s-terskelen</string>
+    <string name="automation_confirm_yes">Ja</string>
+    <string name="automation_confirm_no">Nei</string>
+    <string name="automation_confirm_below">under %1$s-grensen</string>
+    <string name="automation_confirm_above">over %1$s-grensen</string>
     <string name="automation_confirm_question">Vil du bruke profilen?</string>
-    <string name="automation_direction_label">Utløser når utetemperaturen er:</string>
-    <string name="automation_dir_below">Nedenfor</string>
+    <string name="automation_direction_label">Aktiveres når utetemperaturen er:</string>
+    <string name="automation_dir_below">Under</string>
     <string name="automation_dir_above">Over</string>
     <string name="automation_confirm_msg_above">Utetemperaturen er over %1$d°C\n(%2$s°C gjeldende temperatur)\nBruk profilen &quot;%3$s&quot;?</string>
     <string name="automation_profile_title">Bruk en profil basert på temperatur</string>
     <string name="battery_auto_title">Bruk en profil basert på batterinivå</string>
-    <string name="battery_auto_desc">Bruk en profil når batteriet synker under en terskel</string>
-    <string name="battery_auto_threshold_label">Terskel for batteri</string>
-    <string name="battery_auto_note">Utløses én gang når batteriet synker under terskelen, ved oppstart eller under kjøring. Tilkobles ved hver start, eller etter lading over terskelen. Hvis kjøresikkerhet blokkerer innstillinger ved gjeldende hastighet, venter profilen på neste stopp.</string>
+    <string name="battery_auto_desc">Bruk en profil når batteriet synker under en grense</string>
+    <string name="battery_auto_threshold_label">Grense for batteri</string>
+    <string name="battery_auto_note">Aktiveres én gang når batteriet synker under grensen, ved oppstart eller under kjøring. Tilkobles ved hver start, eller etter lading over grensen. Hvis kjøresikkerhet blokkerer innstillinger ved gjeldende hastighet, venter profilen på neste stopp.</string>
     <string name="battery_auto_confirm_msg">Batteriet har sunket under %1$d %%\n(%2$s %% nå)\nBruk profilen “%3$s”?</string>
     <string name="autobri_title">Automatisk lysstyrke</string>
-    <string name="autobri_desc">Still inn skjermens lysstyrke fra utelyset når bilen blir KLAR</string>
-    <string name="autobri_desc_offline">Still inn skjermens lysstyrke fra statusen til lysene når bilen går KLAR</string>
+    <string name="autobri_desc">Still inn skjermens lysstyrke fra utelyset når bilen blir READY</string>
+    <string name="autobri_desc_offline">Still inn skjermens lysstyrke fra statusen til lysene når bilen går READY</string>
     <string name="autobri_follow_desc_offline">Hver gang lysene slås på eller av (tunnel, parkeringsplass, kveld). Justering av lysstyrken for hånd setter automatiseringen på pause til neste start.</string>
     <string name="autobri_level_lights_off">Lys av (dag)</string>
     <string name="autobri_level_lights_on">Lys på (natt, garasje, tunnel)</string>
@@ -438,7 +439,7 @@
     <string name="autobri_note">Utendørs lys er estimert fra solhøyden og Open-Meteo solskinnsvarselet (CC BY 4.0) over et område på omtrent 60 × 60 km rundt bilen, lastet ned i 3 dager og oppdateres maksimalt hver 8. time eller når du forlater området, med en posisjon avrundet til ~10 km. Uten varsel antas det en klar himmel. Hver endring blekner på over ett sekund.</string>
 
     <!-- A/C automation -->
-    <string name="ac_auto_title">Trigger A/C basert på temperatur</string>
+    <string name="ac_auto_title">Aktiver A/C basert på temperatur</string>
     <string name="ac_auto_desc">Still inn klimakontrollen i henhold til utetemperaturen</string>
     <string name="ac_auto_hot">Når det er varmt</string>
     <string name="ac_auto_cold">Når det er kaldt</string>
@@ -446,23 +447,23 @@
     <string name="ac_auto_threshold_cold_label">Utenfor, opptil</string>
     <string name="ac_auto_target_label">Klima satt til</string>
     <string name="ac_auto_fan_label">Viftehastighet</string>
-    <string name="ac_auto_fan_manual">Manual</string>
+    <string name="ac_auto_fan_manual">Manuell</string>
     <string name="ac_auto_fan_level">Nivå</string>
-    <string name="ac_auto_defrost">Tining</string>
+    <string name="ac_auto_defrost">Avriming</string>
     <string name="ac_auto_defrost_front">Foran</string>
     <string name="ac_auto_defrost_rear">Bak</string>
     <string name="ac_auto_rule_off">Regel deaktivert</string>
-    <string name="ac_auto_def_front">Front avriming</string>
-    <string name="ac_auto_def_rear">Bakavriming</string>
+    <string name="ac_auto_def_front">Avriming foran</string>
+    <string name="ac_auto_def_rear">Avriming Bak</string>
     <string name="ac_auto_air_hint">Sist brukt, etter viften: %1$s</string>
     <string name="ac_auto_air_unchanged_hint">Uendret: regelen berører ikke luftretningen.</string>
-    <string name="ac_auto_note">Gjelder når kjøretøyet starter: klimakontroll og klimaanlegg er slått på, deretter sendes innstillingene ovenfor.</string>
-    <string name="ac_auto_trigger_label">Utløser</string>
+    <string name="ac_auto_note">Gjelder når bilen starter: klimakontroll og klimaanlegg er slått på, deretter sendes innstillingene ovenfor.</string>
+    <string name="ac_auto_trigger_label">Trigger</string>
     <string name="ac_auto_trigger_start">Kun ved oppstart</string>
-    <string name="ac_auto_trigger_start_hint">En enkelt sjekk når bilen starter (KLAR): hvis terskelen ikke er nådd i det øyeblikket, utløses ingenting før neste fullstart av bilen.</string>
+    <string name="ac_auto_trigger_start_hint">En enkelt sjekk når bilen starter (READY): hvis grensen ikke er nådd i det øyeblikket, trigges ingenting før neste fullstart av bilen.</string>
     <string name="ac_auto_trigger_once">En gang per start</string>
-    <string name="ac_auto_trigger_once_hint">Hvis terskelen ikke er nådd når bilen starter (KLAR), gjentas kontrollen hver gang bilen går inn i KLAR igjen. Så snart den er oppfylt, brukes innstillingene én gang, så ikke noe mer før neste fullstart av bilen.</string>
-    <string name="ac_auto_trigger_ready">Hver gang bilen går inn KLAR</string>
+    <string name="ac_auto_trigger_once_hint">Hvis grensen ikke er nådd når bilen starter (READY), gjentas kontrollen hver gang bilen går inn i READY igjen. Så snart den er oppfylt, brukes innstillingene én gang, så ikke noe mer før neste fullstart av bilen.</string>
+    <string name="ac_auto_trigger_ready">Hver gang bilen går inn READY</string>
     <string name="ac_auto_trigger_ready_hint">Innstillingene sendes hver gang, inkludert etter et kort stopp: de erstatter de som er laget for hånd.</string>
     <string name="clim_card_title">Klima</string>
     <string name="clim_temperature">Temperatur</string>
@@ -473,15 +474,15 @@
     <string name="clim_ac">A/C</string>
     <string name="clim_auto">Auto</string>
     <string name="clim_section_loop">Resirkulering</string>
-    <string name="clim_loop_inner">Innside</string>
+    <string name="clim_loop_inner">Innvendig</string>
     <string name="clim_loop_outside">Utenfor</string>
     <string name="clim_loop_auto">Auto</string>
     <string name="clim_section_airflow">Luftretning</string>
     <string name="clim_air_face">Ansikt</string>
     <string name="clim_air_feet">Føtter</string>
-    <string name="clim_air_windshield_front">Forrute</string>
-    <string name="clim_air_windshield_rear">Bakskjerm</string>
-    <string name="clim_write_failed">Klimainnstilling nektet av kjøretøyet</string>
+    <string name="clim_air_windshield_front">Frontrute</string>
+    <string name="clim_air_windshield_rear">Bakrute</string>
+    <string name="clim_write_failed">Klimainnstilling avvist av bilen</string>
 
     <!-- Editeur de profil : categories -->
     <string name="profile_cat_drive">Kjøring</string>
@@ -511,9 +512,9 @@
 
     <!-- Confirmation d'activation de l'API externe (issue #79) -->
     <string name="external_api_confirm_title">Vil du aktivere den eksterne API-en?</string>
-    <string name="external_api_confirm_warn">ENHVER INSTALLERT APP VIL KUN TA KONTROLL OVER KJØRETØYET.</string>
+    <string name="external_api_confirm_warn">ENHVER INSTALLERT APP VIL KUNNE TA KONTROLL OVER BILEN.</string>
     <string name="external_api_confirm_msg">Kjøremodus, regenerering, sete- og rattvarme, klimaanlegg og profiler kan styres av en tredjepartsapp uten ytterligere godkjenning fra deg.\n\nFartslåsen forblir aktiv.\n\nAktiver dette bare hvis du faktisk bruker KeyMapper, Tasker eller et lignende verktøy.</string>
-    <string name="external_api_confirm_risk">Du aktiverer denne <b> på egen risiko</b>: du er alene ansvarlig for hva en tredjepartsapp gjør med kjøretøyet ditt.</string>
+    <string name="external_api_confirm_risk">Du aktiverer denne <b> på egen risiko</b>: du er alene ansvarlig for hva en tredjepartsapp gjør med bilen din.</string>
     <string name="external_api_confirm_ok">Bekreft</string>
 
     <!-- Canal beta OTA -->
@@ -531,7 +532,7 @@
     <string name="common_off">AV</string>
 
     <!-- Automatisation clim : mode auto + recyclage -->
-    <string name="recirc_inner">Indre</string>
+    <string name="recirc_inner">Innvendig</string>
     <string name="recirc_outside">Utenfor</string>
     <string name="recirc_auto">Auto</string>
 
@@ -546,13 +547,13 @@
     <!-- Raccourcis avances (service d accessibilite) -->
     <string name="shortcuts_cat_advanced">Avansert</string>
     <string name="adv_sc_title">Avanserte snarveier</string>
-    <string name="adv_sc_desc">Lar MG4Control se rattnøklene før utskytningen. Krever aktivering av tilgjengelighetstjenesten.</string>
-    <string name="adv_sc_service_desc">Lar deg bruke rattnøkler som MG4Control-snarveier.</string>
+    <string name="adv_sc_desc">Lar MG4Control se knapper på rattet før utførelse. Krever aktivering av tilgjengelighetstjenesten.</string>
+    <string name="adv_sc_service_desc">Lar deg bruke knapper på rattet som MG4Control-snarveier.</string>
     <string name="adv_sc_open_accessibility">Aktiver tilgjengelighet</string>
     <string name="adv_sc_status_on">Tjeneste aktiv</string>
     <string name="adv_sc_status_off">Tjeneste inaktiv</string>
-    <string name="adv_sc_record">Ta opp en nøkkel</string>
-    <string name="adv_sc_recording">Trykk på en rattnøkkel...</string>
+    <string name="adv_sc_record">Registrer en knapp</string>
+    <string name="adv_sc_recording">Trykk på en knapp på rattet...</string>
     <string name="adv_sc_none">ingen</string>
     <string name="shortcuts_cat_classic">Snarveier</string>
     <string name="wheel_press_double">Dobbelt</string>
@@ -575,7 +576,7 @@
     <string name="wheel_inherited_fmt">Som for alle: %1$s</string>
     <string name="wheel_add_key">Legg til en knapp</string>
     <string name="wheel_add_key_hint">Ratt, høyre joystick, konsoll…</string>
-    <string name="wheel_capture_title">Trykk på en knapp i bilen</string>
+    <string name="wheel_capture_title">Trykk på en knapp</string>
     <string name="wheel_capture_msg">Knappen legges til så snart den mottas. Venstre joystick er reservert for førerassistanse.</string>
     <string name="wheel_capture_added">“%1$s” lagt til</string>
     <string name="wheel_remove_key">Fjern knappen</string>
@@ -666,7 +667,7 @@
     <string name="batheat_auto_desc">Slå av intelligent batterioppvarming etter en kjøretid</string>
     <string name="batheat_auto_minutes_label">Slå av etter</string>
     <string name="batheat_auto_minutes_value">%1$d min</string>
-    <string name="batheat_auto_note">Nedtellingen starter når varme slås på, kjører eller parkeres (original skjerm, &quot;lav temperatur&quot;-vindu, MG4Control eller snarvei), eller ved oppstart hvis den allerede var på. Den gjelder kun gjeldende tur: den avbestilles ved slutten av turen, når bilen går KLAR. En melding vises når oppvarmingen er slått av.</string>
+    <string name="batheat_auto_note">Nedtellingen starter når varme slås på, kjører eller parkeres (original skjerm, &quot;lav temperatur&quot;-vindu, MG4Control eller snarvei), eller ved oppstart hvis den allerede var på. Den gjelder kun gjeldende tur: den avbestilles ved slutten av turen, når bilen går READY. En melding vises når oppvarmingen er slått av.</string>
     <string name="batheat_auto_toast">Batterivarme slått av etter %1$d min.</string>
     <string name="shortcuts_action_hvac_temp_up">Klima: temperatur +</string>
     <string name="shortcuts_action_hvac_temp_down">Klima: temperatur -</string>
@@ -728,7 +729,7 @@
     <string name="win_rear_left">Bak venstre</string>
     <string name="win_rear_right">Bak høyre</string>
     <string name="win_auto_label">Lukk vinduene når du forlater bilen</string>
-    <string name="win_auto_desc">Bil i P, en gang armert etter forholdene nedenfor: når bilen går KLAR (sikkerhetsbeltet er løsnet og førerdøren åpnet, eller bilen er slått av), lukkes alle vinduer etter den valgte forsinkelsen. Gå tilbake til READY før da avbrytes.</string>
+    <string name="win_auto_desc">Bil i P, en gang armert etter forholdene nedenfor: når bilen går READY (sikkerhetsbeltet er løsnet og førerdøren åpnet, eller bilen er slått av), lukkes alle vinduer etter den valgte forsinkelsen. Gå tilbake til READY før da avbrytes.</string>
     <string name="win_auto_warning">Andre vinduer enn førervinduet har ingen klembeskyttelse. Pass på at ingen er i nærheten av vinduene når du forlater bilen.</string>
     <string name="win_auto_arming_title">Tilkobling: etter kjøring</string>
     <string name="win_auto_speed_label">Hastighet nådd</string>
@@ -748,7 +749,7 @@
     <string name="win_cal_advanced_label">Kalibrering per vindu</string>
     <string name="win_cal_advanced_desc">Måler den faktiske bevegelsen til hvert vindu. Dette er mer nøyaktig enn den generelle tiden. Målingene beholdes hvis du slår av alternativet.</string>
     <string name="win_cal_general">Generell tid</string>
-    <string name="win_automation_title">Automatisk lukking av elektriske vinduer</string>
+    <string name="win_automation_title">Automatisk lukking av vinduer</string>
     <string name="win_cal_limits">Appen kan ikke se dørbryterne: en emulert reise kjører alltid i den målte tiden, uansett hvilken posisjon vinduet startet fra.</string>
     <string name="shortcuts_action_windows_open">Åpne alle vinduer</string>
     <string name="shortcuts_action_windows_close">Lukk alle vinduer</string>
@@ -905,7 +906,7 @@
     <string name="stats_energy_percent">estimert fra batterinivået</string>
 
     <!-- Module sur le combiné (Réglages › Interface), puis les textes dessinés sur le combiné -->
-    <string name="settings_cluster">Driverdisplay</string>
+    <string name="settings_cluster">Sjåførskjermen</string>
     <string name="settings_cluster_module">Modul på instrumentgruppen</string>
     <string name="settings_cluster_module_desc">Viser en MG4Control-modul i midten av instrumentgruppen, på de valgte fanene, i stedet for den opprinnelige siden.</string>
     <string name="settings_cluster_profiles_title">Innstillinger for:</string>
@@ -1025,7 +1026,7 @@
     <string name="charge_popup_end_label">Estimert slutt</string>
     <string name="charge_popup_end_left">%1$s venstre · til %2$d %%</string>
     <string name="charge_popup_lfp_info">Ladegrense kan ikke justeres (LFP-batteri)</string>
-    <string name="charge_popup_limit_fixed">Ladegrense kan ikke justeres på dette kjøretøyet</string>
+    <string name="charge_popup_limit_fixed">Ladegrense kan ikke justeres på denne bilen</string>
     <string name="charge_popup_legend_power">Effekt (kW)</string>
     <string name="charge_popup_legend_battery" formatted="false">Batteri (%)</string>
     <string name="charge_popup_since">siden starten av ladingen (%1$s)</string>
@@ -1048,7 +1049,7 @@
     <string name="charge_popup_disabled">Slå på &quot;Lading pop-up&quot; i Innstillinger › Grensesnitt</string>
     <string name="settings_charge_popup">Lading pop-up</string>
     <string name="settings_charge_popup_switch">Vis popup-vinduet mens du lader</string>
-    <string name="settings_charge_popup_desc">Åpner hver gang en lading starter: kurve fra starten, justerbar ladegrense, kostnad. Stenges ved behov eller når bilen går KLAR; &quot;Lading popup&quot;-snarveien åpner den på nytt.</string>
+    <string name="settings_charge_popup_desc">Åpner hver gang en lading starter: kurve fra starten, justerbar ladegrense, kostnad. Stenges ved behov eller når bilen går READY; &quot;Lading popup&quot;-snarveien åpner den på nytt.</string>
     <string name="shortcuts_action_charge_popup">Lading pop-up</string>
     <string name="shortcuts_action_quick_settings">Hurtiginnstillinger (pop-up)</string>
     <string name="shortcuts_cat_quick">Hurtiginnstillinger</string>
@@ -1212,7 +1213,7 @@
     <string name="preclim_value_celsius">%1$d °C</string>
     <string name="preclim_minus">Mindre</string>
     <string name="preclim_plus">Mer</string>
-    <string name="preclim_title">Forkondisjonering</string>
+    <string name="preclim_title">Forbehandling</string>
     <string name="preclim_mode_now">Nå</string>
     <string name="preclim_mode_at">På et bestemt tidspunkt</string>
     <string name="preclim_now_caption">Klimaet starter med en gang og varer i maksimalt:</string>
@@ -1231,7 +1232,7 @@
     <string name="preclim_tomorrow">i morgen %1$s</string>
     <string name="preclim_cancel">Avbryt</string>
     <string name="preclim_start">Start</string>
-    <string name="preclim_need_park">Skift til P for å starte forkondisjonering</string>
+    <string name="preclim_need_park">Skift til P for å starte forbehandling</string>
     <string name="preclim_clim_unreachable">Klima reagerer ikke: forhåndskondisjonering ikke startet</string>
     <string name="preclim_cd_unit">s før låsing</string>
     <string name="preclim_cd_title">Gå ut med nøkkelen</string>
@@ -1250,7 +1251,7 @@
     <string name="preclim_cfg_unlock_desc">Når modusen starter, minner en popup deg om å ha nøkkelen med deg og hvordan du låser opp bilen.</string>
     <string name="preclim_cd_now">Klima på: %1$s</string>
     <string name="preclim_cd_at">Klima av til %1$s, deretter %2$s</string>
-    <string name="preclim_live_title">Forkondisjonering · %1$s</string>
+    <string name="preclim_live_title">Forbehandling · %1$s</string>
     <string name="preclim_lock_pending">Låser...</string>
     <string name="preclim_lock_ok">Dører låst</string>
     <string name="preclim_lock_failed">Dører ikke låst</string>
@@ -1271,11 +1272,11 @@
     <string name="preclim_hint">Lås opp for å stoppe og få innstillingene tilbake · trykk på skjermen for å lyse opp</string>
     <string name="preclim_hide">Skjul</string>
     <string name="preclim_stop">Stopp</string>
-    <string name="preclim_end_done">Forkondisjonering fullført</string>
+    <string name="preclim_end_done">Forbehandling fullført</string>
     <string name="preclim_end_battery">Batteri under %1$d %%</string>
     <string name="preclim_end_back">Velkommen tilbake</string>
-    <string name="preclim_end_stopped">Forkondisjonering stoppet</string>
-    <string name="preclim_end_driving">Bilen beveger seg: forkondisjonering stoppet</string>
+    <string name="preclim_end_stopped">Forbehandling stoppet</string>
+    <string name="preclim_end_driving">Bilen beveger seg: forbehandling stoppet</string>
     <string name="preclim_end_cycles">%1$d × %2$s av klima</string>
     <string name="preclim_end_now">Klima for %1$s</string>
     <string name="preclim_end_off">Bil slått av ved %1$s, dører låst</string>
@@ -1284,7 +1285,7 @@
     <string name="preclim_end_restored">Klima gjenopprettet: %1$s</string>
     <string name="preclim_end_restored_off">Klima gjenopprettet: av (%1$s)</string>
     <string name="preclim_close">Lukk</string>
-    <string name="preclim_cancelled">Forkondisjonering avbrutt</string>
+    <string name="preclim_cancelled">Forbehandling avbrutt</string>
     <string name="preclim_screen_normal">Normal</string>
     <string name="preclim_dog">Hundemodus</string>
     <string name="preclim_plan_dog">Hundemodus · skjermen på for forbipasserende · stopper rundt %1$s</string>
@@ -1302,15 +1303,15 @@
     <string name="preclim_plan_surv">Overvåking · klima av · skjermen på · stopper rundt %1$s</string>
     <string name="preclim_cd_surv">Overvåking: klima av, skjerm på for forbipasserende</string>
     <string name="preclim_surv_screen_title">KAMERAOVERVÅKNING</string>
-    <string name="preclim_surv_screen_text">Dette kjøretøyet blir tatt opp kontinuerlig, i 360°.</string>
+    <string name="preclim_surv_screen_text">Denne bilen filmes kontinuerlig, i 360°.</string>
     <string name="preclim_surv_status">MG4Control · siden %1$s · batteri %2$s · stopper rundt %3$s · lås opp for å stoppe</string>
     <string name="preclim_surv_end_done">Overvåking fullført</string>
     <string name="preclim_surv_end_stopped">Overvåking stoppet</string>
     <string name="preclim_surv_end_driving">Bilen beveger seg: overvåking stoppet</string>
     <string name="preclim_surv_end_ran">Overvåking for %1$s</string>
     <string name="preclim_surv_cancelled">Overvåking avbrutt</string>
-    <string name="preclim_cfg_cluster">Vis på driverdisplayet</string>
-    <string name="preclim_cfg_cluster_desc">Mens den kjører, erstatter et kort forbruks- eller strømmodulen på klyngens Navigasjon- og Musikk-faner, selv om modulen er slått av.</string>
+    <string name="preclim_cfg_cluster">Vis på sjåførskjermen</string>
+    <string name="preclim_cfg_cluster_desc">Mens den kjører, erstatter et kort forbruks- eller strømmodulen på Navigasjon- og Musikk-faner, selv om modulen er slått av.</string>
     <string name="cluster_preclim_outside">utenfor</string>
     <string name="cluster_preclim_remaining">%1$s igjen · stopper %2$s</string>
     <string name="cluster_preclim_cycle">Syklus %1$d/%2$d · til %3$s</string>
@@ -1342,8 +1343,8 @@
     <string name="sound_volume">Bilvolum under lyden</string>
     <string name="sound_when">Når</string>
     <string name="sound_event_app_start">MG4Control starter</string>
-    <string name="sound_event_ready_on">KLAR på</string>
-    <string name="sound_event_ready_off">KLAR av</string>
+    <string name="sound_event_ready_on">READY på</string>
+    <string name="sound_event_ready_off">READY av</string>
     <string name="sound_event_park">Skift til P</string>
     <string name="sound_event_drive">Skift til D</string>
     <string name="sound_event_door">Fordør åpnet</string>
@@ -1786,7 +1787,7 @@
     <string name="rule_act_wait">Vent</string>
     <string name="rule_add_action">Handling</string>
     <string name="rule_add_condition">Betingelse</string>
-    <string name="rule_add_trigger">Utløser</string>
+    <string name="rule_add_trigger">Trigger</string>
     <string name="rule_choose_action">Legg til en handling</string>
     <string name="rule_choose_condition">Legg til en betingelse</string>
     <string name="rule_choose_event">Hvilken hendelse?</string>
@@ -1794,7 +1795,7 @@
     <string name="rule_choose_setting">Hvilken innstilling?</string>
     <string name="rule_choose_shortcut">Hvilken snarvei?</string>
     <string name="rule_choose_signal">Hvilken verdi?</string>
-    <string name="rule_choose_trigger">Legg til en utløser</string>
+    <string name="rule_choose_trigger">Legg til en trigger</string>
     <string name="rule_cond_days">Ukedager</string>
     <string name="rule_cond_group_all">Gruppe: alle</string>
     <string name="rule_cond_group_any">Gruppe: minst én</string>
@@ -1804,7 +1805,7 @@
     <string name="rule_discard">Forkast</string>
     <string name="rule_discard_title">Forkaste endringene?</string>
     <string name="rule_enabled">Aktivert</string>
-    <string name="rule_for_hint">Hvor lenge verdien må være sann før den utløses.</string>
+    <string name="rule_for_hint">Hvor lenge verdien må være sann før den aktiveres.</string>
     <string name="rule_for_now">Med en gang</string>
     <string name="rule_for_title">Hvor lenge?</string>
     <string name="rule_group_all">Alle</string>
@@ -1829,15 +1830,15 @@
     <string name="rule_name_default_fmt">Automatisering %1$d</string>
     <string name="rule_name_hint">Navn</string>
     <string name="rule_need_action">Legg til minst én handling.</string>
-    <string name="rule_need_trigger">Legg til minst én utløser: uten den ville automatiseringen aldri starte.</string>
+    <string name="rule_need_trigger">Legg til minst én trigger: uten den ville automatiseringen aldri starte.</string>
     <string name="rule_no_phones">Ingen sammenkoblet telefon.</string>
     <string name="rule_no_profiles">Ingen lagret profil.</string>
     <string name="rule_none_actions">Ingen handling ennå.</string>
-    <string name="rule_none_conditions">Ingen betingelse: den kjører hver gang den utløses.</string>
+    <string name="rule_none_conditions">Ingen betingelse: den kjører hver gang den aktiveres.</string>
     <string name="rule_none_if">Ingen betingelse: alltid sann.</string>
     <string name="rule_none_in_block">Ingen handling.</string>
     <string name="rule_none_in_group">Tom gruppe: alltid sann.</string>
-    <string name="rule_none_triggers">Ingen utløser: automatiseringen vil aldri starte.</string>
+    <string name="rule_none_triggers">Ingen trigger: automatiseringen vil aldri starte.</string>
     <string name="rule_notify_title">Hvilken melding?</string>
     <string name="rule_op_above">Over</string>
     <string name="rule_op_below">Under</string>
@@ -1861,7 +1862,7 @@
     <string name="rule_save">Lagre</string>
     <string name="rule_seat_off">Av</string>
     <string name="rule_sec_if">Og hvis</string>
-    <string name="rule_sec_if_hint">Det som må være sant når den utløses.</string>
+    <string name="rule_sec_if_hint">Det som må være sant når den aktiveres.</string>
     <string name="rule_sec_options">Valg</string>
     <string name="rule_sec_then">Så</string>
     <string name="rule_sec_then_hint">Handlingene, ovenfra og ned.</string>
@@ -2027,8 +2028,8 @@
     <string name="shortcuts_cat_onepedal">1 pedal</string>
     <string name="shortcuts_cfg_one_pedal">1 pedal — gjenopprett regenerering</string>
     <string name="shortcuts_onepedal_prev">Som før</string>
-    <string name="shortcuts_onepedal_desc_prev">Når One Pedal slås av, kommer det forrige regenereringsnivået tilbake (standard).</string>
-    <string name="shortcuts_onepedal_desc_fixed">Når One Pedal slås av, byttes det alltid til regenerering %1$s.</string>
+    <string name="shortcuts_onepedal_desc_prev">Når 1 pedal slås av, kommer det forrige regenereringsnivået tilbake (standard).</string>
+    <string name="shortcuts_onepedal_desc_fixed">Når 1 pedal slås av, byttes det alltid til regenerering %1$s.</string>
 
     <!-- Mes automatisations : déclenchements refusés, historique filtrable (2026-11-08) -->
     <string name="rule_last_skip_fmt">Siste utløsning: %1$s · ignorert: %2$s</string>
