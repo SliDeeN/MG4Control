@@ -237,8 +237,15 @@ internal object ClusterModuleOverlay {
             val detachee = v != null && !v.isAttachedToWindow && SystemClock.elapsedRealtime() - poseeMs > ATTACHE_DELAI_MS
             if (v == null || detachee || ecranId != ecran.displayId) {
                 AppLogger.i(TAG, "$origine : module ${if (v == null) "absent" else if (detachee) "détaché" else "sur un autre écran"} — recollé")
-                masquer(origine, involontaire = true)
-                afficher(origine, signalerAbsence = false, reprise = true)
+                if (v == null) {
+                    // Pas de fenêtre à reposer (jamais posée, ou retirée exprès) : la raison du dernier
+                    // retrait décide, comme ailleurs — un module réactivé repart de zéro (2026-11-14).
+                    afficher(origine, signalerAbsence = false, reprise = repriseAutorisee)
+                } else {
+                    // Fenêtre détachée ou sur un autre écran : simple repose, les compteurs restent.
+                    masquer(origine, involontaire = true)
+                    afficher(origine, signalerAbsence = false, reprise = true)
+                }
             }
         }
     }
