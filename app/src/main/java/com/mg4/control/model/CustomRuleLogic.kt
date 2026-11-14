@@ -310,6 +310,22 @@ class TriggerWatch(armed: Boolean = false) {
  * Un déclencheur horaire : part quand l'horloge ARRIVE sur la minute voulue. Pas de rattrapage :
  * écran éteint à 7:00, l'automatisation de 7:00 ne part pas à 7:20.
  */
+/**
+ * Suivis des déclencheurs de [nouvelle] après un rechargement des règles (2026-11-14) : celui d'un
+ * déclencheur inchangé est GARDÉ (attente « pendant » en cours, heure déjà partie dans la minute,
+ * prochain passage périodique) ; modifier ou supprimer une autre règle n'y touche plus. Neuf
+ * ([neuf]) pour un déclencheur ajouté ou modifié, une règle nouvelle, ou une règle réactivée.
+ * Rapprochés par égalité, pas par position : réordonner les déclencheurs garde aussi leurs suivis.
+ */
+fun <W> reuseWatches(ancienne: CustomRule?, nouvelle: CustomRule, anciens: List<W>?, neuf: (RuleTrigger) -> W): List<W> {
+    val dispo = if (ancienne != null && anciens != null && ancienne.enabled == nouvelle.enabled)
+        ancienne.triggers.zip(anciens).toMutableList() else mutableListOf()
+    return nouvelle.triggers.map { t ->
+        val i = dispo.indexOfFirst { it.first == t }
+        if (i >= 0) dispo.removeAt(i).second else neuf(t)
+    }
+}
+
 class TimeWatch {
     private var derniere: Int? = null
 
@@ -391,6 +407,14 @@ object RuleGate {
 }
 
 /** Les effets d'une exécution : fournis par le moteur, simulés par les tests. */
+/**
+ * Comment s'est terminée une question « Demander confirmation » (2026-11-14) : une seule fois, et
+ * l'interruption — bandeau remplacé par un autre, automatisation arrêtée, bandeau impossible à
+ * afficher — se distingue du délai écoulé : elle arrête toujours la suite, même si la règle est
+ * réglée pour continuer sans réponse.
+ */
+enum class ConfirmAnswer { YES, NO, TIMEOUT, INTERRUPTED }
+
 interface RuleEffects {
     /** Lecture fraîche, pour les blocs Si : la voiture a pu changer pendant une attente. */
     fun state(): RuleState
@@ -400,8 +424,8 @@ interface RuleEffects {
     suspend fun profile(id: String): Boolean
     fun notify(text: String)
     suspend fun pause(ms: Long)
-    /** Question Oui / Non ; `null` = pas de réponse dans le délai. */
-    suspend fun confirm(text: String, seconds: Int): Boolean?
+    /** Question Oui / Non : une seule réponse, voir [ConfirmAnswer]. */
+    suspend fun confirm(text: String, seconds: Int): ConfirmAnswer
     /** Les autres actions (son, appli, raccourci perso, automatisations, variable, voix, navigation). */
     suspend fun perform(a: RuleAction): Boolean
 }
@@ -523,9 +547,17 @@ class RuleRun(
             }
             RuleAction.Type.CONFIRM -> {
                 val r = fx.confirm(a.text.orEmpty(), (a.seconds ?: 15).coerceIn(5, 120))
-                val oui = r ?: (a.value == "yes")
-                ligne("${describe(a)} → ${when (r) { true -> "✓"; false -> "✗"; null -> if (oui) "✓ …" else "✗ …" }}")
-                // Non (ou pas de réponse, par défaut) : la suite n'a pas été voulue.
+                val oui = when (r) {
+                    ConfirmAnswer.YES -> true
+                    ConfirmAnswer.NO, ConfirmAnswer.INTERRUPTED -> false
+                    ConfirmAnswer.TIMEOUT -> a.value == "yes"
+                }
+                ligne("${describe(a)} → ${when (r) {
+                    ConfirmAnswer.YES -> "✓"; ConfirmAnswer.NO -> "✗"
+                    ConfirmAnswer.TIMEOUT -> if (oui) "✓ …" else "✗ …"
+                    ConfirmAnswer.INTERRUPTED -> "■"
+                }}")
+                // Non, interrompue, ou pas de réponse (par défaut) : la suite n'a pas été voulue.
                 if (!oui) arret = true
             }
             RuleAction.Type.PLAY_SOUND, RuleAction.Type.OPEN_APP, RuleAction.Type.CUSTOM_SHORTCUT,

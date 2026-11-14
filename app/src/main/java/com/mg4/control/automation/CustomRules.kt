@@ -36,6 +36,8 @@ import com.mg4.control.model.StatsTracker
 import com.mg4.control.model.SunCalc
 import com.mg4.control.model.SunEvent
 import com.mg4.control.model.TimeWatch
+import com.mg4.control.model.ConfirmAnswer
+import com.mg4.control.model.reuseWatches
 import com.mg4.control.model.TriggerWatch
 import com.mg4.control.profile.ActiveProfile
 import com.mg4.control.service.CustomShortcutRunner
@@ -227,14 +229,19 @@ object CustomRules {
         val json = CustomRuleStore.rawJson(ctx)
         if (json != brut || force) {
             brut = json
+            val avant = regles.associateBy { it.id }
+            val anciensSuivis = suivis
             regles = CustomRuleStore.decode(json)
             val maintenant = SystemClock.elapsedRealtime()
             // « Passage en READY » rattrapé si l'écran vient de s'allumer (RuleLogic.catchesUpAtBoot).
             val premier = !chargeUneFois
             chargeUneFois = true
             if (premier && maintenant < RuleLogic.BOOT_WINDOW_MS) AppLogger.i(TAG, "écran allumé depuis ${maintenant / 1000} s : « passage en READY » rattrapé si déjà en READY")
+            // Suivis gardés pour les déclencheurs inchangés (2026-11-14) : modifier, activer ou couper
+            // une autre règle ne remet plus à zéro une attente « pendant », ne refait plus partir une
+            // heure déjà passée dans la minute, ne décale plus un déclencheur périodique.
             suivis = regles.associate { r ->
-                r.id to r.triggers.map {
+                r.id to reuseWatches(avant[r.id], r, anciensSuivis[r.id]) {
                     when (it.type) {
                         RuleTrigger.Type.BECOMES -> TriggerWatch(armed = RuleLogic.catchesUpAtBoot(it, premier, maintenant))
                         RuleTrigger.Type.TIME, RuleTrigger.Type.SUN -> TimeWatch()
@@ -460,8 +467,10 @@ object CustomRules {
 
         override suspend fun pause(ms: Long) = delay(ms)
 
-        override suspend fun confirm(text: String, seconds: Int): Boolean? = suspendCancellableCoroutine { suite ->
-            ProfileConfirmOverlay.showQuestion(ctx, r.name, text, seconds) { r -> if (suite.isActive) suite.resume(r) }
+        override suspend fun confirm(text: String, seconds: Int): ConfirmAnswer = suspendCancellableCoroutine { suite ->
+            val question = ProfileConfirmOverlay.showQuestion(ctx, r.name, text, seconds) { rep -> if (suite.isActive) suite.resume(rep) }
+            // Automatisation arrêtée pendant l'attente : son bandeau part avec elle (2026-11-14).
+            suite.invokeOnCancellation { ProfileConfirmOverlay.closeQuestion(ctx, question) }
         }
 
         /** Un son de la page Sons ([RuleAction.value] = son numéro), comme avant le 2026-11-06. */

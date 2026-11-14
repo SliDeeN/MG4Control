@@ -205,10 +205,10 @@ class CustomRuleTest {
         override suspend fun profile(id: String) = true.also { faits += "profil:$id" }
         override fun notify(text: String) { faits += "msg:$text" }
         override suspend fun pause(ms: Long) { attente += ms }
-        var reponse: Boolean? = true
+        var reponse: ConfirmAnswer = ConfirmAnswer.YES
         /** Appelé à chaque pause d'« attendre que » : de quoi faire évoluer l'état. */
         var surPause: (() -> Unit)? = null
-        override suspend fun confirm(text: String, seconds: Int): Boolean? = reponse.also { faits += "q:$text" }
+        override suspend fun confirm(text: String, seconds: Int): ConfirmAnswer = reponse.also { faits += "q:$text" }
         override suspend fun perform(a: RuleAction): Boolean = true.also { faits += "${a.type}:${a.text ?: a.key}" }
     }
 
@@ -369,12 +369,16 @@ class CustomRuleTest {
         assertEquals("délai écoulé : on continue", listOf("msg:suite"), fx.faits)
         assertEquals(3_000L, fx.attente)
 
-        val non = Faux().also { it.reponse = false }
+        val non = Faux().also { it.reponse = ConfirmAnswer.NO }
         RuleRun(non).run(listOf(RuleAction(RuleAction.Type.CONFIRM, text = "Clim ?"), RuleAction(RuleAction.Type.NOTIFY, text = "x")))
         assertEquals("Non arrête", listOf("q:Clim ?"), non.faits)
-        val muet = Faux().also { it.reponse = null }
+        val muet = Faux().also { it.reponse = ConfirmAnswer.TIMEOUT }
         RuleRun(muet).run(listOf(RuleAction(RuleAction.Type.CONFIRM, text = "Clim ?", value = "yes"), RuleAction(RuleAction.Type.NOTIFY, text = "x")))
         assertEquals("sans réponse = oui si demandé", listOf("q:Clim ?", "msg:x"), muet.faits)
+        // Interrompue (bandeau remplacé, règle arrêtée) : la suite s'arrête, même réglée « sans réponse = oui ».
+        val coupee = Faux().also { it.reponse = ConfirmAnswer.INTERRUPTED }
+        RuleRun(coupee).run(listOf(RuleAction(RuleAction.Type.CONFIRM, text = "Clim ?", value = "yes"), RuleAction(RuleAction.Type.NOTIFY, text = "x")))
+        assertEquals("interrompue = arrêt", listOf("q:Clim ?"), coupee.faits)
 
         val d = Faux()
         val r = RuleRun(d)
