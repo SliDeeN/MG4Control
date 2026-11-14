@@ -1,7 +1,7 @@
 package com.mg4.control.model
 
 /** Ce qu'une automatisation désigne par identifiant : propre à une voiture, à refaire à l'import. */
-enum class RefKind { RULE, PLACE, PROFILE, SOUND, SHORTCUT }
+enum class RefKind { RULE, PLACE, PROFILE, SOUND, SHORTCUT, ABRP }
 
 data class RuleRef(val kind: RefKind, val id: String) {
     /** Clé de [CustomRule.exportNames] : « PLACE:<id> ». */
@@ -52,6 +52,13 @@ object RuleRefs {
                         a.text?.let { id -> map(RuleRef(RefKind.SHORTCUT, id))?.let { b = b.copy(text = it) } }
                     RuleAction.Type.PROFILE ->
                         a.profileId?.let { id -> map(RuleRef(RefKind.PROFILE, id))?.let { b = b.copy(profileId = it) } }
+                    // Compte ABRP (2026-11-14) : ses clés ne voyagent pas avec l'export, seul son nom.
+                    RuleAction.Type.ABRP_START ->
+                        a.text?.let { id -> map(RuleRef(RefKind.ABRP, id))?.let { b = b.copy(text = it) } }
+                    // « Naviguer vers » : un lieu enregistré, ou des coordonnées « lat,lng » laissées telles quelles.
+                    RuleAction.Type.NAVIGATE -> a.text?.takeUnless { isCoordinates(it) }?.let { id ->
+                        map(RuleRef(RefKind.PLACE, id))?.let { b = b.copy(text = it) }
+                    }
                     RuleAction.Type.PLAY_SOUND -> a.key?.takeIf { it.startsWith(RuleLogic.RULE_SOUND) }?.let { k ->
                         map(RuleRef(RefKind.SOUND, k.removePrefix(RuleLogic.RULE_SOUND)))?.let { b = b.copy(key = RuleLogic.RULE_SOUND + it) }
                     }
@@ -70,6 +77,10 @@ object RuleRefs {
             actions = actions(rule.actions, 0) ?: rule.actions,
         )
     }
+
+    /** « 48.85,2.35 » : des coordonnées, pas un identifiant de lieu. */
+    fun isCoordinates(text: String): Boolean =
+        text.split(",").let { p -> p.size == 2 && p.all { it.trim().toDoubleOrNull() != null } }
 
     /** Noms des objets liés, pour l'export : relier par le nom sur une autre voiture. */
     fun names(rule: CustomRule, nameOf: (RuleRef) -> String?): Map<String, String> =

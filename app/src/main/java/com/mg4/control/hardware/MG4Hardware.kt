@@ -1939,8 +1939,10 @@ object MG4Hardware {
 
     fun setDriveMode(mode: DriveMode): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setDriveMode → ${mode.label} (${mode.value})")
-        val ok = setIntPropertyCPM(PROP_DRIVE_MODE, AREA_GLOBAL, mode.value)
-        if (!ok) binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_DRIVE_MODE, mode.value)
+        // Résultat de la voie de repli rendu aussi (2026-11-14) : réussie par le Binder, l'écriture
+        // comptait en échec dans le journal des automatisations.
+        val ok = setIntPropertyCPM(PROP_DRIVE_MODE, AREA_GLOBAL, mode.value) ||
+            binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_DRIVE_MODE, mode.value)
         sAppContext?.getSharedPreferences(PREFS_NAME, 0)?.edit()
             ?.putInt(KEY_LAST_DRIVE_MODE, mode.value)?.apply()
         return ok
@@ -2170,17 +2172,15 @@ object MG4Hardware {
     fun setRegenLevel(level: RegenLevel): Boolean {
         if (logEnabled) AppLogger.i(TAG, "setRegenLevel → ${level.label} (${level.value})")
         return if (level == RegenLevel.ONE_PEDAL) {
-            val ok = setOnePedal(true)
-            if (!ok) {
-                setIntPropertyCPM(PROP_REGEN_LEVEL, AREA_GLOBAL, level.value)
-                binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_REGEN_LEVEL, level.value)
-            }
-            ok
+            if (setOnePedal(true)) return true
+            // Repli : les deux voies, comme avant ; réussi si l'une a réussi (2026-11-14).
+            val cpm = setIntPropertyCPM(PROP_REGEN_LEVEL, AREA_GLOBAL, level.value)
+            val binder = binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_REGEN_LEVEL, level.value)
+            cpm || binder
         } else {
             setOnePedal(false)
-            val ok = setIntPropertyCPM(PROP_REGEN_LEVEL, AREA_GLOBAL, level.value)
-            if (!ok) binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_REGEN_LEVEL, level.value)
-            ok
+            setIntPropertyCPM(PROP_REGEN_LEVEL, AREA_GLOBAL, level.value) ||
+                binderTransact(sVehicleBinder, DESCRIPTOR_VEHICLE, TX_SET_REGEN_LEVEL, level.value)
         }
     }
 

@@ -1589,6 +1589,12 @@
     <string name="rule_import_msg">Zostaną dodane do istniejących jako wyłączone: włącz je po sprawdzeniu.</string>
     <string name="rule_import_none">Brak czytelnej automatyzacji w %1$s</string>
     <string name="rule_import_title">Zaimportować automatyzacje (%1$d)?</string>
+    <plurals name="rule_import_skipped">
+        <item quantity="one">%1$d automatyzacja nie zaimportowana: najwyżej %2$d</item>
+        <item quantity="few">%1$d automatyzacje nie zaimportowane: najwyżej %2$d</item>
+        <item quantity="many">%1$d automatyzacji nie zaimportowanych: najwyżej %2$d</item>
+        <item quantity="other">%1$d automatyzacji nie zaimportowanych: najwyżej %2$d</item>
+    </plurals>
     <string name="rule_import_report_sub">Powiązania między nimi zostały odtworzone. Sprawdź resztę przed ich włączeniem.</string>
     <string name="rule_import_auto">Powiązane automatycznie</string>
     <string name="rule_import_todo_fmt">Do ponownego powiązania (%1$d)</string>
@@ -1607,6 +1613,8 @@
     <string name="rule_import_choose_profile">Wybierz profil</string>
     <string name="rule_import_choose_sound">Wybierz dźwięk</string>
     <string name="rule_import_choose_shortcut">Wybierz skrót</string>
+    <string name="rule_ref_abrp">Konto ABRP</string>
+    <string name="rule_import_choose_abrp">Wybierz konto ABRP</string>
     <string name="rule_import_later">Później</string>
     <string name="rule_import_finished">Gotowe</string>
     <plurals name="rule_import_from_file">

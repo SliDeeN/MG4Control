@@ -26,7 +26,7 @@ object RuleImportReport {
     private const val TAG = "MG4_RULES"
     private const val LISTE_MAX_DP = 380f
 
-    fun afficher(ctx: Context, importees: Int, liens: List<RuleRefs.Link>, apres: () -> Unit) {
+    fun afficher(ctx: Context, importees: Int, liens: List<RuleRefs.Link>, ecartees: String? = null, apres: () -> Unit) {
         val vue = LayoutInflater.from(ctx).inflate(R.layout.dialog_rule_import, null)
         vue.findViewById<TextView>(R.id.rule_import_title).text = ctx.getString(R.string.rule_import_done, importees).trimEnd('.')
         val liste = vue.findViewById<LinearLayout>(R.id.rule_import_list)
@@ -36,6 +36,13 @@ object RuleImportReport {
         val parNom = liens.filter { it.status == RuleRefs.Status.BY_NAME }
         val manquants = liens.filter { it.status == RuleRefs.Status.MISSING }
         var restants = manquants.size
+        // Liste pleine : les automatisations du fichier qui n'ont pas pu entrer.
+        if (ecartees != null) liste.addView(TextView(ctx).apply {
+            text = ecartees
+            textSize = 15f
+            setTextColor(ctx.getColor(R.color.dash_warn))
+            setPadding(0, AppDialog.dp(ctx, 6f), 0, 0)
+        })
         lateinit var titreManquants: TextView
 
         fun peindreFermer() {
@@ -108,6 +115,7 @@ object RuleImportReport {
         RefKind.PROFILE -> R.string.rule_import_choose_profile
         RefKind.SOUND -> R.string.rule_import_choose_sound
         RefKind.SHORTCUT -> R.string.rule_import_choose_shortcut
+        RefKind.ABRP -> R.string.rule_import_choose_abrp
     }
 
     fun sorte(k: RefKind) = when (k) {
@@ -116,6 +124,7 @@ object RuleImportReport {
         RefKind.PROFILE -> R.string.rule_ref_profile
         RefKind.SOUND -> R.string.rule_ref_sound
         RefKind.SHORTCUT -> R.string.rule_ref_shortcut
+        RefKind.ABRP -> R.string.rule_ref_abrp
     }
 
     private fun section(ctx: Context, texte: String) = TextView(ctx).apply {

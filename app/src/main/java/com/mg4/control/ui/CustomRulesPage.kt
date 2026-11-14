@@ -403,15 +403,23 @@ class CustomRulesPage {
                 // Nouveaux identifiants, et coupées : un import n'écrase rien et ne part pas tout seul.
                 // Liens refaits AVANT d'enregistrer (2026-11-14) : vers les copies du fichier, gardés
                 // vers ce qui existe ici, reliés par le nom, ou signalés pour être réassociés.
+                // Plan établi sur les règles qui ENTRERONT (2026-11-14) : une règle du fichier écartée
+                // faute de place n'est plus annoncée comme cible recréée — ses liens sont signalés.
+                val place = (CustomRuleStore.MAX_RULES - CustomRuleStore.all(ctx).size).coerceAtLeast(0)
+                val retenues = lues.take(place)
+                val ecartees = lues.size - retenues.size
                 val objets = RuleRefLookup(ctx)
-                val plan = RuleRefs.planImport(lues, newId = { UUID.randomUUID().toString() },
+                val plan = RuleRefs.planImport(retenues, newId = { UUID.randomUUID().toString() },
                     exists = { objets.exists(it) }, byName = { k, nom -> objets.byName(k, nom) })
                 val ajoutees = plan.rules.filter { CustomRuleStore.add(ctx, it) }.map { it.id }.toSet()
                 CustomRules.refresh(ctx)
                 dessiner()
                 val liens = plan.links.filter { it.ruleId in ajoutees }
-                if (liens.isEmpty()) Toast.makeText(ctx, ctx.getString(R.string.rule_import_done, ajoutees.size), Toast.LENGTH_LONG).show()
-                else RuleImportReport.afficher(ctx, ajoutees.size, liens) { dessiner() }
+                val ecarteesTexte = if (ecartees > 0) ctx.resources.getQuantityString(R.plurals.rule_import_skipped, ecartees, ecartees,
+                    CustomRuleStore.MAX_RULES) else null
+                if (liens.isEmpty()) Toast.makeText(ctx, ctx.getString(R.string.rule_import_done, ajoutees.size) +
+                    (ecarteesTexte?.let { "\n$it" } ?: ""), Toast.LENGTH_LONG).show()
+                else RuleImportReport.afficher(ctx, ajoutees.size, liens, ecarteesTexte) { dessiner() }
             })
     }
 

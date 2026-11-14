@@ -18,6 +18,7 @@ class RuleRefLookup(ctx: Context) {
         RefKind.PROFILE to ProfileManager(ctx).getAll().map { it.id to it.name },
         RefKind.SOUND to RuleSounds.all(ctx).map { it.id to it.title },
         RefKind.SHORTCUT to CustomShortcutSettings.all(ctx).map { it.id to it.name },
+        RefKind.ABRP to AbrpStore.accounts(ctx).map { it.id to it.name },
     )
 
     /** (identifiant, nom) des objets de cette sorte, dans l'ordre de leur page. */

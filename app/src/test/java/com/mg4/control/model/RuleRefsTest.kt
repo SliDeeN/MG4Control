@@ -62,4 +62,34 @@ class RuleRefsTest {
         assertEquals(listOf(RuleRef(RefKind.PLACE, "p2")), RuleRefs.missing(a) { it.kind != RefKind.PLACE || it.id == "p1" }
             .filter { it.kind == RefKind.PLACE })
     }
+
+    @Test
+    fun `navigate keeps coordinates and relinks a place id`() {
+        val r = CustomRule(id = "N", name = "Nav", actions = listOf(
+            RuleAction(RuleAction.Type.NAVIGATE, text = "p9"),
+            RuleAction(RuleAction.Type.NAVIGATE, text = "48.8566, 2.3522")))
+        assertEquals(listOf(RuleRef(RefKind.PLACE, "p9")), RuleRefs.of(r))
+        val n = RuleRefs.rewrite(r) { "m1" }
+        assertEquals("m1", n.actions[0].text)
+        assertEquals("48.8566, 2.3522", n.actions[1].text)
+    }
+
+    @Test
+    fun `a rule left out of the import is flagged, not announced as rebuilt`() {
+        // Liste presque pleine : seule A entre ; son lien vers B (restée dehors) est à réassocier.
+        val plan = RuleRefs.planImport(listOf(a), newId = { "n$it" }, exists = { false }, byName = { _, _ -> null })
+        val versB = plan.links.single { it.ref == RuleRef(RefKind.RULE, "B") }
+        assertEquals(RuleRefs.Status.MISSING, versB.status)
+        assertEquals("B", plan.rules[0].actions[0].text)
+    }
+
+    @Test
+    fun `an ABRP account is a link like the others`() {
+        val r = CustomRule(id = "Z", name = "ABRP", actions = listOf(RuleAction(RuleAction.Type.ABRP_START, text = "acc1")),
+            exportNames = mapOf("ABRP:acc1" to "Ma MG4"))
+        val plan = RuleRefs.planImport(listOf(r), newId = { "n$it" }, exists = { false },
+            byName = { k, n -> if (k == RefKind.ABRP && n == "Ma MG4") "acc9" else null })
+        assertEquals("acc9", plan.rules[0].actions[0].text)
+        assertEquals(RuleRefs.Status.BY_NAME, plan.links.single().status)
+    }
 }
