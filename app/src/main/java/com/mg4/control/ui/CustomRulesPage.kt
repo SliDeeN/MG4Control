@@ -21,6 +21,8 @@ import com.mg4.control.model.RuleLastRun
 import com.mg4.control.model.RuleSkip
 import com.mg4.control.model.RuleText
 import com.mg4.control.automation.RulePlaces
+import com.mg4.control.automation.RuleRefLookup
+import com.mg4.control.model.RuleRefs
 import com.mg4.control.automation.RuleVariables
 import java.text.DateFormat
 import java.util.UUID
@@ -82,6 +84,8 @@ class CustomRulesPage {
         // Grisées : une automatisation coupée, et toutes quand l'interrupteur général est coupé.
         val moteur = CustomRuleStore.isEngineEnabled(ctx)
         val compteurs = CustomRuleStore.counts(ctx)
+        // Liens introuvables sur cette voiture (import, objet supprimé) : signalés sur la carte.
+        val objets = RuleRefLookup(ctx)
         for (r in regles) {
             val carte = gonfleur.inflate(R.layout.item_custom_rule, liste, false)
             val active = moteur && r.enabled
@@ -103,7 +107,8 @@ class CustomRulesPage {
             carte.findViewById<TextView>(R.id.rule_name).text = r.name
             carte.findViewById<TextView>(R.id.rule_summary).text = resume(ctx, texte, r)
             carte.findViewById<TextView>(R.id.rule_last_run).text =
-                derniere(ctx, CustomRules.lastRun(ctx, r.id), CustomRules.lastSkip(ctx, r.id))
+                derniere(ctx, CustomRules.lastRun(ctx, r.id), CustomRules.lastSkip(ctx, r.id),
+                    RuleRefs.missing(r) { objets.exists(it) }.size)
             carte.findViewById<Switch>(R.id.rule_switch).apply {
                 // Toutes les cartes portent le même identifiant : au retour de l'éditeur, Android
                 // rendait à CHAQUE interrupteur l'état sauvegardé du dernier, et l'écoute
@@ -278,21 +283,7 @@ class CustomRulesPage {
     }
 
     /** Raison d'un refus : courte pour la carte, longue (condition en cause, valeur lue) pour l'historique. */
-    private fun raison(ctx: Context, s: RuleSkip, longue: Boolean): String {
-        val cond = s.detail?.let { d -> s.value?.let { ctx.getString(R.string.rule_skip_read_fmt, d, it) } ?: d }
-        return when (s.reason) {
-            RuleSkip.Reason.CONDITIONS -> if (longue && cond != null) ctx.getString(R.string.rule_skip_conditions_fmt, cond)
-                else ctx.getString(R.string.rule_skip_short_conditions)
-            RuleSkip.Reason.UNKNOWN -> if (longue && cond != null) ctx.getString(R.string.rule_skip_unknown_fmt, cond)
-                else ctx.getString(R.string.rule_skip_short_unknown)
-            RuleSkip.Reason.NOT_READY -> ctx.getString(if (longue) R.string.rule_skip_not_ready else R.string.rule_skip_short_not_ready)
-            RuleSkip.Reason.BUSY -> ctx.getString(if (longue) R.string.rule_skip_busy else R.string.rule_skip_short_busy)
-            RuleSkip.Reason.COOLDOWN -> if (longue) ctx.getString(R.string.rule_skip_cooldown_fmt, s.minutes ?: 0)
-                else ctx.getString(R.string.rule_skip_short_cooldown)
-            RuleSkip.Reason.GARAGE -> ctx.getString(R.string.settings_garage_mode)
-            null -> ctx.getString(R.string.rule_unknown)
-        }
-    }
+    private fun raison(ctx: Context, s: RuleSkip, longue: Boolean): String = RuleRunText.skip(ctx, s, longue)
 
     private fun variables(ctx: Context) {
         val v = RuleVariables.all(ctx).toSortedMap()
@@ -385,7 +376,11 @@ class CustomRulesPage {
             sousTitre = ctx.getString(R.string.rule_export_subtitle, regles.size),
             bouton = ctx.getString(R.string.rule_tool_export),
             titreFait = ctx.getString(R.string.rule_export_done_title),
-            fichiers = { listOf(FICHIER to CustomRuleStore.encode(regles)) },
+            // Avec le nom des objets liés (2026-11-14) : relier par le nom sur une autre voiture.
+            fichiers = {
+                val objets = RuleRefLookup(ctx)
+                listOf(FICHIER to CustomRuleStore.encode(regles.map { r -> r.copy(exportNames = RuleRefs.names(r) { objets.name(it) }) }))
+            },
             parcourir = parcourirDossier,
         ).also { it.ouvrir() }
     }
@@ -406,11 +401,17 @@ class CustomRulesPage {
         AppDialog.confirmer(ctx, titre = ctx.getString(R.string.rule_import_title, lues.size), message = ctx.getString(R.string.rule_import_msg),
             oui = ctx.getString(R.string.rule_tool_import), non = ctx.getString(R.string.profile_cancel), onOui = {
                 // Nouveaux identifiants, et coupées : un import n'écrase rien et ne part pas tout seul.
-                var n = 0
-                lues.forEach { r -> if (CustomRuleStore.add(ctx, r.copy(id = UUID.randomUUID().toString(), enabled = false))) n++ }
+                // Liens refaits AVANT d'enregistrer (2026-11-14) : vers les copies du fichier, gardés
+                // vers ce qui existe ici, reliés par le nom, ou signalés pour être réassociés.
+                val objets = RuleRefLookup(ctx)
+                val plan = RuleRefs.planImport(lues, newId = { UUID.randomUUID().toString() },
+                    exists = { objets.exists(it) }, byName = { k, nom -> objets.byName(k, nom) })
+                val ajoutees = plan.rules.filter { CustomRuleStore.add(ctx, it) }.map { it.id }.toSet()
                 CustomRules.refresh(ctx)
                 dessiner()
-                Toast.makeText(ctx, ctx.getString(R.string.rule_import_done, n), Toast.LENGTH_LONG).show()
+                val liens = plan.links.filter { it.ruleId in ajoutees }
+                if (liens.isEmpty()) Toast.makeText(ctx, ctx.getString(R.string.rule_import_done, ajoutees.size), Toast.LENGTH_LONG).show()
+                else RuleImportReport.afficher(ctx, ajoutees.size, liens) { dessiner() }
             })
     }
 
@@ -480,20 +481,23 @@ class CustomRulesPage {
      * Bas de la carte : la dernière exécution, et dessous en orange le dernier déclenchement refusé
      * s'il est plus récent (variante A, 2026-11-08).
      */
-    private fun derniere(ctx: Context, run: RuleLastRun?, skip: RuleSkip?): CharSequence {
+    private fun derniere(ctx: Context, run: RuleLastRun?, skip: RuleSkip?, liensManquants: Int = 0): CharSequence {
         val format = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT)
         // « 1 action réussie » : le nombre d'actions de CETTE exécution, pas un compteur de lancements.
         val ligne = if (run == null) ctx.getString(R.string.rule_never_run) else ctx.getString(R.string.rule_last_run_actions_fmt,
             run.atMs?.let { format.format(Date(it)) } ?: ctx.getString(R.string.rule_run_time_unknown),
-            ctx.resources.getQuantityString(R.plurals.rule_actions_ok, run.done, run.done), run.failed)
-        if (skip == null || !RuleHistory.skipIsNewer(run, skip)) return ligne
-        val refus = ctx.getString(R.string.rule_last_skip_fmt,
-            skip.atMs?.let { format.format(Date(it)) } ?: ctx.getString(R.string.rule_run_time_unknown), raison(ctx, skip, longue = false))
-        return android.text.SpannableStringBuilder(ligne).append("\n").apply {
+            RuleRunText.actions(ctx, run), run.failed)
+        val sortie = android.text.SpannableStringBuilder(ligne)
+        fun orange(texte: String) = sortie.append("\n").apply {
             val d = length
-            append(refus)
+            append(texte)
             setSpan(android.text.style.ForegroundColorSpan(ctx.getColor(R.color.dash_warn)), d, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
+        if (skip != null && RuleHistory.skipIsNewer(run, skip)) orange(ctx.getString(R.string.rule_last_skip_fmt,
+            skip.atMs?.let { format.format(Date(it)) } ?: ctx.getString(R.string.rule_run_time_unknown), raison(ctx, skip, longue = false)))
+        // « ⚠ 1 lien à réassocier » (2026-11-14) : jusqu'à ce qu'un objet soit choisi dans l'éditeur.
+        if (liensManquants > 0) orange(ctx.resources.getQuantityString(R.plurals.rule_links_missing, liensManquants, liensManquants))
+        return sortie
     }
 
     private fun supprimer(ctx: Context, r: CustomRule) {

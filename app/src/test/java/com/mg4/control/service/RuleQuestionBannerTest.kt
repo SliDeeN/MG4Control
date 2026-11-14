@@ -52,4 +52,23 @@ class RuleQuestionBannerTest {
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(6))
         assertEquals(listOf(ConfirmAnswer.TIMEOUT), r)
     }
+
+    @Test
+    fun `a rule question replacing a profile banner declines it once, so its fallback still applies`() {
+        var confirme = 0; var decline = 0
+        val profil = com.mg4.control.model.DrivingProfile(name = "Hiver", driveMode = com.mg4.control.model.DriveMode.ECO,
+            regenLevel = com.mg4.control.model.RegenLevel.ONE_PEDAL)
+        ProfileConfirmOverlay.show(ctx, profil, 5, 3f, com.mg4.control.automation.AutomationSettings.Direction.BELOW,
+            onConfirmed = { confirme++ }, onDeclined = { decline++ })
+        idle()
+        assertTrue("bandeau de profil bien affiché", ProfileConfirmOverlay.isShowing() && decline == 0)
+        val r = mutableListOf<ConfirmAnswer>()
+        ProfileConfirmOverlay.showQuestion(ctx, "A", "Clim ?", 15) { r += it }
+        idle()
+        assertEquals("repli du profil appliqué", 1, decline)
+        assertEquals(0, confirme)
+        assertTrue("la question est affichée", ProfileConfirmOverlay.isShowing() && r.isEmpty())
+        shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(20))
+        assertEquals("une seule fin", 1, decline)
+    }
 }

@@ -50,6 +50,18 @@ object ProfileConfirmOverlay {
      */
     private class Question(val id: Long, val terminer: (com.mg4.control.model.ConfirmAnswer) -> Unit)
     private var question: Question? = null
+    /**
+     * Fin du bandeau de profil affiché (2026-11-14) : une question d'automatisation qui le remplace
+     * le termine « refusé », pour que son repli (profil BT / par défaut) s'applique quand même.
+     */
+    private var profilEnCours: ((Boolean) -> Unit)? = null
+
+    private fun interrompreProfil(pourquoi: String) {
+        val f = profilEnCours ?: return
+        profilEnCours = null
+        AppLogger.i(TAG, "Confirm de profil interrompu ($pourquoi) → onDeclined")
+        f(false)
+    }
     private val numeros = java.util.concurrent.atomic.AtomicLong()
 
     /** Un autre bandeau prend la place : la question en cours se termine « interrompue ». Fil principal. */
@@ -133,13 +145,16 @@ object ProfileConfirmOverlay {
 
         // Un seul chemin de sortie : garde-fou pour ne déclencher qu'un callback.
         var done = false
-        val finish: (Boolean) -> Unit = { confirmed ->
+        lateinit var finish: (Boolean) -> Unit
+        finish = { confirmed ->
             if (!done) {
                 done = true
+                if (profilEnCours === finish) profilEnCours = null
                 dismiss(context)
                 if (confirmed) onConfirmed() else onDeclined()
             }
         }
+        profilEnCours = finish
 
         // Sous garde : une mise en page fautive lèverait ici, sur le thread principal du service,
         // et l'emporterait avec elle. Sans bandeau, la question vaut NON — comme sans réponse.
@@ -255,6 +270,7 @@ object ProfileConfirmOverlay {
         val id = numeros.incrementAndGet()
         handler.post {
             interrompreQuestion("nouvelle question")
+            interrompreProfil("question d'automatisation")
             dismiss(context)
             var done = false
             // Une seule fin par question : réponse, délai écoulé ou interruption.

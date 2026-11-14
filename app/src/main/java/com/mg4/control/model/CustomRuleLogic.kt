@@ -415,19 +415,35 @@ object RuleGate {
  */
 enum class ConfirmAnswer { YES, NO, TIMEOUT, INTERRUPTED }
 
+/**
+ * Résultat d'une action (2026-11-14) : faite et vérifiée, seulement envoyée (relais dont on ne
+ * connaît pas la suite : raccourci, raccourci perso), ou refusée. [reason] : dans la langue de
+ * l'appli, affichée après l'action dans le journal (« refusée : déjà en cours »).
+ */
+data class ActionResult(val outcome: Outcome, val reason: String? = null) {
+    enum class Outcome { DONE, SENT, FAILED }
+    companion object {
+        val DONE = ActionResult(Outcome.DONE)
+        fun done(reason: String? = null) = ActionResult(Outcome.DONE, reason)
+        fun sent(reason: String? = null) = ActionResult(Outcome.SENT, reason)
+        fun failed(reason: String? = null) = ActionResult(Outcome.FAILED, reason)
+        fun of(ok: Boolean, reasonIfFailed: String? = null) = if (ok) DONE else failed(reasonIfFailed)
+    }
+}
+
 interface RuleEffects {
     /** Lecture fraîche, pour les blocs Si : la voiture a pu changer pendant une attente. */
     fun state(): RuleState
     /** Écriture `ExternalApi.SET_*` ; faux = clé ou valeur refusée. Bloquant. */
-    fun set(key: String, value: String): Boolean
-    fun shortcut(name: String): Boolean
+    fun set(key: String, value: String): ActionResult
+    fun shortcut(name: String): ActionResult
     suspend fun profile(id: String): Boolean
     fun notify(text: String)
     suspend fun pause(ms: Long)
     /** Question Oui / Non : une seule réponse, voir [ConfirmAnswer]. */
     suspend fun confirm(text: String, seconds: Int): ConfirmAnswer
     /** Les autres actions (son, appli, raccourci perso, automatisations, variable, voix, navigation). */
-    suspend fun perform(a: RuleAction): Boolean
+    suspend fun perform(a: RuleAction): ActionResult
 }
 
 /**
@@ -453,6 +469,9 @@ class RuleRun(
     var done = 0
         private set
     var failed = 0
+        private set
+    /** Actions seulement envoyées : leur résultat n'est pas connu (2026-11-14). */
+    var sent = 0
         private set
     private var etapes = 0
     private var arret = false
@@ -570,8 +589,19 @@ class RuleRun(
         }
     }
 
-    private fun note(ok: Boolean, a: RuleAction) {
-        if (ok) done++ else failed++
-        ligne((if (ok) "✓ " else "✗ ") + describe(a))
+    private fun note(ok: Boolean, a: RuleAction) = note(ActionResult.of(ok), a)
+
+    private fun note(r: ActionResult, a: RuleAction) {
+        when (r.outcome) {
+            ActionResult.Outcome.DONE -> done++
+            ActionResult.Outcome.SENT -> sent++
+            ActionResult.Outcome.FAILED -> failed++
+        }
+        val signe = when (r.outcome) {
+            ActionResult.Outcome.DONE -> "✓ "
+            ActionResult.Outcome.SENT -> "↗ "
+            ActionResult.Outcome.FAILED -> "✗ "
+        }
+        ligne(signe + describe(a) + (r.reason?.let { " — $it" } ?: ""))
     }
 }

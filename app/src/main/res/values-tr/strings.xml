@@ -1441,6 +1441,17 @@
         <item quantity="one">%d eylem başarılı</item>
         <item quantity="other">%d eylem başarılı</item>
     </plurals>
+    <plurals name="rule_actions_sent">
+        <item quantity="one">%d gönderildi</item>
+        <item quantity="other">%d gönderildi</item>
+    </plurals>
+    <string name="rule_res_sent">istek gönderildi</string>
+    <string name="rule_res_refused">araç tarafından uygulanmadı</string>
+    <string name="rule_res_started">başlatıldı</string>
+    <string name="rule_res_rule_off">reddedildi: kapalı veya yok</string>
+    <string name="rule_res_rule_burst">reddedildi: çok fazla art arda başlatma</string>
+    <string name="rule_res_refused_fmt">reddedildi: %1$s</string>
+    <string name="rule_res_var_unknown_fmt">bilinmeyen değişken %1$s</string>
     <plurals name="rule_runs_count">
         <item quantity="one">%d kez çalıştı</item>
         <item quantity="other">%d kez çalıştı</item>
@@ -1570,6 +1581,34 @@
     <string name="rule_import_msg">Mevcutlara kapalı olarak eklenir: kontrol ettikten sonra açın.</string>
     <string name="rule_import_none">%1$s içinde okunabilir otomasyon yok</string>
     <string name="rule_import_title">%1$d otomasyon içe aktarılsın mı?</string>
+    <string name="rule_import_report_sub">Aralarındaki bağlantılar yeniden kuruldu. Açmadan önce kalanları kontrol edin.</string>
+    <string name="rule_import_auto">Otomatik bağlandı</string>
+    <string name="rule_import_todo_fmt">Yeniden bağlanacak (%1$d)</string>
+    <string name="rule_import_by_name_fmt">“%1$s” adıyla bağlandı</string>
+    <string name="rule_import_missing_fmt">“%1$s” bulunamadı</string>
+    <string name="rule_import_in_fmt">“%1$s” içinde</string>
+    <string name="rule_import_linked_fmt">“%1$s” ile bağlandı</string>
+    <string name="rule_import_unnamed">adsız</string>
+    <string name="rule_ref_rule">Otomasyon</string>
+    <string name="rule_ref_place">Konum</string>
+    <string name="rule_ref_profile">Profil</string>
+    <string name="rule_ref_sound">Ses</string>
+    <string name="rule_ref_shortcut">Özel kısayol</string>
+    <string name="rule_import_choose_rule">Otomasyon seç</string>
+    <string name="rule_import_choose_place">Konum seç</string>
+    <string name="rule_import_choose_profile">Profil seç</string>
+    <string name="rule_import_choose_sound">Ses seç</string>
+    <string name="rule_import_choose_shortcut">Kısayol seç</string>
+    <string name="rule_import_later">Daha sonra</string>
+    <string name="rule_import_finished">Bitti</string>
+    <plurals name="rule_import_from_file">
+        <item quantity="one">Dosyadaki otomasyonlara %d bağlantı</item>
+        <item quantity="other">Dosyadaki otomasyonlara %d bağlantı</item>
+    </plurals>
+    <plurals name="rule_links_missing">
+        <item quantity="one">⚠ Yeniden bağlanacak %d bağlantı</item>
+        <item quantity="other">⚠ Yeniden bağlanacak %d bağlantı</item>
+    </plurals>
     <string name="rule_export_title">Otomasyonları dışa aktar</string>
     <string name="rule_export_subtitle">%1$d otomasyon tek dosyada; burada veya başka bir araçta içe aktarılabilir.</string>
     <string name="rule_export_done_title">Otomasyonlar dışa aktarıldı</string>

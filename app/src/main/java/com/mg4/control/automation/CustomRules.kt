@@ -37,6 +37,7 @@ import com.mg4.control.model.SunCalc
 import com.mg4.control.model.SunEvent
 import com.mg4.control.model.TimeWatch
 import com.mg4.control.model.ConfirmAnswer
+import com.mg4.control.model.ActionResult
 import com.mg4.control.model.reuseWatches
 import com.mg4.control.model.TriggerWatch
 import com.mg4.control.profile.ActiveProfile
@@ -136,11 +137,12 @@ object CustomRules {
      * Déclenchée mais pas exécutée (2026-11-08) : l'historique et la carte le montrent, avec la
      * raison — sinon seul le journal du diagnostic le disait, et la règle semblait ne jamais partir.
      */
-    private fun ignorer(ctx: Context, r: CustomRule, by: String?, skip: RuleSkip) {
+    private fun ignorer(ctx: Context, r: CustomRule, by: String?, skip: RuleSkip): RuleSkip {
         val s = skip.copy(atMs = System.currentTimeMillis().takeIf { StatsTracker.clockPlausible(it) }, by = by)
         dernieresRefus[r.id] = s
         CustomRuleStore.addSkip(ctx, r.id, r.name, s)
         principal.post { surChangement?.invoke() }
+        return s
     }
 
     /** Démarrage du service : charge les règles, puis l'événement « démarrage de l'écran ». */
@@ -181,14 +183,19 @@ object CustomRules {
      * Lancement à la main : bouton du volant, bulle, ou action « Lancer une automatisation ». Les
      * conditions de la règle s'appliquent, comme pour tout déclencheur.
      */
-    fun runManual(context: Context, id: String?, origine: String, by: String? = null) {
+    /**
+     * [resultat] (2026-11-14) : `null` si elle a démarré, sinon la raison du refus, dans la langue
+     * de l'appli — pour « Lancer une automatisation » qui l'attend.
+     */
+    fun runManual(context: Context, id: String?, origine: String, by: String? = null, resultat: ((String?) -> Unit)? = null) {
         app = context.applicationContext
-        if (id == null) return
+        if (id == null) { resultat?.invoke(context.getString(com.mg4.control.R.string.rule_res_rule_off)); return }
         fil.post {
             recharger()
             val r = regles.firstOrNull { it.id == id }
             if (r == null || !r.enabled || !CustomRuleStore.isEngineEnabled(context)) {
                 AppLogger.i(TAG, "lancement ($origine) : automatisation $id absente, coupée ou moteur coupé")
+                resultat?.invoke(context.getString(com.mg4.control.R.string.rule_res_rule_off))
                 return@post
             }
             val maintenant = SystemClock.elapsedRealtime()
@@ -196,10 +203,13 @@ object CustomRules {
             while (rafale.isNotEmpty() && maintenant - rafale.first() > RAFALE_MS) rafale.removeFirst()
             if (rafale.size >= RAFALE_MAX) {
                 AppLogger.w(TAG, "« ${r.name} » ($origine) : trop de lancements rapprochés, ignorée")
+                resultat?.invoke(context.getString(com.mg4.control.R.string.rule_res_rule_burst))
                 return@post
             }
             rafale.addLast(maintenant)
-            declencher(r, origine, by ?: context.getString(com.mg4.control.R.string.rule_trg_manual))
+            val refus = declencher(r, origine, by ?: context.getString(com.mg4.control.R.string.rule_trg_manual))
+            resultat?.invoke(refus?.let { context.getString(com.mg4.control.R.string.rule_res_refused_fmt,
+                com.mg4.control.ui.RuleRunText.skip(context, it, longue = false)) })
         }
     }
 
@@ -223,11 +233,18 @@ object CustomRules {
 
     /** Le premier chargement des règles depuis le démarrage du service a eu lieu. */
     private var chargeUneFois = false
+    /** Interrupteur général lu au dernier rechargement ; `null` avant le premier. */
+    private var moteurVu: Boolean? = null
 
     private fun recharger(force: Boolean = false) {
         val ctx = app ?: return
         val json = CustomRuleStore.rawJson(ctx)
-        if (json != brut || force) {
+        // Moteur rallumé (2026-11-14) : tous les suivis repartent de zéro, comme une règle réactivée —
+        // sinon une attente « pendant 30 s » compterait le temps passé moteur coupé.
+        val moteur = CustomRuleStore.isEngineEnabled(ctx)
+        val rallume = moteurVu == false && moteur
+        moteurVu = moteur
+        if (json != brut || force || rallume) {
             brut = json
             val avant = regles.associateBy { it.id }
             val anciensSuivis = suivis
@@ -241,7 +258,7 @@ object CustomRules {
             // une autre règle ne remet plus à zéro une attente « pendant », ne refait plus partir une
             // heure déjà passée dans la minute, ne décale plus un déclencheur périodique.
             suivis = regles.associate { r ->
-                r.id to reuseWatches(avant[r.id], r, anciensSuivis[r.id]) {
+                r.id to reuseWatches(if (rallume) null else avant[r.id], r, anciensSuivis[r.id]) {
                     when (it.type) {
                         RuleTrigger.Type.BECOMES -> TriggerWatch(armed = RuleLogic.catchesUpAtBoot(it, premier, maintenant))
                         RuleTrigger.Type.TIME, RuleTrigger.Type.SUN -> TimeWatch()
@@ -254,6 +271,7 @@ object CustomRules {
             // Une règle supprimée ou coupée n'a plus à finir ce qu'elle faisait.
             val ids = actives(ctx).map { it.id }.toSet()
             enCours.keys.filter { it !in ids }.forEach { enCours.remove(it)?.cancel() }
+            if (rallume) AppLogger.i(TAG, "interrupteur général rallumé : déclencheurs remis à zéro")
             AppLogger.i(TAG, "${regles.size} automatisation(s), ${ids.size} active(s)" +
                 if (CustomRuleStore.isEngineEnabled(ctx)) "" else " — interrupteur général coupé")
         }
@@ -357,12 +375,12 @@ object CustomRules {
     }
 
     /** [by] : ce qui l'a déclenchée, en texte (historique) ; [origine] : pour le journal. */
-    private fun declencher(r: CustomRule, origine: String, by: String?) {
-        val ctx = app ?: return
+    /** `null` : partie ; sinon le refus noté (2026-11-14 : « Lancer une automatisation » l'affiche). */
+    private fun declencher(r: CustomRule, origine: String, by: String?): RuleSkip? {
+        val ctx = app ?: return RuleSkip()
         if (GarageMode.isOn(ctx)) {
             AppLogger.i(TAG, "« ${r.name} » ($origine) : Mode Garage, rien")
-            ignorer(ctx, r, by, RuleSkip(reason = RuleSkip.Reason.GARAGE))
-            return
+            return ignorer(ctx, r, by, RuleSkip(reason = RuleSkip.Reason.GARAGE))
         }
         val etat = lire(ctx, RuleLogic.signals(r), RuleLogic.usesClock(r), RuleLogic.places(r))
         val conditions = RuleLogic.evaluate(r.condition, etat)
@@ -371,17 +389,17 @@ object CustomRules {
             // La première condition en cause et ce qui a été lu pour elle.
             val texte = RuleText(AndroidRuleWords(ctx))
             val enCause = RuleLogic.firstFailing(r.condition, etat)
-            ignorer(ctx, r, by, RuleSkip(
+            return ignorer(ctx, r, by, RuleSkip(
                 reason = if (conditions == false) RuleSkip.Reason.CONDITIONS else RuleSkip.Reason.UNKNOWN,
                 detail = enCause?.let { texte.condition(it) }, value = texte.readValue(enCause, etat)))
-            return
         }
         val maintenant = SystemClock.elapsedRealtime()
-        when (RuleGate.decide(r, isRunning(r.id), departs[r.id], maintenant, ReadyWatcher.ready)) {
-            RuleGate.Decision.START -> lancer(r, origine, by)
+        return when (RuleGate.decide(r, isRunning(r.id), departs[r.id], maintenant, ReadyWatcher.ready)) {
+            RuleGate.Decision.START -> { lancer(r, origine, by); null }
             RuleGate.Decision.RESTART -> {
                 enCours.remove(r.id)?.cancel()
                 lancer(r, "$origine, relancée", by)
+                null
             }
             RuleGate.Decision.BUSY -> {
                 AppLogger.i(TAG, "« ${r.name} » ($origine) : déjà en cours, ignorée")
@@ -415,11 +433,11 @@ object CustomRules {
                 run.run(r.actions)
             } finally {
                 val heure = System.currentTimeMillis().takeIf { StatsTracker.clockPlausible(it) }
-                val bilan = RuleLastRun(heure, run.done, run.failed, run.journal.toList(), by)
+                val bilan = RuleLastRun(heure, run.done, run.failed, run.journal.toList(), by, sent = run.sent)
                 dernieres[r.id] = bilan
                 CustomRuleStore.setLastRun(ctx, r.id, bilan)
                 CustomRuleStore.addHistory(ctx, r.id, r.name, bilan)
-                AppLogger.i(TAG, "« ${r.name} » terminée : ${run.done} ok, ${run.failed} en échec — ${run.journal.joinToString(" ; ")}")
+                AppLogger.i(TAG, "« ${r.name} » terminée : ${run.done} ok, ${run.sent} envoyée(s), ${run.failed} en échec — ${run.journal.joinToString(" ; ")}")
                 principal.post { surChangement?.invoke() }
             }
         }
@@ -430,16 +448,23 @@ object CustomRules {
     private class Effets(private val ctx: Context, private val r: CustomRule) : RuleEffects {
         override fun state(): RuleState = lire(ctx, RuleLogic.signals(r), RuleLogic.usesClock(r), RuleLogic.places(r))
 
-        override fun set(key: String, value: String): Boolean {
-            if (GarageMode.isOn(ctx)) return false
+        override fun set(key: String, value: String): ActionResult {
+            if (GarageMode.isOn(ctx)) return ActionResult.failed(ctx.getString(com.mg4.control.R.string.settings_garage_mode))
             // « $NOM » : la valeur de la variable NOM (2026-11-06) ; variable inconnue = échec.
             val v = RuleLogic.variableRef(value)?.let { nom ->
-                RuleVariables.all(ctx)[nom] ?: run { AppLogger.w(TAG, "réglage $key : variable $nom inconnue"); return false }
+                RuleVariables.all(ctx)[nom] ?: run {
+                    AppLogger.w(TAG, "réglage $key : variable $nom inconnue")
+                    return ActionResult.failed(ctx.getString(com.mg4.control.R.string.rule_res_var_unknown_fmt, nom))
+                }
             } ?: value
-            return if (key in RuleKeys.ALL) RuleWrites.set(ctx, key, v) else VehicleCommands.set(ctx, key, v, TAG)
+            // Résultat réel de la voiture (2026-11-14), plus « clé connue ».
+            val ok = if (key in RuleKeys.ALL) RuleWrites.set(ctx, key, v) else VehicleCommands.set(ctx, key, v, TAG, strict = true)
+            return ActionResult.of(ok, ctx.getString(com.mg4.control.R.string.rule_res_refused))
         }
 
-        override fun shortcut(name: String): Boolean {
+        override fun shortcut(name: String): ActionResult = if (relais(name)) ActionResult.sent(ctx.getString(com.mg4.control.R.string.rule_res_sent)) else ActionResult.failed()
+
+        private fun relais(name: String): Boolean {
             val sc = ShortcutAction.entries.firstOrNull { it.name == name }
             if (sc == null || sc in INTERDITS || GarageMode.isOn(ctx)) return false
             val i = Intent(ctx, MG4ControlService::class.java).apply {
@@ -481,7 +506,32 @@ object CustomRules {
             return true
         }
 
-        override suspend fun perform(a: RuleAction): Boolean {
+        override suspend fun perform(a: RuleAction): ActionResult = when (a.type) {
+            // Relayé : on sait seulement que la demande est partie.
+            RuleAction.Type.CUSTOM_SHORTCUT -> if (faire(a)) ActionResult.sent(ctx.getString(com.mg4.control.R.string.rule_res_sent)) else ActionResult.failed()
+            RuleAction.Type.RUN_RULE -> lancerAutre(a)
+            else -> ActionResult.of(faire(a))
+        }
+
+        /**
+         * « Lancer une automatisation » (2026-11-14) : attend la décision du moteur — démarrée, ou
+         * refusée et pourquoi (coupée, déjà en cours, temps de repos…) — au lieu de compter ✓ dès la
+         * mise en file.
+         */
+        private suspend fun lancerAutre(a: RuleAction): ActionResult {
+            if (GarageMode.isOn(ctx)) return ActionResult.failed(ctx.getString(com.mg4.control.R.string.settings_garage_mode))
+            val id = a.text ?: return ActionResult.failed()
+            // Une règle qui se relance elle-même tournerait en rond.
+            if (id == r.id || CustomRuleStore.all(ctx).none { it.id == id })
+                return ActionResult.failed(ctx.getString(com.mg4.control.R.string.rule_res_rule_off))
+            val refus = suspendCancellableCoroutine<String?> { suite ->
+                runManual(ctx, id, "lancée par « ${r.name} »", "« ${r.name} »") { raison -> if (suite.isActive) suite.resume(raison) }
+            }
+            return if (refus == null) ActionResult.done(ctx.getString(com.mg4.control.R.string.rule_res_started))
+            else ActionResult.failed(refus)
+        }
+
+        private suspend fun faire(a: RuleAction): Boolean {
             if (GarageMode.isOn(ctx)) return false
             return when (a.type) {
                 RuleAction.Type.PLAY_SOUND -> when {
@@ -532,13 +582,7 @@ object CustomRules {
                     principal.post { surChangement?.invoke() }
                     true
                 }
-                RuleAction.Type.RUN_RULE -> {
-                    val id = a.text ?: return false
-                    // Une règle qui se relance elle-même tournerait en rond.
-                    if (id == r.id || CustomRuleStore.all(ctx).none { it.id == id }) return false
-                    runManual(ctx, id, "lancée par « ${r.name} »", "« ${r.name} »")
-                    true
-                }
+                RuleAction.Type.RUN_RULE -> false   // passe par lancerAutre
                 RuleAction.Type.SET_VARIABLE -> {
                     val nom = a.key ?: return false
                     val v = a.value ?: return false

@@ -200,8 +200,8 @@ class CustomRuleTest {
         val faits = mutableListOf<String>()
         var attente = 0L
         override fun state() = etat
-        override fun set(key: String, value: String) = (key !in refuse).also { faits += "$key=$value" }
-        override fun shortcut(name: String) = true.also { faits += "sc:$name" }
+        override fun set(key: String, value: String) = ActionResult.of(key !in refuse).also { faits += "$key=$value" }
+        override fun shortcut(name: String) = ActionResult.sent("envoyé").also { faits += "sc:$name" }
         override suspend fun profile(id: String) = true.also { faits += "profil:$id" }
         override fun notify(text: String) { faits += "msg:$text" }
         override suspend fun pause(ms: Long) { attente += ms }
@@ -209,7 +209,8 @@ class CustomRuleTest {
         /** Appelé à chaque pause d'« attendre que » : de quoi faire évoluer l'état. */
         var surPause: (() -> Unit)? = null
         override suspend fun confirm(text: String, seconds: Int): ConfirmAnswer = reponse.also { faits += "q:$text" }
-        override suspend fun perform(a: RuleAction): Boolean = true.also { faits += "${a.type}:${a.text ?: a.key}" }
+        override suspend fun perform(a: RuleAction): ActionResult = (if (a.type == RuleAction.Type.RUN_RULE) ActionResult.failed("refusée : déjà en cours")
+            else ActionResult.DONE).also { faits += "${a.type}:${a.text ?: a.key}" }
     }
 
     @Test
@@ -712,5 +713,19 @@ class CustomRuleTest {
         assertEquals(RuleCounts(4, 1), back["a"])
         val partiel: Map<String, RuleCounts> = g.fromJson("""{"b":{"runs":2}}""", t)
         assertEquals(RuleCounts(runs = 2, skips = 0), partiel["b"])
+    }
+
+    @Test
+    fun `done, sent and refused are counted apart, with the reason`() = runBlocking {
+        val fx = Faux(refuse = setOf("hvac_ac"))
+        val run = RuleRun(fx) { it.type?.name ?: "?" }
+        run.run(listOf(
+            RuleAction(RuleAction.Type.SET, key = "hvac_power", value = "1"),
+            RuleAction(RuleAction.Type.SET, key = "hvac_ac", value = "1"),
+            RuleAction(RuleAction.Type.SHORTCUT, shortcut = "SEATS"),
+            RuleAction(RuleAction.Type.RUN_RULE, text = "autre"),
+        ))
+        assertEquals(1, run.done); assertEquals(1, run.sent); assertEquals(2, run.failed)
+        assertEquals(listOf("✓ SET", "✗ SET", "↗ SHORTCUT — envoyé", "✗ RUN_RULE — refusée : déjà en cours"), run.journal)
     }
 }

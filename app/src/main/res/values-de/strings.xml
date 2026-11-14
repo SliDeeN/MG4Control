@@ -1441,6 +1441,17 @@
         <item quantity="one">%d Aktion erfolgreich</item>
         <item quantity="other">%d Aktionen erfolgreich</item>
     </plurals>
+    <plurals name="rule_actions_sent">
+        <item quantity="one">%d gesendet</item>
+        <item quantity="other">%d gesendet</item>
+    </plurals>
+    <string name="rule_res_sent">Anfrage gesendet</string>
+    <string name="rule_res_refused">vom Auto nicht übernommen</string>
+    <string name="rule_res_started">gestartet</string>
+    <string name="rule_res_rule_off">abgelehnt: aus oder nicht vorhanden</string>
+    <string name="rule_res_rule_burst">abgelehnt: zu viele Starts kurz hintereinander</string>
+    <string name="rule_res_refused_fmt">abgelehnt: %1$s</string>
+    <string name="rule_res_var_unknown_fmt">unbekannte Variable %1$s</string>
     <plurals name="rule_runs_count">
         <item quantity="one">%d× ausgeführt</item>
         <item quantity="other">%d× ausgeführt</item>
@@ -1570,6 +1581,34 @@
     <string name="rule_import_msg">Sie kommen zu den vorhandenen hinzu, ausgeschaltet: nach Prüfung einschalten.</string>
     <string name="rule_import_none">Keine lesbare Automation in %1$s</string>
     <string name="rule_import_title">%1$d Automationen importieren?</string>
+    <string name="rule_import_report_sub">Die Verknüpfungen untereinander wurden neu erstellt. Prüfen Sie den Rest, bevor Sie sie einschalten.</string>
+    <string name="rule_import_auto">Automatisch verknüpft</string>
+    <string name="rule_import_todo_fmt">Neu zuzuordnen (%1$d)</string>
+    <string name="rule_import_by_name_fmt">„%1$s“ über den Namen verknüpft</string>
+    <string name="rule_import_missing_fmt">„%1$s“ nicht gefunden</string>
+    <string name="rule_import_in_fmt">in „%1$s“</string>
+    <string name="rule_import_linked_fmt">verknüpft mit „%1$s“</string>
+    <string name="rule_import_unnamed">ohne Namen</string>
+    <string name="rule_ref_rule">Automatisierung</string>
+    <string name="rule_ref_place">Ort</string>
+    <string name="rule_ref_profile">Profil</string>
+    <string name="rule_ref_sound">Ton</string>
+    <string name="rule_ref_shortcut">Eigene Verknüpfung</string>
+    <string name="rule_import_choose_rule">Automatisierung wählen</string>
+    <string name="rule_import_choose_place">Ort wählen</string>
+    <string name="rule_import_choose_profile">Profil wählen</string>
+    <string name="rule_import_choose_sound">Ton wählen</string>
+    <string name="rule_import_choose_shortcut">Verknüpfung wählen</string>
+    <string name="rule_import_later">Später</string>
+    <string name="rule_import_finished">Fertig</string>
+    <plurals name="rule_import_from_file">
+        <item quantity="one">%d Verknüpfung zu einer Automatisierung der Datei</item>
+        <item quantity="other">%d Verknüpfungen zu Automatisierungen der Datei</item>
+    </plurals>
+    <plurals name="rule_links_missing">
+        <item quantity="one">⚠ %d Verknüpfung neu zuordnen</item>
+        <item quantity="other">⚠ %d Verknüpfungen neu zuordnen</item>
+    </plurals>
     <string name="rule_export_title">Automatisierungen exportieren</string>
     <string name="rule_export_subtitle">%1$d Automatisierungen in einer Datei, hier oder in einem anderen Auto zu importieren.</string>
     <string name="rule_export_done_title">Automatisierungen exportiert</string>

@@ -1441,6 +1441,17 @@
         <item quantity="one">%d action succeeded</item>
         <item quantity="other">%d actions succeeded</item>
     </plurals>
+    <plurals name="rule_actions_sent">
+        <item quantity="one">%d sent</item>
+        <item quantity="other">%d sent</item>
+    </plurals>
+    <string name="rule_res_sent">request sent</string>
+    <string name="rule_res_refused">not applied by the car</string>
+    <string name="rule_res_started">started</string>
+    <string name="rule_res_rule_off">refused: off or missing</string>
+    <string name="rule_res_rule_burst">refused: too many starts in a row</string>
+    <string name="rule_res_refused_fmt">refused: %1$s</string>
+    <string name="rule_res_var_unknown_fmt">unknown variable %1$s</string>
     <plurals name="rule_runs_count">
         <item quantity="one">%d run</item>
         <item quantity="other">%d runs</item>
@@ -1570,6 +1581,34 @@
     <string name="rule_import_msg">They are added to the existing ones, turned off: turn them on once checked.</string>
     <string name="rule_import_none">No readable automation in %1$s</string>
     <string name="rule_import_title">Import %1$d automations?</string>
+    <string name="rule_import_report_sub">Links between them were rebuilt. Check what is left before turning them on.</string>
+    <string name="rule_import_auto">Linked automatically</string>
+    <string name="rule_import_todo_fmt">To link again (%1$d)</string>
+    <string name="rule_import_by_name_fmt">“%1$s” linked by its name</string>
+    <string name="rule_import_missing_fmt">“%1$s” not found</string>
+    <string name="rule_import_in_fmt">in “%1$s”</string>
+    <string name="rule_import_linked_fmt">linked to “%1$s”</string>
+    <string name="rule_import_unnamed">unnamed</string>
+    <string name="rule_ref_rule">Automation</string>
+    <string name="rule_ref_place">Place</string>
+    <string name="rule_ref_profile">Profile</string>
+    <string name="rule_ref_sound">Sound</string>
+    <string name="rule_ref_shortcut">Custom shortcut</string>
+    <string name="rule_import_choose_rule">Choose an automation</string>
+    <string name="rule_import_choose_place">Choose a place</string>
+    <string name="rule_import_choose_profile">Choose a profile</string>
+    <string name="rule_import_choose_sound">Choose a sound</string>
+    <string name="rule_import_choose_shortcut">Choose a shortcut</string>
+    <string name="rule_import_later">Later</string>
+    <string name="rule_import_finished">Done</string>
+    <plurals name="rule_import_from_file">
+        <item quantity="one">%d link to an automation in the file</item>
+        <item quantity="other">%d links to automations in the file</item>
+    </plurals>
+    <plurals name="rule_links_missing">
+        <item quantity="one">⚠ %d link to fix</item>
+        <item quantity="other">⚠ %d links to fix</item>
+    </plurals>
     <string name="rule_export_title">Export automations</string>
     <string name="rule_export_subtitle">%1$d automations in one file, to import here or in another car.</string>
     <string name="rule_export_done_title">Automations exported</string>

@@ -1442,6 +1442,18 @@
         <item quantity="many">%d acciones correctas</item>
         <item quantity="other">%d acciones correctas</item>
     </plurals>
+    <plurals name="rule_actions_sent">
+        <item quantity="one">%d enviada</item>
+        <item quantity="many">%d enviadas</item>
+        <item quantity="other">%d enviadas</item>
+    </plurals>
+    <string name="rule_res_sent">solicitud enviada</string>
+    <string name="rule_res_refused">no aplicado por el coche</string>
+    <string name="rule_res_started">iniciada</string>
+    <string name="rule_res_rule_off">rechazada: desactivada o ausente</string>
+    <string name="rule_res_rule_burst">rechazada: demasiados inicios seguidos</string>
+    <string name="rule_res_refused_fmt">rechazada: %1$s</string>
+    <string name="rule_res_var_unknown_fmt">variable %1$s desconocida</string>
     <plurals name="rule_runs_count">
         <item quantity="one">%d ejecución</item>
         <item quantity="many">%d ejecuciones</item>
@@ -1573,6 +1585,36 @@
     <string name="rule_import_msg">Se añaden a las existentes, desactivadas: actívelas tras revisarlas.</string>
     <string name="rule_import_none">Ninguna automatización legible en %1$s</string>
     <string name="rule_import_title">¿Importar %1$d automatizaciones?</string>
+    <string name="rule_import_report_sub">Los enlaces entre ellas se han rehecho. Revise lo que queda antes de activarlas.</string>
+    <string name="rule_import_auto">Enlazados automáticamente</string>
+    <string name="rule_import_todo_fmt">Por volver a asociar (%1$d)</string>
+    <string name="rule_import_by_name_fmt">«%1$s» enlazado por su nombre</string>
+    <string name="rule_import_missing_fmt">«%1$s» no encontrado</string>
+    <string name="rule_import_in_fmt">en «%1$s»</string>
+    <string name="rule_import_linked_fmt">enlazado con «%1$s»</string>
+    <string name="rule_import_unnamed">sin nombre</string>
+    <string name="rule_ref_rule">Automatización</string>
+    <string name="rule_ref_place">Lugar</string>
+    <string name="rule_ref_profile">Perfil</string>
+    <string name="rule_ref_sound">Sonido</string>
+    <string name="rule_ref_shortcut">Atajo personal</string>
+    <string name="rule_import_choose_rule">Elegir una automatización</string>
+    <string name="rule_import_choose_place">Elegir un lugar</string>
+    <string name="rule_import_choose_profile">Elegir un perfil</string>
+    <string name="rule_import_choose_sound">Elegir un sonido</string>
+    <string name="rule_import_choose_shortcut">Elegir un atajo</string>
+    <string name="rule_import_later">Más tarde</string>
+    <string name="rule_import_finished">Hecho</string>
+    <plurals name="rule_import_from_file">
+        <item quantity="one">%d enlace a una automatización del archivo</item>
+        <item quantity="many">%d enlaces a automatizaciones del archivo</item>
+        <item quantity="other">%d enlaces a automatizaciones del archivo</item>
+    </plurals>
+    <plurals name="rule_links_missing">
+        <item quantity="one">⚠ %d enlace por reasociar</item>
+        <item quantity="many">⚠ %d enlaces por reasociar</item>
+        <item quantity="other">⚠ %d enlaces por reasociar</item>
+    </plurals>
     <string name="rule_export_title">Exportar automatizaciones</string>
     <string name="rule_export_subtitle">%1$d automatizaciones en un archivo, para importar aquí o en otro coche.</string>
     <string name="rule_export_done_title">Automatizaciones exportadas</string>

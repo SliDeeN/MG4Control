@@ -1441,6 +1441,17 @@
         <item quantity="one">%d handling vellykket</item>
         <item quantity="other">%d handlinger vellykket</item>
 </plurals>
+    <plurals name="rule_actions_sent">
+        <item quantity="one">%d sendt</item>
+        <item quantity="other">%d sendt</item>
+    </plurals>
+    <string name="rule_res_sent">forespørsel sendt</string>
+    <string name="rule_res_refused">ikke brukt av bilen</string>
+    <string name="rule_res_started">startet</string>
+    <string name="rule_res_rule_off">avvist: av eller mangler</string>
+    <string name="rule_res_rule_burst">avvist: for mange starter på rad</string>
+    <string name="rule_res_refused_fmt">avvist: %1$s</string>
+    <string name="rule_res_var_unknown_fmt">ukjent variabel %1$s</string>
     <plurals name="rule_runs_count">
         <item quantity="one">%d kjøring</item>
         <item quantity="other">%d kjøringer</item>
@@ -1570,6 +1581,34 @@
     <string name="rule_import_msg">De legges til de eksisterende, slått av: slå dem på når du har sjekket dem.</string>
     <string name="rule_import_none">Ingen lesbar automatisering i %1$s</string>
     <string name="rule_import_title">Importere %1$d automatiseringer?</string>
+    <string name="rule_import_report_sub">Koblingene mellom dem er laget på nytt. Sjekk resten før du slår dem på.</string>
+    <string name="rule_import_auto">Koblet automatisk</string>
+    <string name="rule_import_todo_fmt">Må kobles på nytt (%1$d)</string>
+    <string name="rule_import_by_name_fmt">«%1$s» koblet etter navnet</string>
+    <string name="rule_import_missing_fmt">Fant ikke «%1$s»</string>
+    <string name="rule_import_in_fmt">i «%1$s»</string>
+    <string name="rule_import_linked_fmt">koblet til «%1$s»</string>
+    <string name="rule_import_unnamed">uten navn</string>
+    <string name="rule_ref_rule">Automatisering</string>
+    <string name="rule_ref_place">Sted</string>
+    <string name="rule_ref_profile">Profil</string>
+    <string name="rule_ref_sound">Lyd</string>
+    <string name="rule_ref_shortcut">Egen snarvei</string>
+    <string name="rule_import_choose_rule">Velg en automatisering</string>
+    <string name="rule_import_choose_place">Velg et sted</string>
+    <string name="rule_import_choose_profile">Velg en profil</string>
+    <string name="rule_import_choose_sound">Velg en lyd</string>
+    <string name="rule_import_choose_shortcut">Velg en snarvei</string>
+    <string name="rule_import_later">Senere</string>
+    <string name="rule_import_finished">Ferdig</string>
+    <plurals name="rule_import_from_file">
+        <item quantity="one">%d kobling til en automatisering i filen</item>
+        <item quantity="other">%d koblinger til automatiseringer i filen</item>
+    </plurals>
+    <plurals name="rule_links_missing">
+        <item quantity="one">⚠ %d kobling må fikses</item>
+        <item quantity="other">⚠ %d koblinger må fikses</item>
+    </plurals>
     <string name="rule_export_title">Eksporter automatiseringer</string>
     <string name="rule_export_subtitle">%1$d automatiseringer i én fil, for import her eller i en annen bil.</string>
     <string name="rule_export_done_title">Automatiseringer eksportert</string>

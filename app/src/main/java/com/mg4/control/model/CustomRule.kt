@@ -28,6 +28,11 @@ data class CustomRule(
     val cooldownMinutes: Int = 0,
     /** Ne part que voiture en READY. */
     val onlyWhenReady: Boolean = false,
+    /**
+     * Seulement dans un fichier d'export (2026-11-14) : nom des objets liés, « PLACE:<id> » → « Maison »,
+     * pour les relier par le nom sur une autre voiture ([RuleRefs]). Jamais enregistré.
+     */
+    val exportNames: Map<String, String>? = null,
 ) {
     /** Déclenchée alors qu'elle tourne encore (une attente en cours, par exemple). */
     enum class IfRunning { IGNORE, RESTART }
@@ -275,6 +280,8 @@ data class RuleLastRun(
     val journal: List<String>? = null,
     /** Ce qui l'a déclenchée, dans la langue de l'appli (« Le profil actif change »). */
     val by: String? = null,
+    /** Actions seulement envoyées (2026-11-14) ; 0 dans les historiques plus anciens. */
+    val sent: Int = 0,
 )
 
 /**

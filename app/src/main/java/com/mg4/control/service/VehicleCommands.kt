@@ -23,7 +23,11 @@ object VehicleCommands {
      * Écrit [key] = [value] ; NEXT / PREV / TOGGLE sont résolus d'après l'état lu. Vrai si la
      * commande est partie (ou la clé connue mais sans objet sur ce firmware), faux si refusée.
      */
-    fun set(ctx: Context, key: String, value: String, tag: String): Boolean {
+    /**
+     * [strict] (automatisations, 2026-11-14) : faux aussi quand la voiture n'applique pas la
+     * commande — l'API externe, elle, garde « vrai = clé et valeur valides ».
+     */
+    fun set(ctx: Context, key: String, value: String, tag: String, strict: Boolean = false): Boolean {
         // NEXT/PREV/TOGGLE sont résolus en valeur concrète AVANT le dispatch : le cycle
         // emprunte ensuite exactement le même chemin d'écriture qu'une consigne explicite,
         // donc les mêmes validations, le même clampage et le même verrou de vitesse.
@@ -41,24 +45,24 @@ object VehicleCommands {
         val ok = when (key) {
             ExternalApi.SET_DRIVE_MODE -> DriveMode.entries
                 .firstOrNull { it.name.equals(v, true) }
-                ?.let { MG4Hardware.setDriveMode(it); true } ?: false
+                ?.let { MG4Hardware.setDriveMode(it) || !strict } ?: false
             ExternalApi.SET_REGEN -> RegenLevel.entries
                 .firstOrNull { it.name.equals(v, true) }
-                ?.let { MG4Hardware.setRegenLevel(it); true } ?: false
+                ?.let { MG4Hardware.setRegenLevel(it) || !strict } ?: false
             ExternalApi.SET_SEAT_HEAT_LEFT ->
                 v.toIntOrNull()?.takeIf { it in 0..3 }
-                    ?.let { MG4Hardware.setSeatHeatLeft(it); true } ?: false
+                    ?.let { MG4Hardware.setSeatHeatLeft(it) || !strict } ?: false
             ExternalApi.SET_SEAT_HEAT_RIGHT ->
                 v.toIntOrNull()?.takeIf { it in 0..3 }
-                    ?.let { MG4Hardware.setSeatHeatRight(it); true } ?: false
+                    ?.let { MG4Hardware.setSeatHeatRight(it) || !strict } ?: false
             ExternalApi.SET_STEERING_HEAT -> {
                 val on = v.equals("true", true) || v == "1"
-                MG4Hardware.setSteeringHeat(on); true
+                MG4Hardware.setSteeringHeat(on) || !strict
             }
-            ExternalApi.SET_PROFILE -> { applyProfile(ctx, v, tag); true }
-            else -> setClimate(key, v, tag)
+            ExternalApi.SET_PROFILE -> applyProfile(ctx, v, tag) || !strict
+            else -> setClimate(key, v, tag, strict)
         }
-        if (!ok) AppLogger.w(tag, "SET refusé — clé ou valeur invalide ($key=$v)")
+        if (!ok) AppLogger.w(tag, if (strict) "SET non appliqué ($key=$v)" else "SET refusé — clé ou valeur invalide ($key=$v)")
         return ok
     }
 
@@ -120,7 +124,7 @@ object VehicleCommands {
      * Consigne et ventilation sont clampées aux **bornes réelles du véhicule**, pas à des
      * valeurs codées en dur : elles diffèrent d'un firmware à l'autre.
      */
-    private fun setClimate(key: String, value: String, tag: String): Boolean {
+    private fun setClimate(key: String, value: String, tag: String, strict: Boolean = false): Boolean {
         val hvacKeys = setOf(
             ExternalApi.SET_HVAC_POWER, ExternalApi.SET_HVAC_AC, ExternalApi.SET_HVAC_AUTO,
             ExternalApi.SET_HVAC_TEMP, ExternalApi.SET_HVAC_FAN, ExternalApi.SET_HVAC_RECIRC,
@@ -129,38 +133,38 @@ object VehicleCommands {
         if (key !in hvacKeys) return false
         if (!MG4Hardware.hasClimateControl()) {
             AppLogger.w(tag, "SET $key ignoré — clim non pilotable sur ce firmware")
-            return true   // clé connue : ce n'est pas une erreur de syntaxe
+            return !strict   // clé connue : ce n'est pas une erreur de syntaxe (API) ; rien d'appliqué (automatisation)
         }
         val on = value.equals("true", true) || value == "1"
         return when (key) {
-            ExternalApi.SET_HVAC_POWER    -> { MG4Hardware.setClimatePower(on); true }
-            ExternalApi.SET_HVAC_AC       -> { MG4Hardware.setClimateAc(on); true }
-            ExternalApi.SET_HVAC_AUTO     -> { MG4Hardware.setClimateAuto(on); true }
-            ExternalApi.SET_DEFROST_FRONT -> { MG4Hardware.setClimateDefrostFront(on); true }
-            ExternalApi.SET_DEFROST_REAR  -> { MG4Hardware.setClimateDefrostRear(on); true }
+            ExternalApi.SET_HVAC_POWER    -> MG4Hardware.setClimatePower(on) || !strict
+            ExternalApi.SET_HVAC_AC       -> MG4Hardware.setClimateAc(on) || !strict
+            ExternalApi.SET_HVAC_AUTO     -> MG4Hardware.setClimateAuto(on) || !strict
+            ExternalApi.SET_DEFROST_FRONT -> MG4Hardware.setClimateDefrostFront(on) || !strict
+            ExternalApi.SET_DEFROST_REAR  -> MG4Hardware.setClimateDefrostRear(on) || !strict
             ExternalApi.SET_HVAC_RECIRC   -> {
                 val mode = when (value.uppercase()) {
                     "INNER", "0"   -> MG4Hardware.LoopMode.INNER
                     "OUTSIDE", "1" -> MG4Hardware.LoopMode.OUTSIDE
                     "AUTO", "2"    -> MG4Hardware.LoopMode.AUTO
-                    else           -> return true.also {
+                    else           -> return (!strict).also {
                         AppLogger.w(tag, "SET $key : valeur invalide '$value'")
                     }
                 }
-                MG4Hardware.setClimateLoopMode(mode); true
+                MG4Hardware.setClimateLoopMode(mode) || !strict
             }
             ExternalApi.SET_HVAC_TEMP, ExternalApi.SET_HVAC_FAN -> {
-                val n = value.toIntOrNull() ?: return true.also {
+                val n = value.toIntOrNull() ?: return (!strict).also {
                     AppLogger.w(tag, "SET $key : valeur non numérique '$value'")
                 }
-                val state = MG4Hardware.getClimateState() ?: return true.also {
+                val state = MG4Hardware.getClimateState() ?: return (!strict).also {
                     AppLogger.w(tag, "SET $key : état clim illisible")
                 }
-                if (key == ExternalApi.SET_HVAC_TEMP)
+                val fait = if (key == ExternalApi.SET_HVAC_TEMP)
                     MG4Hardware.setClimateTemp(n.coerceIn(state.tempMin, state.tempMax))
                 else
                     MG4Hardware.setClimateFan(n.coerceIn(state.fanMin, state.fanMax))
-                true
+                fait || !strict
             }
             else -> false
         }
