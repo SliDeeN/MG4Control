@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/site.css?v=cbeb2f14">
-  <link rel="stylesheet" href="../assets/css/sim.css?v=5ab313b9">
+  <link rel="stylesheet" href="../assets/css/sim.css?v=b1dc7c31">
   <link rel="stylesheet" href="../assets/css/explorer.css?v=34b00b13">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -216,7 +216,7 @@
         <label class="x-fw">
           <span>Firmware</span>
           <select data-fw-select aria-label="Firmware">
-            <option>SWI133</option><option>SWI132</option><option>SWI68</option><option>SWI69</option><option>SWI131</option><option>SWI165</option><option>UNKNOWN</option>
+            <option>SWI133</option><option>SWI132</option><option>SWI68</option><option>SWI69</option><option>SWI131</option><option>SWI165</option><option>SWI173</option><option>UNKNOWN</option>
           </select>
         </label>
         <button type="button" class="icon-btn x-pin" aria-pressed="true" aria-label="Keep the mockup visible while scrolling">
@@ -693,7 +693,7 @@
       <h3><span data-l="en">Floating buttons</span></h3>
       <p data-l="en">Up to 6 bubbles on top of every app: a tap triggers the shortcut, a long press moves the bubble.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Shortcuts tab, “Floating buttons” page. Each bubble uses one of the steering-wheel shortcut actions, with a title (the shortcut's name by default), a size, a text size and optional bold text. A toggle shows filled when it is on; a value (temperature, fan, regeneration…) shows briefly after the press, and a halo confirms the tap. A bubble can also sit in the black bar at the top of the screen. Each profile has its own bubbles, which can be copied to other profiles. They hide in reverse, in Garage mode and while Car keeper is running.</p>
+        <p data-l="en">Shortcuts tab, “Floating buttons” page. Each bubble uses one of the steering-wheel shortcut actions, with a title (the shortcut's name by default), a size, a text size and optional bold text. A toggle shows filled when it is on; a value (temperature, fan, regeneration…) shows briefly after the press, and a halo confirms the tap. A bubble can also sit in the black bar at the top of the screen, exactly where it is dropped, climate area included: it only avoids the other bubbles (#222). Each profile has its own bubbles, which can be copied to other profiles. They hide in reverse, in Garage mode and while Car keeper is running.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-bubblecolor" data-hl-key="fl-color" data-demo="bubbleColor">
@@ -711,9 +711,9 @@
     </div>
     <div class="pt is-new" id="f-bubblelook" data-hl-key="fl-edit" data-demo="bubbleLook">
       <h3><span data-l="en">Each bubble's look</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
-      <p data-l="en">Background opacity, dark, tinted or light background, border or none, and dimming when idle: each bubble has its own look (#230).</p>
+      <p data-l="en">Background opacity, dark, tinted, light or black background, automatic or fixed width, border or none, and dimming when idle: each bubble has its own look (#230, #222).</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">When dimmed, a bubble drops to 40 % after 5 s without a touch; a touch runs the action and makes it sharp again. “Copy the look of…” takes another bubble's, from this profile or another one, and “Apply to all bubbles” spreads it over the profile. An active toggle stays at least 60 % opaque, and under 35 % the text gets an outline to stay readable. A bubble never set keeps its previous look.</p>
+        <p data-l="en">When dimmed, a bubble drops to 40 % after 5 s without a touch; a touch runs the action and makes it sharp again. “Copy the look of…” takes another bubble's, from this profile or another one, and “Apply to all bubbles” spreads it over the profile. An active toggle stays at least 60 % opaque, and under 35 % the text gets an outline to stay readable. A bubble never set keeps its previous look. The black background at 100 % blends into the black top bar. With a fixed width (60 to 240 dp), an information bubble no longer changes width with its value; a text that is too long ends with “…”.</p>
       </details>
     </div>
 
@@ -1109,7 +1109,7 @@
       <h3><span data-l="en">Trips</span></h3>
       <p data-l="en">Each trip with its duration, distance, consumption and energy breakdown.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">A trip runs from one ignition to the next. On SWI133 and SWI132, the breakdown comes from the car's counters: motor, climate, accessories and regeneration. Other firmwares have no such counters: energy is computed from the battery voltage and current, and the breakdown is limited to “Motor” and “Climate control and others”, in whole kWh. Switch firmware above the mockup to compare. Selected firmware: <span data-fw-name></span>.</p>
+        <p data-l="en">A trip runs from one ignition to the next. On SWI133 and SWI132, the breakdown comes from the car's counters: motor, climate, accessories and regeneration. Other firmwares have no such counters: energy is computed from the battery voltage and current, and the breakdown is limited to “Motor” and “Climate control and others”, in whole kWh. Switch firmware above the mockup to compare. Selected firmware: <span data-fw-name></span>. The trip and charge lists show the 50 most recent, then “Show 50 more” or “Show all”; the tiles and the CSV export always cover everything.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="st-charges" data-go="stats:2">
@@ -1183,7 +1183,7 @@
       <h3><span data-l="en">A module on the cluster</span></h3>
       <p data-l="en">The cluster's central square, the one used by navigation and music, shows an MG4Control module instead of its original page.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Turn on “Module on the instrument cluster” in Settings, Interface tab. The module shows as soon as the app starts, without waiting for READY, and takes the cluster's background to blend in. The cluster is a separate computer: only this 260 × 260 px square comes from the head unit, where a SAIC app draws it: the card shows wherever that app is installed (SWI133, SWI68, SWI165, and any other firmware that has it, #231). On the A9 firmwares (SWI69, SWI131, SWI132), the cluster draws everything itself: nothing can show there, and the card does not appear in the settings. Try the preview below the cards.</p>
+        <p data-l="en">Turn on “Module on the instrument cluster” in Settings, Interface tab. The module shows as soon as the app starts, without waiting for READY, and takes the cluster's background to blend in. The cluster is a separate computer: this 260 × 260 px square comes from the head unit when a SAIC app supplies the image (#231). The mockup offers the module on SWI133, SWI68, SWI165 and on the SWI173 variant with that app. On SWI69, SWI131 and SWI132, the cluster draws these pages itself and the settings card is hidden. Try the preview below the cards.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-modules" data-hl-key="s-cluster-tabs" data-demo="cluster">
@@ -1627,6 +1627,7 @@
         </tbody>
       </table>
     </div>
+    <p class="note" data-l="en"><b>SWI173 in the mockup.</b> Use the SWI131 column for the features in the table, with the driver display module also available on the variant with the SAIC app that supplies the image.</p>
     <p class="note" data-l="en"><b>SWI133, SWI68, SWI165</b> use the older SAIC SDK, <b>SWI69, SWI131, SWI132</b> the “A9” family. <b>SWI173</b> (Asian market) is recognised since 2.7.0 and handled as SWI131 (#175). MG4Control uses several paths (Android Automotive Car API, direct binder, firmware ADAS services) and falls back automatically if one fails.</p>
   </div>
 </section>
@@ -1699,9 +1700,9 @@
 <div class="dock" aria-label="Virtual vehicle"></div>
 <button type="button" class="to-top" aria-label="Back to the top of the page" title="Back to the top of the page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="../assets/js/strings.js?v=2beaa4fd"></script>
-<script src="../assets/js/sim.js?v=fcef1c03"></script>
-<script src="../assets/js/site.js?v=eae0ab3a"></script>
+<script src="../assets/js/strings.js?v=ba146649"></script>
+<script src="../assets/js/sim.js?v=59fc2281"></script>
+<script src="../assets/js/site.js?v=5b3c68e9"></script>
 <script src="../assets/js/explorer.js?v=72fb983a"></script>
 </body>
 </html>

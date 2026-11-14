@@ -747,6 +747,8 @@
 .st-chip.on { background: var(--dash-accent-dim); border-color: var(--dash-accent); color: var(--dash-accent); }
 .st-cap { font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); margin-right: 2px; }
 .st-empty { color: var(--text-secondary); font-size: calc(15px * var(--ts, 1)); }
+.st-pager { margin-top: 12px; padding: 0 12px; }
+.st-pager .b { flex: none; padding: 0 14px; }
 .st-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-top: 6px; background: var(--dash-card); border: 1px solid var(--dash-border); border-radius: 12px; cursor: pointer; }
 .st-row > div:first-child { flex: 1; min-width: 0; }
 .st-row b { display: block; font-size: calc(15px * var(--ts, 1)); }
@@ -1183,10 +1185,12 @@
 .cls-prev { flex: none; width: 214px; display: flex; flex-direction: column; gap: 8px; }
 .cls-prev .a-sub { margin: 0; }
 /* Personnalisation avancée de l'écran conducteur (issue #229) : aperçu à gauche, réglages à droite. */
-.cll-body { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 24px; margin-top: 8px; align-items: start; }
-.cll-sq { display: block; width: 300px; height: 300px; border-radius: 14px; background: #0C0C0C; font-family: Roboto, "Segoe UI", system-ui, sans-serif; }
-.cll-panel { max-height: 330px; overflow-y: auto; padding-right: 8px; }
+.cll-body { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 24px; margin-top: 8px; align-items: start; min-height: 0; }
+.cll-sq { display: block; width: 100%; aspect-ratio: 1; border-radius: 14px; background: #0C0C0C; font-family: Roboto, "Segoe UI", system-ui, sans-serif; }
+.cll-panel { max-height: 410px; overflow-y: auto; padding-right: 8px; }
 .cll-panel .mw-cap { margin-top: 12px; }
+.cll-acts .mw-b { flex: none; min-width: 120px; }
+.cll-acts .mw-b:first-child { margin-right: auto; }
 .cll-hit { cursor: pointer; }
 .cls-layout { width: 100%; margin-top: 10px; }
 .cls-sq { display: block; width: 214px; height: 214px; border-radius: 10px; background: #0C0C0C; font-family: Roboto, "Segoe UI", system-ui, sans-serif; }
@@ -1200,6 +1204,7 @@
 .cls-group { display: flex; flex-direction: column; gap: 6px; }
 .cls-row { display: flex; align-items: center; gap: 10px; }
 .cls-lbl { flex: none; width: 112px; font-size: calc(14px * var(--ts, 1)); color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cls-mixed, .a-row .lbl .cls-mixed { display: block; color: var(--dash-warn); white-space: normal; }
 .cls-row > .a-grid { flex: 1; min-width: 0; }
 .cls-row .b { height: 42px; font-size: calc(14px * var(--ts, 1)); }
 .cls-adv {
@@ -1310,9 +1315,9 @@
 .pcp-right { flex: 1; min-width: 0; gap: 10px; }
 .pcp-tabs { flex: none; height: 48px; }
 .pcp-durs { flex: none; height: 52px; }
-.pcp-modes { display: flex; gap: 10px; }
-.pcp-mode { flex: 1; height: 64px; justify-content: center; gap: 10px; font-size: calc(15px * var(--ts, 1)); font-weight: 700; }
-.pcp-mode .mw-ico { width: 24px; height: 24px; }
+.pcp-mode { flex: none; height: 52px; padding: 0 18px 0 16px; justify-content: center; gap: 8px; white-space: nowrap; }
+.ov-card .pcp-mode { font-size: calc(16px * var(--ts, 1)); font-weight: 700; }
+.pcp-mode .mw-ico { flex: none; width: 24px; height: 24px; }
 .pcp-mode.surv .mw-ico { color: var(--dash-danger); }
 .pcp-mode.surv.on { background: var(--dash-danger-dim); border-color: var(--dash-danger); }
 .pcp-step { display: flex; align-items: center; gap: 10px; }
@@ -1326,9 +1331,10 @@
 .pcp-warn .mw-ico { flex: none; width: 20px; height: 20px; color: var(--dash-warn); }
 .pcp-warn.red { background: var(--dash-danger-dim); border-color: var(--dash-danger); }
 .pcp-warn.red .mw-ico { color: var(--dash-danger); }
-.pcp-foot { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
-.pcp-foot > span { flex: 1; font-size: calc(14px * var(--ts, 1)); color: var(--text-secondary); }
-.pcp-foot .mw-b { flex: none; width: 200px; }
+.pcp-foot { display: flex; align-items: center; gap: 10px; min-height: 56px; margin-top: 12px; }
+.pcp-foot > span { flex: 1; min-width: 0; font-size: calc(15px * var(--ts, 1)); color: var(--text-secondary); }
+.pcp-foot [data-a="pcClose"] { width: 180px; }
+.pcp-foot [data-a="pcGo"] { width: 220px; }
 
 /* ── Garde-voiture : écran de suivi (PreClimateActivity), toujours sombre ── */
 .a-pcs {

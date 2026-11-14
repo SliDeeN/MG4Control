@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/site.css?v=cbeb2f14">
-  <link rel="stylesheet" href="assets/css/sim.css?v=5ab313b9">
+  <link rel="stylesheet" href="assets/css/sim.css?v=b1dc7c31">
   <link rel="stylesheet" href="assets/css/explorer.css?v=34b00b13">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -216,7 +216,7 @@
         <label class="x-fw">
           <span>Firmware</span>
           <select data-fw-select aria-label="Firmware">
-            <option>SWI133</option><option>SWI132</option><option>SWI68</option><option>SWI69</option><option>SWI131</option><option>SWI165</option><option>UNKNOWN</option>
+            <option>SWI133</option><option>SWI132</option><option>SWI68</option><option>SWI69</option><option>SWI131</option><option>SWI165</option><option>SWI173</option><option>UNKNOWN</option>
           </select>
         </label>
         <button type="button" class="icon-btn x-pin" aria-pressed="true" aria-label="Garder la maquette visible pendant le défilement">
@@ -693,7 +693,7 @@
       <h3><span data-l="fr">Boutons flottants</span></h3>
       <p data-l="fr">Jusqu'à 6 bulles posées par-dessus toutes les applications : un toucher déclenche le raccourci, un appui long déplace la bulle.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Onglet Raccourcis, page « Boutons flottants ». Chaque bulle reprend une action des raccourcis du volant, avec un titre (le nom du raccourci par défaut), une taille, une taille de texte et du gras au choix. Une bascule s'affiche pleine quand elle est activée ; une valeur (température, ventilation, régénération…) s'affiche un instant après l'appui, et un halo confirme le toucher. Une bulle peut aussi se loger dans la barre noire du haut de l'écran. Chaque profil a ses propres bulles, copiables vers d'autres profils. Elles se cachent en marche arrière, en Mode Garage et pendant le Garde-voiture.</p>
+        <p data-l="fr">Onglet Raccourcis, page « Boutons flottants ». Chaque bulle reprend une action des raccourcis du volant, avec un titre (le nom du raccourci par défaut), une taille, une taille de texte et du gras au choix. Une bascule s'affiche pleine quand elle est activée ; une valeur (température, ventilation, régénération…) s'affiche un instant après l'appui, et un halo confirme le toucher. Une bulle peut aussi se loger dans la barre noire du haut de l'écran, à l'endroit exact où on la lâche, zone de la clim comprise : elle évite seulement les autres bulles (#222). Chaque profil a ses propres bulles, copiables vers d'autres profils. Elles se cachent en marche arrière, en Mode Garage et pendant le Garde-voiture.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-bubblecolor" data-hl-key="fl-color" data-demo="bubbleColor">
@@ -711,9 +711,9 @@
     </div>
     <div class="pt is-new" id="f-bubblelook" data-hl-key="fl-edit" data-demo="bubbleLook">
       <h3><span data-l="fr">L'apparence de chaque bulle</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
-      <p data-l="fr">Opacité du fond, fond sombre, teinté ou clair, bordure ou non, et atténuation au repos : chaque bulle a son apparence (#230).</p>
+      <p data-l="fr">Opacité du fond, fond sombre, teinté, clair ou noir, largeur automatique ou fixe, bordure ou non, et atténuation au repos : chaque bulle a son apparence (#230, #222).</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Atténuée, une bulle passe à 40 % après 5 s sans toucher ; un toucher lance l'action et la rend nette. « Copier l'apparence de… » reprend celle d'une autre bulle, de ce profil ou d'un autre, et « Appliquer à toutes les bulles » l'étend au profil. Une bascule active reste opaque à 60 % au moins, et sous 35 % le texte prend un contour pour rester lisible. Une bulle jamais réglée garde son allure d'avant.</p>
+        <p data-l="fr">Atténuée, une bulle passe à 40 % après 5 s sans toucher ; un toucher lance l'action et la rend nette. « Copier l'apparence de… » reprend celle d'une autre bulle, de ce profil ou d'un autre, et « Appliquer à toutes les bulles » l'étend au profil. Une bascule active reste opaque à 60 % au moins, et sous 35 % le texte prend un contour pour rester lisible. Une bulle jamais réglée garde son allure d'avant. Le fond noir à 100 % se fond dans la barre noire du haut. En largeur fixe (60 à 240 dp), une bulle d'information ne change plus de largeur avec sa valeur ; un texte trop long se termine par « … ».</p>
       </details>
     </div>
 
@@ -1109,7 +1109,7 @@
       <h3><span data-l="fr">Trajets</span></h3>
       <p data-l="fr">Chaque trajet avec sa durée, sa distance, sa consommation et le détail de l'énergie.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Un trajet va d'un contact à l'autre. Sur SWI133 et SWI132, le détail vient des compteurs de la voiture : moteur, climatisation, accessoires et récupération. Les autres firmwares n'ont pas ces compteurs : l'énergie y est calculée d'après la tension et le courant de la batterie, et le détail se limite à « Moteur » et « Climatisation et autres », au kWh entier. Changez de firmware au-dessus de la maquette pour comparer. Firmware sélectionné : <span data-fw-name></span>.</p>
+        <p data-l="fr">Un trajet va d'un contact à l'autre. Sur SWI133 et SWI132, le détail vient des compteurs de la voiture : moteur, climatisation, accessoires et récupération. Les autres firmwares n'ont pas ces compteurs : l'énergie y est calculée d'après la tension et le courant de la batterie, et le détail se limite à « Moteur » et « Climatisation et autres », au kWh entier. Changez de firmware au-dessus de la maquette pour comparer. Firmware sélectionné : <span data-fw-name></span>. Les listes des trajets et des recharges montrent les 50 plus récents, puis « Afficher 50 de plus » ou « Tout afficher » ; les tuiles et l'export CSV couvrent toujours tout.</p>
       </details>
     </div>
     <div class="pt" data-hl-key="st-charges" data-go="stats:2">
@@ -1183,7 +1183,7 @@
       <h3><span data-l="fr">Un module sur le combiné</span></h3>
       <p data-l="fr">Le carré central du combiné, celui de la navigation et de la musique, affiche un module MG4Control à la place de sa page d'origine.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Activez « Module sur le combiné » dans Réglages, onglet Interface. Le module s'affiche dès le démarrage de l'application, sans attendre le READY, et prend le fond du combiné pour s'y fondre. Le combiné est un calculateur à part : seul ce carré de 260 × 260 px vient de l'écran central, où une application SAIC le dessine : la carte apparaît partout où elle est installée (SWI133, SWI68, SWI165, et tout autre firmware qui l'a, #231). Sur les firmwares A9 (SWI69, SWI131, SWI132), le combiné dessine tout lui-même : rien ne peut s'y afficher, et la carte n'apparaît pas dans les réglages. Essayez l'aperçu sous les cartes.</p>
+        <p data-l="fr">Activez « Module sur le combiné » dans Réglages, onglet Interface. Le module s'affiche dès le démarrage de l'application, sans attendre le READY, et prend le fond du combiné pour s'y fondre. Le combiné est un calculateur à part : ce carré de 260 × 260 px vient de l'écran central quand une application SAIC fournit l'image (#231). La maquette propose le module sur SWI133, SWI68, SWI165 et sur la variante SWI173 équipée de cette application. Sur SWI69, SWI131 et SWI132, le combiné dessine lui-même ces pages et la carte est masquée. Essayez l'aperçu sous les cartes.</p>
       </details>
     </div>
     <div class="pt" id="f-cluster-modules" data-hl-key="s-cluster-tabs" data-demo="cluster">
@@ -1627,6 +1627,7 @@
         </tbody>
       </table>
     </div>
+    <p class="note" data-l="fr"><b>SWI173 dans la maquette.</b> Utilisez la colonne SWI131 pour les fonctions du tableau, avec le module sur l'écran conducteur en plus sur la variante équipée de l'application SAIC qui fournit l'image.</p>
     <p class="note" data-l="fr"><b>SWI133, SWI68, SWI165</b> utilisent l'ancien SDK SAIC, <b>SWI69, SWI131, SWI132</b> la famille « A9 ». <b>SWI173</b> (marché asiatique) est reconnu depuis la 2.7.0 et traité comme SWI131 (#175). MG4Control passe par plusieurs voies (API Car d'Android Automotive, binder direct, services ADAS du firmware) et se replie automatiquement si l'une échoue.</p>
   </div>
 </section>
@@ -1699,9 +1700,9 @@
 <div class="dock" aria-label="Véhicule virtuel"></div>
 <button type="button" class="to-top" aria-label="Revenir en haut de la page" title="Revenir en haut de la page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="assets/js/strings.js?v=2beaa4fd"></script>
-<script src="assets/js/sim.js?v=fcef1c03"></script>
-<script src="assets/js/site.js?v=eae0ab3a"></script>
+<script src="assets/js/strings.js?v=ba146649"></script>
+<script src="assets/js/sim.js?v=59fc2281"></script>
+<script src="assets/js/site.js?v=5b3c68e9"></script>
 <script src="assets/js/explorer.js?v=72fb983a"></script>
 </body>
 </html>

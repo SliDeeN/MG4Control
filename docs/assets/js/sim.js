@@ -11,7 +11,7 @@
   'use strict';
 
   const STR = window.MG4_STRINGS || {};
-  const FIRMWARES = ['SWI133', 'SWI132', 'SWI68', 'SWI69', 'SWI131', 'SWI165', 'UNKNOWN'];
+  const FIRMWARES = ['SWI133', 'SWI132', 'SWI68', 'SWI69', 'SWI131', 'SWI165', 'SWI173', 'UNKNOWN'];
   const LS_KEY = 'mg4sim.fw.v1';
 
   // ── Outils ────────────────────────────────────────────────────────────────
@@ -37,11 +37,11 @@
     return args.length ? fmt(t, args) : t.replace(/%%/g, '%');
   }
   /** Pluriel de l'app (<plurals>, clés « nom#one », « nom#few »…), choisi comme Android le fait. */
-  function P(key, n) {
+  function P(key, n, ...args) {
     const l = appLang(), d = STR[l] || {}, f = STR.fr || {}, m10 = n % 10, m100 = n % 100;
     const q = n === 1 || (l === 'fr' && n === 0) ? 'one' : l === 'pl' ? (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? 'few' : 'many') : 'other';
     const t = d[key + '#' + q] ?? d[key + '#other'] ?? f[key + '#' + q] ?? f[key + '#other'] ?? key;
-    return fmt(t, [n]);
+    return fmt(t, [n, ...args]);
   }
 
   // ── Modèle ────────────────────────────────────────────────────────────────
@@ -61,7 +61,10 @@
   /** Plafond de ProfileManager.MAX_PROFILES : dix depuis la 2.6.9. */
   const MAX_PROFILES = 10;
   /** Réglages de l'écran conducteur gardés par profil (lus dès l'état initial). */
-  const CL_KEYS = ['cluster', 'clusterNav', 'clusterMedia', 'clusterStyle', 'clusterPill', 'clusterUnit', 'clusterAvg', 'clusterDist', 'clusterPowerMax', 'clusterLayout'];
+  const CL_DEFAULTS = { cluster: false, clusterNav: 'consumption', clusterMedia: 'none', clusterStyle: 'dynamic',
+    clusterPill: 'profile', clusterUnit: 'wh', clusterAvg: null, clusterDist: 'auto', clusterPowerMax: 'auto',
+    clusterLayout: null, clusterRefresh: 1000, clusterAnim: 800 };
+  const ST_PAGE_SIZE = 50;
   function mkProfile(o) {
     return Object.assign({
       id: uid(), name: '', driveMode: 'NORMAL', regen: 'MEDIUM', energy: false, tsr: true,
@@ -135,7 +138,7 @@
       fw, forced: null, fwDismissed: false, appLang: null,
       activeProfileId: daily.id,
       car: {
-        on: true, ready: true, speed: 0, maxSpeed: 0, outside: 12,
+        on: true, ready: true, speed: 0, inPark: true, maxSpeed: 0, outside: 12,
         custom: { power: 1, steer: 1, pedal: 1 },
         windows: { FL: 0, FR: 0, RL: 0, RR: 0 },
         driveMode: 'NORMAL', regen: 'ADAPTIVE', energy: false,
@@ -158,22 +161,16 @@
       profiles: [daily, road, winter],
       defaultId: daily.id,
       lastManual: null,
-      settings: { defaultScreen: 'dashboard', theme: 'auto', api: false, autoUpdate: true, beta: false, gate: false, gateMax: 30,
+      settings: { ...CL_DEFAULTS, defaultScreen: 'dashboard', theme: 'auto', api: false, autoUpdate: true, beta: false, gate: false, gateMax: 30,
                   garage: false, textSize: 'standard', updOverlay: true, readyDefault: false, popupDelay: 10,
-                  // Écran conducteur (ClusterModuleSettings) : module par onglet, actualisation en ms.
-                  cluster: false, clusterNav: 'consumption', clusterMedia: 'none', clusterRefresh: 1000, clusterUnit: 'wh',
-                  // Style, pastille, unité de la moyenne (null = celle de la jauge), durée de l'animation (ms).
-                  clusterStyle: 'dynamic', clusterPill: 'profile', clusterAvg: null, clusterAnim: 800,
                   // Pop-up de charge (ChargePopupSettings) : désactivé par défaut depuis la 2.6.10,
                   // comme la zone clim pendant la projection.
                   chargePopup: false,
                   // Plein écran, zone clim pendant Android Auto / CarPlay, raccourci de secours,
                   // « Ce que règle AUTO », distance et fin d'échelle de puissance du combiné.
                   fullscreen: false, hvacZone: false, rescue: true, scopeAir: true, scopeLoop: true,
-                  clusterDist: 'auto', clusterPowerMax: 'auto',
-                  // Écran conducteur V2 (issue #229) : null = la disposition d'avant ; unité de distance
-                  // générale (2026-11-10) ; jauge montrée dans la personnalisation avancée.
-                  clusterLayout: null, distUnit: 'auto', clLayMod: null,
+                  // Unité de distance générale et dernière jauge ouverte dans l'éditeur du combiné.
+                  distUnit: 'auto', clLayMod: null,
                   // Côté du menu (NavSide) et « Garder l'A/C coupé » (#208, désactivé par défaut).
                   navSide: 'auto', keepAcOff: false },
       sc: {
@@ -219,7 +216,7 @@
       // Boutons flottants : un jeu par profil (FloatingSets), masquage en marche arrière commun.
       floating: { hideReverse: true, sets: {}, color: '#A6C8FF' },
       // Garde-voiture : derniers choix de la fenêtre et réglages de sa page (PreClimateSettings).
-      preclim: { cam: 'ok', camAuto: true, usb: null, survScreen: false, nocam: false, mode: 'now', dur: 60, temp: 21, fan: 4, dog: false, surv: false, at: { h: 7, m: 30, run: 15, runs: 2, pause: 10 },
+      preclim: { cam: 'ok', camAuto: true, usb: null, survScreen: false, nocam: false, mode: 'now', dur: 60, temp: null, fan: null, dog: false, surv: false, at: { first: null, run: 15, runs: 1, pause: 30 },
                  lock: 20, soc: 20, screen: 'dim', cluster: true, unlock: true },
       pc: null,                    // programme en cours (pcStart)
       // Sons d'automatisation : un son par moment au plus (SoundAutomationSettings).
@@ -242,7 +239,7 @@
     st.stats.trips.forEach((t, i) => { t.segs = (segs[i] || [[daily, 1]]).map(([p, f]) => ({ pid: p.id, km: +(t.km * f).toFixed(1) })); t.seed = i + 1; });
     // Écran conducteur par profil : chaque profil part des réglages communs d'avant.
     st.clCfg = {};
-    st.profiles.forEach((p) => { st.clCfg[p.id] = clPick(st.settings); });
+    st.profiles.forEach((p) => { st.clCfg[p.id] = { ...CL_DEFAULTS }; });
     return st;
   }
 
@@ -262,7 +259,10 @@
   }
 
   // ── Capacités par firmware (miroir de FirmwareInfo / MG4Hardware) ─────────
-  function gen() { return state.fw === 'UNKNOWN' && state.forced ? state.forced : state.fw; }
+  function gen() {
+    const fw = state.fw === 'UNKNOWN' && state.forced ? state.forced : state.fw;
+    return fw === 'SWI173' ? 'SWI131' : fw;
+  }
   function caps() {
     const g = gen();
     const known = g !== 'UNKNOWN';
@@ -277,7 +277,7 @@
       beam: known, batHeat: known,                     // feux de route automatiques, chauffage de la batterie
       counters: g === 'SWI132' || g === 'SWI133',      // compteurs d'énergie du véhicule ; sinon l'énergie est calculée
       doorSensor: g === 'SWI132' || g === 'SWI133',    // portes lisibles ; sinon sortie de READY
-      cluster: ['SWI133', 'SWI68', 'SWI165'].includes(g), // module sur l'écran conducteur (ClusterModuleSettings.SUPPORTED)
+      cluster: state.fw === 'SWI173' || ['SWI133', 'SWI68', 'SWI165'].includes(g), // caripk sur l'image SWI173 référencée
       a9: ['SWI69', 'SWI131', 'SWI132'].includes(g),       // FirmwareInfo.isA9 : pas de musique en ligne
       fifth: (!vsm || s132) ? 'adas_ica' : 'adas_tja'
     };
@@ -286,11 +286,10 @@
   const activeProfile = () => state.profiles.find((p) => p.id === state.activeProfileId) || null;
 
   // ── Écran conducteur par profil : toute la carte suit le profil actif ───────
-  function clPick(s) { const o = {}; CL_KEYS.forEach((k) => { o[k] = s[k]; }); return o; }
-  /** Réglages du combiné d'un profil ; un profil inconnu reprend ceux du moment. */
-  function clCfg(id) { if (!state.clCfg[id]) state.clCfg[id] = clPick(state.settings); return state.clCfg[id]; }
-  /** Écrit un réglage du combiné pour le profil actif (et ce qui est à l'écran). */
-  function clSet(key, v) { state.settings[key] = v; const p = activeProfile(); if (p) clCfg(p.id)[key] = v; }
+  function clCfg(id) { return state.clCfg[id] ??= { ...CL_DEFAULTS }; }
+  /** Écrit un réglage du combiné pour le profil suivi (et ce qui est à l'écran). */
+  function clSet(key, v) { state.settings[key] = v; const id = flFollowed(); if (id) clCfg(id)[key] = v; }
+  function clSync() { const id = flFollowed(); Object.assign(state.settings, id ? clCfg(id) : CL_DEFAULTS); }
   const MI_KM = 1.609344;
   /** Miles ? « Auto » suit l'unité réglée sur la voiture (0x2140f439). */
   // Unité de distance : un réglage général depuis le 2026-11-10 (Réglages › Interface), plus du combiné.
@@ -892,14 +891,18 @@
   // clim vaut une minute, une seconde d'attente (« À une heure ») dix minutes.
   let pcTimer = null;
   const PC_TICK = 250;
-  const hmIn = (min) => new Intl.DateTimeFormat(appLang() === 'en' ? 'en-GB' : appLang(), { hour: '2-digit', minute: '2-digit' }).format(Date.now() + min * 60000);
-  /** Cycles [début, fin], en minutes depuis le verrouillage (PreClimatePlan) ; le mode chien dure 2 h. */
-  function pcPlan(r) {
+  const PC_DAY = 1440;
+  const pcMinute = () => { const t = new Date(); return t.getHours() * 60 + t.getMinutes() + t.getSeconds() / 60; };
+  const pcClock = (minute) => {
+    const m = (Math.round(minute) % PC_DAY + PC_DAY) % PC_DAY;
+    return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  };
+  const pcFirst = (at, now) => at.first ?? (Math.ceil(Math.floor(now + 60) / 5) * 5) % PC_DAY;
+  const pcCanStart = () => car().inPark && car().speed === 0;
+  /** Cycles [début, fin], en minutes depuis le départ (PreClimatePlan) ; le mode chien dure 2 h. */
+  function pcPlan(r, now) {
     if (r.mode !== 'at' || r.dog || r.surv) return [[0, r.dog && !r.surv ? 120 : r.dur]];
-    const now = new Date(), t = new Date(now);
-    t.setHours(r.at.h, r.at.m, 0, 0);
-    let first = Math.round((t - now) / 60000);
-    if (first < 1) first += 1440;
+    const delay = pcFirst(r.at, now) - now, first = delay < 1 ? delay + PC_DAY : delay;
     const out = [];
     for (let i = 0; i < r.at.runs; i++) { const a = first + i * (r.at.run + r.at.pause); out.push([a, a + r.at.run]); }
     return out;
@@ -912,12 +915,14 @@
   }
   function pcStart(r) {
     const cl = car().clim;
+    const started = pcMinute();
     // Surveillance : l'appli caméra pilotable filme dès « Démarrer » (START), si l'interrupteur est allumé.
     const rec = !!(r.surv && state.preclim.cam === 'ok' && state.preclim.camAuto);
-    state.pc = { req: JSON.parse(JSON.stringify(r)), phase: 'cd', left: r.lock, min: 0, plan: pcPlan(r), rec,
-                 snap: { power: cl.power, ac: cl.ac, auto: cl.auto, temp: cl.temp, fan: cl.fan }, hidden: false, wake: Date.now(), startHM: nowHM() };
-    // « Maintenant » : la clim démarre tout de suite ; surveillance et « À une heure » : coupée.
-    if (r.surv || (r.mode === 'at' && !r.dog)) cl.power = false; else pcClim(true);
+    state.pc = { req: JSON.parse(JSON.stringify(r)), phase: 'cd', left: r.lock, min: 0, plan: pcPlan(r, started), rec,
+                 snap: { power: cl.power, ac: cl.ac, auto: cl.auto, temp: cl.temp, fan: cl.fan }, hidden: false, wake: Date.now(), started };
+    // « À une heure » conserve la clim pendant le décompte et applique le premier état au verrouillage.
+    if (r.surv) cl.power = false;
+    else if (r.mode === 'now') pcClim(true);
     clearInterval(pcTimer); pcTimer = setInterval(pcTick, PC_TICK);
     commit();
   }
@@ -927,28 +932,33 @@
     if (c.speed > 3) return pcEnd('driving');
     if (pc.phase === 'cd') {
       pc.left -= 1;
-      if (pc.left <= 0) { pc.phase = 'live'; c.locked = true; pc.wake = Date.now(); pc.startHM = nowHM(); }
+      pc.min = (pc.req.lock - pc.left) / 60;
+      if (pc.left <= 0) {
+        pc.phase = 'live'; c.locked = true; pc.wake = Date.now();
+        if (pc.req.mode === 'at') pcClim(pc.plan.some(([a, b]) => pc.min >= a && pc.min < b));
+      }
       return commit();
     }
     if (!c.locked) return pcEnd('back');
     if (c.soc < pc.req.soc) return pcEnd('battery');
-    const plan = pc.plan, last = plan[plan.length - 1][1];
-    const running = plan.some(([a, b]) => pc.min >= a && pc.min < b);
-    pc.min += (running ? 1 : 10) * PC_TICK / 1000;
-    if (pc.min >= last) return pcEnd('done');
-    const now = plan.some(([a, b]) => pc.min >= a && pc.min < b);
-    if (!pc.req.surv && now !== running) pcClim(now);
+    const cur = pc.plan.find(([a, b]) => pc.min >= a && pc.min < b);
+    const next = pc.plan.find(([a]) => a > pc.min);
+    if (!cur && !next) return pcEnd('done');
+    pc.min = Math.min(pc.min + (cur ? 1 : 10) * PC_TICK / 1000, cur ? cur[1] : next[0]);
+    if (pc.min >= pc.plan[pc.plan.length - 1][1]) return pcEnd('done');
+    const running = pc.plan.some(([a, b]) => pc.min >= a && pc.min < b);
+    if (!pc.req.surv && running !== !!cur) pcClim(running);
     commit();
   }
   /** Fin : la clim retrouve toujours ses réglages d'avant ; la voiture ne s'éteint qu'à la fin du programme ou batterie faible. */
   function pcEnd(kind) {
     const pc = state.pc, c = car();
-    if (!pc) return;
+    if (!pc || pc.phase === 'end') return;
     clearInterval(pcTimer); pcTimer = null;
     Object.assign(c.clim, pc.snap);
+    pc.rec = false;
     pc.end = { kind, ran: pc.min, at: nowHM(), off: kind === 'done' || kind === 'battery' };
     if (pc.end.off) { c.on = false; c.ready = false; }
-    if (kind === 'back' || kind === 'driving' || kind === 'cancelled') c.locked = false;
     pc.phase = 'end'; pc.hidden = false;
     commit();
   }
@@ -959,7 +969,7 @@
     const plan = pc.plan, cur = plan.find(([a, b]) => pc.min >= a && pc.min < b), next = plan.find(([a]) => a > pc.min);
     const left = pc.phase === 'cd' ? null : cur ? cur[1] - pc.min : next ? next[0] - pc.min : 0;
     return { cd: pc.phase === 'cd' ? Math.max(0, Math.ceil(pc.left)) : null, surv: pc.req.surv, dog: pc.req.dog, running: !!cur, left,
-             cycle: plan.length > 1 ? [plan.indexOf(cur || next) + 1, plan.length] : null, temp: pc.req.temp, off: hmIn(plan[plan.length - 1][1] - pc.min) };
+             cycle: plan.length > 1 ? [plan.indexOf(cur || next) + 1, plan.length] : null, temp: pc.req.temp, off: pcClock(pc.started + plan[plan.length - 1][1]) };
   }
 
   // ── Actions des raccourcis (MG4ControlService.executeShortcut) ────────────
@@ -1959,7 +1969,7 @@
           }
           return;
         }
-        if (deja) return;
+        if (deja || id === 'clpanel') return;
         // À l'ouverture, le choix en cours est amené en vue, une ligne au-dessus restant visible.
         const on = n.querySelector('.on');
         if (!on) return;
@@ -2031,7 +2041,7 @@
         let text = flash || flTitle(b);
         if (info && !flash) { const v = flInfoValue(b.info); text = b.infoStyle === 'label' ? (b.title || flInfoName(b.info)) + ' ' + v : b.infoStyle === 'icon' ? FL_ICON[b.info] + ' ' + v : v; }
         return '<button class="a-fl' + (b.bar ? ' bar' : '') + (on === true ? ' lit' : on === false ? ' off' : '') + (flash ? ' flash' : '') + (b.bold ? ' bold' : '') + (this._flHalo === b.id ? ' halo' : '') +
-          (b.dim && this._flHalo !== b.id ? ' dimmed' : '') + '" data-fl="' + b.id + '" style="' + pos + ';height:' + h + 'px;font-size:' + (b.bar ? Math.min(b.text, 22) : b.text) + 'px;' + flLookStyle(b, on === true) + '">' + esc(text) + '</button>';
+          (b.dim && this._flHalo !== b.id ? ' dimmed' : '') + '" data-fl="' + b.id + '" style="' + pos + ';height:' + h + 'px;font-size:' + (b.bar ? Math.min(b.text, 22) : b.text) + 'px;' + (b.width ? 'width:' + b.width + 'px;min-width:' + b.width + 'px;max-width:' + b.width + 'px;' : '') + flLookStyle(b, on === true) + '">' + esc(text) + '</button>';
       }).join('') + '</div>';
     }
     /** Appui court : le raccourci ; halo au relâchement, et la valeur un instant pour un réglage pas à pas. */
@@ -2074,12 +2084,13 @@
           '<button class="mw-b p" data-a="pcDone"><span>' + esc(S('preclim_close')) + '</span></button></div></div>';
       }
       if (pc.phase === 'cd') {
-        const line = r.surv ? S('preclim_cd_surv') : r.mode === 'at' && !r.dog ? S('preclim_cd_at', hmIn(pc.plan[0][0]), sum(r.temp, false, r.fan)) : S('preclim_cd_now', sum(r.temp, false, r.fan));
+        const line = r.surv ? S('preclim_cd_surv') : r.mode === 'at' ? S('preclim_cd_at', pcClock(pc.started + pc.plan[0][0]), sum(r.temp, false, r.fan)) : S('preclim_cd_now', sum(r.temp, false, r.fan));
         return '<div class="a-pcs" data-hl="preclim-screen"><div class="pcs-cd"><div class="pcs-sec"><b>' + Math.max(0, Math.ceil(pc.left)) + '</b><span>' + esc(S('preclim_cd_unit')) + '</span></div>' +
           '<div class="pcs-cdtxt"><div class="pcs-t">' + esc(S('preclim_cd_title')) + '</div><div class="pcs-p">' + esc(S('preclim_cd_text')) + '</div><div class="pcs-p acc">' + esc(line) + '</div>' +
-          (r.dog ? warn('preclim_dog_warning') : r.surv ? warn('preclim_surv_warning', true) : '') + '</div></div>' + btns + '</div>';
+          (r.dog ? warn('preclim_dog_warning') : r.surv ? warn('preclim_surv_warning', true) : '') + '</div></div>' +
+          '<div class="pcs-btns"><button class="mw-b d" data-a="pcStop"><span>' + esc(S('preclim_cancel')) + '</span></button></div></div>';
       }
-      const plan = pc.plan, last = plan[plan.length - 1][1], off = hmIn(last - pc.min);
+      const plan = pc.plan, last = plan[plan.length - 1][1], off = pcClock(pc.started + last), start = pcClock(Math.floor(pc.started));
       const cur = plan.find(([a, b]) => pc.min >= a && pc.min < b), next = plan.find(([a]) => a > pc.min);
       if (r.surv) {
         // Pastille REC (variante A) : temps filmé, d'après l'état renvoyé par l'appli caméra.
@@ -2087,8 +2098,10 @@
         const recTag = pc.rec ? '<div class="pcs-rec" data-hl="preclim-rec"><i></i>' + esc(S('preclim_surv_rec', two(Math.floor(rs / 3600)) + ':' + two(Math.floor(rs / 60) % 60) + ':' + two(rs % 60))) + '</div>' : '';
         // Écran selon « Écran pendant l'attente » seulement si « Appliquer aussi à la surveillance » (2026-11-13).
         const sdim = r.survScreen && r.screen !== 'normal' && Date.now() - pc.wake > 10000 ? (r.screen === 'off' ? ' black' : ' dim') : '';
-        return '<div class="a-pcs surv' + sdim + '"' + (r.survScreen ? ' data-a="pcWake"' : '') + ' data-hl="preclim-screen">' + recTag + '<div class="pcs-surv">' + MW.cam + '<div class="pcs-st">' + esc(S('preclim_surv_screen_title')) + '</div><div class="pcs-p">' + esc(S('preclim_surv_screen_text')) + '</div>' +
-          '<div class="pcs-status">' + esc(S('preclim_surv_status', pc.startHM, c.soc + ' % · ' + pcPowerW(), off)) + '</div></div>' + btns + '</div>';
+        const message = pc.rec ? 'preclim_surv_screen_text' : r.cam === 'none' ? 'preclim_cam_nocam_warn_title' : null;
+        return '<div class="a-pcs surv' + sdim + '"' + (r.survScreen ? ' data-a="pcWake"' : '') + ' data-hl="preclim-screen">' + recTag + '<div class="pcs-surv">' + MW.cam + '<div class="pcs-st">' +
+          esc(S(r.cam === 'none' ? 'preclim_surv' : 'preclim_surv_screen_title')) + '</div>' + (message ? '<div class="pcs-p">' + esc(S(message)) + '</div>' : '') +
+          '<div class="pcs-status">' + esc(S('preclim_surv_status', start, c.soc + ' % · ' + pcPowerW(), off)) + '</div></div>' + btns + '</div>';
       }
       // Particules bleues si la clim refroidit, orange si elle chauffe ; seulement clim en marche.
       const trend = r.temp > c.outside + 0.5 ? 'heat' : 'cool';
@@ -2096,19 +2109,23 @@
       if (r.dog) {
         return '<div class="a-pcs dog ' + trend + '" data-hl="preclim-screen">' + parts + '<div class="pcs-dog">' + MW.paw + '<div class="pcs-t">' + esc(S('preclim_dog_title')) + '</div><div class="pcs-p">' + esc(S('preclim_dog_text')) + '</div>' +
           '<div class="pcs-temp">' + r.temp + '<span>°C</span></div><div class="pcs-p">' + esc(S('preclim_dog_outside', c.outside + ' °C')) + '</div>' +
-          '<div class="pcs-status">' + esc(S('preclim_dog_status', dur(pc.min), c.soc + ' % · ' + pcPowerW())) + '</div></div>' + btns + '</div>';
+          '<div class="pcs-status">' + esc(S('preclim_dog_status', start, c.soc + ' % · ' + pcPowerW())) + '</div></div>' + btns + '</div>';
       }
       const left = cur ? cur[1] - pc.min : next ? next[0] - pc.min : 0;
-      const prevEnd = next && plan.indexOf(next) > 0 ? plan[plan.indexOf(next) - 1][1] : 0;
+      const prevEnd = next && plan.indexOf(next) > 0 ? plan[plan.indexOf(next) - 1][1] : r.lock / 60;
       const tot = cur ? cur[1] - cur[0] : next ? Math.max(1, next[0] - prevEnd) : 1;
       const part = clamp(1 - left / tot, 0, 1), R = 92, C = 2 * Math.PI * R;
+      const scheduled = r.mode === 'at', idx = plan.indexOf(cur || next);
+      const ringLabel = !cur ? S('preclim_wait_label') : scheduled ? S('preclim_cycle', idx + 1, plan.length) : S('preclim_remaining');
+      const ringTime = cur ? S(scheduled ? 'preclim_until' : 'preclim_stop_at', pcClock(pc.started + cur[1])) : S('preclim_at_time', pcClock(pc.started + (next ? next[0] : last)));
       const ring = '<div class="pcs-ring ' + (cur ? trend : 'wait') + '"><svg viewBox="0 0 220 220" aria-hidden="true"><circle cx="110" cy="110" r="' + R + '" class="tr"/><circle cx="110" cy="110" r="' + R + '" class="pv" stroke-dasharray="' + (C * part).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 110 110)"/></svg>' +
-        '<div class="pcs-rin"><small>' + esc(S(cur ? 'preclim_remaining' : 'preclim_wait_label')) + '</small><b>' + esc(dur(left)) + '</b><small>' + esc(cur ? S('preclim_until', hmIn(left)) : S('preclim_at_time', hmIn(left))) + '</small></div></div>';
-      const idx = plan.indexOf(cur || next) + 1;
-      const info = [cur ? S('preclim_state_run') : S('preclim_state_wait'), plan.length > 1 ? S('preclim_cycle', idx, plan.length) : null,
-        S('preclim_started_at', pc.startHM), S('preclim_off_at', off), S('preclim_outside', c.outside + ' °C'), S('preclim_battery', c.soc + ' %'), S('preclim_power', pcPowerW()), '🔒 ' + S('preclim_lock_ok')].filter(Boolean);
+        '<div class="pcs-rin"><small>' + esc(ringLabel) + '</small><b>' + esc(dur(left)) + '</b><small>' + esc(ringTime) + '</small></div></div>';
+      const lines = scheduled ? plan.map(([a, b], i) => (i < idx ? '✓ ' : '● ') + S('preclim_run_line', i + 1, pcClock(pc.started + a), pcClock(pc.started + b))) :
+        [S('preclim_started_at', start), S('preclim_off_at', off)];
+      const info = [cur ? S('preclim_state_run') : S('preclim_state_wait'), sum(r.temp, false, r.fan), ...lines, S('preclim_outside', c.outside + ' °C'),
+        S('preclim_battery', c.soc + ' %'), S('preclim_power', pcPowerW()), '🔒 ' + S('preclim_lock_ok')];
       const dim = r.screen !== 'normal' && Date.now() - pc.wake > 10000 ? (r.screen === 'off' ? ' black' : ' dim') : '';
-      return '<div class="a-pcs ' + trend + dim + '" data-a="pcWake" data-hl="preclim-screen">' + parts + '<div class="pcs-live">' + ring + '<div class="pcs-info"><div class="pcs-t">' + esc(S('preclim_live_title', sum(r.temp, false, r.fan))) + '</div>' +
+      return '<div class="a-pcs ' + trend + dim + '" data-a="pcWake" data-hl="preclim-screen">' + parts + '<div class="pcs-live">' + ring + '<div class="pcs-info"><div class="pcs-t">' + esc(S('preclim_live_title', pcClock(Math.floor(pc.started + pc.min)))) + '</div>' +
         info.map((x) => '<div class="pcs-p">' + esc(x) + '</div>').join('') + '<div class="pcs-p dimtxt">' + esc(S('preclim_hint')) + '</div></div></div>' + btns + '</div>';
     }
 
@@ -2553,33 +2570,44 @@
         '</div>' + (k.cluster ? this.setCluster() : '');
     }
     /**
-     * Carte « Écran conducteur » : SWI133, SWI68 et SWI165 seulement, absente ailleurs
+     * Carte « Écran conducteur » : disponible sur les firmwares équipés.
      * (ClusterModuleSettings.SUPPORTED). Refonte du 2026-10-17 : l'aperçu à gauche — la vraie jauge
      * sur un trajet simulé, qui suit chaque réglage —, les réglages groupés à droite (Modules,
      * Apparence, Unités) et « Avancé » replié.
      */
     setCluster() {
-      const s = state.settings, u = this.ui, ref = Math.round(s.clusterRefresh / 100), anim = Math.round(s.clusterAnim / 100);
+      const u = this.ui;
       // « Réglage de : » — un ou plusieurs profils ; la carte montre le premier choisi, un
       // changement vaut pour tous (ClusterProfiles). Sans profil, les réglages communs.
       const ps = state.profiles;
       u.clSel = (u.clSel || []).filter((id) => ps.some((p) => p.id === id));
-      if (!u.clSel.length && ps.length) u.clSel = [state.profiles.some((p) => p.id === state.activeProfileId) ? state.activeProfileId : ps[0].id];
+      const followed = flFollowed();
+      if (!u.clSel.length && ps.length) u.clSel = [followed];
       const cfg = this.clEditCfg();
+      const selected = u.clSel.length ? ps.filter((p) => u.clSel.includes(p.id)).map((p) => clCfg(p.id)) : [cfg];
+      const mixed = (key) => selected.some((c) => c[key] !== cfg[key]);
+      const active = selected.some((c) => c.cluster);
+      const ref = Math.round(cfg.clusterRefresh / 100), anim = Math.round(cfg.clusterAnim / 100);
       clPrevCfg = cfg;
       const mi = clMiles(), power = cfg.clusterPowerMax || 'auto';
-      const seg = (a, cur, opts, x) => '<div class="a-grid g' + opts.length + '">' + opts.map(([v, key, raw]) => '<button class="b nc' + (String(cur) === String(v) ? ' on' : '') + '" data-a="' + a + '" data-v="' + v + '"' +
+      const seg = (a, cur, opts, x) => '<div class="a-grid g' + opts.length + '">' + opts.map(([v, key, raw]) => '<button class="b nc' + (cur !== undefined && String(cur) === String(v) ? ' on' : '') + '" data-a="' + a + '" data-v="' + v + '"' +
         (x ? ' data-x="' + x + '"' : '') + '>' + esc(raw != null ? raw : S(key)) + '</button>').join('') + '</div>';
-      const line = (label, inner, hl) => '<div class="cls-row"' + (hl ? ' data-hl="' + hl + '"' : '') + '><span class="cls-lbl">' + esc(label) + '</span>' + inner + '</div>';
+      const line = (label, inner, hl, key) => '<div class="cls-row"' + (hl ? ' data-hl="' + hl + '"' : '') + '><span class="cls-lbl">' + esc(label) +
+        (key && mixed(key) ? '<small class="cls-mixed">' + esc(S('settings_cluster_mixed')) + '</small>' : '') + '</span>' + inner + '</div>';
+      const common = (key, value = cfg[key]) => mixed(key) ? undefined : value;
+      const timing = (key) => mixed(key) ? S('settings_cluster_mixed_short') : fmtS(cfg[key]) + ' s';
       const mods = [['none', 'settings_cluster_none'], ['consumption', 'settings_cluster_consumption'], ['power', 'settings_cluster_power']];
       const chips = ps.length ? '<div class="cls-profs" data-hl="s-cluster-profiles"><span class="cls-lbl">' + esc(S('settings_cluster_profiles_title')) + '</span><div class="cl-chips">' +
-        ps.map((p) => '<button class="cl-chip' + (u.clSel.includes(p.id) ? ' on' : '') + '" data-a="clSel" data-v="' + p.id + '">' + esc(p.name) + (p.id === state.activeProfileId ? ' <small>●</small>' : '') + '</button>').join('') +
-        (ps.length > 1 ? '<button class="cl-chip all" data-a="clSelAll">' + esc(S('settings_cluster_profiles_all')) + '</button>' : '') + '</div></div>' +
+        ps.map((p) => '<button class="cl-chip' + (u.clSel.includes(p.id) ? ' on' : '') + '" data-a="clSel" data-v="' + p.id + '">' + esc(p.name) + (p.id === followed ? ' <small>●</small>' : '') + '</button>').join('') +
+        (ps.length > 1 ? '<button class="cl-chip all" data-a="clSelAll">' + esc(S('settings_cluster_profiles_all')) + '</button><button class="cl-chip all" data-a="clSelCurrent">' +
+          esc(S('settings_cluster_profiles_current_only')) + '</button>' : '') + '</div></div>' +
         '<div class="a-desc">' + esc(u.clSel.length > 1 ? S('settings_cluster_profiles_many', u.clSel.length) : S('settings_cluster_profiles_one', (ps.find((p) => p.id === u.clSel[0]) || {}).name || '')) + '</div>' : '';
       const h = '<div class="a-sec" data-hl="s-cluster"><div class="a-h">' + esc(S('settings_cluster')) + '</div>' + chips +
-        '<div class="a-row"><span class="lbl">' + esc(S('settings_cluster_module')) + '<small>' + esc(S('settings_cluster_module_desc')) + '</small></span>' + sw(cfg.cluster, 'cluster') + '</div>';
+        '<div class="a-row"><span class="lbl">' + esc(S('settings_cluster_module')) + '<small>' + esc(S('settings_cluster_module_desc')) + '</small>' +
+        (mixed('cluster') ? '<small class="cls-mixed">' + esc(S('settings_cluster_mixed')) + '</small>' : '') +
+        '</span>' + sw(selected.every((c) => c.cluster), 'cluster') + '</div>';
       // Activer déplie : l'aperçu et les réglages.
-      if (!cfg.cluster) return h + '</div>';
+      if (!active) return h + '</div>';
       const tab = u.clPrevTab || 'nav', m = tab === 'media' ? cfg.clusterMedia : cfg.clusterNav;
       const prev = '<div class="cls-prev" data-hl="s-cluster-preview"><div class="a-sub">' + esc(S('settings_cluster_preview')) + '</div>' +
         (m === 'none' ? '<div class="cls-none">' + esc(S('settings_cluster_preview_none')) + '</div>' : '<svg class="cls-sq" viewBox="0 0 260 260" data-clprev="' + m + '" role="img"></svg>') +
@@ -2587,38 +2615,39 @@
           .map(([v, key]) => '<button class="b nc sm' + (tab === v ? ' on' : '') + '" data-a="clPrevTab" data-v="' + v + '">' + esc(S(key)) + '</button>').join('') + '</div></div>';
       const set = '<div class="cls-set">' +
         '<div class="a-sub">' + esc(S('settings_cluster_sec_modules')) + '</div>' +
-        '<div class="cls-group" data-hl="s-cluster-tabs">' + line(S('settings_cluster_row_nav'), seg('clusterMod', cfg.clusterNav, mods, 'nav')) + line(S('settings_cluster_row_media'), seg('clusterMod', cfg.clusterMedia, mods, 'media')) + '</div>' +
+        '<div class="cls-group" data-hl="s-cluster-tabs">' + line(S('settings_cluster_row_nav'), seg('clusterMod', common('clusterNav'), mods, 'nav'), null, 'clusterNav') +
+        line(S('settings_cluster_row_media'), seg('clusterMod', common('clusterMedia'), mods, 'media'), null, 'clusterMedia') + '</div>' +
         '<div class="a-desc">' + esc(S('settings_cluster_tabs_note')) + '</div>' +
         '<div class="a-sub">' + esc(S('settings_cluster_sec_appearance')) + '</div>' +
-        line(S('settings_cluster_row_style'), seg('clusterStyle', cfg.clusterStyle, [['dynamic', 'settings_cluster_style_dynamic'], ['discreet', 'settings_cluster_style_discreet']]), 's-cluster-style') +
+        line(S('settings_cluster_row_style'), seg('clusterStyle', common('clusterStyle'), [['dynamic', 'settings_cluster_style_dynamic'], ['discreet', 'settings_cluster_style_discreet']]), 's-cluster-style', 'clusterStyle') +
         // Personnalisation avancée (issue #229) : jauge, couleurs, épaisseur, 4 informations.
         '<button class="b cls-layout" data-a="clLayOpen" data-hl="s-cluster-layout">' + esc(S('cluster_layout_open')) + '</button>' +
         '<div class="a-desc">' + esc(S('cluster_layout_open_desc')) + '</div>' +
         // Puissance maxi (issue #165) : Auto apprend les pointes ; sinon une fin d'échelle fixe.
-        line(S('settings_cluster_row_power'), seg('clusterPowerMax', power, [['auto', 'settings_cluster_power_auto'], ['125', null, '125'], ['150', null, '150'], ['180', null, '180'], ['320', null, '320']]), 's-cluster-power') +
-        (power === 'auto' ? '<div class="a-desc">' + esc(S('settings_cluster_power_desc', state.clLearned)) + '</div>' : '') +
+        line(S('settings_cluster_row_power'), seg('clusterPowerMax', common('clusterPowerMax', power), [['auto', 'settings_cluster_power_auto'], ['125', null, '125'], ['150', null, '150'], ['180', null, '180'], ['320', null, '320']]), 's-cluster-power', 'clusterPowerMax') +
+        '<div class="a-desc">' + esc(S('settings_cluster_power_desc', state.clLearned)) + '</div>' +
         '<div class="a-sub">' + esc(S('settings_cluster_sec_units')) + '</div>' +
         // Unité de la jauge ; la moyenne a la sienne dans sa case (personnalisation avancée).
-        line(S('settings_cluster_row_gauge'), seg('clusterUnit', cfg.clusterUnit, [['wh', null, mi ? 'Wh/mi' : S('cluster_unit_wh_km')], ['kwh', null, mi ? 'kWh/100 mi' : S('cluster_unit_kwh_100km')]]), 's-cluster-unit') +
-        '<button class="cls-adv" data-a="clAdv" data-hl="s-cluster-refresh"><span>' + esc(S('settings_cluster_advanced', fmtS(s.clusterRefresh) + ' s', fmtS(s.clusterAnim) + ' s')) + '</span><i>' + (u.clAdv ? '▴' : '▾') + '</i></button>' +
+        line(S('settings_cluster_row_gauge'), seg('clusterUnit', common('clusterUnit'), [['wh', null, mi ? 'Wh/mi' : S('cluster_unit_wh_km')], ['kwh', null, mi ? 'kWh/100 mi' : S('cluster_unit_kwh_100km')]]), 's-cluster-unit', 'clusterUnit') +
+        '<button class="cls-adv" data-a="clAdv" data-hl="s-cluster-refresh"><span>' + esc(S('settings_cluster_advanced', timing('clusterRefresh'), timing('clusterAnim'))) + '</span><i>' + (u.clAdv ? '▴' : '▾') + '</i></button>' +
         (u.clAdv ? '<div class="cls-advbox">' +
           '<div class="a-sub">' + esc(S('settings_cluster_refresh')) + '</div>' +
-          '<div class="a-row"><div style="flex:1">' + range('clusterRefresh', 1, 10, ref) + '</div><span class="a-val" data-out="clusterRefresh">' + outText('clusterRefresh', ref) + '</span></div>' +
+          '<div class="a-row"><div style="flex:1">' + range('clusterRefresh', 1, 10, ref) + '</div><span class="a-val" data-out="clusterRefresh">' + esc(timing('clusterRefresh')) + '</span></div>' +
           '<div class="a-desc">' + esc(S('settings_cluster_refresh_desc')) + '</div>' +
           '<div class="a-sub" style="margin-top:8px">' + esc(S('settings_cluster_animation')) + '</div>' +
-          '<div class="a-row"><div style="flex:1">' + range('clusterAnim', 2, 20, anim) + '</div><span class="a-val" data-out="clusterAnim">' + outText('clusterAnim', anim) + '</span></div>' +
+          '<div class="a-row"><div style="flex:1">' + range('clusterAnim', 2, 20, anim) + '</div><span class="a-val" data-out="clusterAnim">' + esc(timing('clusterAnim')) + '</span></div>' +
           '<div class="a-desc">' + esc(S('settings_cluster_animation_desc')) + '</div></div>' : '') +
         '</div>';
       return h + '<div class="cls-wrap">' + prev + set + '</div></div>';
     }
     /** Réglages montrés par la carte : ceux du premier profil choisi. */
-    clEditCfg() { const sel = this.ui.clSel; return sel && sel.length ? clCfg(sel[0]) : state.settings; }
+    clEditCfg() { const p = state.profiles.find((p) => (this.ui.clSel || []).includes(p.id)); return p ? clCfg(p.id) : state.settings; }
     /** Un changement vaut pour chaque profil choisi ; à l'écran tout de suite si le profil actif en est. */
     clEditSet(key, v) {
       const sel = this.ui.clSel && this.ui.clSel.length ? this.ui.clSel : null;
       if (!sel) { state.settings[key] = v; return commit(); }
       sel.forEach((id) => { clCfg(id)[key] = v; });
-      if (sel.includes(state.activeProfileId)) state.settings[key] = v;
+      if (sel.includes(flFollowed())) state.settings[key] = v;
       commit();
     }
     setAdv() {
@@ -2652,8 +2681,8 @@
       const upd = u.updFb === 'ok' ? '<button class="b green" data-a="checkUpd">' + esc(S('update_up_to_date')) + '</button>' : '<button class="b" data-a="checkUpd" data-hl="s-checkupd">' + esc(S('btn_check_update')) + '</button>';
       const apk = u.apkFb ? '<button class="b green" data-a="cleanApk">' + esc(u.apkFb) + '</button>' : '<button class="b" data-a="cleanApk">' + esc(S('btn_clean_apk')) + '</button>';
       const unknownMode = state.fw === 'UNKNOWN';
-      const chips = ['SWI133', 'SWI132', 'SWI68', 'SWI69', 'SWI131', 'SWI165'].map((g) =>
-        '<button class="fw-chip' + (gen() === g ? ' on' : '') + (unknownMode ? ' tap' : '') + '" ' + (unknownMode ? 'data-a="force" data-v="' + g + '"' : 'tabindex="-1"') + '>' + g + '</button>').join('');
+      const chips = FIRMWARES.filter((f) => f !== 'UNKNOWN' && (f !== 'SWI173' || !unknownMode)).map((g) =>
+        '<button class="fw-chip' + ((state.forced || state.fw) === g ? ' on' : '') + (unknownMode ? ' tap' : '') + '" ' + (unknownMode ? 'data-a="force" data-v="' + g + '"' : 'tabindex="-1"') + '>' + g + '</button>').join('');
       const du = [['data_usage_today', '38 Mo'], ['data_usage_week', '212 Mo'], ['data_usage_month', '0,9 Go'], ['data_usage_30d', '1,2 Go']]
         .map(([key, v]) => '<div class="du-row"><span>' + esc(S(key)) + '</span><b>' + (appLang() === 'fr' ? v : v.replace(',', '.').replace('Mo', 'MB').replace('Go', 'GB')) + '</b></div>').join('');
       return '<div class="a-sec" data-hl="s-maint"><div class="a-h">' + esc(S('settings_maintenance')) + '</div><div class="a-grid g2 up2">' + upd + apk + '</div>' +
@@ -2842,7 +2871,9 @@
       // Apparence (#230) : opacité du fond, fond sombre / teinté / clair, bordure, atténuation au repos.
       const look = '<div class="a-sub" style="margin:10px 0 4px">' + esc(S('floating_look_title')) + '</div>' +
         row('floating_field_opacity', '<div style="flex:1">' + range('flOpacity', 0, 100, b.opacity == null ? 72 : b.opacity) + '</div><span class="a-val" data-out="flOpacity">' + esc(S('floating_opacity_value', b.opacity == null ? 72 : b.opacity)) + '</span>') +
-        row('floating_field_fill', seg('flFill', b.fill || 'dark', [['dark', 'floating_fill_dark'], ['tint', 'floating_fill_tint'], ['light', 'floating_fill_light']])) +
+        row('floating_field_fill', seg('flFill', b.fill || 'dark', [['dark', 'floating_fill_dark'], ['tint', 'floating_fill_tint'], ['light', 'floating_fill_light'], ['black', 'floating_fill_black']])) +
+        row('floating_field_width', seg('flWidth', b.width ? 'fixed' : 'auto', [['auto', 'floating_width_auto'], ['fixed', 'floating_width_fixed']])) +
+        (b.width ? '<div class="a-row" style="margin-left:168px"><div style="flex:1">' + range('flWidthV', 60, 240, b.width, false, '', 10) + '</div><span class="a-val" data-out="flWidthV">' + esc(S('floating_width_value', b.width)) + '</span></div>' : '') +
         row('floating_field_border', seg('flBorder', b.noBorder ? 'none' : 'color', [['color', 'floating_border_color'], ['none', 'floating_border_none']])) +
         '<div class="a-row"><span class="lbl">' + esc(S('floating_field_dim')) + '<small>' + esc(S('floating_dim_hint')) + '</small></span>' + sw(!!b.dim, 'flDim') + '</div>';
       return '<div class="fl-edit" data-hl="fl-edit"><div class="a-sub" style="margin:0 0 6px">' + esc(S('floating_edit_heading_name', flTitle(b))) + '</div>' + content +
@@ -3131,6 +3162,22 @@
       };
     }
     num(v, d) { return v == null ? '—' : v.toLocaleString(appLang() === 'en' ? 'en-GB' : appLang(), { minimumFractionDigits: d, maximumFractionDigits: d }); }
+    statsUnit() { return clMiles() ? 'mi' : 'km'; }
+    statsDistance(km) {
+      const distance = km / (clMiles() ? MI_KM : 1);
+      return this.num(distance, distance < 100 ? 1 : 0) + ' ' + this.statsUnit();
+    }
+    statsSpeed(kmh) { return Math.trunc(kmh / (clMiles() ? MI_KM : 1)) + (clMiles() ? ' mph' : ' km/h'); }
+    statsPerDistance(value) { return value * (clMiles() ? MI_KM : 1); }
+    statsConsumption(value, approximate) {
+      return (approximate ? '≈ ' : '') + this.num(this.statsPerDistance(value), approximate ? 0 : 1) + ' kWh/100 ' + this.statsUnit();
+    }
+    statsPager(kind, shown, total) {
+      if (shown >= total) return '';
+      return '<div class="a-row st-pager"><span class="lbl">' + esc(S('stats_shown_' + kind, shown, total)) + '</span>' +
+        '<button class="b sm" data-a="stMore" data-v="' + kind + '">' + esc(S('stats_show_more_fmt', Math.min(ST_PAGE_SIZE, total - shown))) + '</button>' +
+        '<button class="b sm" data-a="stAll" data-v="' + kind + '">' + esc(S('stats_show_all')) + '</button></div>';
+    }
     money(v) { return v == null ? '—' : this.num(v, 2) + ' ' + state.stats.currency; }
     tiles(list) {
       return '<div class="st-tiles">' + list.map(([k, v]) => '<div class="st-tile"><small>' + esc(k) + '</small><b>' + esc(v) + '</b></div>').join('') + '</div>';
@@ -3147,11 +3194,11 @@
       if (!st.enabled) return h;
       const kwh = (v) => this.num(v, 1) + ' kWh';
       h += '<div class="a-sec" data-hl="st-summary"><div class="a-h">' + esc(S('stats_summary_title')) + '</div>' + this.periodRow() + this.tiles([
-        [S('stats_tile_distance'), this.num(s.km, 1) + ' km'],
-        [S('stats_tile_consumption'), s.cons != null ? this.num(s.cons, 1) + ' kWh/100 km' : '—'],
-        [S('stats_tile_speed'), s.speed != null ? Math.round(s.speed) + ' km/h' : '—'],
+        [S('stats_tile_distance'), this.statsDistance(s.km)],
+        [S('stats_tile_consumption'), s.cons != null ? this.statsConsumption(s.cons) : '—'],
+        [S('stats_tile_speed'), s.speed != null ? this.statsSpeed(s.speed) : '—'],
         [S('stats_tile_energy'), kwh(s.kwh)], [S('stats_tile_regen'), kwh(s.regen)], [S('stats_tile_charged'), kwh(s.charged)],
-        [S('stats_tile_cost'), this.money(s.driving)], [S('stats_tile_cost_per100'), this.money(s.per100)]
+        [S('stats_tile_cost'), this.money(s.driving)], [S('stats_tile_cost_per100', this.statsUnit()), this.money(s.per100 == null ? null : this.statsPerDistance(s.per100))]
       ]) + '</div>';
       // Batterie : menu des trois MG4. En changer recalcule les recharges enregistrées.
       h += '<div class="a-sec" data-hl="st-battery"><div class="a-h">' + esc(S('stats_battery_title')) + '</div><div class="a-row"><span class="lbl">' + esc(S('stats_battery_label')) + '</span>' +
@@ -3170,7 +3217,7 @@
         '<div class="a-desc">' + esc(S('stats_price_note')) + '</div></div>';
       // Petits trajets : la distance minimale est grisée tant que le filtre est coupé.
       h += '<div class="a-sec" data-hl="st-skip"><div class="a-h">' + esc(S('stats_cat_trips')) + '</div><div class="a-row"><span class="lbl">' + esc(S('stats_skip_short_label')) + '</span>' + sw(st.skipShort, 'stSkipShort') + '</div>' +
-        '<div class="a-row' + (st.skipShort ? '' : ' dim') + '"><span class="lbl">' + esc(S('stats_min_trip_label')) + '</span><input class="a-input num" style="width:120px" type="number" step="0.1" min="0.1" max="50" data-c="stMinTrip" data-fid="stMinTrip" value="' + st.minTrip + '"' + (st.skipShort ? '' : ' disabled') + '></div>' +
+        '<div class="a-row' + (st.skipShort ? '' : ' dim') + '"><span class="lbl">' + esc(S('stats_min_trip_label', this.statsUnit())) + '</span><input class="a-input num" style="width:120px" type="number" step="0.1" data-c="stMinTrip" data-fid="stMinTrip" value="' + +(st.minTrip / (clMiles() ? MI_KM : 1)).toFixed(2) + '"' + (st.skipShort ? '' : ' disabled') + '></div>' +
         '<div class="a-desc">' + esc(S('stats_skip_short_note')) + '</div></div>';
       const ret = [[30, 'stats_retention_30d'], [90, 'stats_retention_3m'], [182, 'stats_retention_6m'], [365, 'stats_retention_1y']];
       h += '<div class="a-sec" data-hl="st-retention"><div class="a-h">' + esc(S('stats_retention_title')) + '</div><div class="a-grid g4">' +
@@ -3205,19 +3252,20 @@
       const chips = used.length ? '<div class="st-chips st-prof" data-hl="st-profile"><span class="st-cap">' + esc(S('stats_filter_profile')) + '</span>' +
         [{ id: '', name: S('stats_filter_all') }].concat(used).map((p) => '<button class="st-chip' + ((pid || '') === p.id ? ' on' : '') + '" data-a="stProf" data-v="' + p.id + '">' + esc(p.name) + '</button>').join('') + '</div>' : '';
       let h = '<div class="a-sec" data-hl="st-trips"><div class="st-title">' + esc(S('stats_cat_trips')) + '</div>' + this.periodRow() + chips + this.tiles([
-        [S('stats_tile_trips'), String(list.length)], [S('stats_tile_distance'), this.num(km, 1) + ' km'],
-        [S('stats_tile_longest'), this.num(list.reduce((a, x) => Math.max(a, x.km), 0), 1) + ' km'], [S('stats_tile_cost'), this.money(s.driving * km / kmAll)]
+        [S('stats_tile_trips'), String(list.length)], [S('stats_tile_distance'), this.statsDistance(km)],
+        [S('stats_tile_longest'), this.statsDistance(list.reduce((a, x) => Math.max(a, x.km), 0))], [S('stats_tile_cost'), this.money(s.driving * km / kmAll)]
       ]) + '</div>';
       if (!list.length) return h + '<div class="a-sec st-empty">' + esc(S('stats_no_trip')) + '</div>';
-      list.forEach(({ t, i, km: kp }) => {
-        const cons = t.short ? '≈ ' + Math.round(t.kwh / t.km * 100) + ' kWh/100 km' : this.num(t.kwh / t.km * 100, 1) + ' kWh/100 km';
+      const shown = u.stTripsShown ?? ST_PAGE_SIZE;
+      list.slice(0, shown).forEach(({ t, i, km: kp }) => {
+        const cons = this.statsConsumption(t.kwh / t.km * 100, t.short);
         const open = u.statsOpen === 't' + i;
         const ids = Array.from(new Set((t.segs || []).map((g) => g.pid)));
         const pill = ids.length > 1 ? '<span class="st-pill mixed">' + esc(S('stats_trip_mixed')) + '</span>'
           : ids.length ? '<span class="st-pill" style="--pc:' + color(ids[0]) + '">' + esc(profName(ids[0])) + '</span>' : '';
-        const dist = pid && kp < t.km ? S('stats_portion', this.num(kp, 1) + ' km', this.num(t.km, 1) + ' km') : this.num(t.km, 1) + ' km';
+        const dist = pid && kp < t.km ? S('stats_portion', this.statsDistance(kp), this.statsDistance(t.km)) : this.statsDistance(t.km);
         h += '<div class="st-row" data-a="stOpen" data-v="t' + i + '" data-hl="st-trip-row"><div><b>' + esc(this.dateLine(t.start, t.end)) + ' ' + pill + '</b><small>' + esc(this.dur(t.end - t.start) + ' · ' + dist) + '</small></div>' +
-          '<div class="st-r"><b>' + esc(cons) + '</b><small>' + esc(t.speed + ' km/h · ' + this.num(t.kwh, 1) + ' kWh') + '</small></div></div>';
+          '<div class="st-r"><b>' + esc(cons) + '</b><small>' + esc(this.statsSpeed(t.speed) + ' · ' + this.num(t.kwh, 1) + ' kWh') + '</small></div></div>';
         if (open) {
           // Sans compteurs d'énergie (hors SWI132/133), l'énergie est calculée d'après la tension et
           // le courant de la batterie, et la répartition vient du compteur d'origine, au kWh entier.
@@ -3227,7 +3275,7 @@
             ? [[S('stats_detail_motor'), this.num(t.motor, 1) + ' kWh'], [S('stats_detail_climate'), this.num(t.climate, 1) + ' kWh'], [S('stats_detail_accessories'), this.num(t.acc, 1) + ' kWh']]
             : [[S('stats_detail_origin'), S('stats_detail_origin_integrated')], [S('stats_detail_motor'), whole(Math.floor(t.kwh - aux))], [S('stats_detail_auxiliary'), whole(aux)]];
           const split = ids.length > 1 ? '<div class="st-split" data-hl="st-split"><div class="a-sub">' + esc(S('stats_split_title')) + '</div>' +
-            t.segs.map((g) => '<div class="st-splitrow"><span class="st-pill" style="--pc:' + color(g.pid) + '">' + esc(profName(g.pid)) + '</span><span class="st-track"><i style="width:' + (g.km / t.km * 100).toFixed(1) + '%;background:' + color(g.pid) + '"></i></span><b>' + this.num(g.km, 1) + ' km</b></div>').join('') + '</div>' : '';
+            t.segs.map((g) => '<div class="st-splitrow"><span class="st-pill" style="--pc:' + color(g.pid) + '">' + esc(profName(g.pid)) + '</span><span class="st-track"><i style="width:' + (g.km / t.km * 100).toFixed(1) + '%;background:' + color(g.pid) + '"></i></span><b>' + esc(this.statsDistance(g.km)) + '</b></div>').join('') + '</div>' : '';
           h += this.detailBox(energy.concat([
             [S('stats_detail_regen'), '− ' + this.num(t.regen, 1) + ' kWh'],
             [S('stats_detail_consumption'), t.short ? S('stats_detail_consumption_short') : cons],
@@ -3235,7 +3283,7 @@
           ]), split + this.tripCurve(t));
         }
       });
-      return h;
+      return h + this.statsPager('trips', shown, list.length);
     }
     /**
      * Graphique d'un trajet (TripCurveView) : une barre par tronçon, largeur choisie à l'affichage
@@ -3255,26 +3303,32 @@
         bars.push(rnd() < 0.07 ? -Math.round((2 + rnd() * 6) * 10) / 10 : Math.round((avg * (0.6 + v / t.speed * 0.4) - slope * 1.2 + (rnd() - 0.5) * 4) * 10) / 10);
         speed.push(v); alt.push(a);
       }
-      const W = 900, top = 10, H = 110, band = state.stats.band, BH = band ? 46 : 0;
+      const W = 900, top = 10, H = 110, BH = 46;
+      const bands = state.stats.bands || {};
+      const shown = [['speed', speed, 'var(--dash-accent)'], ['elev', alt, '#A78BFA']].filter(([key]) => bands[key]);
       const max = Math.max(30, ...bars), min = Math.min(0, ...bars), y0 = top + H * max / (max - min), bw = W / n;
       const col = (x) => (x < 0 ? '#15803D' : x < 14 ? '#22C55E' : x <= 22 ? '#F59E0B' : '#F43F5E');
-      let svg = '<svg viewBox="0 0 ' + W + ' ' + (top + H + 8 + BH) + '" class="st-curve" aria-hidden="true"><line x1="0" x2="' + W + '" y1="' + y0.toFixed(1) + '" y2="' + y0.toFixed(1) + '" stroke="var(--dash-border)"/>';
+      let svg = '<svg viewBox="0 0 ' + W + ' ' + (top + H + 8 + BH * shown.length) + '" class="st-curve" aria-hidden="true"><line x1="0" x2="' + W + '" y1="' + y0.toFixed(1) + '" y2="' + y0.toFixed(1) + '" stroke="var(--dash-border)"/>';
       bars.forEach((x, i) => {
         const y = top + H * (max - Math.max(x, 0)) / (max - min), hh = Math.abs(x) * H / (max - min);
         svg += '<rect x="' + (i * bw + bw * 0.12).toFixed(1) + '" y="' + (x >= 0 ? y : y0).toFixed(1) + '" width="' + (bw * 0.76).toFixed(1) + '" height="' + Math.max(1, hh).toFixed(1) + '" rx="1.5" fill="' + col(x) + '"/>';
       });
-      if (band) {
-        const vals = band === 'speed' ? speed : alt, lo = Math.min(...vals), hi = Math.max(...vals), b0 = top + H + 8;
+      shown.forEach(([, vals, color], i) => {
+        const lo = Math.min(...vals), hi = Math.max(...vals), b0 = top + H + 8 + i * BH;
         const pts = vals.map((x, i) => ((i + 0.5) * bw).toFixed(1) + ',' + (b0 + BH - 4 - (BH - 8) * (x - lo) / Math.max(1, hi - lo)).toFixed(1)).join(' ');
-        svg += '<polyline points="' + pts + '" fill="none" stroke="' + (band === 'speed' ? 'var(--dash-accent)' : '#A78BFA') + '" stroke-width="2"/>';
-      }
+        svg += '<line x1="0" x2="' + W + '" y1="' + (b0 + 4) + '" y2="' + (b0 + 4) + '" stroke="' + color + '" stroke-dasharray="4 4" opacity=".45"/>' +
+          '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2"/>';
+      });
       svg += '</svg>';
       let up = 0, down = 0; for (let i = 1; i < alt.length; i++) { const d = alt[i] - alt[i - 1]; if (d > 0) up += d; else down -= d; }
-      const btn = (b, key) => '<button class="b sm' + (band === b ? ' on' : '') + '" data-a="stBand" data-v="' + b + '">' + esc(S(key)) + '</button>';
+      const btn = (b, key) => '<button class="b sm' + (bands[b] ? ' on' : '') + '" data-a="stBand" data-v="' + b + '" aria-pressed="' + !!bands[b] + '">' + esc(S(key)) + '</button>';
+      const legend = [S('stats_curve_legend_regen') + ' < 0'];
+      if (bands.speed) legend.push(S('stats_curve_legend_speed'));
+      if (bands.elev) legend.push(S('stats_curve_elevation_value', S('stats_curve_elevation'), Math.round(up), Math.round(down)));
       return '<div class="st-graph" data-hl="st-curve"><div class="a-row" style="min-height:30px"><span class="a-sub" style="flex:1;margin:0">' + esc(S('stats_curve_title')) + '</span>' +
-        '<span class="a-desc">' + esc(S('stats_curve_summary', this.num(avg, 1), this.num(Math.max(...bars), 0))) + '</span></div>' + svg +
+        '<span class="a-desc">' + esc(S('stats_curve_summary', this.num(this.statsPerDistance(avg), 1), this.num(this.statsPerDistance(Math.max(...bars)), 0)) + ' ' + this.statsUnit()) + '</span></div>' + svg +
         '<div class="a-row" style="min-height:36px">' + btn('speed', 'stats_curve_speed') + btn('elev', 'stats_curve_elevation') + '<span class="a-desc" style="flex:1;text-align:right">' +
-        esc(band === 'elev' ? S('stats_curve_elevation_value', S('stats_curve_elevation'), Math.round(up), Math.round(down)) : band === 'speed' ? S('stats_curve_legend_speed') : S('stats_curve_legend_regen') + ' < 0') + '</span></div></div>';
+        esc(legend.join(' · ')) + '</span></div></div>';
     }
     /** Export (ExportDialog) : la maquette annonce les fichiers écrits, sans rien télécharger. */
     exportGo() {
@@ -3297,7 +3351,8 @@
         [S('stats_tile_sessions'), s.charges.length + ' · ' + s.ac + ' AC / ' + s.dc + ' DC']
       ]) + '</div>';
       if (!s.charges.length) return h + '<div class="a-sec st-empty">' + esc(S('stats_no_charge')) + '</div>';
-      s.charges.forEach((c) => {
+      const shown = u.stChargesShown ?? ST_PAGE_SIZE;
+      s.charges.slice(0, shown).forEach((c) => {
         const i = st.charges.indexOf(c);
         const open = u.statsOpen === 'c' + i;
         const type = S(c.type === 'DC' ? 'stats_charge_dc' : c.type === 'AC' ? 'stats_charge_ac' : 'stats_charge_unknown');
@@ -3319,7 +3374,7 @@
             (c.reconstructed ? '<button class="b sm primary" data-a="stComplete" data-v="' + i + '">' + esc(S('stats_complete_session')) + '</button>' : '<span></span>') + '</div>');
         }
       });
-      return h;
+      return h + this.statsPager('charges', shown, s.charges.length);
     }
     detailBox(lines, extra) {
       return '<div class="st-detail">' + lines.map(([k, v, hl]) => '<div class="a-row"' + (hl ? ' data-hl="' + hl + '"' : '') + ' style="min-height:30px"><span class="lbl" style="font-size:14px;color:var(--text-secondary)">' + esc(k) + '</span><span style="font-size:14px">' + esc(v) + '</span></div>').join('') + (extra || '') + '</div>';
@@ -3630,26 +3685,31 @@
     /** « Démarrer » validé : la fenêtre se ferme, le décompte part. */
     pcLaunch() {
       const p = state.preclim, now = p.mode === 'now';
+      if (state.pc && state.pc.phase !== 'end') return;
+      if (!pcCanStart()) return this.toast(S('preclim_need_park'), 3000);
+      if (!caps().clim) return this.toast(S('preclim_clim_unreachable'), 3000);
+      if (now && p.surv && p.cam === 'none' && !p.nocam) return this.toast(S('preclim_surv_need_app'), 3000);
       clearInterval(this._cd); this.ui.overlay = null;
-      pcStart(Object.assign({}, p, { surv: now && p.surv, dog: now && p.dog && !p.surv }));
+      p.temp ??= car().clim.temp;
+      p.fan ??= car().clim.fan;
+      p.at.first = pcFirst(p.at, pcMinute());
+      pcStart({ ...p, surv: now && p.surv, dog: now && p.dog && !p.surv });
     }
     preclimPopupHtml() {
-      const p = state.preclim, cl = car().clim, now = p.mode === 'now';
+      const p = state.preclim, cl = car().clim, now = p.mode === 'now', minute = pcMinute();
       const surv = now && p.surv, dog = now && p.dog && !surv;
-      const two = (x) => String(x).padStart(2, '0');
-      const step = (label, val, act) => '<div class="pcp-step"><span>' + esc(label) + '</span><button class="mw-step" data-a="' + act + '" data-v="-1" data-rep>' + MW.minus + '</button><b>' + esc(val) + '</b><button class="mw-step" data-a="' + act + '" data-v="1" data-rep>' + MW.plus + '</button></div>';
+      const step = (label, val, act, min = false, max = false) => '<div class="pcp-step"><span>' + esc(label) + '</span><button class="mw-step" data-a="' + act + '" data-v="-1" data-rep' + (min ? ' disabled' : '') + '>' + MW.minus + '</button><b>' + esc(val) + '</b><button class="mw-step" data-a="' + act + '" data-v="1" data-rep' + (max ? ' disabled' : '') + '>' + MW.plus + '</button></div>';
       const tabs = '<div class="ov-seg pcp-tabs">' + [['now', 'preclim_mode_now'], ['at', 'preclim_mode_at']].map(([v, key]) => '<button' + (p.mode === v ? ' class="on"' : '') + ' data-a="pcMode" data-v="' + v + '">' + esc(S(key)) + '</button>').join('') + '</div>';
       let left;
       if (now) {
         left = '<div class="ov-cap">' + esc(S(surv ? 'preclim_surv_caption' : 'preclim_now_caption')) + '</div><div class="ov-seg pcp-durs">' +
           [15, 30, 60, 120].map((m) => { const off = dog && m !== 120, on = dog ? m === 120 : p.dur === m; return '<button class="' + (on ? 'on' : '') + (off ? ' dis' : '') + '" data-a="pcDur" data-v="' + m + '"' + (off ? ' disabled' : '') + '>' + esc(clDur(m)) + '</button>'; }).join('') + '</div>' +
-          '<div class="pcp-modes"><button class="ov-tile pcp-mode' + (dog ? ' on' : '') + '" data-a="pcDog">' + MW.paw + '<span>' + esc(S('preclim_dog')) + '</span></button>' +
-          '<button class="ov-tile pcp-mode surv' + (surv ? ' on' : '') + '" data-a="pcSurv" data-hl="preclim-surv">' + MW.cam + '<span>' + esc(S('preclim_surv')) + '</span></button></div>' +
           (surv ? '<div class="pcp-text">' + esc(S('preclim_surv_stops', p.soc)) + '</div>' : '');
       } else {
         const a = p.at;
-        left = step(S('preclim_first'), two(a.h) + ':' + two(a.m), 'pcAtTime') + step(S('preclim_run'), clDur(a.run), 'pcAtRun') + step(S('preclim_runs'), String(a.runs), 'pcAtRuns') +
-          (a.runs > 1 ? step(S('preclim_pause'), clDur(a.pause), 'pcAtPause') : '');
+        left = step(S('preclim_first'), pcClock(pcFirst(a, minute)), 'pcAtTime') + step(S('preclim_run'), clDur(a.run), 'pcAtRun', a.run === 5, a.run === 60) +
+          step(S('preclim_runs'), String(a.runs), 'pcAtRuns', a.runs === 1, a.runs === 5) +
+          (a.runs > 1 ? step(S('preclim_pause'), clDur(a.pause), 'pcAtPause', a.pause === 10, a.pause === 120) : '');
       }
       const warn = (key, red) => '<div class="pcp-warn' + (red ? ' red' : '') + '">' + MW.warning + '<span>' + esc(S(key)) + '</span></div>';
       const cam = p.cam, filmera = surv && cam === 'ok' && p.camAuto, camName = 'MG4 360 Camera';
@@ -3664,15 +3724,19 @@
       const right = surv
         // L'avertissement caméra prend la place du texte « 0,2 kW » (proposition 1, 2026-11-08).
         ? '<div class="ov-cap">' + esc(S('preclim_surv_off_title')) + '</div>' + (banner || '<div class="pcp-text">' + esc(S('preclim_surv_off_text')) + '</div>') + camLine + warn('preclim_surv_warning', true)
-        : '<div class="ov-cap">' + esc(S('preclim_clim_caption')) + '</div>' + step(S('preclim_temp'), S('preclim_value_celsius', p.temp), 'pcTemp') + step(S('preclim_fan'), String(p.fan), 'pcFan') +
+        : '<div class="ov-cap">' + esc(S('preclim_clim_caption')) + '</div>' + step(S('preclim_temp'), S('preclim_value_celsius', p.temp ?? cl.temp), 'pcTemp') + step(S('preclim_fan'), String(p.fan ?? cl.fan), 'pcFan') +
           '<div class="pcp-text">' + esc(S('preclim_current', S('preclim_summary', cl.temp + ' °C', cl.auto ? S('clim_auto') : cl.fan))) + '</div>' + (dog ? warn('preclim_dog_warning') : '');
-      const plan = pcPlan(Object.assign({}, p, { dog, surv })), off = hmIn(plan[plan.length - 1][1] + p.lock / 60);
-      const planTxt = surv ? S('preclim_plan_surv', off) : dog ? S('preclim_plan_dog', off) : now ? S('preclim_plan_now', off) : S('preclim_plan_at', hmIn(plan[0][0]), off);
+      const plan = pcPlan({ ...p, dog, surv }, minute), off = pcClock(minute + plan[plan.length - 1][1]);
+      const times = plan.map(([start]) => pcClock(minute + start)).join(' · ');
+      const starts = pcFirst(p.at, minute) - minute < 1 ? S('preclim_tomorrow', times) : times;
+      const planTxt = surv ? S('preclim_plan_surv', off) : dog ? S('preclim_plan_dog', off) : now ? S('preclim_plan_now', off) : S('preclim_plan_at', starts, off);
+      const modes = now ? '<button class="ov-tile pcp-mode' + (dog ? ' on' : '') + '" data-a="pcDog" aria-pressed="' + dog + '">' + MW.paw + '<span>' + esc(S('preclim_dog')) + '</span></button>' +
+        '<button class="ov-tile pcp-mode surv' + (surv ? ' on' : '') + '" data-a="pcSurv" data-hl="preclim-surv" aria-pressed="' + surv + '">' + MW.cam + '<span>' + esc(S('preclim_surv')) + '</span></button>' : '';
       const icon = surv ? MW.cam : dog ? MW.paw : MW.fan;
       return '<div class="a-scrim" data-a="pcBg"><div class="ov-card pcp' + (surv ? ' surv' : '') + '" data-hl="preclim-popup">' +
         '<div class="ov-head">' + icon + '<div class="ov-title">' + esc(S(surv ? 'preclim_surv' : dog ? 'preclim_dog' : 'preclim_title')) + '</div><button class="ov-x" data-a="pcClose" aria-label="' + esc(S('nav_close')) + '">' + MW.close + '</button></div>' +
         '<div class="pcp-body"><div class="ov-pan pcp-left">' + tabs + left + '</div><div class="ov-pan pcp-right">' + right + '</div></div>' +
-        '<div class="pcp-foot"><span>' + esc(planTxt) + '</span><button class="mw-b sm" data-a="pcClose"><span>' + esc(S('preclim_cancel')) + '</span></button>' +
+        '<div class="pcp-foot"><span>' + esc(planTxt) + '</span>' + modes + '<button class="mw-b sm" data-a="pcClose"><span>' + esc(S('preclim_cancel')) + '</span></button>' +
         '<button class="mw-b sm ' + (blocked ? 'off' : surv ? 'd' : 'p') + '" data-a="pcGo"' + (blocked ? ' disabled' : '') + '><span>' + esc(S('preclim_start')) + '</span></button></div></div></div>';
     }
     /**
@@ -4131,7 +4195,9 @@
               '<div class="mw-hint">' + esc(S('cluster_layout_gauge_preview_note')) + '</div>' + cap('settings_cluster_row_style') +
               opt('clLayStyle', c.style, [['dynamic', S('settings_cluster_style_dynamic')], ['discreet', S('settings_cluster_style_discreet')]]) + cap('cluster_layout_position') +
               opt('clLayPos', L.gauge || 'middle', [['top', S('cluster_layout_position_top')], ['middle', S('cluster_layout_position_middle')], ['bottom', S('cluster_layout_position_bottom')]]) +
-              (c.mod === 'consumption' ? swRow('cluster_layout_consumption_kw', !!L.consKw, 'clLayConsKw') + (L.consKw ? cap('cluster_layout_power_unit') + hpOpt('clLayHp', L.powerUnit) : '')
+              cap('cluster_layout_thickness') + opt('clLayThickness', L.thickness || 'normal', ['thin', 'normal', 'thick'].map((x) => [x, S('cluster_layout_thickness_' + x)])) +
+              (c.mod === 'consumption' ? swRow('cluster_layout_average_cursor', L.averageCursor ?? (c.style === 'discreet'), 'clLayAverage') +
+                swRow('cluster_layout_consumption_kw', !!L.consKw, 'clLayConsKw') + (L.consKw ? cap('cluster_layout_power_unit') + hpOpt('clLayHp', L.powerUnit) : '')
                 : cap('cluster_layout_power_unit') + hpOpt('clLayHp', L.powerUnit) + swRow('cluster_layout_power_consumption', L.powerCons !== false, 'clLayPowerCons'));
           } else {
             const b = L.slots[c.sel];
@@ -4141,9 +4207,14 @@
               (b ? cap('cluster_layout_display') + opt('clLayBStyle', clStyleOf(b), clInfoStyles(b.info).map((x) => [x, S(x === 'pill' ? 'cluster_layout_style_pill' : x === 'value' ? 'floating_info_style_value' : x === 'icon' ? 'floating_info_style_icon' : 'floating_info_style_label')])) +
                 (b.info === 'POWER' ? cap('cluster_layout_unit') + hpOpt('clLayBUnit', b.unit) : '') : '<div class="mw-hint">' + esc(S('cluster_layout_empty_note')) + '</div>');
           }
-          return win(1320, head(MW.list, S('cluster_layout_title'), null) + '<div class="cll-body"><div class="cll-left"><svg class="cll-sq" viewBox="0 0 260 260" data-clprev="' + c.mod + '" data-cllay role="img"></svg>' +
+          const sel = this.ui.clSel || [];
+          const subtitle = sel.length > 1 ? S('settings_cluster_profiles_many', sel.length) :
+            sel.length ? S('settings_cluster_profiles_one', profName(sel[0])) : '';
+          return win(1440, '<div class="mw-t">' + esc(S('cluster_layout_title')) + '</div>' +
+            (subtitle ? '<div class="mw-s">' + esc(subtitle) + '</div>' : '') +
+            '<div class="cll-body"><div class="cll-left"><svg class="cll-sq" viewBox="0 0 260 260" data-clprev="' + c.mod + '" data-cllay role="img"></svg>' +
             '<div class="mw-hint">' + esc(S('cluster_layout_hint').split('·')[0].trim()) + '</div></div><div class="cll-panel" data-sk="clpanel">' + panel + '</div></div>' +
-            '<div class="mw-acts">' + B(S('cluster_layout_reset'), 'clLayReset') + B(S('profile_cancel'), 'dlgClose') + B(S('rule_save'), 'clLaySave', 'p') + '</div>', '', 'cl-layout');
+            '<div class="mw-acts cll-acts">' + B(S('cluster_layout_reset'), 'clLayReset') + B(S('profile_cancel'), 'dlgClose') + B(S('rule_save'), 'clLaySave', 'p') + '</div>', '', 'cl-layout');
         }
         case 'rLineMenu': {
           // Menu ⋮ d'une ligne (CustomRuleEditFragment.menu) : seuls les gestes possibles à cette place.
@@ -4185,8 +4256,9 @@
           const auto = I.rows.map((row, i) => [row, i]).filter(([row]) => row.ok && !row.pick);
           const todo = I.rows.map((row, i) => [row, i]).filter(([row]) => row.pick);
           const left = todo.filter(([row]) => !row.ok).length;
-          return win(900, head(MW.list, S('rule_import_done', I.n).replace(/\.$/, ''), S('rule_import_report_sub')) +
+          return win(900, head(MW.list, S('rule_import_done', I.n).replace(/\.$/, ''), I.n ? S('rule_import_report_sub') : '') +
             '<div class="mw-scroll ri-list mt12">' +
+            (I.skipped ? '<div class="mw-warn">' + esc(P('rule_import_skipped', I.skipped, RULES_MAX)) + '</div>' : '') +
             (auto.length ? '<div class="ri-sec">' + esc(S('rule_import_auto')) + '</div>' + auto.map(([row, i]) => line(row, i)).join('') : '') +
             (todo.length ? '<div class="ri-sec">' + esc(S('rule_import_todo_fmt', left)) + '</div>' + todo.map(([row, i]) => line(row, i)).join('') : '') + '</div>' +
             '<div class="mw-acts">' + B(S(left ? 'rule_import_later' : 'rule_import_finished'), 'dlgClose', 'p') + '</div>', '', 'rule-import');
@@ -4319,8 +4391,11 @@
         case 'keepAc': state.settings.keepAcOff = !state.settings.keepAcOff; commit(); return true;
         case 'flColor': state.floating.color = v; commit(); return true;
         case 'flColorDef': state.floating.color = null; commit(); return true;
-        case 'stProf': u.stProf = v || null; this.render(); return true;
-        case 'stBand': state.stats.band = state.stats.band === v ? null : v; commit(); return true;
+        case 'stProf': u.stProf = v || null; u.statsOpen = null; u.stTripsShown = u.stChargesShown = ST_PAGE_SIZE; this.render(); return true;
+        case 'stBand': {
+          const bands = state.stats.bands ??= {};
+          bands[v] = !bands[v]; commit(); return true;
+        }
         case 'stExport': u.dialog = { type: 'export', what: 'stats', dest: 'dl', title: S('stats_export_title'), sub: S('stats_export_subtitle', state.stats.trips.length, state.stats.charges.length), go: S('stats_export') }; this.render(); return true;
         // Boutons physiques
         case 'wkScope': u.wkScope = v; this.render(); return true;
@@ -4384,16 +4459,19 @@
             act: [{ k: 'notify', msg: L('Bonne journée', 'Have a good day') }], opt: { ready: false, restart: false }, last: null, missing: 1 };
           const b = { id: 'ri' + (Date.now() + 1), name: L('Rappel câble', 'Cable reminder'), on: false, trg: [{ k: 'app_start' }], cond: [],
             act: [{ k: 'sound' }], opt: { ready: false, restart: false }, last: null, missing: 1 };
-          if (R.list.length + 2 <= RULES_MAX) R.list.push(a, b);
-          commit();
-          u.rImp = { n: 2, rows: [
-            { kind: 'rule_ref_rule', ok: true, text: P('rule_import_from_file', 2) },
+          const imported = [a, b].slice(0, Math.max(0, RULES_MAX - R.list.length));
+          R.list.push(...imported);
+          const rows = imported.length ? [
             { kind: 'rule_ref_place', ok: true, text: S('rule_import_by_name_fmt', L('Maison', 'Home')), sub: S('rule_import_in_fmt', a.name) },
             { kind: 'rule_ref_place', ok: false, name: L('Travail', 'Work'), rule: a.id, rname: a.name, pick: 'rule_import_choose_place',
               items: [L('Bureau', 'Office'), L('Salle de sport', 'Gym'), L('Maison', 'Home')] },
-            { kind: 'rule_ref_sound', ok: false, name: 'carillon.mp3', rule: b.id, rname: b.name, pick: 'rule_import_choose_sound', items: USB_SOUNDS.map((x) => x[0]) },
-          ] };
-          u.dialog = { type: 'rImport' }; this.render(); return true;
+          ] : [];
+          if (imported.length === 2) {
+            rows.unshift({ kind: 'rule_ref_rule', ok: true, text: P('rule_import_from_file', 2) });
+            rows.push({ kind: 'rule_ref_sound', ok: false, name: 'carillon.mp3', rule: b.id, rname: b.name, pick: 'rule_import_choose_sound', items: USB_SOUNDS.map((x) => x[0]) });
+          }
+          u.rImp = { n: imported.length, skipped: 2 - imported.length, rows };
+          u.dialog = { type: 'rImport' }; commit(); return true;
         }
         case 'rImpChoose': { const row = u.rImp && u.rImp.rows[+v]; if (row) { u.dialog = { type: 'rImpPick', row: +v }; this.render(); } return true; }
         case 'rImpPick': {
@@ -4713,7 +4791,7 @@
           const pill = (key, v) => '<span class="mw-pillv"><i>' + esc(S(key)) + '</i>' + esc(v) + '</span>';
           const qr = (nm) => '<div class="mw-qr">' + qrBox(150) + '<span>' + nm + '</span></div>';
           return win(1000, '<div class="mw-cols"><div class="mw-col grow">' + head(MW.info, S('app_name'), S('info_based_on')) +
-            '<div class="mw-pills">' + pill('info_version_label', '2.6.8') + pill('info_firmware_label', gen() === 'UNKNOWN' ? 'SWI???-00000' : gen() + '-xxxxx') + '</div>' +
+            '<div class="mw-pills">' + pill('info_version_label', '2.6.8') + pill('info_firmware_label', state.fw === 'UNKNOWN' ? 'SWI???-00000' : state.fw + '-xxxxx') + '</div>' +
             '<div class="mw-credit">' + esc(S('info_made_with_love')) + '</div><div class="mw-thanks">' + esc(S('info_special_thanks')) + '</div></div>' +
             '<div class="mw-pan mw-qrs">' + qr('GitHub') + qr('GitLab') + '</div></div><div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
         }
@@ -4906,7 +4984,7 @@
         case 'pDefault': {
           // Toast écrit en dur en français dans l'app (ProfileFragment), quelle que soit la langue.
           const p = state.profiles.find((x) => x.id === v);
-          state.defaultId = v; r(); return this.toast('Profil par défaut : ' + (p ? p.name : ''));
+          state.defaultId = v; clSync(); r(); return this.toast('Profil par défaut : ' + (p ? p.name : ''));
         }
         case 'pDel': u.dialog = { type: 'delProfile', id: v }; return this.render();
         // Menu ⋮ de la carte (ProfileFragment.menuProfil) : Dupliquer, Renommer, Supprimer.
@@ -4925,6 +5003,7 @@
             if (!taken.includes(name.toLowerCase())) break;
           }
           const copy = Object.assign(JSON.parse(JSON.stringify(p)), { id: uid(), name, bt: null });   // sans téléphone (ProfileCopy.duplicate)
+          state.clCfg[copy.id] = rClone(clCfg(p.id));
           state.profiles.splice(state.profiles.indexOf(p) + 1, 0, copy);
           r(); return this.toast(S('profile_duplicated_fmt', name));
         }
@@ -4933,7 +5012,13 @@
           const d = u.dialog, p = d && state.profiles.find((x) => x.id === d.id), n = ((d && d.name) || '').trim().slice(0, 30);
           u.dialog = null; if (p && n) p.name = n; return r();
         }
-        case 'delOk': state.profiles = state.profiles.filter((x) => x.id !== u.dialog.id); if (state.defaultId === u.dialog.id) state.defaultId = null; u.dialog = null; return r();
+        case 'delOk': {
+          const id = u.dialog.id;
+          state.profiles = state.profiles.filter((x) => x.id !== id);
+          delete state.clCfg[id];
+          if (state.defaultId === id) state.defaultId = null;
+          clSync(); u.dialog = null; return r();
+        }
         case 'pNew':
           if (state.profiles.length >= MAX_PROFILES) return this.toast(S('profile_max_reached', MAX_PROFILES));
           this.startEdit(null); u.screen = 'profileEdit'; return this.render();
@@ -4976,8 +5061,9 @@
           const isDef = p._default; delete p._new; delete p._default;
           const i = state.profiles.findIndex((x) => x.id === p.id);
           if (i >= 0) state.profiles[i] = p;
-          else { state.profiles.push(p); state.clCfg[p.id] = Object.assign(clPick(state.settings), { cluster: false }); flSet(p.id); }
+          else { state.profiles.push(p); flSet(p.id); }
           if (isDef) state.defaultId = p.id; else if (state.defaultId === p.id) state.defaultId = null;
+          clSync();
           u.edit = null; u.screen = 'profiles'; return r();
         }
         // Réglages
@@ -5088,14 +5174,14 @@
         case 'pcDur': state.preclim.dur = n; return r();
         case 'pcDog': state.preclim.dog = !state.preclim.dog; if (state.preclim.dog) state.preclim.surv = false; return r();
         case 'pcSurv': state.preclim.surv = !state.preclim.surv; if (state.preclim.surv) state.preclim.dog = false; return r();
-        case 'pcTemp': { const cl = c.clim; state.preclim.temp = clamp(state.preclim.temp + n, cl.tMin, cl.tMax); return r(); }
-        case 'pcFan': { const cl = c.clim; state.preclim.fan = clamp(state.preclim.fan + n, cl.fMin, cl.fMax); return r(); }
-        case 'pcAtTime': { const a = state.preclim.at, t = ((a.h * 60 + a.m + n * 5) % 1440 + 1440) % 1440; a.h = Math.floor(t / 60); a.m = t % 60; return r(); }
+        case 'pcTemp': { const cl = c.clim; state.preclim.temp = clamp((state.preclim.temp ?? cl.temp) + n, cl.tMin, cl.tMax); return r(); }
+        case 'pcFan': { const cl = c.clim; state.preclim.fan = clamp((state.preclim.fan ?? cl.fan) + n, cl.fMin, cl.fMax); return r(); }
+        case 'pcAtTime': { const a = state.preclim.at; a.first = (pcFirst(a, pcMinute()) + n * 5 + PC_DAY) % PC_DAY; return r(); }
         case 'pcAtRun': state.preclim.at.run = clamp(state.preclim.at.run + n * 5, 5, 60); return r();
-        case 'pcAtRuns': state.preclim.at.runs = clamp(state.preclim.at.runs + n, 1, 6); return r();
-        case 'pcAtPause': state.preclim.at.pause = clamp(state.preclim.at.pause + n * 5, 5, 60); return r();
+        case 'pcAtRuns': state.preclim.at.runs = clamp(state.preclim.at.runs + n, 1, 5); return r();
+        case 'pcAtPause': state.preclim.at.pause = clamp(state.preclim.at.pause + n * 10, 10, 120); return r();
         case 'pcGo': {
-          if (c.speed > 0) return this.toast(S('preclim_need_park'), 3000);
+          if (!pcCanStart()) return this.toast(S('preclim_need_park'), 3000);
           // Surveillance sans aucune appli dashcam : refusée, sauf « Surveillance sans caméra » permis.
           if (state.preclim.mode === 'now' && state.preclim.surv && state.preclim.cam === 'none' && !state.preclim.nocam) return this.toast(S('preclim_surv_need_app'), 3000);
           // Rappel avant le départ : la clé, et les trois façons de déverrouiller.
@@ -5110,7 +5196,13 @@
         case 'pcUsbTest': state.preclim.usb = 'testing'; r(); setTimeout(() => { state.preclim.usb = 'ok'; commit(); }, 1200); return;
         // Garde-voiture : écran de suivi
         case 'pcHide': if (state.pc) state.pc.hidden = true; return r();
-        case 'pcStop': if (state.pc) pcEnd(state.pc.phase === 'cd' ? 'cancelled' : 'stopped'); return;
+        case 'pcStop': {
+          const pc = state.pc;
+          if (!pc) return;
+          if (pc.phase !== 'cd') return pcEnd('stopped');
+          pcEnd('cancelled'); state.pc = null;
+          return this.toast(S(pc.req.surv ? 'preclim_surv_cancelled' : 'preclim_cancelled'));
+        }
         case 'pcWake': if (state.pc) state.pc.wake = Date.now(); return r();
         case 'pcDone': state.pc = null; return r();
         case 'pcScreenMode': state.preclim.screen = v; return r();
@@ -5191,7 +5283,7 @@
         }
         case 'garage': s.garage = !s.garage; return r();
         case 'readyDefault': s.readyDefault = !s.readyDefault; return r();
-        case 'cluster': return this.clEditSet('cluster', !this.clEditCfg().cluster);
+        case 'cluster': return this.clEditSet('cluster', !(u.clSel?.length ? u.clSel.every((id) => clCfg(id).cluster) : s.cluster));
         case 'clusterUnit': return this.clEditSet('clusterUnit', v);
         case 'clusterStyle': return this.clEditSet('clusterStyle', v);
         case 'clusterPill': return this.clEditSet('clusterPill', v);
@@ -5204,12 +5296,15 @@
           u.clSel = sel; return this.render();
         }
         case 'clSelAll': u.clSel = state.profiles.map((p) => p.id); return this.render();
+        case 'clSelCurrent': u.clSel = [flFollowed()]; return this.render();
         case 'distUnit': s.distUnit = v; return r();
         // Personnalisation avancée (ClusterLayoutEditor) : rien d'écrit avant « Enregistrer ».
         case 'clLayOpen': {
+          if (!u.clSel?.length && flFollowed()) u.clSel = [flFollowed()];
           const cfg = this.clEditCfg();
+          const mod = u.clPrevTab === 'media' ? cfg.clusterMedia : cfg.clusterNav;
           u.clLay = { L: rClone(clLayoutOf(cfg)), sel: 'g', style: cfg.clusterStyle,
-            mod: s.clLayMod || (cfg.clusterNav === 'power' ? 'power' : 'consumption') };
+            mod: s.clLayMod || (mod !== 'none' ? mod : cfg.clusterNav !== 'none' ? cfg.clusterNav : 'consumption') };
           u.dialog = { type: 'clLayout' }; return this.render();
         }
         case 'clLaySel': if (u.clLay) u.clLay.sel = v === 'g' ? 'g' : +v; return this.render();
@@ -5217,13 +5312,18 @@
         case 'clLayMod': u.clLay.mod = v; s.clLayMod = v; return this.render();
         case 'clLayStyle': u.clLay.style = v; return this.render();
         case 'clLayPos': u.clLay.L.gauge = v; return this.render();
+        case 'clLayThickness': u.clLay.L.thickness = v === 'normal' ? null : v; return this.render();
+        case 'clLayAverage': {
+          const { L, style } = u.clLay;
+          L.averageCursor = !(L.averageCursor ?? (style === 'discreet')); return this.render();
+        }
         case 'clLayConsKw': u.clLay.L.consKw = !u.clLay.L.consKw || null; return this.render();
         case 'clLayPowerCons': u.clLay.L.powerCons = u.clLay.L.powerCons === false ? null : false; return this.render();
         case 'clLayHp': u.clLay.L.powerUnit = v === 'hp' ? 'hp' : null; return this.render();
         case 'clLayInfo': u.clLay.L.slots[u.clLay.sel] = v ? { info: v, style: clPillOk(v) ? 'pill' : 'label' } : null; return this.render();
         case 'clLayBStyle': u.clLay.L.slots[u.clLay.sel].style = v; return this.render();
         case 'clLayBUnit': u.clLay.L.slots[u.clLay.sel].unit = v === 'hp' ? 'hp' : null; return this.render();
-        case 'clLayReset': u.clLay.L = clLayoutOf({ clusterPill: 'profile' }); u.clLay.sel = 'g'; return this.render();
+        case 'clLayReset': u.clLay.L = clLayoutOf({ ...this.clEditCfg(), clusterLayout: null }); u.clLay.sel = 'g'; return this.render();
         case 'clLaySave': {
           const c = u.clLay; u.dialog = null; u.clLay = null;
           this.clEditSet('clusterStyle', c.style); return this.clEditSet('clusterLayout', rClone(c.L));
@@ -5258,6 +5358,8 @@
         case 'flInfoStyle': { const b = flFind(u.flEditing); if (b) b.infoStyle = v; return r(); }
         case 'flTap': { const b = flFind(u.flEditing); if (b) b.tap = v === 'none' ? 'none' : null; return r(); }
         case 'flFill': { const b = flFind(u.flEditing); if (b) b.fill = v === 'dark' ? null : v; return r(); }
+        // Largeur (#222) : Automatique = celle du texte ; Fixe = 60 à 240 dp par pas de 10, 110 au départ.
+        case 'flWidth': { const b = flFind(u.flEditing); if (b) b.width = v === 'fixed' ? (b.width || 110) : null; return r(); }
         case 'flBorder': { const b = flFind(u.flEditing); if (b) b.noBorder = v === 'none' || null; return r(); }
         case 'flDim': { const b = flFind(u.flEditing); if (b) b.dim = !b.dim || null; return r(); }
         case 'flReverse': state.floating.hideReverse = !state.floating.hideReverse; return r();
@@ -5323,7 +5425,9 @@
           s.chargePopup = !s.chargePopup;
           if (!s.chargePopup) instances.forEach((i) => { const o = i.ui.overlay; if (o && o.type === 'charge') i.ui.overlay = null; });
           return r();
-        case 'clusterMod': s[el && el.getAttribute('data-x') === 'media' ? 'clusterMedia' : 'clusterNav'] = v; return r();
+        case 'clusterMod':
+          u.clPrevTab = el?.getAttribute('data-x') === 'media' ? 'media' : 'nav';
+          return this.clEditSet(u.clPrevTab === 'media' ? 'clusterMedia' : 'clusterNav', v);
         case 'updOverlay': s.updOverlay = !s.updOverlay; return r();
         case 'textSize': s.textSize = v; return r();
         case 'rcToggle': {
@@ -5387,7 +5491,12 @@
         case 'calRedo': u.dialog = { type: 'cal', w: u.dialog.w, step: 1 }; return this.render();
         case 'calSave': state.winCal[u.dialog.w] = { down: u.dialog.down, up: u.dialog.up }; u.dialog = null; r(); return this.toast(S('win_cal_saved'));
         case 'stEnable': state.stats.enabled = !state.stats.enabled; return r();
-        case 'stPeriod': state.stats.period = +v; return r();
+        case 'stPeriod': state.stats.period = +v; u.statsOpen = null; u.stTripsShown = u.stChargesShown = ST_PAGE_SIZE; return r();
+        case 'stMore': case 'stAll': {
+          const key = v === 'trips' ? 'stTripsShown' : 'stChargesShown';
+          u[key] = a === 'stAll' ? Infinity : (u[key] ?? ST_PAGE_SIZE) + ST_PAGE_SIZE;
+          return this.render();
+        }
         case 'stRetention': state.stats.retention = +v; return r();
         case 'stOpen': u.statsOpen = u.statsOpen === v ? null : v; return this.render();
         case 'stClear': u.dialog = { type: 'stClear' }; return this.render();
@@ -5451,6 +5560,7 @@
         case 'flAction': if (fb) { const [act, cid] = t.value.split(':'); fb.action = act; fb.customId = cid || null; } return commit();
         case 'flInfo': if (fb) fb.info = t.value; return commit();
         case 'flOpacity': if (fb) fb.opacity = clamp(Math.round(+t.value / 5) * 5, 0, 100); return commit();
+        case 'flWidthV': if (fb) fb.width = clamp(Math.round(+t.value / 10) * 10, 60, 240); return commit();
         // Taille de la bulle : aimantée à ±3 % autour de Petit, Moyen et Grand.
         case 'flSize': if (fb) { let v = +t.value; [0, 50, 100].forEach((m) => { if (Math.abs(v - m) <= 3) v = m; }); fb.size = v; } return commit();
         case 'flText': if (fb) fb.text = +t.value; return commit();
@@ -5485,8 +5595,8 @@
         case 'waTime': state.winAuto.time = +t.value; return commit();
         case 'waDelay': state.winAuto.delay = +t.value; return commit();
         case 'popupDelay': state.settings.popupDelay = clamp(+t.value, 1, 60); return commit();
-        case 'clusterRefresh': state.settings.clusterRefresh = clamp(Math.round(+t.value), 1, 10) * 100; return commit();
-        case 'clusterAnim': state.settings.clusterAnim = clamp(Math.round(+t.value), 2, 20) * 100; return commit();
+        case 'clusterRefresh': return this.clEditSet('clusterRefresh', clamp(Math.round(+t.value), 1, 10) * 100);
+        case 'clusterAnim': return this.clEditSet('clusterAnim', clamp(Math.round(+t.value), 2, 20) * 100);
         case 'waBeepVol': state.winAuto.beepVol = +t.value; return commit();
         case 'winCourse': state.winCourse = Math.round(+t.value * 1000); return commit();
         case 'stCurrency': state.stats.currency = (t.value || '').slice(0, 3) || '€'; return commit();
@@ -5496,7 +5606,7 @@
           return commit();
         }
         case 'stBattery': setBattery(+t.value); return commit();
-        case 'stMinTrip': { const x = parseFloat(String(t.value).replace(',', '.')); if (!isNaN(x)) state.stats.minTrip = clamp(x, 0.1, 50); return commit(); }
+        case 'stMinTrip': { const x = parseFloat(String(t.value).replace(',', '.')); if (!isNaN(x)) state.stats.minTrip = clamp(x * (clMiles() ? MI_KM : 1), 0.1, 50); return commit(); }
         case 'batThr': state.auto.b.thr = +t.value; return commit();
         case 'batProfile': state.auto.b.profileId = t.value; return commit();
         case 'batExec': state.auto.b.autoExec = t.checked; return commit();
@@ -5668,10 +5778,10 @@
         case 'acOnce': state.auto.c.open = true; u.screen = 'automation'; return commit();
         case 'statsBattery': state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 0; return commit();
         case 'cluster':
-          // Le module n'existe que sur SWI133, SWI68 et SWI165 : ailleurs, la carte est absente.
+          // La carte est absente sur les firmwares sans module.
           u.screen = 'settings'; u.tabs.set = 1;
           if (caps().cluster) clSet('cluster', true);
-          else this.toast(L('Écran conducteur : SWI133, SWI68 et SWI165 seulement. Changez de firmware au-dessus de la maquette.', 'Driver display: SWI133, SWI68 and SWI165 only. Switch firmware above the mockup.'), 3600);
+          else this.toast(clusterUnavailable(), 3600);
           return commit();
         case 'statsCharges': state.stats.enabled = true; u.screen = 'stats'; u.tabs.st = 2; return commit();
         case 'statsEnergy': {
@@ -5682,7 +5792,7 @@
         case 'clusterDiscreet':
           u.screen = 'settings'; u.tabs.set = 1;
           if (caps().cluster) { clSet('cluster', true); clSet('clusterStyle', 'discreet'); }
-          else this.toast(L('Écran conducteur : SWI133, SWI68 et SWI165 seulement. Changez de firmware au-dessus de la maquette.', 'Driver display: SWI133, SWI68 and SWI165 only. Switch firmware above the mockup.'), 3600);
+          else this.toast(clusterUnavailable(), 3600);
           return commit();
         case 'chargeCluster':
           // Le module de charge se voit dans l'aperçu sous les cartes : une borne rapide est branchée.
@@ -5722,11 +5832,11 @@
           if (!caps().clim) return this.toast(L('Garde-voiture : climatisation non exposée par ce firmware. Changez de firmware au-dessus de la maquette.', 'Car keeper: climate not exposed by this firmware. Switch firmware above the mockup.'), 3600);
           if (!this.assigned('PRE_CLIMATE')) { state.sc.map.btn2_single = 'PRE_CLIMATE'; delete state.sc.extra.btn2_single; }
           if (name === 'preclimCfg') { u.screen = 'shortcuts'; u.tabs.sc = 'preclim'; return commit(); }
-          if (state.pc) { clearInterval(pcTimer); pcTimer = null; state.pc = null; }
-          const c = car(); c.speed = 0; c.locked = false; if (!c.on) { c.on = true; c.ready = true; }
+          if (state.pc) { pcEnd(state.pc.phase === 'cd' ? 'cancelled' : 'stopped'); state.pc = null; }
+          const c = car(); c.speed = 0; c.inPark = true; c.locked = false; if (!c.on) { c.on = true; c.ready = true; }
           state.preclim.dog = name === 'dogMode'; state.preclim.surv = name === 'surveillance';
           this.closeOverlay();
-          if (name === 'preclimRun') { state.preclim.mode = 'now'; pcStart(Object.assign({}, state.preclim, { lock: 8, dur: 15 })); return; }
+          if (name === 'preclimRun') { state.preclim.mode = 'now'; pcStart({ ...state.preclim, lock: 8, dur: 15, temp: state.preclim.temp ?? c.clim.temp, fan: state.preclim.fan ?? c.clim.fan }); return; }
           state.preclim.mode = 'now'; u.overlay = { type: 'preclim' }; return commit();
         }
         case 'floating': {
@@ -5762,7 +5872,7 @@
         case 'distance': u.screen = 'settings'; u.tabs.set = 1; state.settings.distUnit = 'mi'; return commit();
         case 'clusterProfile': case 'clusterMiles': case 'clusterPower': case 'clusterLayout':
           u.screen = 'settings'; u.tabs.set = 1; u.clSel = null;
-          if (!caps().cluster) { this.toast(L('Écran conducteur : SWI133, SWI68 et SWI165 seulement. Changez de firmware au-dessus de la maquette.', 'Driver display: SWI133, SWI68 and SWI165 only. Switch firmware above the mockup.'), 3600); return commit(); }
+          if (!caps().cluster) { this.toast(clusterUnavailable(), 3600); return commit(); }
           clSet('cluster', true);
           if (name === 'clusterMiles') state.settings.distUnit = 'mi';
           if (name === 'clusterPower') { clSet('clusterNav', 'power'); clSet('clusterPowerMax', 'auto'); }
@@ -5818,12 +5928,12 @@
   }
   /** Une valeur oui / non colore la bulle comme une bascule. */
   const flInfoBool = (i) => (i === 'AC_ON' ? !!car().clim.ac : null);
-  /** Apparence d'une bulle (#230) : fond (opacité, sombre / teinté / clair), bordure ; rien de réglé = l'allure d'avant. */
+  /** Apparence d'une bulle (#230) : fond (opacité, sombre / teinté / clair / noir #222), bordure ; rien de réglé = l'allure d'avant. */
   function flLookStyle(b, lit) {
     if (b.opacity == null && !b.fill && !b.noBorder) return '';
     const a = (b.opacity == null ? 72 : lit ? Math.max(60, b.opacity) : b.opacity) / 100, fill = b.fill || 'dark';
     let st = '';
-    if (!lit) st += 'background:' + (fill === 'light' ? 'rgba(238,242,248,' + a + ');color:#0B1220' : fill === 'tint' ? 'color-mix(in srgb, var(--fl, #A6C8FF) ' + Math.round(40 * a) + '%, rgba(28,28,32,' + a + '))' : 'rgba(28,28,32,' + a + ')') + ';';
+    if (!lit) st += 'background:' + (fill === 'light' ? 'rgba(238,242,248,' + a + ');color:#0B1220' : fill === 'black' ? 'rgba(0,0,0,' + a + ')' : fill === 'tint' ? 'color-mix(in srgb, var(--fl, #A6C8FF) ' + Math.round(40 * a) + '%, rgba(28,28,32,' + a + '))' : 'rgba(28,28,32,' + a + ')') + ';';
     if (b.noBorder) st += 'border-color:transparent;';
     // Sous 35 %, le texte prend un contour pour rester lisible.
     if (a < 0.35 && fill !== 'light') st += 'text-shadow:0 0 3px #000,0 0 2px #000;';
@@ -5916,6 +6026,7 @@
       case 'pcSoc': return S('preclim_value_percent', +v);
       case 'flSize': return S('floating_size_value', +v);
       case 'flOpacity': return S('floating_opacity_value', Math.round(+v / 5) * 5);
+      case 'flWidthV': return S('floating_width_value', Math.round(+v / 10) * 10);
       case 'flText': return S('floating_text_value', +v);
       case 'climTemp': return v + '°';
       case 'pkBri': return v + '%';
@@ -6177,6 +6288,7 @@
       '<div class="dock-grid">' +
       '<label class="dock-f"><span data-l10n="dock-fw"></span><select data-d="fw">' + FIRMWARES.map((f) => '<option value="' + f + '">' + f + '</option>').join('') + '</select></label>' +
       '<label class="dock-f"><span><span data-l10n="dock-speed"></span> <b data-o="speed"></b></span><input type="range" min="0" max="130" step="5" data-d="speed"></label>' +
+      '<div class="dock-f"><span data-l10n="dock-gear"></span><div class="dock-row"><button type="button" class="dock-btn" data-d="park" data-v="P">P</button><button type="button" class="dock-btn" data-d="park" data-v="D">D</button></div></div>' +
       '<label class="dock-f"><span><span data-l10n="dock-temp"></span> <b data-o="temp"></b></span><input type="range" min="-15" max="45" step="1" data-d="temp"></label>' +
       '<label class="dock-f"><span><span data-l10n="dock-soc"></span> <b data-o="soc"></b></span><input type="range" min="5" max="100" step="1" data-d="soc"></label>' +
       '<div class="dock-f"><span data-l10n="dock-lights"></span><div class="dock-row"><button type="button" class="dock-btn" data-d="lights"></button></div></div>' +
@@ -6202,9 +6314,15 @@
       if (c.charge && +e.target.value > 0) stopCharge();
       const was = c.speed;
       c.speed = +e.target.value; c.maxSpeed = Math.max(c.maxSpeed || 0, c.speed);
+      if (c.speed > 0) c.inPark = false;
       if (was === 0 && c.speed > 0) soundFire('drive'); else if (was > 0 && c.speed === 0) soundFire('park');
       commit();
     });
+    el.querySelectorAll('[data-d=park]').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.v === 'P' && car().speed > 0) return;
+      car().inPark = b.dataset.v === 'P';
+      commit();
+    }));
     q('[data-d=temp]').addEventListener('input', (e) => { car().outside = +e.target.value; commit(); });
     // Batterie : franchir le seuil en roulant déclenche le profil, une fois par épisode.
     q('[data-d=soc]').addEventListener('input', (e) => { car().soc = +e.target.value; batteryAutomation(null); commit(); });
@@ -6246,6 +6364,7 @@
       const c = car(), k = caps();
       const L10N = {
         'dock-title': L('Véhicule virtuel', 'Virtual vehicle'), 'dock-fw': 'Firmware', 'dock-speed': L('Vitesse', 'Speed'),
+        'dock-gear': L('Position du levier', 'Gear selector'),
         'dock-temp': L('Temp. extérieure', 'Outside temp.'), 'dock-bt': L('Bluetooth connecté', 'Bluetooth connected'),
         'dock-doors': L('Portes avant', 'Front doors'), 'dock-media': L('Volume média', 'Media volume'), 'dock-wheel': L('Volant', 'Steering wheel'),
         'dock-active': L('Profil en cours (dernier appliqué)', 'Current profile (last applied)'),
@@ -6255,6 +6374,12 @@
       q('.dock-sum').textContent = L('Véhicule virtuel', 'Virtual vehicle') + ' · ' + (state.fw === 'UNKNOWN' && state.forced ? 'UNKNOWN→' + state.forced : state.fw) + ' · ' + c.speed + ' km/h · ' + c.outside + ' °C';
       q('[data-d=fw]').value = state.fw;
       q('[data-d=speed]').value = c.speed; q('[data-o=speed]').textContent = c.speed + ' km/h';
+      el.querySelectorAll('[data-d=park]').forEach((b) => {
+        const park = b.dataset.v === 'P';
+        b.disabled = park && c.speed > 0;
+        b.setAttribute('aria-pressed', String(park === c.inPark));
+        b.classList.toggle('on', park === c.inPark);
+      });
       q('[data-d=temp]').value = c.outside; q('[data-o=temp]').textContent = c.outside + ' °C';
       q('[data-d=soc]').value = c.soc; q('[data-o=soc]').textContent = c.soc + ' %';
       q('[data-d=soc]').disabled = !!c.charge;
@@ -6290,6 +6415,8 @@
   }
 
   // ── Écran conducteur : aperçu du module (ClusterGauge + ClusterGaugeView) ──
+  const clusterUnavailable = () => L('Écran conducteur : choisissez SWI133, SWI68, SWI165 ou SWI173 dans la maquette.',
+    'Driver display: choose SWI133, SWI68, SWI165 or SWI173 in the mockup.');
   /** Bornes de ClusterGauge, les mêmes que l'app. */
   const CG = { STOP_KMH: 5, WH_KM_FULL: 3000, WH_KM_CURVE: 100, REGEN_FULL_KW: 60, STOPPED_FULL_KW: 20, POWER_FULL_KW: 320,
                 POWER_CURVE_KW: 20, REGEN_CURVE_KW: 10, SMOOTHING: 0.5, DISCREET_ZERO: 0.3, DISCREET_TAU_MS: 2000 };
@@ -6378,10 +6505,10 @@
     return { text: name.toLocaleUpperCase(appLang()), mode: catOn(p, 'drive') ? p.driveMode : mode };
   }
 
-  function clArc(cx, cy, r, start, sweep, col) {
+  function clArc(cx, cy, r, start, sweep, col, width) {
     if (Math.abs(sweep) < 0.5) return '';
     const p = (a) => (cx + r * Math.cos(a * Math.PI / 180)).toFixed(2) + ' ' + (cy + r * Math.sin(a * Math.PI / 180)).toFixed(2);
-    return '<path d="M' + p(start) + 'A' + r + ' ' + r + ' 0 ' + (Math.abs(sweep) > 180 ? 1 : 0) + ' ' + (sweep > 0 ? 1 : 0) + ' ' + p(start + sweep) + '" fill="none" stroke="' + col + '" stroke-width="13" stroke-linecap="round"/>';
+    return '<path d="M' + p(start) + 'A' + r + ' ' + r + ' 0 ' + (Math.abs(sweep) > 180 ? 1 : 0) + ' ' + (sweep > 0 ? 1 : 0) + ' ' + p(start + sweep) + '" fill="none" stroke="' + col + '" stroke-width="' + width + '" stroke-linecap="round"/>';
   }
   /** Un texte : sans graisse, un léger espacement (petit()) ; [ls] le fixe. */
   const clTxt = (t, x, y, size, col, weight, anchor, ls) => (t ? '<text x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" font-size="' + size + '" fill="' + col + '" text-anchor="' + (anchor || 'middle') + '"' +
@@ -6410,13 +6537,14 @@
   /** Module B : l'arc de puissance (issues #152 et #158). */
   function clPower(g) {
     const cx = 130, cy = 122, R = 88, st = g.st;
+    const thickness = 13 * g.thicknessFactor;
     let h = '';
     (g.hp ? powerTicksHp(g.full) : powerTicks(g.full).map((k) => [k, k])).forEach(([k, c]) => { h += clGrad(cx, cy, R, 270 + 120 * powerFraction(k, g.full), String(c)); });
     (g.hp ? [15, 40, 80].map((x) => [x / CH_KW, x]) : CG_TICKS.regen.map((k) => [k, k])).forEach(([k, c]) => { h += clGrad(cx, cy, R, 270 - 120 * regenFraction(k), String(c)); });
-    h += clArc(cx, cy, R, 150, 240, CL.track);
+    h += clArc(cx, cy, R, 150, 240, CL.track, thickness);
     // Le remplissage s'arrête net au zéro : son bout arrondi ne passe pas de l'autre côté.
     if (st) h += '<defs><clipPath id="' + g.id + 'P"><rect x="130" y="0" width="130" height="260"/></clipPath><clipPath id="' + g.id + 'R"><rect x="0" y="0" width="130" height="260"/></clipPath></defs>' +
-      '<g clip-path="url(#' + g.id + (g.part >= 0 ? 'P' : 'R') + ')">' + clArc(cx, cy, R, 270, 120 * g.part, st.regen ? CL.accent : CL.warn) + '</g>';
+      '<g clip-path="url(#' + g.id + (g.part >= 0 ? 'P' : 'R') + ')">' + clArc(cx, cy, R, 270, 120 * g.part, st.regen ? CL.accent : CL.warn, thickness) + '</g>';
     h += '<line x1="130" y1="' + (cy - R - 8) + '" x2="130" y2="' + (cy - R + 8) + '" stroke="' + CL.text2 + '" stroke-width="2"/>' + clTxt('0', 130, cy - R - 12, 11, CL.text2);
     const v = g.value != null ? g.value : st && st.value;
     const recup = !!st && v != null && v < 0;
@@ -6441,11 +6569,17 @@
   /** Module A : l'anneau de consommation. */
   function clConsumption(g) {
     const cx = 130, cy = 120, st = g.st;
+    const thickness = 13 * g.thicknessFactor;
     let h = '';
     // Graduations en Wh/km, libellées dans l'unité choisie : l'anneau, lui, ne change pas.
     CG_TICKS.cons.forEach((w) => { h += clGrad(cx, cy, 80, 135 + 270 * consFraction(w), clTick(w, g.unit)); });
-    h += clArc(cx, cy, 80, 135, 270, CL.track);
-    if (st) h += clArc(cx, cy, 80, 135, 270 * g.part, st.regen ? CL.accent : CL.warn);
+    h += clArc(cx, cy, 80, 135, 270, CL.track, thickness);
+    if (st) h += clArc(cx, cy, 80, 135, 270 * g.part, st.regen ? CL.accent : CL.warn, thickness);
+    if (g.averageCursor && g.avgWh > 0) {
+      const angle = (135 + 270 * consFraction(g.avgWh * (g.mi ? MI_KM : 1))) * Math.PI / 180;
+      const radius = 80 - thickness / 2 - 7;
+      h += '<circle cx="' + (cx + radius * Math.cos(angle)).toFixed(1) + '" cy="' + (cy + radius * Math.sin(angle)).toFixed(1) + '" r="3.5" fill="' + CL.text + '"/>';
+    }
     const v = g.value != null ? g.value : st ? st.value : 0;
     let big = ['–', ''];
     if (st && st.unit === 'WH_PER_KM') big = clCons(v, g.unit, g.mi);
@@ -6462,18 +6596,19 @@
     return h + clFoot(S('cluster_trip_avg'), clAvg(g.avgWh, g.avgUnit, g.mi), CL.text, S('cluster_regen'), g.regenWh != null ? ['+' + Math.round(g.regenWh), 'Wh'] : ['–', null], CL.accent);
   }
   // Style discret (issue #153, variante A) : une barre fine graduée, des chiffres fixes sous les crans.
-  const clBar = (x0, x1, col) => (x1 - x0 < 0.5 ? '' : '<line x1="' + x0.toFixed(1) + '" y1="124" x2="' + x1.toFixed(1) + '" y2="124" stroke="' + col + '" stroke-width="6" stroke-linecap="round"/>');
+  const clBar = (x0, x1, col, width) => (x1 - x0 < 0.5 ? '' : '<line x1="' + x0.toFixed(1) + '" y1="124" x2="' + x1.toFixed(1) + '" y2="124" stroke="' + col + '" stroke-width="' + width + '" stroke-linecap="round"/>');
   const clNotch = (x, lab, main) => '<line x1="' + x.toFixed(1) + '" y1="131" x2="' + x.toFixed(1) + '" y2="136" stroke="' + (main ? CL.text : CL.cran) + '" stroke-width="' + (main ? 2 : 1) + '"/>' +
     (lab == null ? '' : clTxt(lab, x, 152, 13, main ? CL.text2 : CL.discret, main ? 500 : null, 'middle', 0));
   const clTitle = (t) => clTxt(t.toLocaleUpperCase(appLang()), 130, 70, 11, CL.discret, null, 'middle', 1.5);
   function clDiscreetPower(g) {
     const X = (f) => 30 + 200 * f, zero = X(CG.DISCREET_ZERO), st = g.st;
-    let h = clTitle(S('settings_cluster_power')) + clBar(30, 230, CL.track);
+    const thickness = 6 * g.thicknessFactor;
+    let h = clTitle(S('settings_cluster_power')) + clBar(30, 230, CL.track, thickness);
     const v = g.value != null ? g.value : st && st.value;
     if (st && v != null) {
       const xv = X(discreetPowerFraction(v, g.full));
-      if (v < -0.5) h += clBar(xv, zero, CL.accent);
-      else if (v > 0.5) h += clBar(zero, xv, CL.clair);
+      if (v < -0.5) h += clBar(xv, zero, CL.accent, thickness);
+      else if (v > 0.5) h += clBar(zero, xv, CL.clair, thickness);
     }
     (g.hp ? dPowerTicksHp(g.full) : dPowerTicks(g.full).map((k) => [k, dPowerLabel(k, g.full) ? k : null])).forEach(([k, c]) => { h += clNotch(X(discreetPowerFraction(k, g.full)), c == null ? null : String(c), k === 0); });
     // Le zéro, repère de toute la barre.
@@ -6483,17 +6618,18 @@
   }
   function clDiscreetCons(g) {
     const st = g.st, X = (wh) => 72 + 158 * consFraction(wh), avg = g.avgWh, f = g.mi ? MI_KM : 1;
+    const thickness = 6 * g.thicknessFactor;
     // À gauche, une courte zone pour la récupération ; puis l'échelle de consommation.
-    let h = clTitle(S('settings_cluster_consumption')) + clBar(30, 66, CL.track) + clBar(72, 230, CL.track);
+    let h = clTitle(S('settings_cluster_consumption')) + clBar(30, 66, CL.track, thickness) + clBar(72, 230, CL.track, thickness);
     const v = g.value != null ? g.value : st && st.value;
     if (st && v != null) {
-      if (st.unit === 'KW_REGEN') h += clBar(66 - 36 * regenFraction(v), 66, CL.accent);
-      else if (st.unit === 'WH_PER_KM') h += clBar(72, X(v * f), avg != null && v > avg ? CL.warn : CL.eco);
+      if (st.unit === 'KW_REGEN') h += clBar(66 - 36 * regenFraction(v), 66, CL.accent, thickness);
+      else if (st.unit === 'WH_PER_KM') h += clBar(72, X(v * f), avg != null && v > avg ? CL.clair : CL.eco, thickness);
     }
     CG_TICKS.cons.forEach((w) => { h += clNotch(X(w), CG_TICKS.dConsLab.includes(w) ? clTick(w, g.unit) : null, false); });
     h += clTxt(S('cluster_regen'), 48, 152, 11, CL.accent, null, 'middle', 0) + clTxt((g.unit === 'kwh' ? 'kWh/100 ' : 'Wh/') + (g.mi ? 'mi' : 'km'), 230, 168, 11, CL.discret, null, 'end', 0);
     // La moyenne du trajet : un triangle au-dessus de la barre, et son mot.
-    if (avg != null) {
+    if (avg != null && g.averageCursor) {
       const xm = X(avg * f);
       h += '<path d="M' + (xm - 5).toFixed(1) + ' 108L' + (xm + 5).toFixed(1) + ' 108L' + xm.toFixed(1) + ' 116Z" fill="' + CL.text + '"/>' + clTxt(S('cluster_avg_short'), xm, 103, 11, CL.text2, null, 'middle', 0);
     }
@@ -6581,6 +6717,7 @@
     if (g.preclim) return h + clPreclimSvg(g.preclim);
     if (g.charge) return h + clChargeSvg(g.charge);
     if (g.layout) return h + clLayoutSvg(g);
+    g = { ...g, thicknessFactor: 1, averageCursor: g.style === 'discreet' };
     const pill = g.pill ? clPillSvg(g.pill) : '';
     if (g.style === 'discreet') return h + pill + (g.mod === 'power' ? clDiscreetPower(g) : clDiscreetCons(g));
     return h + pill + (g.mod === 'power' ? clPower(g) : clConsumption(g));
@@ -6685,7 +6822,8 @@
   function clLayoutSvg(g) {
     const L = g.layout, ed = g.edit, geo = clGeo(L, !!ed), z = geo.gauge;
     const [top, bot] = g.style === 'discreet' ? [54, 174] : g.mod === 'power' ? [6, 194] : [4, 200];
-    const inner = Object.assign({}, g, { noFoot: true });
+    const thicknessFactor = L.thickness === 'thin' ? 0.6 : L.thickness === 'thick' ? 1.45 : 1;
+    const inner = Object.assign({}, g, { noFoot: true, thicknessFactor, averageCursor: L.averageCursor ?? (g.style === 'discreet') });
     const gauge = g.style === 'discreet' ? (g.mod === 'power' ? clDiscreetPower(inner) : clDiscreetCons(inner)) : (g.mod === 'power' ? clPower(inner) : clConsumption(inner));
     const e = Math.min(z.h / (bot - top), 1), tx = (260 - 260 * e) / 2, ty = z.y + (z.h - (bot - top) * e) / 2 - top * e;
     let h = '<defs><clipPath id="' + g.id + 'Z"><rect x="0" y="' + z.y + '" width="260" height="' + z.h + '"/></clipPath></defs><g clip-path="url(#' + g.id + 'Z)"><g transform="translate(' +
@@ -6865,7 +7003,7 @@
       q('[data-run=accel]').disabled = speed >= 130 && !boost;
       q('[data-run=brake]').disabled = speed < 10 && !boost;
       q('.cl-msg').textContent = !k.cluster
-        ? L('Sur ' + k.g + ', ce module ne peut pas s’afficher : le combiné dessine tout lui-même. Il existe sur SWI133, SWI68 et SWI165.', 'On ' + k.g + ', this module cannot show: the cluster draws everything itself. It exists on SWI133, SWI68 and SWI165.')
+        ? clusterUnavailable()
         : ch ? L('Une charge est en cours : le module de charge remplace la jauge. Débranchez pour la retrouver.', 'A charge is in progress: the charge module replaces the gauge. Unplug to get it back.')
         : L('Relevé toutes les ' + fmtS(s.clusterRefresh) + ' s, glissement en ' + fmtS(s.clusterAnim) + ' s : la jauge et le chiffre vont d’une valeur à la suivante.', 'Reading every ' + fmtS(s.clusterRefresh) + ' s, gliding over ' + fmtS(s.clusterAnim) + ' s: the gauge and the number move from one value to the next.');
       schedule();
