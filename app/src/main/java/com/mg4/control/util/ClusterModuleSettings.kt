@@ -109,6 +109,7 @@ object ClusterModuleSettings {
      * chaque relevé repart de ce qui est à l'écran.
      */
     const val KEY_ANIMATION = "cluster_animation_ms"
+    const val KEY_POWER_MAX = "cluster_power_max"
     const val MIN_ANIMATION_MS = 200
     const val MAX_ANIMATION_MS = 2000
     const val STEP_ANIMATION_MS = 100
@@ -191,7 +192,10 @@ object ClusterModuleSettings {
             pill = p.getString(KEY_PILL, null),
             refreshMs = if (p.contains(KEY_REFRESH)) p.getInt(KEY_REFRESH, DEFAULT_REFRESH_MS) else null,
             animationMs = if (p.contains(KEY_ANIMATION)) p.getInt(KEY_ANIMATION, DEFAULT_ANIMATION_MS) else null,
-        ).copy(layout = p.getString(KEY_LAYOUT, null)?.let { j ->
+        ).copy(
+            // Puissance maxi (issue #165) : oubliée ici jusqu'au 2026-11-14 — sans profil, le choix revenait à Auto.
+            powerMax = if (p.contains(KEY_POWER_MAX)) p.getInt(KEY_POWER_MAX, 0) else null,
+            layout = p.getString(KEY_LAYOUT, null)?.let { j ->
             runCatching { com.google.gson.Gson().fromJson(j, ClusterLayout::class.java) }.getOrNull()
         })
     }
@@ -209,6 +213,7 @@ object ClusterModuleSettings {
             putString(KEY_PILL, c.pill)
             c.refreshMs?.let { putInt(KEY_REFRESH, it) } ?: remove(KEY_REFRESH)
             c.animationMs?.let { putInt(KEY_ANIMATION, it) } ?: remove(KEY_ANIMATION)
+            c.powerMax?.let { putInt(KEY_POWER_MAX, it) } ?: remove(KEY_POWER_MAX)
             c.layout?.let { putString(KEY_LAYOUT, com.google.gson.Gson().toJson(it)) } ?: remove(KEY_LAYOUT)
         }.apply()
     }

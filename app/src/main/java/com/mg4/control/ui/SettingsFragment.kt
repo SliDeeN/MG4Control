@@ -526,7 +526,7 @@ class SettingsFragment : Fragment() {
             // L'aperçu montre le premier profil sélectionné.
             apercu.reglages = premier
             apercu.profilMontre = noms.firstOrNull()
-            if (actif && isResumed) apercu.demarrer() else if (!actif) apercu.arreter()
+            if (actif && isResumed && pageInterfaceVisible()) apercu.demarrer() else if (!actif) apercu.arreter()
             apercu.rafraichir()
 
             val refresh = choisis.map { ClusterModuleSettings.refreshMs(it) }
@@ -962,8 +962,11 @@ class SettingsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         majCarteCombine?.invoke()
-        if (combineDeplie) apercuCombine?.demarrer()
+        if (combineDeplie && pageInterfaceVisible()) apercuCombine?.demarrer()
     }
+
+    /** L'aperçu de l'écran conducteur ne tourne que sur l'onglet Interface (2026-11-14). */
+    private fun pageInterfaceVisible(): Boolean = view?.findViewById<View>(R.id.page_set_ui)?.visibility == View.VISIBLE
 
     override fun onPause() {
         apercuCombine?.arreter()
@@ -1017,6 +1020,10 @@ class SettingsFragment : Fragment() {
                 btn.setCategoryTabActive(on)
             }
             scroll?.scrollTo(0, 0)   // changer d'onglet en gardant le scroll précédent désoriente
+            // Aperçu de l'écran conducteur : arrêté hors de l'onglet Interface — son trajet simulé
+            // tournait sur le fil principal tant que Réglages restait ouvert (2026-11-14).
+            if (target.id == R.id.page_set_ui && combineDeplie && isResumed) apercuCombine?.demarrer()
+            else apercuCombine?.arreter()
         }
         usable.forEach { (btn, page) -> btn.setOnClickListener { select(page) } }
         // Un onglet mémorisé peut ne plus être disponible (page vidée entre-temps) : repli sur le premier.

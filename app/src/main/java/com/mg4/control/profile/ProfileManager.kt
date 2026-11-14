@@ -106,6 +106,8 @@ class ProfileManager(private val context: Context) {
             persist(list)
         }
         triggerBackup()
+        // Premier profil : le combiné quitte les réglages communs pour les siens.
+        if (getAll().size == 1) suiviPeutChanger("premier profil")
         return true
     }
 
@@ -169,6 +171,7 @@ class ProfileManager(private val context: Context) {
             ActiveProfile.forgetIfMissing(context, list.map { it.id })
         }
         triggerBackup()
+        suiviPeutChanger("profil supprimé")
     }
 
     /**
@@ -181,12 +184,22 @@ class ProfileManager(private val context: Context) {
             persist(ordonner(getAll(), ids))
         }
         triggerBackup()
+        suiviPeutChanger("profils réordonnés")
     }
 
     fun setDefault(profileId: String) {
         prefs.edit().putString(KEY_DEFAULT_ID, profileId).apply()
         triggerBackup()
+        suiviPeutChanger("profil par défaut")
     }
+
+    /**
+     * Le profil que suit l'écran conducteur a pu changer sans qu'aucun profil soit appliqué
+     * (2026-11-14) : profil par défaut, suppression du profil actif, ordre, premier profil créé.
+     * Le module est remis en place ou retiré selon les réglages du profil désormais suivi.
+     */
+    private fun suiviPeutChanger(pourquoi: String) =
+        runCatching { com.mg4.control.service.ClusterModuleOverlay.refresh(context, pourquoi) }
 
     fun getDefaultProfile(): DrivingProfile? {
         val defaultId = prefs.getString(KEY_DEFAULT_ID, null) ?: return null

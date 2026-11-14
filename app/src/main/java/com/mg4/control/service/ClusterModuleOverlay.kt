@@ -186,7 +186,7 @@ internal object ClusterModuleOverlay {
      */
     private val ecouteurEcrans = object : DisplayManager.DisplayListener {
         override fun onDisplayAdded(displayId: Int) {
-            if (vue == null) afficher("écran $displayId ajouté", signalerAbsence = false)
+            if (vue == null) afficher("écran $displayId ajouté", signalerAbsence = false, reprise = true)
         }
         override fun onDisplayRemoved(displayId: Int) {
             if (displayId == ecranId) masquer("écran $displayId retiré")
@@ -228,7 +228,7 @@ internal object ClusterModuleOverlay {
             if (!doitEtreLa(app)) return@post
             val ecran = ecranDuCombine(app)
             if (ecran == null) {
-                ESSAIS_MS.forEach { delai -> main.postDelayed({ if (vue == null) afficher("$origine (+$delai ms)", signalerAbsence = false) }, delai) }
+                ESSAIS_MS.forEach { delai -> main.postDelayed({ if (vue == null) afficher("$origine (+$delai ms)", signalerAbsence = false, reprise = true) }, delai) }
                 return@post
             }
             val v = vue
@@ -236,7 +236,7 @@ internal object ClusterModuleOverlay {
             if (v == null || detachee || ecranId != ecran.displayId) {
                 AppLogger.i(TAG, "$origine : module ${if (v == null) "absent" else if (detachee) "détaché" else "sur un autre écran"} — recollé")
                 masquer(origine)
-                afficher(origine, signalerAbsence = false)
+                afficher(origine, signalerAbsence = false, reprise = true)
             }
         }
     }
@@ -324,7 +324,7 @@ internal object ClusterModuleOverlay {
      * Sans effet si le module est déjà là. [signalerAbsence] : faux pour les essais déclenchés par
      * l'arrivée d'un écran quelconque, qui ne sont pas tous celui du combiné.
      */
-    private fun afficher(origine: String, signalerAbsence: Boolean = true) {
+    private fun afficher(origine: String, signalerAbsence: Boolean = true, reprise: Boolean = false) {
         val ctx = appContext ?: return
         if (vue != null) return
         // Dernier filet : un essai différé (+1 à +10 s) ou un autre appelant ne pose rien en mode
@@ -366,7 +366,7 @@ internal object ClusterModuleOverlay {
                 "${ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA)?.key ?: "aucun"}) sur l'écran " +
                 "${ecran.displayId} « ${ecran.name} » ${taille.x}×${taille.y} px — carré de ${place.side} px " +
                 "en (${place.x}, ${place.y})")
-            demarrerReleves()
+            demarrerReleves(reprise)
         } catch (e: Exception) {
             AppLogger.e(TAG, "$origine : affichage refusé sur l'écran ${ecran.displayId} — " +
                 "${e.javaClass.simpleName}: ${e.message}")
@@ -386,20 +386,26 @@ internal object ClusterModuleOverlay {
 
     // ── Relevés (fil du lecteur) ─────────────────────────────────────────────
 
-    /** Le trajet repart de zéro à chaque affichage, et à chaque passage en READY ([readyListener]). */
-    private fun demarrerReleves() {
+    /**
+     * Le trajet repart de zéro à chaque affichage, et à chaque passage en READY ([readyListener]).
+     * [reprise] (2026-11-14) : fenêtre simplement reposée (combiné réveillé, écran revenu) — la
+     * moyenne, la récupération et la charge en cours sont gardées.
+     */
+    private fun demarrerReleves(reprise: Boolean = false) {
         lecteur.post {
             enMarche = true
-            trajet.reset()
+            if (!reprise) trajet.reset()
             kwLisse = null
             dernierKwMs = 0L
             dernierLentMs = 0L
             dernierOnglet = -1
             dernierModule = null
             dernierPreClim = false
-            session.terminer()
             chargeBrute = null
-            chargeFinie = false
+            if (!reprise) {
+                session.terminer()
+                chargeFinie = false
+            }
             lecteur.removeCallbacks(tic)
             lecteur.post(tic)
         }
@@ -483,6 +489,9 @@ internal object ClusterModuleOverlay {
                 if (enCharge) {
                     chargeFinie = false
                 } else {
+                    // Sortie de charge (2026-11-14) : la prise relue tout de suite, pas au relevé lent
+                    // (10 s) — sinon un débranchement affichait « Charge terminée » jusqu'à lui.
+                    if (!chargeFinie) runCatching { EnergyReader.chargeRaw() }.getOrNull()?.let { chargeBrute = it }
                     val brut = chargeBrute
                     if (brut != null && ChargeDisplay.priseSignalee(brut.ac, brut.dc)) {
                         if (!chargeFinie) {
