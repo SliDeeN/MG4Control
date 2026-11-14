@@ -71,6 +71,8 @@ class StatsFragment : Fragment() {
         const val TAG = "MG4_STATS"
         /** Durée d'affichage au-delà de laquelle le journal la note. */
         const val RENDU_LENT_MS = 50L
+        /** Lignes ajoutées à chaque « Afficher 50 de plus ». */
+        const val PAQUET_LIGNES = 50
         /** Attente après le dernier pas de l'état de santé avant de recalculer les recharges. */
         const val RECALCUL_SOH_MS = 800L
     }
@@ -107,6 +109,16 @@ class StatsFragment : Fragment() {
      * onResume, qui suit aussitôt, ne refait pas le même rendu.
      */
     private var renduALaCreation = false
+    /**
+     * Lignes construites dans les listes Trajets et Recharges (2026-11-14) : par paquets de
+     * [PAQUET_LIGNES], « Afficher 50 de plus » / « Tout afficher ». Mesuré sur la voiture : 105 à
+     * 200 ms pour 101 trajets construits d'un coup, à chaque affichage de l'onglet.
+     */
+    private var trajetsMontres = PAQUET_LIGNES
+    private var chargesMontrees = PAQUET_LIGNES
+
+    /** Période ou filtre changé : les listes repartent de 50. */
+    private fun listesAuDebut() { trajetsMontres = PAQUET_LIGNES; chargesMontrees = PAQUET_LIGNES }
     /** Ligne dépliée d'une liste, repérée par l'horodatage de son enregistrement. */
     private var expanded: Long? = null
     /** Filtre « Profil » de l'onglet Trajets (2026-11-05) ; null = tous. */
@@ -472,7 +484,7 @@ class StatsFragment : Fragment() {
             list.addView(emptyNote(ctx, R.string.stats_no_trip))
             return
         }
-        trips.forEach { (trip, entier) ->
+        trips.take(trajetsMontres).forEach { (trip, entier) ->
             // Avec le filtre, un trajet mixte annonce sa part : « 24 km sur 61 km ».
             val distance = if (trip !== entier && entier.isMixed)
                 getString(R.string.stats_portion, km(trip.distance), km(entier.distance)) else km(trip.distance)
@@ -495,7 +507,21 @@ class StatsFragment : Fragment() {
                 list.addView(tripDetail(ctx, entier))
             }
         }
+        if (trips.size > trajetsMontres) list.addView(suite(ctx, R.string.stats_shown_trips, trajetsMontres, trips.size,
+            plus = { trajetsMontres += PAQUET_LIGNES; render() }, tout = { trajetsMontres = Int.MAX_VALUE; render() }))
     }
+
+    /** Bas de liste : « 50 sur 101 trajets affichés », Afficher 50 de plus, Tout afficher. */
+    private fun suite(ctx: Context, texte: Int, montres: Int, total: Int, plus: () -> Unit, tout: () -> Unit): View =
+        LinearLayout(ctx).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(ctx, 10), 0, dp(ctx, 4))
+            addView(label(ctx, getString(texte, montres, total), 16f, R.color.text_secondary),
+                LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            addView(choice(ctx, getString(R.string.stats_show_more_fmt, minOf(PAQUET_LIGNES, total - montres)), false, plus))
+            addView(choice(ctx, getString(R.string.stats_show_all), false, tout))
+        }
 
     private fun renderCharges(
         v: View, s: StatsSettings, sum: StatsSummary, charges: List<ChargeSession>
@@ -520,7 +546,7 @@ class StatsFragment : Fragment() {
             list.addView(emptyNote(ctx, R.string.stats_no_charge))
             return
         }
-        charges.forEach { session ->
+        charges.take(chargesMontrees).forEach { session ->
             val type = when (session.type) {
                 ChargeType.DC -> getString(R.string.stats_charge_dc)
                 ChargeType.AC -> getString(R.string.stats_charge_ac)
@@ -544,6 +570,8 @@ class StatsFragment : Fragment() {
                 onClick = { expanded = if (expanded == session.startMs) null else session.startMs; render() }))
             if (expanded == session.startMs) list.addView(chargeDetail(ctx, session, s))
         }
+        if (charges.size > chargesMontrees) list.addView(suite(ctx, R.string.stats_shown_charges, chargesMontrees, charges.size,
+            plus = { chargesMontrees += PAQUET_LIGNES; render() }, tout = { chargesMontrees = Int.MAX_VALUE; render() }))
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -807,10 +835,10 @@ class StatsFragment : Fragment() {
     private fun periodRow(ctx: Context): View = LinearLayout(ctx).apply {
         orientation = LinearLayout.HORIZONTAL
         addView(choice(ctx, getString(R.string.stats_period_short, SHORT_PERIOD_DAYS), shortPeriod) {
-            shortPeriod = true; render()
+            shortPeriod = true; listesAuDebut(); render()
         })
         addView(choice(ctx, getString(R.string.stats_period_all), !shortPeriod) {
-            shortPeriod = false; render()
+            shortPeriod = false; listesAuDebut(); render()
         })
     }
 
@@ -976,9 +1004,9 @@ class StatsFragment : Fragment() {
                 addView(label(ctx, getString(R.string.stats_filter_profile), 14f, R.color.text_secondary).apply {
                     setPadding(0, 0, dp(ctx, 10), 0)
                 })
-                addView(choice(ctx, getString(R.string.stats_filter_all), profilFiltre == null) { profilFiltre = null; expanded = null; render() })
+                addView(choice(ctx, getString(R.string.stats_filter_all), profilFiltre == null) { profilFiltre = null; expanded = null; listesAuDebut(); render() })
                 profils.forEach { (id, nom) ->
-                    addView(choice(ctx, nom, profilFiltre == id) { profilFiltre = id; expanded = null; render() })
+                    addView(choice(ctx, nom, profilFiltre == id) { profilFiltre = id; expanded = null; listesAuDebut(); render() })
                 }
             })
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)

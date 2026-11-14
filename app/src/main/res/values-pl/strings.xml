@@ -807,6 +807,10 @@
     <string name="stats_export_empty">Brak podróży i ładowań do eksportu.</string>
     <string name="stats_clear_confirm">Zostaną usunięte podróże (%1$d) i ładowania (%2$d). Tego nie można cofnąć.</string>
     <string name="stats_history_size">Podróże: %1$d · ładowania: %2$d · %3$d kB</string>
+    <string name="stats_shown_trips">Wyświetlono %1$d z %2$d podróży</string>
+    <string name="stats_shown_charges">Wyświetlono %1$d z %2$d ładowań</string>
+    <string name="stats_show_more_fmt">Pokaż %1$d więcej</string>
+    <string name="stats_show_all">Pokaż wszystko</string>
     <string name="stats_tile_distance">Dystans</string>
     <string name="stats_tile_consumption">Średnie zużycie</string>
     <string name="stats_tile_speed">Średnia prędkość</string>

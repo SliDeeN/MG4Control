@@ -807,6 +807,10 @@
     <string name="stats_export_empty">Nenhuma viagem ou carregamento para exportar.</string>
     <string name="stats_clear_confirm">Serão apagadas %1$d viagens e %2$d carregamentos. Esta ação é definitiva.</string>
     <string name="stats_history_size">%1$d viagens · %2$d carregamentos · %3$d kB</string>
+    <string name="stats_shown_trips">%1$d de %2$d viagens mostradas</string>
+    <string name="stats_shown_charges">%1$d de %2$d carregamentos mostrados</string>
+    <string name="stats_show_more_fmt">Mostrar mais %1$d</string>
+    <string name="stats_show_all">Mostrar tudo</string>
     <string name="stats_tile_distance">Distância</string>
     <string name="stats_tile_consumption">Consumo médio</string>
     <string name="stats_tile_speed">Velocidade média</string>

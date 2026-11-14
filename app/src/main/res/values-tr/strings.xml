@@ -807,6 +807,10 @@
     <string name="stats_export_empty">Dışa aktarılacak yolculuk veya şarj yok.</string>
     <string name="stats_clear_confirm">%1$d yolculuk ve %2$d şarj silinecek. Bu geri alınamaz.</string>
     <string name="stats_history_size">%1$d yolculuk · %2$d şarj · %3$d kB</string>
+    <string name="stats_shown_trips">%2$d yolculuktan %1$d tanesi gösteriliyor</string>
+    <string name="stats_shown_charges">%2$d şarjdan %1$d tanesi gösteriliyor</string>
+    <string name="stats_show_more_fmt">%1$d tane daha göster</string>
+    <string name="stats_show_all">Tümünü göster</string>
     <string name="stats_tile_distance">Mesafe</string>
     <string name="stats_tile_consumption">Ortalama tüketim</string>
     <string name="stats_tile_speed">Ortalama hız</string>

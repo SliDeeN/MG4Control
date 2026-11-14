@@ -807,6 +807,10 @@
     <string name="stats_export_empty">Ingen turer eller ladinger å eksportere.</string>
     <string name="stats_clear_confirm">%1$d-turer og %2$d-avgifter vil bli slettet. Dette kan ikke angres.</string>
     <string name="stats_history_size">%1$d turer · %2$d lader · %3$d kB</string>
+    <string name="stats_shown_trips">%1$d av %2$d turer vist</string>
+    <string name="stats_shown_charges">%1$d av %2$d lader vist</string>
+    <string name="stats_show_more_fmt">Vis %1$d til</string>
+    <string name="stats_show_all">Vis alle</string>
     <string name="stats_tile_distance">Avstand</string>
     <string name="stats_tile_consumption">Gjennomsnittlig forbruk</string>
     <string name="stats_tile_speed">Gjennomsnittlig hastighet</string>

@@ -807,6 +807,10 @@
     <string name="stats_export_empty">No trips or charges to export.</string>
     <string name="stats_clear_confirm">%1$d trips and %2$d charges will be deleted. This cannot be undone.</string>
     <string name="stats_history_size">%1$d trips · %2$d charges · %3$d kB</string>
+    <string name="stats_shown_trips">%1$d of %2$d trips shown</string>
+    <string name="stats_shown_charges">%1$d of %2$d charges shown</string>
+    <string name="stats_show_more_fmt">Show %1$d more</string>
+    <string name="stats_show_all">Show all</string>
     <string name="stats_tile_distance">Distance</string>
     <string name="stats_tile_consumption">Average consumption</string>
     <string name="stats_tile_speed">Average speed</string>

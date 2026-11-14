@@ -807,6 +807,10 @@
     <string name="stats_export_empty">No hay trayectos ni cargas que exportar.</string>
     <string name="stats_clear_confirm">Se borrarán %1$d trayectos y %2$d cargas. Esta acción es definitiva.</string>
     <string name="stats_history_size">%1$d trayectos · %2$d cargas · %3$d kB</string>
+    <string name="stats_shown_trips">%1$d de %2$d trayectos mostrados</string>
+    <string name="stats_shown_charges">%1$d de %2$d cargas mostradas</string>
+    <string name="stats_show_more_fmt">Mostrar %1$d más</string>
+    <string name="stats_show_all">Mostrar todo</string>
     <string name="stats_tile_distance">Distancia</string>
     <string name="stats_tile_consumption">Consumo medio</string>
     <string name="stats_tile_speed">Velocidad media</string>

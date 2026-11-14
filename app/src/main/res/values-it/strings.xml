@@ -807,6 +807,10 @@
     <string name="stats_export_empty">Nessun viaggio o ricarica da esportare.</string>
     <string name="stats_clear_confirm">Verranno cancellati %1$d viaggi e %2$d ricariche. L\'operazione è definitiva.</string>
     <string name="stats_history_size">%1$d viaggi · %2$d ricariche · %3$d kB</string>
+    <string name="stats_shown_trips">%1$d di %2$d viaggi mostrati</string>
+    <string name="stats_shown_charges">%1$d di %2$d ricariche mostrate</string>
+    <string name="stats_show_more_fmt">Mostra altri %1$d</string>
+    <string name="stats_show_all">Mostra tutto</string>
     <string name="stats_tile_distance">Distanza</string>
     <string name="stats_tile_consumption">Consumo medio</string>
     <string name="stats_tile_speed">Velocità media</string>

@@ -824,6 +824,10 @@
     <string name="stats_export_empty">Aucun trajet ni charge à exporter.</string>
     <string name="stats_clear_confirm">%1$d trajets et %2$d charges seront effacés. Cette action est définitive.</string>
     <string name="stats_history_size">%1$d trajets · %2$d charges · %3$d ko</string>
+    <string name="stats_shown_trips">%1$d sur %2$d trajets affichés</string>
+    <string name="stats_shown_charges">%1$d sur %2$d recharges affichées</string>
+    <string name="stats_show_more_fmt">Afficher %1$d de plus</string>
+    <string name="stats_show_all">Tout afficher</string>
     <string name="stats_tile_distance">Distance</string>
     <string name="stats_tile_consumption">Consommation moyenne</string>
     <string name="stats_tile_speed">Vitesse moyenne</string>

@@ -807,6 +807,10 @@
     <string name="stats_export_empty">Keine Fahrten oder Ladungen zum Exportieren.</string>
     <string name="stats_clear_confirm">%1$d Fahrten und %2$d Ladungen werden gelöscht. Das lässt sich nicht rückgängig machen.</string>
     <string name="stats_history_size">%1$d Fahrten · %2$d Ladungen · %3$d kB</string>
+    <string name="stats_shown_trips">%1$d von %2$d Fahrten angezeigt</string>
+    <string name="stats_shown_charges">%1$d von %2$d Ladungen angezeigt</string>
+    <string name="stats_show_more_fmt">%1$d weitere anzeigen</string>
+    <string name="stats_show_all">Alle anzeigen</string>
     <string name="stats_tile_distance">Strecke</string>
     <string name="stats_tile_consumption">Durchschnittsverbrauch</string>
     <string name="stats_tile_speed">Durchschnittstempo</string>
