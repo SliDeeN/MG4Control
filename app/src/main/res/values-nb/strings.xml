@@ -279,8 +279,6 @@
     <string name="settings_rescue_shortcut_desc">Hvis du holder midtklikket på høyre joystick i 5 sekunder, åpnes MG4Control, selv i Garage-modus. Krever tilgjengelighetstjenesten (avanserte snarveier).</string>
     <string name="settings_auto_scope_title">Klima · hva AUTO kontrollerer</string>
     <string name="settings_auto_scope_desc">I AUTO stiller bilen inn viften, luftretningen og resirkulasjonen selv. Fjern merket for det du vil ha under din kontroll.</string>
-    <string name="settings_auto_scope_fan">Vifte</string>
-    <string name="settings_auto_scope_fan_desc">Alltid: det er det AUTO gjør.</string>
     <string name="settings_auto_scope_air">Luftretning</string>
     <string name="settings_auto_scope_loop">Resirkulering</string>
     <string name="settings_auto_scope_air_car">Valgt av bilen</string>

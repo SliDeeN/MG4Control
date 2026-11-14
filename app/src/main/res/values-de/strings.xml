@@ -278,8 +278,6 @@
     <string name="settings_rescue_shortcut_desc">Den mittleren Klick des rechten Joysticks 5 Sekunden lang halten öffnet MG4Control, auch im Werkstattmodus. Erfordert den Bedienungshilfendienst (erweiterte Tastenkürzel).</string>
     <string name="settings_auto_scope_title">Klima · was AUTO regelt</string>
     <string name="settings_auto_scope_desc">In AUTO regelt das Auto Gebläse, Luftrichtung und Umluft selbst. Deaktivieren Sie, was Sie selbst bestimmen möchten.</string>
-    <string name="settings_auto_scope_fan">Gebläse</string>
-    <string name="settings_auto_scope_fan_desc">Immer: das ist die Aufgabe von AUTO.</string>
     <string name="settings_auto_scope_air">Luftrichtung</string>
     <string name="settings_auto_scope_loop">Umluft</string>
     <string name="settings_auto_scope_air_car">Vom Auto gewählt</string>

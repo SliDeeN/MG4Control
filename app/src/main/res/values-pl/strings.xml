@@ -278,8 +278,6 @@
     <string name="settings_rescue_shortcut_desc">Przytrzymanie środkowego przycisku prawego joysticka przez 5 sekund otwiera MG4Control, nawet w trybie warsztatowym. Wymaga usługi ułatwień dostępu (skróty zaawansowane).</string>
     <string name="settings_auto_scope_title">Klimatyzacja · co ustawia AUTO</string>
     <string name="settings_auto_scope_desc">W trybie AUTO samochód sam ustawia nawiew, kierunek powietrza i obieg. Odznacz to, co chcesz zachować pod własną kontrolą.</string>
-    <string name="settings_auto_scope_fan">Nawiew</string>
-    <string name="settings_auto_scope_fan_desc">Zawsze: tym właśnie zajmuje się AUTO.</string>
     <string name="settings_auto_scope_air">Kierunek powietrza</string>
     <string name="settings_auto_scope_loop">Obieg powietrza</string>
     <string name="settings_auto_scope_air_car">Wybiera samochód</string>

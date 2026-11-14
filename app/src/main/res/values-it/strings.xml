@@ -278,8 +278,6 @@
     <string name="settings_rescue_shortcut_desc">Tenere premuto per 5 secondi il clic centrale del joystick destro apre MG4Control, anche in modalità officina. Richiede il servizio di accessibilità (scorciatoie avanzate).</string>
     <string name="settings_auto_scope_title">Clima · cosa regola AUTO</string>
     <string name="settings_auto_scope_desc">In AUTO l’auto regola da sola ventilazione, direzione dell’aria e ricircolo. Deseleziona ciò che vuoi decidere tu.</string>
-    <string name="settings_auto_scope_fan">Ventilazione</string>
-    <string name="settings_auto_scope_fan_desc">Sempre: è il compito di AUTO.</string>
     <string name="settings_auto_scope_air">Direzione dell’aria</string>
     <string name="settings_auto_scope_loop">Ricircolo</string>
     <string name="settings_auto_scope_air_car">Scelta dall’auto</string>

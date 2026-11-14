@@ -280,8 +280,6 @@
     <string name="settings_rescue_shortcut_desc">Maintenir 5 secondes le clic central du joystick droit ouvre MG4Control, même en Mode Garage. Nécessite le service d’accessibilité (raccourcis avancés).</string>
     <string name="settings_auto_scope_title">Climatisation · ce que règle AUTO</string>
     <string name="settings_auto_scope_desc">En AUTO, la voiture règle elle-même la ventilation, le sens de l’air et la recirculation. Décochez ce que vous voulez garder à votre main.</string>
-    <string name="settings_auto_scope_fan">Ventilation</string>
-    <string name="settings_auto_scope_fan_desc">Toujours : c’est le rôle d’AUTO.</string>
     <string name="settings_auto_scope_air">Sens de l’air</string>
     <string name="settings_auto_scope_loop">Recirculation</string>
     <string name="settings_auto_scope_air_car">Choisi par la voiture</string>

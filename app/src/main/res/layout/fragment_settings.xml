@@ -1989,54 +1989,8 @@
                     android:textColor="@color/text_secondary"
                     android:textSize="18sp" />
 
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="12dp"
-                    android:paddingTop="10dp"
-                    android:paddingBottom="10dp">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:text="@string/settings_auto_scope_fan"
-                            android:textColor="@color/text_primary"
-                            android:textSize="19sp" />
-
-                        <TextView
-                            
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="@string/settings_auto_scope_fan_desc"
-                            android:textColor="@color/dash_text_lo"
-                            android:textSize="18sp" />
-
-                    </LinearLayout>
-
-                    <com.mg4.control.ui.widget.SegmentSwitch
-                        android:id="@+id/switch_auto_scope_fan"
-                        android:layout_marginHorizontal="8dp"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:enabled="false" />
-
-                </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="@color/dash_border" />
+                <!-- « Ventilation » retirée (2026-11-14) : toujours cochée et grisée, la description dit déjà que
+                     c'est le rôle d'AUTO. -->
 
                 <LinearLayout
                     android:layout_width="match_parent"
