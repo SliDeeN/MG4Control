@@ -630,7 +630,7 @@
     <string name="audio_source_online">Online</string>
     <string name="audio_source_projection">CarPlay / Android Auto</string>
     <string name="adv_sc_new">Ny snarvei</string>
-    <string name="adv_sc_step_key">1 · Nøkkel</string>
+    <string name="adv_sc_step_key">1 · Knapp</string>
     <string name="adv_sc_step_press">2 · Trykk type</string>
     <string name="adv_sc_step_action">3 · Funksjon</string>
     <string name="adv_sc_step_profile">4 · Profil</string>
@@ -645,7 +645,7 @@
     <string name="adv_sc_status_label">Tjenestestatus</string>
     <string name="adv_sc_saved">Snarvei lagret</string>
     <string name="adv_sc_create">Opprett snarvei</string>
-    <string name="adv_sc_need_key">Spill inn en nøkkel først</string>
+    <string name="adv_sc_need_key">Velg en knapp å konfigurere først</string>
     <string name="adv_sc_need_action">Velg en funksjon</string>
     <string name="adv_sc_record_cancelled">Opptaket avbrutt</string>
 
@@ -703,7 +703,7 @@
     <string name="adv_sc_updated">Snarvei oppdatert</string>
     <string name="adv_sc_press_short">Kort trykk</string>
     <string name="adv_sc_press_long_lbl">Langt trykk</string>
-    <string name="adv_sc_key_unknown">Nøkkel %1$d</string>
+    <string name="adv_sc_key_unknown">Knapp %1$d</string>
     <string name="adv_sc_replace_title">Knappen er allerede brukt</string>
     <string name="adv_sc_replace_msg">%1$s på %2$s kjører allerede: %3$s.\n\n Vil du erstatte den med den nye handlingen?</string>
     <string name="adv_sc_replace_ok">Bytt ut</string>
