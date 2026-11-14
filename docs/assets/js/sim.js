@@ -2636,10 +2636,9 @@
       h += '<div data-hl="s-gate">' + row('s-gate', S('settings_speed_gate_desc'), '', sw(s.gate, 'gate')) +
         '<div class="a-row"><span class="lbl' + (s.gate ? '' : ' dim') + '">' + esc(S('settings_speed_gate_max_label')) + '</span><input class="a-input num" type="number" min="0" max="250" data-c="gateMax" data-fid="gateMax" value="' + s.gateMax + '"' + (s.gate ? '' : ' disabled') + ' placeholder="' + esc(S('settings_speed_gate_max_hint')) + '"></div></div></div>';
       let top = '';
-      // Ce que règle AUTO (issue #160) : la ventilation toujours ; le sens de l'air et la recirculation au choix.
+      // Ce que règle AUTO (issue #160) : sens de l'air et recirculation au choix (la ventilation, toujours : ligne retirée le 2026-11-14).
       if (k.clim) {
         top += '<div class="a-sec" data-hl="s-autoscope"><div class="a-h">' + esc(S('settings_auto_scope_title')) + '</div><div class="a-desc">' + esc(S('settings_auto_scope_desc')) + '</div>' +
-          row('s-autoscope', S('settings_auto_scope_fan'), S('settings_auto_scope_fan_desc'), sw(true, 'noop', true)) +
           row('s-autoscope', S('settings_auto_scope_air'), S(s.scopeAir ? 'settings_auto_scope_air_car' : 'settings_auto_scope_air_kept'), sw(s.scopeAir, 'scopeAir')) +
           row('s-autoscope', S('settings_auto_scope_loop'), S(s.scopeLoop ? 'settings_auto_scope_loop_car' : 'settings_auto_scope_loop_kept'), sw(s.scopeLoop, 'scopeLoop')) +
           '<div class="a-desc" style="margin-top:6px">' + esc(S('settings_auto_scope_note')) + '</div></div>';
