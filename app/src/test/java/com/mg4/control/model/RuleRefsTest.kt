@@ -98,7 +98,15 @@ class RuleRefsTest {
         // Même voiture : la B d'origine existe, mais la copie de B n'a pas pu entrer.
         val plan = RuleRefs.planImport(listOf(a), newId = { "n$it" }, exists = { true }, byName = { _, _ -> "B" },
             leftOut = setOf("B"))
-        val versB = plan.links.single { it.ref == RuleRef(RefKind.RULE, "B") }
+        // X existe ici et n'est pas écartée : gardée, sans lien listé ; seul le lien vers B l'est.
+        val versB = plan.links.single { it.ref.kind == RefKind.RULE }
         assertEquals(RuleRefs.Status.MISSING, versB.status)
+        // L'action enregistrée ne vise ni l'original « B » ni rien d'existant, jusqu'au choix.
+        val cible = plan.rules[0].actions[0].text!!
+        assertEquals(RuleRefs.UNRESOLVED + "B", cible)
+        assertEquals(listOf(RuleRef(RefKind.RULE, cible)), RuleRefs.missing(plan.rules[0]) { it.id != cible }.filter { it.kind == RefKind.RULE })
+        // Le choix fait dans le rapport (sur le lien qu'il montre) remplace bien cette cible.
+        val choisie = RuleRefs.rewrite(plan.rules[0]) { if (it == versB.ref) "B2" else null }
+        assertEquals("B2", choisie.actions[0].text)
     }
 }

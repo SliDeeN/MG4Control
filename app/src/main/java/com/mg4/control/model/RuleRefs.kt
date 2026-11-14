@@ -18,6 +18,9 @@ object RuleRefs {
 
     private const val MAX_DEPTH = RuleLogic.MAX_DEPTH + 2
 
+    /** Préfixe d'un lien laissé sans cible à l'import : ne correspond à aucun objet, jamais. */
+    const val UNRESOLVED = "unresolved:"
+
     /** Les liens de [rule], sans doublon, dans l'ordre où ils apparaissent. */
     fun of(rule: CustomRule): List<RuleRef> {
         val out = LinkedHashSet<RuleRef>()
@@ -126,8 +129,11 @@ object RuleRefs {
                         liens[cle] = Link(nouvel, r.name, ref, nom ?: noms[ref.id], Status.FROM_FILE, it)
                     }
                     ref.kind == RefKind.RULE && ref.id in leftOut -> {
-                        liens[cle] = Link(nouvel, r.name, ref, nom, Status.MISSING, null)
-                        null
+                        // Cible NON RÉSOLUE jusqu'au choix (2026-11-14) : l'ancien identifiant viserait
+                        // l'original de cette voiture si la règle était activée sans passer par le rapport.
+                        val nonResolu = UNRESOLVED + ref.id
+                        liens[cle] = Link(nouvel, r.name, RuleRef(ref.kind, nonResolu), nom, Status.MISSING, null)
+                        nonResolu
                     }
                     exists(ref) -> null
                     else -> {
