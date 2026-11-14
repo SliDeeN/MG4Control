@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/site.css?v=cbeb2f14">
-  <link rel="stylesheet" href="../assets/css/sim.css?v=499fb3dc">
+  <link rel="stylesheet" href="../assets/css/sim.css?v=5ab313b9">
   <link rel="stylesheet" href="../assets/css/explorer.css?v=34b00b13">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="en">New</span> · 2.7.0</span>
-        <b><span data-l="en">27 new things in this release</span></b>
+        <b><span data-l="en">28 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -147,6 +147,7 @@
         <a href="#f-rules" data-feature="f-rules"><span data-l="en">🤖 My automations (experimental)</span></a>
         <a href="#f-rule-skip" data-feature="f-rule-skip"><span data-l="en">🚫 Ignored triggers shown</span></a>
         <a href="#f-rule-editor" data-feature="f-rule-editor"><span data-l="en">🧭 Editor: one tile per option, then its mode</span></a>
+        <a href="#f-rule-import" data-feature="f-rule-import"><span data-l="en">🔗 Import that keeps links</span></a>
         <a href="#f-rule-tpl" data-feature="f-rule-tpl"><span data-l="en">📋 Ready-made templates</span></a>
         <a href="#f-wheel" data-feature="f-wheel"><span data-l="en">🎮 Hardware buttons: one card per key</span></a>
         <a href="#f-quick" data-feature="f-quick"><span data-l="en">🎛️ Quick settings pop-up</span></a>
@@ -950,7 +951,14 @@
       <h3><span data-l="en">Ignored triggers</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
       <p data-l="en">When an automation is triggered but doesn't run, its card says so in orange, with the reason; two pills count its runs and its refusals.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Reasons: a false condition (with the value read), an unreadable condition, car not in READY, rule still running, debounce or Garage mode. The history keeps them too, with the trigger that started them, and filters into All / Run / Ignored; identical refusals in a row are grouped (×N). The orange line goes away at the next run. The “N runs” and “N ignored” (orange) pills count from the rule's creation, survive its edits and leave “Test” out; the last run reads “2 actions succeeded, 0 failed”.</p>
+        <p data-l="en">Reasons: a false condition (with the value read), an unreadable condition, car not in READY, rule still running, debounce or Garage mode. The history keeps them too, with the trigger that started them, and filters into All / Run / Ignored; identical refusals in a row are grouped (×N). The orange line goes away at the next run. The “N runs” and “N ignored” (orange) pills count from the rule's creation, survive its edits and leave “Test” out; the last run reads “3 actions succeeded, 1 sent, 0 failed”. The journal marks each action ✓ (done, confirmed by the car), ↗ (sent: shortcut, custom shortcut) or ✗ (refused), with the reason: “not applied by the car”, “refused: already running”… A “Ask for confirmation” question replaced by another banner, or whose rule stops, is “interrupted”: the rest doesn't run.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-rule-import" data-hl-key="rule-import" data-demo="ruleImport">
+      <h3><span data-l="en">Export and import that keep links</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="en">Automations move from one car to another: links between them are rebuilt, and what's missing is linked again in the import window.</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">The export (Downloads, USB drive or another folder) also writes the names of the places, profiles, sounds, custom shortcuts and ABRP accounts used (never their keys). On import, automations arrive switched off; “Run”, “Stop” and “Turn on / off” target the imported copies, not the originals, If / Else blocks included; a missing place, profile, sound, shortcut or ABRP account is linked to the one with the same name; navigation to coordinates stays as it is. The rest is listed “To link again”, with “Choose a place / a profile / a sound…” right there. As long as a link leads nowhere, the card shows “⚠ N links to fix”. In the mockup, “Import” shows an import coming from another car.</p>
       </details>
     </div>
     <div class="pt is-new" id="f-rule-tpl" data-hl-key="rule-tpl" data-demo="ruleTpl">
@@ -1691,8 +1699,8 @@
 <div class="dock" aria-label="Virtual vehicle"></div>
 <button type="button" class="to-top" aria-label="Back to the top of the page" title="Back to the top of the page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="../assets/js/strings.js?v=e56c524d"></script>
-<script src="../assets/js/sim.js?v=2df5331f"></script>
+<script src="../assets/js/strings.js?v=a3ceaf84"></script>
+<script src="../assets/js/sim.js?v=6932e426"></script>
 <script src="../assets/js/site.js?v=eae0ab3a"></script>
 <script src="../assets/js/explorer.js?v=72fb983a"></script>
 </body>

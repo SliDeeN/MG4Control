@@ -1566,3 +1566,15 @@
 .a-logo span.lg { width: 100%; max-width: 145px; height: 24px; padding: 0; background: url("../img/wordmark-blue.png") center / contain no-repeat; }
 
 .app[data-app-theme="dark"] .a-logo span.lg { background-image: url("../img/wordmark-blue-night.png"); }
+
+/* Fin d'import des automatisations (2026-11-14) : reliés automatiquement / à réassocier. */
+.ri-list { max-height: 330px; }
+.ri-sec { margin: 12px 0 4px; font-size: calc(12px * var(--ts, 1)); letter-spacing: .08em; text-transform: uppercase; color: var(--text-secondary); }
+.ri-row { display: flex; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--dash-border); }
+.ri-row:last-child { border-bottom: none; }
+.ri-tag { flex: 0 0 auto; padding: 3px 10px; border-radius: 8px; font-size: calc(12px * var(--ts, 1)); background: var(--dash-warn-dim); color: var(--dash-warn); }
+.ri-tag.ok { background: var(--dash-eco-dim, rgba(52,211,153,.15)); color: var(--dash-eco, #34D399); }
+.ri-txt { flex: 1; min-width: 0; }
+.ri-txt b { display: block; font-weight: 500; }
+.ri-txt span { display: block; font-size: calc(13px * var(--ts, 1)); color: var(--text-secondary); }
+.ri-row .mw-b { flex: 0 0 auto; }

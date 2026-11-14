@@ -1759,7 +1759,7 @@
   /** Une exécution : conditions (sauf Tester), puis les actions de haut en bas, dans le journal. */
   async function runRule(r, why, test) {
     const j = [], t0 = Date.now();
-    let ok = 0, ko = 0;
+    let ok = 0, ko = 0, sent = 0;
     j.push('▶ ' + (why || S('rule_test')));
     if (!test) {
       if (r.opt && r.opt.ready && !car().ready) { j.push('■ ' + S('rule_opt_ready')); return rDone(r, j, 0, 0, { short: S('rule_skip_short_not_ready'), long: S('rule_skip_not_ready'), by: why }); }
@@ -1777,23 +1777,35 @@
           const s = activeSim(); const yes = s ? await s.ruleAsk(a.msg) : false;
           j.push((yes ? '✓ ' : '■ ') + rTxt('act', a)); if (!yes) return false; continue;
         }
-        const done = rExec(a);
-        if (done) ok++; else ko++;
-        j.push((done ? '→ ' : '✗ ') + rTxt('act', a));
+        // Fait (✓), seulement envoyé (↗) ou refusé (✗), avec la raison (2026-11-14).
+        const res = rResult(a);
+        if (res.o === 'ok') ok++; else if (res.o === 'sent') sent++; else ko++;
+        j.push((res.o === 'ok' ? '✓ ' : res.o === 'sent' ? '↗ ' : '✗ ') + rTxt('act', a) + (res.why ? ' — ' + res.why : ''));
       }
       return true;
     };
     await steps(r.act);
-    return rDone(r, j, ok, ko, false, t0, test);
+    return rDone(r, j, ok, ko, false, t0, test, sent);
   }
-  function rDone(r, j, ok, ko, skipped, t0, test) {
+  function rDone(r, j, ok, ko, skipped, t0, test, sent) {
     // Un refus reste sur la carte jusqu'à la prochaine exécution (RuleHistory.skipIsNewer).
-    if (!skipped) { r.last = { at: nowHM(), ok, ko }; r.skip = null; } else r.skip = { at: nowHM(), why: skipped.short };
+    if (!skipped) { r.last = { at: nowHM(), ok, ko, sent: sent || 0 }; r.skip = null; } else r.skip = { at: nowHM(), why: skipped.short };
     // Compteurs de la carte (2026-11-08) : « Tester » ne compte pas ; chaque refus compte.
     if (skipped) r.skips = (r.skips || 0) + 1; else if (!test) r.runs = (r.runs || 0) + 1;
     state.rules.hist.unshift({ id: r.id, name: r.name, at: nowHM(), ok, ko, skipped: skipped || false, journal: j });
     state.rules.hist.length = Math.min(state.rules.hist.length, 20);
     commit();
+  }
+  /** Résultat d'une action : relais = envoyé, « Lancer » = démarrée ou refusée et pourquoi. */
+  function rResult(a) {
+    if (a.k === 'shortcut') { runAction(a.a); return { o: 'sent', why: S('rule_res_sent') }; }
+    if (a.k === 'run_rule') {
+      const r = state.rules.list.find((x) => x.id === a.id);
+      if (!r || !r.on || !state.rules.engine) return { o: 'ko', why: S('rule_res_rule_off') };
+      runRule(r, S('rule_trg_manual'));
+      return { o: 'ok', why: S('rule_res_started') };
+    }
+    return rExec(a) ? { o: 'ok' } : { o: 'ko', why: a.k === 'set' ? S('rule_res_refused') : null };
   }
   function rExec(a) {
     const c = car();
@@ -4000,7 +4012,8 @@
         // Compteurs en pastilles (lancées, ignorées en orange), cachés à zéro.
         const pills = (r.runs ? '<span class="rl-pill">' + esc(P('rule_runs_count', r.runs)) + '</span>' : '') + (r.skips ? '<span class="rl-pill warn">' + esc(P('rule_skips_count', r.skips)) + '</span>' : '');
         return '<div class="a-card rl-card' + (off ? ' off' : '') + '" data-hl="rule-card"><div class="a-row"><span class="a-title rl-name" data-a="rEdit" data-v="' + r.id + '">' + esc(r.name) + '</span>' + pills + sw(r.on, 'rOn', false, r.id) + '</div>' +
-          '<div class="rl-sum">' + esc(rSummary(r)) + '</div><div class="rl-foot"><span class="a-desc">' + esc(r.last ? S('rule_last_run_actions_fmt', r.last.at, P('rule_actions_ok', r.last.ok), r.last.ko) : S('rule_never_run')) +
+          '<div class="rl-sum">' + esc(rSummary(r)) + '</div><div class="rl-foot"><span class="a-desc">' + esc(r.last ? S('rule_last_run_actions_fmt', r.last.at, P('rule_actions_ok', r.last.ok) + (r.last.sent ? ', ' + P('rule_actions_sent', r.last.sent) : ''), r.last.ko) : S('rule_never_run')) +
+          (r.missing ? '<span class="rl-skip" data-hl="rule-links">' + esc(P('rule_links_missing', r.missing)) + '</span>' : '') +
           (r.skip ? '<span class="rl-skip">' + esc(S('rule_last_skip_fmt', r.skip.at, r.skip.why)) + '</span>' : '') + '</span>' +
           '<button class="b sm primary" data-a="rEdit" data-v="' + r.id + '">' + esc(S('rule_menu_edit')) + '</button><button class="b sm" data-a="rTest" data-v="' + r.id + '">' + esc(S('rule_test')) + '</button>' +
           '<button class="b sm danger" data-a="rDel" data-v="' + r.id + '">' + esc(S('rule_delete')) + '</button></div></div>';
@@ -4162,6 +4175,28 @@
           return win(1000, head(MW.list, S('rule_tool_history'), S('rule_hist_count_fmt', all.length, 20)) + seg + '<div class="mw-scroll rl-hist mt12" data-sk="hist">' +
             (H.length ? H.map(row).join('') : '<div class="a-desc">' + esc(all.length ? S('rule_hist_empty_filter') : S('rule_never_run')) + '</div>') + '</div>' +
             '<div class="mw-acts">' + B(S('nav_close'), 'dlgClose') + '</div>');
+        }
+        case 'rImport': {
+          // Fin d'import (RuleImportReport) : reliés automatiquement, puis à réassocier avec le choix sur place.
+          const I = this.ui.rImp || { n: 0, rows: [] };
+          const tag = (row) => '<span class="ri-tag' + (row.ok ? ' ok' : '') + '">' + esc(S(row.kind)) + '</span>';
+          const line = (row, i) => '<div class="ri-row">' + tag(row) + '<div class="ri-txt"><b>' + esc(row.ok ? row.text : S('rule_import_missing_fmt', row.name)) + '</b>' +
+            ((row.ok ? row.sub : S('rule_import_in_fmt', row.rname)) ? '<span>' + esc(row.ok ? row.sub : S('rule_import_in_fmt', row.rname)) + '</span>' : '') + '</div>' +
+            (row.ok ? '' : B(S(row.pick), 'rImpChoose', 'sm', i)) + '</div>';
+          const auto = I.rows.map((row, i) => [row, i]).filter(([row]) => row.ok && !row.pick);
+          const todo = I.rows.map((row, i) => [row, i]).filter(([row]) => row.pick);
+          const left = todo.filter(([row]) => !row.ok).length;
+          return win(900, head(MW.list, S('rule_import_done', I.n).replace(/\.$/, ''), S('rule_import_report_sub')) +
+            '<div class="mw-scroll ri-list mt12">' +
+            (auto.length ? '<div class="ri-sec">' + esc(S('rule_import_auto')) + '</div>' + auto.map(([row, i]) => line(row, i)).join('') : '') +
+            (todo.length ? '<div class="ri-sec">' + esc(S('rule_import_todo_fmt', left)) + '</div>' + todo.map(([row, i]) => line(row, i)).join('') : '') + '</div>' +
+            '<div class="mw-acts">' + B(S(left ? 'rule_import_later' : 'rule_import_finished'), 'dlgClose', 'p') + '</div>', '', 'rule-import');
+        }
+        case 'rImpPick': {
+          const row = this.ui.rImp.rows[d.row];
+          return win(760, head(MW.list, S(row.pick)) + '<div class="mw-grid">' +
+            row.items.map((it, i) => '<button class="mw-choice" data-a="rImpPick" data-v="' + i + '"><b>' + esc(it) + '</b></button>').join('') + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'rImpBack') + '</div>', '', 'mw-pick');
         }
         case 'rInfo':
           return confirm({ ico: MW.info, title: d.title, msg: d.msg, yes: S('nav_close') });
@@ -4343,7 +4378,35 @@
         case 'rAbrp': u.dialog = { type: 'rAbrp' }; this.render(); return true;
         case 'rAbrpDemo': this.toast(L('Démonstration : dans l\'appli, le compte se saisit au clavier ou s\'importe depuis la clé USB.', 'Demo: in the app, the account is typed in or imported from the USB drive.'), 3200); return true;
         case 'rExport': u.dialog = { type: 'export', what: 'rules', dest: 'dl', title: S('rule_export_title'), sub: S('rule_export_subtitle', R.list.length), go: S('rule_tool_export') }; this.render(); return true;
-        case 'rImport': this.toast(L('Démonstration : l\'import lit un fichier JSON exporté par MG4Control (règles ajoutées coupées).', 'Demo: import reads a JSON file exported by MG4Control (rules added switched off).'), 3200); return true;
+        case 'rImport': {
+          // Démonstration (2026-11-14) : un fichier venu d'une autre voiture, deux automatisations coupées ;
+          // les liens vers le fichier et « Maison » sont refaits, « Travail » et le son restent à réassocier.
+          const a = { id: 'ri' + Date.now(), name: L('Arrivée au travail', 'Arriving at work'), on: false, trg: [{ k: 'app_start' }], cond: [],
+            act: [{ k: 'notify', msg: L('Bonne journée', 'Have a good day') }], opt: { ready: false, restart: false }, last: null, missing: 1 };
+          const b = { id: 'ri' + (Date.now() + 1), name: L('Rappel câble', 'Cable reminder'), on: false, trg: [{ k: 'app_start' }], cond: [],
+            act: [{ k: 'sound' }], opt: { ready: false, restart: false }, last: null, missing: 1 };
+          if (R.list.length + 2 <= RULES_MAX) R.list.push(a, b);
+          commit();
+          u.rImp = { n: 2, rows: [
+            { kind: 'rule_ref_rule', ok: true, text: P('rule_import_from_file', 2) },
+            { kind: 'rule_ref_place', ok: true, text: S('rule_import_by_name_fmt', L('Maison', 'Home')), sub: S('rule_import_in_fmt', a.name) },
+            { kind: 'rule_ref_place', ok: false, name: L('Travail', 'Work'), rule: a.id, rname: a.name, pick: 'rule_import_choose_place',
+              items: [L('Bureau', 'Office'), L('Salle de sport', 'Gym'), L('Maison', 'Home')] },
+            { kind: 'rule_ref_sound', ok: false, name: 'carillon.mp3', rule: b.id, rname: b.name, pick: 'rule_import_choose_sound', items: USB_SOUNDS.map((x) => x[0]) },
+          ] };
+          u.dialog = { type: 'rImport' }; this.render(); return true;
+        }
+        case 'rImpChoose': { const row = u.rImp && u.rImp.rows[+v]; if (row) { u.dialog = { type: 'rImpPick', row: +v }; this.render(); } return true; }
+        case 'rImpPick': {
+          const d = u.dialog, row = u.rImp && u.rImp.rows[d.row];
+          if (row) {
+            const nom = row.items[+v]; row.ok = true; row.text = S('rule_import_linked_fmt', nom); row.sub = S('rule_import_in_fmt', row.rname);
+            const r = R.list.find((x) => x.id === row.rule); if (r) r.missing = Math.max(0, (r.missing || 0) - 1);
+            commit();
+          }
+          u.dialog = { type: 'rImport' }; this.render(); return true;
+        }
+        case 'rImpBack': u.dialog = { type: 'rImport' }; this.render(); return true;
         case 'rAskYes': case 'rAskNo': { const d = u.dialog; clearTimeout(this._askT); u.dialog = null; this.render(); if (d && d.done) d.done(a === 'rAskYes'); return true; }
         // Éditeur
         case 'rEditOn': if (e) { e.rule.on = !e.rule.on; this.render(); } return true;
@@ -5530,6 +5593,7 @@
           u.screen = 'shortcuts'; u.tabs.sc = 'classic'; commit(); this.highlight('sc-btn1'); return true;
         case 'rules': u.screen = 'automation'; u.tabs.auto = 'rules'; commit(); this.highlight('rules-head'); return true;
         case 'ruleTpl': u.screen = 'automation'; u.tabs.auto = 'rules'; u.dialog = { type: 'rTpl' }; commit(); return true;
+        case 'ruleImport': u.screen = 'automation'; u.tabs.auto = 'rules'; commit(); return this.extAct('rImport', null, null);
         case 'ruleEdit': {
           const r = state.rules.list.find((x) => x.id === 'r3') || state.rules.list[0];
           u.screen = 'automation'; u.tabs.auto = 'rules'; commit();
