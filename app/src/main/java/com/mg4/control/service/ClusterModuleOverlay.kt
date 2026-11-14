@@ -29,6 +29,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.hardware.ClusterReadySignal
 import com.mg4.control.hardware.ClusterTabReader
 import com.mg4.control.hardware.EnergyReader
 import com.mg4.control.hardware.MG4Hardware
@@ -112,6 +113,8 @@ internal object ClusterModuleOverlay {
     private const val MANQUE_TOLERE_MS = 3_000L
     /** Signaux des cases d'information (issue #229) : relus toutes les 5 s, comme les bulles. */
     private const val SIGNAUX_MS = 5_000L
+    /** Délai entre la pose de la fenêtre et le renvoi d'« image prête » (issue #245). */
+    private const val RELANCE_PRET_MS = 3_000L
 
     private val main = Handler(Looper.getMainLooper())
     private val lecteur: Handler by lazy { Handler(HandlerThread("mg4-cluster").also { it.start() }.looper) }
@@ -376,9 +379,11 @@ internal object ClusterModuleOverlay {
                 "${ClusterModuleSettings.moduleFor(ctx, ClusterTab.NAVIGATION)?.key ?: "aucun"}, musique=" +
                 "${ClusterModuleSettings.moduleFor(ctx, ClusterTab.MEDIA)?.key ?: "aucun"}) sur l'écran " +
                 "${ecran.displayId} « ${ecran.name} » ${taille.x}×${taille.y} px — carré de ${place.side} px " +
-                "en (${place.x}, ${place.y})")
+                "en (${place.x}, ${place.y}) — Android démarré depuis ${SystemClock.elapsedRealtime() / 1000} s")
             demarrerReleves(reprise)
             repriseAutorisee = false
+            lecteur.removeCallbacks(relancePret)
+            lecteur.postDelayed(relancePret, RELANCE_PRET_MS)
         } catch (e: Exception) {
             AppLogger.e(TAG, "$origine : affichage refusé sur l'écran ${ecran.displayId} — " +
                 "${e.javaClass.simpleName}: ${e.message}")
@@ -434,8 +439,28 @@ internal object ClusterModuleOverlay {
     private fun arreterReleves() {
         lecteur.post {
             enMarche = false
+            lecteur.removeCallbacks(relancePret)
             lecteur.removeCallbacks(tic)
         }
+    }
+
+    /**
+     * Issue #245 (2026-11-14) : au démarrage, l'appli SAIC du combiné peut oublier de dire
+     * « image prête » (course avec sa liaison à la voiture, voir [ClusterReadySignal]) — le combiné
+     * garde alors sa page d'origine, et notre module reste caché jusqu'au premier changement
+     * d'onglet. Quelques secondes après chaque pose, sur Musique ou Navigation, on renvoie le
+     * signal que l'appli SAIC envoie elle-même à chaque changement d'onglet. Fil du lecteur.
+     */
+    private val relancePret = Runnable {
+        if (!enMarche) return@Runnable
+        val onglet = runCatching { ClusterTabReader.onglet() }.getOrNull()
+        if (onglet == null || ClusterReadySignal.signauxPour(onglet) == null) {
+            AppLogger.i(TAG, "image prête : rien à renvoyer (onglet ${onglet ?: "illisible"})")
+            return@Runnable
+        }
+        AppLogger.i(TAG, "image prête, avant renvoi (onglet $onglet) : ${ClusterReadySignal.releve()}")
+        ClusterReadySignal.envoyer(onglet, "image prête")
+        lecteur.postDelayed({ AppLogger.i(TAG, "image prête, 1 s après le renvoi : ${ClusterReadySignal.releve()}") }, 1_000L)
     }
 
     private val tic = object : Runnable {
@@ -551,6 +576,13 @@ internal object ClusterModuleOverlay {
                     (module?.let { "module ${it.key}" } ?: "aucun module, page d'origine"))
                 dernierOnglet = onglet
                 dernierModule = module
+                // Issue #245 : l'appli SAIC envoie « image prête » 500 ms après le changement.
+                if (ClusterReadySignal.signauxPour(onglet) != null) {
+                    AppLogger.i(TAG, "image prête au changement d'onglet : ${ClusterReadySignal.releve()}")
+                    lecteur.postDelayed({
+                        AppLogger.i(TAG, "image prête 1,5 s après le changement d'onglet : ${ClusterReadySignal.releve()}")
+                    }, 1_500L)
+                }
             }
             // Pré-climatisation : sa fiche sur les onglets qui portent l'image de l'écran central,
             // quel que soit le module réglé pour eux.
