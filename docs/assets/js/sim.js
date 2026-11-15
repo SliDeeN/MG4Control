@@ -180,8 +180,8 @@
                   distUnit: 'auto', clLayMod: null,
                   // Côté du menu (NavSide) et « Garder l'A/C coupé » (#208, désactivé par défaut).
                   navSide: 'auto', keepAcOff: false,
-                  // Relance de la détection du téléphone branché (#251) ; applis en plein écran (#248),
-                  // une appli → 'FULL' | 'STATUS' | 'NAVIGATION'. Tous deux désactivés par défaut.
+                  // Relance de la détection du téléphone branché (#251) ; applications en plein écran (#248),
+                  // une application → 'FULL' | 'STATUS' | 'NAVIGATION'. Tous deux désactivés par défaut.
                   projKick: false, immersive: false, immersiveApps: {} },
       sc: {
         enabled: true,
@@ -868,7 +868,7 @@
   // ── Raccourcis perso (CustomShortcutRunner) ───────────────────────────────
   const CS_KINDS = ['APP', 'FUNCTION', 'BROADCAST', 'LINK', 'WEBHOOK'];
   const CS_KIND_KEY = { APP: 'custom_kind_app', FUNCTION: 'custom_kind_function', BROADCAST: 'custom_kind_broadcast', LINK: 'custom_kind_link', WEBHOOK: 'custom_kind_webhook' };
-  /** Fonctions proposées : raccourcis Android des applis, et celles exposées à MG4Control (convention). */
+  /** Fonctions proposées : raccourcis Android des applications, et celles exposées à MG4Control (convention). */
   const CS_FUNCS = [['Spotify · ' + 'Search', 'custom_tag_shortcut'], ['Waze · Home', 'custom_tag_shortcut'], ['MG4 Dashcam · Event', 'custom_tag_declared']];
   const customTarget = (cs) => ({ APP: cs.app, FUNCTION: cs.fn, BROADCAST: cs.action, LINK: cs.link, WEBHOOK: cs.url }[cs.kind] || '');
   const customName = (id) => { const cs = state.sc.custom.find((x) => x.id === id); return cs ? cs.name : '?'; };
@@ -926,7 +926,7 @@
   function pcStart(r) {
     const cl = car().clim;
     const started = pcMinute();
-    // Surveillance : l'appli caméra pilotable filme dès « Démarrer » (START), si l'interrupteur est allumé.
+    // Surveillance : l'application caméra pilotable filme dès « Démarrer » (START), si l'interrupteur est allumé.
     const rec = !!(r.surv && state.preclim.cam === 'ok' && state.preclim.camAuto);
     state.pc = { req: JSON.parse(JSON.stringify(r)), phase: 'cd', left: r.lock, min: 0, plan: pcPlan(r, started), rec,
                  snap: { power: cl.power, ac: cl.ac, auto: cl.auto, temp: cl.temp, fan: cl.fan }, hidden: false, wake: Date.now(), started };
@@ -2108,7 +2108,7 @@
       const plan = pc.plan, last = plan[plan.length - 1][1], off = pcClock(pc.started + last), start = pcClock(Math.floor(pc.started));
       const cur = plan.find(([a, b]) => pc.min >= a && pc.min < b), next = plan.find(([a]) => a > pc.min);
       if (r.surv) {
-        // Pastille REC (variante A) : temps filmé, d'après l'état renvoyé par l'appli caméra.
+        // Pastille REC (variante A) : temps filmé, d'après l'état renvoyé par l'application caméra.
         const rs = Math.round(pc.min * 60), two = (x) => String(x).padStart(2, '0');
         const recTag = pc.rec ? '<div class="pcs-rec" data-hl="preclim-rec"><i></i>' + esc(S('preclim_surv_rec', two(Math.floor(rs / 3600)) + ':' + two(Math.floor(rs / 60) % 60) + ':' + two(rs % 60))) + '</div>' : '';
         // Écran selon « Écran pendant l'attente » seulement si « Appliquer aussi à la surveillance » (2026-11-13).
@@ -2692,12 +2692,12 @@
       if (k.clim) top += '<div class="a-sec" data-hl="s-keepac"><div class="a-h">' + esc(S('settings_keep_ac_title')) + '</div>' + row('s-keepac', S('settings_keep_ac'), S('settings_keep_ac_desc'), sw(s.keepAcOff, 'keepAc')) + '</div>';
       // Relancer la détection du téléphone branché (#251) : démarrage et réveil, désactivé par défaut.
       top += '<div class="a-sec" data-hl="s-projkick"><div class="a-h">' + esc(S('settings_projection_title')) + '</div>' + row('s-projkick', S('settings_projection_kick'), S('settings_projection_kick_desc'), sw(s.projKick, 'projKick')) + '</div>';
-      // Applis en plein écran (#248) : juste sous la carte Android Auto · CarPlay.
+      // Applications en plein écran (#248) : juste sous la carte Android Auto · CarPlay.
       top += this.setImmersive();
       return top + h;
     }
     /**
-     * Applis en plein écran (#248, ImmersiveApps) : interrupteur, rappel du glissement quand il est
+     * Applications en plein écran (#248, ImmersiveApps) : interrupteur, rappel du glissement quand il est
      * actif (bord du côté du volant), résumé « Nom (Mode) » et bouton « Choisir (n) ».
      */
     setImmersive() {
@@ -2826,20 +2826,20 @@
         '<div class="a-row"><span class="lbl">' + esc(S('preclim_cfg_unlock')) + '<small>' + esc(S('preclim_cfg_unlock_desc')) + '</small></span>' + sw(p.unlock, 'pcUnlockSw') + '</div>' +
         '<div class="a-desc" style="margin-top:8px;color:var(--dash-warn)">⚠ ' + esc(S('preclim_cfg_warning')) + '</div></div>' + this.camCard();
     }
-    /** Carte « Caméra de surveillance » (2026-11-08) : appli détectée, enregistrement auto, emplacement, test de la clé. */
+    /** Carte « Caméra de surveillance » (2026-11-08) : application détectée, enregistrement auto, emplacement, test de la clé. */
     camCard() {
       const p = state.preclim, ok = p.cam === 'ok';
       const st = { ok: ['ok', S('preclim_cam_found', 'MG4 360 Camera'), S('preclim_cam_found_desc', 'com.drivehub.kamera')],
         old: ['warn', S('preclim_cam_old', 'MG4 360 Camera'), S('preclim_cam_old_desc')],
         incompat: ['warn', S('preclim_cam_incompat', 'MG4 Dashcam'), S('preclim_cam_incompat_desc')],
         none: ['lo', S('preclim_cam_none'), S('preclim_cam_none_desc')] }[p.cam];
-      const demo = '<div class="cam-demo"><span>' + esc(L('Démo — appli installée :', 'Demo — installed app:')) + '</span>' +
+      const demo = '<div class="cam-demo"><span>' + esc(L('Démo — application installée :', 'Demo — installed app:')) + '</span>' +
         [['ok', L('Pilotable', 'Controllable')], ['old', L('Trop ancienne', 'Too old')], ['incompat', L('Non compatible', 'Incompatible')], ['none', L('Aucune', 'None')]].map(([v, t]) =>
           '<button class="b sm' + (p.cam === v ? ' on' : '') + '" data-a="pcCam" data-v="' + v + '">' + esc(t) + '</button>').join('') + '</div>';
       const usb = p.usb === 'testing' ? S('preclim_cam_usb_testing') : p.usb === 'ok' ? S('preclim_cam_usb_ok', appLang() === 'fr' ? '41,2 Go' : '41.2 GB', appLang() === 'fr' ? '64 Go' : '64 GB', '9 h 09') : S('preclim_cam_usb_untested');
       return '<div class="a-sec" data-hl="sc-preclim-cam"><div class="a-h">' + esc(S('preclim_cam_title')) + '</div>' +
         '<div class="cam-st ' + st[0] + '">' + MW.cam + '<div><b>' + esc(st[1]) + '</b><span>' + esc(st[2]) + '</span></div></div>' +
-        // Sans appli dashcam : surveillance permise après un avertissement « aucune vidéo » (2026-11-13).
+        // Sans application dashcam : surveillance permise après un avertissement « aucune vidéo » (2026-11-13).
         (p.cam === 'none' ? '<div class="a-row" data-hl="sc-preclim-nocam"><span class="lbl">' + esc(S('preclim_cam_nocam')) + '<small>' + esc(S('preclim_cam_nocam_desc')) + '</small></span>' + sw(p.nocam, 'pcNoCam') + '</div>' : '') +
         '<div class="cam-opts' + (ok ? '' : ' dis') + '">' +
         '<div class="a-row"><span class="lbl">' + esc(S('preclim_cam_auto')) + '<small>' + esc(S('preclim_cam_auto_desc')) + '</small></span>' + sw(p.camAuto && ok, 'pcCamAuto') + '</div>' +
@@ -3714,7 +3714,7 @@
     /**
      * Fenêtre du Garde-voiture (PreClimatePopupOverlay) : « Maintenant » (durée, mode chien,
      * surveillance) ou « À une heure » (cycles) à gauche ; la clim, ou la surveillance clim coupée, à droite.
-     * Appli caméra : celle choisie dans la carte « Caméra de surveillance » (démonstration) ; sans appli, Démarrer est grisé.
+     * Application caméra : celle choisie dans la carte « Caméra de surveillance » (démonstration) ; sans application, Démarrer est grisé.
      */
     /** « Démarrer » validé : la fenêtre se ferme, le décompte part. */
     pcLaunch() {
@@ -4511,11 +4511,11 @@
         case 'rDelOk': R.list = R.list.filter((x) => x.id !== u.dialog.id); u.dialog = null; commit(); return true;
         case 'rHist': u.dialog = { type: 'rHist', f: 'all' }; this.render(); return true;
         case 'rHistF': if (u.dialog) u.dialog.f = v; this.render(); return true;
-        // Variables et lieux : la maquette n'en crée pas, la fenêtre « vide » de l'appli s'affiche.
+        // Variables et lieux : la maquette n'en crée pas, la fenêtre « vide » de l'application s'affiche.
         case 'rVars': u.dialog = { type: 'rInfo', title: S('rule_tool_variables'), msg: S('rule_vars_empty') }; this.render(); return true;
         case 'rPlaces': u.dialog = { type: 'rInfo', title: S('rule_tool_places'), msg: S('rule_places_empty') }; this.render(); return true;
         case 'rAbrp': u.dialog = { type: 'rAbrp' }; this.render(); return true;
-        case 'rAbrpDemo': this.toast(L('Démonstration : dans l\'appli, le compte se saisit au clavier ou s\'importe depuis la clé USB.', 'Demo: in the app, the account is typed in or imported from the USB drive.'), 3200); return true;
+        case 'rAbrpDemo': this.toast(L('Démonstration : dans l\'application, le compte se saisit au clavier ou s\'importe depuis la clé USB.', 'Demo: in the app, the account is typed in or imported from the USB drive.'), 3200); return true;
         case 'rExport': u.dialog = { type: 'export', what: 'rules', dest: 'dl', title: S('rule_export_title'), sub: S('rule_export_subtitle', R.list.length), go: S('rule_tool_export') }; this.render(); return true;
         case 'rImport': {
           // Démonstration (2026-11-14) : un fichier venu d'une autre voiture, deux automatisations coupées ;
@@ -4737,7 +4737,7 @@
             html: esc(S('immersive_confirm_msg')) + '\n\n<b>' + esc(S('immersive_tip_label')) + '</b> — ' + esc(tip) });
         }
         case 'immApps': {
-          // ImmersiveAppsDialog : une ligne par appli lançable (sans AA, CarPlay ni lanceur), segments
+          // ImmersiveAppsDialog : une ligne par application lançable (sans AA, CarPlay ni lanceur), segments
           // Normal / Bandeau / Barre / Tout ; Annuler ou Enregistrer.
           const modes = [['NORMAL', 'immersive_mode_normal'], ['STATUS', 'immersive_mode_status'], ['NAVIGATION', 'immersive_mode_nav'], ['FULL', 'immersive_mode_full']];
           const liste = APPS.filter((nm) => nm !== 'MG Launcher');
@@ -5326,7 +5326,7 @@
         case 'pcAtPause': state.preclim.at.pause = clamp(state.preclim.at.pause + n * 10, 10, 120); return r();
         case 'pcGo': {
           if (!pcCanStart()) return this.toast(S('preclim_need_park'), 3000);
-          // Surveillance sans aucune appli dashcam : refusée, sauf « Surveillance sans caméra » permis.
+          // Surveillance sans aucune application dashcam : refusée, sauf « Surveillance sans caméra » permis.
           if (state.preclim.mode === 'now' && state.preclim.surv && state.preclim.cam === 'none' && !state.preclim.nocam) return this.toast(S('preclim_surv_need_app'), 3000);
           // Rappel avant le départ : la clé, et les trois façons de déverrouiller.
           if (state.preclim.unlock) { u.dialog = { type: 'pcUnlock' }; return r(); }
@@ -5494,7 +5494,7 @@
           return;
         case 'hvacZone': s.hvacZone = !s.hvacZone; return r();
         case 'projKick': s.projKick = !s.projKick; return r();
-        // Applis en plein écran : avertissement à CHAQUE activation ; Annuler laisse l'option coupée.
+        // Applications en plein écran : avertissement à CHAQUE activation ; Annuler laisse l'option coupée.
         case 'immersive': if (s.immersive) { s.immersive = false; return r(); } u.dialog = { type: 'immWarn' }; return this.render();
         case 'immOk': s.immersive = true; u.dialog = null; return r();
         case 'immChoose': u.dialog = { type: 'immApps', draft: { ...s.immersiveApps } }; return this.render();
@@ -6908,7 +6908,7 @@
 
   // ── Écran conducteur V2 (issue #229) : la jauge et jusqu'à 4 cases d'information ──
   /**
-   * Informations proposées pour une case, dans l'ordre de l'appli (ClusterInfo.choices) : les 5 du
+   * Informations proposées pour une case, dans l'ordre de l'application (ClusterInfo.choices) : les 5 du
    * combiné, puis les plus utiles des bulles (BubbleInfo.FIRST), puis les autres signaux. Sans
    * firmware, réseau Wi-Fi, téléphone, données, soleil, clé, projection, média ni appel.
    */

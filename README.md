@@ -1958,7 +1958,7 @@ vérifiée : une source sans rien à jouer reste muette, et l'appui suivant pass
 car le cycle repart de la dernière source choisie, pas de celle qui joue.
 
 - **SWI133, SWI68, SWI165** : par le service média SAIC, source par source.
-- **SWI69, SWI131, SWI132** : le Bluetooth passe par l'appli Média SAIC, comme la touche de
+- **SWI69, SWI131, SWI132** : le Bluetooth passe par l'application Média SAIC, comme la touche de
   source d'origine — c'est elle qui fait passer la sortie audio de la voiture en Bluetooth avant
   de lancer la lecture. L'USB vise le lecteur du port où la clé est branchée (un lecteur par
   port). « En ligne » n'est pas proposé : cette source n'existe pas sur ces firmwares.
@@ -1992,17 +1992,17 @@ garde ses fonctions habituelles) ; la voiture doit être en P, vérifié avant t
   affiche un avertissement rouge fixe « SURVEILLANCE CAMÉRA », avec une pastille **REC** en haut à
   droite et la durée filmée (grise et figée quand la caméra d'origine de la voiture prend la main).
 
-**Enregistrement par l'appli caméra** (#180) : avec une version pilotable de MG4-360-Camera-App,
+**Enregistrement par l'application caméra** (#180) : avec une version pilotable de MG4-360-Camera-App,
 MG4Control lance l'enregistrement continu dès *Démarrer* (durée de la surveillance plus le décompte,
 120 min au plus) et l'arrête à toutes les fins. La page *Garde-voiture* a une carte **Caméra de
-surveillance** : l'appli détectée (relue à chaque affichage de l'onglet), l'interrupteur *Lancer
-l'enregistrement automatiquement* (activé par défaut), l'emplacement (celui de l'appli : un dossier
+surveillance** : l'application détectée (relue à chaque affichage de l'onglet), l'interrupteur *Lancer
+l'enregistrement automatiquement* (activé par défaut), l'emplacement (celui de l'application : un dossier
 « surveillance » sur la clé USB si elle est branchée, sinon en mémoire interne) et *Tester la clé
 USB*, avec l'espace libre et une durée d'enregistrement estimée. Dans la fenêtre, une ligne dit que
-l'appli filmera et la place sur la clé ; sinon un bandeau prévient au-dessus des boutons :
-enregistrement automatique coupé, appli que MG4Control ne sait pas piloter, ou version trop
-ancienne — l'enregistrement se lance alors à la main dans l'appli. Un échec d'enregistrement
-n'arrête pas la surveillance. L'état renvoyé par l'appli ne sert qu'à l'affichage. Toute appli
+l'application filmera et la place sur la clé ; sinon un bandeau prévient au-dessus des boutons :
+enregistrement automatique coupé, application que MG4Control ne sait pas piloter, ou version trop
+ancienne — l'enregistrement se lance alors à la main dans l'application. Un échec d'enregistrement
+n'arrête pas la surveillance. L'état renvoyé par l'application ne sert qu'à l'affichage. Toute application
 caméra peut s'y brancher en déclarant pour `com.mg4.control.action.SHORTCUT` deux actions
 `<préfixe>.action.START_CONTINUOUS` et `STOP_CONTINUOUS` (contrat détaillé dans
 [l'issue #96 de MG4-360-Camera-App](https://github.com/jamakr4/MG4-360-Camera-App/issues/96)).
@@ -2177,10 +2177,10 @@ colonne, façon Home Assistant. Les automatisations ci-dessus restent à part, t
   Android Auto / CarPlay, média, appel, soleil levé…)
 - **Alors** : réglages du véhicule et de la clim (aussi à la valeur d'une variable, `$NOM`),
   luminosité, volume, média (dont lecture et pause), vitres, son (bip avec son volume, ou vos sons
-  importés d'une clé USB, 12 au plus, au volume choisi), ouvrir une appli, raccourci perso, lancer,
+  importés d'une clé USB, 12 au plus, au volume choisi), ouvrir une application, raccourci perso, lancer,
   activer ou arrêter une autre automatisation, retenir une valeur dans une variable, ajouter ou
   retirer, attendre, attendre que, Si / Sinon, Répéter, question Oui / Non en bandeau, navigation,
-  actions Android (retour à l'accueil, retour, fermer une appli, ouvrir une page des paramètres),
+  actions Android (retour à l'accueil, retour, fermer une application, ouvrir une page des paramètres),
   données en direct vers ABRP ; Wi-Fi, Bluetooth et point d'accès à l'essai. « Lire un texte à voix
   haute » n'est plus proposé (la voiture n'a pas de moteur vocal Android) ; une action existante
   passe par la voix de la voiture sur SWI133 et SWI132
@@ -2300,7 +2300,7 @@ Règles à connaître :
   choisie (1 km par défaut, de 0,1 à 50 km) n'est pas enregistré
 - **Batterie et état de santé** : l'état de santé se règle de 50 à 100 % par pas de 0,5 %, aux
   boutons − et + (maintenus, ils défilent), et la capacité retenue s'affiche dessous. 100 % par
-  défaut : un concessionnaire ou une appli OBD peut le mesurer. Changer l'un ou l'autre recalcule
+  défaut : un concessionnaire ou une application OBD peut le mesurer. Changer l'un ou l'autre recalcule
   les recharges enregistrées d'après le pourcentage — une énergie mesurée ne bouge pas ; tant que la
   batterie n'a pas été confirmée, l'onglet Recharge le rappelle
 - **Charges rapides** : le pourcentage affiché ne suit pas l'énergie entrée (de 62,8 à 70,1 %,
@@ -2756,13 +2756,13 @@ MG4Control/
 │   │   │   ├── CustomShortcut.kt      # Raccourcis perso : types, validation, cibles refusées
 │   │   │   ├── SoundAutomationRules.kt # Sons : moments, source audio à remettre
 │   │   │   ├── PowerScale.kt          # Écran conducteur : fin d'échelle de puissance apprise
-│   │   │   ├── Projection.kt          # Android Auto / CarPlay : quel téléphone, quelle appli
+│   │   │   ├── Projection.kt          # Android Auto / CarPlay : quel téléphone, quelle application
 │   │   │   ├── ChargeEnergyLearning.kt # Énergie des charges : table apprise par tranche de 1 %, source retenue
 │   │   │   ├── TripSegments.kt        # Trajet découpé par profil, « Mixte », part d'un profil
 │   │   │   ├── TripCurve.kt           # Graphique d'un trajet : points relevés, barres choisies à l'affichage
 │   │   │   ├── StatsCsv.kt            # Export CSV : trajets, recharges, portions par profil
 │   │   │   ├── QuickSettings.kt       # Pop-up Réglages rapides : tuiles choisies
-│   │   │   ├── DashcamRemoteModel.kt  # Appli caméra : contrat, détection, compteur REC, place sur la clé
+│   │   │   ├── DashcamRemoteModel.kt  # Application caméra : contrat, détection, compteur REC, place sur la clé
 │   │   │   ├── AbrpTelemetry.kt       # ABRP : relevé envoyé et cadence
 │   │   │   ├── BubbleColors.kt        # Boutons flottants : pastilles de couleur, contraste du texte
 │   │   │   ├── PowerSmoother.kt       # Garde-voiture : puissance tirée de la batterie, lissée
@@ -2833,7 +2833,7 @@ MG4Control/
 │   │   │   ├── QuickSettingsPage.kt   # Page Réglages rapides : choix et ordre des tuiles
 │   │   │   ├── CustomRulesPage.kt     # Mes automatisations : liste, historique, variables, lieux
 │   │   │   ├── AbrpDialogs.kt         # Comptes ABRP : liste, fenêtre d'un compte, fichier modèle
-│   │   │   ├── DashcamUi.kt           # Textes du test de la clé USB de l'appli caméra
+│   │   │   ├── DashcamUi.kt           # Textes du test de la clé USB de l'application caméra
 │   │   │   ├── FlowRow.kt             # Rangée qui passe à la ligne (puces des Réglages rapides, ABRP)
 │   │   │   ├── CustomRuleEditFragment.kt # Éditeur Quand / Et si / Alors (une colonne)
 │   │   │   ├── Assistant.kt           # Fenêtre à étapes de l'éditeur (Retour, chemin, grande fenêtre)
@@ -2874,7 +2874,7 @@ MG4Control/
 │   │   │   ├── ChargeMonitor.kt       # Suivi de charge en arrière-plan (pop-up et statistiques)
 │   │   │   ├── ChargePopupOverlay.kt  # Pop-up de charge (plein cadre)
 │   │   │   ├── PreClimate.kt          # Garde-voiture : programme, verrouillage, arrêts (+ fenêtre et écran de suivi)
-│   │   │   ├── DashcamRemote.kt       # Surveillance : START / STOP de l'appli caméra, état REC, test de la clé
+│   │   │   ├── DashcamRemote.kt       # Surveillance : START / STOP de l'application caméra, état REC, test de la clé
 │   │   │   ├── FloatingButtonsOverlay.kt # Bulles par-dessus les applications (+ FloatingButtonState, FloatingHalo)
 │   │   │   ├── CustomShortcutRunner.kt # Exécution d'un raccourci perso
 │   │   │   ├── QuickSettingsOverlay.kt # Pop-up Réglages rapides (+ QuickTiles, lecture et écriture des tuiles)
@@ -2900,7 +2900,7 @@ MG4Control/
 │   │   │   ├── ButtonLines.kt         # Libellés de bouton sur deux lignes, sinon « … »
 │   │   │   ├── FirmwareHelper.kt      # Lecture version firmware complète (async)
 │   │   │   ├── LocaleHelper.kt        # Gestion de la langue (9 langues) et de la taille du texte
-│   │   │   ├── DashcamApp.kt          # Garde-voiture : appli caméra pilotable, ancienne ou absente
+│   │   │   ├── DashcamApp.kt          # Garde-voiture : application caméra pilotable, ancienne ou absente
 │   │   │   ├── ThemeHelper.kt         # Thème auto / sombre / clair
 │   │   │   └── DataUsage.kt           # Consommation de données (interface Ethernet)
 │   │   │
