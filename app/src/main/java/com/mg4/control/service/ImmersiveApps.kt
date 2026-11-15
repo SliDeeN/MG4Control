@@ -1,7 +1,9 @@
 package com.mg4.control.service
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
@@ -20,8 +22,9 @@ import com.mg4.control.model.ImmersivePolicy
  * fusionne pas encore remplacerait nos paquets ou perdrait les siens : l'option reste en pause
  * tant qu'elle est installée ([mg4Dash]).
  *
- * Un passage au démarrage du service et à chaque changement, une relecture unique 5 s après une
- * écriture (pas de lecture-écriture atomique dans Settings). Journal [TAG].
+ * Un passage au démarrage du service, à chaque changement et quand MG4Dash est installé, mis à
+ * jour ou désinstallé ([watch]) ; une relecture unique 5 s après une écriture (pas de
+ * lecture-écriture atomique dans Settings). Journal [TAG].
  */
 object ImmersiveApps {
 
@@ -32,11 +35,8 @@ object ImmersiveApps {
     const val KEY_APPS = "immersive_apps"
     private const val RELECTURE_MS = 5_000L
 
-    /**
-     * Première version de MG4Dash qui applique la règle commune ; `null` tant que son développeur
-     * ne l'a pas donnée : toute version installée met alors l'option en pause.
-     */
-    private val MG4DASH_FUSION_VERSION: Long? = null
+    /** Première version de MG4Dash qui applique la règle commune v2 (1.7.3 beta 24). */
+    private const val MG4DASH_FUSION_VERSION = 292L
 
     enum class Mg4Dash { ABSENT, OK, OUTDATED }
 
@@ -72,8 +72,7 @@ object ImmersiveApps {
             ?: return Mg4Dash.ABSENT
         @Suppress("DEPRECATION")
         val version = if (Build.VERSION.SDK_INT >= 28) info.longVersionCode else info.versionCode.toLong()
-        val mini = MG4DASH_FUSION_VERSION ?: return Mg4Dash.OUTDATED
-        return if (version >= mini) Mg4Dash.OK else Mg4Dash.OUTDATED
+        return if (version >= MG4DASH_FUSION_VERSION) Mg4Dash.OK else Mg4Dash.OUTDATED
     }
 
     /** Applis que MG4Dash cache entièrement (sa clé) : elles le restent quel que soit notre choix. */
@@ -97,7 +96,44 @@ object ImmersiveApps {
             .sortedBy { it.second.lowercase() }
     }
 
-    /** Un passage, sur son fil : démarrage du service, option ou choix changés. */
+    private var surveillance: BroadcastReceiver? = null
+
+    /**
+     * MG4Dash installé, mis à jour ou désinstallé : un passage (l'option sort de pause, ses paquets
+     * partent avec lui). Enregistré par le service, le temps de sa vie.
+     */
+    fun watch(ctx: Context) {
+        if (surveillance != null) return
+        val r = object : BroadcastReceiver() {
+            override fun onReceive(c: Context, i: Intent) {
+                if (i.data?.schemeSpecificPart != ImmersivePolicy.MG4DASH) return
+                // Une mise à jour envoie REMOVED (remplacement) puis ADDED et REPLACED : un seul passage.
+                if (i.getBooleanExtra(Intent.EXTRA_REPLACING, false) && i.action != Intent.ACTION_PACKAGE_REPLACED) return
+                val quoi = when (i.action) {
+                    Intent.ACTION_PACKAGE_REPLACED -> "MG4Dash mis à jour"
+                    Intent.ACTION_PACKAGE_REMOVED -> "MG4Dash désinstallé"
+                    else -> "MG4Dash installé"
+                }
+                refresh(c, quoi)
+            }
+        }
+        val f = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REPLACED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addDataScheme("package")
+        }
+        runCatching { ctx.applicationContext.registerReceiver(r, f) }
+            .onSuccess { surveillance = r }
+            .onFailure { AppLogger.w(TAG, "surveillance de MG4Dash impossible : ${it.message}") }
+    }
+
+    fun unwatch(ctx: Context) {
+        surveillance?.let { r -> runCatching { ctx.applicationContext.unregisterReceiver(r) } }
+        surveillance = null
+    }
+
+    /** Un passage, sur son fil : démarrage du service, option ou choix changés, MG4Dash changé. */
     fun refresh(ctx: Context, raison: String) {
         val app = ctx.applicationContext
         fil.post { passage(app, raison, relire = true) }
@@ -118,15 +154,17 @@ object ImmersiveApps {
             // Rien à ajouter, rien à nous à retirer : on ne touche pas à la valeur, même pour la
             // ranger — elle peut être celle d'une autre appli ou d'un ancien MG4Dash (revue du
             // 2026-11-15). En pause, seuls nos restes éventuels sont retirés.
-            if (!ImmersivePolicy.hasStake(self, voulus, cles, installes)) {
+            val avant = global(app, ImmersivePolicy.SETTING)
+            var geres = global(app, ImmersivePolicy.MANAGED)
+            if (!ImmersivePolicy.hasStake(self, voulus, avant, cles, installes, geres)) {
                 AppLogger.i(TAG, "$raison : rien à faire$pause")
                 return
             }
-            val avant = global(app, ImmersivePolicy.SETTING)
-            val p = ImmersivePolicy.plan(self, voulus, avant, cles, installes)
+            val p = ImmersivePolicy.plan(self, voulus, avant, cles, installes, geres)
 
             // Une écriture refusée arrête le passage : les clés de suivi restent telles quelles (la
-            // nôtre garde anciens + voulus), le passage suivant reprendra (revue du 2026-11-15).
+            // nôtre garde anciens + voulus, la commune ce qui a pu être écrit), le passage suivant
+            // reprendra (revue du 2026-11-15).
             var ecrit = false
             fun ecrire(nom: String, valeur: String?): Boolean {
                 if (put(app, nom, valeur)) { ecrit = true; return true }
@@ -136,11 +174,13 @@ object ImmersiveApps {
             }
             var cle = cles[self]
             if (p.keyBefore != cle) { if (!ecrire(maCle, p.keyBefore)) return; cle = p.keyBefore }
+            if (p.managedBefore != geres) { if (!ecrire(ImmersivePolicy.MANAGED, p.managedBefore)) return; geres = p.managedBefore }
             if (p.policyChanged) {
                 if (!ecrire(ImmersivePolicy.SETTING, p.policy)) return
                 AppLogger.i(TAG, "$raison : policy_control ${avant ?: "(vide)"} → ${p.policy ?: "(vide)"}")
             }
             if (p.keyAfter != cle && !ecrire(maCle, p.keyAfter)) return
+            if (p.managedAfter != geres && !ecrire(ImmersivePolicy.MANAGED, p.managedAfter)) return
             for (k in p.clearKeys) if (!ecrire(k, null)) return
             if (!ecrit) AppLogger.i(TAG, "$raison : rien à changer$pause")
             if (ecrit && relire) fil.postDelayed({ passage(app, "relecture", relire = false) }, RELECTURE_MS)

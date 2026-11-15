@@ -3,29 +3,36 @@ package com.mg4.control.model
 /**
  * Fusion de `Settings.Global "policy_control"` entre MG4Dash et MG4Control (issue #248) — Kotlin
  * pur, sans Android : la même fonction dans les deux applis, mêmes tests (règle commune convenue
- * avec le développeur de MG4Dash le 2026-11-15).
+ * avec le développeur de MG4Dash le 2026-11-15, v2 après la revue du même jour).
  *
  * Android 9 (`PolicyControl`) découpe la valeur sur `:`, chaque section sur le premier `=`, les
  * paquets sur `,` (nettoyés). `immersive.full` règle les filtres bandeau (status) ET barre
  * (navigation) au moment où il est lu : une section `.status` / `.navigation` placée AVANT est
- * sans effet, une placée après remplace le filtre. `-paquet` exclut, `*` / `apps` visent large.
+ * sans effet, une placée après remplace le filtre — vide, elle dit « aucune appli ».
+ * `.preconfirms` vaut le filtre de `full` / `.navigation` tant qu'elle est absente ; vide, elle
+ * remet le message « plein écran ». `-paquet` exclut, `*` / `apps` visent large.
  *
  * Chaque propriétaire ([OWNER_KEYS]) garde dans sa propre clé Global les paquets qu'il réclame :
- * `paquet` (tout cacher), `paquet/status` (bandeau seul), `paquet/navigation` (barre seule). À
- * chaque passage, il ne retire que ses anciens paquets et ceux des propriétaires désinstallés,
- * jamais ceux qu'un autre réclame, et n'ajoute que les siens. Android Auto et CarPlay ne sont
- * jamais ajoutés et toujours retirés.
+ * `paquet` (tout cacher), `paquet/status` (bandeau seul), `paquet/navigation` (barre seule). La
+ * clé commune [MANAGED] garde ce que l'un de nous a pu écrire : ce qu'elle contient et que plus
+ * personne ne réclame est retiré, même si celui qui l'a ajouté ne passe plus (deux retraits
+ * simultanés). Un paquet réclamé par un propriétaire installé n'est jamais retiré, et chaque
+ * passage remet ce que tous réclament. Android Auto et CarPlay ne sont jamais ajoutés, toujours
+ * retirés, et exclus (`-paquet`) d'une section qui vise large.
  *
- * L'appelant applique [Plan] dans l'ordre : sa clé = [Plan.keyBefore], puis `policy_control` =
- * [Plan.policy] si [Plan.policyChanged], puis sa clé = [Plan.keyAfter], puis efface
+ * L'appelant ne passe que si [hasStake], puis applique [Plan] dans l'ordre : sa clé =
+ * [Plan.keyBefore], [MANAGED] = [Plan.managedBefore], `policy_control` = [Plan.policy] si
+ * [Plan.policyChanged], sa clé = [Plan.keyAfter], [MANAGED] = [Plan.managedAfter], puis efface
  * [Plan.clearKeys]. 5 s après une écriture, il refait un passage et réécrit une seule fois si la
- * valeur doit encore changer (pas de lecture-écriture atomique). Personne n'observe la clé.
+ * valeur doit encore changer (pas de lecture-écriture atomique). Personne n'observe les clés.
  */
 enum class ImmersiveMode { FULL, STATUS, NAVIGATION }
 
 object ImmersivePolicy {
 
     const val SETTING = "policy_control"
+    /** Clé commune : tout ce que les propriétaires ont pu écrire dans [SETTING], au format des clés. */
+    const val MANAGED = "immersive_managed"
     const val MG4DASH = "app.mg4dash"
     const val ANDROID_AUTO = "com.allgo.app.androidauto"
     const val CARPLAY = "com.allgo.carplay.service"
@@ -43,10 +50,12 @@ object ImmersivePolicy {
     private const val PRE = "immersive.preconfirms"
     private val KNOWN = listOf(FULL, STATUS, NAV, PRE)
     private val NEVER = setOf(ANDROID_AUTO, CARPLAY)
+    /** Nos exclusions, posées à côté de `*` / `apps` et retirées quand il n'y en a plus. */
+    private val EXCLUSIONS = listOf("-$ANDROID_AUTO", "-$CARPLAY")
 
     /** Ce qu'on a le droit de réclamer : ni Android Auto, ni CarPlay, ni `*`, `apps`, `-paquet`. */
     fun isClaimable(pkg: String): Boolean =
-        pkg.isNotEmpty() && pkg !in NEVER && pkg != "*" && pkg != "apps" && !pkg.startsWith("-")
+        pkg.isNotEmpty() && pkg !in NEVER && !isWildcard(pkg) && !pkg.startsWith("-")
 
     /** Lecture d'une clé : paquet → modes. Suffixe inconnu : entrée ignorée. */
     fun parseKey(value: String?): Map<String, Set<ImmersiveMode>> {
@@ -80,21 +89,25 @@ object ImmersivePolicy {
     }.joinToString(",").ifEmpty { null }
 
     /**
-     * Ce que fait un passage. [keyBefore] = anciens + voulus (écrit d'abord), [keyAfter] = voulus
-     * (écrit après `policy_control`), [clearKeys] = clés des propriétaires désinstallés à effacer.
+     * Ce que fait un passage. [keyBefore] = anciens + voulus (écrit d'abord), [managedBefore] =
+     * [MANAGED] + toutes les réclamations (écrit avant `policy_control`), [keyAfter] = voulus et
+     * [managedAfter] = toutes les réclamations (écrits après), [clearKeys] = clés des
+     * propriétaires désinstallés à effacer.
      */
     data class Plan(
         val policy: String?,
         val policyChanged: Boolean,
         val keyBefore: String?,
         val keyAfter: String?,
+        val managedBefore: String?,
+        val managedAfter: String?,
         val clearKeys: List<String>,
     )
 
     /**
      * [self] : le propriétaire qui passe ; [wanted] : ce qu'il veut maintenant ; [policy] : la
      * valeur actuelle ; [keys] : propriétaire → contenu de sa clé ; [installed] : propriétaires
-     * installés ([self] l'est forcément).
+     * installés ([self] l'est forcément) ; [managed] : contenu de [MANAGED].
      */
     fun plan(
         self: String,
@@ -102,15 +115,17 @@ object ImmersivePolicy {
         policy: String?,
         keys: Map<String, String?>,
         installed: Set<String>,
+        managed: String?,
     ): Plan {
         val voulus = wanted.filterKeys { isClaimable(it) }.filterValues { it.isNotEmpty() }
         val anciens = keys[self]?.let { parseKey(it) } ?: legacy(self, policy)
-        val autres = OWNER_KEYS.keys.filter { it != self && it in installed }.map { parseKey(keys[it]) }
         val orphelins = OWNER_KEYS.keys.filter { it != self && it !in installed }.map { parseKey(keys[it]) }
+        val geres = parseKey(managed)
+        val tous = reclamations(self, voulus, keys, installed)
 
         fun retirer(section: String): Set<String> =
-            (claims(anciens, section) + orphelins.flatMap { claims(it, section) }) -
-                claims(voulus, section) - autres.flatMap { claims(it, section) }.toSet()
+            (claims(anciens, section) + orphelins.flatMap { claims(it, section) } + claims(geres, section)) -
+                claims(tous, section)
 
         val sections = parse(policy)
 
@@ -119,11 +134,15 @@ object ImmersivePolicy {
         val vivantes = sections.filterIndexed { i, s -> !(i < dernierFull && (s.name == STATUS || s.name == NAV)) }
             .toMutableList()
 
-        // 2. Retraits, Android Auto, CarPlay, doublons et vides, section par section.
+        // 2. Retraits, Android Auto, CarPlay, doublons et vides, section par section ; nos
+        //    exclusions à côté de * / apps, retirées quand il n'y en a plus.
         for (s in vivantes) {
             val e = s.entries ?: continue
             val moins = retirer(s.name!!)
             val propres = e.map { it.trim() }.filter { it.isNotEmpty() && it !in NEVER && it !in moins }.distinct()
+                .toMutableList()
+            if (propres.any { isWildcard(it) }) EXCLUSIONS.forEach { if (it !in propres) propres += it }
+            else propres.removeAll(EXCLUSIONS)
             e.clear(); e += propres
         }
 
@@ -138,8 +157,8 @@ object ImmersivePolicy {
             }
         }
 
-        // 4. Ajout dans immersive.full (créée si besoin).
-        val ajoutFull = claims(voulus, FULL)
+        // 4. Ajout dans immersive.full (créée si besoin) de ce que tous réclament.
+        val ajoutFull = claims(tous, FULL)
         var full = vivantes.firstOrNull { it.name == FULL }
         if (full == null && ajoutFull.isNotEmpty()) {
             full = Section(FULL, mutableListOf())
@@ -147,47 +166,88 @@ object ImmersivePolicy {
         }
         full?.let { ajouter(it, ajoutFull) }
 
-        // 5. .status puis .navigation : création (copie de immersive.full), ajout, suppression si identique.
+        // 5. .status puis .navigation : création (copie de immersive.full) si un paquet réclamé n'y
+        //    est pas, ajout, suppression si identique à immersive.full.
         for (nom in listOf(STATUS, NAV)) {
-            val miens = claims(voulus, nom)
+            val reclames = claims(tous, nom)
             val dansFull = full?.entries.orEmpty()
             var sec = vivantes.firstOrNull { it.name == nom }
-            if (sec == null && miens.any { it !in dansFull }) {
+            if (sec == null && reclames.any { it !in dansFull }) {
                 sec = Section(nom, dansFull.toMutableList())
                 vivantes += sec
             }
             if (sec == null) continue
-            ajouter(sec, miens)
+            ajouter(sec, reclames)
             if (full != null && sec.entries!!.toSet() == full.entries!!.toSet()) vivantes.remove(sec)
         }
 
         // 6. Ajout dans .preconfirms si elle existe.
-        vivantes.firstOrNull { it.name == PRE }?.let { ajouter(it, claims(voulus, PRE)) }
+        vivantes.firstOrNull { it.name == PRE }?.let { ajouter(it, claims(tous, PRE)) }
 
-        // 7. Sections vides supprimées, écriture dans l'ordre full, status, navigation, preconfirms, inconnues.
-        val ordonnees = KNOWN.mapNotNull { nom -> vivantes.firstOrNull { it.name == nom && it.entries!!.isNotEmpty() } } +
-            vivantes.filter { it.entries == null }
+        // 7. Sections vides supprimées (une section de seuls `-paquet` est vide), sauf celles qui
+        //    disent quelque chose à Android : .status / .navigation vides si immersive.full ne
+        //    l'est pas, .preconfirms vide si immersive.full ou .navigation ne l'est pas. Écriture
+        //    dans l'ordre full, status, navigation, preconfirms, inconnues.
+        fun pleine(nom: String) = vivantes.firstOrNull { it.name == nom }?.let { !vide(it) } ?: false
+        val garder = mapOf(
+            FULL to false,
+            STATUS to pleine(FULL),
+            NAV to pleine(FULL),
+            PRE to (pleine(FULL) || pleine(NAV)),
+        )
+        val ordonnees = KNOWN.mapNotNull { nom ->
+            vivantes.firstOrNull { it.name == nom && (!vide(it) || garder.getValue(nom)) }
+        } + vivantes.filter { it.entries == null }
         val valeur = ordonnees.joinToString(":") { it.text() }.ifEmpty { null }
 
-        val union = linkedMapOf<String, MutableSet<ImmersiveMode>>()
-        (anciens.entries + voulus.entries).forEach { (p, m) -> union.getOrPut(p) { linkedSetOf() } += m }
         return Plan(
             policy = valeur,
             policyChanged = valeur != policy?.ifEmpty { null },
-            keyBefore = formatKey(union),
+            keyBefore = formatKey(fusion(anciens, voulus)),
             keyAfter = formatKey(voulus),
+            managedBefore = formatKey(fusion(geres, tous)),
+            managedAfter = formatKey(tous),
             clearKeys = OWNER_KEYS.filter { (o, _) -> o != self && o !in installed && keys[o] != null }.values.toList(),
         )
     }
 
     /**
-     * Un passage a-t-il quelque chose à faire ? Rien à ajouter, rien à soi à retirer, aucune clé
-     * d'un propriétaire désinstallé : on ne touche pas à la valeur, même pour la « ranger » (elle
-     * peut appartenir à une autre appli, ou à une ancienne version de MG4Dash).
+     * Un passage a-t-il quelque chose à faire ? Oui s'il y a à ajouter, à soi à retirer, une clé
+     * d'un propriétaire désinstallé, Android Auto ou CarPlay en clair dans une section, ou dans
+     * [MANAGED] un paquet que plus personne ne réclame. Sinon on ne touche pas à la valeur, même
+     * pour la « ranger » (elle peut appartenir à une autre appli).
      */
-    fun hasStake(self: String, wanted: Map<String, Set<ImmersiveMode>>, keys: Map<String, String?>, installed: Set<String>): Boolean =
-        wanted.any { (p, m) -> isClaimable(p) && m.isNotEmpty() } || !keys[self].isNullOrEmpty() ||
-            OWNER_KEYS.keys.any { it != self && it !in installed && !keys[it].isNullOrEmpty() }
+    fun hasStake(
+        self: String,
+        wanted: Map<String, Set<ImmersiveMode>>,
+        policy: String?,
+        keys: Map<String, String?>,
+        installed: Set<String>,
+        managed: String?,
+    ): Boolean {
+        val voulus = wanted.filterKeys { isClaimable(it) }.filterValues { it.isNotEmpty() }
+        if (voulus.isNotEmpty() || !keys[self].isNullOrEmpty()) return true
+        if (OWNER_KEYS.keys.any { it != self && it !in installed && !keys[it].isNullOrEmpty() }) return true
+        if (parse(policy).any { s -> s.entries.orEmpty().any { it.trim() in NEVER } }) return true
+        val geres = parseKey(managed)
+        val tous = reclamations(self, voulus, keys, installed)
+        return KNOWN.any { (claims(geres, it) - claims(tous, it)).isNotEmpty() }
+    }
+
+    /** Ce que réclament [self] (ses voulus) et les autres propriétaires installés (leurs clés). */
+    private fun reclamations(
+        self: String,
+        voulus: Map<String, Set<ImmersiveMode>>,
+        keys: Map<String, String?>,
+        installed: Set<String>,
+    ): Map<String, Set<ImmersiveMode>> =
+        fusion(voulus, *OWNER_KEYS.keys.filter { it != self && it in installed }.map { parseKey(keys[it]) }.toTypedArray())
+
+    private fun fusion(vararg cs: Map<String, Set<ImmersiveMode>>): Map<String, Set<ImmersiveMode>> {
+        val out = linkedMapOf<String, MutableSet<ImmersiveMode>>()
+        cs.forEach { c -> c.forEach { (p, m) -> out.getOrPut(p) { linkedSetOf() } += m } }
+        return out
+    }
 
     /** Ce qu'un propriétaire réclame dans une section. */
     private fun claims(c: Map<String, Set<ImmersiveMode>>, section: String): Set<String> = c.filter { (_, m) ->
@@ -198,6 +258,11 @@ object ImmersivePolicy {
             else -> m.isNotEmpty()
         }
     }.keys
+
+    private fun isWildcard(e: String) = e == "*" || e == "apps"
+
+    /** Une section sans paquet ni joker (vide, ou seulement des `-paquet`) ne vise rien. */
+    private fun vide(s: Section) = s.entries!!.all { it.startsWith("-") }
 
     /** Ajout en fin de section, sans doublon ni paquet exclu par `-paquet`. */
     private fun ajouter(s: Section, pkgs: Collection<String>) {

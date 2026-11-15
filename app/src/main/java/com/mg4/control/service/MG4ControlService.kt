@@ -201,6 +201,7 @@ class MG4ControlService : Service() {
         ProjectionKick.start(this)
         // Issue #248 : applis en plein écran, remises dans policy_control (fusion avec MG4Dash).
         ImmersiveApps.refresh(this, "démarrage")
+        ImmersiveApps.watch(this)
         // Relu ici aussi : démarré avant le déverrouillage, MG4App a pu trouver le réglage illisible.
         FirmwareInfo.initWithContext(applicationContext)
         // AVANT startForeground : la notification annonce le Mode Garage, elle doit donc être
@@ -349,6 +350,7 @@ class MG4ControlService : Service() {
         externalApiReceiver?.let { unregisterReceiver(it) } // issue #79
         externalApiReceiver = null
         ProjectionKick.stop(this)            // issue #251
+        ImmersiveApps.unwatch(this)          // issue #248
         ClusterModuleOverlay.stop()
     }
 
