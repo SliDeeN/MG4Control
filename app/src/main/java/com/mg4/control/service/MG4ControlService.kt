@@ -199,6 +199,8 @@ class MG4ControlService : Service() {
         AppLogger.i(TAG, "onCreate")
         // Issue #251 : relance de la détection du téléphone branché (démarrage et réveil), si l'option est active.
         ProjectionKick.start(this)
+        // Issue #248 : applis en plein écran, remises dans policy_control (fusion avec MG4Dash).
+        ImmersiveApps.refresh(this, "démarrage")
         // Relu ici aussi : démarré avant le déverrouillage, MG4App a pu trouver le réglage illisible.
         FirmwareInfo.initWithContext(applicationContext)
         // AVANT startForeground : la notification annonce le Mode Garage, elle doit donc être

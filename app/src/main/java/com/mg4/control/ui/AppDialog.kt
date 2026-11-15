@@ -664,7 +664,7 @@ internal object AppDialog {
      * l'écran : tant qu'on tape, la fenêtre remonte en haut, et les premiers résultats restent
      * visibles ; « OK » du clavier le referme et la recentre.
      */
-    private fun champRecherche(context: Context, fenetre: () -> android.app.Dialog?, surTexte: (String) -> Unit): View {
+    fun champRecherche(context: Context, fenetre: () -> android.app.Dialog?, surTexte: (String) -> Unit): View {
         val champ = EditText(context).apply {
             hint = context.getString(R.string.dialog_search)
             setTextColor(context.getColor(R.color.text_primary))

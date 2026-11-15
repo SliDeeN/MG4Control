@@ -718,6 +718,9 @@ class SettingsFragment : Fragment() {
             setOnCheckedChangeListener { _, checked -> com.mg4.control.automation.AcKeepOff.setOn(requireContext(), checked) }
         }
 
+        // ── Applis en plein écran (issue #248), désactivé par défaut ──
+        setupImmersive(view)
+
         // ── Relancer la détection du téléphone branché (issue #251), désactivé par défaut ──
         view.findViewById<View>(R.id.card_projection_kick).visibility =
             if (runCatching { requireContext().packageManager.getPackageInfo("com.allgo.rui", 0) }.isSuccess)
@@ -1055,6 +1058,39 @@ class SettingsFragment : Fragment() {
 
 
     // ── Feedback "application à jour" sur le bouton ──────────────────────────
+
+    /**
+     * Applis en plein écran (issue #248) : interrupteur, résumé des applis choisies et leur mode,
+     * bouton vers la fenêtre de choix. En pause tant qu'un MG4Dash qui ne fusionne pas est installé.
+     */
+    private fun setupImmersive(view: View) {
+        val ctx = requireContext()
+        val resume = view.findViewById<TextView>(R.id.tv_immersive_summary)
+        val bouton = view.findViewById<MaterialButton>(R.id.btn_immersive_choose)
+        view.findViewById<View>(R.id.tv_immersive_outdated).visibility =
+            if (com.mg4.control.service.ImmersiveApps.mg4Dash(ctx) == com.mg4.control.service.ImmersiveApps.Mg4Dash.OUTDATED)
+                View.VISIBLE else View.GONE
+        fun maj() {
+            val choix = com.mg4.control.service.ImmersiveApps.selection(ctx)
+            val pm = ctx.packageManager
+            resume.text = choix.mapNotNull { (paquet, mode) ->
+                val nom = runCatching { pm.getApplicationLabel(pm.getApplicationInfo(paquet, 0)).toString() }.getOrNull()
+                    ?: return@mapNotNull null
+                "$nom (" + getString(when (mode) {
+                    com.mg4.control.model.ImmersiveMode.STATUS -> R.string.immersive_mode_status
+                    com.mg4.control.model.ImmersiveMode.NAVIGATION -> R.string.immersive_mode_nav
+                    com.mg4.control.model.ImmersiveMode.FULL -> R.string.immersive_mode_full
+                }) + ")"
+            }.joinToString(", ").ifEmpty { getString(R.string.immersive_apps_none) }
+            bouton.text = getString(R.string.immersive_choose, choix.size)
+        }
+        maj()
+        view.findViewById<Switch>(R.id.switch_immersive).apply {
+            isChecked = com.mg4.control.service.ImmersiveApps.isOn(ctx)
+            setOnCheckedChangeListener { _, checked -> com.mg4.control.service.ImmersiveApps.setOn(ctx, checked) }
+        }
+        bouton.setOnClickListener { ImmersiveAppsDialog.show(ctx) { if (isAdded) maj() } }
+    }
 
     private fun showUpToDate(btn: MaterialButton, originalText: String) {
         val ctx = requireContext()
