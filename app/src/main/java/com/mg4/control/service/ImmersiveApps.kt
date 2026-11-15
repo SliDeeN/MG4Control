@@ -114,20 +114,35 @@ object ImmersiveApps {
             val voulus = if (isOn(app) && dash != Mg4Dash.OUTDATED) selection(app).mapValues { setOf(it.value) } else emptyMap()
             val cles = ImmersivePolicy.OWNER_KEYS.entries.associate { (o, k) -> o to global(app, k) }
             val installes = ImmersivePolicy.OWNER_KEYS.keys.filter { it == self || installe(app, it) }.toSet()
+            val pause = if (dash == Mg4Dash.OUTDATED && isOn(app)) " (en pause : MG4Dash à mettre à jour)" else ""
+            // Rien à ajouter, rien à nous à retirer : on ne touche pas à la valeur, même pour la
+            // ranger — elle peut être celle d'une autre appli ou d'un ancien MG4Dash (revue du
+            // 2026-11-15). En pause, seuls nos restes éventuels sont retirés.
+            if (!ImmersivePolicy.hasStake(self, voulus, cles, installes)) {
+                AppLogger.i(TAG, "$raison : rien à faire$pause")
+                return
+            }
             val avant = global(app, ImmersivePolicy.SETTING)
             val p = ImmersivePolicy.plan(self, voulus, avant, cles, installes)
 
+            // Une écriture refusée arrête le passage : les clés de suivi restent telles quelles (la
+            // nôtre garde anciens + voulus), le passage suivant reprendra (revue du 2026-11-15).
             var ecrit = false
+            fun ecrire(nom: String, valeur: String?): Boolean {
+                if (put(app, nom, valeur)) { ecrit = true; return true }
+                AppLogger.w(TAG, "$raison : écriture de $nom refusée — passage arrêté, clés de suivi gardées")
+                if (relire) fil.postDelayed({ passage(app, "nouvel essai", relire = false) }, RELECTURE_MS)
+                return false
+            }
             var cle = cles[self]
-            if (p.keyBefore != cle) { put(app, maCle, p.keyBefore); cle = p.keyBefore; ecrit = true }
+            if (p.keyBefore != cle) { if (!ecrire(maCle, p.keyBefore)) return; cle = p.keyBefore }
             if (p.policyChanged) {
-                put(app, ImmersivePolicy.SETTING, p.policy); ecrit = true
+                if (!ecrire(ImmersivePolicy.SETTING, p.policy)) return
                 AppLogger.i(TAG, "$raison : policy_control ${avant ?: "(vide)"} → ${p.policy ?: "(vide)"}")
             }
-            if (p.keyAfter != cle) { put(app, maCle, p.keyAfter); ecrit = true }
-            p.clearKeys.forEach { put(app, it, null); ecrit = true }
-            if (!ecrit) AppLogger.i(TAG, "$raison : rien à changer" +
-                if (dash == Mg4Dash.OUTDATED && isOn(app)) " (en pause : MG4Dash à mettre à jour)" else "")
+            if (p.keyAfter != cle && !ecrire(maCle, p.keyAfter)) return
+            for (k in p.clearKeys) if (!ecrire(k, null)) return
+            if (!ecrit) AppLogger.i(TAG, "$raison : rien à changer$pause")
             if (ecrit && relire) fil.postDelayed({ passage(app, "relecture", relire = false) }, RELECTURE_MS)
         }.onFailure { AppLogger.w(TAG, "$raison : ${it.javaClass.simpleName} ${it.message}") }
     }
@@ -135,9 +150,9 @@ object ImmersiveApps {
     private fun global(ctx: Context, nom: String): String? =
         runCatching { Settings.Global.getString(ctx.contentResolver, nom) }.getOrNull()?.ifEmpty { null }
 
-    private fun put(ctx: Context, nom: String, valeur: String?) {
-        Settings.Global.putString(ctx.contentResolver, nom, valeur)
-    }
+    /** `false` si Android refuse l'écriture ([Settings.Global.putString] le dit) ou si elle lève. */
+    private fun put(ctx: Context, nom: String, valeur: String?): Boolean =
+        runCatching { Settings.Global.putString(ctx.contentResolver, nom, valeur) }.getOrDefault(false)
 
     private fun installe(ctx: Context, pkg: String): Boolean =
         runCatching { ctx.packageManager.getPackageInfo(pkg, 0); true }.getOrDefault(false)

@@ -180,6 +180,15 @@ object ImmersivePolicy {
         )
     }
 
+    /**
+     * Un passage a-t-il quelque chose à faire ? Rien à ajouter, rien à soi à retirer, aucune clé
+     * d'un propriétaire désinstallé : on ne touche pas à la valeur, même pour la « ranger » (elle
+     * peut appartenir à une autre appli, ou à une ancienne version de MG4Dash).
+     */
+    fun hasStake(self: String, wanted: Map<String, Set<ImmersiveMode>>, keys: Map<String, String?>, installed: Set<String>): Boolean =
+        wanted.any { (p, m) -> isClaimable(p) && m.isNotEmpty() } || !keys[self].isNullOrEmpty() ||
+            OWNER_KEYS.keys.any { it != self && it !in installed && !keys[it].isNullOrEmpty() }
+
     /** Ce qu'un propriétaire réclame dans une section. */
     private fun claims(c: Map<String, Set<ImmersiveMode>>, section: String): Set<String> = c.filter { (_, m) ->
         when (section) {
