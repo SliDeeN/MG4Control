@@ -97,7 +97,11 @@ internal object OverlayKit {
         trait: Int = Color.TRANSPARENT, epaisseur: Int = 0,
         rayon: Float = 0f, ovale: Boolean = false,
     ) {
-        val forme = vue.background as? GradientDrawable ?: GradientDrawable().also { vue.background = it }
+        // mutate() : un fond venu d'une ressource (bg_dialog_tile…) partage son état avec toutes les
+        // vues qui l'utilisent ; le repeindre sans copie colorait aussi la recherche et les tuiles des
+        // autres fenêtres (fenêtre des applis en plein écran, 2026-11-15).
+        val forme = (vue.background as? GradientDrawable)?.mutate() as? GradientDrawable
+            ?: GradientDrawable().also { vue.background = it }
         forme.shape = if (ovale) GradientDrawable.OVAL else GradientDrawable.RECTANGLE
         if (!ovale) forme.cornerRadius = rayon
         forme.setColor(remplissage)
