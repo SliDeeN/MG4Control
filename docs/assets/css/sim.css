@@ -1092,6 +1092,11 @@
 .mw-seg { height: 56px; }
 .mw-seg > button { font-size: calc(16px * var(--ts, 1)); }
 .mw-seg.sm { height: 48px; margin-top: 12px; }
+/* Applis en plein écran (#248) : une ligne par appli, segments à droite (500 dp dans l'appli). */
+.mw-imlist { height: 330px; margin-top: 12px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--dash-border) transparent; }
+.mw-imrow { display: flex; align-items: center; gap: 14px; padding: 6px 4px; border-bottom: 1px solid var(--dash-border); }
+.mw-imrow b { flex: 1; min-width: 0; font-size: calc(16px * var(--ts, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mw-imrow .mw-seg.sm { flex: 0 0 500px; margin-top: 0; }
 .mw-step { flex: none; width: 52px; height: 52px; padding: 0; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); color: var(--text-primary); display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
 .mw-step.big { width: 64px; height: 64px; }
 .mw-step.big .mw-ico { width: 28px; height: 28px; }

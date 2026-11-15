@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../assets/css/site.css?v=cbeb2f14">
-  <link rel="stylesheet" href="../assets/css/sim.css?v=d5b9604b">
+  <link rel="stylesheet" href="../assets/css/sim.css?v=ce2bd6de">
   <link rel="stylesheet" href="../assets/css/explorer.css?v=34b00b13">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="en">New</span> · 2.7.0</span>
-        <b><span data-l="en">28 new things in this release</span></b>
+        <b><span data-l="en">30 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -162,6 +162,8 @@
         <a href="#f-abrp" data-feature="f-abrp"><span data-l="en">🗺️ Live data to ABRP</span></a>
         <a href="#f-onepedal" data-feature="f-onepedal"><span data-l="en">🦶 One Pedal: back to the previous level</span></a>
         <a href="#f-keepac" data-feature="f-keepac"><span data-l="en">❄️ Keep the A/C off</span></a>
+        <a href="#f-projkick" data-feature="f-projkick"><span data-l="en">🔌 Phone plugged in before start-up</span></a>
+        <a href="#f-immersive" data-feature="f-immersive"><span data-l="en">🖥️ Full-screen apps</span></a>
         <a href="#f-bri0" data-feature="f-bri0"><span data-l="en">🔅 Brightness down to 0 %</span></a>
         <a href="#f-preclim-watts" data-feature="f-preclim-watts"><span data-l="en">⚡ Car keeper: power in watts</span></a>
         <a href="#f-profilecopy" data-feature="f-profilecopy"><span data-l="en">📑 Duplicate and rename a profile</span></a>
@@ -686,7 +688,14 @@
       <h3><span data-l="en">Android Auto / CarPlay</span></h3>
       <p data-l="en">One button opens Android Auto or CarPlay depending on the connected phone; a second press takes you back to the previous screen.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">MG4Control asks the car's projection service which phone is plugged in, then opens the right app. Without a phone, a message says so.</p>
+        <p data-l="en">MG4Control asks the car's projection service which phone is plugged in, then opens the right app. Without a phone, a message says so. If a phone is plugged in by cable but no projection starts, the shortcut restarts its detection, then opens Android Auto or CarPlay as soon as it is recognised.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-projkick" data-hl-key="s-projkick" data-demo="projKick">
+      <h3><span data-l="en">Phone plugged in before start-up</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="en">An iPhone or Android phone plugged in before the screen started was seen by neither CarPlay nor Android Auto. An option announces it to the car again (#251).</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">In Settings › Advanced, “Android Auto · CarPlay” card, off by default. When the screen starts or wakes up and no projection is open, MG4Control announces the cable-connected phone again, as if it had just been plugged in; if nothing happens, it resets the port and tries once more. An Android phone is left to AA Kick when that app is installed. Nothing happens in Garage mode.</p>
       </details>
     </div>
     <div class="pt" id="f-floating" data-hl-key="sc-floating" data-demo="floating">
@@ -1364,6 +1373,13 @@
         <p data-l="en">In Settings › Interface, off by default. Swipe from the edge to bring the bars back for a moment.</p>
       </details>
     </div>
+    <div class="pt is-new" id="f-immersive" data-hl-key="s-immersive" data-demo="immersive">
+      <h3><span data-l="en">Full-screen apps</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="en">Pick apps, such as Waze or ABRP, for which the car's top bar, side bar, or both, disappear (#248).</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">In Settings › Advanced, under the “Android Auto · CarPlay” card, off by default. For each app: Normal, Banner, Bar or All. Each time you turn it on, a warning reminds you that the feature changes an Android setting shared by all apps: it may conflict with a custom launcher or another app that also manages full screen. Swipe from the edge of the screen (left, or right with right-hand drive) to bring the bar back for a few seconds. Android Auto and CarPlay are never affected. MG4Dash and MG4Control share this setting under a common rule: MG4Dash 1.7.3 beta 24 or later is required, otherwise the option stays paused.</p>
+      </details>
+    </div>
     <div class="pt" id="f-hvaczone" data-hl-key="proj-zone" data-demo="hvacZone">
       <h3><span data-l="en">Climate during Android Auto / CarPlay</span></h3>
       <p data-l="en">During projection, tapping the climate area of the top bar opens MG4Control's HVAC pop-up.</p>
@@ -1700,8 +1716,8 @@
 <div class="dock" aria-label="Virtual vehicle"></div>
 <button type="button" class="to-top" aria-label="Back to the top of the page" title="Back to the top of the page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="../assets/js/strings.js?v=ba146649"></script>
-<script src="../assets/js/sim.js?v=358993bc"></script>
+<script src="../assets/js/strings.js?v=004d90c2"></script>
+<script src="../assets/js/sim.js?v=0a90ee8f"></script>
 <script src="../assets/js/site.js?v=5b3c68e9"></script>
 <script src="../assets/js/explorer.js?v=72fb983a"></script>
 </body>

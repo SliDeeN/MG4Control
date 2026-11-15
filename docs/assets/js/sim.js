@@ -179,7 +179,10 @@
                   // Unité de distance générale et dernière jauge ouverte dans l'éditeur du combiné.
                   distUnit: 'auto', clLayMod: null,
                   // Côté du menu (NavSide) et « Garder l'A/C coupé » (#208, désactivé par défaut).
-                  navSide: 'auto', keepAcOff: false },
+                  navSide: 'auto', keepAcOff: false,
+                  // Relance de la détection du téléphone branché (#251) ; applis en plein écran (#248),
+                  // une appli → 'FULL' | 'STATUS' | 'NAVIGATION'. Tous deux désactivés par défaut.
+                  projKick: false, immersive: false, immersiveApps: {} },
       sc: {
         enabled: true,
         map: { btn1_single: 'PROFILE_PICKER', btn1_long: 'ONE_PEDAL', btn2_single: 'NONE', btn2_long: 'ADAS_CYCLE' },
@@ -2687,7 +2690,25 @@
       }
       // Garder l'A/C coupé (#208) : désactivé par défaut.
       if (k.clim) top += '<div class="a-sec" data-hl="s-keepac"><div class="a-h">' + esc(S('settings_keep_ac_title')) + '</div>' + row('s-keepac', S('settings_keep_ac'), S('settings_keep_ac_desc'), sw(s.keepAcOff, 'keepAc')) + '</div>';
+      // Relancer la détection du téléphone branché (#251) : démarrage et réveil, désactivé par défaut.
+      top += '<div class="a-sec" data-hl="s-projkick"><div class="a-h">' + esc(S('settings_projection_title')) + '</div>' + row('s-projkick', S('settings_projection_kick'), S('settings_projection_kick_desc'), sw(s.projKick, 'projKick')) + '</div>';
+      // Applis en plein écran (#248) : juste sous la carte Android Auto · CarPlay.
+      top += this.setImmersive();
       return top + h;
+    }
+    /**
+     * Applis en plein écran (#248, ImmersiveApps) : interrupteur, rappel du glissement quand il est
+     * actif (bord du côté du volant), résumé « Nom (Mode) » et bouton « Choisir (n) ».
+     */
+    setImmersive() {
+      const s = state.settings, apps = s.immersiveApps;
+      const MODE_KEY = { FULL: 'immersive_mode_full', STATUS: 'immersive_mode_status', NAVIGATION: 'immersive_mode_nav' };
+      const noms = Object.keys(apps).map((a) => a + ' (' + S(MODE_KEY[apps[a]]) + ')').join(', ') || S('immersive_apps_none');
+      return '<div class="a-sec" data-hl="s-immersive"><div class="a-h">' + esc(S('immersive_title')) + '</div>' +
+        '<div class="a-row"><span class="lbl">' + esc(S('immersive_switch')) + '<small>' + esc(S('immersive_switch_desc')) + '</small></span>' + sw(s.immersive, 'immersive') + '</div>' +
+        (s.immersive ? '<div class="a-desc">' + esc(S(car().rhd ? 'immersive_reminder_right' : 'immersive_reminder_left')) + '</div>' : '') +
+        '<div class="a-row" style="margin-top:8px"><span class="lbl">' + esc(S('immersive_apps')) + '<small>' + esc(noms) + '</small></span>' +
+        '<button class="b" style="flex:0 0 auto;padding:0 18px" data-a="immChoose">' + esc(S('immersive_choose', Object.keys(apps).length)) + '</button></div></div>';
     }
     setInfo() {
       const k = caps(), u = this.ui;
@@ -4709,6 +4730,24 @@
             row(MW.phone, 'preclim_unlock_app', 'preclim_unlock_app_desc') + '</div>' +
             '<div class="mw-acts tall">' + B(S('preclim_unlock_never'), 'pcUnlockNever') + B(S('preclim_unlock_ok'), 'pcUnlockOk', 'w') + '</div>', 'c', 'pc-unlock');
         }
+        case 'immWarn': {
+          // Avertissement (conflits possibles) puis l'astuce du glissement, « Astuce » en gras.
+          const tip = S(car().rhd ? 'immersive_tip_right' : 'immersive_tip_left');
+          return confirm({ tone: 'warn', title: S('immersive_title'), yes: S('immersive_confirm_ok'), no: S('profile_cancel'), yesAct: 'immOk',
+            html: esc(S('immersive_confirm_msg')) + '\n\n<b>' + esc(S('immersive_tip_label')) + '</b> — ' + esc(tip) });
+        }
+        case 'immApps': {
+          // ImmersiveAppsDialog : une ligne par appli lançable (sans AA, CarPlay ni lanceur), segments
+          // Normal / Bandeau / Barre / Tout ; Annuler ou Enregistrer.
+          const modes = [['NORMAL', 'immersive_mode_normal'], ['STATUS', 'immersive_mode_status'], ['NAVIGATION', 'immersive_mode_nav'], ['FULL', 'immersive_mode_full']];
+          const liste = APPS.filter((nm) => nm !== 'MG Launcher');
+          const ligne = (nm) => '<div class="mw-imrow">' + appIcon(nm) + '<b>' + esc(nm) + '</b><div class="ov-seg mw-seg sm">' +
+            modes.map(([m, key]) => '<button' + ((d.draft[nm] || 'NORMAL') === m ? ' class="on"' : '') + ' data-a="immMode" data-v="' + esc(nm + '|' + m) + '">' + esc(S(key)) + '</button>').join('') + '</div></div>';
+          return win(1100, head(MW.list, S('immersive_title'), S('immersive_dialog_count', Object.keys(d.draft).length)) +
+            '<div class="mw-hint">' + esc(S('immersive_hint')) + '</div>' +
+            '<div class="mw-imlist" data-sk="imm">' + liste.map(ligne).join('') + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(S('profile_save'), 'immSave', 'p') + '</div>', '', 'imm-apps');
+        }
         case 'powerOff':
           return confirm({ tone: 'danger', ico: MW.power, title: S('vehicle_power_dialog_title'), msg: S('vehicle_power_dialog_msg'), yes: S('vehicle_power_dialog_confirm'), no: S('vehicle_power_dialog_cancel'), yesAct: 'powerOk' });
         case 'pickApp': case 'pickProfile': {
@@ -5454,6 +5493,17 @@
           if (s.fullscreen) this.toast(L('Simulation : sur la voiture, la barre d\'état et la barre de navigation disparaissent.', 'Simulation: in the car, the status and navigation bars disappear.'), 3200);
           return;
         case 'hvacZone': s.hvacZone = !s.hvacZone; return r();
+        case 'projKick': s.projKick = !s.projKick; return r();
+        // Applis en plein écran : avertissement à CHAQUE activation ; Annuler laisse l'option coupée.
+        case 'immersive': if (s.immersive) { s.immersive = false; return r(); } u.dialog = { type: 'immWarn' }; return this.render();
+        case 'immOk': s.immersive = true; u.dialog = null; return r();
+        case 'immChoose': u.dialog = { type: 'immApps', draft: { ...s.immersiveApps } }; return this.render();
+        case 'immMode': {
+          const d = u.dialog, i = v.lastIndexOf('|'), app = v.slice(0, i), m = v.slice(i + 1);
+          if (m === 'NORMAL') delete d.draft[app]; else d.draft[app] = m;
+          return this.render();
+        }
+        case 'immSave': s.immersiveApps = u.dialog.draft; u.dialog = null; return r();
         case 'androidSet': return this.toast(L('Simulation : sur la voiture, l\'écran des paramètres Android s\'ouvre (le launcher de la voiture n\'y donne pas accès).',
           'Simulation: in the car, the Android settings screen opens (the car\'s launcher offers no way there).'), 3600);
         case 'rescue': s.rescue = !s.rescue; return r();
@@ -5845,6 +5895,8 @@
           u.flEditing = b.id; commit(); this.highlight('fl-edit'); return true;
         }
         case 'keepAc': u.screen = 'settings'; u.tabs.set = 2; commit(); this.highlight('s-keepac'); return true;
+        case 'projKick': u.screen = 'settings'; u.tabs.set = 2; commit(); this.highlight('s-projkick'); return true;
+        case 'immersive': u.screen = 'settings'; u.tabs.set = 2; commit(); this.highlight('s-immersive'); return true;
         case 'bri0': car().brightness = briMin(); commit(); this.openPicker(); return true;
         case 'statsProfile': {
           stats(1); const p = state.profiles[1] || state.profiles[0]; u.stProf = p ? p.id : null; commit(); this.highlight('st-profile'); return true;

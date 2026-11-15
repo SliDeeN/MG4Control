@@ -36,7 +36,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/site.css?v=cbeb2f14">
-  <link rel="stylesheet" href="assets/css/sim.css?v=d5b9604b">
+  <link rel="stylesheet" href="assets/css/sim.css?v=ce2bd6de">
   <link rel="stylesheet" href="assets/css/explorer.css?v=34b00b13">
   <script>
     /* Thème et maquette épinglée appliqués avant l'affichage pour éviter un flash. Langue : chaque
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span>
-        <b><span data-l="fr">28 nouveautés dans cette version</span></b>
+        <b><span data-l="fr">30 nouveautés dans cette version</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span></button>
       </div>
       <div class="wn-list">
@@ -162,6 +162,8 @@
         <a href="#f-abrp" data-feature="f-abrp"><span data-l="fr">🗺️ Données en direct vers ABRP</span></a>
         <a href="#f-onepedal" data-feature="f-onepedal"><span data-l="fr">🦶 1 Pédale : retour au niveau d'avant</span></a>
         <a href="#f-keepac" data-feature="f-keepac"><span data-l="fr">❄️ Garder l'A/C coupé</span></a>
+        <a href="#f-projkick" data-feature="f-projkick"><span data-l="fr">🔌 Téléphone branché avant le démarrage</span></a>
+        <a href="#f-immersive" data-feature="f-immersive"><span data-l="fr">🖥️ Applis en plein écran</span></a>
         <a href="#f-bri0" data-feature="f-bri0"><span data-l="fr">🔅 Luminosité jusqu'à 0 %</span></a>
         <a href="#f-preclim-watts" data-feature="f-preclim-watts"><span data-l="fr">⚡ Garde-voiture : puissance en watts</span></a>
         <a href="#f-profilecopy" data-feature="f-profilecopy"><span data-l="fr">📑 Dupliquer et renommer un profil</span></a>
@@ -686,7 +688,14 @@
       <h3><span data-l="fr">Android Auto / CarPlay</span></h3>
       <p data-l="fr">Un bouton ouvre Android Auto ou CarPlay selon le téléphone connecté ; un second appui ramène à l'écran précédent.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">MG4Control demande au service de projection de la voiture quel téléphone est branché, puis ouvre la bonne application. Sans téléphone, un message le signale.</p>
+        <p data-l="fr">MG4Control demande au service de projection de la voiture quel téléphone est branché, puis ouvre la bonne application. Sans téléphone, un message le signale. Si un téléphone est branché par câble sans qu'aucune projection ne démarre, le raccourci relance sa détection, puis ouvre Android Auto ou CarPlay dès qu'il est reconnu.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-projkick" data-hl-key="s-projkick" data-demo="projKick">
+      <h3><span data-l="fr">Téléphone branché avant le démarrage</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
+      <p data-l="fr">Un iPhone ou un téléphone Android branché avant le démarrage de l'écran n'était vu ni par CarPlay ni par Android Auto. Une option le signale de nouveau à la voiture (#251).</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Dans Réglages › Avancé, carte « Android Auto · CarPlay », désactivée par défaut. Au démarrage de l'écran et à son réveil, si aucune projection n'est ouverte, MG4Control annonce de nouveau le téléphone branché par câble, comme s'il venait d'être branché ; sans résultat, il réinitialise la prise et recommence une fois. Un téléphone Android est laissé à AA Kick quand cette appli est installée. Rien ne se passe en Mode Garage.</p>
       </details>
     </div>
     <div class="pt" id="f-floating" data-hl-key="sc-floating" data-demo="floating">
@@ -1364,6 +1373,13 @@
         <p data-l="fr">Dans Réglages › Interface, désactivée par défaut. Glissez depuis le bord pour faire réapparaître les barres un instant.</p>
       </details>
     </div>
+    <div class="pt is-new" id="f-immersive" data-hl-key="s-immersive" data-demo="immersive">
+      <h3><span data-l="fr">Applis en plein écran</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
+      <p data-l="fr">Choisissez des applis, comme Waze ou ABRP, pour lesquelles le bandeau du haut, la barre latérale de la voiture, ou les deux, disparaissent (#248).</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Dans Réglages › Avancé, sous la carte « Android Auto · CarPlay », désactivée par défaut. Pour chaque appli : Normal, Bandeau, Barre ou Tout. À chaque activation, un avertissement rappelle que la fonction modifie un réglage d'Android partagé par toutes les applis : elle peut entrer en conflit avec un lanceur personnalisé ou une autre appli qui gère aussi le plein écran. Glissez depuis le bord de l'écran (gauche, ou droit si le volant est à droite) pour faire revenir la barre quelques secondes. Android Auto et CarPlay ne sont jamais concernés. MG4Dash et MG4Control partagent ce réglage selon une règle commune : il faut MG4Dash 1.7.3 beta 24 ou plus récent, sinon l'option reste en pause.</p>
+      </details>
+    </div>
     <div class="pt" id="f-hvaczone" data-hl-key="proj-zone" data-demo="hvacZone">
       <h3><span data-l="fr">Clim pendant Android Auto / CarPlay</span></h3>
       <p data-l="fr">Pendant la projection, toucher la zone clim de la barre noire du haut ouvre le pop-up HVAC de MG4Control.</p>
@@ -1700,8 +1716,8 @@
 <div class="dock" aria-label="Véhicule virtuel"></div>
 <button type="button" class="to-top" aria-label="Revenir en haut de la page" title="Revenir en haut de la page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="assets/js/strings.js?v=ba146649"></script>
-<script src="assets/js/sim.js?v=358993bc"></script>
+<script src="assets/js/strings.js?v=004d90c2"></script>
+<script src="assets/js/sim.js?v=0a90ee8f"></script>
 <script src="assets/js/site.js?v=5b3c68e9"></script>
 <script src="assets/js/explorer.js?v=72fb983a"></script>
 </body>
