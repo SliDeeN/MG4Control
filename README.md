@@ -315,7 +315,17 @@ the one playing.
 #### Android Auto / CarPlay and Android settings
 - **Android Auto / CarPlay**: one press opens Android Auto or CarPlay depending on the connected
   phone — MG4Control asks the car's projection service —, a second press goes back to the previous
-  screen. Without a phone, a message says so.
+  screen. Without a phone, a message says so. If a phone is plugged in by cable but no projection
+  starts, the shortcut restarts its detection ("Phone plugged in: trying to detect it again…") and opens Android Auto
+  or CarPlay as soon as it is recognised.
+- **Phone plugged in before start-up** (#251): an iPhone or Android phone plugged in before the
+  head unit starts was seen by neither CarPlay nor Android Auto. Option in *Settings → Advanced*,
+  "Android Auto · CarPlay" card (off by default, hidden without the car's AllGo projection
+  service): 15 s after start-up, and 10 s after the screen wakes from a real sleep, if no
+  projection is open, MG4Control announces the cable-connected phone to the car again, as if it had
+  just been plugged in; with no session 15 s later, it resets the USB port and tries once more. An
+  Android phone is left to AA Kick when that app is installed. Nothing happens in Garage mode.
+  Diagnostic lines: `MG4_PROJ`.
 - **Android settings**: opens the Android settings screen, which the car's launcher does not offer —
   the Android or the Android Automotive one depending on the firmware; if neither opens, a message
   says so. Also a button in *Settings → Info*. Idea taken from **sensoyg**'s fork.
@@ -334,7 +344,9 @@ car must be in P, checked before anything else.
   the battery. A warning reminds you to check regularly that the mode is still running.
 - **Surveillance mode**: a dashcam app is needed
   ([MG4-360-Camera-App](https://github.com/jamakr4/MG4-360-Camera-App) or
-  [MG4_Dashcam](https://github.com/Tommasov/MG4_Dashcam)) — without one, *Start* is greyed out. The
+  [MG4_Dashcam](https://github.com/Tommasov/MG4_Dashcam)) — without one, *Start* is greyed out,
+  unless *Surveillance without a camera* is turned on (off by default, after a warning that no
+  video will be recorded: warning screen and A/C off only). The
   car stays on and locked, **climate off** (about 0.2 kW), for up to 2 h; the screen shows a fixed
   red "CAMERA SURVEILLANCE" warning, with a **REC** badge in the top-right corner and the recorded
   time (grey and frozen while the car's own camera takes over).
@@ -368,7 +380,8 @@ settings and the car switches off. Everything stops if the car is unlocked (it t
 it moves, or below an adjustable battery level. A full-frame follow-up screen shows the time left,
 the current cycle and the lock state, with blue or orange particles depending on whether the
 climate is cooling or heating; while waiting, the screen stays normal, dims (the default) or turns
-off. The floating buttons disappear from the countdown until the end of the program. On SWI133, SWI68 and SWI165, a card on the driver display also shows the countdown, the time
+off — *Also apply to surveillance* (No by default) lets the surveillance screen follow that choice,
+and *Off* turns it fully black. The floating buttons disappear from the countdown until the end of the program. On SWI133, SWI68 and SWI165, a card on the driver display also shows the countdown, the time
 left and the setpoint, or the surveillance in progress. The settings (lock delay 10–60 s, battery
 threshold 10–40 %, screen, cluster card, reminder before leaving) are on the *Car keeper* page of the Shortcuts tab.
 
@@ -387,8 +400,8 @@ actions, with a title (the shortcut's name by default), a size, a text size and 
 and a colour: blue by default, general or for that bubble only, from nine swatches or the hue
 picker. A bubble is edited inside its own card on the page.
 A toggle shows filled when it is on; a value (temperature, fan, regeneration…) shows briefly after
-the press, and a halo confirms the tap. A bubble can also sit in the **black bar at the top** of the
-screen. **Each profile has its own bubbles**, which can be copied to other profiles, and
+the press, and a halo confirms the tap. A bubble can also sit anywhere in the **black bar at the
+top** of the screen (#222). **Each profile has its own bubbles**, which can be copied to other profiles, and
 the page's switch belongs to the chosen profile. They hide in
 reverse, in Garage mode and while Car keeper is running.
 
@@ -397,8 +410,9 @@ reverse, in Garage mode and while Car keeper is running.
   volume, time… —, as *Value*, *Label + value* or *Icon + value*. On tap: run the action, or nothing
   (display only; a long press still moves the bubble). A yes / no value colours it like a toggle;
   the time and the speed are read every second, the rest every 5 s, "—" when the value is unreadable
-- **Each bubble's look** (#230): background opacity (0 to 100 %), dark, tinted or light background,
-  border or none, and **dimming when idle** (40 % after 5 s without a touch; a touch runs the action
+- **Each bubble's look** (#230, #222): background opacity (0 to 100 %), dark, tinted, light or
+  black background, **width** *Automatic* or *Fixed* (60 to 240 dp, so the bubble no longer
+  changes width with its value), border or none, and **dimming when idle** (40 % after 5 s without a touch; a touch runs the action
   and makes it sharp again). *Copy the look of…* takes another bubble's, from this profile or
   another one, and *Apply to all bubbles* spreads it over the profile. An active toggle stays at
   least 60 % opaque; under 35 %, the text gets an outline
@@ -540,7 +554,11 @@ places (renamed, resized, moved to the current position or deleted); JSON export
 (Downloads, USB drive or another folder — an imported rule arrives switched off). A rule can also
 be run from a key or a bubble (*Run an automation*); under its *Button, bubble or automation* trigger,
 the editor says what starts it. Two pills on the card count its **runs** and its **refusals** (in
-orange), *Test* left out; the last run reads "2 actions succeeded, 0 failed". Every ⋮ menu offers **Copy** and **Cut**;
+orange), *Test* left out; the last run reads "2 actions succeeded, 0 failed", and the history
+gives each action's real result (done, sent or failed, with the reason). The **import keeps the
+links** between automations, places, profiles, sounds, shortcuts and ABRP accounts: a window lists
+what was linked automatically or by name, and lets you choose a replacement for what is missing
+(or *Later*). Every ⋮ menu offers **Copy** and **Cut**;
 *Paste* only shows where the item fits (section type, nesting depth) and refuses an automation that
 would start itself. A rule's card sums up what an If / Else block does ("if X → A; else → B"); the
 *All / At least one / None* selector reads "Conditions met:" and only shows from two conditions.
@@ -582,6 +600,8 @@ sub-tabs:
   its **consumption graph**; a **Profile** row filters the trips
 - **Charging**: energy charged, cost and AC / DC sessions, including charges made while the head
   unit was asleep
+
+Trips and charges are listed 50 at a time, with *Show 50 more* and *Show all*.
 
 **Per profile** (#206): each trip is split by the active profile. Changing profile on the way makes
 it a **"Mixed"** trip, whose detail gives the split; a stretch shorter than 0.5 km merges into its
@@ -773,7 +793,9 @@ Screen organised into **four tabs**:
   for the statistics, the driver display and the information bubbles; the CSV export stays in km),
   **module on the driver display** (see above)
 - **Advanced**: **Garage mode** (see below), return to the default profile each time the car
-  enters READY (option, off by default), **what AUTO controls**, **keep the A/C off**, **emergency shortcut** (hold the
+  enters READY (option, off by default), **what AUTO controls**, **keep the A/C off**, **phone
+  re-detection for Android Auto / CarPlay** (see the shortcuts), **full-screen apps** (see below),
+  **emergency shortcut** (hold the
   right joystick's centre click for 5 s: MG4Control opens, even in Garage mode; on by default,
   through the accessibility service), update check at launch, **update alert on the vehicle
   screen**, **beta channel**, power the car off while keeping the screen on, block driving settings
@@ -782,6 +804,26 @@ Screen organised into **four tabs**:
   days), "About" dialog (app version, firmware, QR codes), **Android settings** button, firmware
   indicator, and a Diagnostic button revealed by 5 taps on the logo — its "Save…" offers
   Downloads/MG4Control, a USB drive or a folder of your choice
+
+#### Full-screen apps (#248)
+*Settings → Advanced*, under the "Android Auto · CarPlay" card, off by default. Choose apps (Waze,
+ABRP…) for which the car's **top bar**, **side bar** or both are hidden: for each app, *Normal*,
+*Banner*, *Bar* or *All* (the window has a search field, by name or package). Android Auto,
+CarPlay, launchers and MG4Control are never offered. Each time the switch is turned on, a warning
+says the feature changes an Android setting shared by every app and may conflict with a custom
+launcher or another app that also manages full screen; it gives the tip, repeated under the switch:
+**swipe from the edge of the screen** (left, or right with right-hand drive; from the top for the
+top bar) to bring the bar back for a few seconds.
+
+Under the hood: Android 9's `Settings.Global "policy_control"` (`immersive.full`, `.status`,
+`.navigation`), shared with [MG4Dash](https://github.com/Skittle6938/MG4Dash) under a **common
+rule** written with its developer — the same Kotlin function in both apps (`ImmersivePolicy`).
+Each owner keeps what it asked for in its own Global key (`mg4control_immersive`,
+`mg4dash_immersive`…), the shared `immersive_managed` key remembers what they wrote, and an owner
+only ever removes what nobody claims any more; foreign sections and values are kept. MG4Dash
+**1.7.3 beta 24** (versionCode 292) or later is required: with an older version, the option is
+paused and MG4Control only removes its own entries. A pass runs at start-up, on every change, and
+when MG4Dash is installed, updated or removed. Diagnostic lines: `MG4_IMMERSIF`.
 
 ### Pop-ups and windows
 Since 2.6.8, everything shown in a window shares the same look: rounded cards, large buttons, and
@@ -901,6 +943,8 @@ fails, a message says so and the old path is still available.
 ### Profiles
 - Profiles in a **three-column grid**, with apply, set as default, edit and delete; the applied
   profile is marked "Active" straight away
+- **⋮ menu on each card**: *Duplicate* ("<name> Copy", placed right after the original, settings
+  copied without the paired phone), *Rename* and *Delete*
 - **Profile order**: a long press on a card lifts it; drag it into place, in all four directions
   (the grid scrolls by itself near its edges, a banner shows the position) and the order is saved on release.
   This order is the picker's, the "Profile cycle" page buttons' and the default cycle's; in a
@@ -1070,6 +1114,9 @@ MG4Control/
 │   │   │   ├── SoundAutomationRules.kt # Sounds: moments, audio source to restore
 │   │   │   ├── PowerScale.kt          # Driver display: learned power scale
 │   │   │   ├── Projection.kt          # Android Auto / CarPlay: which phone, which app
+│   │   │   ├── UsbPhone.kt            # Phone on USB: Apple / Android / AOAP, timing rules (#251)
+│   │   │   ├── ImmersivePolicy.kt     # Full-screen apps: common rule with MG4Dash for policy_control (#248)
+│   │   │   ├── ImmersiveCleanup.kt    # Full-screen apps: removes only our entries in front of an old MG4Dash
 │   │   │   ├── ChargeEnergyLearning.kt # Charge energy: table learnt per 1% band, source kept
 │   │   │   ├── TripSegments.kt        # Trip split by profile, "Mixed", a profile's share
 │   │   │   ├── TripCurve.kt           # Trip graph: recorded points, bars chosen when drawing
@@ -1096,6 +1143,7 @@ MG4Control/
 │   │   │   ├── BatteryTypeConfig.kt   # Battery type (A9): charge limit adjustable or not
 │   │   │   ├── ChargeProbe.kt         # Charging diagnostic probe (MG4_CHARGE log)
 │   │   │   ├── DriverSide.kt          # Steering wheel side read from the car (menu side)
+│   │   │   ├── UsbPhoneKick.kt        # Phone re-detection: USB announcement and port reset (#251)
 │   │   │   └── VehicleWriteGate.kt    # Speed lock, enforced inside the write primitives
 │   │   │
 │   │   ├── stats/
@@ -1157,6 +1205,7 @@ MG4Control/
 │   │   │   ├── StatsFragment.kt       # Statistics (3 sub-tabs)
 │   │   │   ├── ProfileAdapter.kt      # Profile RecyclerView adapter
 │   │   │   ├── AppDialog.kt           # App windows: confirmation, choice grid, lists, − / + buttons
+│   │   │   ├── ImmersiveAppsDialog.kt # Full-screen apps: Normal / Banner / Bar / All per app
 │   │   │   ├── RestoreProfilesDialog.kt # "Restore profiles?" — lists the profiles found
 │   │   │   ├── StatsDialogs.kt        # Complete a charge, fix a tariff (no keyboard)
 │   │   │   ├── ClusterSettingsPreview.kt # Driver display preview in the settings (simulated trip)
@@ -1193,6 +1242,8 @@ MG4Control/
 │   │   │   ├── QuickSettingsOverlay.kt # Quick settings pop-up (+ QuickTiles, reading and writing the tiles)
 │   │   │   ├── VehicleCommands.kt     # Writes shared by the external API and the automations
 │   │   │   ├── ProjectionShortcut.kt  # Android Auto / CarPlay shortcut (+ ProjectionHvacZone, climate area)
+│   │   │   ├── ProjectionKick.kt      # Phone re-detection at start-up, wake-up and from the shortcut (#251)
+│   │   │   ├── ImmersiveApps.kt       # Full-screen apps: choice, passes, watching MG4Dash (#248)
 │   │   │   └── ClusterModuleOverlay.kt # Module window on the cluster display, readings and tab
 │   │   │
 │   │   ├── receiver/
@@ -1968,7 +2019,18 @@ car le cycle repart de la dernière source choisie, pas de celle qui joue.
 #### Android Auto / CarPlay et Paramètres Android
 - **Android Auto / CarPlay** : un appui ouvre Android Auto ou CarPlay selon le téléphone branché —
   MG4Control le demande au service de projection de la voiture —, un second ramène à l'écran
-  précédent. Sans téléphone, un message le dit.
+  précédent. Sans téléphone, un message le dit. Si un téléphone est branché par câble sans
+  qu'aucune projection ne démarre, le raccourci relance sa détection (« Téléphone branché : nouvelle
+  tentative de détection… ») puis ouvre Android Auto ou CarPlay dès qu'il est reconnu.
+- **Téléphone branché avant le démarrage** (#251) : un iPhone ou un téléphone Android branché avant
+  le démarrage de l'écran n'était vu ni par CarPlay ni par Android Auto. Option dans *Réglages →
+  Avancé*, carte « Android Auto · CarPlay » (désactivée par défaut, masquée sans le service de
+  projection AllGo de la voiture) : 15 s après le démarrage, et 10 s après le réveil de l'écran
+  après une vraie mise en veille, si aucune projection n'est ouverte, MG4Control signale de nouveau
+  le téléphone branché à la voiture, comme s'il venait d'être branché ; sans session 15 s plus tard,
+  il réinitialise la prise USB et recommence une fois. Un téléphone Android est laissé à AA Kick
+  quand cette application est installée. Rien ne se passe en Mode Garage. Lignes du Diagnostic :
+  `MG4_PROJ`.
 - **Paramètres Android** : ouvre l'écran des paramètres d'Android, que le launcher de la voiture ne
   propose pas — celui d'Android ou d'Android Automotive selon le firmware ; si aucun ne s'ouvre, un
   message le dit. Aussi en bouton dans *Réglages → Infos*. Idée reprise du fork de **sensoyg**.
@@ -1987,7 +2049,9 @@ garde ses fonctions habituelles) ; la voiture doit être en P, vérifié avant t
   batterie. Un avertissement rappelle de vérifier régulièrement que le mode tourne toujours.
 - **Mode Surveillance** : il faut une application dashcam
   ([MG4-360-Camera-App](https://github.com/jamakr4/MG4-360-Camera-App) ou
-  [MG4_Dashcam](https://github.com/Tommasov/MG4_Dashcam)) — sans elle, *Démarrer* est grisé. La
+  [MG4_Dashcam](https://github.com/Tommasov/MG4_Dashcam)) — sans elle, *Démarrer* est grisé, sauf
+  si *Surveillance sans caméra* est activée (désactivée par défaut, après un avertissement : aucune
+  vidéo n'est enregistrée, seulement l'écran d'avertissement et la clim coupée). La
   voiture reste allumée et verrouillée, **clim coupée** (environ 0,2 kW), jusqu'à 2 h ; l'écran
   affiche un avertissement rouge fixe « SURVEILLANCE CAMÉRA », avec une pastille **REC** en haut à
   droite et la durée filmée (grise et figée quand la caméra d'origine de la voiture prend la main).
@@ -2021,7 +2085,8 @@ la voiture s'éteint. Tout s'arrête si la voiture est déverrouillée (elle res
 elle roule, ou sous un niveau de batterie réglable. Un écran de suivi plein cadre montre le temps
 restant, le cycle en cours et l'état du verrouillage, avec des particules bleues ou orange selon
 que la clim refroidit ou chauffe ; pendant l'attente, l'écran reste normal, s'atténue (par défaut)
-ou s'éteint. Les boutons flottants disparaissent du décompte jusqu'à la fin du programme. Sur SWI133, SWI68 et SWI165, une fiche sur l'écran conducteur montre aussi le décompte,
+ou s'éteint — *Appliquer aussi à la surveillance* (Non par défaut) fait suivre ce choix à l'écran de
+surveillance, et *Éteint* le rend entièrement noir. Les boutons flottants disparaissent du décompte jusqu'à la fin du programme. Sur SWI133, SWI68 et SWI165, une fiche sur l'écran conducteur montre aussi le décompte,
 le temps restant et la consigne, ou la surveillance en cours. Les réglages (délai de verrouillage
 10–60 s, seuil de batterie 10–40 %, écran, fiche du combiné, rappel avant le départ) sont sur la page *Garde-voiture* de
 l'onglet Raccourcis.
@@ -2043,8 +2108,8 @@ taille, une taille de texte et du gras au choix, et une couleur : bleue par déf
 propre à la bulle, parmi neuf pastilles ou au sélecteur de teinte. Une bulle se modifie dans sa
 propre carte de la page. Une bascule s'affiche pleine quand elle est
 activée ; une valeur (température, ventilation, régénération…) s'affiche un instant après l'appui,
-et un halo confirme le toucher. Une bulle peut aussi se loger dans la **barre noire du haut** de
-l'écran. **Chaque profil a ses propres bulles**, copiables vers d'autres profils, et
+et un halo confirme le toucher. Une bulle peut aussi se loger n'importe où dans la **barre noire du
+haut** de l'écran (#222). **Chaque profil a ses propres bulles**, copiables vers d'autres profils, et
 l'interrupteur de la page vaut pour le profil choisi. Elles se cachent
 en marche arrière, en Mode Garage et pendant le Garde-voiture.
 
@@ -2054,8 +2119,9 @@ en marche arrière, en Mode Garage et pendant le Garde-voiture.
   valeur*. Au toucher : lancer l'action, ou rien (affichage seul ; l'appui long déplace toujours la
   bulle). Une valeur oui / non la colore comme une bascule ; l'heure et la vitesse sont relues chaque
   seconde, le reste toutes les 5 s, « — » quand la valeur est illisible
-- **Apparence de chaque bulle** (#230) : opacité du fond (0 à 100 %), fond sombre, teinté ou clair,
-  bordure ou non, et **atténuation au repos** (40 % après 5 s sans toucher ; un toucher lance
+- **Apparence de chaque bulle** (#230, #222) : opacité du fond (0 à 100 %), fond sombre, teinté,
+  clair ou noir, **largeur** *Automatique* ou *Fixe* (60 à 240 dp, la bulle ne change plus de
+  largeur avec sa valeur), bordure ou non, et **atténuation au repos** (40 % après 5 s sans toucher ; un toucher lance
   l'action et la rend nette). *Copier l'apparence de…* reprend celle d'une autre bulle, de ce profil
   ou d'un autre, et *Appliquer à toutes les bulles* l'étend au profil. Une bascule active reste
   opaque à 60 % au moins ; sous 35 %, le texte prend un contour
@@ -2203,7 +2269,11 @@ la position actuelle ou supprimés) ; export et import en JSON (Téléchargement
 dossier — une règle importée arrive coupée). Une règle se lance aussi depuis une touche ou une bulle
 (*Lancer une automatisation*) ; sous son déclencheur *Bouton, bulle ou automatisation*, l'éditeur dit
 ce qui la lance. Deux pastilles sur la carte comptent ses **lancements** et ses **refus** (en
-orange), hors *Tester* ; la dernière exécution se lit « 2 actions réussies, 0 en échec ». Chaque menu ⋮ propose **Copier** et **Couper** ; *Coller* n'apparaît
+orange), hors *Tester* ; la dernière exécution se lit « 2 actions réussies, 0 en échec », et
+l'historique donne le vrai résultat de chaque action (faite, envoyée ou en échec, avec la raison).
+L'**import garde les liens** entre automatisations, lieux, profils, sons, raccourcis et comptes
+ABRP : une fenêtre liste ce qui a été relié automatiquement ou par son nom, et fait choisir un
+remplaçant pour ce qui manque (ou *Plus tard*). Chaque menu ⋮ propose **Copier** et **Couper** ; *Coller* n'apparaît
 que là où l'élément a sa place (type de section, profondeur) et refuse une automatisation qui se
 lancerait elle-même. La carte d'une règle résume ce que fait un bloc Si / Sinon (« si X → A ;
 sinon → B ») ; le sélecteur *Toutes / Au moins une / Aucune* s'intitule « Conditions remplies : » et
@@ -2250,6 +2320,8 @@ ailleurs, sauf export demandé. Trois sous-onglets :
   et, déplié, son **graphique de consommation** ; une rangée **Profil** filtre les trajets
 - **Recharge** : énergie rechargée, coût et sessions AC / DC, y compris les charges faites pendant
   que le boîtier dormait
+
+Trajets et recharges s'affichent par 50, avec *Afficher 50 de plus* et *Tout afficher*.
 
 **Par profil** (#206) : chaque trajet est découpé selon le profil actif. Un changement de profil
 en route en fait un trajet **« Mixte »**, dont le détail donne la répartition ; une portion de
@@ -2451,7 +2523,9 @@ Statistiques.
   conducteur et les bulles d'information ; l'export CSV reste en km), **module sur l'écran
   conducteur** (cf. ci-dessus)
 - **Réglages avancés** : **Mode Garage** (cf. ci-dessous), retour au profil par défaut à chaque
-  passage en READY (option, décochée), **ce que règle AUTO**, **garder l'A/C coupé**, **raccourci de secours** (clic central
+  passage en READY (option, décochée), **ce que règle AUTO**, **garder l'A/C coupé**, **nouvelle
+  détection du téléphone pour Android Auto / CarPlay** (cf. raccourcis), **applications en plein
+  écran** (cf. ci-dessous), **raccourci de secours** (clic central
   du joystick droit tenu 5 s : MG4Control s'ouvre, même en Mode Garage ; activé par défaut, par le
   service d'accessibilité), vérification des mises à jour au lancement, **alerte de mise à jour sur
   l'écran du véhicule**, **canal bêta**, extinction du véhicule écran allumé, blocage des réglages
@@ -2461,6 +2535,28 @@ Statistiques.
   l'app, firmware, QR codes), bouton **Paramètres Android**, indicateur de firmware, et bouton
   Diagnostic révélé par 5 clics sur le logo — son « Enregistrer… » propose Téléchargements/MG4Control,
   une clé USB ou un dossier au choix
+
+#### Applications en plein écran (#248)
+*Réglages → Avancé*, sous la carte « Android Auto · CarPlay », désactivée par défaut. Choisissez
+des applications (Waze, ABRP…) pour lesquelles le **bandeau du haut**, la **barre latérale** de la
+voiture ou les deux sont cachés : pour chaque application, *Normal*, *Bandeau*, *Barre* ou *Tout*
+(la fenêtre a une recherche, par nom ou par paquet). Android Auto, CarPlay, les lanceurs et
+MG4Control ne sont jamais proposés. À chaque activation, un avertissement rappelle que la fonction
+modifie un réglage d'Android partagé par toutes les applications et peut entrer en conflit avec un
+lanceur personnalisé ou une autre application qui gère aussi le plein écran ; il donne l'astuce,
+reprise sous l'interrupteur : **glisser depuis le bord de l'écran** (gauche, ou droit si le volant
+est à droite ; depuis le haut pour le bandeau) fait revenir la barre quelques secondes.
+
+Sous le capot : le réglage `Settings.Global "policy_control"` d'Android 9 (`immersive.full`,
+`.status`, `.navigation`), partagé avec [MG4Dash](https://github.com/Skittle6938/MG4Dash) selon une
+**règle commune** écrite avec son développeur — la même fonction Kotlin dans les deux applications
+(`ImmersivePolicy`). Chaque propriétaire garde ce qu'il a demandé dans sa propre clé Global
+(`mg4control_immersive`, `mg4dash_immersive`…), la clé commune `immersive_managed` retient ce qu'ils
+ont écrit, et un propriétaire ne retire que ce que plus personne ne réclame ; les sections et
+valeurs étrangères sont gardées. Il faut MG4Dash **1.7.3 beta 24** (versionCode 292) ou plus
+récent : avec une version plus ancienne, l'option est en pause et MG4Control ne retire que ses
+propres entrées. Un passage a lieu au démarrage, à chaque changement, et quand MG4Dash est
+installé, mis à jour ou désinstallé. Lignes du Diagnostic : `MG4_IMMERSIF`.
 
 ### Pop-ups et fenêtres
 Depuis la 2.6.8, tout ce qui s'affiche en fenêtre partage la même présentation : cartes arrondies,
@@ -2584,6 +2680,8 @@ ancienne est refusée ; en cas d'échec, un message le dit et l'ancienne voie re
 ### Profils
 - Profils en **grille de trois colonnes**, avec application, définition par défaut, modification,
   suppression ; le profil appliqué est marqué « Actif » tout de suite
+- **Menu ⋮ de chaque carte** : *Dupliquer* (« <nom> Copie », placé juste après l'original, réglages
+  copiés sans le téléphone associé), *Renommer* et *Supprimer*
 - **Ordre des profils** : un appui long sur une carte la soulève ; on la fait glisser à sa place,
   dans les quatre directions (la grille défile seule près de ses bords, un bandeau indique la position) et l'ordre est
   enregistré au relâcher. Cet ordre est celui du sélecteur, des boutons de la page « Cycle profils »
@@ -2757,6 +2855,9 @@ MG4Control/
 │   │   │   ├── SoundAutomationRules.kt # Sons : moments, source audio à remettre
 │   │   │   ├── PowerScale.kt          # Écran conducteur : fin d'échelle de puissance apprise
 │   │   │   ├── Projection.kt          # Android Auto / CarPlay : quel téléphone, quelle application
+│   │   │   ├── UsbPhone.kt            # Téléphone en USB : Apple / Android / AOAP, règles de temps (#251)
+│   │   │   ├── ImmersivePolicy.kt     # Applications en plein écran : règle commune avec MG4Dash pour policy_control (#248)
+│   │   │   ├── ImmersiveCleanup.kt    # Applications en plein écran : ne retire que nos entrées devant un ancien MG4Dash
 │   │   │   ├── ChargeEnergyLearning.kt # Énergie des charges : table apprise par tranche de 1 %, source retenue
 │   │   │   ├── TripSegments.kt        # Trajet découpé par profil, « Mixte », part d'un profil
 │   │   │   ├── TripCurve.kt           # Graphique d'un trajet : points relevés, barres choisies à l'affichage
@@ -2783,6 +2884,7 @@ MG4Control/
 │   │   │   ├── BatteryTypeConfig.kt   # Type de batterie (A9) : limite de charge réglable ou non
 │   │   │   ├── ChargeProbe.kt         # Sonde de diagnostic de la charge (journal MG4_CHARGE)
 │   │   │   ├── DriverSide.kt          # Côté du volant lu sur la voiture (côté du menu)
+│   │   │   ├── UsbPhoneKick.kt        # Nouvelle détection du téléphone : annonce USB et remise à zéro de la prise (#251)
 │   │   │   └── VehicleWriteGate.kt    # Verrou de vitesse posé dans les primitives d'écriture
 │   │   │
 │   │   ├── stats/
@@ -2844,6 +2946,7 @@ MG4Control/
 │   │   │   ├── StatsFragment.kt       # Statistiques (3 sous-onglets)
 │   │   │   ├── ProfileAdapter.kt      # Adaptateur RecyclerView profils
 │   │   │   ├── AppDialog.kt           # Fenêtres de l'app : confirmation, grille de choix, listes, boutons − / +
+│   │   │   ├── ImmersiveAppsDialog.kt # Applications en plein écran : Normal / Bandeau / Barre / Tout par application
 │   │   │   ├── RestoreProfilesDialog.kt # « Restaurer les profils ? » — liste des profils retrouvés
 │   │   │   ├── StatsDialogs.kt        # Compléter une recharge, corriger un tarif (sans clavier)
 │   │   │   ├── ClusterSettingsPreview.kt # Aperçu de l'écran conducteur dans les réglages (trajet simulé)
@@ -2880,6 +2983,8 @@ MG4Control/
 │   │   │   ├── QuickSettingsOverlay.kt # Pop-up Réglages rapides (+ QuickTiles, lecture et écriture des tuiles)
 │   │   │   ├── VehicleCommands.kt     # Écritures partagées par l'API externe et les automatisations
 │   │   │   ├── ProjectionShortcut.kt  # Raccourci Android Auto / CarPlay (+ ProjectionHvacZone, zone clim)
+│   │   │   ├── ProjectionKick.kt      # Nouvelle détection du téléphone : démarrage, réveil, raccourci (#251)
+│   │   │   ├── ImmersiveApps.kt       # Applications en plein écran : choix, passages, suivi de MG4Dash (#248)
 │   │   │   └── ClusterModuleOverlay.kt # Fenêtre du module sur l'écran du combiné, relevés et onglet
 │   │   │
 │   │   ├── receiver/
