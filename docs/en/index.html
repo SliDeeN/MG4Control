@@ -138,14 +138,13 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="en">New</span> · 2.7.0</span>
-        <b><span data-l="en">30 new things in this release</span></b>
+        <b><span data-l="en">29 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
         <a href="#f-look270" data-feature="f-look270"><span data-l="en">🎨 New look: menu on the left, pills</span></a>
         <a href="#f-navside" data-feature="f-navside"><span data-l="en">↔️ Menu on the driver's side</span></a>
         <a href="#f-rules" data-feature="f-rules"><span data-l="en">🤖 My automations (experimental)</span></a>
-        <a href="#f-rule-skip" data-feature="f-rule-skip"><span data-l="en">🚫 Ignored triggers shown</span></a>
         <a href="#f-rule-editor" data-feature="f-rule-editor"><span data-l="en">🧭 Editor: one tile per option, then its mode</span></a>
         <a href="#f-rule-import" data-feature="f-rule-import"><span data-l="en">🔗 Import that keeps links</span></a>
         <a href="#f-rule-tpl" data-feature="f-rule-tpl"><span data-l="en">📋 Ready-made templates</span></a>
@@ -956,13 +955,6 @@
       </details>
     </div>
 
-    <div class="pt is-new" id="f-rule-skip" data-hl-key="rules-tools" data-demo="rules">
-      <h3><span data-l="en">Ignored triggers</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
-      <p data-l="en">When an automation is triggered but doesn't run, its card says so in orange, with the reason; two pills count its runs and its refusals.</p>
-      <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Reasons: a false condition (with the value read), an unreadable condition, car not in READY, rule still running, debounce or Garage mode. The history keeps them too, with the trigger that started them, and filters into All / Run / Ignored; identical refusals in a row are grouped (×N). The orange line goes away at the next run. The “N runs” and “N ignored” (orange) pills count from the rule's creation, survive its edits and leave “Test” out; the last run reads “3 actions succeeded, 1 sent, 0 failed”. The journal marks each action ✓ (done, confirmed by the car), ↗ (sent: shortcut, custom shortcut) or ✗ (refused), with the reason: “not applied by the car”, “refused: already running”… A “Ask for confirmation” question replaced by another banner, or whose rule stops, is “interrupted”: the rest doesn't run.</p>
-      </details>
-    </div>
     <div class="pt is-new" id="f-rule-import" data-hl-key="rule-import" data-demo="ruleImport">
       <h3><span data-l="en">Export and import that keep links</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
       <p data-l="en">Automations move from one car to another: links between them are rebuilt, and what's missing is linked again in the import window.</p>
