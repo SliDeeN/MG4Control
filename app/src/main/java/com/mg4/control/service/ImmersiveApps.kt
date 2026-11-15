@@ -153,14 +153,16 @@ object ImmersiveApps {
             val pause = if (dash == Mg4Dash.OUTDATED && isOn(app)) " (en pause : MG4Dash à mettre à jour)" else ""
             // Rien à ajouter, rien à nous à retirer : on ne touche pas à la valeur, même pour la
             // ranger — elle peut être celle d'une autre appli ou d'un ancien MG4Dash (revue du
-            // 2026-11-15). En pause, seuls nos restes éventuels sont retirés.
+            // 2026-11-15). Devant un MG4Dash qui ne suit pas encore la règle (pause, ou option
+            // coupée), nettoyage seul : nos restes partent, sa valeur n'est pas rangée.
+            val nettoyage = dash == Mg4Dash.OUTDATED
             val avant = global(app, ImmersivePolicy.SETTING)
             var geres = global(app, ImmersivePolicy.MANAGED)
-            if (!ImmersivePolicy.hasStake(self, voulus, avant, cles, installes, geres)) {
+            if (!ImmersivePolicy.hasStake(self, voulus, avant, cles, installes, geres, nettoyage)) {
                 AppLogger.i(TAG, "$raison : rien à faire$pause")
                 return
             }
-            val p = ImmersivePolicy.plan(self, voulus, avant, cles, installes, geres)
+            val p = ImmersivePolicy.plan(self, voulus, avant, cles, installes, geres, nettoyage)
 
             // Une écriture refusée arrête le passage : les clés de suivi restent telles quelles (la
             // nôtre garde anciens + voulus, la commune ce qui a pu être écrit), le passage suivant
