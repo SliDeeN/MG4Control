@@ -1092,11 +1092,20 @@
 .mw-seg { height: 56px; }
 .mw-seg > button { font-size: calc(16px * var(--ts, 1)); }
 .mw-seg.sm { height: 48px; margin-top: 12px; }
-/* Applis en plein écran (#248) : une ligne par appli, segments à droite (500 dp dans l'appli). */
-.mw-imlist { height: 330px; margin-top: 12px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--dash-border) transparent; }
-.mw-imrow { display: flex; align-items: center; gap: 14px; padding: 6px 4px; border-bottom: 1px solid var(--dash-border); }
-.mw-imrow b { flex: 1; min-width: 0; font-size: calc(16px * var(--ts, 1)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.mw-imrow .mw-seg.sm { flex: 0 0 500px; margin-top: 0; }
+/* Applications en plein écran (#248). */
+.a-imm-warning { color: var(--dash-warn); }
+.a-imm-selection { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--dash-border); }
+.mw-immersive .mw-badge .ico { width: 28px; height: 28px; }
+.mw-imsearch { flex: none; margin-top: 12px; }
+.mw-imhint { margin-top: 12px; color: var(--text-secondary); font-size: calc(16px * var(--ts, 1)); }
+.mw-imlist { min-height: 0; max-height: 330px; margin-top: 14px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--dash-border) transparent; }
+.mw-imrow { display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 4px 0; }
+.mw-imrow .mw-appico { flex: none; width: 48px; height: 48px; }
+.mw-imname { flex: 1; min-width: 0; font-size: calc(19px * var(--ts, 1)); }
+.mw-imname > span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mw-imname small { display: block; font-size: calc(15px * var(--ts, 1)); }
+.mw-imrow .mw-seg { flex: 0 0 500px; height: 60px; }
+.mw-imempty { padding: 24px 0; text-align: center; color: var(--text-secondary); font-size: calc(18px * var(--ts, 1)); }
 .mw-step { flex: none; width: 52px; height: 52px; padding: 0; border-radius: 12px; background: var(--dash-btn); border: 1px solid var(--dash-border); color: var(--text-primary); display: flex; align-items: center; justify-content: center; touch-action: manipulation; }
 .mw-step.big { width: 64px; height: 64px; }
 .mw-step.big .mw-ico { width: 28px; height: 28px; }

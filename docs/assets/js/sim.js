@@ -59,6 +59,11 @@
     299: ['Joystick gauche', 'Joystick left'], 300: ['Joystick droite', 'Joystick right'], 301: ['Joystick centre', 'Joystick centre']
   };
   const APPS = ['ABRP', 'Bluetooth', 'Chargemap', 'Deezer', 'Files', 'Google Maps', 'MG Launcher', 'Radio', 'Settings', 'Spotify', 'TomTom GO', 'Waze', 'YouTube', 'YouTube Music'];
+  const IMMERSIVE_MODES = { NORMAL: 'immersive_mode_normal', STATUS: 'immersive_mode_status', NAVIGATION: 'immersive_mode_nav', FULL: 'immersive_mode_full' };
+  const IMMERSIVE_PACKAGES = {
+    'Google Maps': 'com.google.android.apps.maps', Spotify: 'com.spotify.music', Waze: 'com.waze',
+    YouTube: 'com.google.android.youtube', 'YouTube Music': 'com.google.android.apps.youtube.music'
+  };
 
   /** Plafond de ProfileManager.MAX_PROFILES : dix depuis la 2.6.9. */
   const MAX_PROFILES = 10;
@@ -159,7 +164,7 @@
         brightness: 70, volume: 14, volMax: 30, prevVolume: null,
         soc: 64, lights: false, batHeat: false, highBeam: true,
         // Portes verrouillées (Garde-voiture), unité de distance de la voiture, projection à l'écran.
-        locked: false, distUnit: 'km', projection: null,
+        locked: false, distUnit: 'km', projection: null, rhd: false, mg4Dash: 'absent',
         doors: { L: false, R: false },
         media: { playing: false, track: 3, source: 'RADIO' },
         // Recharge simulée (véhicule virtuel) et limite de charge réglée sur la voiture.
@@ -2702,12 +2707,12 @@
      */
     setImmersive() {
       const s = state.settings, apps = s.immersiveApps;
-      const MODE_KEY = { FULL: 'immersive_mode_full', STATUS: 'immersive_mode_status', NAVIGATION: 'immersive_mode_nav' };
-      const noms = Object.keys(apps).map((a) => a + ' (' + S(MODE_KEY[apps[a]]) + ')').join(', ') || S('immersive_apps_none');
+      const noms = Object.entries(apps).map(([nom, mode]) => nom + ' (' + S(IMMERSIVE_MODES[mode]) + ')').join(', ') || S('immersive_apps_none');
       return '<div class="a-sec" data-hl="s-immersive"><div class="a-h">' + esc(S('immersive_title')) + '</div>' +
         '<div class="a-row"><span class="lbl">' + esc(S('immersive_switch')) + '<small>' + esc(S('immersive_switch_desc')) + '</small></span>' + sw(s.immersive, 'immersive') + '</div>' +
         (s.immersive ? '<div class="a-desc">' + esc(S(car().rhd ? 'immersive_reminder_right' : 'immersive_reminder_left')) + '</div>' : '') +
-        '<div class="a-row" style="margin-top:8px"><span class="lbl">' + esc(S('immersive_apps')) + '<small>' + esc(noms) + '</small></span>' +
+        (car().mg4Dash === 'outdated' ? '<div class="a-desc a-imm-warning">' + esc(S('immersive_mg4dash_outdated')) + '</div>' : '') +
+        '<div class="a-row a-imm-selection"><span class="lbl">' + esc(S('immersive_apps')) + '<small>' + esc(noms) + '</small></span>' +
         '<button class="b" style="flex:0 0 auto;padding:0 18px" data-a="immChoose">' + esc(S('immersive_choose', Object.keys(apps).length)) + '</button></div></div>';
     }
     setInfo() {
@@ -4737,16 +4742,22 @@
             html: esc(S('immersive_confirm_msg')) + '\n\n<b>' + esc(S('immersive_tip_label')) + '</b> — ' + esc(tip) });
         }
         case 'immApps': {
-          // ImmersiveAppsDialog : une ligne par application lançable (sans AA, CarPlay ni lanceur), segments
-          // Normal / Bandeau / Barre / Tout ; Annuler ou Enregistrer.
-          const modes = [['NORMAL', 'immersive_mode_normal'], ['STATUS', 'immersive_mode_status'], ['NAVIGATION', 'immersive_mode_nav'], ['FULL', 'immersive_mode_full']];
-          const liste = APPS.filter((nm) => nm !== 'MG Launcher');
-          const ligne = (nm) => '<div class="mw-imrow">' + appIcon(nm) + '<b>' + esc(nm) + '</b><div class="ov-seg mw-seg sm">' +
-            modes.map(([m, key]) => '<button' + ((d.draft[nm] || 'NORMAL') === m ? ' class="on"' : '') + ' data-a="immMode" data-v="' + esc(nm + '|' + m) + '">' + esc(S(key)) + '</button>').join('') + '</div></div>';
-          return win(1100, head(MW.list, S('immersive_title'), S('immersive_dialog_count', Object.keys(d.draft).length)) +
-            '<div class="mw-hint">' + esc(S('immersive_hint')) + '</div>' +
-            '<div class="mw-imlist" data-sk="imm">' + liste.map(ligne).join('') + '</div>' +
-            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(S('profile_save'), 'immSave', 'p') + '</div>', '', 'imm-apps');
+          const query = d.query.trim().toLowerCase();
+          const apps = APPS.filter((name) => name !== 'MG Launcher');
+          const visible = apps.filter((name) => name.toLowerCase().includes(query) || IMMERSIVE_PACKAGES[name]?.includes(query));
+          const ligne = (name) => '<div class="mw-imrow">' + appIcon(name) + '<div class="mw-imname"><span>' + esc(name) + '</span>' +
+            (car().mg4Dash === 'compatible' && name === 'Waze' ? '<small class="a-imm-warning">' + esc(S('immersive_by_mg4dash')) + '</small>' : '') +
+            '</div><div class="ov-seg mw-seg" role="group" aria-label="' + esc(name) + '">' +
+            Object.entries(IMMERSIVE_MODES).map(([mode, key]) => {
+              const selected = (d.draft[name] || 'NORMAL') === mode;
+              return '<button' + (selected ? ' class="on"' : '') + ' aria-pressed="' + selected + '" data-a="immMode" data-v="' + esc(name + '|' + mode) + '">' + esc(S(key)) + '</button>';
+            }).join('') + '</div></div>';
+          const search = esc(S('dialog_search'));
+          return win(1040, head(ico('cat_adjust'), S('immersive_title'), S('immersive_dialog_count', Object.keys(d.draft).length)) +
+            (apps.length > 6 ? '<input class="a-input mw-imsearch" data-c="immQuery" data-fid="immQuery" aria-label="' + search + '" placeholder="' + search + '" value="' + esc(d.query) + '">' : '') +
+            '<div class="mw-imhint">' + esc(S('immersive_hint')) + '</div>' +
+            '<div class="mw-imlist" data-sk="imm">' + (visible.length ? visible.map(ligne).join('') : '<div class="mw-imempty">' + esc(S('immersive_empty')) + '</div>') + '</div>' +
+            '<div class="mw-acts">' + B(S('profile_cancel'), 'dlgClose') + B(S('profile_save'), 'immSave', 'p') + '</div>', 'mw-immersive', 'imm-apps');
         }
         case 'powerOff':
           return confirm({ tone: 'danger', ico: MW.power, title: S('vehicle_power_dialog_title'), msg: S('vehicle_power_dialog_msg'), yes: S('vehicle_power_dialog_confirm'), no: S('vehicle_power_dialog_cancel'), yesAct: 'powerOk' });
@@ -4962,6 +4973,10 @@
           this.ui.edit.name = t.value;
         } else if (t.getAttribute('data-c') === 'rQ' && this.ui.dialog) {
           this.ui.dialog.q = t.value; this.render();   // recherche de la grande fenêtre, à chaque lettre
+        } else if (t.getAttribute('data-c') === 'immQuery' && this.ui.dialog?.type === 'immApps') {
+          this.ui.dialog.query = t.value;
+          this.app.querySelector('.mw-imlist').scrollTop = 0;
+          this.render();
         }
       });
       this.app.addEventListener('change', (e) => {
@@ -5497,7 +5512,7 @@
         // Applications en plein écran : avertissement à CHAQUE activation ; Annuler laisse l'option coupée.
         case 'immersive': if (s.immersive) { s.immersive = false; return r(); } u.dialog = { type: 'immWarn' }; return this.render();
         case 'immOk': s.immersive = true; u.dialog = null; return r();
-        case 'immChoose': u.dialog = { type: 'immApps', draft: { ...s.immersiveApps } }; return this.render();
+        case 'immChoose': u.dialog = { type: 'immApps', draft: { ...s.immersiveApps }, query: '' }; return this.render();
         case 'immMode': {
           const d = u.dialog, i = v.lastIndexOf('|'), app = v.slice(0, i), m = v.slice(i + 1);
           if (m === 'NORMAL') delete d.draft[app]; else d.draft[app] = m;
@@ -6477,6 +6492,11 @@
       '<div class="dock-f"><span data-l10n="dock-doors"></span><div class="dock-row"><button type="button" class="dock-btn" data-door="L"></button><button type="button" class="dock-btn" data-door="R"></button></div></div>' +
       '<div class="dock-f"><span data-l10n="dock-media"></span><div class="dock-row dock-media"><b data-o="vol"></b></div></div>' +
       '<div class="dock-f"><span data-l10n="dock-active"></span><div class="dock-row dock-media"><b data-o="active"></b></div></div>' +
+      '<label class="dock-f"><span>MG4Dash</span><select data-d="mg4Dash">' +
+      '<option value="absent">' + L('Non installé', 'Not installed') + '</option><option value="outdated">' + L('Ancienne version', 'Older version') + '</option>' +
+      '<option value="compatible">' + L('Version compatible', 'Compatible version') + '</option></select></label>' +
+      '<label class="dock-f"><span>' + L('Côté du volant', 'Steering wheel side') + '</span><select data-d="driverSide">' +
+      '<option value="left">' + L('Gauche', 'Left') + '</option><option value="right">' + L('Droite', 'Right') + '</option></select></label>' +
       '</div>' +
       '<div class="dock-wheel"><span class="dock-lbl" data-l10n="dock-wheel"></span>' + wheelHtml('sm') + '</div>' +
       '<div class="dock-log" aria-live="polite"></div>' +
@@ -6488,6 +6508,8 @@
     el.querySelector('.dock-x').addEventListener('click', () => toggle(false));
     const q = (s) => el.querySelector(s);
     q('[data-d=fw]').addEventListener('change', (e) => setFirmware(e.target.value));
+    q('[data-d=mg4Dash]').addEventListener('change', (e) => { car().mg4Dash = e.target.value; commit(); });
+    q('[data-d=driverSide]').addEventListener('change', (e) => { car().rhd = e.target.value === 'right'; commit(); });
     q('[data-d=speed]').addEventListener('input', (e) => {
       const c = car();
       // Rouler débranche la borne.
@@ -6553,6 +6575,8 @@
       el.querySelectorAll('[data-l10n]').forEach((n) => { n.textContent = L10N[n.getAttribute('data-l10n')] || ''; });
       q('.dock-sum').textContent = L('Véhicule virtuel', 'Virtual vehicle') + ' · ' + (state.fw === 'UNKNOWN' && state.forced ? 'UNKNOWN→' + state.forced : state.fw) + ' · ' + c.speed + ' km/h · ' + c.outside + ' °C';
       q('[data-d=fw]').value = state.fw;
+      q('[data-d=mg4Dash]').value = c.mg4Dash;
+      q('[data-d=driverSide]').value = c.rhd ? 'right' : 'left';
       q('[data-d=speed]').value = c.speed; q('[data-o=speed]').textContent = c.speed + ' km/h';
       el.querySelectorAll('[data-d=park]').forEach((b) => {
         const park = b.dataset.v === 'P';
