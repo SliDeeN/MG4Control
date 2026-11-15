@@ -2008,6 +2008,17 @@
                         </LinearLayout>
 
                         <TextView
+                            android:id="@+id/tv_immersive_tip"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:paddingBottom="8dp"
+                            android:textColor="@color/dash_text_lo"
+                            android:textSize="18sp"
+                            android:visibility="gone" />
+
+                        <TextView
                             android:id="@+id/tv_immersive_outdated"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"

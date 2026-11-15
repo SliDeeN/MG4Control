@@ -1085,9 +1085,48 @@ class SettingsFragment : Fragment() {
             bouton.text = getString(R.string.immersive_choose, choix.size)
         }
         maj()
-        view.findViewById<Switch>(R.id.switch_immersive).apply {
-            isChecked = com.mg4.control.service.ImmersiveApps.isOn(ctx)
-            setOnCheckedChangeListener { _, checked -> com.mg4.control.service.ImmersiveApps.setOn(ctx, checked) }
+        // Le côté de la barre de la voiture suit le volant ; illisible, elle est à gauche.
+        val droite = NavSide.detected(ctx) == com.mg4.control.hardware.DriverSide.Side.RIGHT
+        val astuce = view.findViewById<TextView>(R.id.tv_immersive_tip).apply {
+            setText(if (droite) R.string.immersive_reminder_right else R.string.immersive_reminder_left)
+        }
+        fun majAstuce(on: Boolean) { astuce.visibility = if (on) View.VISIBLE else View.GONE }
+        val inter = view.findViewById<Switch>(R.id.switch_immersive)
+        inter.isChecked = com.mg4.control.service.ImmersiveApps.isOn(ctx)
+        majAstuce(inter.isChecked)
+        // À chaque activation : avertissement (conflits possibles) et astuce du glissement. Refus
+        // ou fenêtre fermée : l'interrupteur revient sur OFF sans rien écrire.
+        var silence = false
+        inter.setOnCheckedChangeListener { _, checked ->
+            if (silence) return@setOnCheckedChangeListener
+            if (!checked) {
+                com.mg4.control.service.ImmersiveApps.setOn(ctx, false)
+                majAstuce(false)
+                return@setOnCheckedChangeListener
+            }
+            val label = getString(R.string.immersive_tip_label)
+            val texte = android.text.SpannableStringBuilder(getString(R.string.immersive_confirm_msg))
+                .append("\n\n")
+            val debut = texte.length
+            texte.append(label)
+            texte.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), debut, texte.length,
+                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            texte.append(" — ").append(getString(if (droite) R.string.immersive_tip_right else R.string.immersive_tip_left))
+            AppDialog.confirmer(
+                ctx,
+                titre = getString(R.string.immersive_title),
+                message = texte,
+                ton = AppDialog.Ton.ALERTE,
+                oui = getString(R.string.immersive_confirm_ok),
+                non = getString(R.string.profile_cancel),
+                onOui = {
+                    com.mg4.control.service.ImmersiveApps.setOn(ctx, true)
+                    if (isAdded) majAstuce(true)
+                },
+                onNon = {
+                    if (isAdded) { silence = true; inter.isChecked = false; silence = false }
+                },
+            )
         }
         bouton.setOnClickListener { ImmersiveAppsDialog.show(ctx) { if (isAdded) maj() } }
     }

@@ -1129,7 +1129,7 @@
     <string name="projection_redetect_failed">Téléphone non reconnu : débranchez puis rebranchez le câble</string>
     <string name="immersive_title">Applis en plein écran</string>
     <string name="immersive_switch">Forcer le plein écran</string>
-    <string name="immersive_switch_desc">Cache le bandeau du haut, la barre latérale de la voiture, ou les deux, pour les applis choisies. Glissez depuis le bord de l’écran pour les faire revenir quelques secondes.</string>
+    <string name="immersive_switch_desc">Cache le bandeau du haut, la barre latérale de la voiture, ou les deux, pour les applis choisies.</string>
     <string name="immersive_apps">Applis choisies</string>
     <string name="immersive_apps_none">Aucune</string>
     <string name="immersive_choose">Choisir (%1$d)</string>
@@ -1141,6 +1141,13 @@
     <string name="immersive_mode_full">Tout</string>
     <string name="immersive_by_mg4dash">MG4Dash la met déjà entièrement en plein écran</string>
     <string name="immersive_mg4dash_outdated">MG4Dash doit être mis à jour pour partager le plein écran avec MG4Control. L’option reste en pause d’ici là.</string>
+    <string name="immersive_confirm_msg">Cette fonction modifie un réglage d’Android partagé par toutes les applis. Elle peut entrer en conflit avec un lanceur personnalisé ou une autre appli qui gère aussi le plein écran : barres qui réapparaissent, ou appli qui reste en plein écran. En cas de souci, désactivez-la ici.</string>
+    <string name="immersive_tip_label">Astuce</string>
+    <string name="immersive_tip_left">glissez le doigt depuis le bord gauche de l’écran vers la droite pour faire revenir la barre (depuis le haut vers le bas pour le bandeau). Elle se cache de nouveau après quelques secondes.</string>
+    <string name="immersive_tip_right">glissez le doigt depuis le bord droit de l’écran vers la gauche pour faire revenir la barre (depuis le haut vers le bas pour le bandeau). Elle se cache de nouveau après quelques secondes.</string>
+    <string name="immersive_reminder_left">Glissez depuis le bord gauche pour faire revenir la barre quelques secondes.</string>
+    <string name="immersive_reminder_right">Glissez depuis le bord droit pour faire revenir la barre quelques secondes.</string>
+    <string name="immersive_confirm_ok">Activer</string>
     <string name="immersive_empty">Aucune appli trouvée</string>
     <string name="shortcuts_cat_preclim">Garde-voiture</string>
     <string name="shortcuts_cat_floating">Boutons flottants</string>

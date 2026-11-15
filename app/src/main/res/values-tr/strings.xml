@@ -1111,7 +1111,7 @@
     <string name="projection_redetect_failed">Telefon tanınmadı: kabloyu çıkarıp yeniden takın</string>
     <string name="immersive_title">Tam ekran uygulamalar</string>
     <string name="immersive_switch">Tam ekranı zorla</string>
-    <string name="immersive_switch_desc">Seçilen uygulamalarda aracın üst çubuğunu, yan çubuğunu veya ikisini birden gizler. Birkaç saniyeliğine geri getirmek için ekranın kenarından kaydırın.</string>
+    <string name="immersive_switch_desc">Seçilen uygulamalarda aracın üst çubuğunu, yan çubuğunu veya ikisini birden gizler.</string>
     <string name="immersive_apps">Seçilen uygulamalar</string>
     <string name="immersive_apps_none">Yok</string>
     <string name="immersive_choose">Seç (%1$d)</string>
@@ -1123,6 +1123,13 @@
     <string name="immersive_mode_full">Tümü</string>
     <string name="immersive_by_mg4dash">MG4Dash onu zaten tam ekran yapıyor</string>
     <string name="immersive_mg4dash_outdated">Tam ekranı MG4Control ile paylaşmak için MG4Dash güncellenmeli. O zamana kadar seçenek duraklatıldı.</string>
+    <string name="immersive_confirm_msg">Bu özellik, tüm uygulamaların paylaştığı bir Android ayarını değiştirir. Özel bir başlatıcı veya tam ekranı yöneten başka bir uygulamayla çakışabilir: çubuklar geri gelebilir ya da bir uygulama tam ekranda kalabilir. Sorun olursa buradan kapatın.</string>
+    <string name="immersive_tip_label">İpucu</string>
+    <string name="immersive_tip_left">yan çubuğu geri getirmek için ekranın sol kenarından sağa doğru kaydırın (üst çubuk için yukarıdan aşağıya). Birkaç saniye sonra yeniden gizlenir.</string>
+    <string name="immersive_tip_right">yan çubuğu geri getirmek için ekranın sağ kenarından sola doğru kaydırın (üst çubuk için yukarıdan aşağıya). Birkaç saniye sonra yeniden gizlenir.</string>
+    <string name="immersive_reminder_left">Yan çubuğu birkaç saniyeliğine geri getirmek için sol kenardan kaydırın.</string>
+    <string name="immersive_reminder_right">Yan çubuğu birkaç saniyeliğine geri getirmek için sağ kenardan kaydırın.</string>
+    <string name="immersive_confirm_ok">Etkinleştir</string>
     <string name="immersive_empty">Uygulama bulunamadı</string>
     <string name="shortcuts_cat_preclim">Araç bekçisi</string>
     <string name="shortcuts_cat_floating">Yüzen düğmeler</string>

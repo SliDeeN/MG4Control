@@ -1111,7 +1111,7 @@
     <string name="projection_redetect_failed">Telefon nicht erkannt: Kabel ab- und wieder anstecken</string>
     <string name="immersive_title">Apps im Vollbild</string>
     <string name="immersive_switch">Vollbild erzwingen</string>
-    <string name="immersive_switch_desc">Blendet für die gewählten Apps die obere Leiste, die Seitenleiste des Fahrzeugs oder beide aus. Vom Bildschirmrand wischen, um sie einige Sekunden lang zurückzuholen.</string>
+    <string name="immersive_switch_desc">Blendet für die gewählten Apps die obere Leiste, die Seitenleiste des Fahrzeugs oder beide aus.</string>
     <string name="immersive_apps">Gewählte Apps</string>
     <string name="immersive_apps_none">Keine</string>
     <string name="immersive_choose">Auswählen (%1$d)</string>
@@ -1123,6 +1123,13 @@
     <string name="immersive_mode_full">Alles</string>
     <string name="immersive_by_mg4dash">MG4Dash zeigt sie bereits komplett im Vollbild</string>
     <string name="immersive_mg4dash_outdated">MG4Dash muss aktualisiert werden, um das Vollbild mit MG4Control zu teilen. Bis dahin ist die Option pausiert.</string>
+    <string name="immersive_confirm_msg">Diese Funktion ändert eine Android-Einstellung, die alle Apps teilen. Sie kann mit einem eigenen Launcher oder einer anderen App kollidieren, die ebenfalls den Vollbildmodus steuert: Leisten kommen zurück oder eine App bleibt im Vollbild. Bei Problemen hier ausschalten.</string>
+    <string name="immersive_tip_label">Tipp</string>
+    <string name="immersive_tip_left">vom linken Bildschirmrand nach rechts wischen, um die Seitenleiste zurückzuholen (von oben nach unten für die obere Leiste). Sie verschwindet nach einigen Sekunden wieder.</string>
+    <string name="immersive_tip_right">vom rechten Bildschirmrand nach links wischen, um die Seitenleiste zurückzuholen (von oben nach unten für die obere Leiste). Sie verschwindet nach einigen Sekunden wieder.</string>
+    <string name="immersive_reminder_left">Vom linken Rand wischen, um die Seitenleiste einige Sekunden zurückzuholen.</string>
+    <string name="immersive_reminder_right">Vom rechten Rand wischen, um die Seitenleiste einige Sekunden zurückzuholen.</string>
+    <string name="immersive_confirm_ok">Aktivieren</string>
     <string name="immersive_empty">Keine App gefunden</string>
     <string name="shortcuts_cat_preclim">Fahrzeugwächter</string>
     <string name="shortcuts_cat_floating">Schwebende Tasten</string>

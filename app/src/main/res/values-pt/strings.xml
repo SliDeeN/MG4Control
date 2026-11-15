@@ -1111,7 +1111,7 @@
     <string name="projection_redetect_failed">Telemóvel não reconhecido: desligue e volte a ligar o cabo</string>
     <string name="immersive_title">Apps em ecrã inteiro</string>
     <string name="immersive_switch">Forçar ecrã inteiro</string>
-    <string name="immersive_switch_desc">Esconde a barra superior, a barra lateral do carro ou ambas nas apps escolhidas. Deslize a partir da margem do ecrã para as fazer voltar durante alguns segundos.</string>
+    <string name="immersive_switch_desc">Esconde a barra superior, a barra lateral do carro ou ambas nas apps escolhidas.</string>
     <string name="immersive_apps">Apps escolhidas</string>
     <string name="immersive_apps_none">Nenhuma</string>
     <string name="immersive_choose">Escolher (%1$d)</string>
@@ -1123,6 +1123,13 @@
     <string name="immersive_mode_full">Tudo</string>
     <string name="immersive_by_mg4dash">O MG4Dash já a põe em ecrã inteiro</string>
     <string name="immersive_mg4dash_outdated">É preciso atualizar o MG4Dash para partilhar o ecrã inteiro com o MG4Control. Até lá, a opção fica em pausa.</string>
+    <string name="immersive_confirm_msg">Esta função altera uma definição do Android partilhada por todas as apps. Pode entrar em conflito com um launcher personalizado ou outra app que também gira o ecrã inteiro: barras que voltam a aparecer, ou uma app que fica em ecrã inteiro. Em caso de problema, desative-a aqui.</string>
+    <string name="immersive_tip_label">Dica</string>
+    <string name="immersive_tip_left">deslize o dedo a partir da margem esquerda do ecrã para a direita para fazer voltar a barra lateral (de cima para baixo para a barra superior). Volta a esconder-se após alguns segundos.</string>
+    <string name="immersive_tip_right">deslize o dedo a partir da margem direita do ecrã para a esquerda para fazer voltar a barra lateral (de cima para baixo para a barra superior). Volta a esconder-se após alguns segundos.</string>
+    <string name="immersive_reminder_left">Deslize a partir da margem esquerda para fazer voltar a barra lateral durante alguns segundos.</string>
+    <string name="immersive_reminder_right">Deslize a partir da margem direita para fazer voltar a barra lateral durante alguns segundos.</string>
+    <string name="immersive_confirm_ok">Ativar</string>
     <string name="immersive_empty">Nenhuma app encontrada</string>
     <string name="shortcuts_cat_preclim">Guardião do carro</string>
     <string name="shortcuts_cat_floating">Botões flutuantes</string>
