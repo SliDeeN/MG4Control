@@ -9,6 +9,7 @@ import android.os.Handler
 import android.os.HandlerThread
 import android.provider.Settings
 import com.mg4.control.debug.AppLogger
+import com.mg4.control.model.ImmersiveCleanup
 import com.mg4.control.model.ImmersiveMode
 import com.mg4.control.model.ImmersivePolicy
 
@@ -151,18 +152,21 @@ object ImmersiveApps {
             val cles = ImmersivePolicy.OWNER_KEYS.entries.associate { (o, k) -> o to global(app, k) }
             val installes = ImmersivePolicy.OWNER_KEYS.keys.filter { it == self || installe(app, it) }.toSet()
             val pause = if (dash == Mg4Dash.OUTDATED && isOn(app)) " (en pause : MG4Dash à mettre à jour)" else ""
-            // Rien à ajouter, rien à nous à retirer : on ne touche pas à la valeur, même pour la
-            // ranger — elle peut être celle d'une autre appli ou d'un ancien MG4Dash (revue du
-            // 2026-11-15). Devant un MG4Dash qui ne suit pas encore la règle (pause, ou option
-            // coupée), nettoyage seul : nos restes partent, sa valeur n'est pas rangée.
-            val nettoyage = dash == Mg4Dash.OUTDATED
             val avant = global(app, ImmersivePolicy.SETTING)
+            // Devant un MG4Dash qui ne suit pas encore la règle (pause, ou option coupée), la règle
+            // commune n'est pas appliquée : la valeur peut être la sienne (revue du 2026-11-15).
+            if (dash == Mg4Dash.OUTDATED) {
+                nettoyer(app, raison, relire, self, maCle, avant, cles, installes, pause)
+                return
+            }
+            // Rien à ajouter, rien à nous à retirer : on ne touche pas à la valeur, même pour la
+            // ranger — elle peut être celle d'une autre appli (revue du 2026-11-15).
             var geres = global(app, ImmersivePolicy.MANAGED)
-            if (!ImmersivePolicy.hasStake(self, voulus, avant, cles, installes, geres, nettoyage)) {
+            if (!ImmersivePolicy.hasStake(self, voulus, avant, cles, installes, geres)) {
                 AppLogger.i(TAG, "$raison : rien à faire$pause")
                 return
             }
-            val p = ImmersivePolicy.plan(self, voulus, avant, cles, installes, geres, nettoyage)
+            val p = ImmersivePolicy.plan(self, voulus, avant, cles, installes, geres)
 
             // Une écriture refusée arrête le passage : les clés de suivi restent telles quelles (la
             // nôtre garde anciens + voulus, la commune ce qui a pu être écrit), le passage suivant
@@ -187,6 +191,33 @@ object ImmersiveApps {
             if (!ecrit) AppLogger.i(TAG, "$raison : rien à changer$pause")
             if (ecrit && relire) fil.postDelayed({ passage(app, "relecture", relire = false) }, RELECTURE_MS)
         }.onFailure { AppLogger.w(TAG, "$raison : ${it.javaClass.simpleName} ${it.message}") }
+    }
+
+    /**
+     * Nettoyage seul ([ImmersiveCleanup]) : les entrées que notre clé identifie partent de la
+     * valeur, puis notre clé est effacée. La clé commune n'est pas touchée. Rien sans notre clé.
+     */
+    private fun nettoyer(
+        app: Context, raison: String, relire: Boolean, self: String, maCle: String,
+        avant: String?, cles: Map<String, String?>, installes: Set<String>, pause: String,
+    ) {
+        val nous = cles[self]
+        if (nous == null) {
+            AppLogger.i(TAG, "$raison : rien à faire$pause (MG4Dash ne suit pas encore la règle commune)")
+            return
+        }
+        val autres = cles.filterKeys { it != self && it in installes }.values
+        val apres = ImmersiveCleanup.clean(nous, avant, autres)
+        fun refus(nom: String) {
+            AppLogger.w(TAG, "$raison : nettoyage, écriture de $nom refusée — notre clé gardée")
+            if (relire) fil.postDelayed({ passage(app, "nouvel essai", relire = false) }, RELECTURE_MS)
+        }
+        if (apres != avant) {
+            if (!put(app, ImmersivePolicy.SETTING, apres)) return refus(ImmersivePolicy.SETTING)
+            AppLogger.i(TAG, "$raison : nettoyage$pause, policy_control ${avant ?: "(vide)"} → ${apres ?: "(vide)"}")
+        }
+        if (!put(app, maCle, null)) return refus(maCle)
+        AppLogger.i(TAG, "$raison : nettoyage$pause, clé $maCle effacée")
     }
 
     private fun global(ctx: Context, nom: String): String? =

@@ -23,8 +23,7 @@ package com.mg4.control.model
  * L'appelant ne passe que si [hasStake], puis applique [Plan] dans l'ordre : sa clé =
  * [Plan.keyBefore], [MANAGED] = [Plan.managedBefore], `policy_control` = [Plan.policy] si
  * [Plan.policyChanged], sa clé = [Plan.keyAfter], [MANAGED] = [Plan.managedAfter], puis efface
- * [Plan.clearKeys]. `cleanupOnly` (MG4Control en pause devant un MG4Dash qui ne suit pas encore la
- * règle) : seuls nos restes partent, le reste de la valeur n'est pas rangé. 5 s après une écriture, il refait un passage et réécrit une seule fois si la
+ * [Plan.clearKeys]. 5 s après une écriture, il refait un passage et réécrit une seule fois si la
  * valeur doit encore changer (pas de lecture-écriture atomique). Personne n'observe les clés.
  */
 enum class ImmersiveMode { FULL, STATUS, NAVIGATION }
@@ -108,8 +107,7 @@ object ImmersivePolicy {
     /**
      * [self] : le propriétaire qui passe ; [wanted] : ce qu'il veut maintenant ; [policy] : la
      * valeur actuelle ; [keys] : propriétaire → contenu de sa clé ; [installed] : propriétaires
-     * installés ([self] l'est forcément) ; [managed] : contenu de [MANAGED] ; [cleanupOnly] :
-     * nettoyage seul, voir [nettoyage].
+     * installés ([self] l'est forcément) ; [managed] : contenu de [MANAGED].
      */
     fun plan(
         self: String,
@@ -118,7 +116,6 @@ object ImmersivePolicy {
         keys: Map<String, String?>,
         installed: Set<String>,
         managed: String?,
-        cleanupOnly: Boolean = false,
     ): Plan {
         val voulus = wanted.filterKeys { isClaimable(it) }.filterValues { it.isNotEmpty() }
         val anciens = keys[self]?.let { parseKey(it) } ?: legacy(self, policy)
@@ -131,39 +128,7 @@ object ImmersivePolicy {
                 claims(tous, section)
 
         val sections = parse(policy)
-        val vivantes = if (cleanupOnly) nettoyage(sections, ::retirer) else regle(sections, ::retirer, tous)
-        val valeur = vivantes.joinToString(":") { it.text() }.ifEmpty { null }
 
-        return Plan(
-            policy = valeur,
-            policyChanged = valeur != policy?.ifEmpty { null },
-            keyBefore = formatKey(fusion(anciens, voulus)),
-            keyAfter = formatKey(voulus),
-            managedBefore = formatKey(fusion(geres, tous)),
-            managedAfter = formatKey(tous),
-            clearKeys = OWNER_KEYS.filter { (o, _) -> o != self && o !in installed && keys[o] != null }.values.toList(),
-        )
-    }
-
-    /**
-     * Nettoyage seul : chaque section perd les paquets à retirer et rien d'autre (ni Android Auto,
-     * ni doublon, ni section morte, ni joker, ni ordre) ; une section que ce retrait vide part.
-     * La valeur peut appartenir à un MG4Dash qui ne suit pas encore la règle (revue du 2026-11-15).
-     */
-    private fun nettoyage(sections: List<Section>, retirer: (String) -> Set<String>): List<Section> =
-        sections.mapNotNull { s ->
-            val e = s.entries ?: return@mapNotNull s
-            val moins = retirer(s.name!!)
-            if (e.none { it.trim() in moins }) return@mapNotNull s
-            Section(s.name, e.filter { it.trim() !in moins }.toMutableList()).takeUnless { vide(it) }
-        }
-
-    /** La règle complète, étapes 1 à 7 ; sections à écrire, dans l'ordre. */
-    private fun regle(
-        sections: List<Section>,
-        retirer: (String) -> Set<String>,
-        tous: Map<String, Set<ImmersiveMode>>,
-    ): List<Section> {
         // 1. Sections mortes : .status / .navigation placées avant le dernier immersive.full.
         val dernierFull = sections.indexOfLast { it.name == FULL }
         val vivantes = sections.filterIndexed { i, s -> !(i < dernierFull && (s.name == STATUS || s.name == NAV)) }
@@ -230,17 +195,27 @@ object ImmersivePolicy {
             NAV to pleine(FULL),
             PRE to (pleine(FULL) || pleine(NAV)),
         )
-        return KNOWN.mapNotNull { nom ->
+        val ordonnees = KNOWN.mapNotNull { nom ->
             vivantes.firstOrNull { it.name == nom && (!vide(it) || garder.getValue(nom)) }
         } + vivantes.filter { it.entries == null }
+        val valeur = ordonnees.joinToString(":") { it.text() }.ifEmpty { null }
+
+        return Plan(
+            policy = valeur,
+            policyChanged = valeur != policy?.ifEmpty { null },
+            keyBefore = formatKey(fusion(anciens, voulus)),
+            keyAfter = formatKey(voulus),
+            managedBefore = formatKey(fusion(geres, tous)),
+            managedAfter = formatKey(tous),
+            clearKeys = OWNER_KEYS.filter { (o, _) -> o != self && o !in installed && keys[o] != null }.values.toList(),
+        )
     }
 
     /**
      * Un passage a-t-il quelque chose à faire ? Oui s'il y a à ajouter, à soi à retirer, une clé
      * d'un propriétaire désinstallé, Android Auto ou CarPlay en clair dans une section, ou dans
      * [MANAGED] un paquet que plus personne ne réclame. Sinon on ne touche pas à la valeur, même
-     * pour la « ranger » (elle peut appartenir à une autre appli). En [cleanupOnly], Android Auto
-     * et CarPlay en clair ne comptent pas : ce n'est pas une trace à nous.
+     * pour la « ranger » (elle peut appartenir à une autre appli).
      */
     fun hasStake(
         self: String,
@@ -249,12 +224,11 @@ object ImmersivePolicy {
         keys: Map<String, String?>,
         installed: Set<String>,
         managed: String?,
-        cleanupOnly: Boolean = false,
     ): Boolean {
         val voulus = wanted.filterKeys { isClaimable(it) }.filterValues { it.isNotEmpty() }
         if (voulus.isNotEmpty() || !keys[self].isNullOrEmpty()) return true
         if (OWNER_KEYS.keys.any { it != self && it !in installed && !keys[it].isNullOrEmpty() }) return true
-        if (!cleanupOnly && parse(policy).any { s -> s.entries.orEmpty().any { it.trim() in NEVER } }) return true
+        if (parse(policy).any { s -> s.entries.orEmpty().any { it.trim() in NEVER } }) return true
         val geres = parseKey(managed)
         val tous = reclamations(self, voulus, keys, installed)
         return KNOWN.any { (claims(geres, it) - claims(tous, it)).isNotEmpty() }
@@ -288,7 +262,7 @@ object ImmersivePolicy {
     private fun isWildcard(e: String) = e == "*" || e == "apps"
 
     /** Une section sans paquet ni joker (vide, ou seulement des `-paquet`) ne vise rien. */
-    private fun vide(s: Section) = s.entries!!.map { it.trim() }.filter { it.isNotEmpty() }.all { it.startsWith("-") }
+    private fun vide(s: Section) = s.entries!!.all { it.startsWith("-") }
 
     /** Ajout en fin de section, sans doublon ni paquet exclu par `-paquet`. */
     private fun ajouter(s: Section, pkgs: Collection<String>) {

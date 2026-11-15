@@ -231,28 +231,6 @@ class ImmersivePolicyTest {
         assertNull(v.policy)
     }
 
-    // ── Pause de MG4Control (MG4Dash < 292) : seuls nos restes sont retirés. ──
-
-    @Test fun `R8 en pause, la valeur d un ancien MG4Dash n est pas touchee`() {
-        // 1.7.3 beta 2 : CarPlay en clair ; aucune trace de MG4Control.
-        assertFalse(ImmersivePolicy.hasStake(C, emptyMap(), "immersive.full=$CP", emptyMap(), setOf(D, C, COFF), null, cleanupOnly = true))
-    }
-
-    @Test fun `R9 en pause, seuls nos paquets partent`() {
-        // Section morte, doublon, CarPlay, joker sans exclusions : rien de cela n'est à nous.
-        val avant = "immersive.status=W:immersive.full=$D,X,W,$CP,X:immersive.navigation=apps,W"
-        val cles = mapOf<String, String?>(C to "W/status")
-        val tous = setOf(D, C, COFF)
-        assertTrue(ImmersivePolicy.hasStake(C, emptyMap(), avant, cles, tous, "W/status", cleanupOnly = true))
-        val p = ImmersivePolicy.plan(C, emptyMap(), avant, cles, tous, "W/status", cleanupOnly = true)
-        // W n'est retiré que des sections où nous le réclamions (bandeau) ; la section vidée part.
-        assertEquals("immersive.full=$D,X,W,$CP,X:immersive.navigation=apps,W", p.policy)
-        assertNull(p.keyAfter)
-        assertNull(p.managedAfter)
-        // Une fois nos traces parties, plus d'enjeu.
-        assertFalse(ImmersivePolicy.hasStake(C, emptyMap(), p.policy, emptyMap(), tous, null, cleanupOnly = true))
-    }
-
     @Test fun `lecture des cles`() {
         // Suffixe inconnu ignoré ; W et W/status = tout ; interdits exclus quel que soit le suffixe.
         val k = ImmersivePolicy.parseKey("W,W/status,X/futur,Y/navigation,$CP/status,*,apps,-Z, ,")
