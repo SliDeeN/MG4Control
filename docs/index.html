@@ -130,7 +130,7 @@
       <a class="btn btn-ghost" href="#installation"><span data-l="fr">Installation</span></a>
     </div>
     <div class="hero-meta">
-      <span><span data-l="fr">9 langues</span></span>
+      <span><span data-l="fr">10 langues</span></span>
       <span><span data-l="fr">7 firmwares : SWI133 · SWI132 · SWI68 · SWI69 · SWI131 · SWI165 · SWI173</span></span>
       <span><span data-l="fr">Licence GPL v3</span></span>
     </div>
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span>
-        <b><span data-l="fr">29 nouveautés dans cette version</span></b>
+        <b><span data-l="fr">31 nouveautés dans cette version</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="fr">Ne montrer que les nouveautés</span></button>
       </div>
       <div class="wn-list">
@@ -157,12 +157,14 @@
         <a href="#f-bubblelook" data-feature="f-bubblelook"><span data-l="fr">🫧 Apparence de chaque bulle</span></a>
         <a href="#f-cluster-layout" data-feature="f-cluster-layout"><span data-l="fr">🧩 Écran conducteur : jauge et 4 infos à placer</span></a>
         <a href="#f-cluster-miles" data-feature="f-cluster-miles"><span data-l="fr">📏 Kilomètres ou miles partout</span></a>
+        <a href="#f-altitude" data-feature="f-altitude"><span data-l="fr">⛰️ L'altitude dans les bulles et sur l'écran conducteur</span></a>
         <a href="#f-survcam" data-feature="f-survcam"><span data-l="fr">📹 Surveillance : la dashcam filme</span></a>
         <a href="#f-abrp" data-feature="f-abrp"><span data-l="fr">🗺️ Données en direct vers ABRP</span></a>
         <a href="#f-onepedal" data-feature="f-onepedal"><span data-l="fr">🦶 1 Pédale : retour au niveau d'avant</span></a>
         <a href="#f-keepac" data-feature="f-keepac"><span data-l="fr">❄️ Garder l'A/C coupé</span></a>
         <a href="#f-projkick" data-feature="f-projkick"><span data-l="fr">🔌 Téléphone branché avant le démarrage</span></a>
         <a href="#f-immersive" data-feature="f-immersive"><span data-l="fr">🖥️ Applications en plein écran</span></a>
+        <a href="#f-autolang" data-feature="f-autolang"><span data-l="fr">🗣️ Tchèque, 10e langue</span></a>
         <a href="#f-bri0" data-feature="f-bri0"><span data-l="fr">🔅 Luminosité jusqu'à 0 %</span></a>
         <a href="#f-preclim-watts" data-feature="f-preclim-watts"><span data-l="fr">⚡ Garde-voiture : puissance en watts</span></a>
         <a href="#f-profilecopy" data-feature="f-profilecopy"><span data-l="fr">📑 Dupliquer et renommer un profil</span></a>
@@ -694,7 +696,7 @@
       <h3><span data-l="fr">Téléphone branché avant le démarrage</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
       <p data-l="fr">Un iPhone ou un téléphone Android branché avant le démarrage de l'écran n'était vu ni par CarPlay ni par Android Auto. Une option le signale de nouveau à la voiture (#251).</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Dans Réglages › Avancé, carte « Android Auto · CarPlay », désactivée par défaut. Au démarrage de l'écran et à son réveil, si aucune projection n'est ouverte, MG4Control annonce de nouveau le téléphone branché par câble, comme s'il venait d'être branché ; sans résultat, il réinitialise la prise et recommence une fois. Un téléphone Android est laissé à AA Kick quand cette application est installée. Rien ne se passe en Mode Garage.</p>
+        <p data-l="fr">Dans Réglages › Avancé, carte « Android Auto · CarPlay », désactivée par défaut. Au démarrage de l'écran, à son réveil et dès l'activation de l'option, si aucune projection n'est ouverte, MG4Control annonce de nouveau le téléphone branché par câble, comme s'il venait d'être branché ; sans résultat, il réinitialise la prise et recommence une fois. Au démarrage, un téléphone pas encore visible est cherché pendant une minute. Un iPhone qui quitte la liste USB a lancé CarPlay : MG4Control attend alors sa session, jusqu'à 30 s. Le raccourci Android Auto / CarPlay fait la même relance et ouvre la projection dès qu'elle arrive. Un téléphone Android est laissé à AA Kick quand cette application est installée. Rien ne se passe en Mode Garage.</p>
       </details>
     </div>
     <div class="pt" id="f-floating" data-hl-key="sc-floating" data-demo="floating">
@@ -712,7 +714,7 @@
       </details>
     </div>    <div class="pt is-new" id="f-infobubbles" data-hl-key="fl-edit" data-demo="infoBubble">
       <h3><span data-l="fr">Bulles d'information</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
-      <p data-l="fr">Une bulle peut afficher une information au lieu d'un titre : batterie, autonomie, température extérieure, vitesse, consigne de clim, mode de conduite, régénération, profil, volume, heure… (#236).</p>
+      <p data-l="fr">Une bulle peut afficher une information au lieu d'un titre : batterie, autonomie, température extérieure, vitesse, consigne de clim, mode de conduite, régénération, profil, volume, heure, altitude… (#236).</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <p data-l="fr">Dans l'édition d'une bulle, « Contenu » : Titre ou Information. Affichage : valeur, libellé + valeur (le titre tapé, sinon le nom de la valeur) ou icône + valeur. Au toucher : lancer l'action, ou rien (affichage seul ; l'appui long déplace toujours la bulle). Une valeur oui / non colore la bulle comme une bascule ; l'heure et la vitesse se relisent chaque seconde, le reste toutes les 5 s ; « — » quand la valeur est illisible. Les bulles existantes ne changent pas.</p>
       </details>
@@ -722,6 +724,13 @@
       <p data-l="fr">Opacité du fond, fond sombre, teinté, clair ou noir, largeur automatique ou fixe, bordure ou non, et atténuation au repos : chaque bulle a son apparence (#230, #222).</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <p data-l="fr">Atténuée, une bulle passe à 40 % après 5 s sans toucher ; un toucher lance l'action et la rend nette. « Copier l'apparence de… » reprend celle d'une autre bulle, de ce profil ou d'un autre, et « Appliquer à toutes les bulles » l'étend au profil. Une bascule active reste opaque à 60 % au moins, et sous 35 % le texte prend un contour pour rester lisible. Une bulle jamais réglée garde son allure d'avant. Le fond noir à 100 % se fond dans la barre noire du haut. En largeur fixe (60 à 240 dp), une bulle d'information ne change plus de largeur avec sa valeur ; un texte trop long se termine par « … ».</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-altitude" data-hl-key="fl-edit" data-demo="altitude">
+      <h3><span data-l="fr">L'altitude, en information</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
+      <p data-l="fr">L'altitude GPS de la voiture s'affiche dans une bulle ou dans une case de l'écran conducteur, et sert aussi de valeur aux automatisations (#254).</p>
+      <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
+        <p data-l="fr">Lue sur le GPS de la voiture, sans connexion : la dernière position connue qui porte une altitude, arrondie au mètre, tenue à jour en roulant. En mètres, ou en pieds quand l'unité de distance est en miles (une case de l'écran conducteur a son propre choix km / miles). Dans Mes automatisations, catégorie Lieux : au-dessus ou en dessous d'un seuil, de 0 à 4000 m par pas de 50 m.</p>
       </details>
     </div>
 
@@ -1196,7 +1205,7 @@
     </div>
     <div class="pt is-new" id="f-cluster-layout" data-hl-key="s-cluster-layout" data-demo="clusterLayout">
       <h3><span data-l="fr">La jauge et 4 infos à placer</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
-      <p data-l="fr">La jauge en haut, au milieu ou en bas, et jusqu'à 4 informations autour : profil, mode, moyenne, récupération, distance, énergie, puissance, batterie, autonomie, température, heure… (#229).</p>
+      <p data-l="fr">La jauge en haut, au milieu ou en bas, et jusqu'à 4 informations autour : profil, mode, moyenne, récupération, distance, énergie, puissance, batterie, autonomie, température, heure, altitude… (#229).</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
         <p data-l="fr">Réglages › Interface › Écran conducteur › « Personnalisation avancée » : un aperçu animé à gauche ; touchez une case ou la jauge pour la régler, maintenez le doigt dessus, puis faites-la glisser pour la déplacer. Chaque case : valeur, libellé + valeur, icône + valeur ou pastille, trois tailles, et son unité (la moyenne en Wh/km, kWh/100 km ou km/kWh, la puissance en kW ou en chevaux). La jauge : position, épaisseur, couleurs de la consommation et de la récupération, repère de la moyenne du trajet, kW sous la consommation ou consommation sous les kW — les options suivent la jauge choisie dans l'aperçu, qui se rouvre sur la dernière choisie. La jauge de puissance peut compter en chevaux, avec des graduations rondes (25, 50, 100, 200 ch…). Une rangée sans information disparaît sur le combiné et la jauge s'agrandit. Rien n'est enregistré avant « Enregistrer », pour tous les profils sélectionnés.</p>
       </details>
@@ -1384,7 +1393,7 @@
       <h3><span data-l="fr">Langue de la voiture</span><span class="badge-new"><span data-l="fr">Nouveau</span> · 2.7.0</span></h3>
       <p data-l="fr">Au premier lancement, MG4Control prend la langue de la voiture si elle est traduite ; sinon il vous la demande.</p>
       <details class="more"><summary><span data-l="fr">En savoir plus</span></summary>
-        <p data-l="fr">Neuf langues : français, anglais, allemand, espagnol, italien, portugais, turc et, nouveaux, polonais et norvégien (bokmål, #239). Les pop-ups affichés avant la première ouverture de l'application suivent aussi cette langue. Un choix déjà fait n'est pas modifié.</p>
+        <p data-l="fr">Dix langues : français, anglais, allemand, espagnol, italien, portugais, turc et, nouveaux, polonais, norvégien (bokmål, #239) et tchèque (#257). Les pop-ups affichés avant la première ouverture de l'application suivent aussi cette langue. Un choix déjà fait n'est pas modifié.</p>
       </details>
     </div>
   </div>
@@ -1709,8 +1718,8 @@
 <div class="dock" aria-label="Véhicule virtuel"></div>
 <button type="button" class="to-top" aria-label="Revenir en haut de la page" title="Revenir en haut de la page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="assets/js/strings.js?v=2a262528"></script>
-<script src="assets/js/sim.js?v=e5764c36"></script>
+<script src="assets/js/strings.js?v=513cbcd5"></script>
+<script src="assets/js/sim.js?v=2c50d303"></script>
 <script src="assets/js/site.js?v=5b3c68e9"></script>
 <script src="assets/js/explorer.js?v=72fb983a"></script>
 </body>

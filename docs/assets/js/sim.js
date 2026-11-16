@@ -490,6 +490,9 @@
     if (def) { trace.push(L('Profil par défaut : « ', 'Default profile: “') + def.name + L(' »', '”')); applyProfile(def, { via: L('profil par défaut', 'default profile') }); return; }
     trace.push(L('Aucun profil à appliquer', 'No profile to apply'));
   }
+  /** Altitude GPS (#254) du véhicule virtuel, en mètres : une colline douce tant qu'on roule. */
+  const altM = () => { const c = car(); return Math.round(c.altitude ?? (412 + (c.speed ? 18 * Math.sin(Date.now() / 60000) : 0))); };
+  const altTxt = (miles) => miles ? [String(Math.round(altM() / 0.3048)), 'ft'] : [String(altM()), 'm'];
   const nowHM = () => new Intl.DateTimeFormat(appLang() === 'en' ? 'en-GB' : appLang(), { hour: '2-digit', minute: '2-digit' }).format(Date.now());
   /** Changer de batterie recalcule l'énergie des recharges enregistrées, comme dans l'app. */
   function setBattery(nominal) {
@@ -1552,6 +1555,8 @@
     charge_end: { cat: 'charge', name: () => S('rule_trg_charge_end'), txt: () => S('rule_trg_charge_end'), st: () => !car().charge },
     temp_below: { cat: 'car', def: { v: 5 }, name: () => S('rule_sig_outside_temp') + ' · ' + lc(S('rule_op_below')), txt: (t) => S('rule_sig_outside_temp') + ' ' + lc(S('rule_op_below')) + ' ' + t.v + ' °C', val: (t) => car().outside < t.v },
     temp_above: { cat: 'car', def: { v: 28 }, name: () => S('rule_sig_outside_temp') + ' · ' + lc(S('rule_op_above')), txt: (t) => S('rule_sig_outside_temp') + ' ' + lc(S('rule_op_above')) + ' ' + t.v + ' °C', val: (t) => car().outside > t.v },
+    alt_below: { cat: 'places', def: { v: 500 }, name: () => S('rule_sig_altitude') + ' · ' + lc(S('rule_op_below')), txt: (t) => S('rule_sig_altitude') + ' ' + lc(S('rule_op_below')) + ' ' + t.v + ' m', val: (t) => altM() < t.v },
+    alt_above: { cat: 'places', def: { v: 1000 }, name: () => S('rule_sig_altitude') + ' · ' + lc(S('rule_op_above')), txt: (t) => S('rule_sig_altitude') + ' ' + lc(S('rule_op_above')) + ' ' + t.v + ' m', val: (t) => altM() > t.v },
     steering_for: { cat: 'car', ok: (k) => k.heat, def: { min: 15 }, name: () => S('rule_yes_fmt', S('rule_key_steering')) + ' · ' + S('rule_for_title').replace(/ ?\?$/, ''),
       txt: (t) => S('rule_yes_fmt', S('rule_key_steering')) + ' · ' + S('rule_minutes_fmt', t.min), val: () => car().steering, hold: (t) => t.min * 60 },
     seat_for: { cat: 'car', ok: (k) => k.heat, def: { min: 20 }, name: () => S('rule_key_seat_left') + ' > ' + S('rule_seat_off').toLowerCase(),
@@ -1584,6 +1589,8 @@
     random: { cat: 'time', def: { p: 50 }, name: () => S('rule_cond_random'), txt: (c) => S('rule_random_fmt', c.p), ok: (c) => Math.random() * 100 < c.p },
     temp_below: { cat: 'car', def: { v: 5 }, name: () => R_TRG.temp_below.name(), txt: (c) => R_TRG.temp_below.txt(c), ok: (c) => car().outside < c.v },
     temp_above: { cat: 'car', def: { v: 28 }, name: () => R_TRG.temp_above.name(), txt: (c) => R_TRG.temp_above.txt(c), ok: (c) => car().outside > c.v },
+    alt_below: { cat: 'places', def: { v: 500 }, name: () => R_TRG.alt_below.name(), txt: (c) => R_TRG.alt_below.txt(c), ok: (c) => altM() < c.v },
+    alt_above: { cat: 'places', def: { v: 1000 }, name: () => R_TRG.alt_above.name(), txt: (c) => R_TRG.alt_above.txt(c), ok: (c) => altM() > c.v },
     soc_below: { cat: 'charge', def: { v: 20 }, name: () => R_TRG.soc_below.name(), txt: (c) => R_TRG.soc_below.txt(c), ok: (c) => car().soc < c.v },
     soc_above: { def: { v: 80 }, name: () => S('rule_sig_soc'), txt: (c) => R_TRG.soc_above.txt(c), ok: (c) => car().soc > c.v },
     ready: { cat: 'car', def: { is: true }, name: () => S('rule_sig_ready'), txt: (c) => S(c.is ? 'rule_yes_fmt' : 'rule_no_fmt', S('rule_sig_ready')), ok: (c) => !!car().ready === c.is },
@@ -1634,6 +1641,7 @@
       subj('soc', 'battery', S('rule_sig_soc'), [md(S('rule_mode_above'), 'soc_above'), md(S('rule_mode_below'), 'soc_below')]);
       subj('charging', 'battery', S('rule_sig_charging'), [md(S('rule_trg_charge_start'), 'charge_start'), md(S('rule_trg_charge_end'), 'charge_end'), md(S('rule_mode_both'), 'charging_change')]);
       subj('outside', 'climate', S('rule_sig_outside_temp'), [md(S('rule_mode_above'), 'temp_above'), md(S('rule_mode_below'), 'temp_below')]);
+      subj('altitude', 'places', S('rule_sig_altitude'), [md(S('rule_mode_above'), 'alt_above'), md(S('rule_mode_below'), 'alt_below')]);
       if (k.heat) {
         subj('steering', 'comfort', S('rule_key_steering'), [md(S('rule_mode_to_true'), 'steering_on'), md(S('rule_mode_to_false'), 'steering_off'), md(S('rule_mode_both'), 'steering_change')]);
         subj('seat', 'comfort', S('rule_key_seat_left'), [md(S('rule_mode_above'), 'seat_above'), md(S('rule_mode_below'), 'seat_below')]);
@@ -1646,6 +1654,7 @@
       subj('drive_mode', 'driving', S('rule_sig_drive_mode'), [md(S('rule_op_is'), 'drive_mode')]);
       subj('soc', 'battery', S('rule_sig_soc'), [md(S('rule_op_above'), 'soc_above'), md(S('rule_op_below'), 'soc_below')]);
       subj('outside', 'climate', S('rule_sig_outside_temp'), [md(S('rule_op_above'), 'temp_above'), md(S('rule_op_below'), 'temp_below')]);
+      subj('altitude', 'places', S('rule_sig_altitude'), [md(S('rule_op_above'), 'alt_above'), md(S('rule_op_below'), 'alt_below')]);
       subj('sun_up', 'screen_sound', S('rule_sig_sun_up'), [md(S('segment_yes'), 'sun_up', { is: true }), md(S('segment_no'), 'sun_up', { is: false })]);
       subj('random', 'flow', S('rule_cond_random'), [md(S('rule_cond_random'), 'random')]);
     } else {
@@ -2558,7 +2567,7 @@
     setLang() {
       const cur = appLang();
       const b = (code) => '<button class="b nc' + (cur === code ? ' on' : '') + '" data-a="lang" data-v="' + code + '">' + esc(S('settings_language_' + code)) + '</button>';
-      return '<div class="a-sec" data-hl="s-lang"><div class="a-h">' + esc(S('settings_language')) + '</div><div class="a-grid g3">' + b('fr') + b('en') + b('de') + b('es') + b('pt') + b('it') + b('tr') + b('pl') + b('nb') + '</div></div>';
+      return '<div class="a-sec" data-hl="s-lang"><div class="a-h">' + esc(S('settings_language')) + '</div><div class="a-grid g5">' + b('fr') + b('en') + b('de') + b('es') + b('pt') + b('it') + b('tr') + b('pl') + b('nb') + b('cs') + '</div></div>';
     }
     setUi() {
       const s = state.settings, k = caps();
@@ -4380,6 +4389,7 @@
         case 'soc_below': case 'soc_above': body = stepper('v', S('rule_sig_soc'), ' %', 5, 95); break;
         case 'seat_above': case 'seat_below': body = stepper('v', S('rule_key_seat_left'), '', 0, 3); break;
         case 'temp_below': case 'temp_above': body = stepper('v', S('rule_sig_outside_temp'), ' °C', -20, 45); break;
+        case 'alt_below': case 'alt_above': body = stepper('v', S('rule_sig_altitude'), ' m', 0, 4000); break;
         case 'steering_for': case 'seat_for': body = stepper('min', S('rule_for_title'), ' min', 1, 60); break;
         case 'every': body = stepper('min', S('rule_every_title'), ' min', 1, 120) + '<div class="mw-hint">' + esc(S('rule_every_hint')) + '</div>'; break;
         case 'time': body = '<div class="mw-cap">' + esc(S('rule_time_title')) + '</div>' + stepper('h', 'h', '', 0, 23) + stepper('m', 'min', '', 0, 59); break;
@@ -4622,7 +4632,7 @@
             const cur = +it.for || 0, sens = +dir, pas = sens > 0 ? (cur < 60 ? 5 : cur < 600 ? 15 : 60) : (cur <= 60 ? 5 : cur <= 600 ? 15 : 60);
             it.for = clamp(cur + sens * pas, 0, 3600); this.render(); return true;
           }
-          const step = f === 'v' && it.k === 'brightness' ? 5 : f === 'min' && it.k === 'every' ? 5 : 1;
+          const step = f === 'v' && it.k === 'brightness' ? 5 : f === 'v' && (it.k === 'alt_above' || it.k === 'alt_below') ? 50 : f === 'min' && it.k === 'every' ? 5 : 1;
           it[f] = clamp((+it[f] || 0) + (+dir) * step, +min, +max); this.render(); return true;
         }
         case 'rvSet': { const i = v.indexOf('='), it = u.dialog.item; it[v.slice(0, i)] = JSON.parse(v.slice(i + 1)); this.render(); return true; }
@@ -4692,7 +4702,7 @@
           const tile = (code) => '<button class="mw-lang" data-a="pickLang" data-v="' + code + '"><b>' + esc(S('settings_language_' + code)) + '</b><span>' + code.toUpperCase() + '</span></button>';
           const title = S('settings_language_pick_title'), en = 'Choose your language';
           return win(820, '<span class="mw-badge mid">' + MW.language + '</span><div class="mw-ct">' + esc(title) + '</div>' + (title !== en ? '<div class="mw-s center">' + en + '</div>' : '') +
-            [['fr', 'en', 'de'], ['es', 'pt', 'it'], ['tr', 'pl', 'nb']].map((r) => '<div class="mw-langs">' + r.map(tile).join('') + '</div>').join(''), 'c');
+            [['fr', 'en', 'de', 'es', 'pt'], ['it', 'tr', 'pl', 'nb', 'cs']].map((r) => '<div class="mw-langs">' + r.map(tile).join('') + '</div>').join(''), 'c');
         }
         case 'update': {
           // Trois états sous le même en-tête (UpdateDialogManager) : les nouveautés et les actions,
@@ -5902,10 +5912,11 @@
         }
         case 'bubbleColor': u.screen = 'shortcuts'; u.tabs.sc = 'floating'; commit(); this.highlight('fl-color'); return true;
         // Bulle d'information (#236) et apparence (#230) : une bulle d'exemple, ouverte en édition.
-        case 'infoBubble': case 'bubbleLook': {
+        case 'infoBubble': case 'bubbleLook': case 'altitude': {
           this.demo('floating');
           const set = flSet(flFollowed() || ''), b = set.list[0]; if (!b) return true;
           if (name === 'infoBubble') { b.content = 'info'; b.info = 'SOC'; b.infoStyle = 'icon'; b.tap = 'none'; }
+          else if (name === 'altitude') { b.content = 'info'; b.info = 'ALTITUDE'; b.infoStyle = 'icon'; b.tap = 'none'; }
           else { b.fill = 'tint'; b.opacity = 55; b.dim = true; }
           u.flEditing = b.id; commit(); this.highlight('fl-edit'); return true;
         }
@@ -6099,10 +6110,10 @@
   const flActionName = (b) => (b.action === 'CUSTOM' ? customName(b.customId) : S(ACTION_KEY[b.action] || 'floating_unknown_action'));
   const flTitle = (b) => b.title || flActionName(b);
   /** Bulles d'information (#236) : des valeurs lues par les automatisations, et l'heure. */
-  const FL_INFOS = ['SOC', 'RANGE', 'OUTSIDE_TEMP', 'SPEED', 'HVAC_TEMP', 'DRIVE_MODE', 'REGEN', 'PROFILE', 'VOLUME', 'AC_ON', 'TIME'];
+  const FL_INFOS = ['SOC', 'RANGE', 'OUTSIDE_TEMP', 'SPEED', 'HVAC_TEMP', 'DRIVE_MODE', 'REGEN', 'PROFILE', 'VOLUME', 'AC_ON', 'TIME', 'ALTITUDE'];
   const flInfoName = (i) => S({ SOC: 'rule_sig_soc', RANGE: 'rule_sig_range', OUTSIDE_TEMP: 'rule_sig_outside_temp', SPEED: 'rule_sig_speed', HVAC_TEMP: 'rule_key_hvac_temp',
-    DRIVE_MODE: 'rule_sig_drive_mode', REGEN: 'rule_key_regen', PROFILE: 'rule_sig_profile', VOLUME: 'rule_sig_volume', AC_ON: 'rule_key_ac', TIME: 'floating_info_time' }[i]);
-  const FL_ICON = { SOC: '🔋', RANGE: '🛣', OUTSIDE_TEMP: '🌡', SPEED: '⏱', HVAC_TEMP: '🌡', DRIVE_MODE: '⚙', REGEN: '♻', PROFILE: '☆', VOLUME: '🔊', AC_ON: '❄', TIME: '🕒' };
+    DRIVE_MODE: 'rule_sig_drive_mode', REGEN: 'rule_key_regen', PROFILE: 'rule_sig_profile', VOLUME: 'rule_sig_volume', AC_ON: 'rule_key_ac', TIME: 'floating_info_time', ALTITUDE: 'rule_sig_altitude' }[i]);
+  const FL_ICON = { SOC: '🔋', RANGE: '🛣', OUTSIDE_TEMP: '🌡', SPEED: '⏱', HVAC_TEMP: '🌡', DRIVE_MODE: '⚙', REGEN: '♻', PROFILE: '☆', VOLUME: '🔊', AC_ON: '❄', TIME: '🕒', ALTITUDE: '⛰' };
   function flInfoValue(i) {
     const c = car(), mi = clMiles();
     switch (i) {
@@ -6117,6 +6128,7 @@
       case 'VOLUME': return String(c.volume);
       case 'AC_ON': return c.clim.ac ? 'ON' : 'OFF';
       case 'TIME': return nowHM();
+      case 'ALTITUDE': return altTxt(mi).join(' ');
       default: return '—';
     }
   }
@@ -6937,7 +6949,7 @@
    * firmware, réseau Wi-Fi, téléphone, données, soleil, clé, projection, média ni appel.
    */
   const CL_INFOS = ['TRIP_AVERAGE', 'TRIP_DISTANCE', 'TRIP_ENERGY', 'TRIP_REGEN', 'POWER',
-    'SOC', 'RANGE', 'OUTSIDE_TEMP', 'TIME', 'SPEED', 'HVAC_TEMP', 'DRIVE_MODE', 'REGEN', 'PROFILE', 'VOLUME', 'CHARGE_LIMIT',
+    'SOC', 'RANGE', 'OUTSIDE_TEMP', 'TIME', 'SPEED', 'HVAC_TEMP', 'DRIVE_MODE', 'REGEN', 'PROFILE', 'VOLUME', 'CHARGE_LIMIT', 'ALTITUDE',
     'READY', 'GEAR', 'CHARGING', 'HVAC_ON', 'ONE_PEDAL', 'ENERGY_SAVING', 'AEB', 'TSR', 'ESC', 'DROWSINESS', 'OVERSPEED_ALARM',
     'AC_ON', 'HVAC_AUTO', 'HVAC_ECO', 'FAN', 'RECIRC', 'DEFROST_FRONT', 'DEFROST_REAR', 'SEAT_HEAT_LEFT', 'SEAT_HEAT_RIGHT',
     'STEERING_HEAT', 'BATTERY_HEAT', 'FRONT_DOOR', 'LOCKED', 'BRIGHTNESS', 'NIGHT', 'DRIVE_MINUTES', 'PLUGGED', 'CHARGE_DC',
@@ -6990,11 +7002,11 @@
   };
   const clInfoName = (i) => S({ PROFILE: 'rule_sig_profile', DRIVE_MODE: 'rule_sig_drive_mode', TRIP_AVERAGE: 'cluster_info_trip_average', TRIP_REGEN: 'cluster_info_trip_regen',
     TRIP_DISTANCE: 'cluster_info_trip_distance', TRIP_ENERGY: 'cluster_info_trip_energy', POWER: 'cluster_info_power', SOC: 'rule_sig_soc', RANGE: 'rule_sig_range',
-    OUTSIDE_TEMP: 'rule_sig_outside_temp', SPEED: 'rule_sig_speed', TIME: 'floating_info_time' }[i] || CL_SIG[i]?.[0]);
+    OUTSIDE_TEMP: 'rule_sig_outside_temp', SPEED: 'rule_sig_speed', TIME: 'floating_info_time', ALTITUDE: 'rule_sig_altitude' }[i] || CL_SIG[i]?.[0]);
   /** Affichages proposés (ClusterInfo.styles) : pastille, valeur, icône pour le profil et le mode ; valeur, libellé, icône sinon. */
   const clPillOk = (i) => i === 'PROFILE' || i === 'DRIVE_MODE';
   const clInfoStyles = (i) => (clPillOk(i) ? ['pill', 'value', 'icon'] : ['value', 'label', 'icon']);
-  const CL_DIST_INFOS = ['TRIP_AVERAGE', 'TRIP_DISTANCE', 'SPEED', 'RANGE'];
+  const CL_DIST_INFOS = ['TRIP_AVERAGE', 'TRIP_DISTANCE', 'SPEED', 'RANGE', 'ALTITUDE'];
   const clBlockMiles = (b, general) => b.distance ? b.distance === 'mi' : general;
   function clBlockUnits(info, miles) {
     if (info === 'TRIP_AVERAGE') {
@@ -7024,6 +7036,7 @@
     TIME: 'M3,12a9,9 0,1 0,18 0a9,9 0,0 0,-18 0 M12,7v5l3,3'
   };
   CL_INFO_ICON.RANGE = CL_INFO_ICON.SOC;
+  CL_INFO_ICON.ALTITUDE = 'M3,20h18l-6.921,-14.612a2.3,2.3 0,0 0,-4.158 0l-6.921,14.612z M7.5,11l2,2.5l2.5,-2.5l2,3l2.5,-2';
   CL_INFO_ICON.SPEED = 'M4,17a8,8 0,1 1,16 0 M12,14l4,-4 M12,17m-1,0a1,1 0,1 0,2 0a1,1 0,1 0,-2 0';
   /** La disposition d'un profil, ou celle d'avant : pastille en Info 1, moyenne et récupération en bas. */
   function clLayoutOf(cfg) {
@@ -7071,6 +7084,7 @@
         case 'SPEED': value = [String(Math.round((d.kmh ?? c.speed) / factor)), mi ? 'mph' : 'km/h']; break;
         case 'OUTSIDE_TEMP': value = [String(Math.round(c.outside)), '°C']; break;
         case 'TIME': value = [nowHM(), null]; break;
+        case 'ALTITUDE': value = altTxt(mi); break;
         default: if (CL_SIG[b.info]) value = CL_SIG[b.info][1](c);
       }
       return { style: st, info: b.info, size: b.size, label, value, col, pill };

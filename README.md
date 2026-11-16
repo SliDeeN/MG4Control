@@ -321,11 +321,16 @@ the one playing.
 - **Phone plugged in before start-up** (#251): an iPhone or Android phone plugged in before the
   head unit starts was seen by neither CarPlay nor Android Auto. Option in *Settings → Advanced*,
   "Android Auto · CarPlay" card (off by default, hidden without the car's AllGo projection
-  service): 15 s after start-up, and 10 s after the screen wakes from a real sleep, if no
-  projection is open, MG4Control announces the cable-connected phone to the car again, as if it had
-  just been plugged in; with no session 15 s later, it resets the USB port and tries once more. An
-  Android phone is left to AA Kick when that app is installed. Nothing happens in Garage mode.
-  Diagnostic lines: `MG4_PROJ`.
+  service): 15 s after start-up, 10 s after the screen wakes from a real sleep, and as soon as the
+  option is turned on with a phone plugged in, if no projection is open, MG4Control announces the
+  cable-connected phone to the car again, as if it had just been plugged in; with no session 15 s
+  later, it resets the USB port and tries once more. At start-up and wake-up, a phone not visible
+  yet is looked for every 4 s for one minute, as AA Kick does. Wired CarPlay swaps the USB roles: an
+  iPhone that leaves the USB list after the announcement has started CarPlay, so MG4Control waits
+  for its session (up to 30 s) instead of resetting the port, and the shortcut opens CarPlay as soon
+  as it arrives. An AllGo service that does not answer yet no longer stops anything. An Android
+  phone is left to AA Kick when that app is installed (at start-up and wake-up). Nothing happens in
+  Garage mode. Diagnostic lines: `MG4_PROJ`.
 - **Android settings**: opens the Android settings screen, which the car's launcher does not offer —
   the Android or the Android Automotive one depending on the firmware; if neither opens, a message
   says so. Also a button in *Settings → Info*. Idea taken from **sensoyg**'s fork.
@@ -407,7 +412,7 @@ reverse, in Garage mode and while Car keeper is running.
 
 - **Information bubbles** (#236): instead of a title, a bubble can show a value read from the car —
   battery, range, outside temperature, speed, climate setpoint, drive mode, regeneration, profile,
-  volume, time… —, as *Value*, *Label + value* or *Icon + value*. On tap: run the action, or nothing
+  volume, time, **altitude** (#254)… —, as *Value*, *Label + value* or *Icon + value*. On tap: run the action, or nothing
   (display only; a long press still moves the bubble). A yes / no value colours it like a toggle;
   the time and the speed are read every second, the rest every 5 s, "—" when the value is unreadable
 - **Each bubble's look** (#230, #222): background opacity (0 to 100 %), dark, tinted, light or
@@ -528,7 +533,7 @@ of Home Assistant. The automations above stay separate, as they are.
 - **And if**: *All* / *At least one* / *None* groups, nested three levels deep — time, days,
   season, random, variables, places (GPS) and some sixty vehicle and Android values
   (regeneration, ADAS, climate, seats, lock, brightness, volume, Wi-Fi, Bluetooth, Android Auto /
-  CarPlay, media, call, sun up…)
+  CarPlay, media, call, sun up, altitude…)
 - **Then**: vehicle and climate settings (also to a variable's value, `$NAME`), brightness,
   volume, media (including play and pause), windows, sound (beep with its volume, or your own
   sounds imported from a USB drive, 12 at most, at the chosen volume), open an app, custom
@@ -699,8 +704,8 @@ there, and the card does not appear in the settings.
 - **Advanced customisation** (#229): a pop-up with an animated preview on the left; tap a slot or
   the gauge to set it, long-press it to move it. **The gauge** sits at the top, middle or bottom; **up
   to 4 pieces of information** surround it (two rows of two): profile, drive mode, average, energy
-  recovered, distance, energy used, power, battery, range, temperature, time and the bubbles' other
-  values. Each slot: *Value*, *Label + value*, *Icon + value* or *Badge* (profile and mode — the last
+  recovered, distance, energy used, power, battery, range, temperature, time, altitude and the
+  bubbles' other values. Each slot: *Value*, *Label + value*, *Icon + value* or *Badge* (profile and mode — the last
   applied profile, in capitals, in the colour of its drive mode), three sizes, full width when the
   neighbour is free, and its own unit (the average in Wh/km, kWh/100 km or km/kWh; the power in kW or
   horsepower). A row with no information disappears on the cluster and the gauge grows. For the
@@ -781,10 +786,10 @@ charge into the Statistics tab.
 
 ### Settings
 Screen organised into **four tabs**:
-- **Languages**: French, English, German, Spanish, Italian, Portuguese, Turkish, Polish and
-  Norwegian (Bokmål, #239) — on first launch, MG4Control takes the car's language if it is
-  translated (pop-ups shown before the app is first opened too), otherwise it asks in a window with
-  nine large tiles
+- **Languages**: French, English, German, Spanish, Italian, Portuguese, Turkish, Polish,
+  Norwegian (Bokmål, #239) and Czech (#257) — on first launch, MG4Control takes the car's language
+  if it is translated (pop-ups shown before the app is first opened too), otherwise it asks in a
+  window with ten large tiles, two rows of five
 - **Interface**: screen shown at startup, appearance (auto / dark / light), text size (standard /
   large / extra large), **full screen** (status and navigation bars hidden, off by default),
   **pop-up closing delay** (1 to 60 s, 10 by default), **charging pop-up** (off by default),
@@ -1263,7 +1268,7 @@ MG4Control/
 │   │   │   ├── NavSide.kt             # Menu side: Auto / Left / Right
 │   │   │   ├── ButtonLines.kt         # Button labels on two lines, otherwise "…"
 │   │   │   ├── FirmwareHelper.kt      # Full firmware version string reader (async)
-│   │   │   ├── LocaleHelper.kt        # Language management (9 languages) and text size
+│   │   │   ├── LocaleHelper.kt        # Language management (10 languages) and text size
 │   │   │   ├── DashcamApp.kt          # Car keeper: camera app controllable, outdated or missing
 │   │   │   ├── ThemeHelper.kt         # Auto / dark / light theme
 │   │   │   └── DataUsage.kt           # Data usage (Ethernet interface)
@@ -2025,12 +2030,17 @@ car le cycle repart de la dernière source choisie, pas de celle qui joue.
 - **Téléphone branché avant le démarrage** (#251) : un iPhone ou un téléphone Android branché avant
   le démarrage de l'écran n'était vu ni par CarPlay ni par Android Auto. Option dans *Réglages →
   Avancé*, carte « Android Auto · CarPlay » (désactivée par défaut, masquée sans le service de
-  projection AllGo de la voiture) : 15 s après le démarrage, et 10 s après le réveil de l'écran
-  après une vraie mise en veille, si aucune projection n'est ouverte, MG4Control signale de nouveau
-  le téléphone branché à la voiture, comme s'il venait d'être branché ; sans session 15 s plus tard,
-  il réinitialise la prise USB et recommence une fois. Un téléphone Android est laissé à AA Kick
-  quand cette application est installée. Rien ne se passe en Mode Garage. Lignes du Diagnostic :
-  `MG4_PROJ`.
+  projection AllGo de la voiture) : 15 s après le démarrage, 10 s après le réveil de l'écran après
+  une vraie mise en veille, et dès l'activation de l'option avec un téléphone branché, si aucune
+  projection n'est ouverte, MG4Control signale de nouveau le téléphone branché à la voiture, comme
+  s'il venait d'être branché ; sans session 15 s plus tard, il réinitialise la prise USB et
+  recommence une fois. Au démarrage et au réveil, un téléphone pas encore visible est cherché toutes
+  les 4 s pendant une minute, comme le fait AA Kick. Le CarPlay filaire inverse les rôles USB : un
+  iPhone qui quitte la liste USB après l'annonce a lancé CarPlay, MG4Control attend donc sa session
+  (jusqu'à 30 s) au lieu de réinitialiser la prise, et le raccourci ouvre CarPlay dès qu'elle
+  arrive. Un service AllGo qui ne répond pas encore n'arrête plus rien. Un téléphone Android est
+  laissé à AA Kick quand cette application est installée (au démarrage et au réveil). Rien ne se
+  passe en Mode Garage. Lignes du Diagnostic : `MG4_PROJ`.
 - **Paramètres Android** : ouvre l'écran des paramètres d'Android, que le launcher de la voiture ne
   propose pas — celui d'Android ou d'Android Automotive selon le firmware ; si aucun ne s'ouvre, un
   message le dit. Aussi en bouton dans *Réglages → Infos*. Idée reprise du fork de **sensoyg**.
@@ -2115,7 +2125,7 @@ en marche arrière, en Mode Garage et pendant le Garde-voiture.
 
 - **Bulles d'information** (#236) : au lieu d'un titre, une bulle peut afficher une valeur lue sur
   la voiture — batterie, autonomie, température extérieure, vitesse, consigne de clim, mode de
-  conduite, régénération, profil, volume, heure… —, en *Valeur*, *Libellé + valeur* ou *Icône +
+  conduite, régénération, profil, volume, heure, **altitude** (#254)… —, en *Valeur*, *Libellé + valeur* ou *Icône +
   valeur*. Au toucher : lancer l'action, ou rien (affichage seul ; l'appui long déplace toujours la
   bulle). Une valeur oui / non la colore comme une bascule ; l'heure et la vitesse sont relues chaque
   seconde, le reste toutes les 5 s, « — » quand la valeur est illisible
@@ -2240,7 +2250,7 @@ colonne, façon Home Assistant. Les automatisations ci-dessus restent à part, t
 - **Et si** : groupes *Toutes* / *Au moins une* / *Aucune*, imbriqués sur trois niveaux — heure,
   jours, saison, hasard, variables, lieux (GPS) et une soixantaine de valeurs du véhicule et
   d'Android (récupération, ADAS, clim, sièges, verrouillage, luminosité, volume, Wi-Fi, Bluetooth,
-  Android Auto / CarPlay, média, appel, soleil levé…)
+  Android Auto / CarPlay, média, appel, soleil levé, altitude…)
 - **Alors** : réglages du véhicule et de la clim (aussi à la valeur d'une variable, `$NOM`),
   luminosité, volume, média (dont lecture et pause), vitres, son (bip avec son volume, ou vos sons
   importés d'une clé USB, 12 au plus, au volume choisi), ouvrir une application, raccourci perso, lancer,
@@ -2425,7 +2435,7 @@ dessine tout lui-même : rien ne peut s'y afficher, et la carte n'apparaît pas 
   case ou la jauge pour la régler, on la presse longuement pour la déplacer. **La jauge** se place en
   haut, au milieu ou en bas ; **jusqu'à 4 informations** l'entourent (deux rangées de deux) : profil,
   mode de conduite, moyenne, énergie récupérée, distance, énergie consommée, puissance, batterie,
-  autonomie, température, heure et les autres valeurs des bulles. Chaque case : *Valeur*,
+  autonomie, température, heure, altitude et les autres valeurs des bulles. Chaque case : *Valeur*,
   *Libellé + valeur*, *Icône + valeur* ou *Pastille* (profil et mode — le dernier profil appliqué, en
   capitales, dans la couleur de son mode de conduite), trois tailles, toute la largeur si la voisine
   est libre, et son unité (la moyenne en Wh/km, kWh/100 km ou km/kWh ; la puissance en kW ou en
@@ -2510,10 +2520,10 @@ Statistiques.
 
 ### Réglages
 Écran organisé en **quatre onglets** :
-- **Langues** : français, anglais, allemand, espagnol, italien, portugais, turc, polonais et
-  norvégien (bokmål, #239) — au premier lancement, MG4Control prend la langue de la voiture si elle
-  est traduite (les pop-ups affichés avant la première ouverture aussi), sinon il la demande dans une
-  fenêtre à neuf grandes tuiles
+- **Langues** : français, anglais, allemand, espagnol, italien, portugais, turc, polonais,
+  norvégien (bokmål, #239) et tchèque (#257) — au premier lancement, MG4Control prend la langue de la
+  voiture si elle est traduite (les pop-ups affichés avant la première ouverture aussi), sinon il la
+  demande dans une fenêtre à dix grandes tuiles, deux rangées de cinq
 - **Interface** : écran affiché au démarrage, apparence (auto / sombre / clair), taille du texte
   (standard / grand / très grand), **plein écran** (barres d'état et de navigation masquées,
   désactivé par défaut), **délai avant la fermeture des pop-ups** (1 à 60 s, 10 par défaut),
@@ -3004,7 +3014,7 @@ MG4Control/
 │   │   │   ├── NavSide.kt             # Côté du menu : Auto / Gauche / Droite
 │   │   │   ├── ButtonLines.kt         # Libellés de bouton sur deux lignes, sinon « … »
 │   │   │   ├── FirmwareHelper.kt      # Lecture version firmware complète (async)
-│   │   │   ├── LocaleHelper.kt        # Gestion de la langue (9 langues) et de la taille du texte
+│   │   │   ├── LocaleHelper.kt        # Gestion de la langue (10 langues) et de la taille du texte
 │   │   │   ├── DashcamApp.kt          # Garde-voiture : application caméra pilotable, ancienne ou absente
 │   │   │   ├── ThemeHelper.kt         # Thème auto / sombre / clair
 │   │   │   └── DataUsage.kt           # Consommation de données (interface Ethernet)

@@ -130,7 +130,7 @@
       <a class="btn btn-ghost" href="#installation"><span data-l="en">Installation</span></a>
     </div>
     <div class="hero-meta">
-      <span><span data-l="en">9 languages</span></span>
+      <span><span data-l="en">10 languages</span></span>
       <span><span data-l="en">7 firmwares: SWI133 · SWI132 · SWI68 · SWI69 · SWI131 · SWI165 · SWI173</span></span>
       <span><span data-l="en">GPL v3 licence</span></span>
     </div>
@@ -138,7 +138,7 @@
     <div class="whatsnew">
       <div class="wn-head">
         <span class="badge-new"><span data-l="en">New</span> · 2.7.0</span>
-        <b><span data-l="en">29 new things in this release</span></b>
+        <b><span data-l="en">31 new things in this release</span></b>
         <button type="button" class="wn-all" data-new-link><span data-l="en">Show only what's new</span></button>
       </div>
       <div class="wn-list">
@@ -157,12 +157,14 @@
         <a href="#f-bubblelook" data-feature="f-bubblelook"><span data-l="en">🫧 Look of each bubble</span></a>
         <a href="#f-cluster-layout" data-feature="f-cluster-layout"><span data-l="en">🧩 Driver display: gauge and 4 infos to place</span></a>
         <a href="#f-cluster-miles" data-feature="f-cluster-miles"><span data-l="en">📏 Kilometres or miles everywhere</span></a>
+        <a href="#f-altitude" data-feature="f-altitude"><span data-l="en">⛰️ Altitude in bubbles and on the driver display</span></a>
         <a href="#f-survcam" data-feature="f-survcam"><span data-l="en">📹 Surveillance: the dashcam records</span></a>
         <a href="#f-abrp" data-feature="f-abrp"><span data-l="en">🗺️ Live data to ABRP</span></a>
         <a href="#f-onepedal" data-feature="f-onepedal"><span data-l="en">🦶 One Pedal: back to the previous level</span></a>
         <a href="#f-keepac" data-feature="f-keepac"><span data-l="en">❄️ Keep the A/C off</span></a>
         <a href="#f-projkick" data-feature="f-projkick"><span data-l="en">🔌 Phone plugged in before start-up</span></a>
         <a href="#f-immersive" data-feature="f-immersive"><span data-l="en">🖥️ Full-screen apps</span></a>
+        <a href="#f-autolang" data-feature="f-autolang"><span data-l="en">🗣️ Czech, 10th language</span></a>
         <a href="#f-bri0" data-feature="f-bri0"><span data-l="en">🔅 Brightness down to 0 %</span></a>
         <a href="#f-preclim-watts" data-feature="f-preclim-watts"><span data-l="en">⚡ Car keeper: power in watts</span></a>
         <a href="#f-profilecopy" data-feature="f-profilecopy"><span data-l="en">📑 Duplicate and rename a profile</span></a>
@@ -694,7 +696,7 @@
       <h3><span data-l="en">Phone plugged in before start-up</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
       <p data-l="en">An iPhone or Android phone plugged in before the screen started was seen by neither CarPlay nor Android Auto. An option announces it to the car again (#251).</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">In Settings › Advanced, “Android Auto · CarPlay” card, off by default. When the screen starts or wakes up and no projection is open, MG4Control announces the cable-connected phone again, as if it had just been plugged in; if nothing happens, it resets the port and tries once more. An Android phone is left to AA Kick when that app is installed. Nothing happens in Garage mode.</p>
+        <p data-l="en">In Settings › Advanced, “Android Auto · CarPlay” card, off by default. When the screen starts or wakes up, and as soon as the option is turned on, if no projection is open, MG4Control announces the cable-connected phone again, as if it had just been plugged in; if nothing happens, it resets the port and tries once more. At start-up, a phone not visible yet is looked for during one minute. An iPhone that leaves the USB list has started CarPlay: MG4Control then waits for its session, up to 30 s. The Android Auto / CarPlay shortcut does the same and opens the projection as soon as it arrives. An Android phone is left to AA Kick when that app is installed. Nothing happens in Garage mode.</p>
       </details>
     </div>
     <div class="pt" id="f-floating" data-hl-key="sc-floating" data-demo="floating">
@@ -712,7 +714,7 @@
       </details>
     </div>    <div class="pt is-new" id="f-infobubbles" data-hl-key="fl-edit" data-demo="infoBubble">
       <h3><span data-l="en">Information bubbles</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
-      <p data-l="en">A bubble can show a piece of information instead of a title: battery, range, outside temperature, speed, climate setpoint, drive mode, regeneration, profile, volume, time… (#236).</p>
+      <p data-l="en">A bubble can show a piece of information instead of a title: battery, range, outside temperature, speed, climate setpoint, drive mode, regeneration, profile, volume, time, altitude… (#236).</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
         <p data-l="en">In a bubble's editor, “Content”: Title or Information. Display: value, label + value (the typed title, otherwise the value's name) or icon + value. On tap: run the action, or nothing (display only; a long press still moves the bubble). A yes / no value colours the bubble like a toggle; the time and the speed are read every second, the rest every 5 s; “—” when the value is unreadable. Existing bubbles don't change.</p>
       </details>
@@ -722,6 +724,13 @@
       <p data-l="en">Background opacity, dark, tinted, light or black background, automatic or fixed width, border or none, and dimming when idle: each bubble has its own look (#230, #222).</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
         <p data-l="en">When dimmed, a bubble drops to 40 % after 5 s without a touch; a touch runs the action and makes it sharp again. “Copy the look of…” takes another bubble's, from this profile or another one, and “Apply to all bubbles” spreads it over the profile. An active toggle stays at least 60 % opaque, and under 35 % the text gets an outline to stay readable. A bubble never set keeps its previous look. The black background at 100 % blends into the black top bar. With a fixed width (60 to 240 dp), an information bubble no longer changes width with its value; a text that is too long ends with “…”.</p>
+      </details>
+    </div>
+    <div class="pt is-new" id="f-altitude" data-hl-key="fl-edit" data-demo="altitude">
+      <h3><span data-l="en">Altitude as an information</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
+      <p data-l="en">The car's GPS altitude shows in a bubble or in a driver display slot, and also serves as a value for automations (#254).</p>
+      <details class="more"><summary><span data-l="en">Learn more</span></summary>
+        <p data-l="en">Read from the car's GPS, offline: the most recent known position carrying an altitude, rounded to the metre, kept up to date while driving. In metres, or in feet when the distance unit is miles (a driver display slot has its own km / miles choice). In My automations, Places category: above or below a threshold, from 0 to 4000 m in steps of 50 m.</p>
       </details>
     </div>
 
@@ -1196,7 +1205,7 @@
     </div>
     <div class="pt is-new" id="f-cluster-layout" data-hl-key="s-cluster-layout" data-demo="clusterLayout">
       <h3><span data-l="en">The gauge and 4 infos to place</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
-      <p data-l="en">The gauge at the top, middle or bottom, and up to 4 pieces of information around it: profile, mode, average, regeneration, distance, energy, power, battery, range, temperature, time… (#229).</p>
+      <p data-l="en">The gauge at the top, middle or bottom, and up to 4 pieces of information around it: profile, mode, average, regeneration, distance, energy, power, battery, range, temperature, time, altitude… (#229).</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
         <p data-l="en">Settings › Interface › Driver display › “Advanced customisation”: an animated preview on the left; tap a slot or the gauge to set it, press and hold it, then drag to move it. Each slot: value, label + value, icon + value or badge, three sizes, and its own unit (the average in Wh/km, kWh/100 km or km/kWh, the power in kW or horsepower). The gauge: position, thickness, consumption and regeneration colours, trip-average marker, kW under the consumption or consumption under the kW — the options follow the gauge chosen in the preview, which reopens on the last one chosen. The power gauge can count in horsepower, with round marks (25, 50, 100, 200 hp…). A row with no information disappears on the cluster and the gauge grows. Nothing is saved before “Save”, for all the selected profiles.</p>
       </details>
@@ -1384,7 +1393,7 @@
       <h3><span data-l="en">Car language</span><span class="badge-new"><span data-l="en">New</span> · 2.7.0</span></h3>
       <p data-l="en">On first launch, MG4Control takes the car's language if it is translated; otherwise it asks you.</p>
       <details class="more"><summary><span data-l="en">Learn more</span></summary>
-        <p data-l="en">Nine languages: French, English, German, Spanish, Italian, Portuguese, Turkish and, new, Polish and Norwegian (Bokmål, #239). Pop-ups shown before the app is first opened follow that language too. A choice already made is left unchanged.</p>
+        <p data-l="en">Ten languages: French, English, German, Spanish, Italian, Portuguese, Turkish and, new, Polish, Norwegian (Bokmål, #239) and Czech (#257). Pop-ups shown before the app is first opened follow that language too. A choice already made is left unchanged.</p>
       </details>
     </div>
   </div>
@@ -1709,8 +1718,8 @@
 <div class="dock" aria-label="Virtual vehicle"></div>
 <button type="button" class="to-top" aria-label="Back to the top of the page" title="Back to the top of the page"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 
-<script src="../assets/js/strings.js?v=2a262528"></script>
-<script src="../assets/js/sim.js?v=e5764c36"></script>
+<script src="../assets/js/strings.js?v=513cbcd5"></script>
+<script src="../assets/js/sim.js?v=2c50d303"></script>
 <script src="../assets/js/site.js?v=5b3c68e9"></script>
 <script src="../assets/js/explorer.js?v=72fb983a"></script>
 </body>

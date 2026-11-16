@@ -6,7 +6,7 @@ param([string]$Res, [string]$Out, [string]$ResBeta = '')
 # ASCII only on purpose: Windows PowerShell 5.1 reads scripts without BOM as ANSI.
 
 $ARROW_ESC = [string][char]92 + "u2192"
-$langs = [ordered]@{ fr = 'values'; en = 'values-en'; de = 'values-de'; es = 'values-es'; it = 'values-it'; pt = 'values-pt'; tr = 'values-tr'; pl = 'values-pl'; nb = 'values-nb' }
+$langs = [ordered]@{ fr = 'values'; en = 'values-en'; de = 'values-de'; es = 'values-es'; it = 'values-it'; pt = 'values-pt'; tr = 'values-tr'; pl = 'values-pl'; nb = 'values-nb'; cs = 'values-cs' }
 
 function Read-Strings([string]$dir) {
   $map = [ordered]@{}
