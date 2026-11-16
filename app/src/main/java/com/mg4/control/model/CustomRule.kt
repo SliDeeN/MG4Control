@@ -111,7 +111,12 @@ enum class RuleSignal(val kind: Kind) {
     MEDIA_PLAYING(Kind.BOOL),
     IN_CALL(Kind.BOOL),
     /** Soleil au-dessus de l'horizon, à la position de la voiture. */
-    SUN_UP(Kind.BOOL);
+    SUN_UP(Kind.BOOL),
+    /**
+     * Altitude en mètres (2026-11-16), d'après la dernière position connue qui en porte une : le GPS
+     * de la voiture la fournit (bande Dénivelé du graphique de trajet, vue en voiture).
+     */
+    ALTITUDE(Kind.NUMBER);
 
     enum class Kind { BOOL, NUMBER, TEXT, TEXT_SET }
 

@@ -188,7 +188,7 @@ class ClusterSettingsPreview(private val cadre: FrameLayout, private val vide: T
             RuleSignal.HVAC_TEMP.name to 21.0, RuleSignal.VOLUME.name to 12.0, RuleSignal.CHARGE_LIMIT.name to 90.0,
             RuleSignal.BRIGHTNESS.name to 60.0, RuleSignal.REGEN.name to "MEDIUM", RuleSignal.GEAR.name to "D",
             RuleSignal.HVAC_ON.name to true, RuleSignal.AC_ON.name to true, RuleSignal.READY.name to true,
-            RuleSignal.CHARGING.name to false, RuleSignal.PLUGGED.name to false,
+            RuleSignal.CHARGING.name to false, RuleSignal.PLUGGED.name to false, RuleSignal.ALTITUDE.name to 412.0,
         )
 
         /** Puissance visée (kW) et vitesse (km/h) à l'instant [t] du cycle. */

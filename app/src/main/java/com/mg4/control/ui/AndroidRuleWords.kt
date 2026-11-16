@@ -42,6 +42,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
         RuleSignal.SOC -> " %"
         RuleSignal.RANGE -> " km"
         RuleSignal.OUTSIDE_TEMP -> " °C"
+        RuleSignal.ALTITUDE -> " m"
         else -> ""
     }
 
@@ -261,6 +262,7 @@ class AndroidRuleWords(private val ctx: Context) : RuleWords {
             RuleSignal.MEDIA_PLAYING -> R.string.rule_sig_media_playing
             RuleSignal.IN_CALL -> R.string.rule_sig_in_call
             RuleSignal.SUN_UP -> R.string.rule_sig_sun_up
+            RuleSignal.ALTITUDE -> R.string.rule_sig_altitude
         }
 
         fun eventRes(e: RuleEvent): Int = when (e) {

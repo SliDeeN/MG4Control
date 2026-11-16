@@ -1727,6 +1727,7 @@
     <string name="rule_sig_plugged">Collegata</string>
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Sole sorto</string>
+    <string name="rule_sig_altitude">Altitudine</string>
     <string name="rule_sig_tsr">Segnali (TSR)</string>
     <string name="rule_sig_volume">Volume</string>
     <string name="rule_sig_wifi_on">Wi-Fi attivo</string>

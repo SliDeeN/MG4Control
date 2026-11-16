@@ -77,7 +77,7 @@ object BubbleInfo {
     }
 
     /**
-     * Vitesse et autonomie dans l'unité de distance générale (2026-11-10) : la valeur (en miles,
+     * Vitesse, autonomie et altitude dans l'unité de distance générale (2026-11-10) : la valeur (en miles,
      * arrondie à l'entier) et son unité ; `null` pour les autres informations. En km, rien ne change.
      */
     fun inDistanceUnit(s: RuleSignal, value: Any?, unit: DistanceUnit): Pair<Any?, String>? {
@@ -87,6 +87,9 @@ object BubbleInfo {
                 (if (unit == DistanceUnit.KM || n == null) value else unit.speedFromKmh(n).roundToInt()) to " ${unit.speedShort}"
             RuleSignal.RANGE ->
                 (if (unit == DistanceUnit.KM || n == null) value else unit.fromKm(n).roundToInt()) to " ${unit.short}"
+            // Altitude (2026-11-16) : pieds en miles, mètres sinon.
+            RuleSignal.ALTITUDE ->
+                (if (unit == DistanceUnit.KM || n == null) value else unit.altitudeFromM(n).roundToInt()) to " ${unit.altitudeShort}"
             else -> null
         }
     }

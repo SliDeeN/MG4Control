@@ -1727,6 +1727,7 @@
     <string name="rule_sig_plugged">Ligado à tomada</string>
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Sol nascido</string>
+    <string name="rule_sig_altitude">Altitude</string>
     <string name="rule_sig_tsr">Sinais (TSR)</string>
     <string name="rule_sig_volume">Volume</string>
     <string name="rule_sig_wifi_on">Wi-Fi ligado</string>

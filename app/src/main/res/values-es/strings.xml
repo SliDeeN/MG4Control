@@ -1727,6 +1727,7 @@
     <string name="rule_sig_plugged">Enchufado</string>
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Sol salido</string>
+    <string name="rule_sig_altitude">Altitud</string>
     <string name="rule_sig_tsr">Señales (TSR)</string>
     <string name="rule_sig_volume">Volumen</string>
     <string name="rule_sig_wifi_on">Wi-Fi activado</string>

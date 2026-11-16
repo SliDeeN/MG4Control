@@ -1750,6 +1750,7 @@
     <string name="rule_sig_plugged">Prise branchée</string>
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Soleil levé</string>
+    <string name="rule_sig_altitude">Altitude</string>
     <string name="rule_sig_tsr">Panneaux (TSR)</string>
     <string name="rule_sig_volume">Volume</string>
     <string name="rule_sig_wifi_on">Wi-Fi allumé</string>

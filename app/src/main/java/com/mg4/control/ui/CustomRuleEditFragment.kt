@@ -824,7 +824,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
 
     private fun catSignal(sig: RuleSignal): Cat = when (sig) {
         RuleSignal.LOCKED, RuleSignal.FRONT_DOOR -> Cat.CAR
-        RuleSignal.BT_DEVICE -> Cat.PLACES
+        RuleSignal.BT_DEVICE, RuleSignal.ALTITUDE -> Cat.PLACES
         RuleSignal.READY, RuleSignal.GEAR, RuleSignal.SPEED, RuleSignal.DRIVE_MODE, RuleSignal.REGEN, RuleSignal.ONE_PEDAL,
         RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES, RuleSignal.PROFILE -> Cat.DRIVING
         RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.PLUGGED, RuleSignal.CHARGE_DC, RuleSignal.CHARGE_LIMIT,
@@ -860,7 +860,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
             RuleSignal.ENERGY_SAVING, RuleSignal.DRIVE_MINUTES,
             RuleSignal.SOC, RuleSignal.RANGE, RuleSignal.CHARGING, RuleSignal.PLUGGED, RuleSignal.CHARGE_DC, RuleSignal.CHARGE_LIMIT,
             RuleSignal.BATTERY_HEAT,
-            RuleSignal.OUTSIDE_TEMP, RuleSignal.NIGHT, RuleSignal.SUN_UP,
+            RuleSignal.OUTSIDE_TEMP, RuleSignal.NIGHT, RuleSignal.SUN_UP, RuleSignal.ALTITUDE,
             RuleSignal.HVAC_ON, RuleSignal.AC_ON, RuleSignal.HVAC_AUTO, RuleSignal.HVAC_ECO, RuleSignal.HVAC_TEMP, RuleSignal.FAN,
             RuleSignal.RECIRC, RuleSignal.DEFROST_FRONT, RuleSignal.DEFROST_REAR,
             RuleSignal.SEAT_HEAT_LEFT, RuleSignal.SEAT_HEAT_RIGHT, RuleSignal.STEERING_HEAT,
@@ -896,6 +896,7 @@ class CustomRuleEditFragment : Fragment(R.layout.fragment_custom_rule_edit) {
         RuleSignal.DRIVE_MINUTES -> Borne(0, 600, 30, 5)
         RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> Borne(0, 50_000, 500, 50)
         RuleSignal.CHARGE_LIMIT -> Borne(40, 100, 80, 10)
+        RuleSignal.ALTITUDE -> Borne(0, 4000, 500, 50)
         else -> Borne(0, 100, 0, 1)
     }
 

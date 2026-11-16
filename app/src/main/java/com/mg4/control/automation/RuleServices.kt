@@ -400,6 +400,19 @@ object AndroidControls {
         val connues = listOfNotNull(derniere) + FOURNISSEURS.mapNotNull { p -> runCatching { lm?.getLastKnownLocation(p) }.getOrNull() }
         return connues.filterNot { it.latitude == 0.0 && it.longitude == 0.0 }.maxByOrNull { it.time }
     }
+
+    /**
+     * Altitude en mètres, arrondie (2026-11-16) : la position connue la plus récente qui en porte une,
+     * quel que soit son âge — garée, la voiture n'a pas bougé. En roulant, le suivi des Statistiques
+     * (et celui des automatisations qui la lisent) la tient à jour. `null` si aucune position n'en a.
+     */
+    @SuppressLint("MissingPermission")
+    fun altitude(ctx: Context): Double? {
+        val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+        val connues = listOfNotNull(derniere) + FOURNISSEURS.mapNotNull { p -> runCatching { lm?.getLastKnownLocation(p) }.getOrNull() }
+        return connues.filter { it.hasAltitude() && !(it.latitude == 0.0 && it.longitude == 0.0) }
+            .maxByOrNull { it.time }?.altitude?.let { Math.round(it).toDouble() }
+    }
 }
 
 /** Écritures propres aux automatisations ([RuleKeys]) : les setters de MG4Control, avec leur verrou de conduite. */

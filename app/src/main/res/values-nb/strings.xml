@@ -1721,6 +1721,7 @@
     <string name="rule_sig_plugged">Tilkoblet lader</string>
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Solen er oppe</string>
+    <string name="rule_sig_altitude">Høyde</string>
     <string name="rule_sig_tsr">Skiltgjenkjenning (TSR)</string>
     <string name="rule_sig_volume">Volum</string>
     <string name="rule_sig_wifi_on">Wi-Fi på</string>

@@ -273,7 +273,8 @@ object ClusterInfo {
 
     /** Ce qui se compte en distance : km, miles, ou le réglage général. */
     fun hasDistance(key: String?): Boolean =
-        key == TRIP_AVERAGE || key == TRIP_DISTANCE || key == RuleSignal.SPEED.name || key == RuleSignal.RANGE.name
+        key == TRIP_AVERAGE || key == TRIP_DISTANCE || key == RuleSignal.SPEED.name || key == RuleSignal.RANGE.name ||
+            key == RuleSignal.ALTITUDE.name
 
     fun unit(b: ClusterBlock): String? = units(b.info).let { u -> b.unit?.takeIf { it in u } ?: u.firstOrNull() }
 

@@ -1720,6 +1720,7 @@
     <string name="rule_sig_plugged">Eingesteckt</string>
     <string name="rule_sig_projection">Android Auto / CarPlay</string>
     <string name="rule_sig_sun_up">Sonne aufgegangen</string>
+    <string name="rule_sig_altitude">Höhe</string>
     <string name="rule_sig_tsr">Verkehrszeichen (TSR)</string>
     <string name="rule_sig_volume">Lautstärke</string>
     <string name="rule_sig_wifi_on">WLAN an</string>

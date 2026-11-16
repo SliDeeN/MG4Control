@@ -299,7 +299,7 @@ object CustomRules {
     }
 
     private fun besoinPosition(r: CustomRule): Boolean =
-        RuleLogic.places(r).isNotEmpty() || RuleSignal.SUN_UP in RuleLogic.signals(r) ||
+        RuleLogic.places(r).isNotEmpty() || RuleLogic.signals(r).any { it == RuleSignal.SUN_UP || it == RuleSignal.ALTITUDE } ||
             r.triggers.any { it.type == RuleTrigger.Type.SUN }
 
     /** Arrête l'exécution en cours de l'automatisation [id], s'il y en a une ; elle reste active. */
@@ -671,6 +671,7 @@ object CustomRules {
         RuleSignal.RANGE -> EnergyReader.rangeKm()?.toDouble()
         RuleSignal.CHARGING -> EnergyReader.charging()
         RuleSignal.OUTSIDE_TEMP -> MG4Hardware.getOutsideTempCelsius()?.toDouble()
+        RuleSignal.ALTITUDE -> AndroidControls.altitude(ctx)
         RuleSignal.HVAC_ON -> clim()?.powerOn
         RuleSignal.BT_DEVICE -> BluetoothProfileManager.getConnectedMacs()
         RuleSignal.PROFILE -> ActiveProfile.id(ctx)

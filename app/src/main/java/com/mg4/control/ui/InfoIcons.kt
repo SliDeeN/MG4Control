@@ -35,6 +35,7 @@ object InfoIcons {
             RuleSignal.BT_ON, RuleSignal.WIFI_ON, RuleSignal.HOTSPOT_ON, RuleSignal.WIFI_SSID, RuleSignal.BT_DEVICE,
             RuleSignal.DATA_TODAY_MB, RuleSignal.DATA_MONTH_MB -> R.drawable.ic_cat_wifi
             RuleSignal.PROFILE -> R.drawable.ic_cat_star
+            RuleSignal.ALTITUDE -> R.drawable.ic_info_mountain
             else -> R.drawable.ic_cat_car
         }
     }

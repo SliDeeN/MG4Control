@@ -106,6 +106,12 @@ enum class DistanceUnit(val key: String, val short: String, val factor: Float) {
     /** « km/h » ou « mph ». */
     val speedShort: String get() = if (this == MILES) "mph" else "km/h"
 
+    /** Une altitude en mètres, dans l'unité de hauteur qui va avec : pieds en miles (2026-11-16). */
+    fun altitudeFromM(m: Float): Float = if (this == MILES) m / 0.3048f else m
+
+    /** « m » ou « ft ». */
+    val altitudeShort: String get() = if (this == MILES) "ft" else "m"
+
     companion object {
         /** Choix « Auto » enregistré : comme la voiture. */
         const val AUTO = "auto"

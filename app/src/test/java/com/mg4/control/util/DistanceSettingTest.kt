@@ -1,10 +1,12 @@
 package com.mg4.control.util
 
 import com.mg4.control.model.BubbleInfo
+import com.mg4.control.model.ClusterInfo
 import com.mg4.control.model.DistanceUnit
 import com.mg4.control.model.RuleSignal
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** Unité de distance générale (2026-11-10) : reprise du choix du combiné, conversions. */
@@ -46,5 +48,15 @@ class DistanceSettingTest {
         assertEquals(null to " mi", BubbleInfo.inDistanceUnit(RuleSignal.RANGE, null, DistanceUnit.MILES))
         // Les autres informations ne sont pas des distances.
         assertNull(BubbleInfo.inDistanceUnit(RuleSignal.SOC, 64.0, DistanceUnit.MILES))
+    }
+
+    @Test
+    fun `altitude is shown in feet with miles, in metres with km`() {
+        assertEquals(1352 to " ft", BubbleInfo.inDistanceUnit(RuleSignal.ALTITUDE, 412.0, DistanceUnit.MILES))
+        assertEquals(412.0 to " m", BubbleInfo.inDistanceUnit(RuleSignal.ALTITUDE, 412.0, DistanceUnit.KM))
+        assertEquals(null to " ft", BubbleInfo.inDistanceUnit(RuleSignal.ALTITUDE, null, DistanceUnit.MILES))
+        // Proposée aux bulles et aux cases de l'écran conducteur.
+        assertTrue(RuleSignal.ALTITUDE.name in BubbleInfo.choices())
+        assertTrue(ClusterInfo.hasDistance(RuleSignal.ALTITUDE.name))
     }
 }
