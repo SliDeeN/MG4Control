@@ -59,7 +59,7 @@ object ProjectionShortcut {
         when (etape) {
             is ProjectionStep.Open -> ouvrir(app, etape.kind)
             ProjectionStep.Return -> revenir(app, taches)
-            ProjectionStep.NoPhone -> relancerOuAnnoncer(app, lecture)
+            ProjectionStep.NoPhone -> relancerOuAnnoncer(app)
         }
     }
 
@@ -68,9 +68,10 @@ object ProjectionShortcut {
      * relance sa détection et on ouvre la projection si elle arrive. Rien sur l'USB : le message
      * d'avant.
      */
-    private fun relancerOuAnnoncer(app: Context, lecture: ProjectionReader.Lecture) {
+    private fun relancerOuAnnoncer(app: Context) {
         val loc = LocaleHelper.applyLocale(app)
-        if (lecture is ProjectionReader.Lecture.Injoignable || !ProjectionKick.phonePlugged(app)) {
+        // AllGo qui ne répond pas n'empêche pas la relance (comme AA Kick) : seul l'USB décide.
+        if (!ProjectionKick.phonePlugged(app)) {
             annoncer(app, loc.getString(R.string.projection_no_phone))
             return
         }

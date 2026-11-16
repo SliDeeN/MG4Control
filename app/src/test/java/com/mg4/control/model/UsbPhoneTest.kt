@@ -18,6 +18,16 @@ class UsbPhoneTest {
         assertNull(UsbPhoneRule.kind(dev(0x05ac, 0x1234)))
     }
 
+    @Test fun `iPhone parti de l'USB apres l'avis = inversion de role CarPlay`() {
+        val iphone = dev(0x05ac, 0x12a8)
+        // Toujours là, même renuméroté (autre nom) : pas d'inversion.
+        assertTrue(UsbPhoneRule.stillThere(iphone, listOf(UsbSeen(0x05ac, 0x12a8, "/dev/bus/usb/002/009", listOf(6)))))
+        // Disparu (seule une clé reste) : CarPlay a fait son inversion de rôle.
+        assertFalse(UsbPhoneRule.stillThere(iphone, listOf(dev(0x0781, 0x5581, classes = listOf(8)))))
+        // Sur le port interne, il ne compte pas.
+        assertFalse(UsbPhoneRule.stillThere(iphone, listOf(dev(0x05ac, 0x12a8, bus = "001"))))
+    }
+
     @Test fun `telephone Android, Pixel compris, hors AOAP`() {
         assertEquals(UsbPhoneKind.ANDROID, UsbPhoneRule.kind(dev(0x04e8, 0x6860)))
         assertEquals(UsbPhoneKind.ANDROID, UsbPhoneRule.kind(dev(0x18d1, 0x4ee1)))

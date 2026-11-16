@@ -54,6 +54,15 @@ object UsbPhoneRule {
     fun firstAoap(devices: List<UsbSeen>): UsbSeen? = devices.firstOrNull { isAoap(it) && !isGrayPort(it.name) }
 
     fun anyAoap(devices: List<UsbSeen>): Boolean = firstAoap(devices) != null
+
+    /**
+     * L'appareil [target] (même fabricant et produit, hors port interne) est-il encore sur l'USB ?
+     * Le nom change à la réénumération : on ne le compare pas. Un iPhone qui disparaît juste après
+     * l'avis de branchement a fait son inversion de rôle CarPlay (il devient l'hôte USB : relevé
+     * dans `UsbCarPlayDevice` de DeviceManagerService, 2026-11-16) — CarPlay démarre.
+     */
+    fun stillThere(target: UsbSeen, devices: List<UsbSeen>): Boolean =
+        devices.any { it.vendorId == target.vendorId && it.productId == target.productId && !isGrayPort(it.name) }
 }
 
 /** Quand relancer (issue #251). */

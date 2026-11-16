@@ -28,6 +28,12 @@ import com.mg4.control.util.GarageMode
  * Deux essais au plus : l'avis seul, puis réinitialisation USB + avis ; jamais de boucle.
  * Au démarrage et au réveil, le téléphone Android est laissé à AA Kick s'il est installé.
  *
+ * Rapprochée d'AA Kick le 2026-11-16 (retour de Magne, CarPlay) : AllGo qui ne répond pas encore
+ * n'arrête plus rien (lu comme « pas de session ») ; au démarrage et au réveil, le téléphone est
+ * cherché toutes les 4 s pendant une minute s'il n'est pas encore sur l'USB ; un iPhone qui
+ * disparaît de l'USB après l'avis a fait son inversion de rôle CarPlay : on attend la session
+ * (30 s), sans réinitialisation ni « aucun téléphone ».
+ *
  * Une relance à la fois : un appui pendant une relance automatique se raccroche à elle et en
  * reçoit le résultat. Le Mode Garage arrête tout ; une relance automatique s'arrête aussi si
  * l'option est coupée ou le service arrêté entre-temps (vérifié au départ et avant la
@@ -50,6 +56,11 @@ object ProjectionKick {
     private const val VEILLE_MIN_MS = 60_000L
     /** Attente de la session après chaque essai (bascule AOAP comprise pour Android Auto). */
     private const val ATTENTE_SESSION_MS = 15_000L
+    /** CarPlay : inversion de rôle, énumération (5 s chez YFVE), iAP2 puis session — plus long. */
+    private const val ATTENTE_CARPLAY_MS = 30_000L
+    /** Démarrage / réveil sans téléphone encore visible : on le cherche, comme AA Kick. */
+    private const val RECHERCHE_PAS_MS = 4_000L
+    private const val RECHERCHE_MAX_MS = 60_000L
     private const val PAS_MS = 1_000L
     /** Le téléphone réapparaît après la réinitialisation. */
     private const val APRES_RESET_MS = 2_000L
@@ -202,38 +213,56 @@ object ProjectionKick {
 
     private fun relancer(app: Context, origin: Origin): Outcome {
         arretee(app, origin, "avant de commencer")?.let { return it }
-        val lecture = ProjectionReader.appareilActif(app) as? ProjectionReader.Lecture.Lue ?: run {
-            AppLogger.w(TAG, "relance USB (${origin.label}) : AllGo injoignable — rien")
-            return Outcome.Unreachable
+        // AllGo qui ne répond pas encore (démarrage) n'empêche rien : seule une session ouverte arrête.
+        sessionOuverte(app, origin)?.let { return it }
+        var vus = UsbPhoneKick.devices(app)
+        if (bascule(vus) == null && choisir(vus) == null) {
+            if (origin == Origin.SHORTCUT) {
+                AppLogger.i(TAG, "relance USB (${origin.label}) : aucun téléphone sur l'USB (${vus.size} appareil(s)) — rien")
+                return Outcome.NoPhone
+            }
+            // Démarrage / réveil : le téléphone peut s'énumérer après nous. On le cherche, comme AA Kick.
+            AppLogger.i(TAG, "relance USB (${origin.label}) : pas encore de téléphone sur l'USB, recherche " +
+                "toutes les ${RECHERCHE_PAS_MS / 1000} s pendant ${RECHERCHE_MAX_MS / 1000} s")
+            val debut = SystemClock.elapsedRealtime()
+            while (true) {
+                if (SystemClock.elapsedRealtime() - debut >= RECHERCHE_MAX_MS) {
+                    AppLogger.i(TAG, "relance USB (${origin.label}) : aucun téléphone apparu en ${RECHERCHE_MAX_MS / 1000} s — rien")
+                    return Outcome.NoPhone
+                }
+                SystemClock.sleep(RECHERCHE_PAS_MS)
+                arretee(app, origin, "pendant la recherche")?.let { return it }
+                sessionOuverte(app, origin)?.let { return it }
+                vus = UsbPhoneKick.devices(app)
+                // Apparu déjà basculé : AllGo s'en occupe tout seul, on attend sa session.
+                if (bascule(vus) != null) return attendre(app, "bascule Android Auto apparue", null)
+                if (choisir(vus) != null) break
+            }
         }
-        lecture.appareil?.let {
-            AppLogger.i(TAG, "relance USB (${origin.label}) : session ${it.kind?.label ?: "type ${it.type}"} déjà ouverte — rien")
-            return Outcome.Session(it.kind)
-        }
-        val vus = UsbPhoneKick.devices(app)
         // Téléphone resté basculé pour Android Auto (session d'avant, veille) : AllGo ne le
         // redécouvre qu'au branchement — on le lui annonce aussi (idée reprise de MG4Dash).
         val dejaBascule = bascule(vus)
-        val choisi = dejaBascule ?: choisir(vus) ?: run {
-            AppLogger.i(TAG, "relance USB (${origin.label}) : aucun téléphone sur l'USB (${vus.size} appareil(s)) — rien")
-            return Outcome.NoPhone
-        }
+        val choisi = dejaBascule ?: choisir(vus) ?: return Outcome.NoPhone
         val type = if (dejaBascule != null) UsbPhoneKind.ANDROID else UsbPhoneRule.kind(choisi.first)!!
         if (type == UsbPhoneKind.ANDROID && origin != Origin.SHORTCUT && installe(app, AA_KICK)) {
             AppLogger.i(TAG, "relance USB (${origin.label}) : téléphone Android laissé à AA Kick")
             return Outcome.LeftToAaKick
         }
+        val iphone = choisi.first.takeIf { type == UsbPhoneKind.IPHONE }
         AppLogger.i(TAG, "relance USB (${origin.label}) : ${type.label}" +
             (if (dejaBascule != null) " déjà basculé pour Android Auto" else "") +
             " branché sans session (${hex(choisi.first)}) — essai 1 : nouvel avis de branchement")
         UsbPhoneKick.announceAttached(app, choisi.second)
-        (attendre(app, "essai 1") as? Outcome.Session)?.let { return it }
+        val essai1 = attendre(app, "essai 1", iphone)
+        if (essai1 is Outcome.Session) return essai1
+        // iPhone parti de l'USB : CarPlay a démarré sans que sa session vienne — rien à réinitialiser.
+        if (iphone != null && !UsbPhoneRule.stillThere(iphone, UsbPhoneKick.devices(app).map { it.first })) return essai1
 
         // Essai 2 : comme un câble débranché puis rebranché.
         val encore = UsbPhoneKick.devices(app)
         val basculeMaintenant = bascule(encore)
         // Basculé par notre essai 1 : AllGo est en route, on ne casse pas sa bascule.
-        if (basculeMaintenant != null && dejaBascule == null) return attendre(app, "bascule Android Auto")
+        if (basculeMaintenant != null && dejaBascule == null) return attendre(app, "bascule Android Auto", null)
         val tel = basculeMaintenant ?: choisir(encore) ?: run {
             AppLogger.i(TAG, "relance USB : le téléphone n'est plus sur l'USB")
             return Outcome.NoPhone
@@ -258,8 +287,21 @@ object ProjectionKick {
         val revu = bascule(apres) ?: choisir(apres)
         if (revu != null) UsbPhoneKick.announceAttached(app, revu.second)
         else AppLogger.i(TAG, "relance USB : téléphone pas encore revu après la réinitialisation ($reinit)")
-        return attendre(app, "essai 2")
+        return attendre(app, "essai 2", iphone)
     }
+
+    /** Session déjà ouverte : rien à faire. AllGo injoignable compte comme « pas de session ». */
+    private fun sessionOuverte(app: Context, origin: Origin): Outcome.Session? =
+        when (val l = ProjectionReader.appareilActif(app)) {
+            ProjectionReader.Lecture.Injoignable -> {
+                AppLogger.i(TAG, "relance USB (${origin.label}) : AllGo ne répond pas encore — lu comme « pas de session »")
+                null
+            }
+            is ProjectionReader.Lecture.Lue -> l.appareil?.let {
+                AppLogger.i(TAG, "relance USB (${origin.label}) : session ${it.kind?.label ?: "type ${it.type}"} déjà ouverte — rien")
+                Outcome.Session(it.kind)
+            }
+        }
 
     private fun choisir(vus: List<Pair<UsbSeen, android.hardware.usb.UsbDevice>>) =
         UsbPhoneRule.pick(vus.map { it.first })?.let { c -> vus.first { it.first == c } }
@@ -267,17 +309,31 @@ object ProjectionKick {
     private fun bascule(vus: List<Pair<UsbSeen, android.hardware.usb.UsbDevice>>) =
         UsbPhoneRule.firstAoap(vus.map { it.first })?.let { c -> vus.first { it.first == c } }
 
-    /** Relit AllGo chaque seconde ; la session ouverte, ou « non reconnu » au bout de l'attente. */
-    private fun attendre(app: Context, etape: String): Outcome {
+    /**
+     * Relit AllGo chaque seconde ; la session ouverte, ou « non reconnu » au bout de l'attente.
+     * [iphone] : l'iPhone relancé — CarPlay est plus long ([ATTENTE_CARPLAY_MS]). S'il quitte l'USB,
+     * CarPlay a fait son inversion de rôle (dit une fois dans le journal).
+     */
+    private fun attendre(app: Context, etape: String, iphone: UsbSeen?): Outcome {
         val debut = SystemClock.elapsedRealtime()
-        while (SystemClock.elapsedRealtime() - debut < ATTENTE_SESSION_MS) {
+        val duree = if (iphone != null) ATTENTE_CARPLAY_MS else ATTENTE_SESSION_MS
+        var inversion = false
+        while (SystemClock.elapsedRealtime() - debut < duree) {
             SystemClock.sleep(PAS_MS)
-            val a = (ProjectionReader.appareilActif(app) as? ProjectionReader.Lecture.Lue)?.appareil ?: continue
-            AppLogger.i(TAG, "relance USB ($etape) : session ${a.kind?.label ?: "type ${a.type}"} ouverte " +
-                "après ${(SystemClock.elapsedRealtime() - debut) / 1000} s")
-            return Outcome.Session(a.kind)
+            val a = (ProjectionReader.appareilActif(app) as? ProjectionReader.Lecture.Lue)?.appareil
+            if (a != null) {
+                AppLogger.i(TAG, "relance USB ($etape) : session ${a.kind?.label ?: "type ${a.type}"} ouverte " +
+                    "après ${(SystemClock.elapsedRealtime() - debut) / 1000} s")
+                return Outcome.Session(a.kind)
+            }
+            if (iphone != null && !inversion && !UsbPhoneRule.stillThere(iphone, UsbPhoneKick.devices(app).map { it.first })) {
+                inversion = true
+                AppLogger.i(TAG, "relance USB ($etape) : iPhone parti de l'USB après " +
+                    "${(SystemClock.elapsedRealtime() - debut) / 1000} s — inversion de rôle CarPlay, on attend la session")
+            }
         }
-        AppLogger.i(TAG, "relance USB ($etape) : pas de session après ${ATTENTE_SESSION_MS / 1000} s")
+        AppLogger.i(TAG, "relance USB ($etape) : pas de session après ${duree / 1000} s" +
+            if (inversion) " (iPhone parti de l'USB : CarPlay a démarré sans session)" else "")
         return Outcome.NotRecognised
     }
 
