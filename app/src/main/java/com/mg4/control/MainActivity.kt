@@ -371,7 +371,8 @@ class MainActivity : AppCompatActivity() {
             R.id.btn_pick_it to "it",
             R.id.btn_pick_tr to "tr",
             R.id.btn_pick_pl to "pl",
-            R.id.btn_pick_nb to "nb"
+            R.id.btn_pick_nb to "nb",
+            R.id.btn_pick_cs to "cs"
         )
         buttons.forEach { (viewId, code) ->
             dialogView.findViewById<View>(viewId).setOnClickListener {

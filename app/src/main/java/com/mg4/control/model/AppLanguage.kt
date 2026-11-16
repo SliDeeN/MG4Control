@@ -8,7 +8,7 @@ package com.mg4.control.model
 object AppLanguage {
 
     /** Les langues traduites, dans l'ordre de la fenêtre de choix. */
-    val SUPPORTED = listOf("fr", "en", "de", "es", "pt", "it", "tr", "pl", "nb")
+    val SUPPORTED = listOf("fr", "en", "de", "es", "pt", "it", "tr", "pl", "nb", "cs")
 
     /**
      * Codes de la voiture qui désignent une langue traduite sous un autre nom : le norvégien

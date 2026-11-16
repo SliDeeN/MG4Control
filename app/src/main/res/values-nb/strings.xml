@@ -351,6 +351,7 @@
     <string name="settings_language_tr">Türkçe</string>
     <string name="settings_language_pl">Polski</string>
     <string name="settings_language_nb">Norsk</string>
+    <string name="settings_language_cs">Čeština</string>
     <string name="settings_language_pick_title">Velg ditt språk</string>
     <string name="settings_firmware_version">Fastvareversjon</string>
     <string name="settings_firmware_loading">Leser...</string>

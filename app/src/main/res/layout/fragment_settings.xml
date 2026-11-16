@@ -103,6 +103,7 @@
                     android:layout_height="1dp"
                     android:background="@color/dash_border" />
 
+                <!-- Dix langues en 2 rangées de 5 (tchèque, 2026-11-16). -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -118,6 +119,7 @@
                         android:text="@string/settings_language_fr"
                         android:textColor="@color/text_secondary"
                         android:textSize="19sp"
+                        android:maxLines="1"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"
@@ -133,6 +135,7 @@
                         android:text="@string/settings_language_en"
                         android:textColor="@color/text_secondary"
                         android:textSize="19sp"
+                        android:maxLines="1"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"
@@ -144,33 +147,27 @@
                         android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
                         android:text="@string/settings_language_de"
                         android:textColor="@color/text_secondary"
                         android:textSize="19sp"
+                        android:maxLines="1"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"
                         app:cornerRadius="14dp" />
-
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:paddingStart="12dp"
-                    android:paddingEnd="12dp"
-                    android:paddingBottom="12dp">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_es"
                         android:layout_width="0dp"
                         android:layout_height="64dp"
                         android:layout_weight="1"
+                        android:layout_marginStart="4dp"
                         android:layout_marginEnd="4dp"
                         android:text="@string/settings_language_es"
                         android:textColor="@color/text_secondary"
                         android:textSize="19sp"
+                        android:maxLines="1"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"
@@ -182,24 +179,10 @@
                         android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginStart="4dp"
-                        android:layout_marginEnd="4dp"
                         android:text="@string/settings_language_pt"
                         android:textColor="@color/text_secondary"
                         android:textSize="19sp"
-                        app:backgroundTint="@color/dash_btn"
-                        app:strokeWidth="1dp"
-                        app:strokeColor="@color/dash_border"
-                        app:cornerRadius="14dp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_lang_it"
-                        android:layout_width="0dp"
-                        android:layout_height="64dp"
-                        android:layout_weight="1"
-                        android:layout_marginStart="4dp"
-                        android:text="@string/settings_language_it"
-                        android:textColor="@color/text_secondary"
-                        android:textSize="19sp"
+                        android:maxLines="1"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"
@@ -216,14 +199,31 @@
                     android:paddingBottom="12dp">
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_lang_tr"
+                        android:id="@+id/btn_lang_it"
                         android:layout_width="0dp"
                         android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginEnd="4dp"
+                        android:text="@string/settings_language_it"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="19sp"
+                        android:maxLines="1"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="14dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_tr"
+                        android:layout_width="0dp"
+                        android:layout_height="64dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
                         android:text="@string/settings_language_tr"
                         android:textColor="@color/text_secondary"
                         android:textSize="19sp"
+                        android:maxLines="1"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"
@@ -239,21 +239,38 @@
                         android:text="@string/settings_language_pl"
                         android:textColor="@color/text_secondary"
                         android:textSize="19sp"
+                        android:maxLines="1"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"
                         app:cornerRadius="14dp" />
 
-                    <!-- Norvégien (issue #239, 2026-11-12) : à la place de la case vide. -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_lang_nb"
                         android:layout_width="0dp"
                         android:layout_height="64dp"
                         android:layout_weight="1"
                         android:layout_marginStart="4dp"
+                        android:layout_marginEnd="4dp"
                         android:text="@string/settings_language_nb"
                         android:textColor="@color/text_secondary"
                         android:textSize="19sp"
+                        android:maxLines="1"
+                        app:backgroundTint="@color/dash_btn"
+                        app:strokeWidth="1dp"
+                        app:strokeColor="@color/dash_border"
+                        app:cornerRadius="14dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_lang_cs"
+                        android:layout_width="0dp"
+                        android:layout_height="64dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/settings_language_cs"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="19sp"
+                        android:maxLines="1"
                         app:backgroundTint="@color/dash_btn"
                         app:strokeWidth="1dp"
                         app:strokeColor="@color/dash_border"

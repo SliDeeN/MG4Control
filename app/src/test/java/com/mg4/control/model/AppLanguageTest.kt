@@ -11,6 +11,7 @@ class AppLanguageTest {
         assertEquals("de", AppLanguage.fromCar("de"))
         assertEquals("tr", AppLanguage.fromCar("TR"))
         assertEquals("pl", AppLanguage.fromCar("pl"))
+        assertEquals("cs", AppLanguage.fromCar("cs"))
         // Norvégien (issue #239) : bokmål, et les deux autres codes norvégiens.
         assertEquals("nb", AppLanguage.fromCar("nb"))
         assertEquals("nb", AppLanguage.fromCar("no"))
