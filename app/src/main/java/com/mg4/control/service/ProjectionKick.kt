@@ -23,8 +23,9 @@ import com.mg4.control.util.GarageMode
  * son démarrage (voir [UsbPhoneRule]). On lui redit « appareil branché » — Android Auto comme
  * CarPlay, AllGo trie lui-même.
  *
- * Trois déclencheurs : le démarrage de l'écran et son réveil après une vraie veille (option), et le
- * raccourci « Android Auto / CarPlay » sans session (toujours). Rien si une projection est ouverte.
+ * Quatre déclencheurs : le démarrage de l'écran et son réveil après une vraie veille (option),
+ * l'activation de l'option avec un téléphone déjà branché, et le raccourci « Android Auto /
+ * CarPlay » sans session (toujours). Rien si une projection est ouverte.
  * Deux essais au plus : l'avis seul, puis réinitialisation USB + avis ; jamais de boucle.
  * Au démarrage et au réveil, le téléphone Android est laissé à AA Kick s'il est installé.
  *
@@ -65,7 +66,14 @@ object ProjectionKick {
     /** Le téléphone réapparaît après la réinitialisation. */
     private const val APRES_RESET_MS = 2_000L
 
-    enum class Origin(val label: String) { BOOT("démarrage"), WAKE("réveil"), SHORTCUT("raccourci") }
+    enum class Origin(val label: String) {
+        BOOT("démarrage"), WAKE("réveil"), SHORTCUT("raccourci"),
+        /** L'option vient d'être activée (2026-11-16) : sans elle, rien avant le prochain allumage. */
+        ACTIVATION("activation");
+
+        /** Démarrage et réveil : le téléphone peut encore s'énumérer, et AA Kick agit au même moment. */
+        val atStartup: Boolean get() = this == BOOT || this == WAKE
+    }
 
     sealed class Outcome {
         /** Une session est ouverte ([kind] `null` : type inconnu). */
@@ -95,9 +103,15 @@ object ProjectionKick {
     fun isOn(ctx: Context?): Boolean =
         ctx?.getSharedPreferences(PREFS, Context.MODE_PRIVATE)?.getBoolean(KEY, false) ?: false
 
+    /**
+     * Activée : une relance tout de suite si un téléphone est déjà branché, sinon l'option ne
+     * servirait qu'au prochain allumage (cas du testeur CarPlay de #251, qui avait pris le
+     * raccourci pour un échec). Sans message : le résultat se voit à l'écran.
+     */
     fun setOn(ctx: Context, on: Boolean) {
         ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY, on).apply()
         AppLogger.i(TAG, "relancer la détection du téléphone branché : ${if (on) "activé" else "désactivé"}")
+        if (on && phonePlugged(ctx)) launch(ctx, Origin.ACTIVATION, null)
     }
 
     /** Démarrage du service. L'écoute de l'écran est posée même option coupée : l'option se lit à l'allumage. */
@@ -217,7 +231,7 @@ object ProjectionKick {
         sessionOuverte(app, origin)?.let { return it }
         var vus = UsbPhoneKick.devices(app)
         if (bascule(vus) == null && choisir(vus) == null) {
-            if (origin == Origin.SHORTCUT) {
+            if (!origin.atStartup) {
                 AppLogger.i(TAG, "relance USB (${origin.label}) : aucun téléphone sur l'USB (${vus.size} appareil(s)) — rien")
                 return Outcome.NoPhone
             }
@@ -244,7 +258,7 @@ object ProjectionKick {
         val dejaBascule = bascule(vus)
         val choisi = dejaBascule ?: choisir(vus) ?: return Outcome.NoPhone
         val type = if (dejaBascule != null) UsbPhoneKind.ANDROID else UsbPhoneRule.kind(choisi.first)!!
-        if (type == UsbPhoneKind.ANDROID && origin != Origin.SHORTCUT && installe(app, AA_KICK)) {
+        if (type == UsbPhoneKind.ANDROID && origin.atStartup && installe(app, AA_KICK)) {
             AppLogger.i(TAG, "relance USB (${origin.label}) : téléphone Android laissé à AA Kick")
             return Outcome.LeftToAaKick
         }
